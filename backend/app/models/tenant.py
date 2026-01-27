@@ -1,0 +1,72 @@
+"""Tenant (Company) model."""
+
+import uuid
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import String, Boolean, DateTime, Text, func
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.module import TenantModule
+    from app.models.conference import Conference
+
+
+class Tenant(Base):
+    """
+    Tenant model representing a company using the platform.
+
+    Each tenant has isolated data through PostgreSQL Row-Level Security.
+    """
+
+    __tablename__ = "tenants"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    settings: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+    # Address fields
+    address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # Business fields
+    vat_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    website: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # Contact persons as JSONB array
+    # Structure: [{"name": "John Doe", "email": "john@example.com", "phone": "+1234567890", "role": "Manager"}, ...]
+    contact_persons: Mapped[list] = mapped_column(JSONB, default=list)
+
+    # Comments/notes
+    comments: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    users: Mapped[list["User"]] = relationship(
+        "User", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    tenant_modules: Mapped[list["TenantModule"]] = relationship(
+        "TenantModule", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    conferences: Mapped[list["Conference"]] = relationship(
+        "Conference", back_populates="tenant", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<Tenant {self.name} ({self.slug})>"

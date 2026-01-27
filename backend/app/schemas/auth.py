@@ -1,0 +1,46 @@
+"""Authentication schemas."""
+
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+class LoginRequest(BaseModel):
+    """Login request schema."""
+
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=128)
+
+
+class TokenResponse(BaseModel):
+    """Token response schema."""
+
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int  # seconds until access token expires
+
+
+class RefreshRequest(BaseModel):
+    """Refresh token request schema."""
+
+    refresh_token: str
+
+
+class UserResponse(BaseModel):
+    """User response schema (for /auth/me endpoint)."""
+
+    id: UUID
+    email: EmailStr
+    full_name: str | None
+    role: str
+    tenant_id: UUID | None
+    tenant_name: str | None = None
+    modules: list[str] = []  # List of module codes the user has access to
+    is_active: bool
+    last_login: datetime | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

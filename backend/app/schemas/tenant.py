@@ -1,0 +1,142 @@
+"""Tenant schemas."""
+
+import re
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+class ContactPerson(BaseModel):
+    """Schema for a contact person."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    email: str | None = Field(None, max_length=255)
+    phone: str | None = Field(None, max_length=50)
+    role: str | None = Field(None, max_length=100)  # e.g., "Manager", "Technical Contact"
+
+
+class TenantBase(BaseModel):
+    """Base tenant schema with common fields."""
+
+    name: str = Field(..., min_length=2, max_length=255)
+    slug: str = Field(..., min_length=2, max_length=100)
+    settings: dict = Field(default_factory=dict)
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str) -> str:
+        """Validate slug format (lowercase, alphanumeric, hyphens only)."""
+        if not re.match(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$", v):
+            raise ValueError(
+                "Slug must be lowercase, start/end with alphanumeric, "
+                "and contain only letters, numbers, and hyphens"
+            )
+        return v
+
+
+class TenantCreate(TenantBase):
+    """Schema for creating a tenant."""
+
+    # Address fields
+    address: str | None = Field(None, max_length=500)
+    postal_code: str | None = Field(None, max_length=20)
+    city: str | None = Field(None, max_length=100)
+    country: str | None = Field(None, max_length=100)
+
+    # Business fields
+    vat_number: str | None = Field(None, max_length=50)
+    website: str | None = Field(None, max_length=500)
+
+    # Contact persons
+    contact_persons: list[ContactPerson] = Field(default_factory=list)
+
+    # Comments
+    comments: str | None = None
+
+    # Optional: create admin user for tenant
+    admin_email: EmailStr | None = None
+    admin_password: str | None = Field(None, min_length=8, max_length=128)
+    admin_name: str | None = None
+
+
+class TenantUpdate(BaseModel):
+    """Schema for updating a tenant."""
+
+    name: str | None = Field(None, min_length=2, max_length=255)
+    slug: str | None = Field(None, min_length=2, max_length=100)
+    is_active: bool | None = None
+    settings: dict | None = None
+
+    # Address fields
+    address: str | None = Field(None, max_length=500)
+    postal_code: str | None = Field(None, max_length=20)
+    city: str | None = Field(None, max_length=100)
+    country: str | None = Field(None, max_length=100)
+
+    # Business fields
+    vat_number: str | None = Field(None, max_length=50)
+    website: str | None = Field(None, max_length=500)
+
+    # Contact persons
+    contact_persons: list[ContactPerson] | None = None
+
+    # Comments
+    comments: str | None = None
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str | None) -> str | None:
+        """Validate slug format if provided."""
+        if v is None:
+            return v
+        if not re.match(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$", v):
+            raise ValueError(
+                "Slug must be lowercase, start/end with alphanumeric, "
+                "and contain only letters, numbers, and hyphens"
+            )
+        return v
+
+
+class TenantResponse(BaseModel):
+    """Tenant response schema."""
+
+    id: UUID
+    name: str
+    slug: str
+    is_active: bool
+    settings: dict
+
+    # Address fields
+    address: str | None
+    postal_code: str | None
+    city: str | None
+    country: str | None
+
+    # Business fields
+    vat_number: str | None
+    website: str | None
+
+    # Contact persons
+    contact_persons: list[ContactPerson]
+
+    # Comments
+    comments: str | None
+
+    created_at: datetime
+    updated_at: datetime
+    user_count: int = 0
+    module_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class TenantListResponse(BaseModel):
+    """Paginated tenant list response."""
+
+    items: list[TenantResponse]
+    total: int
+    page: int
+    page_size: int
+    pages: int

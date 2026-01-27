@@ -1,0 +1,524 @@
+"""Volunteer management endpoints."""
+
+from datetime import datetime
+from uuid import UUID
+
+from fastapi import APIRouter, Query, Request
+from sqlalchemy import func, select
+
+from app.core.dependencies import (
+    CurrentUserDep,
+    DbSessionDep,
+    get_client_ip,
+    require_module,
+)
+from app.core.exceptions import NotFoundError, ValidationError
+from app.models.audit import AuditAction, AuditLog
+from app.models.volunteer import Volunteer, VolunteerStatus
+from app.models.conference import Conference
+from app.models.associations import ConferenceVolunteer
+from app.schemas.volunteer import (
+    VolunteerCreate,
+    VolunteerListResponse,
+    VolunteerResponse,
+    VolunteerUpdate,
+    VolunteerStats,
+)
+
+router = APIRouter()
+
+MODULE_CODE = "volunteers"
+
+
+@router.get("", response_model=VolunteerListResponse)
+async def list_volunteers(
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    status: str | None = None,
+    search: str | None = None,
+    role: str | None = None,
+    conference_id: UUID | None = None,
+) -> VolunteerListResponse:
+    """
+    List volunteers for the current tenant.
+
+    Requires the 'volunteers' module.
+    """
+    if not current_user.has_module(MODULE_CODE):
+        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
+
+    query = select(Volunteer).where(Volunteer.tenant_id == current_user.tenant_id)
+
+    if conference_id:
+        query = query.join(
+            ConferenceVolunteer, ConferenceVolunteer.volunteer_id == Volunteer.id
+        ).where(ConferenceVolunteer.conference_id == conference_id)
+
+    if status:
+        query = query.where(Volunteer.status == status)
+
+    if role:
+        query = query.where(Volunteer.role == role)
+
+    if search:
+        search_filter = (
+            Volunteer.first_name.ilike(f"%{search}%")
+            | Volunteer.last_name.ilike(f"%{search}%")
+            | Volunteer.email.ilike(f"%{search}%")
+        )
+        query = query.where(search_filter)
+
+    # Get total count
+    count_query = select(func.count()).select_from(query.subquery())
+    total = (await db.execute(count_query)).scalar() or 0
+
+    # Apply pagination
+    query = query.offset((page - 1) * page_size).limit(page_size)
+    query = query.order_by(Volunteer.created_at.desc())
+
+    result = await db.execute(query)
+    volunteers = result.scalars().all()
+
+    # Batch-query conference_ids for all volunteers in the page
+    vol_ids = [v.id for v in volunteers]
+    conf_ids_map: dict[UUID, list[UUID]] = {vid: [] for vid in vol_ids}
+    if vol_ids:
+        assoc_result = await db.execute(
+            select(ConferenceVolunteer.volunteer_id, ConferenceVolunteer.conference_id)
+            .where(ConferenceVolunteer.volunteer_id.in_(vol_ids))
+        )
+        for row in assoc_result:
+            conf_ids_map[row.volunteer_id].append(row.conference_id)
+
+    items = [
+        VolunteerResponse(
+            id=v.id,
+            tenant_id=v.tenant_id,
+            email=v.email,
+            first_name=v.first_name,
+            last_name=v.last_name,
+            full_name=v.full_name,
+            phone=v.phone,
+            status=v.status,
+            role=v.role,
+            skills=v.skills,
+            availability=v.availability,
+            notes=v.notes,
+            emergency_contact_name=v.emergency_contact_name,
+            emergency_contact_phone=v.emergency_contact_phone,
+            tshirt_size=v.tshirt_size,
+            application_date=v.application_date,
+            approved_date=v.approved_date,
+            total_hours=v.total_hours,
+            created_at=v.created_at,
+            updated_at=v.updated_at,
+            conference_ids=conf_ids_map.get(v.id, []),
+        )
+        for v in volunteers
+    ]
+
+    return VolunteerListResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=(total + page_size - 1) // page_size,
+    )
+
+
+@router.get("/stats", response_model=VolunteerStats)
+async def get_volunteer_stats(
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> VolunteerStats:
+    """Get volunteer statistics for the current tenant."""
+    if not current_user.has_module(MODULE_CODE):
+        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
+
+    base_query = select(Volunteer).where(Volunteer.tenant_id == current_user.tenant_id)
+
+    # Total count
+    total = (await db.execute(select(func.count()).select_from(base_query.subquery()))).scalar() or 0
+
+    # Count by status
+    status_counts = {}
+    for status in VolunteerStatus:
+        count = (
+            await db.execute(
+                select(func.count()).where(
+                    Volunteer.tenant_id == current_user.tenant_id,
+                    Volunteer.status == status.value,
+                )
+            )
+        ).scalar() or 0
+        status_counts[status.value] = count
+
+    # Total hours
+    total_hours = (
+        await db.execute(
+            select(func.sum(Volunteer.total_hours)).where(
+                Volunteer.tenant_id == current_user.tenant_id
+            )
+        )
+    ).scalar() or 0.0
+
+    return VolunteerStats(
+        total=total,
+        pending=status_counts.get("pending", 0),
+        approved=status_counts.get("approved", 0),
+        active=status_counts.get("active", 0),
+        inactive=status_counts.get("inactive", 0),
+        rejected=status_counts.get("rejected", 0),
+        total_hours=total_hours,
+    )
+
+
+@router.post("", response_model=VolunteerResponse, status_code=201)
+async def create_volunteer(
+    volunteer_data: VolunteerCreate,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+) -> VolunteerResponse:
+    """Create a new volunteer."""
+    if not current_user.has_module(MODULE_CODE):
+        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
+
+    # Validate conference exists and belongs to tenant
+    conf_result = await db.execute(
+        select(Conference).where(
+            Conference.id == volunteer_data.conference_id,
+            Conference.tenant_id == current_user.tenant_id,
+        )
+    )
+    if not conf_result.scalar_one_or_none():
+        raise NotFoundError(f"Conference with ID '{volunteer_data.conference_id}' not found")
+
+    # Check for duplicate email within tenant
+    existing = await db.execute(
+        select(Volunteer).where(
+            Volunteer.tenant_id == current_user.tenant_id,
+            Volunteer.email == volunteer_data.email,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise ValidationError(f"Volunteer with email '{volunteer_data.email}' already exists")
+
+    volunteer = Volunteer(
+        tenant_id=current_user.tenant_id,
+        email=volunteer_data.email,
+        first_name=volunteer_data.first_name,
+        last_name=volunteer_data.last_name,
+        phone=volunteer_data.phone,
+        role=volunteer_data.role,
+        skills=volunteer_data.skills,
+        availability=volunteer_data.availability,
+        notes=volunteer_data.notes,
+        emergency_contact_name=volunteer_data.emergency_contact_name,
+        emergency_contact_phone=volunteer_data.emergency_contact_phone,
+        tshirt_size=volunteer_data.tshirt_size,
+        status=VolunteerStatus.PENDING.value,
+    )
+    db.add(volunteer)
+    await db.flush()  # Get volunteer.id before creating association
+
+    # Create conference association
+    db.add(ConferenceVolunteer(
+        conference_id=volunteer_data.conference_id,
+        volunteer_id=volunteer.id,
+    ))
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="volunteer.create",
+        resource_type="volunteer",
+        resource_id=volunteer.id,
+        details={"email": volunteer.email, "name": volunteer.full_name},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(volunteer)
+
+    return VolunteerResponse(
+        id=volunteer.id,
+        tenant_id=volunteer.tenant_id,
+        email=volunteer.email,
+        first_name=volunteer.first_name,
+        last_name=volunteer.last_name,
+        full_name=volunteer.full_name,
+        phone=volunteer.phone,
+        status=volunteer.status,
+        role=volunteer.role,
+        skills=volunteer.skills,
+        availability=volunteer.availability,
+        notes=volunteer.notes,
+        emergency_contact_name=volunteer.emergency_contact_name,
+        emergency_contact_phone=volunteer.emergency_contact_phone,
+        tshirt_size=volunteer.tshirt_size,
+        application_date=volunteer.application_date,
+        approved_date=volunteer.approved_date,
+        total_hours=volunteer.total_hours,
+        created_at=volunteer.created_at,
+        updated_at=volunteer.updated_at,
+        conference_ids=[volunteer_data.conference_id],
+    )
+
+
+@router.get("/{volunteer_id}", response_model=VolunteerResponse)
+async def get_volunteer(
+    volunteer_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> VolunteerResponse:
+    """Get volunteer by ID."""
+    if not current_user.has_module(MODULE_CODE):
+        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
+
+    result = await db.execute(
+        select(Volunteer).where(
+            Volunteer.id == volunteer_id,
+            Volunteer.tenant_id == current_user.tenant_id,
+        )
+    )
+    volunteer = result.scalar_one_or_none()
+
+    if not volunteer:
+        raise NotFoundError(f"Volunteer with ID '{volunteer_id}' not found")
+
+    # Get conference_ids
+    assoc_result = await db.execute(
+        select(ConferenceVolunteer.conference_id)
+        .where(ConferenceVolunteer.volunteer_id == volunteer.id)
+    )
+    conf_ids = [row[0] for row in assoc_result]
+
+    return VolunteerResponse(
+        id=volunteer.id,
+        tenant_id=volunteer.tenant_id,
+        email=volunteer.email,
+        first_name=volunteer.first_name,
+        last_name=volunteer.last_name,
+        full_name=volunteer.full_name,
+        phone=volunteer.phone,
+        status=volunteer.status,
+        role=volunteer.role,
+        skills=volunteer.skills,
+        availability=volunteer.availability,
+        notes=volunteer.notes,
+        emergency_contact_name=volunteer.emergency_contact_name,
+        emergency_contact_phone=volunteer.emergency_contact_phone,
+        tshirt_size=volunteer.tshirt_size,
+        application_date=volunteer.application_date,
+        approved_date=volunteer.approved_date,
+        total_hours=volunteer.total_hours,
+        created_at=volunteer.created_at,
+        updated_at=volunteer.updated_at,
+        conference_ids=conf_ids,
+    )
+
+
+@router.put("/{volunteer_id}", response_model=VolunteerResponse)
+async def update_volunteer(
+    volunteer_id: UUID,
+    volunteer_data: VolunteerUpdate,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+) -> VolunteerResponse:
+    """Update volunteer details."""
+    if not current_user.has_module(MODULE_CODE):
+        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
+
+    result = await db.execute(
+        select(Volunteer).where(
+            Volunteer.id == volunteer_id,
+            Volunteer.tenant_id == current_user.tenant_id,
+        )
+    )
+    volunteer = result.scalar_one_or_none()
+
+    if not volunteer:
+        raise NotFoundError(f"Volunteer with ID '{volunteer_id}' not found")
+
+    # Track status change for approved_date
+    old_status = volunteer.status
+    update_data = volunteer_data.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(volunteer, field, value)
+
+    # Set approved_date when status changes to approved
+    if "status" in update_data:
+        new_status = update_data["status"]
+        if new_status == VolunteerStatus.APPROVED.value and old_status != VolunteerStatus.APPROVED.value:
+            volunteer.approved_date = datetime.utcnow()
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="volunteer.update",
+        resource_type="volunteer",
+        resource_id=volunteer.id,
+        details=update_data,
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(volunteer)
+
+    # Get conference_ids
+    assoc_result = await db.execute(
+        select(ConferenceVolunteer.conference_id)
+        .where(ConferenceVolunteer.volunteer_id == volunteer.id)
+    )
+    conf_ids = [row[0] for row in assoc_result]
+
+    return VolunteerResponse(
+        id=volunteer.id,
+        tenant_id=volunteer.tenant_id,
+        email=volunteer.email,
+        first_name=volunteer.first_name,
+        last_name=volunteer.last_name,
+        full_name=volunteer.full_name,
+        phone=volunteer.phone,
+        status=volunteer.status,
+        role=volunteer.role,
+        skills=volunteer.skills,
+        availability=volunteer.availability,
+        notes=volunteer.notes,
+        emergency_contact_name=volunteer.emergency_contact_name,
+        emergency_contact_phone=volunteer.emergency_contact_phone,
+        tshirt_size=volunteer.tshirt_size,
+        application_date=volunteer.application_date,
+        approved_date=volunteer.approved_date,
+        total_hours=volunteer.total_hours,
+        created_at=volunteer.created_at,
+        updated_at=volunteer.updated_at,
+        conference_ids=conf_ids,
+    )
+
+
+@router.delete("/{volunteer_id}")
+async def delete_volunteer(
+    volunteer_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+) -> dict:
+    """Delete a volunteer."""
+    if not current_user.has_module(MODULE_CODE):
+        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
+
+    result = await db.execute(
+        select(Volunteer).where(
+            Volunteer.id == volunteer_id,
+            Volunteer.tenant_id == current_user.tenant_id,
+        )
+    )
+    volunteer = result.scalar_one_or_none()
+
+    if not volunteer:
+        raise NotFoundError(f"Volunteer with ID '{volunteer_id}' not found")
+
+    volunteer_name = volunteer.full_name
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="volunteer.delete",
+        resource_type="volunteer",
+        resource_id=volunteer_id,
+        details={"email": volunteer.email, "name": volunteer_name},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.delete(volunteer)
+    await db.commit()
+
+    return {"message": f"Volunteer '{volunteer_name}' deleted successfully"}
+
+
+@router.post("/{volunteer_id}/approve", response_model=VolunteerResponse)
+async def approve_volunteer(
+    volunteer_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+) -> VolunteerResponse:
+    """Approve a volunteer application."""
+    if not current_user.has_module(MODULE_CODE):
+        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
+
+    result = await db.execute(
+        select(Volunteer).where(
+            Volunteer.id == volunteer_id,
+            Volunteer.tenant_id == current_user.tenant_id,
+        )
+    )
+    volunteer = result.scalar_one_or_none()
+
+    if not volunteer:
+        raise NotFoundError(f"Volunteer with ID '{volunteer_id}' not found")
+
+    volunteer.status = VolunteerStatus.APPROVED.value
+    volunteer.approved_date = datetime.utcnow()
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="volunteer.approve",
+        resource_type="volunteer",
+        resource_id=volunteer.id,
+        details={"name": volunteer.full_name},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(volunteer)
+
+    # Get conference_ids
+    assoc_result = await db.execute(
+        select(ConferenceVolunteer.conference_id)
+        .where(ConferenceVolunteer.volunteer_id == volunteer.id)
+    )
+    conf_ids = [row[0] for row in assoc_result]
+
+    return VolunteerResponse(
+        id=volunteer.id,
+        tenant_id=volunteer.tenant_id,
+        email=volunteer.email,
+        first_name=volunteer.first_name,
+        last_name=volunteer.last_name,
+        full_name=volunteer.full_name,
+        phone=volunteer.phone,
+        status=volunteer.status,
+        role=volunteer.role,
+        skills=volunteer.skills,
+        availability=volunteer.availability,
+        notes=volunteer.notes,
+        emergency_contact_name=volunteer.emergency_contact_name,
+        emergency_contact_phone=volunteer.emergency_contact_phone,
+        tshirt_size=volunteer.tshirt_size,
+        application_date=volunteer.application_date,
+        approved_date=volunteer.approved_date,
+        total_hours=volunteer.total_hours,
+        created_at=volunteer.created_at,
+        updated_at=volunteer.updated_at,
+        conference_ids=conf_ids,
+    )
