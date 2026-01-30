@@ -6,14 +6,32 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.core.validators import validate_phone
+
 
 class ContactPerson(BaseModel):
-    """Schema for a contact person."""
+    """Schema for a contact person (used for create/update with validation)."""
 
-    name: str = Field(..., min_length=1, max_length=255)
+    first_name: str = Field(..., min_length=1, max_length=255)
+    last_name: str = Field(default="", max_length=255)
     email: str | None = Field(None, max_length=255)
     phone: str | None = Field(None, max_length=50)
     role: str | None = Field(None, max_length=100)  # e.g., "Manager", "Technical Contact"
+
+    @field_validator("phone")
+    @classmethod
+    def check_phone(cls, v: str | None) -> str | None:
+        return validate_phone(v)
+
+
+class ContactPersonResponse(BaseModel):
+    """Schema for contact person in responses (no validation on read)."""
+
+    first_name: str
+    last_name: str = ""
+    email: str | None = None
+    phone: str | None = None
+    role: str | None = None
 
 
 class TenantBase(BaseModel):
@@ -57,7 +75,8 @@ class TenantCreate(TenantBase):
     # Optional: create admin user for tenant
     admin_email: EmailStr | None = None
     admin_password: str | None = Field(None, min_length=8, max_length=128)
-    admin_name: str | None = None
+    admin_first_name: str | None = None
+    admin_last_name: str | None = None
 
 
 class TenantUpdate(BaseModel):
@@ -118,7 +137,7 @@ class TenantResponse(BaseModel):
     website: str | None
 
     # Contact persons
-    contact_persons: list[ContactPerson]
+    contact_persons: list[ContactPersonResponse]
 
     # Comments
     comments: str | None

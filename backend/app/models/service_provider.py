@@ -4,16 +4,16 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, DateTime, ForeignKey, func, Text, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.models.tenant import Tenant
-    from app.models.location import Location
     from app.models.conference import Conference
+    from app.models.location import Location
+    from app.models.tenant import Tenant
 
 
 class ServiceProvider(Base):
@@ -46,6 +46,22 @@ class ServiceProvider(Base):
     # Basic Information
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     service_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Contact info
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    website: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # Address
+    address_line1: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    address_line2: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    state: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # VAT
+    vat_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # Contact persons
     # Structure: [{"name": "John", "email": "john@ex.com", "phone": "+123", "comment": "AV tech lead"}, ...]

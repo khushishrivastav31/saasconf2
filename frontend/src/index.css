@@ -5,3 +5,29 @@
 body {
   @apply bg-gray-50 text-gray-900;
 }
+
+/* Tiptap / ProseMirror editor styles */
+.ProseMirror {
+  @apply outline-none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  @apply text-gray-400 float-left pointer-events-none h-0;
+  content: attr(data-placeholder);
+}
+
+.ProseMirror ul {
+  @apply list-disc pl-5;
+}
+
+.ProseMirror ol {
+  @apply list-decimal pl-5;
+}
+
+.ProseMirror p {
+  @apply my-1;
+}
+
+.ProseMirror a {
+  @apply text-primary-600 underline;
+}

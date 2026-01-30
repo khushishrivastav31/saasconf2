@@ -1,9 +1,10 @@
 """User schemas."""
 
+import re
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.user import UserRole
 
@@ -12,7 +13,9 @@ class UserBase(BaseModel):
     """Base user schema."""
 
     email: EmailStr
-    full_name: str | None = Field(None, max_length=255)
+    first_name: str | None = Field(None, max_length=255)
+    last_name: str | None = Field(None, max_length=255)
+    pronouns: str | None = Field(None, max_length=100)
     role: str = Field(default=UserRole.USER.value)
 
 
@@ -22,15 +25,45 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=128)
     tenant_id: UUID | None = None  # None for super admin
 
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+        return v
+
 
 class UserUpdate(BaseModel):
     """Schema for updating a user."""
 
     email: EmailStr | None = None
-    full_name: str | None = Field(None, max_length=255)
+    first_name: str | None = Field(None, max_length=255)
+    last_name: str | None = Field(None, max_length=255)
+    pronouns: str | None = Field(None, max_length=100)
     role: str | None = None
     is_active: bool | None = None
     password: str | None = Field(None, min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+        return v
 
 
 class UserInDB(UserBase):
@@ -62,8 +95,23 @@ class TenantUserCreate(BaseModel):
 
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
-    full_name: str | None = Field(None, max_length=255)
+    first_name: str | None = Field(None, max_length=255)
+    last_name: str | None = Field(None, max_length=255)
+    pronouns: str | None = Field(None, max_length=100)
     role: str = Field(default=UserRole.USER.value)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+        return v
 
     @property
     def is_valid_role(self) -> bool:
@@ -76,7 +124,9 @@ class TenantUserResponse(BaseModel):
 
     id: UUID
     email: str
-    full_name: str | None
+    first_name: str | None
+    last_name: str | None
+    pronouns: str | None
     role: str
     is_active: bool
     last_login: datetime | None

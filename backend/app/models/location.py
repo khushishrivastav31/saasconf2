@@ -5,16 +5,16 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, Boolean, DateTime, ForeignKey, func, Text, Index, Integer
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.models.tenant import Tenant
     from app.models.conference import Conference
     from app.models.service_provider import ServiceProvider
+    from app.models.tenant import Tenant
 
 
 class LocationType(str, Enum):
@@ -79,6 +79,13 @@ class Location(Base):
     # Amenities and features
     amenities: Mapped[list] = mapped_column(JSONB, default=list)  # ["wifi", "projector", "whiteboard"]
     accessibility_features: Mapped[list] = mapped_column(JSONB, default=list)  # ["wheelchair", "hearing_loop"]
+
+    # Contact info
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    website: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # VAT
+    vat_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # Virtual location details
     virtual_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

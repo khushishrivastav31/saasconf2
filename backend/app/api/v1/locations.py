@@ -2,28 +2,31 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
+    TenantAdminDep,
     get_client_ip,
+    require_module,
 )
 from app.core.exceptions import NotFoundError, ValidationError
-from app.models.audit import AuditLog
-from app.models.location import Location
-from app.models.conference import Conference
+from app.core.pagination import paginate
 from app.models.associations import ConferenceLocation
+from app.models.audit import AuditLog
+from app.models.conference import Conference
+from app.models.location import Location
 from app.models.settings import TenantLocationType
 from app.schemas.location import (
     LocationCreate,
     LocationListResponse,
     LocationResponse,
-    LocationUpdate,
     LocationStats,
-    LocationTypeCount,
     LocationTreeResponse,
+    LocationTypeCount,
+    LocationUpdate,
 )
 
 router = APIRouter()
@@ -57,6 +60,9 @@ def build_location_response(
         longitude=location.longitude,
         building=location.building,
         floor=location.floor,
+        phone=location.phone,
+        website=location.website,
+        vat_number=location.vat_number,
         amenities=location.amenities,
         accessibility_features=location.accessibility_features,
         virtual_url=location.virtual_url,
@@ -71,7 +77,7 @@ def build_location_response(
     )
 
 
-@router.get("", response_model=LocationListResponse)
+@router.get("", response_model=LocationListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_locations(
     current_user: CurrentUserDep,
     db: DbSessionDep,
@@ -88,9 +94,6 @@ async def list_locations(
 
     Requires the 'locations' module.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
-
     query = select(Location).where(Location.tenant_id == current_user.tenant_id)
 
     if conference_id:
@@ -118,16 +121,9 @@ async def list_locations(
         )
         query = query.where(search_filter)
 
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    # Apply pagination
-    query = query.offset((page - 1) * page_size).limit(page_size)
     query = query.order_by(Location.name)
-
-    result = await db.execute(query)
-    locations = result.scalars().all()
+    result = await paginate(db, query, page, page_size)
+    locations = result.items
 
     # Batch-query conference_ids and children counts
     loc_ids = [loc.id for loc in locations]
@@ -151,14 +147,14 @@ async def list_locations(
 
     return LocationListResponse(
         items=items,
-        total=total,
+        total=result.total,
         page=page,
         page_size=page_size,
-        pages=(total + page_size - 1) // page_size,
+        pages=(result.total + page_size - 1) // page_size,
     )
 
 
-@router.get("/tree", response_model=list[LocationTreeResponse])
+@router.get("/tree", response_model=list[LocationTreeResponse], dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_location_tree(
     current_user: CurrentUserDep,
     db: DbSessionDep,
@@ -168,8 +164,6 @@ async def get_location_tree(
 
     Returns top-level locations with nested children.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     # Get all locations for this tenant
     result = await db.execute(
@@ -180,7 +174,6 @@ async def get_location_tree(
     all_locations = result.scalars().all()
 
     # Build tree structure
-    location_map = {loc.id: loc for loc in all_locations}
     root_locations = []
 
     def build_tree(location: Location) -> LocationTreeResponse:
@@ -225,14 +218,12 @@ async def get_location_tree(
     return root_locations
 
 
-@router.get("/stats", response_model=LocationStats)
+@router.get("/stats", response_model=LocationStats, dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_location_stats(
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> LocationStats:
     """Get location statistics for the current tenant."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     base_query = select(Location).where(Location.tenant_id == current_user.tenant_id)
 
@@ -282,16 +273,14 @@ async def get_location_stats(
     )
 
 
-@router.post("", response_model=LocationResponse, status_code=201)
+@router.post("", response_model=LocationResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
 async def create_location(
     location_data: LocationCreate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> LocationResponse:
     """Create a new location."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     # Validate conference exists and belongs to tenant
     conf_result = await db.execute(
@@ -389,15 +378,13 @@ async def create_location(
     return build_location_response(location, conference_ids=[location_data.conference_id])
 
 
-@router.get("/{location_id}", response_model=LocationResponse)
+@router.get("/{location_id}", response_model=LocationResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_location(
     location_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> LocationResponse:
     """Get location by ID."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Location).where(
@@ -427,17 +414,15 @@ async def get_location(
     return build_location_response(location, children_count, conf_ids)
 
 
-@router.put("/{location_id}", response_model=LocationResponse)
+@router.put("/{location_id}", response_model=LocationResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def update_location(
     location_id: UUID,
     location_data: LocationUpdate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> LocationResponse:
     """Update location details."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Location).where(
@@ -453,7 +438,7 @@ async def update_location(
     update_data = location_data.model_dump(exclude_unset=True)
 
     # Validate parent if changing
-    if "parent_id" in update_data and update_data["parent_id"]:
+    if update_data.get("parent_id"):
         if update_data["parent_id"] == location_id:
             raise ValidationError("A location cannot be its own parent")
         parent = await db.execute(
@@ -512,16 +497,14 @@ async def update_location(
     return build_location_response(location, children_count, conf_ids)
 
 
-@router.delete("/{location_id}")
+@router.delete("/{location_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def delete_location(
     location_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a location."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Location).where(

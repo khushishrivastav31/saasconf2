@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useSearchParams, useParams } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -6,13 +6,65 @@ import AdminLayout from "./components/layout/AdminLayout";
 import Tenants from "./pages/admin/Tenants";
 import Modules from "./pages/admin/Modules";
 import AuditLogs from "./pages/admin/AuditLogs";
+import Settings from "./pages/admin/Settings";
 import Volunteers from "./pages/modules/Volunteers";
 import Locations from "./pages/modules/Locations";
 import CallForPapers from "./pages/modules/CallForPapers";
+import {
+  CFPLayout,
+  CFPTopics,
+  CFPProgramCommittee,
+  CFPApplicants,
+  CFPPapers,
+  CFPEvaluatedPapers,
+  CFPSelectedPapers,
+  CFPAssignments,
+} from "./pages/modules/cfp";
 import Conferences from "./pages/Conferences";
 import ConferenceDetail from "./pages/ConferenceDetail";
-import Settings from "./pages/admin/Settings";
 import ComingSoon from "./pages/modules/ComingSoon";
+import Team from "./pages/Team";
+
+// Portal (public-facing CFP applicant pages)
+import { ApplicantAuthProvider } from "./contexts/ApplicantAuthContext";
+import LoginPage from "./pages/portal/LoginPage";
+import RegisterPage from "./pages/portal/RegisterPage";
+import VerifyEmailPage from "./pages/portal/VerifyEmailPage";
+import PortalLayout from "./pages/portal/PortalLayout";
+import DashboardPage from "./pages/portal/DashboardPage";
+import SubmitPaperPage from "./pages/portal/SubmitPaperPage";
+import PaperDetailPage from "./pages/portal/PaperDetailPage";
+import ProfilePage from "./pages/portal/ProfilePage";
+import InvitationsPage from "./pages/portal/InvitationsPage";
+import AssignedPapersTab from "./pages/portal/AssignedPapersTab";
+import EvaluatedPapersTab from "./pages/portal/EvaluatedPapersTab";
+import InfoPage from "./pages/portal/InfoPage";
+
+function LegacyVerifyEmailRedirect() {
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+  const slug = tenantSlug || "";
+  const target = token
+    ? `/${slug}/portal/user/verify-email?token=${token}`
+    : `/${slug}/portal/user/verify-email`;
+  return <Navigate to={target} replace />;
+}
+
+function LegacyLoginRedirect() {
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  return <Navigate to={`/${tenantSlug}/portal/user/login`} replace />;
+}
+
+function LegacyRegisterRedirect() {
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  return <Navigate to={`/${tenantSlug}/portal/user/register`} replace />;
+}
+
+function LegacyCFPPortalRedirect() {
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
+  return <Navigate to={`/${tenantSlug}/portal/dashboard`} replace />;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -42,16 +94,6 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function TenantAdminRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-
-  if (user?.role !== "super_admin" && user?.role !== "tenant_admin") {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <>{children}</>;
-}
-
 function ModuleRoute({
   children,
   moduleCode,
@@ -68,6 +110,16 @@ function ModuleRoute({
 
   // Check if user has the module assigned
   if (!user?.modules?.includes(moduleCode)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function TenantAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+
+  if (user?.role !== "tenant_admin" && user?.role !== "super_admin") {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -115,17 +167,24 @@ function App() {
             </AdminRoute>
           }
         />
-
-        {/* Tenant admin routes */}
         <Route
           path="admin/settings"
           element={
-            <TenantAdminRoute>
+            <AdminRoute>
               <Settings />
-            </TenantAdminRoute>
+            </AdminRoute>
           }
         />
 
+        {/* Team management (tenant admin) */}
+        <Route
+          path="team"
+          element={
+            <TenantAdminRoute>
+              <Team />
+            </TenantAdminRoute>
+          }
+        />
         {/* Module routes */}
         <Route
           path="modules/conferences"
@@ -163,10 +222,20 @@ function App() {
           path="modules/cfp"
           element={
             <ModuleRoute moduleCode="cfp">
-              <CallForPapers />
+              <CFPLayout />
             </ModuleRoute>
           }
-        />
+        >
+          <Route index element={<CallForPapers />} />
+          <Route path="topics" element={<CFPTopics />} />
+          <Route path="program-committee" element={<CFPProgramCommittee />} />
+          <Route path="applicants" element={<CFPApplicants />} />
+          <Route path="papers" element={<CFPPapers />} />
+          <Route path="evaluated-papers" element={<CFPEvaluatedPapers />} />
+          <Route path="accepted-papers" element={<CFPSelectedPapers filter="accepted" />} />
+          <Route path="rejected-papers" element={<CFPSelectedPapers filter="rejected" />} />
+          <Route path="assignments" element={<CFPAssignments />} />
+        </Route>
         <Route
           path="modules/sessions"
           element={
@@ -216,6 +285,54 @@ function App() {
           }
         />
       </Route>
+
+      {/* CFP Applicant Portal — public routes */}
+      <Route
+        path=":companySlug/portal/user/login"
+        element={
+          <ApplicantAuthProvider>
+            <LoginPage />
+          </ApplicantAuthProvider>
+        }
+      />
+      <Route
+        path=":companySlug/portal/user/register"
+        element={
+          <ApplicantAuthProvider>
+            <RegisterPage />
+          </ApplicantAuthProvider>
+        }
+      />
+      <Route
+        path=":companySlug/portal/user/verify-email"
+        element={<VerifyEmailPage />}
+      />
+
+      {/* CFP Applicant Portal — authenticated routes */}
+      <Route
+        path=":companySlug/portal"
+        element={
+          <ApplicantAuthProvider>
+            <PortalLayout />
+          </ApplicantAuthProvider>
+        }
+      >
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="papers/new" element={<SubmitPaperPage />} />
+        <Route path="papers/:paperId" element={<PaperDetailPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="invitations" element={<InvitationsPage />} />
+        <Route path="assigned-papers" element={<AssignedPapersTab />} />
+        <Route path="evaluated-papers" element={<EvaluatedPapersTab />} />
+        <Route path="info/:conferenceId" element={<InfoPage />} />
+      </Route>
+
+      {/* Legacy redirects for old URLs / emailed links */}
+      <Route path="cfp/:tenantSlug/:abbreviation/login" element={<LegacyLoginRedirect />} />
+      <Route path="cfp/:tenantSlug/:abbreviation/register" element={<LegacyRegisterRedirect />} />
+      <Route path="cfp/:tenantSlug/verify-email" element={<LegacyVerifyEmailRedirect />} />
+      <Route path="cfp/:tenantSlug/portal/*" element={<LegacyCFPPortalRedirect />} />
+      <Route path="cfp/:tenantSlug/:abbreviation" element={<LegacyLoginRedirect />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

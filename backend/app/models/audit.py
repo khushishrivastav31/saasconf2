@@ -4,8 +4,8 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, DateTime, ForeignKey, func, Text, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB, INET
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -105,3 +105,8 @@ class AuditAction:
 
     # Settings
     SETTINGS_UPDATE = "settings.update"
+
+    # Platform currency management
+    PLATFORM_CURRENCY_CREATE = "platform_currency.create"
+    PLATFORM_CURRENCY_UPDATE = "platform_currency.update"
+    PLATFORM_CURRENCY_DELETE = "platform_currency.delete"

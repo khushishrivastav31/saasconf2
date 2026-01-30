@@ -61,7 +61,6 @@ class BaseModule(ABC):
 
         Override to perform initialization tasks.
         """
-        pass
 
     def on_disable(self, tenant_id: str) -> None:
         """
@@ -69,4 +68,3 @@ class BaseModule(ABC):
 
         Override to perform cleanup tasks.
         """
-        pass

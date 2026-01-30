@@ -5,10 +5,9 @@ Revises: 006_conferences
 Create Date: 2026-01-26
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
-
 
 # revision identifiers, used by Alembic.
 revision = "007_conf_associations"

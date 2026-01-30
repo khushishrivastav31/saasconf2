@@ -146,7 +146,7 @@ def decode_token(token: str, token_type: str = "access") -> dict[str, Any]:
         return payload
 
     except JWTError as e:
-        raise AuthenticationError(f"Invalid or expired token: {str(e)}")
+        raise AuthenticationError(f"Invalid or expired token: {e!s}") from e
 
 
 def hash_token(token: str) -> str:

@@ -1,0 +1,183 @@
+"""Platform settings management endpoints (super admin only)."""
+
+from uuid import UUID
+
+from fastapi import APIRouter, Query, Request
+from sqlalchemy import case, select
+
+from app.core.dependencies import CurrentUserDep, DbSessionDep, SuperAdminDep, get_client_ip
+from app.core.exceptions import NotFoundError, ValidationError
+from app.core.pagination import paginate
+from app.models.audit import AuditAction, AuditLog
+from app.models.platform_currency import PlatformCurrency
+from app.schemas.platform_currency import (
+    PlatformCurrencyCreate,
+    PlatformCurrencyListResponse,
+    PlatformCurrencyResponse,
+    PlatformCurrencyUpdate,
+)
+
+router = APIRouter()
+
+
+@router.get("/currencies", response_model=PlatformCurrencyListResponse)
+async def list_platform_currencies(
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    search: str | None = None,
+    is_active: bool | None = None,
+) -> PlatformCurrencyListResponse:
+    """List all platform currencies with pagination."""
+    query = select(PlatformCurrency)
+
+    if search:
+        query = query.where(
+            PlatformCurrency.name.ilike(f"%{search}%")
+            | PlatformCurrency.code.ilike(f"%{search}%")
+        )
+
+    if is_active is not None:
+        query = query.where(PlatformCurrency.is_active == is_active)
+
+    # EUR first, then alphabetical
+    query = query.order_by(
+        case((PlatformCurrency.code == "EUR", 0), else_=1),
+        PlatformCurrency.code.asc(),
+    )
+    result = await paginate(db, query, page, page_size)
+
+    items = [
+        PlatformCurrencyResponse.model_validate(c) for c in result.items
+    ]
+
+    return PlatformCurrencyListResponse(
+        items=items,
+        total=result.total,
+        page=page,
+        page_size=page_size,
+        pages=(result.total + page_size - 1) // page_size,
+    )
+
+
+@router.post("/currencies", response_model=PlatformCurrencyResponse, status_code=201)
+async def create_platform_currency(
+    currency_data: PlatformCurrencyCreate,
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> PlatformCurrencyResponse:
+    """Create a new platform currency."""
+    # Check code uniqueness
+    existing = await db.execute(
+        select(PlatformCurrency).where(PlatformCurrency.code == currency_data.code)
+    )
+    if existing.scalar_one_or_none():
+        raise ValidationError(f"Currency with code '{currency_data.code}' already exists")
+
+    currency = PlatformCurrency(
+        code=currency_data.code,
+        name=currency_data.name,
+        symbol=currency_data.symbol,
+        is_active=currency_data.is_active,
+    )
+    db.add(currency)
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=None,
+        user_id=current_user.user_id,
+        action=AuditAction.PLATFORM_CURRENCY_CREATE,
+        resource_type="platform_currency",
+        resource_id=currency.id,
+        details={"code": currency.code, "name": currency.name},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(currency)
+
+    return PlatformCurrencyResponse.model_validate(currency)
+
+
+@router.put("/currencies/{currency_id}", response_model=PlatformCurrencyResponse)
+async def update_platform_currency(
+    currency_id: UUID,
+    currency_data: PlatformCurrencyUpdate,
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> PlatformCurrencyResponse:
+    """Update a platform currency."""
+    result = await db.execute(
+        select(PlatformCurrency).where(PlatformCurrency.id == currency_id)
+    )
+    currency = result.scalar_one_or_none()
+    if not currency:
+        raise NotFoundError(f"Platform currency with ID '{currency_id}' not found")
+
+    update_data = currency_data.model_dump(exclude_unset=True)
+
+    # If code is changing, check uniqueness
+    if "code" in update_data and update_data["code"] != currency.code:
+        existing = await db.execute(
+            select(PlatformCurrency).where(PlatformCurrency.code == update_data["code"])
+        )
+        if existing.scalar_one_or_none():
+            raise ValidationError(f"Currency with code '{update_data['code']}' already exists")
+
+    for field, value in update_data.items():
+        setattr(currency, field, value)
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=None,
+        user_id=current_user.user_id,
+        action=AuditAction.PLATFORM_CURRENCY_UPDATE,
+        resource_type="platform_currency",
+        resource_id=currency.id,
+        details=update_data,
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(currency)
+
+    return PlatformCurrencyResponse.model_validate(currency)
+
+
+@router.delete("/currencies/{currency_id}", status_code=204)
+async def delete_platform_currency(
+    currency_id: UUID,
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> None:
+    """Delete a platform currency."""
+    result = await db.execute(
+        select(PlatformCurrency).where(PlatformCurrency.id == currency_id)
+    )
+    currency = result.scalar_one_or_none()
+    if not currency:
+        raise NotFoundError(f"Platform currency with ID '{currency_id}' not found")
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=None,
+        user_id=current_user.user_id,
+        action=AuditAction.PLATFORM_CURRENCY_DELETE,
+        resource_type="platform_currency",
+        resource_id=currency.id,
+        details={"code": currency.code, "name": currency.name},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.delete(currency)
+    await db.commit()

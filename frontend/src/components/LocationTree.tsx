@@ -138,7 +138,9 @@ export default function LocationTree({
 
     return (
       <div className="flex flex-col h-full">
-        <div className={`p-3 border-b ${dark ? "border-gray-700" : "border-gray-200"}`}>
+        <div
+          className={`p-3 border-b ${dark ? "border-gray-700" : "border-gray-200"}`}
+        >
           <input
             type="text"
             placeholder="Search locations..."
@@ -153,7 +155,9 @@ export default function LocationTree({
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
           {filtered.length === 0 ? (
-            <p className={`text-xs text-center py-4 ${dark ? "text-gray-500" : "text-gray-400"}`}>
+            <p
+              className={`text-xs text-center py-4 ${dark ? "text-gray-500" : "text-gray-400"}`}
+            >
               {lowerQuery ? "No matching locations" : "No locations"}
             </p>
           ) : (
@@ -193,7 +197,9 @@ export default function LocationTree({
 
   return (
     <div className="flex flex-col h-full">
-      <div className={`p-3 border-b ${dark ? "border-gray-700" : "border-gray-200"}`}>
+      <div
+        className={`p-3 border-b ${dark ? "border-gray-700" : "border-gray-200"}`}
+      >
         <input
           type="text"
           placeholder="Search locations..."
@@ -208,7 +214,9 @@ export default function LocationTree({
       </div>
       <div className="flex-1 overflow-y-auto p-2">
         {filteredNodes.length === 0 ? (
-          <p className={`text-xs text-center py-4 ${dark ? "text-gray-500" : "text-gray-400"}`}>
+          <p
+            className={`text-xs text-center py-4 ${dark ? "text-gray-500" : "text-gray-400"}`}
+          >
             {lowerQuery ? "No matching locations" : "No locations found"}
           </p>
         ) : (
@@ -249,7 +257,9 @@ export default function LocationTree({
                     />
                   </svg>
                   <span className="truncate">{node.conference.name}</span>
-                  <span className={`ml-auto text-xs font-normal ${dark ? "text-gray-500" : "text-gray-400"}`}>
+                  <span
+                    className={`ml-auto text-xs font-normal ${dark ? "text-gray-500" : "text-gray-400"}`}
+                  >
                     {node.locations.length}
                   </span>
                 </button>

@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
 import api from "../../config/api";
+import { useIsAdmin } from "../../hooks/useIsAdmin";
 import ConfirmDialog from "../../components/ConfirmDialog";
-import type { CallForPapers, CFPStats, Conference, PaginatedResponse } from "../../types";
-
-type CFPStatusType = "draft" | "open" | "closed" | "review" | "completed";
-
-const statusColors: Record<CFPStatusType, string> = {
-  draft: "bg-gray-100 text-gray-800",
-  open: "bg-green-100 text-green-800",
-  closed: "bg-red-100 text-red-800",
-  review: "bg-yellow-100 text-yellow-800",
-  completed: "bg-blue-100 text-blue-800",
-};
+import Modal from "../../components/Modal";
+import RichTextEditor from "../../components/common/RichTextEditor";
+import RichTextDisplay from "../../components/common/RichTextDisplay";
+import type {
+  CallForPapers,
+  CFPStats,
+  Conference,
+  PaginatedResponse,
+} from "../../types";
+import { CFP_STATUS_COLORS } from "../../config/statusColors";
 
 export default function CallForPapersPage() {
+  const isAdmin = useIsAdmin();
   const [cfps, setCfps] = useState<CallForPapers[]>([]);
   const [stats, setStats] = useState<CFPStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,10 +33,12 @@ export default function CallForPapersPage() {
     open_date: "",
     close_date: "",
     max_submissions_per_speaker: "",
-    require_abstract: true,
-    require_bio: true,
+    required_speaker_fields: [] as string[],
+    required_paper_fields: [] as string[],
     allowed_formats: [] as string[],
     tracks: [] as string[],
+    is_anonymous_review: false,
+    reviewers_per_paper: "3",
     conference_id: "",
   });
 
@@ -85,6 +88,7 @@ export default function CallForPapersPage() {
     fetchCfps();
     fetchStats();
     fetchConferences();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, statusFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -101,10 +105,12 @@ export default function CallForPapersPage() {
       open_date: "",
       close_date: "",
       max_submissions_per_speaker: "",
-      require_abstract: true,
-      require_bio: true,
+      required_speaker_fields: [],
+      required_paper_fields: [],
       allowed_formats: [],
       tracks: [],
+      is_anonymous_review: false,
+      reviewers_per_paper: "3",
       conference_id: "",
     });
     setShowModal(true);
@@ -119,10 +125,12 @@ export default function CallForPapersPage() {
       close_date: cfp.close_date ? cfp.close_date.slice(0, 16) : "",
       max_submissions_per_speaker:
         cfp.max_submissions_per_speaker?.toString() || "",
-      require_abstract: cfp.require_abstract,
-      require_bio: cfp.require_bio,
+      required_speaker_fields: cfp.required_speaker_fields || [],
+      required_paper_fields: cfp.required_paper_fields || [],
       allowed_formats: cfp.allowed_formats,
       tracks: cfp.tracks,
+      is_anonymous_review: cfp.is_anonymous_review,
+      reviewers_per_paper: cfp.reviewers_per_paper?.toString() || "3",
       conference_id: "",
     });
     setShowModal(true);
@@ -139,10 +147,14 @@ export default function CallForPapersPage() {
         max_submissions_per_speaker: formData.max_submissions_per_speaker
           ? parseInt(formData.max_submissions_per_speaker)
           : null,
-        require_abstract: formData.require_abstract,
-        require_bio: formData.require_bio,
+        required_speaker_fields: formData.required_speaker_fields,
+        required_paper_fields: formData.required_paper_fields,
         allowed_formats: formData.allowed_formats,
         tracks: formData.tracks,
+        is_anonymous_review: formData.is_anonymous_review,
+        reviewers_per_paper: formData.reviewers_per_paper
+          ? parseInt(formData.reviewers_per_paper)
+          : 3,
       };
 
       if (editingCfp) {
@@ -199,12 +211,14 @@ export default function CallForPapersPage() {
             Manage call for papers and review submissions
           </p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
-        >
-          Create CFP
-        </button>
+        {isAdmin && (
+          <button
+            onClick={openCreateModal}
+            className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
+          >
+            Create CFP
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -310,16 +324,14 @@ export default function CallForPapersPage() {
                     {cfp.title}
                   </div>
                   {cfp.description && (
-                    <div className="text-sm text-gray-500 truncate max-w-xs">
-                      {cfp.description}
-                    </div>
+                    <RichTextDisplay content={cfp.description} truncate className="text-sm text-gray-500 max-w-xs" />
                   )}
                 </td>
                 <td className="px-6 py-4">
                   <select
                     value={cfp.status}
                     onChange={(e) => handleStatusChange(cfp, e.target.value)}
-                    className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[cfp.status as CFPStatusType]}`}
+                    className={`text-xs font-medium px-2 py-1 rounded-full ${CFP_STATUS_COLORS[cfp.status as keyof typeof CFP_STATUS_COLORS]}`}
                   >
                     <option value="draft">Draft</option>
                     <option value="open">Open</option>
@@ -348,14 +360,25 @@ export default function CallForPapersPage() {
                     {cfp.submission_count}
                   </span>
                 </td>
+                {isAdmin && (
                 <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
                   <button
                     onClick={() => openEditModal(cfp)}
                     className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
                     title="Edit"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      />
                     </svg>
                   </button>
                   <button
@@ -363,11 +386,22 @@ export default function CallForPapersPage() {
                     className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
                     title="Delete"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                   </button>
                 </td>
+                )}
               </tr>
             ))}
             {cfps.length === 0 && (
@@ -408,170 +442,244 @@ export default function CallForPapersPage() {
       )}
 
       {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b">
-              <h2 className="text-lg font-semibold">
-                {editingCfp ? "Edit Call for Papers" : "Create Call for Papers"}
-              </h2>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editingCfp ? "Edit Call for Papers" : "Create Call for Papers"}
+      >
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {!editingCfp && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Conference *
+              </label>
+              <select
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                value={formData.conference_id}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    conference_id: e.target.value,
+                  })
+                }
+              >
+                <option value="">Select a conference...</option>
+                {conferences.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.abbreviation ? ` (${c.abbreviation})` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {!editingCfp && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Conference *
-                  </label>
-                  <select
-                    required
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                    value={formData.conference_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, conference_id: e.target.value })
-                    }
-                  >
-                    <option value="">Select a conference...</option>
-                    {conferences.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                        {c.abbreviation ? ` (${c.abbreviation})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+          )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Title *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.title}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <RichTextEditor
+              value={formData.description}
+              onChange={(html) =>
+                setFormData({ ...formData, description: html })
+              }
+              rows={3}
+            />
+          </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Open Date
-                  </label>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Open Date
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.open_date}
+                onChange={(e) => {
+                  const newOpen = e.target.value;
+                  const adjustClose = formData.close_date && newOpen && formData.close_date < newOpen;
+                  setFormData({
+                    ...formData,
+                    open_date: newOpen,
+                    ...(adjustClose ? { close_date: newOpen } : {}),
+                  });
+                }}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Close Date
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.close_date}
+                min={formData.open_date}
+                onChange={(e) =>
+                  setFormData({ ...formData, close_date: e.target.value })
+                }
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Max Submissions per Speaker
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={formData.max_submissions_per_speaker}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  max_submissions_per_speaker: e.target.value,
+                })
+              }
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+              placeholder="Leave empty for unlimited"
+            />
+          </div>
+
+          {/* Required Speaker Profile Fields */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-900 mb-3">Required Speaker Profile Fields</h3>
+            <div className="flex flex-wrap gap-4">
+              {[
+                { key: "bio", label: "Short Bio" },
+                { key: "picture", label: "Picture" },
+                { key: "video", label: "Video" },
+                { key: "phone", label: "Phone" },
+                { key: "title", label: "Title / Position" },
+                { key: "company", label: "Company / Organization" },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center">
                   <input
-                    type="datetime-local"
-                    value={formData.open_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, open_date: e.target.value })
-                    }
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    type="checkbox"
+                    checked={formData.required_speaker_fields.includes(key)}
+                    onChange={(e) => {
+                      const fields = e.target.checked
+                        ? [...formData.required_speaker_fields, key]
+                        : formData.required_speaker_fields.filter((f) => f !== key);
+                      setFormData({ ...formData, required_speaker_fields: fields });
+                    }}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Close Date
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.close_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, close_date: e.target.value })
-                    }
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                  />
-                </div>
-              </div>
+                  <span className="ml-2 text-sm text-gray-700">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
 
+          {/* Required Paper Fields */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-900 mb-3">Required Paper Fields</h3>
+            <div className="flex flex-wrap gap-4">
+              {[
+                { key: "abstract_short", label: "Short Abstract" },
+                { key: "abstract_long", label: "Detailed Abstract" },
+                { key: "level", label: "Level" },
+                { key: "learning_objectives", label: "Learning Objectives" },
+                { key: "importance", label: "Why is this important?" },
+                { key: "session_type", label: "Session Type" },
+                { key: "topics", label: "Topics" },
+                { key: "video", label: "Video" },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.required_paper_fields.includes(key)}
+                    onChange={(e) => {
+                      const fields = e.target.checked
+                        ? [...formData.required_paper_fields, key]
+                        : formData.required_paper_fields.filter((f) => f !== key);
+                      setFormData({ ...formData, required_paper_fields: fields });
+                    }}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Review Settings */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-900 mb-3">Review Settings</h3>
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Max Submissions per Speaker
+                  Reviewers per Paper
                 </label>
                 <input
                   type="number"
                   min="1"
-                  value={formData.max_submissions_per_speaker}
+                  max="10"
+                  value={formData.reviewers_per_paper}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      max_submissions_per_speaker: e.target.value,
+                      reviewers_per_paper: e.target.value,
                     })
                   }
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Leave empty for unlimited"
                 />
               </div>
-
-              <div className="flex gap-6">
+              <div className="flex items-end pb-1">
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={formData.require_abstract}
+                    checked={formData.is_anonymous_review}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        require_abstract: e.target.checked,
+                        is_anonymous_review: e.target.checked,
                       })
                     }
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                   <span className="ml-2 text-sm text-gray-700">
-                    Require Abstract
-                  </span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.require_bio}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        require_bio: e.target.checked,
-                      })
-                    }
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    Require Speaker Bio
+                    Anonymous Review
                   </span>
                 </label>
               </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-                >
-                  {editingCfp ? "Save Changes" : "Create CFP"}
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+            >
+              {editingCfp ? "Save Changes" : "Create CFP"}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <ConfirmDialog
         open={!!deleteTarget}

@@ -14,6 +14,8 @@ const MODULE_ORDER = [
   "analytics",
   "volunteers",
   "service_providers",
+  "program",
+  "invoices",
 ];
 
 function sortModules(modules: Module[]): Module[] {

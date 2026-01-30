@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.validators import validate_phone
+
 
 class SocialLinks(BaseModel):
     """Schema for social media links."""
@@ -24,11 +26,17 @@ class TeamMember(BaseModel):
     """Schema for a conference team member."""
 
     user_id: UUID | None = None  # Can link to a user in the system
-    name: str = Field(..., min_length=1, max_length=255)
+    first_name: str = Field(..., min_length=1, max_length=255)
+    last_name: str = Field(default="", max_length=255)
     email: str | None = Field(None, max_length=255)
     phone: str | None = Field(None, max_length=50)
     role: str | None = Field(None, max_length=100)  # e.g., "Conference Chair", "Program Committee"
     is_manager: bool = False  # Whether this person is a conference manager
+
+    @field_validator("phone")
+    @classmethod
+    def check_phone(cls, v: str | None) -> str | None:
+        return validate_phone(v)
 
 
 class ConferenceBase(BaseModel):
@@ -56,7 +64,7 @@ class ConferenceCreate(ConferenceBase):
     city: str | None = Field(None, max_length=100)
     country: str | None = Field(None, max_length=100)
     timezone: str | None = Field(None, max_length=50)
-    is_virtual: bool = False
+    venue_type: str = "onsite"  # onsite, virtual, hybrid
     virtual_platform_url: str | None = Field(None, max_length=500)
 
     # Social links
@@ -99,7 +107,7 @@ class ConferenceUpdate(BaseModel):
     city: str | None = Field(None, max_length=100)
     country: str | None = Field(None, max_length=100)
     timezone: str | None = Field(None, max_length=50)
-    is_virtual: bool | None = None
+    venue_type: str | None = None  # onsite, virtual, hybrid
     virtual_platform_url: str | None = Field(None, max_length=500)
 
     # Social links
@@ -137,7 +145,7 @@ class ConferenceResponse(BaseModel):
     city: str | None
     country: str | None
     timezone: str | None
-    is_virtual: bool
+    venue_type: str
     virtual_platform_url: str | None
 
     # Social links

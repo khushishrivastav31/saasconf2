@@ -1,0 +1,331 @@
+// --- Auth ---
+
+export interface ApplicantLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface ApplicantRegisterRequest {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface ApplicantTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+// --- Profile ---
+
+export interface ApplicantProfile {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  pronouns: string | null;
+  phone: string | null;
+  title: string | null;
+  company: string | null;
+  bio: string | null;
+  social_links: Record<string, string>;
+  needs_accessibility: boolean;
+  accessibility_details: string | null;
+  agrees_to_recording: boolean;
+  picture_url: string | null;
+  video_url: string | null;
+  created_at: string;
+}
+
+export interface ApplicantProfileUpdate {
+  first_name?: string;
+  last_name?: string;
+  pronouns?: string;
+  phone?: string;
+  title?: string;
+  company?: string;
+  bio?: string;
+  social_links?: Record<string, string>;
+  needs_accessibility?: boolean;
+  accessibility_details?: string;
+  agrees_to_recording?: boolean;
+}
+
+// --- Conference / CFP ---
+
+export interface PortalCFP {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  open_date: string | null;
+  close_date: string | null;
+  required_speaker_fields: string[];
+  required_paper_fields: string[];
+  guidelines_for_submissions: string | null;
+  tips_for_submission: string | null;
+  code_of_conduct: string | null;
+  incentives_conditions: string | null;
+  faqs: string | null;
+}
+
+export interface PortalSessionType {
+  id: string;
+  name: string;
+  duration_minutes: number;
+}
+
+export interface PortalConferenceSummary {
+  id: string;
+  name: string;
+  abbreviation: string | null;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  city: string | null;
+  country: string | null;
+  venue_type: "onsite" | "virtual" | "hybrid";
+  logo_url: string | null;
+  cfps: PortalCFP[];
+}
+
+export interface PortalLandingData {
+  conference: PortalConferenceSummary;
+  tenant_name: string;
+}
+
+export interface PortalConferenceDetail {
+  id: string;
+  name: string;
+  abbreviation: string | null;
+  cfps: PortalCFP[];
+  session_types: PortalSessionType[];
+}
+
+// --- Paper ---
+
+export interface PortalCospeaker {
+  applicant_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  invitation_status: string;
+  invited_at: string | null;
+  responded_at: string | null;
+}
+
+export interface PortalPaper {
+  id: string;
+  cfp_id: string;
+  cfp_title: string | null;
+  conference_id: string | null;
+  conference_name: string | null;
+  session_type_id: string | null;
+  session_type_name: string | null;
+  title: string;
+  abstract_short: string | null;
+  abstract_long: string | null;
+  level: string | null;
+  learning_objectives: string | null;
+  importance: string | null;
+  status: string;
+  video_url: string | null;
+  is_main_speaker: boolean;
+  main_speaker_first_name: string | null;
+  main_speaker_last_name: string | null;
+  cospeakers: PortalCospeaker[];
+  submitted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PortalPaperListResponse {
+  items: PortalPaper[];
+  total: number;
+}
+
+export interface PortalPaperCreateRequest {
+  cfp_id: string;
+  session_type_id?: string;
+  title: string;
+  abstract_short?: string;
+  abstract_long?: string;
+  level?: string;
+  learning_objectives?: string;
+  importance?: string;
+  cospeaker_emails?: string[];
+}
+
+export interface PortalPaperUpdateRequest {
+  session_type_id?: string;
+  title?: string;
+  abstract_short?: string;
+  abstract_long?: string;
+  level?: string;
+  learning_objectives?: string;
+  importance?: string;
+  cospeaker_emails?: string[];
+}
+
+// --- Invitation ---
+
+export interface PortalInvitation {
+  paper_id: string;
+  paper_title: string;
+  cfp_title: string | null;
+  conference_name: string | null;
+  main_speaker_first_name: string;
+  main_speaker_last_name: string;
+  main_speaker_email: string;
+  invitation_status: string;
+  invited_at: string | null;
+}
+
+export interface PortalInvitationListResponse {
+  items: PortalInvitation[];
+  total: number;
+}
+
+// --- Committee Membership ---
+
+export interface PortalTopic {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+export interface PortalCommitteeMembership {
+  id: string;
+  conference_id: string;
+  conference_name: string;
+  role: string;
+  topics: PortalTopic[];
+  created_at: string;
+}
+
+export interface PortalCommitteeMembershipListResponse {
+  items: PortalCommitteeMembership[];
+  total: number;
+}
+
+// --- Assigned Paper (committee member view) ---
+
+export interface PortalAssignedPaper {
+  id: string;
+  assignment_id: string;
+  is_anonymous: boolean;
+  assigned_at: string;
+  conference_id: string | null;
+  conference_name: string | null;
+  cfp_id: string;
+  cfp_title: string | null;
+  title: string;
+  abstract_short: string | null;
+  abstract_long: string | null;
+  level: string | null;
+  learning_objectives: string | null;
+  importance: string | null;
+  status: string;
+  session_type_name: string | null;
+  topics: PortalTopic[];
+  video_url: string | null;
+  main_speaker_first_name: string | null;
+  main_speaker_last_name: string | null;
+  cospeakers: PortalCospeaker[];
+  review_status: string | null;
+}
+
+export interface PortalAssignedPaperListResponse {
+  items: PortalAssignedPaper[];
+  total: number;
+}
+
+// --- Review Config (for reviewer form) ---
+
+export interface PortalReviewScaleOption {
+  id: string;
+  label: string;
+  numeric_value: number | null;
+  is_unsure: boolean;
+  display_order: number;
+}
+
+export interface PortalReviewScale {
+  id: string;
+  name: string;
+  scale_type: string;
+  options: PortalReviewScaleOption[];
+}
+
+export interface PortalReviewQuestion {
+  id: string;
+  text: string;
+  help_text: string | null;
+  question_type: string;
+  weight: number;
+  comment_requirement: string;
+  low_score_threshold: number | null;
+  count_in_score: boolean;
+  display_order: number;
+  scale: PortalReviewScale | null;
+}
+
+export interface PortalReviewCriterion {
+  id: string;
+  title: string;
+  description: string | null;
+  display_order: number;
+  questions: PortalReviewQuestion[];
+}
+
+export interface PortalReviewAnswer {
+  question_id: string;
+  selected_option_id: string | null;
+  comment: string | null;
+}
+
+export interface PortalExistingReview {
+  id: string;
+  status: string;
+  total_score: number | null;
+  speaker_feedback: string | null;
+  internal_comment: string | null;
+  answers: PortalReviewAnswer[];
+  submitted_at: string | null;
+}
+
+export interface PortalReviewFormSettings {
+  enable_speaker_feedback: boolean;
+  enable_internal_comment: boolean;
+}
+
+export interface PortalReviewConfig {
+  criteria: PortalReviewCriterion[];
+  existing_review: PortalExistingReview | null;
+  form_settings: PortalReviewFormSettings;
+}
+
+export interface PortalReviewSubmitRequest {
+  answers: {
+    question_id: string;
+    selected_option_id?: string | null;
+    comment?: string | null;
+  }[];
+  speaker_feedback?: string | null;
+  internal_comment?: string | null;
+}
+
+// --- Speaker Feedback ---
+
+export interface PortalSpeakerFeedback {
+  speaker_feedback: string;
+  total_score: number | null;
+}
+
+export interface PortalSpeakerFeedbackListResponse {
+  items: PortalSpeakerFeedback[];
+  total: number;
+}

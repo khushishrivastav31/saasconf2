@@ -4,10 +4,9 @@ Revision ID: 011_service_providers
 Revises: 010_location_contact_persons
 Create Date: 2026-01-26
 """
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-
+from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 # revision identifiers, used by Alembic.
 revision = "011_service_providers"

@@ -2,65 +2,60 @@
 
 from app.schemas.auth import (
     LoginRequest,
-    TokenResponse,
     RefreshRequest,
+    TokenResponse,
     UserResponse,
-)
-from app.schemas.tenant import (
-    TenantCreate,
-    TenantUpdate,
-    TenantResponse,
-    TenantListResponse,
-)
-from app.schemas.user import (
-    UserCreate,
-    UserUpdate,
-    UserInDB,
-)
-from app.schemas.module import (
-    ModuleCreate,
-    ModuleUpdate,
-    ModuleResponse,
-    TenantModuleAssign,
-    TenantModuleResponse,
 )
 from app.schemas.conference import (
     ConferenceCreate,
-    ConferenceUpdate,
-    ConferenceResponse,
     ConferenceListResponse,
+    ConferenceResponse,
     ConferenceStats,
-    TeamMember,
+    ConferenceUpdate,
     SocialLinks,
+    TeamMember,
+)
+from app.schemas.module import (
+    ModuleCreate,
+    ModuleResponse,
+    ModuleUpdate,
+    TenantModuleAssign,
+    TenantModuleResponse,
+)
+from app.schemas.tenant import (
+    TenantCreate,
+    TenantListResponse,
+    TenantResponse,
+    TenantUpdate,
+)
+from app.schemas.user import (
+    UserCreate,
+    UserInDB,
+    UserUpdate,
 )
 
 __all__ = [
-    # Auth
+    "ConferenceCreate",
+    "ConferenceListResponse",
+    "ConferenceResponse",
+    "ConferenceStats",
+    "ConferenceUpdate",
     "LoginRequest",
-    "TokenResponse",
-    "RefreshRequest",
-    "UserResponse",
-    # Tenant
-    "TenantCreate",
-    "TenantUpdate",
-    "TenantResponse",
-    "TenantListResponse",
-    # User
-    "UserCreate",
-    "UserUpdate",
-    "UserInDB",
-    # Module
     "ModuleCreate",
-    "ModuleUpdate",
     "ModuleResponse",
+    "ModuleUpdate",
+    "RefreshRequest",
+    "SocialLinks",
+    "TeamMember",
+    "TenantCreate",
+    "TenantListResponse",
     "TenantModuleAssign",
     "TenantModuleResponse",
-    # Conference
-    "ConferenceCreate",
-    "ConferenceUpdate",
-    "ConferenceResponse",
-    "ConferenceListResponse",
-    "ConferenceStats",
-    "TeamMember",
-    "SocialLinks",
+    "TenantResponse",
+    "TenantUpdate",
+    "TokenResponse",
+    "UserCreate",
+    "UserInDB",
+    "UserResponse",
+    "UserUpdate",
 ]

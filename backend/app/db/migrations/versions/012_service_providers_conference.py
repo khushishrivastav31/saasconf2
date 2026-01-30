@@ -4,10 +4,9 @@ Revision ID: 012_service_providers_conference
 Revises: 011_service_providers
 Create Date: 2026-01-27
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
-
 
 # revision identifiers, used by Alembic.
 revision = "012_service_providers_conference"

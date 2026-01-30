@@ -1,5 +1,8 @@
 import { useState } from "react";
 import type { LocationContactPerson } from "../types";
+import RichTextEditor from "./common/RichTextEditor";
+import RichTextDisplay from "./common/RichTextDisplay";
+import { validatePhone } from "../utils/validators";
 
 interface ContactPersonListProps {
   contacts: LocationContactPerson[];
@@ -23,20 +26,25 @@ export default function ContactPersonList({
 }: ContactPersonListProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editData, setEditData] = useState<LocationContactPerson>({
-    name: "",
+    first_name: "",
+    last_name: "",
     email: "",
     phone: "",
     comment: "",
   });
+  const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
+  const [newPhoneError, setNewPhoneError] = useState<string | null>(null);
 
   const startEditing = (index: number) => {
     const contact = contacts[index];
     setEditData({
-      name: contact.name,
+      first_name: contact.first_name,
+      last_name: contact.last_name,
       email: contact.email || "",
       phone: contact.phone || "",
       comment: contact.comment || "",
     });
+    setEditPhoneError(null);
     setEditingIndex(index);
   };
 
@@ -45,7 +53,7 @@ export default function ContactPersonList({
   };
 
   const saveEditing = () => {
-    if (editingIndex !== null && updateContact && editData.name.trim()) {
+    if (editingIndex !== null && updateContact && editData.first_name.trim() && editData.last_name.trim() && !editPhoneError) {
       updateContact(editingIndex, { ...editData });
       setEditingIndex(null);
     }
@@ -70,15 +78,26 @@ export default function ContactPersonList({
                 {editingIndex === index ? (
                   /* Inline edit form */
                   <div className="space-y-3">
-                    <input
-                      type="text"
-                      placeholder="Name *"
-                      className={inputClass}
-                      value={editData.name}
-                      onChange={(e) =>
-                        setEditData({ ...editData, name: e.target.value })
-                      }
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        placeholder="First Name *"
+                        className={inputClass}
+                        value={editData.first_name}
+                        onChange={(e) =>
+                          setEditData({ ...editData, first_name: e.target.value })
+                        }
+                      />
+                      <input
+                        type="text"
+                        placeholder="Last Name *"
+                        className={inputClass}
+                        value={editData.last_name}
+                        onChange={(e) =>
+                          setEditData({ ...editData, last_name: e.target.value })
+                        }
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <input
                         type="email"
@@ -89,30 +108,34 @@ export default function ContactPersonList({
                           setEditData({ ...editData, email: e.target.value })
                         }
                       />
-                      <input
-                        type="tel"
-                        placeholder="Phone"
-                        className={inputClass}
-                        value={editData.phone}
-                        onChange={(e) =>
-                          setEditData({ ...editData, phone: e.target.value })
-                        }
-                      />
+                      <div>
+                        <input
+                          type="tel"
+                          placeholder="+491234545 or 00491234566"
+                          className={`${inputClass} ${editPhoneError ? "border-red-300" : ""}`}
+                          value={editData.phone}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setEditData({ ...editData, phone: value });
+                            setEditPhoneError(validatePhone(value));
+                          }}
+                        />
+                        {editPhoneError && <p className="mt-1 text-xs text-red-600">{editPhoneError}</p>}
+                      </div>
                     </div>
-                    <textarea
+                    <RichTextEditor
+                      value={editData.comment}
+                      onChange={(html) =>
+                        setEditData({ ...editData, comment: html })
+                      }
                       rows={2}
                       placeholder="Comment or notes..."
-                      className={`${inputClass} resize-none`}
-                      value={editData.comment}
-                      onChange={(e) =>
-                        setEditData({ ...editData, comment: e.target.value })
-                      }
                     />
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={saveEditing}
-                        disabled={!editData.name.trim()}
+                        disabled={!editData.first_name.trim() || !editData.last_name.trim() || !!editPhoneError}
                         className="px-3 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
                         Save
@@ -132,11 +155,11 @@ export default function ContactPersonList({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
                         <div className="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-sm font-medium">
-                          {contact.name.charAt(0).toUpperCase()}
+                          {(contact.first_name?.charAt(0) || "").toUpperCase()}{(contact.last_name?.charAt(0) || "").toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-900">
-                            {contact.name}
+                            {[contact.first_name, contact.last_name].filter(Boolean).join(" ")}
                           </p>
                           <div className="flex items-center gap-3 text-xs text-gray-500">
                             {contact.email && (
@@ -180,7 +203,7 @@ export default function ContactPersonList({
                       </div>
                       {contact.comment && (
                         <div className="mt-2 ml-11 text-sm text-gray-600 bg-white border border-gray-100 rounded px-3 py-1.5">
-                          {contact.comment}
+                          <RichTextDisplay content={contact.comment} />
                         </div>
                       )}
                     </div>
@@ -241,15 +264,26 @@ export default function ContactPersonList({
           Add New Contact
         </h4>
         <div className="space-y-3">
-          <input
-            type="text"
-            placeholder="Name *"
-            className={inputClass}
-            value={newContact.name}
-            onChange={(e) =>
-              setNewContact({ ...newContact, name: e.target.value })
-            }
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="text"
+              placeholder="First Name *"
+              className={inputClass}
+              value={newContact.first_name}
+              onChange={(e) =>
+                setNewContact({ ...newContact, first_name: e.target.value })
+              }
+            />
+            <input
+              type="text"
+              placeholder="Last Name *"
+              className={inputClass}
+              value={newContact.last_name}
+              onChange={(e) =>
+                setNewContact({ ...newContact, last_name: e.target.value })
+              }
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <input
               type="email"
@@ -260,30 +294,37 @@ export default function ContactPersonList({
                 setNewContact({ ...newContact, email: e.target.value })
               }
             />
-            <input
-              type="tel"
-              placeholder="Phone"
-              className={inputClass}
-              value={newContact.phone}
-              onChange={(e) =>
-                setNewContact({ ...newContact, phone: e.target.value })
-              }
-            />
+            <div>
+              <input
+                type="tel"
+                placeholder="+491234545 or 00491234566"
+                className={`${inputClass} ${newPhoneError ? "border-red-300" : ""}`}
+                value={newContact.phone}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setNewContact({ ...newContact, phone: value });
+                  setNewPhoneError(validatePhone(value));
+                }}
+              />
+              {newPhoneError && <p className="mt-1 text-xs text-red-600">{newPhoneError}</p>}
+            </div>
           </div>
-          <textarea
+          <RichTextEditor
+            value={newContact.comment}
+            onChange={(html) =>
+              setNewContact({ ...newContact, comment: html })
+            }
             rows={2}
             placeholder="Comment or notes..."
-            className={`${inputClass} resize-none`}
-            value={newContact.comment}
-            onChange={(e) =>
-              setNewContact({ ...newContact, comment: e.target.value })
-            }
           />
         </div>
         <button
           type="button"
-          onClick={addContact}
-          disabled={!newContact.name.trim()}
+          onClick={() => {
+            addContact();
+            setNewPhoneError(null);
+          }}
+          disabled={!newContact.first_name.trim() || !newContact.last_name.trim() || !!newPhoneError}
           className="mt-3 inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           + Add Contact

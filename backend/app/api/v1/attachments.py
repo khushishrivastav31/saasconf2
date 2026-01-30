@@ -7,15 +7,34 @@ from fastapi.responses import Response
 from sqlalchemy import select
 
 from app.config import get_settings
-from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip
+from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
-from app.schemas.attachment import AttachmentResponse, AttachmentListResponse
+from app.schemas.attachment import AttachmentListResponse, AttachmentResponse
 
 router = APIRouter()
 
-ALLOWED_ENTITY_TYPES = {"location", "volunteer", "conference", "service_provider"}
+ALLOWED_ENTITY_TYPES = {"location", "volunteer", "conference", "service_provider", "applicant_picture", "applicant_video", "paper_video"}
+
+# Define allowed MIME types per entity type
+ALLOWED_MIME_TYPES: dict[str, set[str]] = {
+    "applicant_picture": {"image/jpeg", "image/png", "image/webp"},
+    "applicant_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
+    "paper_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
+}
+
+# Default allowed types for general attachments
+DEFAULT_ALLOWED_MIME_TYPES = {
+    "image/jpeg", "image/png", "image/webp", "image/gif",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain", "text/csv",
+    "video/mp4", "video/quicktime", "video/webm",
+}
 
 
 @router.get("", response_model=AttachmentListResponse)
@@ -67,7 +86,7 @@ async def list_attachments(
 
 @router.post("", response_model=AttachmentResponse, status_code=201)
 async def upload_attachment(
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
     file: UploadFile = File(...),
@@ -93,6 +112,15 @@ async def upload_attachment(
     if file_size > max_size:
         raise ValidationError(
             f"File size ({file_size // (1024 * 1024)}MB) exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)"
+        )
+
+    # Validate MIME type
+    content_type = file.content_type or "application/octet-stream"
+    allowed_types = ALLOWED_MIME_TYPES.get(entity_type, DEFAULT_ALLOWED_MIME_TYPES)
+    if content_type not in allowed_types:
+        raise ValidationError(
+            f"File type '{content_type}' is not allowed for {entity_type}. "
+            f"Allowed types: {', '.join(sorted(allowed_types))}"
         )
 
     attachment = Attachment(
@@ -178,7 +206,7 @@ async def download_attachment(
 @router.delete("/{attachment_id}")
 async def delete_attachment(
     attachment_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:

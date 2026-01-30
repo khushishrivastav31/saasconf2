@@ -2,7 +2,9 @@
 export interface User {
   id: string;
   email: string;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  pronouns: string | null;
   role: "super_admin" | "tenant_admin" | "user";
   tenant_id: string | null;
   tenant_name: string | null;
@@ -27,7 +29,8 @@ export interface TokenResponse {
 
 // Tenant types
 export interface ContactPerson {
-  name: string;
+  first_name: string;
+  last_name: string;
   email?: string;
   phone?: string;
   role?: string;
@@ -76,7 +79,8 @@ export interface TenantCreate {
   // Admin user
   admin_email?: string;
   admin_password?: string;
-  admin_name?: string;
+  admin_first_name?: string;
+  admin_last_name?: string;
 }
 
 export interface TenantUpdate {
@@ -241,7 +245,8 @@ export interface VolunteerStats {
 export type LocationType = string;
 
 export interface LocationContactPerson {
-  name: string;
+  first_name: string;
+  last_name: string;
   email?: string;
   phone?: string;
   comment?: string;
@@ -267,6 +272,9 @@ export interface Location {
   longitude: number | null;
   building: string | null;
   floor: string | null;
+  phone: string | null;
+  website: string | null;
+  vat_number: string | null;
   amenities: string[];
   accessibility_features: string[];
   virtual_url: string | null;
@@ -297,6 +305,9 @@ export interface LocationCreate {
   longitude?: number;
   building?: string;
   floor?: string;
+  phone?: string;
+  website?: string;
+  vat_number?: string;
   amenities?: string[];
   accessibility_features?: string[];
   virtual_url?: string;
@@ -322,6 +333,9 @@ export interface LocationUpdate {
   longitude?: number;
   building?: string;
   floor?: string;
+  phone?: string;
+  website?: string;
+  vat_number?: string;
   amenities?: string[];
   accessibility_features?: string[];
   virtual_url?: string;
@@ -360,13 +374,22 @@ export interface CallForPapers {
   status: CFPStatus;
   open_date: string | null;
   close_date: string | null;
+  notification_date: string | null;
+  program_announcement_date: string | null;
   max_submissions_per_speaker: number | null;
-  require_abstract: boolean;
-  require_bio: boolean;
+  required_speaker_fields: string[];
+  required_paper_fields: string[];
   allowed_formats: string[];
   tracks: string[];
   custom_fields: Record<string, unknown>;
+  is_anonymous_review: boolean;
+  reviewers_per_paper: number;
   settings: Record<string, unknown>;
+  code_of_conduct: string | null;
+  incentives_conditions: string | null;
+  tips_for_submission: string | null;
+  guidelines_for_submissions: string | null;
+  faqs: string | null;
   submission_count: number;
   created_at: string;
   updated_at: string;
@@ -379,11 +402,20 @@ export interface CFPCreate {
   open_date?: string;
   close_date?: string;
   max_submissions_per_speaker?: number;
-  require_abstract?: boolean;
-  require_bio?: boolean;
+  required_speaker_fields?: string[];
+  required_paper_fields?: string[];
   allowed_formats?: string[];
   tracks?: string[];
   custom_fields?: Record<string, unknown>;
+  is_anonymous_review?: boolean;
+  reviewers_per_paper?: number;
+  notification_date?: string;
+  program_announcement_date?: string;
+  code_of_conduct?: string;
+  incentives_conditions?: string;
+  tips_for_submission?: string;
+  guidelines_for_submissions?: string;
+  faqs?: string;
   conference_id: string;
 }
 
@@ -402,7 +434,8 @@ export interface Submission {
   tenant_id: string;
   cfp_id: string;
   speaker_email: string;
-  speaker_name: string;
+  speaker_first_name: string;
+  speaker_last_name: string;
   speaker_bio: string | null;
   speaker_company: string | null;
   speaker_title: string | null;
@@ -428,7 +461,8 @@ export interface Submission {
 export interface SubmissionCreate {
   cfp_id: string;
   speaker_email: string;
-  speaker_name: string;
+  speaker_first_name: string;
+  speaker_last_name: string;
   speaker_bio?: string;
   speaker_company?: string;
   speaker_title?: string;
@@ -454,11 +488,245 @@ export interface SubmissionStats {
   withdrawn: number;
 }
 
+// CFP Topic types
+export interface CFPTopic {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CFPTopicCreate {
+  name: string;
+  description?: string;
+}
+
+// CFP Committee Member types
+
+export interface CommitteeMember {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  applicant_id: string;
+  role: string;
+  expertise_areas: string[];
+  // Flattened from applicant
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  title: string | null;
+  company: string | null;
+  picture_url: string | null;
+  // Committee-specific
+  topics: CFPTopic[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommitteeMemberCreate {
+  conference_id: string;
+  applicant_id?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  password?: string;
+  role?: string;
+  expertise_areas?: string[];
+  topic_ids?: string[];
+}
+
+// CFP Committee Role settings types
+
+export interface CFPCommitteeRole {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CFPCommitteeRoleCreate {
+  name: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+export interface CFPCommitteeRoleUpdate {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+// CFP Applicant types
+export interface ApplicantSocialLinks {
+  linkedin?: string | null;
+  bluesky?: string | null;
+  mastodon?: string | null;
+  twitter?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  youtube?: string | null;
+  tiktok?: string | null;
+  github?: string | null;
+  website?: string | null;
+}
+
+export interface Applicant {
+  id: string;
+  tenant_id: string;
+  first_name: string;
+  last_name: string;
+  pronouns: string | null;
+  email: string;
+  phone: string | null;
+  title: string | null;
+  company: string | null;
+  bio: string | null;
+  allow_out_of_timeframe: boolean;
+  social_links: ApplicantSocialLinks;
+  needs_accessibility: boolean;
+  accessibility_details: string | null;
+  agrees_to_recording: boolean;
+  picture_url: string | null;
+  video_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApplicantCreate {
+  first_name: string;
+  last_name: string;
+  pronouns?: string;
+  email: string;
+  phone?: string;
+  title?: string;
+  company?: string;
+  bio?: string;
+  allow_out_of_timeframe?: boolean;
+  social_links?: ApplicantSocialLinks;
+  needs_accessibility?: boolean;
+  accessibility_details?: string;
+  agrees_to_recording?: boolean;
+  password: string;
+}
+
+// Paper types
+export type PaperStatus =
+  | "draft"
+  | "submitted"
+  | "in_evaluation"
+  | "evaluated"
+  | "final_consideration"
+  | "rejected"
+  | "accepted";
+
+export type PaperLevel =
+  | "beginner"
+  | "intermediate"
+  | "advanced"
+  | "all_levels";
+
+export type CospeakerInvitationStatus = "pending" | "accepted" | "declined";
+
+export interface Cospeaker {
+  applicant: Applicant;
+  invitation_status: CospeakerInvitationStatus;
+  invited_at: string | null;
+  responded_at: string | null;
+}
+
+export interface PaperComment {
+  id: string;
+  committee_member_id: string | null;
+  committee_member_first_name: string | null;
+  committee_member_last_name: string | null;
+  committee_member_role: string | null;
+  content: string;
+  created_at: string;
+}
+
+export interface Paper {
+  id: string;
+  tenant_id: string;
+  cfp_id: string;
+  cfp_title: string | null;
+  cfp_status: string | null;
+  conference_name: string | null;
+  main_speaker_id: string;
+  main_speaker: Applicant | null;
+  cospeakers: Cospeaker[];
+  session_type_id: string | null;
+  session_type_name: string | null;
+  session_type_duration: number | null;
+  topics: CFPTopic[];
+  title: string;
+  abstract_short: string | null;
+  abstract_long: string | null;
+  level: PaperLevel | null;
+  learning_objectives: string | null;
+  importance: string | null;
+  status: PaperStatus;
+  display_status: PaperStatus | null;
+  video_url: string | null;
+  comments: PaperComment[];
+  submitted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaperCreate {
+  cfp_id: string;
+  main_speaker_id: string;
+  co_speaker_ids?: string[];
+  session_type_id?: string;
+  topic_ids?: string[];
+  title: string;
+  abstract_short?: string;
+  abstract_long?: string;
+  level?: PaperLevel;
+  learning_objectives?: string;
+  importance?: string;
+}
+
+export interface PaperUpdate {
+  main_speaker_id?: string;
+  co_speaker_ids?: string[];
+  session_type_id?: string | null;
+  topic_ids?: string[];
+  title?: string;
+  abstract_short?: string;
+  abstract_long?: string;
+  level?: PaperLevel;
+  learning_objectives?: string;
+  importance?: string;
+  status?: PaperStatus;
+}
+
+export interface PaperStats {
+  total: number;
+  draft: number;
+  submitted: number;
+  in_evaluation: number;
+  evaluated: number;
+  final_consideration: number;
+  rejected: number;
+  accepted: number;
+}
+
 // Tenant User types
 export interface TenantUser {
   id: string;
   email: string;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  pronouns: string | null;
   role: "tenant_admin" | "user";
   is_active: boolean;
   last_login: string | null;
@@ -469,13 +737,17 @@ export interface TenantUser {
 export interface TenantUserCreate {
   email: string;
   password: string;
-  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  pronouns?: string;
   role?: "tenant_admin" | "user";
 }
 
 export interface TenantUserUpdate {
   email?: string;
-  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  pronouns?: string;
   role?: "tenant_admin" | "user";
   is_active?: boolean;
   password?: string;
@@ -499,7 +771,8 @@ export interface SocialLinks {
 
 export interface TeamMember {
   user_id?: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   email?: string;
   phone?: string;
   role?: string;
@@ -523,7 +796,7 @@ export interface Conference {
   city: string | null;
   country: string | null;
   timezone: string | null;
-  is_virtual: boolean;
+  venue_type: "onsite" | "virtual" | "hybrid";
   virtual_platform_url: string | null;
   // Social links
   social_links: SocialLinks;
@@ -556,7 +829,7 @@ export interface ConferenceCreate {
   city?: string;
   country?: string;
   timezone?: string;
-  is_virtual?: boolean;
+  venue_type?: "onsite" | "virtual" | "hybrid";
   virtual_platform_url?: string;
   social_links?: SocialLinks;
   team_members?: TeamMember[];
@@ -576,7 +849,7 @@ export interface ConferenceUpdate {
   city?: string;
   country?: string;
   timezone?: string;
-  is_virtual?: boolean;
+  venue_type?: "onsite" | "virtual" | "hybrid";
   virtual_platform_url?: string;
   social_links?: SocialLinks;
   team_members?: TeamMember[];
@@ -598,10 +871,11 @@ export interface ConferenceAssociationRequest {
   id: string;
 }
 
-// Tenant Settings types
+// Conference Settings types
 export interface VolunteerRole {
   id: string;
   tenant_id: string;
+  conference_id: string;
   name: string;
   description: string | null;
   is_active: boolean;
@@ -624,6 +898,7 @@ export interface VolunteerRoleUpdate {
 export interface TenantLocationType {
   id: string;
   tenant_id: string;
+  conference_id: string;
   name: string;
   slug: string;
   description: string | null;
@@ -644,6 +919,266 @@ export interface TenantLocationTypeUpdate {
   name?: string;
   slug?: string;
   description?: string;
+  is_active?: boolean;
+}
+
+export interface ConferenceCurrency {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  code: string;
+  name: string;
+  symbol: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConferenceCurrencyCreate {
+  code: string;
+  name: string;
+  symbol: string;
+  is_active?: boolean;
+}
+
+export interface ConferenceCurrencyUpdate {
+  code?: string;
+  name?: string;
+  symbol?: string;
+  is_active?: boolean;
+}
+
+export interface SponsorPackage {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  currency: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SponsorPackageCreate {
+  name: string;
+  description?: string;
+  price: number;
+  currency?: string;
+  is_active?: boolean;
+}
+
+export interface SponsorPackageUpdate {
+  name?: string;
+  description?: string;
+  price?: number;
+  currency?: string;
+  is_active?: boolean;
+}
+
+// Session Type types
+export interface SessionType {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  name: string;
+  slug: string;
+  duration_minutes: number;
+  cfp_eligible: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SessionTypeCreate {
+  name: string;
+  slug: string;
+  duration_minutes: number;
+  cfp_eligible?: boolean;
+  is_active?: boolean;
+}
+
+export interface SessionTypeUpdate {
+  name?: string;
+  slug?: string;
+  duration_minutes?: number;
+  cfp_eligible?: boolean;
+  is_active?: boolean;
+}
+
+// Pronoun Option types (conference-scoped settings)
+export interface PronounOption {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PronounOptionCreate {
+  name: string;
+  is_active?: boolean;
+}
+
+export interface PronounOptionUpdate {
+  name?: string;
+  is_active?: boolean;
+}
+
+// Sponsor types
+export interface Sponsor {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  sponsor_package_id: string | null;
+  sponsor_package_name: string | null;
+  company_name: string;
+  phone: string | null;
+  website: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  vat_number: string | null;
+  price: number | null;
+  currency: string | null;
+  comments: string | null;
+  contact_persons: LocationContactPerson[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SponsorCreate {
+  company_name: string;
+  sponsor_package_id?: string;
+  phone?: string;
+  website?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  vat_number?: string;
+  price?: number;
+  currency?: string;
+  comments?: string;
+  contact_persons?: LocationContactPerson[];
+  is_active?: boolean;
+}
+
+export interface SponsorUpdate {
+  company_name?: string;
+  sponsor_package_id?: string | null;
+  phone?: string;
+  website?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  vat_number?: string;
+  price?: number;
+  currency?: string;
+  comments?: string;
+  contact_persons?: LocationContactPerson[];
+  is_active?: boolean;
+}
+
+// Invoice types
+export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
+
+export interface InvoiceLineItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+}
+
+export interface Invoice {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  invoice_number: string;
+  status: InvoiceStatus;
+  issue_date: string | null;
+  due_date: string | null;
+  recipient_name: string;
+  recipient_email: string | null;
+  recipient_address_line1: string | null;
+  recipient_address_line2: string | null;
+  recipient_city: string | null;
+  recipient_state: string | null;
+  recipient_postal_code: string | null;
+  recipient_country: string | null;
+  recipient_vat_number: string | null;
+  line_items: InvoiceLineItem[];
+  subtotal: number | null;
+  tax_rate: number | null;
+  tax_amount: number | null;
+  total: number | null;
+  currency: string | null;
+  notes: string | null;
+  contact_persons: LocationContactPerson[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceCreate {
+  invoice_number: string;
+  status?: InvoiceStatus;
+  issue_date?: string;
+  due_date?: string;
+  recipient_name: string;
+  recipient_email?: string;
+  recipient_address_line1?: string;
+  recipient_address_line2?: string;
+  recipient_city?: string;
+  recipient_state?: string;
+  recipient_postal_code?: string;
+  recipient_country?: string;
+  recipient_vat_number?: string;
+  line_items?: InvoiceLineItem[];
+  subtotal?: number;
+  tax_rate?: number;
+  tax_amount?: number;
+  total?: number;
+  currency?: string;
+  notes?: string;
+  contact_persons?: LocationContactPerson[];
+  is_active?: boolean;
+}
+
+export interface InvoiceUpdate {
+  invoice_number?: string;
+  status?: InvoiceStatus;
+  issue_date?: string;
+  due_date?: string;
+  recipient_name?: string;
+  recipient_email?: string;
+  recipient_address_line1?: string;
+  recipient_address_line2?: string;
+  recipient_city?: string;
+  recipient_state?: string;
+  recipient_postal_code?: string;
+  recipient_country?: string;
+  recipient_vat_number?: string;
+  line_items?: InvoiceLineItem[];
+  subtotal?: number;
+  tax_rate?: number;
+  tax_amount?: number;
+  total?: number;
+  currency?: string;
+  notes?: string;
+  contact_persons?: LocationContactPerson[];
   is_active?: boolean;
 }
 
@@ -672,6 +1207,16 @@ export interface ServiceProvider {
   conference_id: string | null;
   company_name: string;
   service_description: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  vat_number: string | null;
   contact_persons: LocationContactPerson[];
   created_at: string;
   updated_at: string;
@@ -680,13 +1225,332 @@ export interface ServiceProvider {
 export interface ServiceProviderCreate {
   company_name: string;
   service_description?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  vat_number?: string;
   contact_persons?: LocationContactPerson[];
 }
 
 export interface ServiceProviderUpdate {
   company_name?: string;
   service_description?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  vat_number?: string;
   contact_persons?: LocationContactPerson[];
+}
+
+// Platform Currency types (admin settings)
+export interface PlatformCurrency {
+  id: string;
+  code: string;
+  name: string;
+  symbol: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlatformCurrencyCreate {
+  code: string;
+  name: string;
+  symbol: string;
+  is_active?: boolean;
+}
+
+export interface PlatformCurrencyUpdate {
+  code?: string;
+  name?: string;
+  symbol?: string;
+  is_active?: boolean;
+}
+
+// Booking Options types
+export interface BookingPeriod {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  sort_order: number;
+  prices: Record<string, number> | null;
+  currency: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BookingPeriodCreate {
+  name: string;
+  start_date: string;
+  end_date: string;
+  sort_order?: number;
+  prices?: Record<string, number>;
+  currency?: string;
+  is_active?: boolean;
+}
+
+export interface BookingPeriodUpdate {
+  name?: string;
+  start_date?: string;
+  end_date?: string;
+  sort_order?: number;
+  prices?: Record<string, number>;
+  currency?: string;
+  is_active?: boolean;
+}
+
+export interface BookingPackage {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BookingPackageCreate {
+  name: string;
+  description?: string;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface BookingPackageUpdate {
+  name?: string;
+  description?: string;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface BookingMatrix {
+  periods: BookingPeriod[];
+  packages: BookingPackage[];
+}
+
+// Discount Code types
+export interface DiscountCode {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  name: string;
+  code: string;
+  discount_type: "fixed" | "percentage";
+  discount_value: number;
+  currency: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  max_uses: number;
+  usage_count: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DiscountCodeCreate {
+  name: string;
+  code: string;
+  discount_type: "fixed" | "percentage";
+  discount_value: number;
+  currency?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  max_uses?: number;
+  is_active?: boolean;
+}
+
+export interface DiscountCodeUpdate {
+  name?: string;
+  code?: string;
+  discount_type?: "fixed" | "percentage";
+  discount_value?: number;
+  currency?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  max_uses?: number;
+  is_active?: boolean;
+}
+
+// Paper Assignment types
+export interface PaperAssignment {
+  id: string;
+  paper_id: string;
+  paper_title: string;
+  committee_member_id: string;
+  committee_member_first_name: string;
+  committee_member_last_name: string;
+  is_anonymous: boolean;
+  assigned_at: string;
+}
+
+export interface PaperAssignmentCreate {
+  paper_id: string;
+  committee_member_id: string;
+  is_anonymous?: boolean;
+}
+
+export interface PaperAssignmentListResponse {
+  items: PaperAssignment[];
+  total: number;
+}
+
+export interface AutoAssignRequest {
+  conference_id: string;
+  reviewers_per_paper: number;
+  is_anonymous: boolean;
+  only_submitted?: boolean;
+}
+
+export interface AutoAssignResponse {
+  assignments_created: number;
+  papers_processed: number;
+  papers_skipped: number;
+  skipped_details: string[];
+}
+
+// --- Review Score Scales ---
+
+export interface ReviewScaleOption {
+  id: string;
+  label: string;
+  numeric_value: number | null;
+  is_unsure: boolean;
+  display_order: number;
+}
+
+export interface ReviewScoreScale {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  name: string;
+  scale_type: "numeric_range" | "custom" | "binary";
+  is_active: boolean;
+  options: ReviewScaleOption[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewScoreScaleCreate {
+  name: string;
+  scale_type: "numeric_range" | "custom" | "binary";
+  is_active?: boolean;
+  options: Omit<ReviewScaleOption, "id">[];
+}
+
+export interface ReviewScoreScaleUpdate {
+  name?: string;
+  scale_type?: "numeric_range" | "custom" | "binary";
+  is_active?: boolean;
+  options?: Omit<ReviewScaleOption, "id">[];
+}
+
+// --- Review Criteria & Questions ---
+
+export interface ReviewQuestion {
+  id: string;
+  criterion_id: string;
+  text: string;
+  help_text: string | null;
+  question_type: "scored" | "non_scored";
+  score_scale_id: string | null;
+  score_scale: ReviewScoreScale | null;
+  weight: number;
+  comment_requirement: "optional" | "required" | "required_if_low_score";
+  low_score_threshold: number | null;
+  show_to_reviewers: boolean;
+  count_in_score: boolean;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewQuestionCreate {
+  text: string;
+  help_text?: string;
+  question_type?: "scored" | "non_scored";
+  score_scale_id?: string;
+  weight?: number;
+  comment_requirement?: "optional" | "required" | "required_if_low_score";
+  low_score_threshold?: number;
+  show_to_reviewers?: boolean;
+  count_in_score?: boolean;
+  display_order?: number;
+  is_active?: boolean;
+}
+
+export interface ReviewQuestionUpdate {
+  text?: string;
+  help_text?: string;
+  question_type?: "scored" | "non_scored";
+  score_scale_id?: string;
+  weight?: number;
+  comment_requirement?: "optional" | "required" | "required_if_low_score";
+  low_score_threshold?: number;
+  show_to_reviewers?: boolean;
+  count_in_score?: boolean;
+  display_order?: number;
+  is_active?: boolean;
+}
+
+export interface ReviewCriterion {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  title: string;
+  description: string | null;
+  display_order: number;
+  is_active: boolean;
+  questions: ReviewQuestion[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewCriterionCreate {
+  title: string;
+  description?: string;
+  display_order?: number;
+  is_active?: boolean;
+}
+
+export interface ReviewCriterionUpdate {
+  title?: string;
+  description?: string;
+  display_order?: number;
+  is_active?: boolean;
+}
+
+// Review Form Settings types
+export interface ReviewFormSettings {
+  id: string;
+  conference_id: string;
+  enable_speaker_feedback: boolean;
+  enable_internal_comment: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewFormSettingsUpdate {
+  enable_speaker_feedback?: boolean;
+  enable_internal_comment?: boolean;
 }
 
 // Attachment types

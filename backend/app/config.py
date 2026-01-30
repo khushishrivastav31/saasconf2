@@ -1,8 +1,8 @@
 """Application configuration with Pydantic Settings."""
 
 from functools import lru_cache
-from typing import List
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -15,19 +15,19 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://saasconf:password@localhost:5432/saasconf"
+    DATABASE_URL: str = "postgresql+asyncpg://localhost:5432/saasconf"  # No credentials in default
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
 
     # JWT Configuration
-    JWT_SECRET_KEY: str = "your-secret-key-change-in-production"
+    JWT_SECRET_KEY: str  # No default — MUST be set via environment variable
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3002", "http://127.0.0.1:3002"]
 
     # File Upload
     MAX_UPLOAD_SIZE_MB: int = 10
@@ -38,14 +38,22 @@ class Settings(BaseSettings):
 
     # Super Admin (initial setup)
     SUPER_ADMIN_EMAIL: str = "admin@saasconf.com"
-    SUPER_ADMIN_PASSWORD: str = "changeme123"
+    SUPER_ADMIN_PASSWORD: str  # No default — MUST be set via environment variable
+
+    @model_validator(mode="after")
+    def _validate_secrets(self) -> "Settings":
+        if self.JWT_SECRET_KEY in ("", "your-secret-key-change-in-production"):
+            raise ValueError("JWT_SECRET_KEY must be set to a secure random value")
+        if len(self.JWT_SECRET_KEY) < 32:
+            raise ValueError("JWT_SECRET_KEY must be at least 32 characters")
+        return self
 
     class Config:
         env_file = ".env"
         case_sensitive = True
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()

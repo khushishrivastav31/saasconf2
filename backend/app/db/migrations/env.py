@@ -10,9 +10,21 @@ from app.db.base import Base
 
 # Import all models so they are registered with Base.metadata
 from app.models import (  # noqa
-    Tenant, User, Module, TenantModule, AuditLog, RefreshToken,
-    Volunteer, Location, CallForPapers, Submission, Conference,
-    ConferenceVolunteer, ConferenceLocation, ConferenceCFP,
+    AuditLog,
+    CallForPapers,
+    Conference,
+    ConferenceCFP,
+    ConferenceLocation,
+    ConferenceVolunteer,
+    Location,
+    Module,
+    PlatformCurrency,
+    RefreshToken,
+    Submission,
+    Tenant,
+    TenantModule,
+    User,
+    Volunteer,
 )
 
 settings = get_settings()

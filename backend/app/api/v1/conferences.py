@@ -3,44 +3,55 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy import func, literal, select
 
+from app.api.v1.service_providers import build_service_provider_response
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
+    TenantAdminDep,
     get_client_ip,
+    require_module,
 )
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.pagination import paginate
+from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
 from app.models.audit import AuditAction, AuditLog
-from app.models.conference import Conference
-from app.models.volunteer import Volunteer
-from app.models.location import Location
 from app.models.cfp import CallForPapers
-from app.models.associations import ConferenceVolunteer, ConferenceLocation, ConferenceCFP
+from app.models.conference import Conference
+from app.models.location import Location
+from app.models.service_provider import ServiceProvider
+from app.models.volunteer import Volunteer
+from app.schemas.cfp import CFPListResponse, CFPResponse
 from app.schemas.conference import (
     ConferenceAssociationRequest,
     ConferenceCreate,
     ConferenceListResponse,
     ConferenceResponse,
-    ConferenceUpdate,
     ConferenceStats,
+    ConferenceUpdate,
     TeamMember,
 )
-from app.schemas.volunteer import VolunteerResponse, VolunteerListResponse
-from app.schemas.location import LocationResponse, LocationListResponse
-from app.schemas.cfp import CFPResponse, CFPListResponse
-from app.models.service_provider import ServiceProvider
+from app.schemas.location import LocationListResponse, LocationResponse
 from app.schemas.service_provider import (
     ServiceProviderCreate,
-    ServiceProviderUpdate,
-    ServiceProviderResponse,
     ServiceProviderListResponse,
+    ServiceProviderResponse,
+    ServiceProviderUpdate,
 )
+from app.schemas.volunteer import VolunteerListResponse, VolunteerResponse
 
 router = APIRouter()
 
 MODULE_CODE = "conferences"
+
+
+def _tenant_filter(current_user: CurrentUserDep):
+    """Return a tenant filter clause. Super admins bypass the filter."""
+    if current_user.is_super_admin:
+        return literal(True)
+    return Conference.tenant_id == current_user.tenant_id
 
 
 def _build_conference_response(conf: Conference) -> ConferenceResponse:
@@ -63,7 +74,8 @@ def _build_conference_response(conf: Conference) -> ConferenceResponse:
     for tm in (conf.team_members or []):
         team_members.append(TeamMember(
             user_id=tm.get("user_id"),
-            name=tm.get("name", ""),
+            first_name=tm.get("first_name", ""),
+            last_name=tm.get("last_name", ""),
             email=tm.get("email"),
             phone=tm.get("phone"),
             role=tm.get("role"),
@@ -87,7 +99,7 @@ def _build_conference_response(conf: Conference) -> ConferenceResponse:
         city=conf.city,
         country=conf.country,
         timezone=conf.timezone,
-        is_virtual=conf.is_virtual,
+        venue_type=conf.venue_type,
         virtual_platform_url=conf.virtual_platform_url,
         social_links=conf.social_links or {},
         team_members=team_members,
@@ -102,7 +114,7 @@ def _build_conference_response(conf: Conference) -> ConferenceResponse:
     )
 
 
-@router.get("", response_model=ConferenceListResponse)
+@router.get("", response_model=ConferenceListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_conferences(
     current_user: CurrentUserDep,
     db: DbSessionDep,
@@ -117,10 +129,7 @@ async def list_conferences(
 
     Requires the 'conferences' module.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
-
-    query = select(Conference).where(Conference.tenant_id == current_user.tenant_id)
+    query = select(Conference).where(_tenant_filter(current_user))
 
     if is_active is not None:
         query = query.where(Conference.is_active == is_active)
@@ -148,34 +157,26 @@ async def list_conferences(
         elif status == "draft":
             query = query.where(Conference.start_date.is_(None))
 
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    # Apply pagination
-    query = query.offset((page - 1) * page_size).limit(page_size)
     query = query.order_by(Conference.start_date.desc().nulls_last(), Conference.created_at.desc())
+    result = await paginate(db, query, page, page_size)
 
-    result = await db.execute(query)
-    conferences = result.scalars().all()
+    items = [_build_conference_response(conf) for conf in result.items]
 
-    items = [_build_conference_response(conf) for conf in conferences]
-
-    pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+    pages = (result.total + page_size - 1) // page_size if page_size > 0 else 0
 
     return ConferenceListResponse(
         items=items,
-        total=total,
+        total=result.total,
         page=page,
         page_size=page_size,
         pages=pages,
     )
 
 
-@router.post("", response_model=ConferenceResponse, status_code=201)
+@router.post("", response_model=ConferenceResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
 async def create_conference(
     conference_data: ConferenceCreate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> ConferenceResponse:
@@ -184,8 +185,6 @@ async def create_conference(
 
     Requires the 'conferences' module.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     if not current_user.tenant_id:
         raise ValidationError("A tenant context is required to create a conference")
@@ -205,7 +204,7 @@ async def create_conference(
         city=conference_data.city,
         country=conference_data.country,
         timezone=conference_data.timezone,
-        is_virtual=conference_data.is_virtual,
+        venue_type=conference_data.venue_type,
         virtual_platform_url=conference_data.virtual_platform_url,
         social_links=conference_data.social_links.model_dump() if conference_data.social_links else {},
         team_members=[tm.model_dump() for tm in conference_data.team_members] if conference_data.team_members else [],
@@ -232,7 +231,7 @@ async def create_conference(
     return _build_conference_response(conference)
 
 
-@router.get("/stats", response_model=ConferenceStats)
+@router.get("/stats", response_model=ConferenceStats, dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_conference_stats(
     current_user: CurrentUserDep,
     db: DbSessionDep,
@@ -242,41 +241,39 @@ async def get_conference_stats(
 
     Requires the 'conferences' module.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     today = date.today()
 
     # Total conferences
     total = (await db.execute(
-        select(func.count()).select_from(Conference).where(Conference.tenant_id == current_user.tenant_id)
+        select(func.count()).select_from(Conference).where(_tenant_filter(current_user))
     )).scalar() or 0
 
     # Active conferences
     active = (await db.execute(
         select(func.count()).select_from(Conference)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
         .where(Conference.is_active == True)
     )).scalar() or 0
 
     # Published conferences
     published = (await db.execute(
         select(func.count()).select_from(Conference)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
         .where(Conference.is_published == True)
     )).scalar() or 0
 
     # Upcoming conferences
     upcoming = (await db.execute(
         select(func.count()).select_from(Conference)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
         .where(Conference.start_date > today)
     )).scalar() or 0
 
     # Ongoing conferences
     ongoing = (await db.execute(
         select(func.count()).select_from(Conference)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
         .where(Conference.start_date <= today)
         .where((Conference.end_date >= today) | (Conference.end_date.is_(None)))
     )).scalar() or 0
@@ -284,7 +281,7 @@ async def get_conference_stats(
     # Past conferences
     past = (await db.execute(
         select(func.count()).select_from(Conference)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
         .where(Conference.end_date < today)
     )).scalar() or 0
 
@@ -298,7 +295,7 @@ async def get_conference_stats(
     )
 
 
-@router.get("/{conference_id}", response_model=ConferenceResponse)
+@router.get("/{conference_id}", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_conference(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -309,13 +306,11 @@ async def get_conference(
 
     Requires the 'conferences' module.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Conference)
         .where(Conference.id == conference_id)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
 
@@ -325,11 +320,11 @@ async def get_conference(
     return _build_conference_response(conference)
 
 
-@router.put("/{conference_id}", response_model=ConferenceResponse)
+@router.put("/{conference_id}", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def update_conference(
     conference_id: UUID,
     conference_data: ConferenceUpdate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> ConferenceResponse:
@@ -338,13 +333,11 @@ async def update_conference(
 
     Requires the 'conferences' module.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Conference)
         .where(Conference.id == conference_id)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
 
@@ -386,10 +379,10 @@ async def update_conference(
     return _build_conference_response(conference)
 
 
-@router.delete("/{conference_id}")
+@router.delete("/{conference_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def delete_conference(
     conference_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
@@ -402,13 +395,11 @@ async def delete_conference(
 
     Requires the 'conferences' module.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Conference)
         .where(Conference.id == conference_id)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
 
@@ -517,7 +508,7 @@ async def delete_conference(
     }
 
 
-@router.get("/{conference_id}/delete-preview")
+@router.get("/{conference_id}/delete-preview", dependencies=[Depends(require_module(MODULE_CODE))])
 async def delete_conference_preview(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -529,13 +520,11 @@ async def delete_conference_preview(
     Returns counts of exclusively-linked entities that will be deleted,
     plus counts of shared entities that will only be unlinked.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Conference)
         .where(Conference.id == conference_id)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
     if not conference:
@@ -603,10 +592,10 @@ async def delete_conference_preview(
     }
 
 
-@router.post("/{conference_id}/publish", response_model=ConferenceResponse)
+@router.post("/{conference_id}/publish", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def publish_conference(
     conference_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> ConferenceResponse:
@@ -615,13 +604,11 @@ async def publish_conference(
 
     Requires the 'conferences' module.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Conference)
         .where(Conference.id == conference_id)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
 
@@ -649,10 +636,10 @@ async def publish_conference(
     return _build_conference_response(conference)
 
 
-@router.post("/{conference_id}/unpublish", response_model=ConferenceResponse)
+@router.post("/{conference_id}/unpublish", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def unpublish_conference(
     conference_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> ConferenceResponse:
@@ -661,13 +648,11 @@ async def unpublish_conference(
 
     Requires the 'conferences' module.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Conference)
         .where(Conference.id == conference_id)
-        .where(Conference.tenant_id == current_user.tenant_id)
+        .where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
 
@@ -768,6 +753,9 @@ def _build_location_response_assoc(
         longitude=loc.longitude,
         building=loc.building,
         floor=loc.floor,
+        phone=loc.phone,
+        website=loc.website,
+        vat_number=loc.vat_number,
         amenities=loc.amenities,
         accessibility_features=loc.accessibility_features,
         virtual_url=loc.virtual_url,
@@ -793,13 +781,22 @@ def _build_cfp_response(
         status=cfp.status,
         open_date=cfp.open_date,
         close_date=cfp.close_date,
+        notification_date=cfp.notification_date,
+        program_announcement_date=cfp.program_announcement_date,
         max_submissions_per_speaker=cfp.max_submissions_per_speaker,
-        require_abstract=cfp.require_abstract,
-        require_bio=cfp.require_bio,
+        required_speaker_fields=cfp.required_speaker_fields,
+        required_paper_fields=cfp.required_paper_fields,
+        is_anonymous_review=cfp.is_anonymous_review,
+        reviewers_per_paper=cfp.reviewers_per_paper,
         allowed_formats=cfp.allowed_formats,
         tracks=cfp.tracks,
         custom_fields=cfp.custom_fields,
         settings=cfp.settings,
+        code_of_conduct=cfp.code_of_conduct,
+        incentives_conditions=cfp.incentives_conditions,
+        tips_for_submission=cfp.tips_for_submission,
+        guidelines_for_submissions=cfp.guidelines_for_submissions,
+        faqs=cfp.faqs,
         submission_count=submission_count,
         created_at=cfp.created_at,
         updated_at=cfp.updated_at,
@@ -812,7 +809,7 @@ def _build_cfp_response(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{conference_id}/volunteers", response_model=VolunteerListResponse)
+@router.get("/{conference_id}/volunteers", response_model=VolunteerListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_conference_volunteers(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -821,9 +818,6 @@ async def list_conference_volunteers(
     page_size: int = Query(20, ge=1, le=100),
 ) -> VolunteerListResponse:
     """List volunteers linked to a conference."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
-
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
     query = (
@@ -833,14 +827,9 @@ async def list_conference_volunteers(
         .where(Volunteer.tenant_id == current_user.tenant_id)
     )
 
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    query = query.offset((page - 1) * page_size).limit(page_size)
     query = query.order_by(Volunteer.created_at.desc())
-
-    result = await db.execute(query)
-    volunteers = result.scalars().all()
+    result = await paginate(db, query, page, page_size)
+    volunteers = result.items
 
     # Batch-query conference_ids
     vol_ids = [v.id for v in volunteers]
@@ -854,28 +843,26 @@ async def list_conference_volunteers(
             conf_ids_map[row.volunteer_id].append(row.conference_id)
 
     items = [_build_volunteer_response(v, conf_ids_map.get(v.id, [])) for v in volunteers]
-    pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+    pages = (result.total + page_size - 1) // page_size if page_size > 0 else 0
 
     return VolunteerListResponse(
         items=items,
-        total=total,
+        total=result.total,
         page=page,
         page_size=page_size,
         pages=pages,
     )
 
 
-@router.post("/{conference_id}/volunteers", status_code=201)
+@router.post("/{conference_id}/volunteers", status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
 async def link_volunteer_to_conference(
     conference_id: UUID,
     body: ConferenceAssociationRequest,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Link an existing volunteer to a conference."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -911,17 +898,15 @@ async def link_volunteer_to_conference(
     return {"message": "Volunteer linked to conference"}
 
 
-@router.delete("/{conference_id}/volunteers/{volunteer_id}")
+@router.delete("/{conference_id}/volunteers/{volunteer_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def unlink_volunteer_from_conference(
     conference_id: UUID,
     volunteer_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Unlink a volunteer from a conference. Blocked if it's the volunteer's only conference."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -964,7 +949,7 @@ async def unlink_volunteer_from_conference(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{conference_id}/locations", response_model=LocationListResponse)
+@router.get("/{conference_id}/locations", response_model=LocationListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_conference_locations(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -973,9 +958,6 @@ async def list_conference_locations(
     page_size: int = Query(20, ge=1, le=100),
 ) -> LocationListResponse:
     """List locations linked to a conference."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
-
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
     query = (
@@ -985,14 +967,9 @@ async def list_conference_locations(
         .where(Location.tenant_id == current_user.tenant_id)
     )
 
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    query = query.offset((page - 1) * page_size).limit(page_size)
     query = query.order_by(Location.created_at.desc())
-
-    result = await db.execute(query)
-    locations = result.scalars().all()
+    result = await paginate(db, query, page, page_size)
+    locations = result.items
 
     loc_ids = [loc.id for loc in locations]
     conf_ids_map: dict[UUID, list[UUID]] = {lid: [] for lid in loc_ids}
@@ -1005,28 +982,26 @@ async def list_conference_locations(
             conf_ids_map[row.location_id].append(row.conference_id)
 
     items = [_build_location_response_assoc(loc, conf_ids_map.get(loc.id, [])) for loc in locations]
-    pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+    pages = (result.total + page_size - 1) // page_size if page_size > 0 else 0
 
     return LocationListResponse(
         items=items,
-        total=total,
+        total=result.total,
         page=page,
         page_size=page_size,
         pages=pages,
     )
 
 
-@router.post("/{conference_id}/locations", status_code=201)
+@router.post("/{conference_id}/locations", status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
 async def link_location_to_conference(
     conference_id: UUID,
     body: ConferenceAssociationRequest,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Link an existing location to a conference."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -1062,17 +1037,15 @@ async def link_location_to_conference(
     return {"message": "Location linked to conference"}
 
 
-@router.delete("/{conference_id}/locations/{location_id}")
+@router.delete("/{conference_id}/locations/{location_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def unlink_location_from_conference(
     conference_id: UUID,
     location_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Unlink a location from a conference. Blocked if it's the location's only conference."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -1115,7 +1088,7 @@ async def unlink_location_from_conference(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{conference_id}/cfps", response_model=CFPListResponse)
+@router.get("/{conference_id}/cfps", response_model=CFPListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_conference_cfps(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -1124,9 +1097,6 @@ async def list_conference_cfps(
     page_size: int = Query(20, ge=1, le=100),
 ) -> CFPListResponse:
     """List CFPs linked to a conference."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
-
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
     query = (
@@ -1136,14 +1106,9 @@ async def list_conference_cfps(
         .where(CallForPapers.tenant_id == current_user.tenant_id)
     )
 
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    query = query.offset((page - 1) * page_size).limit(page_size)
     query = query.order_by(CallForPapers.created_at.desc())
-
-    result = await db.execute(query)
-    cfps = result.scalars().all()
+    result = await paginate(db, query, page, page_size)
+    cfps = result.items
 
     cfp_ids = [c.id for c in cfps]
     conf_ids_map: dict[UUID, list[UUID]] = {cid: [] for cid in cfp_ids}
@@ -1171,28 +1136,26 @@ async def list_conference_cfps(
         _build_cfp_response(c, conf_ids_map.get(c.id, []), sub_counts.get(c.id, 0))
         for c in cfps
     ]
-    pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+    pages = (result.total + page_size - 1) // page_size if page_size > 0 else 0
 
     return CFPListResponse(
         items=items,
-        total=total,
+        total=result.total,
         page=page,
         page_size=page_size,
         pages=pages,
     )
 
 
-@router.post("/{conference_id}/cfps", status_code=201)
+@router.post("/{conference_id}/cfps", status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
 async def link_cfp_to_conference(
     conference_id: UUID,
     body: ConferenceAssociationRequest,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Link an existing CFP to a conference."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -1228,17 +1191,15 @@ async def link_cfp_to_conference(
     return {"message": "CFP linked to conference"}
 
 
-@router.delete("/{conference_id}/cfps/{cfp_id}")
+@router.delete("/{conference_id}/cfps/{cfp_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def unlink_cfp_from_conference(
     conference_id: UUID,
     cfp_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Unlink a CFP from a conference. Blocked if it's the CFP's only conference."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -1283,7 +1244,7 @@ async def unlink_cfp_from_conference(
 MODULE_CODE_SP = "service_providers"
 
 
-@router.get("/{conference_id}/service-providers", response_model=ServiceProviderListResponse)
+@router.get("/{conference_id}/service-providers", response_model=ServiceProviderListResponse, dependencies=[Depends(require_module(MODULE_CODE_SP))])
 async def list_conference_service_providers(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -1300,29 +1261,16 @@ async def list_conference_service_providers(
     )
     providers = result.scalars().all()
 
-    items = [
-        ServiceProviderResponse(
-            id=sp.id,
-            tenant_id=sp.tenant_id,
-            location_id=sp.location_id,
-            conference_id=sp.conference_id,
-            company_name=sp.company_name,
-            service_description=sp.service_description,
-            contact_persons=sp.contact_persons or [],
-            created_at=sp.created_at,
-            updated_at=sp.updated_at,
-        )
-        for sp in providers
-    ]
+    items = [build_service_provider_response(sp) for sp in providers]
 
     return ServiceProviderListResponse(items=items, total=len(items))
 
 
-@router.post("/{conference_id}/service-providers", response_model=ServiceProviderResponse, status_code=201)
+@router.post("/{conference_id}/service-providers", response_model=ServiceProviderResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE_SP))])
 async def create_conference_service_provider(
     conference_id: UUID,
     data: ServiceProviderCreate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> ServiceProviderResponse:
@@ -1335,6 +1283,16 @@ async def create_conference_service_provider(
         location_id=None,
         company_name=data.company_name,
         service_description=data.service_description,
+        phone=data.phone,
+        email=data.email,
+        website=data.website,
+        address_line1=data.address_line1,
+        address_line2=data.address_line2,
+        city=data.city,
+        state=data.state,
+        postal_code=data.postal_code,
+        country=data.country,
+        vat_number=data.vat_number,
         contact_persons=[cp.model_dump() for cp in data.contact_persons] if data.contact_persons else [],
     )
     db.add(sp)
@@ -1353,25 +1311,15 @@ async def create_conference_service_provider(
     await db.commit()
     await db.refresh(sp)
 
-    return ServiceProviderResponse(
-        id=sp.id,
-        tenant_id=sp.tenant_id,
-        location_id=sp.location_id,
-        conference_id=sp.conference_id,
-        company_name=sp.company_name,
-        service_description=sp.service_description,
-        contact_persons=sp.contact_persons or [],
-        created_at=sp.created_at,
-        updated_at=sp.updated_at,
-    )
+    return build_service_provider_response(sp)
 
 
-@router.put("/{conference_id}/service-providers/{provider_id}", response_model=ServiceProviderResponse)
+@router.put("/{conference_id}/service-providers/{provider_id}", response_model=ServiceProviderResponse, dependencies=[Depends(require_module(MODULE_CODE_SP))])
 async def update_conference_service_provider(
     conference_id: UUID,
     provider_id: UUID,
     data: ServiceProviderUpdate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> ServiceProviderResponse:
@@ -1412,24 +1360,14 @@ async def update_conference_service_provider(
     await db.commit()
     await db.refresh(sp)
 
-    return ServiceProviderResponse(
-        id=sp.id,
-        tenant_id=sp.tenant_id,
-        location_id=sp.location_id,
-        conference_id=sp.conference_id,
-        company_name=sp.company_name,
-        service_description=sp.service_description,
-        contact_persons=sp.contact_persons or [],
-        created_at=sp.created_at,
-        updated_at=sp.updated_at,
-    )
+    return build_service_provider_response(sp)
 
 
-@router.delete("/{conference_id}/service-providers/{provider_id}")
+@router.delete("/{conference_id}/service-providers/{provider_id}", dependencies=[Depends(require_module(MODULE_CODE_SP))])
 async def delete_conference_service_provider(
     conference_id: UUID,
     provider_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:

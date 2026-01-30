@@ -4,17 +4,17 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, Boolean, Date, DateTime, Text, ForeignKey, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.cfp import CallForPapers
+    from app.models.location import Location
     from app.models.tenant import Tenant
     from app.models.volunteer import Volunteer
-    from app.models.location import Location
-    from app.models.cfp import CallForPapers
 
 
 class Conference(Base):
@@ -46,7 +46,7 @@ class Conference(Base):
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     country: Mapped[str | None] = mapped_column(String(100), nullable=True)
     timezone: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    is_virtual: Mapped[bool] = mapped_column(Boolean, default=False)
+    venue_type: Mapped[str] = mapped_column(String(20), default="onsite")  # onsite, virtual, hybrid
     virtual_platform_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Social media links as JSONB

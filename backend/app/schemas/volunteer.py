@@ -1,10 +1,12 @@
 """Volunteer schemas."""
 
 from datetime import datetime
-from uuid import UUID
 from enum import Enum
+from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.core.validators import validate_phone
 
 
 class VolunteerStatus(str, Enum):
@@ -32,6 +34,11 @@ class VolunteerBase(BaseModel):
     emergency_contact_phone: str | None = Field(None, max_length=50)
     tshirt_size: str | None = Field(None, max_length=10)
 
+    @field_validator("phone", "emergency_contact_phone")
+    @classmethod
+    def check_phone(cls, v: str | None) -> str | None:
+        return validate_phone(v)
+
 
 class VolunteerCreate(VolunteerBase):
     """Schema for creating a volunteer."""
@@ -55,6 +62,11 @@ class VolunteerUpdate(BaseModel):
     emergency_contact_phone: str | None = Field(None, max_length=50)
     tshirt_size: str | None = Field(None, max_length=10)
     total_hours: float | None = None
+
+    @field_validator("phone", "emergency_contact_phone")
+    @classmethod
+    def check_phone(cls, v: str | None) -> str | None:
+        return validate_phone(v)
 
 
 class VolunteerResponse(BaseModel):

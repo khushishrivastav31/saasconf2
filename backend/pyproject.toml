@@ -1,0 +1,42 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "RUF",   # ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E712",   # comparison to True/False (intentional in SQLAlchemy filters)
+    "B008",   # do not perform function calls in argument defaults (FastAPI Depends pattern)
+    "UP007",  # Use X | Y for unions (keep Optional for readability)
+    "B027",   # empty method without abstract decorator (intentional optional override hooks)
+    "SIM102", # collapsible if — keep nested ifs for readability in validation logic
+    "RUF001", # ambiguous unicode in strings (intentional: ×, –)
+    "RUF003", # ambiguous unicode in comments (intentional: ×, –)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

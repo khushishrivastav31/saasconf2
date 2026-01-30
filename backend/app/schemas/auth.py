@@ -33,7 +33,9 @@ class UserResponse(BaseModel):
 
     id: UUID
     email: EmailStr
-    full_name: str | None
+    first_name: str | None
+    last_name: str | None
+    pronouns: str | None = None
     role: str
     tenant_id: UUID | None
     tenant_name: str | None = None

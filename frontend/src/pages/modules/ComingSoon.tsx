@@ -16,12 +16,8 @@ export default function ComingSoon({ moduleName }: { moduleName: string }) {
           />
         </svg>
       </div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">
-        {moduleName}
-      </h2>
-      <p className="text-gray-500 text-sm">
-        This module is coming soon.
-      </p>
+      <h2 className="text-xl font-semibold text-gray-900 mb-2">{moduleName}</h2>
+      <p className="text-gray-500 text-sm">This module is coming soon.</p>
     </div>
   );
 }

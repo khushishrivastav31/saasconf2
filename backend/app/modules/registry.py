@@ -1,6 +1,7 @@
 """Module registry for managing pluggable modules."""
 
-from typing import Dict, Type
+
+from typing import ClassVar
 
 from fastapi import FastAPI
 
@@ -15,11 +16,11 @@ class ModuleRegistry:
     in the FastAPI application.
     """
 
-    _modules: Dict[str, BaseModule] = {}
+    _modules: ClassVar[dict[str, BaseModule]] = {}
     _initialized: bool = False
 
     @classmethod
-    def register(cls, module_class: Type[BaseModule]) -> None:
+    def register(cls, module_class: type[BaseModule]) -> None:
         """
         Register a module with the registry.
 
@@ -47,7 +48,7 @@ class ModuleRegistry:
         return cls._modules.get(code)
 
     @classmethod
-    def get_all_modules(cls) -> Dict[str, BaseModule]:
+    def get_all_modules(cls) -> dict[str, BaseModule]:
         """Get all registered modules."""
         return cls._modules.copy()
 

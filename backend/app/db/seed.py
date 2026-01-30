@@ -1,6 +1,7 @@
 """Database seeding script for initial data."""
 
 import asyncio
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +9,7 @@ from app.config import get_settings
 from app.core.security import hash_password
 from app.db.session import async_session_maker
 from app.models.module import Module
+from app.models.platform_currency import PlatformCurrency
 from app.models.user import User, UserRole
 
 settings = get_settings()
@@ -28,7 +30,8 @@ async def seed_super_admin(session: AsyncSession) -> None:
         tenant_id=None,  # Super admin has no tenant
         email=settings.SUPER_ADMIN_EMAIL,
         password_hash=hash_password(settings.SUPER_ADMIN_PASSWORD),
-        full_name="System Administrator",
+        first_name="System",
+        last_name="Administrator",
         role=UserRole.SUPER_ADMIN.value,
         is_active=True,
     )
@@ -90,6 +93,16 @@ async def seed_default_modules(session: AsyncSession) -> None:
             "name": "Service Provider Management",
             "description": "Manage external service providers, contractors, and vendors for your conferences.",
         },
+        {
+            "code": "program",
+            "name": "Program Management",
+            "description": "Build and manage the conference program, schedule, and agenda.",
+        },
+        {
+            "code": "invoices",
+            "name": "Invoice Management",
+            "description": "Create and manage conference invoices, track payments, and monitor financial status.",
+        },
     ]
 
     for module_data in default_modules:
@@ -109,6 +122,48 @@ async def seed_default_modules(session: AsyncSession) -> None:
     await session.commit()
 
 
+async def seed_default_currencies(session: AsyncSession) -> None:
+    """Create default platform currencies."""
+    default_currencies = [
+        {"code": "EUR", "name": "Euro", "symbol": "\u20ac"},
+        {"code": "USD", "name": "US Dollar", "symbol": "$"},
+        {"code": "GBP", "name": "British Pound", "symbol": "\u00a3"},
+        {"code": "JPY", "name": "Japanese Yen", "symbol": "\u00a5"},
+        {"code": "CHF", "name": "Swiss Franc", "symbol": "CHF"},
+        {"code": "CAD", "name": "Canadian Dollar", "symbol": "CA$"},
+        {"code": "AUD", "name": "Australian Dollar", "symbol": "A$"},
+        {"code": "CNY", "name": "Chinese Yuan", "symbol": "\u00a5"},
+        {"code": "INR", "name": "Indian Rupee", "symbol": "\u20b9"},
+        {"code": "BRL", "name": "Brazilian Real", "symbol": "R$"},
+        {"code": "MXN", "name": "Mexican Peso", "symbol": "MX$"},
+        {"code": "KRW", "name": "South Korean Won", "symbol": "\u20a9"},
+        {"code": "SEK", "name": "Swedish Krona", "symbol": "kr"},
+        {"code": "NOK", "name": "Norwegian Krone", "symbol": "kr"},
+        {"code": "DKK", "name": "Danish Krone", "symbol": "kr"},
+        {"code": "PLN", "name": "Polish Zloty", "symbol": "z\u0142"},
+        {"code": "CZK", "name": "Czech Koruna", "symbol": "K\u010d"},
+        {"code": "HUF", "name": "Hungarian Forint", "symbol": "Ft"},
+        {"code": "SGD", "name": "Singapore Dollar", "symbol": "S$"},
+        {"code": "NZD", "name": "New Zealand Dollar", "symbol": "NZ$"},
+    ]
+
+    for currency_data in default_currencies:
+        result = await session.execute(
+            select(PlatformCurrency).where(PlatformCurrency.code == currency_data["code"])
+        )
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            print(f"Currency already exists: {currency_data['code']}")
+            continue
+
+        currency = PlatformCurrency(**currency_data)
+        session.add(currency)
+        print(f"Created currency: {currency_data['code']}")
+
+    await session.commit()
+
+
 async def seed_database() -> None:
     """Run all seed functions."""
     print("Starting database seeding...")
@@ -116,6 +171,7 @@ async def seed_database() -> None:
     async with async_session_maker() as session:
         await seed_super_admin(session)
         await seed_default_modules(session)
+        await seed_default_currencies(session)
 
     print("Database seeding complete!")
 

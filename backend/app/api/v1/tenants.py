@@ -4,22 +4,22 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import DbSessionDep, SuperAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.pagination import paginate
 from app.core.security import hash_password
 from app.models.audit import AuditAction, AuditLog
 from app.models.module import TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
+from app.schemas.module import TenantModuleAssign, TenantModuleResponse, TenantModuleUpdate
 from app.schemas.tenant import (
     TenantCreate,
     TenantListResponse,
     TenantResponse,
     TenantUpdate,
 )
-from app.schemas.module import TenantModuleAssign, TenantModuleUpdate, TenantModuleResponse
 
 router = APIRouter()
 
@@ -49,20 +49,13 @@ async def list_tenants(
     if is_active is not None:
         query = query.where(Tenant.is_active == is_active)
 
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    # Apply pagination
-    query = query.offset((page - 1) * page_size).limit(page_size)
+    # Apply ordering and pagination
     query = query.order_by(Tenant.created_at.desc())
-
-    result = await db.execute(query)
-    tenants = result.scalars().all()
+    result = await paginate(db, query, page, page_size)
 
     # Get user and module counts for each tenant
     items = []
-    for tenant in tenants:
+    for tenant in result.items:
         # Count users
         user_count = (
             await db.execute(
@@ -101,10 +94,10 @@ async def list_tenants(
 
     return TenantListResponse(
         items=items,
-        total=total,
+        total=result.total,
         page=page,
         page_size=page_size,
-        pages=(total + page_size - 1) // page_size,
+        pages=(result.total + page_size - 1) // page_size,
     )
 
 
@@ -148,7 +141,8 @@ async def create_tenant(
             tenant_id=tenant.id,
             email=tenant_data.admin_email,
             password_hash=hash_password(tenant_data.admin_password),
-            full_name=tenant_data.admin_name,
+            first_name=tenant_data.admin_first_name,
+            last_name=tenant_data.admin_last_name,
             role=UserRole.TENANT_ADMIN.value,
         )
         db.add(admin_user)

@@ -1,12 +1,12 @@
 """Module models."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, Boolean, DateTime, ForeignKey, func, Text, Index, Integer, Numeric
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -113,12 +113,10 @@ class TenantModule(Base):
         """Check if the module subscription is currently active based on dates."""
         if not self.is_enabled:
             return False
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if self.start_date and now < self.start_date:
             return False
-        if self.end_date and now > self.end_date:
-            return False
-        return True
+        return not (self.end_date and now > self.end_date)
 
     def __repr__(self) -> str:
         return f"<TenantModule tenant={self.tenant_id} module={self.module_id}>"

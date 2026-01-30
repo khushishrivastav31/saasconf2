@@ -1,28 +1,43 @@
 """FastAPI application entry point."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.api.v1.router import api_router
 from app.config import get_settings
 from app.core.exceptions import (
-    SaaSConfException,
     AuthenticationError,
     AuthorizationError,
     NotFoundError,
+    SaaSConfException,
 )
-from app.api.v1.router import api_router
 
 settings = get_settings()
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
+
+
+def _cors_response(request: Request, status_code: int, content: dict) -> JSONResponse:
+    """Return a JSONResponse with CORS headers.
+
+    FastAPI exception handlers bypass CORSMiddleware, so we must add
+    the headers manually to avoid the browser blocking error responses.
+    """
+    response = JSONResponse(status_code=status_code, content=content)
+    origin = request.headers.get("origin")
+    if origin and origin in settings.CORS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 
 @asynccontextmanager
@@ -59,15 +74,30 @@ app.add_middleware(
 )
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if not settings.DEBUG:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+
 # Exception handlers
 @app.exception_handler(AuthenticationError)
 async def authentication_error_handler(
     request: Request, exc: AuthenticationError
 ) -> JSONResponse:
     """Handle authentication errors."""
-    return JSONResponse(
-        status_code=401,
-        content={"detail": exc.message, "type": "authentication_error"},
+    return _cors_response(
+        request, 401, {"detail": exc.message, "type": "authentication_error"}
     )
 
 
@@ -76,9 +106,8 @@ async def authorization_error_handler(
     request: Request, exc: AuthorizationError
 ) -> JSONResponse:
     """Handle authorization errors."""
-    return JSONResponse(
-        status_code=403,
-        content={"detail": exc.message, "type": "authorization_error"},
+    return _cors_response(
+        request, 403, {"detail": exc.message, "type": "authorization_error"}
     )
 
 
@@ -87,9 +116,8 @@ async def not_found_error_handler(
     request: Request, exc: NotFoundError
 ) -> JSONResponse:
     """Handle not found errors."""
-    return JSONResponse(
-        status_code=404,
-        content={"detail": exc.message, "type": "not_found_error"},
+    return _cors_response(
+        request, 404, {"detail": exc.message, "type": "not_found_error"}
     )
 
 
@@ -98,9 +126,25 @@ async def saasconf_error_handler(
     request: Request, exc: SaaSConfException
 ) -> JSONResponse:
     """Handle general application errors."""
-    return JSONResponse(
-        status_code=400,
-        content={"detail": exc.message, "type": "error"},
+    return _cors_response(
+        request, 400, {"detail": exc.message, "type": "error"}
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_error_handler(
+    request: Request, exc: Exception
+) -> JSONResponse:
+    """Catch-all for unhandled exceptions, ensuring CORS headers are present."""
+    import logging
+    import traceback
+
+    logger = logging.getLogger("saasconf")
+    logger.error("Unhandled exception on %s %s: %s", request.method, request.url.path, exc)
+    if settings.DEBUG:
+        traceback.print_exc()
+    return _cors_response(
+        request, 500, {"detail": "Internal server error", "type": "server_error"}
     )
 
 

@@ -5,10 +5,9 @@ Revises: 005_tenant_company_details
 Create Date: 2026-01-23
 
 """
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-
+from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 # revision identifiers, used by Alembic.
 revision = "006_conferences"

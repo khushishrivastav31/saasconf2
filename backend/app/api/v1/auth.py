@@ -2,9 +2,10 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.dependencies import (
@@ -17,21 +18,23 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
-    hash_password,
     hash_token,
     verify_password,
 )
 from app.models.audit import AuditAction, AuditLog
 from app.models.module import TenantModule
+from app.models.tenant import Tenant
 from app.models.token import RefreshToken
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse, UserResponse
 
 settings = get_settings()
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("5/minute")
 async def login(
     request: Request,
     login_data: LoginRequest,
@@ -66,6 +69,15 @@ async def login(
 
     if not user.is_active:
         raise AuthenticationError("User account is deactivated")
+
+    # Check if the user's tenant is active
+    if user.tenant_id:
+        tenant_result = await db.execute(
+            select(Tenant).where(Tenant.id == user.tenant_id)
+        )
+        tenant = tenant_result.scalar_one_or_none()
+        if not tenant or not tenant.is_active:
+            raise AuthenticationError("Your company account has been deactivated")
 
     # Get user's modules if they belong to a tenant
     modules: list[str] = []
@@ -125,7 +137,9 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
+@limiter.limit("10/minute")
 async def refresh_token(
+    request: Request,
     refresh_data: RefreshRequest,
     db: DbSessionDep,
 ) -> TokenResponse:
@@ -134,9 +148,8 @@ async def refresh_token(
 
     The refresh token is validated and a new access token is issued.
     """
-    # Decode refresh token
-    payload = decode_token(refresh_data.refresh_token, token_type="refresh")
-    user_id = payload["sub"]
+    # Decode refresh token (validates token; raises on invalid)
+    decode_token(refresh_data.refresh_token, token_type="refresh")
 
     # Verify refresh token exists and is valid
     token_hash = hash_token(refresh_data.refresh_token)
@@ -156,6 +169,15 @@ async def refresh_token(
 
     if not user or not user.is_active:
         raise AuthenticationError("User not found or deactivated")
+
+    # Check if the user's tenant is active
+    if user.tenant_id:
+        tenant_result = await db.execute(
+            select(Tenant).where(Tenant.id == user.tenant_id)
+        )
+        tenant = tenant_result.scalar_one_or_none()
+        if not tenant or not tenant.is_active:
+            raise AuthenticationError("Your company account has been deactivated")
 
     # Get user's modules
     modules: list[str] = []
@@ -278,7 +300,9 @@ async def get_current_user_info(
     return UserResponse(
         id=user.id,
         email=user.email,
-        full_name=user.full_name,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        pronouns=user.pronouns,
         role=user.role,
         tenant_id=user.tenant_id,
         tenant_name=tenant_name,

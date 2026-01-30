@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 
 from app.core.dependencies import DbSessionDep, SuperAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.pagination import paginate
 from app.models.audit import AuditAction, AuditLog
 from app.models.module import Module, TenantModule
 from app.schemas.module import (
@@ -43,20 +44,13 @@ async def list_modules(
     if is_active is not None:
         query = query.where(Module.is_active == is_active)
 
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    # Apply pagination
-    query = query.offset((page - 1) * page_size).limit(page_size)
+    # Apply ordering and pagination
     query = query.order_by(Module.created_at.desc())
-
-    result = await db.execute(query)
-    modules = result.scalars().all()
+    result = await paginate(db, query, page, page_size)
 
     # Get tenant counts for each module
     items = []
-    for module in modules:
+    for module in result.items:
         tenant_count = (
             await db.execute(
                 select(func.count()).where(TenantModule.module_id == module.id)
@@ -78,10 +72,10 @@ async def list_modules(
 
     return ModuleListResponse(
         items=items,
-        total=total,
+        total=result.total,
         page=page,
         page_size=page_size,
-        pages=(total + page_size - 1) // page_size,
+        pages=(result.total + page_size - 1) // page_size,
     )
 
 

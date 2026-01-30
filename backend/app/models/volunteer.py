@@ -1,19 +1,19 @@
 """Volunteer model."""
 
 import uuid
-from datetime import datetime, date
+from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, Boolean, DateTime, Date, ForeignKey, func, Text, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.models.tenant import Tenant
     from app.models.conference import Conference
+    from app.models.tenant import Tenant
 
 
 class VolunteerStatus(str, Enum):

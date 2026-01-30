@@ -1,48 +1,57 @@
-"""Call for Papers management endpoints."""
+"""CFP CRUD, Topic CRUD, CFP stats, and Submission endpoints."""
 
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy import func, select, update as sa_update
 
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
+    TenantAdminDep,
     get_client_ip,
+    require_module,
 )
-from app.core.exceptions import NotFoundError, ValidationError
-from app.models.audit import AuditLog
-from app.models.cfp import CallForPapers, Submission, CFPStatus, SubmissionStatus
-from app.models.conference import Conference
+from app.core.exceptions import NotFoundError
+from app.core.pagination import paginate
 from app.models.associations import ConferenceCFP
+from app.models.audit import AuditLog
+from app.models.cfp import (
+    CallForPapers,
+    CFPPaper,
+    CFPPaperAssignment,
+    CFPStatus,
+    CFPTopic,
+    Submission,
+    SubmissionStatus,
+)
+from app.models.conference import Conference
 from app.schemas.cfp import (
     CFPCreate,
     CFPListResponse,
     CFPResponse,
-    CFPUpdate,
     CFPStats,
+    CFPUpdate,
     SubmissionCreate,
     SubmissionListResponse,
     SubmissionResponse,
-    SubmissionUpdate,
     SubmissionStats,
+    SubmissionUpdate,
+    TopicCreate,
+    TopicListResponse,
+    TopicResponse,
+    TopicUpdate,
 )
 
+from .shared import MODULE_CODE
+
 router = APIRouter()
-
-MODULE_CODE = "cfp"
-
-
-def check_module_access(current_user) -> None:
-    """Check if user has access to CFP module."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
 
 # ============ CFP Endpoints ============
 
-@router.get("", response_model=CFPListResponse)
+@router.get("/", response_model=CFPListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_cfps(
     current_user: CurrentUserDep,
     db: DbSessionDep,
@@ -53,8 +62,6 @@ async def list_cfps(
     conference_id: UUID | None = None,
 ) -> CFPListResponse:
     """List Call for Papers for the current tenant."""
-    check_module_access(current_user)
-
     query = select(CallForPapers).where(CallForPapers.tenant_id == current_user.tenant_id)
 
     if conference_id:
@@ -69,16 +76,10 @@ async def list_cfps(
         search_filter = CallForPapers.title.ilike(f"%{search}%")
         query = query.where(search_filter)
 
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    # Apply pagination
-    query = query.offset((page - 1) * page_size).limit(page_size)
     query = query.order_by(CallForPapers.created_at.desc())
-
-    result = await db.execute(query)
-    cfps = result.scalars().all()
+    result = await paginate(db, query, page, page_size)
+    cfps = result.items
+    total = result.total
 
     # Batch-query conference_ids and submission counts
     cfp_ids = [c.id for c in cfps]
@@ -109,13 +110,22 @@ async def list_cfps(
                 status=cfp.status,
                 open_date=cfp.open_date,
                 close_date=cfp.close_date,
+                notification_date=cfp.notification_date,
+                program_announcement_date=cfp.program_announcement_date,
                 max_submissions_per_speaker=cfp.max_submissions_per_speaker,
-                require_abstract=cfp.require_abstract,
-                require_bio=cfp.require_bio,
+                required_speaker_fields=cfp.required_speaker_fields,
+                required_paper_fields=cfp.required_paper_fields,
+                is_anonymous_review=cfp.is_anonymous_review,
+                reviewers_per_paper=cfp.reviewers_per_paper,
                 allowed_formats=cfp.allowed_formats,
                 tracks=cfp.tracks,
                 custom_fields=cfp.custom_fields,
                 settings=cfp.settings,
+                code_of_conduct=cfp.code_of_conduct,
+                incentives_conditions=cfp.incentives_conditions,
+                tips_for_submission=cfp.tips_for_submission,
+                guidelines_for_submissions=cfp.guidelines_for_submissions,
+                faqs=cfp.faqs,
                 submission_count=sub_count,
                 created_at=cfp.created_at,
                 updated_at=cfp.updated_at,
@@ -132,13 +142,12 @@ async def list_cfps(
     )
 
 
-@router.get("/stats", response_model=CFPStats)
+@router.get("/stats", response_model=CFPStats, dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_cfp_stats(
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> CFPStats:
     """Get CFP statistics for the current tenant."""
-    check_module_access(current_user)
 
     base_query = select(CallForPapers).where(CallForPapers.tenant_id == current_user.tenant_id)
 
@@ -178,15 +187,133 @@ async def get_cfp_stats(
     )
 
 
-@router.post("", response_model=CFPResponse, status_code=201)
+# ============ Topic Endpoints ============
+
+@router.get("/topics", response_model=TopicListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+async def list_topics(
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> TopicListResponse:
+    """List all topics for the current tenant."""
+    query = (
+        select(CFPTopic)
+        .where(CFPTopic.tenant_id == current_user.tenant_id)
+        .order_by(CFPTopic.name)
+    )
+    result = await db.execute(query)
+    topics = list(result.scalars().all())
+
+    items = [
+        TopicResponse(
+            id=t.id,
+            tenant_id=t.tenant_id,
+            name=t.name,
+            description=t.description,
+            created_at=t.created_at,
+            updated_at=t.updated_at,
+        )
+        for t in topics
+    ]
+
+    return TopicListResponse(items=items, total=len(items))
+
+
+@router.post("/topics", response_model=TopicResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
+async def create_topic(
+    topic_data: TopicCreate,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> TopicResponse:
+    """Create a new topic."""
+    topic = CFPTopic(
+        tenant_id=current_user.tenant_id,
+        name=topic_data.name,
+        description=topic_data.description,
+    )
+    db.add(topic)
+    await db.commit()
+    await db.refresh(topic)
+
+    return TopicResponse(
+        id=topic.id,
+        tenant_id=topic.tenant_id,
+        name=topic.name,
+        description=topic.description,
+        created_at=topic.created_at,
+        updated_at=topic.updated_at,
+    )
+
+
+@router.put("/topics/{topic_id}", response_model=TopicResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+async def update_topic(
+    topic_id: UUID,
+    topic_data: TopicUpdate,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> TopicResponse:
+    """Update a topic."""
+    result = await db.execute(
+        select(CFPTopic).where(
+            CFPTopic.id == topic_id,
+            CFPTopic.tenant_id == current_user.tenant_id,
+        )
+    )
+    topic = result.scalar_one_or_none()
+
+    if not topic:
+        raise NotFoundError(f"Topic with ID '{topic_id}' not found")
+
+    update_data = topic_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(topic, field, value)
+
+    await db.commit()
+    await db.refresh(topic)
+
+    return TopicResponse(
+        id=topic.id,
+        tenant_id=topic.tenant_id,
+        name=topic.name,
+        description=topic.description,
+        created_at=topic.created_at,
+        updated_at=topic.updated_at,
+    )
+
+
+@router.delete("/topics/{topic_id}", dependencies=[Depends(require_module(MODULE_CODE))])
+async def delete_topic(
+    topic_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Delete a topic."""
+    result = await db.execute(
+        select(CFPTopic).where(
+            CFPTopic.id == topic_id,
+            CFPTopic.tenant_id == current_user.tenant_id,
+        )
+    )
+    topic = result.scalar_one_or_none()
+
+    if not topic:
+        raise NotFoundError(f"Topic with ID '{topic_id}' not found")
+
+    await db.delete(topic)
+    await db.commit()
+
+    return {"message": f"Topic '{topic.name}' deleted successfully"}
+
+
+# ============ CFP Create / Get / Update / Delete Endpoints ============
+
+@router.post("/", response_model=CFPResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
 async def create_cfp(
     cfp_data: CFPCreate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> CFPResponse:
     """Create a new Call for Papers."""
-    check_module_access(current_user)
 
     # Validate conference exists and belongs to tenant
     conf_result = await db.execute(
@@ -204,12 +331,19 @@ async def create_cfp(
         description=cfp_data.description,
         open_date=cfp_data.open_date,
         close_date=cfp_data.close_date,
+        notification_date=cfp_data.notification_date,
+        program_announcement_date=cfp_data.program_announcement_date,
         max_submissions_per_speaker=cfp_data.max_submissions_per_speaker,
-        require_abstract=cfp_data.require_abstract,
-        require_bio=cfp_data.require_bio,
+        required_speaker_fields=cfp_data.required_speaker_fields,
+        required_paper_fields=cfp_data.required_paper_fields,
         allowed_formats=cfp_data.allowed_formats,
         tracks=cfp_data.tracks,
         custom_fields=cfp_data.custom_fields,
+        code_of_conduct=cfp_data.code_of_conduct,
+        incentives_conditions=cfp_data.incentives_conditions,
+        tips_for_submission=cfp_data.tips_for_submission,
+        guidelines_for_submissions=cfp_data.guidelines_for_submissions,
+        faqs=cfp_data.faqs,
         status=CFPStatus.DRAFT.value,
     )
     db.add(cfp)
@@ -245,13 +379,22 @@ async def create_cfp(
         status=cfp.status,
         open_date=cfp.open_date,
         close_date=cfp.close_date,
+        notification_date=cfp.notification_date,
+        program_announcement_date=cfp.program_announcement_date,
         max_submissions_per_speaker=cfp.max_submissions_per_speaker,
-        require_abstract=cfp.require_abstract,
-        require_bio=cfp.require_bio,
+        required_speaker_fields=cfp.required_speaker_fields,
+        required_paper_fields=cfp.required_paper_fields,
+        is_anonymous_review=cfp.is_anonymous_review,
+        reviewers_per_paper=cfp.reviewers_per_paper,
         allowed_formats=cfp.allowed_formats,
         tracks=cfp.tracks,
         custom_fields=cfp.custom_fields,
         settings=cfp.settings,
+        code_of_conduct=cfp.code_of_conduct,
+        incentives_conditions=cfp.incentives_conditions,
+        tips_for_submission=cfp.tips_for_submission,
+        guidelines_for_submissions=cfp.guidelines_for_submissions,
+        faqs=cfp.faqs,
         submission_count=0,
         created_at=cfp.created_at,
         updated_at=cfp.updated_at,
@@ -259,14 +402,13 @@ async def create_cfp(
     )
 
 
-@router.get("/{cfp_id}", response_model=CFPResponse)
+@router.get("/{cfp_id}", response_model=CFPResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_cfp(
     cfp_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> CFPResponse:
     """Get CFP by ID."""
-    check_module_access(current_user)
 
     result = await db.execute(
         select(CallForPapers).where(
@@ -301,13 +443,22 @@ async def get_cfp(
         status=cfp.status,
         open_date=cfp.open_date,
         close_date=cfp.close_date,
+        notification_date=cfp.notification_date,
+        program_announcement_date=cfp.program_announcement_date,
         max_submissions_per_speaker=cfp.max_submissions_per_speaker,
-        require_abstract=cfp.require_abstract,
-        require_bio=cfp.require_bio,
+        required_speaker_fields=cfp.required_speaker_fields,
+        required_paper_fields=cfp.required_paper_fields,
+        is_anonymous_review=cfp.is_anonymous_review,
+        reviewers_per_paper=cfp.reviewers_per_paper,
         allowed_formats=cfp.allowed_formats,
         tracks=cfp.tracks,
         custom_fields=cfp.custom_fields,
         settings=cfp.settings,
+        code_of_conduct=cfp.code_of_conduct,
+        incentives_conditions=cfp.incentives_conditions,
+        tips_for_submission=cfp.tips_for_submission,
+        guidelines_for_submissions=cfp.guidelines_for_submissions,
+        faqs=cfp.faqs,
         submission_count=sub_count,
         created_at=cfp.created_at,
         updated_at=cfp.updated_at,
@@ -315,16 +466,15 @@ async def get_cfp(
     )
 
 
-@router.put("/{cfp_id}", response_model=CFPResponse)
+@router.put("/{cfp_id}", response_model=CFPResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def update_cfp(
     cfp_id: UUID,
     cfp_data: CFPUpdate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> CFPResponse:
     """Update CFP details."""
-    check_module_access(current_user)
 
     result = await db.execute(
         select(CallForPapers).where(
@@ -342,6 +492,15 @@ async def update_cfp(
     for field, value in update_data.items():
         setattr(cfp, field, value)
 
+    # When is_anonymous_review changes, propagate to all existing assignments
+    if "is_anonymous_review" in update_data:
+        paper_ids_subq = select(CFPPaper.id).where(CFPPaper.cfp_id == cfp.id)
+        await db.execute(
+            sa_update(CFPPaperAssignment)
+            .where(CFPPaperAssignment.paper_id.in_(paper_ids_subq))
+            .values(is_anonymous=update_data["is_anonymous_review"])
+        )
+
     # Audit log
     audit_log = AuditLog(
         tenant_id=current_user.tenant_id,
@@ -349,7 +508,7 @@ async def update_cfp(
         action="cfp.update",
         resource_type="cfp",
         resource_id=cfp.id,
-        details=update_data,
+        details={"updated_fields": list(update_data.keys())},
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
@@ -380,13 +539,22 @@ async def update_cfp(
         status=cfp.status,
         open_date=cfp.open_date,
         close_date=cfp.close_date,
+        notification_date=cfp.notification_date,
+        program_announcement_date=cfp.program_announcement_date,
         max_submissions_per_speaker=cfp.max_submissions_per_speaker,
-        require_abstract=cfp.require_abstract,
-        require_bio=cfp.require_bio,
+        required_speaker_fields=cfp.required_speaker_fields,
+        required_paper_fields=cfp.required_paper_fields,
+        is_anonymous_review=cfp.is_anonymous_review,
+        reviewers_per_paper=cfp.reviewers_per_paper,
         allowed_formats=cfp.allowed_formats,
         tracks=cfp.tracks,
         custom_fields=cfp.custom_fields,
         settings=cfp.settings,
+        code_of_conduct=cfp.code_of_conduct,
+        incentives_conditions=cfp.incentives_conditions,
+        tips_for_submission=cfp.tips_for_submission,
+        guidelines_for_submissions=cfp.guidelines_for_submissions,
+        faqs=cfp.faqs,
         submission_count=sub_count,
         created_at=cfp.created_at,
         updated_at=cfp.updated_at,
@@ -394,15 +562,14 @@ async def update_cfp(
     )
 
 
-@router.delete("/{cfp_id}")
+@router.delete("/{cfp_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def delete_cfp(
     cfp_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a CFP."""
-    check_module_access(current_user)
 
     result = await db.execute(
         select(CallForPapers).where(
@@ -438,7 +605,7 @@ async def delete_cfp(
 
 # ============ Submission Endpoints ============
 
-@router.get("/{cfp_id}/submissions", response_model=SubmissionListResponse)
+@router.get("/{cfp_id}/submissions", response_model=SubmissionListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_submissions(
     cfp_id: UUID,
     current_user: CurrentUserDep,
@@ -449,7 +616,6 @@ async def list_submissions(
     search: str | None = None,
 ) -> SubmissionListResponse:
     """List submissions for a CFP."""
-    check_module_access(current_user)
 
     # Verify CFP exists
     cfp_result = await db.execute(
@@ -472,21 +638,16 @@ async def list_submissions(
     if search:
         search_filter = (
             Submission.title.ilike(f"%{search}%")
-            | Submission.speaker_name.ilike(f"%{search}%")
+            | Submission.speaker_first_name.ilike(f"%{search}%")
+            | Submission.speaker_last_name.ilike(f"%{search}%")
             | Submission.speaker_email.ilike(f"%{search}%")
         )
         query = query.where(search_filter)
 
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    # Apply pagination
-    query = query.offset((page - 1) * page_size).limit(page_size)
     query = query.order_by(Submission.submitted_at.desc())
-
-    result = await db.execute(query)
-    submissions = result.scalars().all()
+    result = await paginate(db, query, page, page_size)
+    submissions = result.items
+    total = result.total
 
     items = [
         SubmissionResponse(
@@ -494,7 +655,8 @@ async def list_submissions(
             tenant_id=s.tenant_id,
             cfp_id=s.cfp_id,
             speaker_email=s.speaker_email,
-            speaker_name=s.speaker_name,
+            speaker_first_name=s.speaker_first_name,
+            speaker_last_name=s.speaker_last_name,
             speaker_bio=s.speaker_bio,
             speaker_company=s.speaker_company,
             speaker_title=s.speaker_title,
@@ -528,14 +690,13 @@ async def list_submissions(
     )
 
 
-@router.get("/{cfp_id}/submissions/stats", response_model=SubmissionStats)
+@router.get("/{cfp_id}/submissions/stats", response_model=SubmissionStats, dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_submission_stats(
     cfp_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> SubmissionStats:
     """Get submission statistics for a CFP."""
-    check_module_access(current_user)
 
     # Verify CFP exists
     cfp_result = await db.execute(
@@ -576,16 +737,15 @@ async def get_submission_stats(
     )
 
 
-@router.post("/{cfp_id}/submissions", response_model=SubmissionResponse, status_code=201)
+@router.post("/{cfp_id}/submissions", response_model=SubmissionResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
 async def create_submission(
     cfp_id: UUID,
     submission_data: SubmissionCreate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> SubmissionResponse:
     """Create a new submission."""
-    check_module_access(current_user)
 
     # Verify CFP exists and is open
     cfp_result = await db.execute(
@@ -603,7 +763,8 @@ async def create_submission(
         tenant_id=current_user.tenant_id,
         cfp_id=cfp_id,
         speaker_email=submission_data.speaker_email,
-        speaker_name=submission_data.speaker_name,
+        speaker_first_name=submission_data.speaker_first_name,
+        speaker_last_name=submission_data.speaker_last_name,
         speaker_bio=submission_data.speaker_bio,
         speaker_company=submission_data.speaker_company,
         speaker_title=submission_data.speaker_title,
@@ -628,7 +789,7 @@ async def create_submission(
         action="submission.create",
         resource_type="submission",
         resource_id=submission.id,
-        details={"title": submission.title, "speaker": submission.speaker_name},
+        details={"title": submission.title, "speaker": f"{submission.speaker_first_name} {submission.speaker_last_name}"},
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
@@ -642,7 +803,8 @@ async def create_submission(
         tenant_id=submission.tenant_id,
         cfp_id=submission.cfp_id,
         speaker_email=submission.speaker_email,
-        speaker_name=submission.speaker_name,
+        speaker_first_name=submission.speaker_first_name,
+        speaker_last_name=submission.speaker_last_name,
         speaker_bio=submission.speaker_bio,
         speaker_company=submission.speaker_company,
         speaker_title=submission.speaker_title,
@@ -666,7 +828,7 @@ async def create_submission(
     )
 
 
-@router.get("/{cfp_id}/submissions/{submission_id}", response_model=SubmissionResponse)
+@router.get("/{cfp_id}/submissions/{submission_id}", response_model=SubmissionResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_submission(
     cfp_id: UUID,
     submission_id: UUID,
@@ -674,7 +836,6 @@ async def get_submission(
     db: DbSessionDep,
 ) -> SubmissionResponse:
     """Get submission by ID."""
-    check_module_access(current_user)
 
     result = await db.execute(
         select(Submission).where(
@@ -693,7 +854,8 @@ async def get_submission(
         tenant_id=submission.tenant_id,
         cfp_id=submission.cfp_id,
         speaker_email=submission.speaker_email,
-        speaker_name=submission.speaker_name,
+        speaker_first_name=submission.speaker_first_name,
+        speaker_last_name=submission.speaker_last_name,
         speaker_bio=submission.speaker_bio,
         speaker_company=submission.speaker_company,
         speaker_title=submission.speaker_title,
@@ -717,17 +879,16 @@ async def get_submission(
     )
 
 
-@router.put("/{cfp_id}/submissions/{submission_id}", response_model=SubmissionResponse)
+@router.put("/{cfp_id}/submissions/{submission_id}", response_model=SubmissionResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def update_submission(
     cfp_id: UUID,
     submission_id: UUID,
     submission_data: SubmissionUpdate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> SubmissionResponse:
     """Update submission details."""
-    check_module_access(current_user)
 
     result = await db.execute(
         select(Submission).where(
@@ -771,7 +932,8 @@ async def update_submission(
         tenant_id=submission.tenant_id,
         cfp_id=submission.cfp_id,
         speaker_email=submission.speaker_email,
-        speaker_name=submission.speaker_name,
+        speaker_first_name=submission.speaker_first_name,
+        speaker_last_name=submission.speaker_last_name,
         speaker_bio=submission.speaker_bio,
         speaker_company=submission.speaker_company,
         speaker_title=submission.speaker_title,
@@ -795,16 +957,15 @@ async def update_submission(
     )
 
 
-@router.delete("/{cfp_id}/submissions/{submission_id}")
+@router.delete("/{cfp_id}/submissions/{submission_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def delete_submission(
     cfp_id: UUID,
     submission_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a submission."""
-    check_module_access(current_user)
 
     result = await db.execute(
         select(Submission).where(
@@ -827,7 +988,7 @@ async def delete_submission(
         action="submission.delete",
         resource_type="submission",
         resource_id=submission_id,
-        details={"title": submission_title, "speaker": submission.speaker_name},
+        details={"title": submission_title, "speaker": f"{submission.speaker_first_name} {submission.speaker_last_name}"},
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )

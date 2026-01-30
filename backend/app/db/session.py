@@ -1,10 +1,10 @@
 """Database session management with RLS support."""
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import get_settings
 
@@ -54,10 +54,12 @@ async def get_db_with_rls(
             # Set RLS context variables
             if tenant_id:
                 await session.execute(
-                    text(f"SET LOCAL app.current_tenant_id = '{tenant_id}'")
+                    text("SELECT set_config('app.current_tenant_id', :tid, true)"),
+                    {"tid": str(tenant_id)}
                 )
             await session.execute(
-                text(f"SET LOCAL app.is_super_admin = '{str(is_super_admin).lower()}'")
+                text("SELECT set_config('app.is_super_admin', :sa, true)"),
+                {"sa": str(is_super_admin).lower()}
             )
             yield session
         finally:
@@ -77,8 +79,10 @@ async def set_rls_context(
     """
     if tenant_id:
         await session.execute(
-            text(f"SET LOCAL app.current_tenant_id = '{tenant_id}'")
+            text("SELECT set_config('app.current_tenant_id', :tid, true)"),
+            {"tid": str(tenant_id)}
         )
     await session.execute(
-        text(f"SET LOCAL app.is_super_admin = '{str(is_super_admin).lower()}'")
+        text("SELECT set_config('app.is_super_admin', :sa, true)"),
+        {"sa": str(is_super_admin).lower()}
     )

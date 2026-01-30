@@ -1,6 +1,6 @@
 """Pluggable modules system."""
 
-from app.modules.registry import ModuleRegistry
 from app.modules.base import BaseModule
+from app.modules.registry import ModuleRegistry
 
-__all__ = ["ModuleRegistry", "BaseModule"]
+__all__ = ["BaseModule", "ModuleRegistry"]

@@ -3,26 +3,28 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
+    TenantAdminDep,
     get_client_ip,
     require_module,
 )
 from app.core.exceptions import NotFoundError, ValidationError
-from app.models.audit import AuditAction, AuditLog
-from app.models.volunteer import Volunteer, VolunteerStatus
-from app.models.conference import Conference
+from app.core.pagination import paginate
 from app.models.associations import ConferenceVolunteer
+from app.models.audit import AuditLog
+from app.models.conference import Conference
+from app.models.volunteer import Volunteer, VolunteerStatus
 from app.schemas.volunteer import (
     VolunteerCreate,
     VolunteerListResponse,
     VolunteerResponse,
-    VolunteerUpdate,
     VolunteerStats,
+    VolunteerUpdate,
 )
 
 router = APIRouter()
@@ -30,7 +32,7 @@ router = APIRouter()
 MODULE_CODE = "volunteers"
 
 
-@router.get("", response_model=VolunteerListResponse)
+@router.get("", response_model=VolunteerListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_volunteers(
     current_user: CurrentUserDep,
     db: DbSessionDep,
@@ -46,9 +48,6 @@ async def list_volunteers(
 
     Requires the 'volunteers' module.
     """
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
-
     query = select(Volunteer).where(Volunteer.tenant_id == current_user.tenant_id)
 
     if conference_id:
@@ -70,16 +69,13 @@ async def list_volunteers(
         )
         query = query.where(search_filter)
 
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    # Apply pagination
-    query = query.offset((page - 1) * page_size).limit(page_size)
+    # Apply ordering before pagination
     query = query.order_by(Volunteer.created_at.desc())
 
-    result = await db.execute(query)
-    volunteers = result.scalars().all()
+    # Paginate
+    result = await paginate(db, query, page, page_size)
+    volunteers = result.items
+    total = result.total
 
     # Batch-query conference_ids for all volunteers in the page
     vol_ids = [v.id for v in volunteers]
@@ -128,14 +124,12 @@ async def list_volunteers(
     )
 
 
-@router.get("/stats", response_model=VolunteerStats)
+@router.get("/stats", response_model=VolunteerStats, dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_volunteer_stats(
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> VolunteerStats:
     """Get volunteer statistics for the current tenant."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     base_query = select(Volunteer).where(Volunteer.tenant_id == current_user.tenant_id)
 
@@ -175,16 +169,14 @@ async def get_volunteer_stats(
     )
 
 
-@router.post("", response_model=VolunteerResponse, status_code=201)
+@router.post("", response_model=VolunteerResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
 async def create_volunteer(
     volunteer_data: VolunteerCreate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> VolunteerResponse:
     """Create a new volunteer."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     # Validate conference exists and belongs to tenant
     conf_result = await db.execute(
@@ -271,15 +263,13 @@ async def create_volunteer(
     )
 
 
-@router.get("/{volunteer_id}", response_model=VolunteerResponse)
+@router.get("/{volunteer_id}", response_model=VolunteerResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_volunteer(
     volunteer_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> VolunteerResponse:
     """Get volunteer by ID."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Volunteer).where(
@@ -324,17 +314,15 @@ async def get_volunteer(
     )
 
 
-@router.put("/{volunteer_id}", response_model=VolunteerResponse)
+@router.put("/{volunteer_id}", response_model=VolunteerResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def update_volunteer(
     volunteer_id: UUID,
     volunteer_data: VolunteerUpdate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> VolunteerResponse:
     """Update volunteer details."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Volunteer).where(
@@ -408,16 +396,14 @@ async def update_volunteer(
     )
 
 
-@router.delete("/{volunteer_id}")
+@router.delete("/{volunteer_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def delete_volunteer(
     volunteer_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a volunteer."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Volunteer).where(
@@ -451,16 +437,14 @@ async def delete_volunteer(
     return {"message": f"Volunteer '{volunteer_name}' deleted successfully"}
 
 
-@router.post("/{volunteer_id}/approve", response_model=VolunteerResponse)
+@router.post("/{volunteer_id}/approve", response_model=VolunteerResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def approve_volunteer(
     volunteer_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> VolunteerResponse:
     """Approve a volunteer application."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(Volunteer).where(

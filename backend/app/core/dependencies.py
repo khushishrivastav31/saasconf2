@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.core.exceptions import AuthenticationError, AuthorizationError
 from app.core.security import decode_token
 from app.db.session import get_db, set_rls_context
+from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 
 settings = get_settings()
@@ -81,6 +82,13 @@ async def get_current_user(
     tenant_id = UUID(payload["tenant_id"]) if payload.get("tenant_id") else None
     role = payload["role"]
     modules = payload.get("modules", [])
+
+    # Check if the user's tenant is active
+    if tenant_id:
+        result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+        tenant = result.scalar_one_or_none()
+        if not tenant or not tenant.is_active:
+            raise AuthenticationError("Your company account has been deactivated")
 
     # Set RLS context for this request
     await set_rls_context(

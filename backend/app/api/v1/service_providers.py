@@ -2,11 +2,12 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Request
-from sqlalchemy import select, delete as sa_delete
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import select
 
-from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip, require_module
+from app.core.exceptions import NotFoundError
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.models.location import Location
@@ -29,8 +30,19 @@ def build_service_provider_response(sp: ServiceProvider) -> ServiceProviderRespo
         id=sp.id,
         tenant_id=sp.tenant_id,
         location_id=sp.location_id,
+        conference_id=sp.conference_id,
         company_name=sp.company_name,
         service_description=sp.service_description,
+        phone=sp.phone,
+        email=sp.email,
+        website=sp.website,
+        address_line1=sp.address_line1,
+        address_line2=sp.address_line2,
+        city=sp.city,
+        state=sp.state,
+        postal_code=sp.postal_code,
+        country=sp.country,
+        vat_number=sp.vat_number,
         contact_persons=sp.contact_persons or [],
         created_at=sp.created_at,
         updated_at=sp.updated_at,
@@ -53,15 +65,13 @@ async def _get_location_or_404(
     return location
 
 
-@router.get("", response_model=ServiceProviderListResponse)
+@router.get("", response_model=ServiceProviderListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_service_providers(
     location_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> ServiceProviderListResponse:
     """List service providers for a location."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     await _get_location_or_404(db, location_id, current_user.tenant_id)
 
@@ -79,17 +89,15 @@ async def list_service_providers(
     return ServiceProviderListResponse(items=items, total=len(items))
 
 
-@router.post("", response_model=ServiceProviderResponse, status_code=201)
+@router.post("", response_model=ServiceProviderResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
 async def create_service_provider(
     location_id: UUID,
     sp_data: ServiceProviderCreate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> ServiceProviderResponse:
     """Create a new service provider for a location."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     await _get_location_or_404(db, location_id, current_user.tenant_id)
 
@@ -98,6 +106,16 @@ async def create_service_provider(
         location_id=location_id,
         company_name=sp_data.company_name,
         service_description=sp_data.service_description,
+        phone=sp_data.phone,
+        email=sp_data.email,
+        website=sp_data.website,
+        address_line1=sp_data.address_line1,
+        address_line2=sp_data.address_line2,
+        city=sp_data.city,
+        state=sp_data.state,
+        postal_code=sp_data.postal_code,
+        country=sp_data.country,
+        vat_number=sp_data.vat_number,
         contact_persons=[cp.model_dump() for cp in sp_data.contact_persons] if sp_data.contact_persons else [],
     )
     db.add(sp)
@@ -120,18 +138,16 @@ async def create_service_provider(
     return build_service_provider_response(sp)
 
 
-@router.put("/{provider_id}", response_model=ServiceProviderResponse)
+@router.put("/{provider_id}", response_model=ServiceProviderResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def update_service_provider(
     location_id: UUID,
     provider_id: UUID,
     sp_data: ServiceProviderUpdate,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> ServiceProviderResponse:
     """Update a service provider."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(ServiceProvider).where(
@@ -167,17 +183,15 @@ async def update_service_provider(
     return build_service_provider_response(sp)
 
 
-@router.delete("/{provider_id}")
+@router.delete("/{provider_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def delete_service_provider(
     location_id: UUID,
     provider_id: UUID,
-    current_user: CurrentUserDep,
+    current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a service provider and its attachments."""
-    if not current_user.has_module(MODULE_CODE):
-        raise ValidationError(f"Module '{MODULE_CODE}' is not enabled for your organization")
 
     result = await db.execute(
         select(ServiceProvider).where(

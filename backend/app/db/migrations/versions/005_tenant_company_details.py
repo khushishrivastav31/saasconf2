@@ -5,10 +5,9 @@ Revises: 004_tenant_module_enhancements
 Create Date: 2026-01-23
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
-
 
 # revision identifiers, used by Alembic.
 revision = "005_tenant_company_details"

@@ -3,19 +3,21 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
-from sqlalchemy import func, select
+from sqlalchemy import select
 
-from app.core.dependencies import DbSessionDep, TenantAdminDep, SuperAdminDep, get_client_ip
-from app.core.exceptions import NotFoundError, ValidationError, AuthorizationError
+from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
+from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
+from app.core.pagination import paginate
 from app.core.security import hash_password
 from app.models.audit import AuditAction, AuditLog
+from app.models.settings import PronounOption
 from app.models.user import User, UserRole
 from app.schemas.user import (
     TenantUserCreate,
     TenantUserResponse,
-    UserUpdate,
-    UserListResponse,
     UserInDB,
+    UserListResponse,
+    UserUpdate,
 )
 
 router = APIRouter()
@@ -52,45 +54,64 @@ async def list_tenant_users(
 
     if search:
         query = query.where(
-            User.email.ilike(f"%{search}%") | User.full_name.ilike(f"%{search}%")
+            User.email.ilike(f"%{search}%")
+            | User.first_name.ilike(f"%{search}%")
+            | User.last_name.ilike(f"%{search}%")
         )
 
     if is_active is not None:
         query = query.where(User.is_active == is_active)
 
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    # Apply pagination
-    query = query.offset((page - 1) * page_size).limit(page_size)
+    # Apply ordering and pagination
     query = query.order_by(User.created_at.desc())
-
-    result = await db.execute(query)
-    users = result.scalars().all()
+    result = await paginate(db, query, page, page_size)
 
     items = [
         UserInDB(
             id=u.id,
             tenant_id=u.tenant_id,
             email=u.email,
-            full_name=u.full_name,
+            first_name=u.first_name,
+            last_name=u.last_name,
+            pronouns=u.pronouns,
             role=u.role,
             is_active=u.is_active,
             last_login=u.last_login,
             created_at=u.created_at,
             updated_at=u.updated_at,
         )
-        for u in users
+        for u in result.items
     ]
 
     return UserListResponse(
         items=items,
-        total=total,
+        total=result.total,
         page=page,
         page_size=page_size,
-        pages=(total + page_size - 1) // page_size,
+        pages=(result.total + page_size - 1) // page_size,
     )
+
+
+@router.get("/pronoun-options")
+async def list_user_pronoun_options(
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> list[dict]:
+    """List distinct active pronoun names across all conferences in the tenant."""
+    if current_user.tenant_id is None:
+        return []
+
+    result = await db.execute(
+        select(PronounOption.name)
+        .where(
+            PronounOption.tenant_id == current_user.tenant_id,
+            PronounOption.is_active == True,
+        )
+        .distinct()
+        .order_by(PronounOption.name)
+    )
+    names = result.scalars().all()
+    return [{"id": n, "name": n} for n in names]
 
 
 @router.post("", response_model=TenantUserResponse, status_code=201)
@@ -135,7 +156,9 @@ async def create_tenant_user(
         tenant_id=target_tenant_id,
         email=user_data.email,
         password_hash=hash_password(user_data.password),
-        full_name=user_data.full_name,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        pronouns=user_data.pronouns,
         role=user_data.role,
     )
     db.add(user)
@@ -159,7 +182,9 @@ async def create_tenant_user(
     return TenantUserResponse(
         id=user.id,
         email=user.email,
-        full_name=user.full_name,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        pronouns=user.pronouns,
         role=user.role,
         is_active=user.is_active,
         last_login=user.last_login,
@@ -188,7 +213,9 @@ async def get_tenant_user(
     return TenantUserResponse(
         id=user.id,
         email=user.email,
-        full_name=user.full_name,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        pronouns=user.pronouns,
         role=user.role,
         is_active=user.is_active,
         last_login=user.last_login,
@@ -253,7 +280,9 @@ async def update_tenant_user(
     return TenantUserResponse(
         id=user.id,
         email=user.email,
-        full_name=user.full_name,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        pronouns=user.pronouns,
         role=user.role,
         is_active=user.is_active,
         last_login=user.last_login,

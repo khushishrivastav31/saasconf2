@@ -5,9 +5,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from app.core.dependencies import DbSessionDep, SuperAdminDep
+from app.core.pagination import paginate
 from app.models.audit import AuditLog
 
 router = APIRouter()
@@ -80,16 +81,9 @@ async def list_audit_logs(
     if end_date:
         query = query.where(AuditLog.created_at <= end_date)
 
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total = (await db.execute(count_query)).scalar() or 0
-
-    # Apply pagination and ordering
-    query = query.offset((page - 1) * page_size).limit(page_size)
+    # Apply ordering and pagination
     query = query.order_by(AuditLog.created_at.desc())
-
-    result = await db.execute(query)
-    logs = result.scalars().all()
+    result = await paginate(db, query, page, page_size)
 
     items = [
         AuditLogResponse(
@@ -104,15 +98,15 @@ async def list_audit_logs(
             user_agent=log.user_agent,
             created_at=log.created_at,
         )
-        for log in logs
+        for log in result.items
     ]
 
     return AuditLogListResponse(
         items=items,
-        total=total,
+        total=result.total,
         page=page,
         page_size=page_size,
-        pages=(total + page_size - 1) // page_size,
+        pages=(result.total + page_size - 1) // page_size,
     )
 
 
