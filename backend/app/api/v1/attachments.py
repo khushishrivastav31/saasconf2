@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.file_validation import validate_upload, sanitize_filename
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.schemas.attachment import AttachmentListResponse, AttachmentResponse
@@ -16,25 +17,6 @@ from app.schemas.attachment import AttachmentListResponse, AttachmentResponse
 router = APIRouter()
 
 ALLOWED_ENTITY_TYPES = {"location", "volunteer", "conference", "service_provider", "applicant_picture", "applicant_video", "paper_video"}
-
-# Define allowed MIME types per entity type
-ALLOWED_MIME_TYPES: dict[str, set[str]] = {
-    "applicant_picture": {"image/jpeg", "image/png", "image/webp"},
-    "applicant_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
-    "paper_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
-}
-
-# Default allowed types for general attachments
-DEFAULT_ALLOWED_MIME_TYPES = {
-    "image/jpeg", "image/png", "image/webp", "image/gif",
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "text/plain", "text/csv",
-    "video/mp4", "video/quicktime", "video/webm",
-}
 
 
 @router.get("", response_model=AttachmentListResponse)
@@ -114,21 +96,17 @@ async def upload_attachment(
             f"File size ({file_size // (1024 * 1024)}MB) exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)"
         )
 
-    # Validate MIME type
+    # Validate MIME type via magic bytes
     content_type = file.content_type or "application/octet-stream"
-    allowed_types = ALLOWED_MIME_TYPES.get(entity_type, DEFAULT_ALLOWED_MIME_TYPES)
-    if content_type not in allowed_types:
-        raise ValidationError(
-            f"File type '{content_type}' is not allowed for {entity_type}. "
-            f"Allowed types: {', '.join(sorted(allowed_types))}"
-        )
+    verified_type = validate_upload(file_data, content_type, entity_type)
+    safe_filename = sanitize_filename(file.filename or "unnamed")
 
     attachment = Attachment(
         tenant_id=tenant_id,
         entity_type=entity_type,
         entity_id=entity_id,
-        filename=file.filename or "unnamed",
-        content_type=file.content_type or "application/octet-stream",
+        filename=safe_filename,
+        content_type=verified_type,
         file_size=file_size,
         file_data=file_data,
         description=description,

@@ -1,8 +1,9 @@
 """Authentication endpoints."""
 
 from datetime import datetime
+from typing import Annotated
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import select
@@ -12,7 +13,9 @@ from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
     get_client_ip,
+    get_token_from_header,
 )
+from app.core.token_blacklist import blacklist_token
 from app.core.exceptions import AuthenticationError
 from app.core.security import (
     create_access_token,
@@ -231,6 +234,7 @@ async def logout(
     current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
+    token: Annotated[str, Depends(get_token_from_header)],
 ) -> dict:
     """
     Logout user by revoking their refresh tokens.
@@ -243,8 +247,20 @@ async def logout(
     )
     tokens = result.scalars().all()
 
-    for token in tokens:
-        token.revoked_at = datetime.utcnow()
+    for tk in tokens:
+        tk.revoked_at = datetime.utcnow()
+
+    # Blacklist the current access token
+    try:
+        payload = decode_token(token, token_type="access")
+        jti = payload.get("jti")
+        if jti:
+            exp = payload.get("exp", 0)
+            remaining = int(exp - datetime.utcnow().timestamp())
+            if remaining > 0:
+                await blacklist_token(jti, remaining)
+    except Exception:
+        pass  # Don't fail logout if blacklisting fails
 
     # Log logout
     audit_log = AuditLog(

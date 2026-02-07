@@ -40,6 +40,15 @@ class Settings(BaseSettings):
     SUPER_ADMIN_EMAIL: str = "admin@saasconf.com"
     SUPER_ADMIN_PASSWORD: str  # No default — MUST be set via environment variable
 
+    # Monitoring
+    SENTRY_DSN: str = ""  # Leave empty to disable Sentry
+    SENTRY_ENVIRONMENT: str = "development"
+
+    # Email (Resend)
+    RESEND_API_KEY: str = ""  # Leave empty to use console logging (development)
+    RESEND_FROM_EMAIL: str = "noreply@sonrisa.ventures"
+    RESEND_FROM_NAME: str = "SaaSConf"
+
     @model_validator(mode="after")
     def _validate_secrets(self) -> "Settings":
         if self.JWT_SECRET_KEY in ("", "your-secret-key-change-in-production"):

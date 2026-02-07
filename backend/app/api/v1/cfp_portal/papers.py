@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.email import send_cospeaker_invitation_email
 from app.core.exceptions import NotFoundError
+from app.core.file_validation import validate_upload, sanitize_filename
 from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
 from app.models.cfp import (
@@ -549,6 +550,8 @@ async def upload_portal_attachment(
             raise HTTPException(status_code=400, detail="Can only upload video for draft papers")
 
     file_data = await file.read()
+    verified_type = validate_upload(file_data, file.content_type or "application/octet-stream", entity_type)
+    safe_filename = sanitize_filename(file.filename or "upload")
     file_size = len(file_data)
 
     # Delete existing attachment of same type for this entity (only keep latest)
@@ -566,8 +569,8 @@ async def upload_portal_attachment(
         tenant_id=current.tenant_id,
         entity_type=entity_type,
         entity_id=entity_id,
-        filename=file.filename or "upload",
-        content_type=file.content_type or "application/octet-stream",
+        filename=safe_filename,
+        content_type=verified_type,
         file_size=file_size,
         file_data=file_data,
         description=description,

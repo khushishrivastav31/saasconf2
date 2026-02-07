@@ -39,6 +39,7 @@ import InvitationsPage from "./pages/portal/InvitationsPage";
 import AssignedPapersTab from "./pages/portal/AssignedPapersTab";
 import EvaluatedPapersTab from "./pages/portal/EvaluatedPapersTab";
 import InfoPage from "./pages/portal/InfoPage";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 
 function LegacyVerifyEmailRedirect() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
@@ -135,7 +136,9 @@ function App() {
         path="/"
         element={
           <ProtectedRoute>
-            <AdminLayout />
+            <ErrorBoundary>
+              <AdminLayout />
+            </ErrorBoundary>
           </ProtectedRoute>
         }
       >
@@ -313,7 +316,9 @@ function App() {
         path=":companySlug/portal"
         element={
           <ApplicantAuthProvider>
-            <PortalLayout />
+            <ErrorBoundary>
+              <PortalLayout />
+            </ErrorBoundary>
           </ApplicantAuthProvider>
         }
       >

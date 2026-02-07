@@ -25,6 +25,17 @@ settings = get_settings()
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
+# Sentry error monitoring
+if settings.SENTRY_DSN:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.SENTRY_ENVIRONMENT,
+        release=f"saasconf-backend@{settings.APP_VERSION}",
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+    )
+
 
 def _cors_response(request: Request, status_code: int, content: dict) -> JSONResponse:
     """Return a JSONResponse with CORS headers.
@@ -43,10 +54,13 @@ def _cors_response(request: Request, status_code: int, content: dict) -> JSONRes
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler."""
+    from app.core.token_blacklist import init_redis, close_redis
     # Startup
     print(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    await init_redis()
     yield
     # Shutdown
+    await close_redis()
     print("Shutting down...")
 
 
@@ -141,6 +155,11 @@ async def unhandled_error_handler(
 
     logger = logging.getLogger("saasconf")
     logger.error("Unhandled exception on %s %s: %s", request.method, request.url.path, exc)
+    # Sentry captures this automatically via its FastAPI integration,
+    # but our catch-all handler prevents propagation, so capture explicitly
+    if settings.SENTRY_DSN:
+        import sentry_sdk
+        sentry_sdk.capture_exception(exc)
     if settings.DEBUG:
         traceback.print_exc()
     return _cors_response(

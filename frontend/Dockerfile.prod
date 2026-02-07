@@ -1,0 +1,41 @@
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --only=production=false
+
+# Copy source and build
+COPY . .
+
+# Build arguments for environment variables (baked into static files)
+ARG VITE_API_URL
+ARG VITE_SENTRY_DSN
+ARG VITE_SENTRY_ENVIRONMENT
+ARG VITE_APP_VERSION
+
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
+ENV VITE_SENTRY_ENVIRONMENT=$VITE_SENTRY_ENVIRONMENT
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
+
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine
+
+# Copy custom nginx config
+COPY deploy/nginx.conf /etc/nginx/nginx.conf
+
+# Copy built assets
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget -q --spider http://localhost:80/health || exit 1
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

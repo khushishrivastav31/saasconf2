@@ -78,6 +78,13 @@ async def get_current_user(
     """
     payload = decode_token(token, token_type="access")
 
+    # Check if token has been revoked
+    jti = payload.get("jti")
+    if jti:
+        from app.core.token_blacklist import is_token_blacklisted
+        if await is_token_blacklisted(jti):
+            raise AuthenticationError("Token has been revoked")
+
     user_id = UUID(payload["sub"])
     tenant_id = UUID(payload["tenant_id"]) if payload.get("tenant_id") else None
     role = payload["role"]

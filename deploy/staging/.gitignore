@@ -1,0 +1,5 @@
+# Environment file with secrets
+.env
+
+# Backup files (stored on server, not in repo)
+*.sql.gz

@@ -82,6 +82,7 @@ def create_access_token(
         "exp": expire,
         "iat": datetime.utcnow(),
         "type": "access",
+        "jti": secrets.token_urlsafe(16),
     }
 
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
