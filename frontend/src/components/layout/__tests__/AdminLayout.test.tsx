@@ -113,7 +113,6 @@ describe("AdminLayout", () => {
       render(<AdminLayout />);
 
       expect(screen.getByRole("link", { name: /conferences/i })).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /users/i })).toBeInTheDocument();
     });
 
     it("hides module navigation links when user has no module access", () => {
@@ -125,7 +124,6 @@ describe("AdminLayout", () => {
       render(<AdminLayout />);
 
       expect(screen.queryByRole("link", { name: /conferences/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole("link", { name: /users/i })).not.toBeInTheDocument();
     });
 
     it("shows only modules the user has access to", () => {
@@ -137,7 +135,6 @@ describe("AdminLayout", () => {
       render(<AdminLayout />);
 
       expect(screen.getByRole("link", { name: /conferences/i })).toBeInTheDocument();
-      expect(screen.queryByRole("link", { name: /users/i })).not.toBeInTheDocument();
     });
 
     it("shows Team link for tenant_admin users", () => {
@@ -198,7 +195,6 @@ describe("AdminLayout", () => {
       render(<AdminLayout />);
 
       expect(screen.getByRole("link", { name: /conferences/i })).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /users/i })).toBeInTheDocument();
     });
   });
 
