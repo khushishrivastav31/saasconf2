@@ -55,3 +55,4 @@ build/
 # Database
 *.db
 *.sqlite3
+*.pdf

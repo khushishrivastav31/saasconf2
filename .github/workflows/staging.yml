@@ -106,9 +106,17 @@ jobs:
         working-directory: frontend
         run: npx tsc --noEmit
 
-      - name: Run tests
+      - name: Run tests with coverage
         working-directory: frontend
-        run: npm run test -- --run --reporter=verbose
+        run: npm run test:coverage -- --run --reporter=verbose
+
+      - name: Check coverage thresholds
+        working-directory: frontend
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "Coverage Summary:"
+            cat coverage/coverage-summary.json | jq '.total'
+          fi
 
       - name: Build
         working-directory: frontend

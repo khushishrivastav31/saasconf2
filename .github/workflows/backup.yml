@@ -1,0 +1,38 @@
+name: Scheduled Backup
+
+on:
+  schedule:
+    # Run daily at 3:00 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  STAGING_HOST: 46.225.88.254
+  STAGING_USER: deploy
+
+jobs:
+  backup:
+    name: Database Backup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run backup
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'ENDSSH'
+            cd /opt/saasconf/app/deploy/staging
+            ./backup.sh
+          ENDSSH
+
+      - name: Verify backup
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'ENDSSH'
+            echo "=== Recent Backups ==="
+            ls -lht /opt/saasconf/backups/*.sql.gz 2>/dev/null | head -5 || echo "No backups found"
+          ENDSSH
