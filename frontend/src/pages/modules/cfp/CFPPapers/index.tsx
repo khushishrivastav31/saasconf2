@@ -87,8 +87,13 @@ function PaperListRow({
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function CFPPapers() {
-  const isAdmin = useIsAdmin();
+interface CFPPapersProps {
+  isAdmin?: boolean;
+}
+
+export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {}) {
+  const isAdminFallback = useIsAdmin();
+  const isAdmin = isAdminProp ?? isAdminFallback;
   const { conferenceId } = useParams<{ conferenceId: string }>();
   const queryClient = useQueryClient();
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);

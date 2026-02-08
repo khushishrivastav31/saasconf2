@@ -1,4 +1,5 @@
 import { createContext, useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import api, { clearTokens, setTokens, getAccessToken } from "../config/api";
 import type { User, LoginRequest, TokenResponse } from "../types";
 
@@ -14,6 +15,7 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -44,6 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchUser]);
 
   const login = async (credentials: LoginRequest) => {
+    // Clear any cached data from previous user session
+    queryClient.clear();
     const response = await api.post<TokenResponse>("/auth/login", credentials);
     const { access_token, refresh_token } = response.data;
     setTokens(access_token, refresh_token);
@@ -56,6 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       clearTokens();
       setUser(null);
+      // Clear all cached queries to prevent stale data when switching users
+      queryClient.clear();
     }
   };
 

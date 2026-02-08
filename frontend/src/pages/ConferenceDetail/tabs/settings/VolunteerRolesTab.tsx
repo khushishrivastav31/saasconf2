@@ -14,7 +14,6 @@ import StatusBadge from "../../../../components/common/StatusBadge";
 import { ErrorBanner } from "../../../../components/common/ErrorBanner";
 import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
 import ModalFooter from "../../../../components/common/ModalFooter";
-import { useIsAdmin } from "../../../../hooks/useIsAdmin";
 import { useSettingsCrud } from "../../../../hooks/useSettingsCrud";
 import { EditIcon, DeleteIcon } from "../../icons";
 
@@ -22,10 +21,11 @@ import { EditIcon, DeleteIcon } from "../../icons";
 
 function ConferenceVolunteerRolesTab({
   conference,
+  isAdmin,
 }: {
   conference: Conference;
+  isAdmin: boolean;
 }) {
-  const isAdmin = useIsAdmin();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<VolunteerRole | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VolunteerRole | null>(null);

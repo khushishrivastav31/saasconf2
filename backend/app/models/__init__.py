@@ -33,6 +33,7 @@ from app.models.sponsor import Sponsor
 from app.models.tenant import Tenant
 from app.models.token import RefreshToken
 from app.models.user import User
+from app.models.user_conference_access import UserConferenceAccess
 from app.models.volunteer import Volunteer
 
 __all__ = [
@@ -70,6 +71,7 @@ __all__ = [
     "TenantLocationType",
     "TenantModule",
     "User",
+    "UserConferenceAccess",
     "Volunteer",
     "VolunteerRole",
 ]

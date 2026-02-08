@@ -13,6 +13,7 @@ from app.core.security import decode_token
 from app.db.session import get_db, set_rls_context
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
+from app.models.user_conference_access import UserConferenceAccess
 
 settings = get_settings()
 
@@ -148,6 +149,54 @@ async def require_tenant_admin(
     """Require the current user to be a tenant admin or super admin."""
     if not (current_user.is_super_admin or current_user.is_tenant_admin):
         raise AuthorizationError("Tenant admin access required")
+    return current_user
+
+
+async def check_conference_admin_access(
+    db: AsyncSession,
+    user_id: UUID,
+    conference_id: UUID,
+) -> bool:
+    """
+    Check if a user has admin access to a specific conference.
+
+    Returns True if the user has conference-specific admin access.
+    """
+    result = await db.execute(
+        select(UserConferenceAccess)
+        .where(UserConferenceAccess.user_id == user_id)
+        .where(UserConferenceAccess.conference_id == conference_id)
+    )
+    access = result.scalar_one_or_none()
+    if not access:
+        return False
+    return access.is_admin
+
+
+async def require_conference_admin(
+    conference_id: UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CurrentUser:
+    """
+    Require the current user to have admin access to the specified conference.
+
+    A user has admin access if:
+    1. They are a super admin, OR
+    2. They are a tenant admin, OR
+    3. They have conference-specific admin access
+    """
+    # Super admins and tenant admins always have access
+    if current_user.is_super_admin or current_user.is_tenant_admin:
+        return current_user
+
+    # Check conference-specific admin access
+    has_access = await check_conference_admin_access(
+        db, current_user.user_id, conference_id
+    )
+    if not has_access:
+        raise AuthorizationError("Admin access to this conference required")
+
     return current_user
 
 

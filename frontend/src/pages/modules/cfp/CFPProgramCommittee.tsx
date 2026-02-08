@@ -566,12 +566,15 @@ export default function CFPProgramCommittee({
   selectedMemberId: externalSelectedId,
   setSelectedMemberId: externalSetSelectedId,
   conferenceId,
+  isAdmin: isAdminProp,
 }: {
   selectedMemberId?: string | null;
   setSelectedMemberId?: (id: string | null) => void;
   conferenceId?: string;
+  isAdmin?: boolean;
 } = {}) {
-  const isAdmin = useIsAdmin();
+  const isAdminFallback = useIsAdmin();
+  const isAdmin = isAdminProp ?? isAdminFallback;
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null);
   const selectedMemberId = externalSelectedId ?? internalSelectedId;
   const setSelectedMemberId = externalSetSelectedId ?? setInternalSelectedId;

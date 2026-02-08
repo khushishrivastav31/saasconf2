@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../config/api";
-import { useIsAdmin } from "../../../hooks/useIsAdmin";
 import type {
   Conference,
   CallForPapers,
@@ -118,10 +117,11 @@ function emptyForm(): CFPFormState {
 
 export default function ConferenceCFPsTab({
   conference,
+  isAdmin,
 }: {
   conference: Conference;
+  isAdmin: boolean;
 }) {
-  const isAdmin = useIsAdmin();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<CFPFormState>(emptyForm());
   const [activeRichTab, setActiveRichTab] =

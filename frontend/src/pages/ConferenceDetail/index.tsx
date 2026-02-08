@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../hooks/useAuth";
-import { useIsAdmin } from "../../hooks/useIsAdmin";
+import { useConferenceAdmin } from "../../hooks/useConferenceAdmin";
 import api from "../../config/api";
 import type {
   Conference,
@@ -89,7 +89,7 @@ export default function ConferenceDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const isAdmin = useIsAdmin();
+  const { isAdmin } = useConferenceAdmin(conferenceId);
   const [activeSection, setActiveSection] = useState<SectionId>("details");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -739,39 +739,44 @@ export default function ConferenceDetail() {
               <ConferenceDetailsTab
                 conference={conference}
                 onUpdate={handleUpdate}
+                isAdmin={isAdmin}
               />
             )}
             {activeSection === "team" && (
               <ConferenceTeamTab
                 conference={conference}
                 onUpdate={handleUpdate}
+                isAdmin={isAdmin}
               />
             )}
             {activeSection === "social" && (
               <ConferenceSocialTab
                 conference={conference}
                 onUpdate={handleUpdate}
+                isAdmin={isAdmin}
               />
             )}
             {activeSection === "volunteers" && (
-              <ConferenceVolunteersTab conference={conference} />
+              <ConferenceVolunteersTab conference={conference} isAdmin={isAdmin} />
             )}
             {activeSection === "locations" && (
               <ConferenceLocationsTab
                 conference={conference}
                 selectedLocationId={selectedLocationId}
                 setSelectedLocationId={setSelectedLocationId}
+                isAdmin={isAdmin}
               />
             )}
             {activeSection === "cfp" && (
-              <ConferenceCFPsTab conference={conference} />
+              <ConferenceCFPsTab conference={conference} isAdmin={isAdmin} />
             )}
-            {activeSection === "cfp-topics" && <CFPTopics />}
+            {activeSection === "cfp-topics" && <CFPTopics isAdmin={isAdmin} />}
             {activeSection === "cfp-program-committee" && (
               <CFPProgramCommittee
                 selectedMemberId={selectedCommitteeMemberId}
                 setSelectedMemberId={setSelectedCommitteeMemberId}
                 conferenceId={conferenceId}
+                isAdmin={isAdmin}
               />
             )}
             {activeSection === "cfp-applicants" && (
@@ -779,13 +784,14 @@ export default function ConferenceDetail() {
                 selectedApplicantId={selectedApplicantId}
                 setSelectedApplicantId={setSelectedApplicantId}
                 conferenceId={conferenceId}
+                isAdmin={isAdmin}
               />
             )}
             {activeSection === "cfp-papers" && (
-              <CFPPapers />
+              <CFPPapers isAdmin={isAdmin} />
             )}
             {activeSection === "cfp-assignments" && (
-              <CFPAssignments conferenceId={conferenceId} />
+              <CFPAssignments conferenceId={conferenceId} isAdmin={isAdmin} />
             )}
             {activeSection === "cfp-evaluated-papers" && (
               <CFPEvaluatedPapers />
@@ -810,6 +816,7 @@ export default function ConferenceDetail() {
                 conference={conference}
                 selectedSponsorId={selectedSponsorId}
                 setSelectedSponsorId={setSelectedSponsorId}
+                isAdmin={isAdmin}
               />
             )}
             {activeSection === "analytics" && (
@@ -820,6 +827,7 @@ export default function ConferenceDetail() {
                 conference={conference}
                 selectedServiceProviderId={selectedServiceProviderId}
                 setSelectedServiceProviderId={setSelectedServiceProviderId}
+                isAdmin={isAdmin}
               />
             )}
             {activeSection === "invoices" && (
@@ -827,6 +835,7 @@ export default function ConferenceDetail() {
                 conference={conference}
                 selectedInvoiceId={selectedInvoiceId}
                 setSelectedInvoiceId={setSelectedInvoiceId}
+                isAdmin={isAdmin}
               />
             )}
             {activeSection === "program" && (
@@ -835,10 +844,11 @@ export default function ConferenceDetail() {
             {activeSection === "booking" && conference && (
               <ConferenceBookingTab
                 conferenceId={conference.id}
+                isAdmin={isAdmin}
               />
             )}
             {activeSection === "settings" && (
-              <ConferenceSettingsTab conference={conference} />
+              <ConferenceSettingsTab conference={conference} isAdmin={isAdmin} />
             )}
           </div>
         </div>

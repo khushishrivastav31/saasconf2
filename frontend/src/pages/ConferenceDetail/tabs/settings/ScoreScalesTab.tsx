@@ -9,7 +9,6 @@ import type {
 import { parseApiError } from "../../../../utils/apiError";
 import Modal from "../../../../components/Modal";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
-import { useIsAdmin } from "../../../../hooks/useIsAdmin";
 import StatusBadge from "../../../../components/common/StatusBadge";
 import { ErrorBanner } from "../../../../components/common/ErrorBanner";
 import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
@@ -21,10 +20,11 @@ import { EditIcon, DeleteIcon } from "../../icons";
 
 function ConferenceScoreScalesTab({
   conference,
+  isAdmin,
 }: {
   conference: Conference;
+  isAdmin: boolean;
 }) {
-  const isAdmin = useIsAdmin();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingScale, setEditingScale] = useState<ReviewScoreScale | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ReviewScoreScale | null>(null);

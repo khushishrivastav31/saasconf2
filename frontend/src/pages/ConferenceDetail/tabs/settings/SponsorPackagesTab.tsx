@@ -14,7 +14,6 @@ import Modal from "../../../../components/Modal";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
 import RichTextEditor from "../../../../components/common/RichTextEditor";
 import RichTextDisplay from "../../../../components/common/RichTextDisplay";
-import { useIsAdmin } from "../../../../hooks/useIsAdmin";
 import StatusBadge from "../../../../components/common/StatusBadge";
 import { ErrorBanner } from "../../../../components/common/ErrorBanner";
 import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
@@ -26,10 +25,11 @@ import { EditIcon, DeleteIcon } from "../../icons";
 
 function ConferenceSponsorPackagesTab({
   conference,
+  isAdmin,
 }: {
   conference: Conference;
+  isAdmin: boolean;
 }) {
-  const isAdmin = useIsAdmin();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<SponsorPackage | null>(
     null,

@@ -11,7 +11,7 @@ import PronounOptionsTab from "../../PronounOptionsTab";
 
 type ConferenceSettingsActiveTab = "volunteer-roles" | "location-types" | "sponsor-packages" | "session-types" | "committee-roles" | "score-scales" | "review-criteria" | "pronoun-options";
 
-function ConferenceSettingsTab({ conference }: { conference: Conference }) {
+function ConferenceSettingsTab({ conference, isAdmin }: { conference: Conference; isAdmin: boolean }) {
   const [activeTab, setActiveTab] =
     useState<ConferenceSettingsActiveTab>("volunteer-roles");
 
@@ -115,21 +115,21 @@ function ConferenceSettingsTab({ conference }: { conference: Conference }) {
       </div>
 
       {activeTab === "volunteer-roles" ? (
-        <ConferenceVolunteerRolesTab conference={conference} />
+        <ConferenceVolunteerRolesTab conference={conference} isAdmin={isAdmin} />
       ) : activeTab === "location-types" ? (
-        <ConferenceLocationTypesTab conference={conference} />
+        <ConferenceLocationTypesTab conference={conference} isAdmin={isAdmin} />
       ) : activeTab === "sponsor-packages" ? (
-        <ConferenceSponsorPackagesTab conference={conference} />
+        <ConferenceSponsorPackagesTab conference={conference} isAdmin={isAdmin} />
       ) : activeTab === "session-types" ? (
-        <ConferenceSessionTypesTab conference={conference} />
+        <ConferenceSessionTypesTab conference={conference} isAdmin={isAdmin} />
       ) : activeTab === "committee-roles" ? (
-        <ConferenceCommitteeRolesTab conference={conference} />
+        <ConferenceCommitteeRolesTab conference={conference} isAdmin={isAdmin} />
       ) : activeTab === "score-scales" ? (
-        <ConferenceScoreScalesTab conference={conference} />
+        <ConferenceScoreScalesTab conference={conference} isAdmin={isAdmin} />
       ) : activeTab === "review-criteria" ? (
-        <ConferenceReviewCriteriaTab conference={conference} />
+        <ConferenceReviewCriteriaTab conference={conference} isAdmin={isAdmin} />
       ) : activeTab === "pronoun-options" ? (
-        <PronounOptionsTab conference={conference} />
+        <PronounOptionsTab conference={conference} isAdmin={isAdmin} />
       ) : null}
     </div>
   );

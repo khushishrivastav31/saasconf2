@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import api from "../../../config/api";
-import { useIsAdmin } from "../../../hooks/useIsAdmin";
 import type { Conference, ConferenceUpdate } from "../../../types";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 
 function ConferenceDetailsTab({
   conference,
   onUpdate,
+  isAdmin,
 }: {
   conference: Conference;
   onUpdate: () => void;
+  isAdmin: boolean;
 }) {
-  const isAdmin = useIsAdmin();
   const [formData, setFormData] = useState<ConferenceUpdate>({
     name: conference.name,
     abbreviation: conference.abbreviation || "",

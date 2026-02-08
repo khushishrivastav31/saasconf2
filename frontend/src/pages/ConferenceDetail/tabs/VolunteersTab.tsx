@@ -5,7 +5,6 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import api from "../../../config/api";
-import { useIsAdmin } from "../../../hooks/useIsAdmin";
 import { validatePhone } from "../../../utils/validators";
 import type {
   Conference,
@@ -24,8 +23,13 @@ import AttachmentList from "../../../components/AttachmentList";
 import { ErrorBanner } from "../../../components/common/ErrorBanner";
 import { EditIcon, DeleteIcon } from "../icons";
 
-function ConferenceVolunteersTab({ conference }: { conference: Conference }) {
-  const isAdmin = useIsAdmin();
+function ConferenceVolunteersTab({
+  conference,
+  isAdmin,
+}: {
+  conference: Conference;
+  isAdmin: boolean;
+}) {
   const queryClient = useQueryClient();
   const [linkError, setLinkError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);

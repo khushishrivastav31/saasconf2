@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import api from "../../../config/api";
-import { useIsAdmin } from "../../../hooks/useIsAdmin";
 import type { Conference, SocialLinks } from "../../../types";
 import { CONFERENCE_SOCIAL_PLATFORMS } from "../../../config/socialPlatforms";
 
 function ConferenceSocialTab({
   conference,
   onUpdate,
+  isAdmin,
 }: {
   conference: Conference;
   onUpdate: () => void;
+  isAdmin: boolean;
 }) {
-  const isAdmin = useIsAdmin();
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(
     conference.social_links || {},
   );

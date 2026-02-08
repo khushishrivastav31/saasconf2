@@ -19,7 +19,6 @@ import type {
 } from "../../../../../types";
 import { parseApiError } from "../../../../../utils/apiError";
 import ConfirmDialog from "../../../../../components/ConfirmDialog";
-import { useIsAdmin } from "../../../../../hooks/useIsAdmin";
 import { ErrorBanner, SuccessBanner } from "../../../../../components/common/ErrorBanner";
 import { LoadingSpinner } from "../../../../../components/common/LoadingSpinner";
 import CriterionCard from "./CriterionCard";
@@ -30,10 +29,11 @@ import QuestionModal from "./QuestionModal";
 
 function ConferenceReviewCriteriaTab({
   conference,
+  isAdmin,
 }: {
   conference: Conference;
+  isAdmin: boolean;
 }) {
-  const isAdmin = useIsAdmin();
   const queryClient = useQueryClient();
 
   // Criteria state

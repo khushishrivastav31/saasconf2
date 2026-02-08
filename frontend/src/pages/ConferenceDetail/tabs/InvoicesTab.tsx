@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../config/api";
-import { useIsAdmin } from "../../../hooks/useIsAdmin";
 import type {
   Conference,
   Invoice,
@@ -33,12 +32,13 @@ export default function ConferenceInvoicesTab({
   conference,
   selectedInvoiceId,
   setSelectedInvoiceId,
+  isAdmin,
 }: {
   conference: Conference;
   selectedInvoiceId: string | null;
   setSelectedInvoiceId: (id: string | null) => void;
+  isAdmin: boolean;
 }) {
-  const isAdmin = useIsAdmin();
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);

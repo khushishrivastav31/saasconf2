@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../config/api";
-import { useIsAdmin } from "../../../hooks/useIsAdmin";
 import type {
   Conference,
   PaginatedResponse,
@@ -22,12 +21,13 @@ export default function ConferenceLocationsTab({
   conference,
   selectedLocationId,
   setSelectedLocationId,
+  isAdmin,
 }: {
   conference: Conference;
   selectedLocationId: string | null;
   setSelectedLocationId: (id: string | null) => void;
+  isAdmin: boolean;
 }) {
-  const isAdmin = useIsAdmin();
   const queryClient = useQueryClient();
   const [linkError, setLinkError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);

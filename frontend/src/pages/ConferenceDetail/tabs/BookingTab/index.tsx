@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../../config/api";
-import { useIsAdmin } from "../../../../hooks/useIsAdmin";
 import type {
   BookingPeriod,
   BookingPeriodCreate,
@@ -19,8 +18,7 @@ import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
 import PricingMatrixSection from "./PricingMatrixSection";
 import DiscountCodesSection from "./DiscountCodesSection";
 
-function ConferenceBookingTab({ conferenceId }: { conferenceId: string }) {
-  const isAdmin = useIsAdmin();
+function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string; isAdmin: boolean }) {
   const queryClient = useQueryClient();
   const [showAddPeriod, setShowAddPeriod] = useState(false);
   const [showAddPackage, setShowAddPackage] = useState(false);

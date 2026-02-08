@@ -52,10 +52,12 @@ function DragHandle({ className }: { className?: string }) {
 
 interface CFPAssignmentsProps {
   conferenceId?: string;
+  isAdmin?: boolean;
 }
 
-export default function CFPAssignments({ conferenceId }: CFPAssignmentsProps = {}) {
-  const isAdmin = useIsAdmin();
+export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: CFPAssignmentsProps = {}) {
+  const isAdminFallback = useIsAdmin();
+  const isAdmin = isAdminProp ?? isAdminFallback;
   const queryClient = useQueryClient();
   const [selectedConferenceId, setSelectedConferenceId] = useState<string>(conferenceId ?? "");
   const [search, setSearch] = useState("");

@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../config/api";
-import { useIsAdmin } from "../../../hooks/useIsAdmin";
 import type {
   Conference,
   TeamMember,
@@ -11,16 +10,18 @@ import type {
 import { validatePhone } from "../../../utils/validators";
 import { parseApiError } from "../../../utils/apiError";
 import { ErrorBanner } from "../../../components/common/ErrorBanner";
+import ConfirmDialog from "../../../components/ConfirmDialog";
 import { EditIcon, DeleteIcon } from "../icons";
 
 function ConferenceTeamTab({
   conference,
   onUpdate,
+  isAdmin,
 }: {
   conference: Conference;
   onUpdate: () => void;
+  isAdmin: boolean;
 }) {
-  const isAdmin = useIsAdmin();
   const queryClient = useQueryClient();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(
     conference.team_members || [],
@@ -50,6 +51,12 @@ function ConferenceTeamTab({
     "idle" | "saving" | "saved" | "error"
   >("idle");
   const [userError, setUserError] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{ index: number; member: TeamMember } | null>(null);
+
+  // Sync local state when conference data changes (e.g., after refetch)
+  useEffect(() => {
+    setTeamMembers(conference.team_members || []);
+  }, [conference.team_members]);
 
   // Fetch existing tenant users to match team members
   const { data: usersData } = useQuery({
@@ -69,21 +76,29 @@ function ConferenceTeamTab({
     usersById[u.id] = u;
   }
 
-  const findUserForMember = (member: TeamMember): TenantUser | undefined => {
+  const findUserForMember = (member: TeamMember, originalEmail?: string): TenantUser | undefined => {
+    // First, try to find by user_id (most reliable)
     if (member.user_id && usersById[member.user_id]) {
       return usersById[member.user_id];
     }
+    // Then try by current email
     if (member.email) {
-      return usersByEmail[member.email.toLowerCase()];
+      const user = usersByEmail[member.email.toLowerCase()];
+      if (user) return user;
+    }
+    // Finally, try by original email (handles email change scenarios)
+    if (originalEmail) {
+      return usersByEmail[originalEmail.toLowerCase()];
     }
     return undefined;
   };
 
   const updateMutation = useMutation({
     mutationFn: async (members: TeamMember[]) => {
-      await api.put(`/conferences/${conference.id}`, {
+      const response = await api.put(`/conferences/${conference.id}`, {
         team_members: members,
       });
+      return response.data;
     },
     onMutate: () => setSaveStatus("saving"),
     onSuccess: () => {
@@ -91,8 +106,9 @@ function ConferenceTeamTab({
       onUpdate();
       setTimeout(() => setSaveStatus("idle"), 2000);
     },
-    onError: () => {
+    onError: (error) => {
       setSaveStatus("error");
+      setUserError(parseApiError(error));
       setTimeout(() => setSaveStatus("idle"), 3000);
     },
   });
@@ -102,9 +118,16 @@ function ConferenceTeamTab({
     setUserError(null);
 
     let userId: string | undefined;
+    const emailLower = newMember.email?.trim().toLowerCase();
 
-    // If email and password provided, create a user account
-    if (newMember.email?.trim() && newPassword.trim()) {
+    // Check if a user with this email already exists
+    const existingUser = emailLower ? usersByEmail[emailLower] : undefined;
+
+    if (existingUser) {
+      // Link to existing user instead of creating a new one
+      userId = existingUser.id;
+    } else if (newMember.email?.trim() && newPassword.trim()) {
+      // No existing user, but email + password provided → create new user
       try {
         const res = await api.post<TenantUser>("/users", {
           email: newMember.email.trim(),
@@ -141,10 +164,12 @@ function ConferenceTeamTab({
     updateMutation.mutate(newMembers);
   };
 
-  const removeMember = (index: number) => {
-    const newMembers = teamMembers.filter((_, i) => i !== index);
+  const confirmRemoveMember = () => {
+    if (removeTarget === null) return;
+    const newMembers = teamMembers.filter((_, i) => i !== removeTarget.index);
     setTeamMembers(newMembers);
     updateMutation.mutate(newMembers);
+    setRemoveTarget(null);
   };
 
   const startEditing = (index: number) => {
@@ -166,7 +191,8 @@ function ConferenceTeamTab({
     setUserError(null);
 
     const existingMember = teamMembers[editingIndex];
-    const existingUser = findUserForMember(existingMember);
+    // Try to find the user by user_id first, then by original email (handles email changes)
+    const existingUser = findUserForMember(existingMember, existingMember.email);
 
     // If the member has a linked user account, update role/password
     if (existingUser) {
@@ -196,21 +222,30 @@ function ConferenceTeamTab({
           return;
         }
       }
-    } else if (editForm.email?.trim() && editPassword.trim()) {
-      // No user yet but email + password provided — create one
-      try {
-        const res = await api.post<TenantUser>("/users", {
-          email: editForm.email.trim(),
-          password: editPassword.trim(),
-          first_name: editForm.first_name.trim(),
-          last_name: editForm.last_name.trim(),
-          role: editForm.is_manager ? "tenant_admin" : "user",
-        });
-        editForm.user_id = res.data.id;
-        queryClient.invalidateQueries({ queryKey: ["team-users"] });
-      } catch (err) {
-        setUserError(parseApiError(err));
-        return;
+      // Always preserve/set user_id on the team member to prevent future lookup issues
+      editForm.user_id = existingUser.id;
+    } else if (editForm.email?.trim()) {
+      // No linked user yet but email provided — check if user exists to link
+      const existingUserWithEmail = usersByEmail[editForm.email.toLowerCase()];
+      if (existingUserWithEmail) {
+        // Link to existing user instead of creating a new one
+        editForm.user_id = existingUserWithEmail.id;
+      } else if (editPassword.trim()) {
+        // No existing user, but password provided → create new user
+        try {
+          const res = await api.post<TenantUser>("/users", {
+            email: editForm.email.trim(),
+            password: editPassword.trim(),
+            first_name: editForm.first_name.trim(),
+            last_name: editForm.last_name.trim(),
+            role: editForm.is_manager ? "tenant_admin" : "user",
+          });
+          editForm.user_id = res.data.id;
+          queryClient.invalidateQueries({ queryKey: ["team-users"] });
+        } catch (err) {
+          setUserError(parseApiError(err));
+          return;
+        }
       }
     }
 
@@ -379,14 +414,14 @@ function ConferenceTeamTab({
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        {findUserForMember(teamMembers[editingIndex])
+                        {findUserForMember(teamMembers[editingIndex], teamMembers[editingIndex]?.email)
                           ? "New Password"
                           : "Password"}
                       </label>
                       <input
                         type="password"
                         placeholder={
-                          findUserForMember(teamMembers[editingIndex])
+                          findUserForMember(teamMembers[editingIndex], teamMembers[editingIndex]?.email)
                             ? "Leave empty to keep current"
                             : "Set to enable login"
                         }
@@ -402,7 +437,7 @@ function ConferenceTeamTab({
                       )}
                     </div>
                     <div className="flex items-end pb-1">
-                      {findUserForMember(teamMembers[editingIndex]) ? (
+                      {findUserForMember(teamMembers[editingIndex], teamMembers[editingIndex]?.email) ? (
                         <span className="text-xs text-green-600 flex items-center gap-1">
                           <svg
                             className="w-3.5 h-3.5"
@@ -526,9 +561,9 @@ function ConferenceTeamTab({
                       </button>
                       <button
                         type="button"
-                        onClick={() => removeMember(index)}
+                        onClick={() => setRemoveTarget({ index, member })}
                         className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
-                        title="Remove"
+                        title="Remove from team"
                       >
                         <DeleteIcon />
                       </button>
@@ -706,6 +741,19 @@ function ConferenceTeamTab({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!removeTarget}
+        title="Remove Team Member"
+        message={
+          removeTarget
+            ? `Are you sure you want to remove "${[removeTarget.member.first_name, removeTarget.member.last_name].filter(Boolean).join(" ")}" from this conference's team? This only removes them from this conference - their user account (if any) will not be affected.`
+            : ""
+        }
+        confirmLabel="Remove from Team"
+        onConfirm={confirmRemoveMember}
+        onCancel={() => setRemoveTarget(null)}
+      />
     </div>
   );
 }

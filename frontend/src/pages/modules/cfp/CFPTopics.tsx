@@ -11,8 +11,9 @@ interface TopicListResponse {
   total: number;
 }
 
-export default function CFPTopics() {
-  const isAdmin = useIsAdmin();
+export default function CFPTopics({ isAdmin: isAdminProp }: { isAdmin?: boolean } = {}) {
+  const isAdminFallback = useIsAdmin();
+  const isAdmin = isAdminProp ?? isAdminFallback;
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);

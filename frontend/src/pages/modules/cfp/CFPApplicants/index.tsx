@@ -98,12 +98,15 @@ export default function CFPApplicants({
   selectedApplicantId: externalSelectedId,
   setSelectedApplicantId: externalSetSelectedId,
   conferenceId,
+  isAdmin: isAdminProp,
 }: {
   selectedApplicantId?: string | null;
   setSelectedApplicantId?: (id: string | null) => void;
   conferenceId?: string;
+  isAdmin?: boolean;
 } = {}) {
-  const isAdmin = useIsAdmin();
+  const isAdminFallback = useIsAdmin();
+  const isAdmin = isAdminProp ?? isAdminFallback;
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null);
   const selectedApplicantId = externalSelectedId ?? internalSelectedId;
   const setSelectedApplicantId = externalSetSelectedId ?? setInternalSelectedId;
