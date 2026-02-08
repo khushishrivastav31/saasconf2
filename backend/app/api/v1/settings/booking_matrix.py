@@ -13,7 +13,7 @@ from app.schemas.settings import (
     BookingPeriodResponse,
 )
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 

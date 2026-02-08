@@ -8,7 +8,6 @@ from sqlalchemy import select
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    TenantAdminDep,
     get_client_ip,
 )
 from app.core.exceptions import NotFoundError, ValidationError
@@ -23,7 +22,7 @@ from app.schemas.review import (
     ReviewScoreScaleResponse,
 )
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 
@@ -115,12 +114,13 @@ async def create_review_question(
     conference_id: UUID,
     criterion_id: UUID,
     question_data: ReviewQuestionCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> ReviewQuestionResponse:
     """Create a new review question under a criterion."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     # Validate criterion exists and belongs to conference
     crit_result = await db.execute(
@@ -194,12 +194,13 @@ async def update_review_question(
     criterion_id: UUID,
     question_id: UUID,
     question_data: ReviewQuestionUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> ReviewQuestionResponse:
     """Update an existing review question."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(ReviewQuestion).where(
@@ -255,12 +256,13 @@ async def delete_review_question(
     conference_id: UUID,
     criterion_id: UUID,
     question_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a review question. Fails if any review answer references it."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(ReviewQuestion).where(

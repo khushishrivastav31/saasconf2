@@ -20,6 +20,7 @@ export default function UsersTab({
   const queryClient = useQueryClient();
   const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TenantUser | null>(null);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<TenantUser | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["tenant-users", tenantId],
@@ -34,6 +35,15 @@ export default function UsersTab({
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
       await api.delete(`/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant-users", tenantId] });
+    },
+  });
+
+  const permanentDeleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await api.delete(`/users/${userId}?permanent=true`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenant-users", tenantId] });
@@ -134,25 +144,47 @@ export default function UsersTab({
                           />
                         </svg>
                       </button>
-                      <button
-                        onClick={() => setDeleteTarget(user)}
-                        className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
-                        title="Deactivate"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                      {user.is_active ? (
+                        <button
+                          onClick={() => setDeleteTarget(user)}
+                          className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                          title="Deactivate"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                            />
+                          </svg>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setPermanentDeleteTarget(user)}
+                          className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
+                          title="Permanently Delete"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -186,6 +218,18 @@ export default function UsersTab({
           setDeleteTarget(null);
         }}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!permanentDeleteTarget}
+        title="Permanently Delete User"
+        message={`Are you sure you want to PERMANENTLY delete "${permanentDeleteTarget?.email}"? This action cannot be undone and the user record will be completely removed from the system.`}
+        confirmLabel="Delete Permanently"
+        onConfirm={() => {
+          if (permanentDeleteTarget) permanentDeleteMutation.mutate(permanentDeleteTarget.id);
+          setPermanentDeleteTarget(null);
+        }}
+        onCancel={() => setPermanentDeleteTarget(null)}
       />
     </div>
   );

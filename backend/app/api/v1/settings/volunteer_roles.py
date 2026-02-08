@@ -8,7 +8,6 @@ from sqlalchemy import select
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    TenantAdminDep,
     get_client_ip,
 )
 from app.core.exceptions import NotFoundError, ValidationError
@@ -21,7 +20,7 @@ from app.schemas.settings import (
     VolunteerRoleUpdate,
 )
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 
@@ -67,12 +66,13 @@ async def list_volunteer_roles(
 async def create_volunteer_role(
     conference_id: UUID,
     role_data: VolunteerRoleCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> VolunteerRoleResponse:
     """Create a new volunteer role for a conference."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     # Check unique name within conference
     existing = await db.execute(
@@ -126,12 +126,13 @@ async def update_volunteer_role(
     conference_id: UUID,
     role_id: UUID,
     role_data: VolunteerRoleUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> VolunteerRoleResponse:
     """Update an existing volunteer role."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(VolunteerRole).where(
@@ -191,12 +192,13 @@ async def update_volunteer_role(
 async def delete_volunteer_role(
     conference_id: UUID,
     role_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a volunteer role."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(VolunteerRole).where(

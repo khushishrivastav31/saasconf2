@@ -8,7 +8,6 @@ from sqlalchemy import select
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    TenantAdminDep,
     get_client_ip,
 )
 from app.core.exceptions import NotFoundError, ValidationError
@@ -21,7 +20,7 @@ from app.schemas.settings import (
     SponsorPackageUpdate,
 )
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 
@@ -69,12 +68,13 @@ async def list_sponsor_packages(
 async def create_sponsor_package(
     conference_id: UUID,
     pkg_data: SponsorPackageCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> SponsorPackageResponse:
     """Create a new sponsor package for a conference."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     # Check unique name within conference
     existing = await db.execute(
@@ -132,12 +132,13 @@ async def update_sponsor_package(
     conference_id: UUID,
     package_id: UUID,
     pkg_data: SponsorPackageUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> SponsorPackageResponse:
     """Update an existing sponsor package."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(SponsorPackage).where(
@@ -199,12 +200,13 @@ async def update_sponsor_package(
 async def delete_sponsor_package(
     conference_id: UUID,
     package_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a sponsor package."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(SponsorPackage).where(

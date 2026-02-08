@@ -9,7 +9,6 @@ from sqlalchemy import update as sql_update
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    TenantAdminDep,
     get_client_ip,
 )
 from app.core.exceptions import NotFoundError, ValidationError
@@ -23,7 +22,7 @@ from app.schemas.settings import (
     LocationTypeUpdate,
 )
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 
@@ -86,12 +85,13 @@ async def list_location_types(
 async def create_location_type(
     conference_id: UUID,
     type_data: LocationTypeCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> LocationTypeResponse:
     """Create a new location type for a conference."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     # Check unique slug within conference
     existing = await db.execute(
@@ -148,12 +148,13 @@ async def update_location_type(
     conference_id: UUID,
     type_id: UUID,
     type_data: LocationTypeUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> LocationTypeResponse:
     """Update an existing location type."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(TenantLocationType).where(
@@ -238,12 +239,13 @@ async def update_location_type(
 async def delete_location_type(
     conference_id: UUID,
     type_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a location type. Blocked if locations are using this type."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(TenantLocationType).where(

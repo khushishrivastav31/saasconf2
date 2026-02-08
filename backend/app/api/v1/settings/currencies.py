@@ -9,7 +9,6 @@ from sqlalchemy import update as sql_update
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    TenantAdminDep,
     get_client_ip,
 )
 from app.core.exceptions import NotFoundError, ValidationError
@@ -22,7 +21,7 @@ from app.schemas.settings import (
     CurrencyUpdate,
 )
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 
@@ -69,12 +68,13 @@ async def list_currencies(
 async def create_currency(
     conference_id: UUID,
     currency_data: CurrencyCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> CurrencyResponse:
     """Create a new currency for a conference."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     # Check unique code within conference
     existing = await db.execute(
@@ -130,12 +130,13 @@ async def update_currency(
     conference_id: UUID,
     currency_id: UUID,
     currency_data: CurrencyUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> CurrencyResponse:
     """Update an existing currency."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(ConferenceCurrency).where(
@@ -208,12 +209,13 @@ async def update_currency(
 async def delete_currency(
     conference_id: UUID,
     currency_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a currency. Blocked if sponsor packages are using this currency."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(ConferenceCurrency).where(

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.cfp import CallForPapers
     from app.models.location import Location
     from app.models.tenant import Tenant
+    from app.models.user_conference_access import UserConferenceAccess
     from app.models.volunteer import Volunteer
 
 
@@ -84,6 +85,11 @@ class Conference(Base):
     )
     cfps: Mapped[list["CallForPapers"]] = relationship(
         "CallForPapers", secondary="conference_cfps", viewonly=True,
+    )
+    user_access: Mapped[list["UserConferenceAccess"]] = relationship(
+        "UserConferenceAccess",
+        back_populates="conference",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

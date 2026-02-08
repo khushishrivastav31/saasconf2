@@ -8,7 +8,6 @@ from sqlalchemy import select
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    TenantAdminDep,
     get_client_ip,
 )
 from app.core.exceptions import NotFoundError, ValidationError
@@ -21,7 +20,7 @@ from app.schemas.settings import (
     BookingPeriodUpdate,
 )
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 
@@ -71,12 +70,13 @@ async def list_booking_periods(
 async def create_booking_period(
     conference_id: UUID,
     period_data: BookingPeriodCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> BookingPeriodResponse:
     """Create a new booking period for a conference."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     # Check unique name within conference
     existing = await db.execute(
@@ -140,12 +140,13 @@ async def update_booking_period(
     conference_id: UUID,
     period_id: UUID,
     period_data: BookingPeriodUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> BookingPeriodResponse:
     """Update an existing booking period."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(BookingPeriod).where(
@@ -214,12 +215,13 @@ async def update_booking_period(
 async def delete_booking_period(
     conference_id: UUID,
     period_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a booking period and clean up dangling references in package prices."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(BookingPeriod).where(

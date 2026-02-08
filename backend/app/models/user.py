@@ -13,6 +13,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.tenant import Tenant
+    from app.models.user_conference_access import UserConferenceAccess
 
 
 class UserRole(str, Enum):
@@ -48,6 +49,7 @@ class User(Base):
         String(50), nullable=False, default=UserRole.USER.value
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    has_all_conference_access: Mapped[bool] = mapped_column(Boolean, default=True)
     last_login: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -60,6 +62,12 @@ class User(Base):
 
     # Relationships
     tenant: Mapped["Tenant | None"] = relationship("Tenant", back_populates="users")
+    conference_access: Mapped[list["UserConferenceAccess"]] = relationship(
+        "UserConferenceAccess",
+        foreign_keys="UserConferenceAccess.user_id",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
     # Indexes
     __table_args__ = (

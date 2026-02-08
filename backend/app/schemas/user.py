@@ -48,6 +48,7 @@ class UserUpdate(BaseModel):
     pronouns: str | None = Field(None, max_length=100)
     role: str | None = None
     is_active: bool | None = None
+    has_all_conference_access: bool | None = None
     password: str | None = Field(None, min_length=8, max_length=128)
 
     @field_validator("password")
@@ -72,6 +73,7 @@ class UserInDB(UserBase):
     id: UUID
     tenant_id: UUID | None
     is_active: bool
+    has_all_conference_access: bool = True
     last_login: datetime | None
     created_at: datetime
     updated_at: datetime
@@ -129,6 +131,7 @@ class TenantUserResponse(BaseModel):
     pronouns: str | None
     role: str
     is_active: bool
+    has_all_conference_access: bool = True
     last_login: datetime | None
     created_at: datetime
     updated_at: datetime

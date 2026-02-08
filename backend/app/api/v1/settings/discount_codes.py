@@ -8,7 +8,6 @@ from sqlalchemy import select
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    TenantAdminDep,
     get_client_ip,
 )
 from app.core.exceptions import NotFoundError, ValidationError
@@ -21,7 +20,7 @@ from app.schemas.settings import (
     DiscountCodeUpdate,
 )
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 
@@ -74,12 +73,13 @@ async def list_discount_codes(
 async def create_discount_code(
     conference_id: UUID,
     code_data: DiscountCodeCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> DiscountCodeResponse:
     """Create a new discount code for a conference."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     # Check unique code within conference
     existing = await db.execute(
@@ -146,12 +146,13 @@ async def update_discount_code(
     conference_id: UUID,
     discount_code_id: UUID,
     code_data: DiscountCodeUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> DiscountCodeResponse:
     """Update an existing discount code."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(DiscountCode).where(
@@ -218,12 +219,13 @@ async def update_discount_code(
 async def delete_discount_code(
     conference_id: UUID,
     discount_code_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a discount code."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(DiscountCode).where(

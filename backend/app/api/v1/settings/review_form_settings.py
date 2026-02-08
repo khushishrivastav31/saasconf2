@@ -5,11 +5,11 @@ from uuid import UUID
 from fastapi import APIRouter
 from sqlalchemy import select
 
-from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep
+from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.models.review import ReviewFormSettings
 from app.schemas.review import ReviewFormSettingsResponse, ReviewFormSettingsUpdate
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 
@@ -54,11 +54,12 @@ async def get_review_form_settings(
 async def update_review_form_settings(
     conference_id: UUID,
     data: ReviewFormSettingsUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> ReviewFormSettingsResponse:
     """Update review form settings for a conference."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(ReviewFormSettings).where(

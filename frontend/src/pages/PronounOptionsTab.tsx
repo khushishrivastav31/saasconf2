@@ -12,13 +12,11 @@ import StatusBadge from "../components/common/StatusBadge";
 import { ErrorBanner } from "../components/common/ErrorBanner";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import ModalFooter from "../components/common/ModalFooter";
-import { useIsAdmin } from "../hooks/useIsAdmin";
 import { useSettingsCrud } from "../hooks/useSettingsCrud";
 
 // --- Pronoun Options Tab -----------------------------------------------------
 
-export default function PronounOptionsTab({ conference }: { conference: Conference }) {
-  const isAdmin = useIsAdmin();
+export default function PronounOptionsTab({ conference, isAdmin }: { conference: Conference; isAdmin: boolean }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPronoun, setEditingPronoun] = useState<PronounOption | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PronounOption | null>(null);

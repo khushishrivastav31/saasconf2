@@ -729,6 +729,7 @@ export interface TenantUser {
   pronouns: string | null;
   role: "tenant_admin" | "user";
   is_active: boolean;
+  has_all_conference_access: boolean;
   last_login: string | null;
   created_at: string;
   updated_at: string;
@@ -750,7 +751,25 @@ export interface TenantUserUpdate {
   pronouns?: string;
   role?: "tenant_admin" | "user";
   is_active?: boolean;
+  has_all_conference_access?: boolean;
   password?: string;
+}
+
+// User Conference Access types
+export interface UserConferenceAccess {
+  id: string;
+  user_id: string;
+  conference_id: string;
+  access_level: "admin" | "read_only";
+  granted_by: string | null;
+  granted_at: string;
+}
+
+export interface UserConferenceAccessWithDetails extends UserConferenceAccess {
+  conference_name: string;
+  conference_abbreviation: string | null;
+  user_email: string;
+  user_name: string | null;
 }
 
 // Conference types

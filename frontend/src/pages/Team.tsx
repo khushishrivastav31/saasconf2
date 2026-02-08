@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../config/api";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -9,15 +9,18 @@ import type {
   TenantUserCreate,
   TenantUserUpdate,
   PaginatedResponse,
+  Conference,
+  UserConferenceAccessWithDetails,
 } from "../types";
 
 export default function Team() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TenantUser | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["team-users"],
@@ -42,6 +45,8 @@ export default function Team() {
   });
 
   const users = data?.items ?? [];
+  // Look up editingUser from fresh query data to avoid stale state
+  const editingUser = editingUserId ? users.find((u) => u.id === editingUserId) : null;
   const filteredUsers = search
     ? users.filter(
         (u) =>
@@ -94,6 +99,18 @@ export default function Team() {
           <button
             onClick={() => setError(null)}
             className="ml-2 text-red-500 hover:text-red-700 font-medium"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded text-sm">
+          {successMessage}
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="ml-2 text-green-500 hover:text-green-700 font-medium"
           >
             Dismiss
           </button>
@@ -184,7 +201,7 @@ export default function Team() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button
-                        onClick={() => setEditingUser(user)}
+                        onClick={() => setEditingUserId(user.id)}
                         className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
                         title="Edit"
                       >
@@ -233,9 +250,14 @@ export default function Team() {
       {/* Add Member Modal */}
       {showAddModal && (
         <AddMemberModal
-          onClose={() => {
+          onClose={(created?: boolean, memberName?: string) => {
             setShowAddModal(false);
-            queryClient.invalidateQueries({ queryKey: ["team-users"] });
+            if (created && memberName) {
+              setSuccessMessage(`Team member "${memberName}" has been created successfully.`);
+              setTimeout(() => setSuccessMessage(null), 5000);
+            }
+            // Force refetch to ensure new data is loaded
+            queryClient.refetchQueries({ queryKey: ["team-users"] });
           }}
         />
       )}
@@ -243,10 +265,12 @@ export default function Team() {
       {/* Edit Member Modal */}
       {editingUser && (
         <EditMemberModal
+          key={`${editingUser.id}-${editingUser.updated_at}`}
           user={editingUser}
           onClose={() => {
-            setEditingUser(null);
-            queryClient.invalidateQueries({ queryKey: ["team-users"] });
+            setEditingUserId(null);
+            // Force refetch to ensure updated data is loaded
+            queryClient.refetchQueries({ queryKey: ["team-users"] });
           }}
         />
       )}
@@ -266,7 +290,7 @@ export default function Team() {
   );
 }
 
-function AddMemberModal({ onClose }: { onClose: () => void }) {
+function AddMemberModal({ onClose }: { onClose: (created?: boolean, memberName?: string) => void }) {
   const [formData, setFormData] = useState<TenantUserCreate>({
     email: "",
     password: "",
@@ -287,8 +311,12 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
   const createMutation = useMutation({
     mutationFn: async (data: TenantUserCreate) => {
       await api.post("/users", data);
+      return data;
     },
-    onSuccess: () => onClose(),
+    onSuccess: (data) => {
+      const memberName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email;
+      onClose(true, memberName);
+    },
     onError: (err) => setErrorMessage(parseApiError(err)),
   });
 
@@ -299,7 +327,7 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Modal open={true} onClose={onClose} title="Add Team Member" size="max-w-md">
+    <Modal open={true} onClose={() => onClose()} title="Add Team Member" size="max-w-md">
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-4 space-y-4">
           {errorMessage && (
@@ -419,7 +447,7 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
         <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => onClose()}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
           >
             Cancel
@@ -444,6 +472,7 @@ function EditMemberModal({
   user: TenantUser;
   onClose: () => void;
 }) {
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState<TenantUserUpdate>({
     email: user.email,
     first_name: user.first_name || "",
@@ -451,8 +480,17 @@ function EditMemberModal({
     pronouns: user.pronouns || "",
     role: user.role,
     is_active: user.is_active,
+    has_all_conference_access: user.has_all_conference_access,
   });
   const [newPassword, setNewPassword] = useState("");
+
+  // Sync formData when user prop changes (e.g., after query refetch)
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      has_all_conference_access: user.has_all_conference_access,
+    }));
+  }, [user.has_all_conference_access]);
 
   const { data: pronounData } = useQuery({
     queryKey: ["user-pronoun-options"],
@@ -461,6 +499,27 @@ function EditMemberModal({
       return res.data;
     },
   });
+
+  // Fetch conferences for assignment
+  const { data: conferencesData } = useQuery({
+    queryKey: ["conferences-for-access"],
+    queryFn: async () => {
+      const res = await api.get<PaginatedResponse<Conference>>("/conferences?page_size=100");
+      return res.data;
+    },
+  });
+
+  // Fetch user's current conference access
+  const { data: userAccessData, refetch: refetchUserAccess } = useQuery({
+    queryKey: ["user-conference-access", user.id],
+    queryFn: async () => {
+      const res = await api.get<{ items: UserConferenceAccessWithDetails[]; total: number }>(
+        `/user-conference-access/user/${user.id}`
+      );
+      return res.data;
+    },
+  });
+
   const [saveStatus, setSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -477,6 +536,7 @@ function EditMemberModal({
     onSuccess: () => {
       setSaveStatus("saved");
       setNewPassword("");
+      queryClient.invalidateQueries({ queryKey: ["team-users"] });
       setTimeout(() => setSaveStatus("idle"), 2000);
     },
     onError: (err) => {
@@ -484,6 +544,50 @@ function EditMemberModal({
       setErrorMessage(parseApiError(err));
       setTimeout(() => setSaveStatus("idle"), 3000);
     },
+  });
+
+  // Grant conference access mutation
+  const grantAccessMutation = useMutation({
+    mutationFn: async ({ conferenceId, accessLevel }: { conferenceId: string; accessLevel: "admin" | "read_only" }) => {
+      // If user currently has all conference access, turn it off first
+      if (user.has_all_conference_access) {
+        await api.put(`/users/${user.id}`, { has_all_conference_access: false });
+      }
+      await api.post("/user-conference-access", {
+        user_id: user.id,
+        conference_id: conferenceId,
+        access_level: accessLevel,
+      });
+    },
+    onSuccess: () => {
+      refetchUserAccess();
+      queryClient.invalidateQueries({ queryKey: ["team-users"] });
+    },
+    onError: (err) => setErrorMessage(parseApiError(err)),
+  });
+
+  // Revoke conference access mutation
+  const revokeAccessMutation = useMutation({
+    mutationFn: async (accessId: string) => {
+      await api.delete(`/user-conference-access/${accessId}`);
+    },
+    onSuccess: () => {
+      refetchUserAccess();
+    },
+    onError: (err) => setErrorMessage(parseApiError(err)),
+  });
+
+  // Update access level mutation
+  const updateAccessMutation = useMutation({
+    mutationFn: async ({ accessId, accessLevel }: { accessId: string; accessLevel: "admin" | "read_only" }) => {
+      await api.put(`/user-conference-access/${accessId}`, {
+        access_level: accessLevel,
+      });
+    },
+    onSuccess: () => {
+      refetchUserAccess();
+    },
+    onError: (err) => setErrorMessage(parseApiError(err)),
   });
 
   const handleSave = () => {
@@ -495,207 +599,240 @@ function EditMemberModal({
   };
 
   return (
-    <Modal open={true} onClose={onClose} title="Edit Team Member" size="max-w-md">
-      <div className="px-6 pb-2 -mt-2 flex justify-between items-center">
-        <p className="text-sm text-gray-500">{user.email}</p>
+    <Modal open={true} onClose={onClose} title="Edit Team Member" size="max-w-2xl">
+      <div className="px-6 pb-2 -mt-2 flex justify-end items-center">
         <div className="flex items-center gap-2">
           {saveStatus === "saving" && (
             <span className="text-xs text-gray-500 flex items-center gap-1">
-              <svg
-                className="animate-spin h-3 w-3"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
+              <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
               Saving...
             </span>
           )}
           {saveStatus === "saved" && (
             <span className="text-xs text-green-600 flex items-center gap-1">
-              <svg
-                className="h-3 w-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               Saved
             </span>
           )}
-          {saveStatus === "error" && (
-            <span className="text-xs text-red-600">Save failed</span>
-          )}
+          {saveStatus === "error" && <span className="text-xs text-red-600">Save failed</span>}
         </div>
       </div>
 
-      <div className="px-6 py-4 space-y-4">
+      <div className="px-6 py-4">
         {errorMessage && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700 mb-4">
             {errorMessage}
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Email
-          </label>
-          <input
-            type="email"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            value={formData.email}
-            onChange={(e) =>
-              setFormData({ ...formData, email: e.target.value })
-            }
-          />
-        </div>
+        <div className="grid grid-cols-2 gap-6">
+          {/* Left column - User details */}
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email *</label>
+              <input
+                type="email"
+                required
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              First Name *
-            </label>
-            <input
-              type="text"
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.first_name}
-              onChange={(e) =>
-                setFormData({ ...formData, first_name: e.target.value })
-              }
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">First Name *</label>
+                <input
+                  type="text"
+                  required
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.first_name}
+                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Last Name *</label>
+                <input
+                  type="text"
+                  required
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.last_name}
+                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {pronounData && pronounData.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Pronouns</label>
+                  <select
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    value={formData.pronouns || ""}
+                    onChange={(e) => setFormData({ ...formData, pronouns: e.target.value || undefined })}
+                  >
+                    <option value="">Select...</option>
+                    {pronounData.map((opt) => (
+                      <option key={opt.id} value={opt.name}>{opt.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Role</label>
+                <select
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as "tenant_admin" | "user" })}
+                >
+                  <option value="user">Read-only</option>
+                  <option value="tenant_admin">Admin</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between py-1">
+              <label className="text-sm font-medium text-gray-700">Active</label>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                  formData.is_active ? "bg-primary-600" : "bg-gray-200"
+                }`}
+              >
+                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.is_active ? "translate-x-4" : "translate-x-0"}`} />
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-gray-200">
+              <label className="block text-sm font-medium text-gray-700">New Password</label>
+              <input
+                type="password"
+                minLength={8}
+                placeholder="Leave empty to keep current"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Last Name *
+
+          {/* Right column - Conference access */}
+          <div className="border-l border-gray-200 pl-6">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Conference Access</h4>
+
+            <label className="flex items-center gap-2 mb-2">
+              <input
+                type="checkbox"
+                checked={formData.has_all_conference_access}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setFormData({ ...formData, has_all_conference_access: newValue });
+                  try {
+                    await api.put(`/users/${user.id}`, { has_all_conference_access: newValue });
+                    queryClient.invalidateQueries({ queryKey: ["team-users"] });
+                  } catch (err) {
+                    setErrorMessage(parseApiError(err));
+                    setFormData({ ...formData, has_all_conference_access: !newValue });
+                  }
+                }}
+                className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-700">All Conferences</span>
             </label>
-            <input
-              type="text"
-              required
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.last_name}
-              onChange={(e) =>
-                setFormData({ ...formData, last_name: e.target.value })
-              }
-            />
+
+            {!formData.has_all_conference_access && (
+              <div className="border border-gray-200 rounded-lg bg-gray-50 p-2 max-h-48 overflow-y-auto">
+                {userAccessData && userAccessData.items.length > 0 ? (
+                  <div className="space-y-1.5 mb-2">
+                    {userAccessData.items.map((access) => (
+                      <div key={access.id} className="flex items-center justify-between bg-white border border-gray-200 rounded px-2 py-1.5">
+                        <span className="text-sm text-gray-900 truncate">{access.conference_name}</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <select
+                            value={access.access_level}
+                            onChange={(e) => updateAccessMutation.mutate({ accessId: access.id, accessLevel: e.target.value as "admin" | "read_only" })}
+                            className="text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          >
+                            <option value="read_only">Read-only</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => revokeAccessMutation.mutate(access.id)}
+                            disabled={revokeAccessMutation.isPending}
+                            className="text-red-500 hover:text-red-700 p-0.5"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 mb-2">No access granted yet.</p>
+                )}
+
+                {conferencesData && (() => {
+                  const assignedIds = new Set(userAccessData?.items.map((a) => a.conference_id) || []);
+                  const availableConferences = conferencesData.items.filter((c) => !assignedIds.has(c.id));
+                  if (availableConferences.length === 0) return null;
+
+                  return (
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        id="add-conference-select"
+                        className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        defaultValue=""
+                      >
+                        <option value="" disabled>Add conference...</option>
+                        {availableConferences.map((conf) => (
+                          <option key={conf.id} value={conf.id}>{conf.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const select = document.getElementById("add-conference-select") as HTMLSelectElement;
+                          if (select.value) {
+                            grantAccessMutation.mutate({ conferenceId: select.value, accessLevel: "read_only" });
+                            select.value = "";
+                          }
+                        }}
+                        disabled={grantAccessMutation.isPending}
+                        className="px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700 disabled:opacity-50"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
-        </div>
-
-        {pronounData && pronounData.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Pronouns
-            </label>
-            <select
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.pronouns || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, pronouns: e.target.value || undefined })
-              }
-            >
-              <option value="">Select pronouns...</option>
-              {pronounData.map((opt) => (
-                <option key={opt.id} value={opt.name}>
-                  {opt.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Access Level
-          </label>
-          <select
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            value={formData.role}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                role: e.target.value as "tenant_admin" | "user",
-              })
-            }
-          >
-            <option value="user">Read-only</option>
-            <option value="tenant_admin">Admin</option>
-          </select>
-          <p className="mt-1 text-xs text-gray-500">
-            Read-only users can view all data but cannot create, edit, or delete.
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700">Active</label>
-          <button
-            type="button"
-            onClick={() =>
-              setFormData({ ...formData, is_active: !formData.is_active })
-            }
-            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-              formData.is_active ? "bg-primary-600" : "bg-gray-200"
-            }`}
-          >
-            <span
-              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                formData.is_active ? "translate-x-5" : "translate-x-0"
-              }`}
-            />
-          </button>
-        </div>
-
-        <div className="border-t border-gray-200 pt-4">
-          <label className="block text-sm font-medium text-gray-700">
-            New Password
-          </label>
-          <input
-            type="password"
-            minLength={8}
-            placeholder="Leave empty to keep current password"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Minimum 8 characters. Only fill in to change the password.
-          </p>
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+      <div className="px-6 py-3 bg-gray-50 rounded-b-lg flex justify-end gap-3">
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          className="px-4 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
         >
           Close
         </button>
         <button
           type="button"
           onClick={handleSave}
-          disabled={
-            updateMutation.isPending ||
-            (newPassword.length > 0 && newPassword.length < 8)
-          }
-          className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
+          disabled={updateMutation.isPending || (newPassword.length > 0 && newPassword.length < 8)}
+          className="px-4 py-1.5 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
         >
           {updateMutation.isPending ? "Saving..." : "Save Changes"}
         </button>

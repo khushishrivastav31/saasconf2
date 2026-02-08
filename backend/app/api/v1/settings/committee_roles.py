@@ -8,7 +8,6 @@ from sqlalchemy import select
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    TenantAdminDep,
     get_client_ip,
 )
 from app.core.exceptions import NotFoundError, ValidationError
@@ -21,7 +20,7 @@ from app.schemas.settings import (
     CFPCommitteeRoleUpdate,
 )
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 
@@ -67,12 +66,13 @@ async def list_committee_roles(
 async def create_committee_role(
     conference_id: UUID,
     role_data: CFPCommitteeRoleCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> CFPCommitteeRoleResponse:
     """Create a new committee role for a conference."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     # Check unique name within conference
     existing = await db.execute(
@@ -126,12 +126,13 @@ async def update_committee_role(
     conference_id: UUID,
     role_id: UUID,
     role_data: CFPCommitteeRoleUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> CFPCommitteeRoleResponse:
     """Update an existing committee role."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(CFPCommitteeRole).where(
@@ -191,12 +192,13 @@ async def update_committee_role(
 async def delete_committee_role(
     conference_id: UUID,
     role_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a committee role."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(CFPCommitteeRole).where(

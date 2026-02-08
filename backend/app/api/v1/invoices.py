@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 
-from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip, require_module
-from app.core.exceptions import NotFoundError
+from app.core.dependencies import CurrentUserDep, DbSessionDep, check_conference_admin_access, get_client_ip, require_module
+from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.pagination import paginate
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
@@ -133,11 +133,17 @@ async def list_invoices(
 async def create_invoice(
     conference_id: UUID,
     invoice_data: InvoiceCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> InvoiceResponse:
     """Create a new invoice for a conference."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
+
     conference = await _get_conference_for_tenant(
         db, conference_id, current_user.tenant_id
     )
@@ -234,11 +240,17 @@ async def update_invoice(
     conference_id: UUID,
     invoice_id: UUID,
     invoice_data: InvoiceUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> InvoiceResponse:
     """Update an invoice."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
+
     result = await db.execute(
         select(Invoice).where(
             Invoice.id == invoice_id,
@@ -294,11 +306,17 @@ async def update_invoice(
 async def delete_invoice(
     conference_id: UUID,
     invoice_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete an invoice and its attachments."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
+
     result = await db.execute(
         select(Invoice).where(
             Invoice.id == invoice_id,

@@ -11,9 +11,11 @@ from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
     TenantAdminDep,
+    check_conference_admin_access,
     get_client_ip,
     require_module,
 )
+from app.core.exceptions import AuthorizationError
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.pagination import paginate
 from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
@@ -41,6 +43,7 @@ from app.schemas.service_provider import (
     ServiceProviderUpdate,
 )
 from app.schemas.volunteer import VolunteerListResponse, VolunteerResponse
+from app.api.v1.user_conference_access import grant_conference_access_for_team_member
 
 router = APIRouter()
 
@@ -324,15 +327,21 @@ async def get_conference(
 async def update_conference(
     conference_id: UUID,
     conference_data: ConferenceUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> ConferenceResponse:
     """
     Update a conference.
 
-    Requires the 'conferences' module.
+    Requires the 'conferences' module and admin access to the conference.
+    (Tenant admins or users with conference-specific admin access)
     """
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     result = await db.execute(
         select(Conference)
@@ -352,10 +361,22 @@ async def update_conference(
         update_data["social_links"] = update_data["social_links"].model_dump() if hasattr(update_data["social_links"], "model_dump") else update_data["social_links"]
 
     if "team_members" in update_data and update_data["team_members"] is not None:
-        update_data["team_members"] = [
+        team_members_data = [
             tm.model_dump() if hasattr(tm, "model_dump") else tm
             for tm in update_data["team_members"]
         ]
+        update_data["team_members"] = team_members_data
+
+        # Auto-grant conference access for team members with user_id
+        for tm in team_members_data:
+            if tm.get("user_id"):
+                await grant_conference_access_for_team_member(
+                    db=db,
+                    user_id=UUID(tm["user_id"]) if isinstance(tm["user_id"], str) else tm["user_id"],
+                    conference_id=conference.id,
+                    is_manager=tm.get("is_manager", False),
+                    granted_by=current_user.user_id,
+                )
 
     for field, value in update_data.items():
         setattr(conference, field, value)
@@ -382,7 +403,7 @@ async def update_conference(
 @router.delete("/{conference_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def delete_conference(
     conference_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
@@ -393,8 +414,13 @@ async def delete_conference(
     conference are deleted. Entities also linked to other conferences are
     simply unlinked (handled by CASCADE on junction tables).
 
-    Requires the 'conferences' module.
+    Requires the 'conferences' module and admin access to the conference.
     """
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     result = await db.execute(
         select(Conference)
@@ -595,15 +621,20 @@ async def delete_conference_preview(
 @router.post("/{conference_id}/publish", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def publish_conference(
     conference_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> ConferenceResponse:
     """
     Publish a conference (make it visible).
 
-    Requires the 'conferences' module.
+    Requires the 'conferences' module and admin access to the conference.
     """
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     result = await db.execute(
         select(Conference)
@@ -639,15 +670,20 @@ async def publish_conference(
 @router.post("/{conference_id}/unpublish", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def unpublish_conference(
     conference_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> ConferenceResponse:
     """
     Unpublish a conference (hide it).
 
-    Requires the 'conferences' module.
+    Requires the 'conferences' module and admin access to the conference.
     """
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     result = await db.execute(
         select(Conference)
@@ -858,11 +894,16 @@ async def list_conference_volunteers(
 async def link_volunteer_to_conference(
     conference_id: UUID,
     body: ConferenceAssociationRequest,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Link an existing volunteer to a conference."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -902,11 +943,16 @@ async def link_volunteer_to_conference(
 async def unlink_volunteer_from_conference(
     conference_id: UUID,
     volunteer_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Unlink a volunteer from a conference. Blocked if it's the volunteer's only conference."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -997,11 +1043,16 @@ async def list_conference_locations(
 async def link_location_to_conference(
     conference_id: UUID,
     body: ConferenceAssociationRequest,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Link an existing location to a conference."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -1041,11 +1092,16 @@ async def link_location_to_conference(
 async def unlink_location_from_conference(
     conference_id: UUID,
     location_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Unlink a location from a conference. Blocked if it's the location's only conference."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -1151,11 +1207,16 @@ async def list_conference_cfps(
 async def link_cfp_to_conference(
     conference_id: UUID,
     body: ConferenceAssociationRequest,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Link an existing CFP to a conference."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -1195,11 +1256,16 @@ async def link_cfp_to_conference(
 async def unlink_cfp_from_conference(
     conference_id: UUID,
     cfp_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Unlink a CFP from a conference. Blocked if it's the CFP's only conference."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
@@ -1270,11 +1336,17 @@ async def list_conference_service_providers(
 async def create_conference_service_provider(
     conference_id: UUID,
     data: ServiceProviderCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> ServiceProviderResponse:
     """Create a service provider directly linked to a conference (no location)."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
+
     conference = await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
     sp = ServiceProvider(
@@ -1319,11 +1391,17 @@ async def update_conference_service_provider(
     conference_id: UUID,
     provider_id: UUID,
     data: ServiceProviderUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> ServiceProviderResponse:
     """Update a conference service provider."""
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
+
     conference = await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 
     result = await db.execute(
@@ -1367,12 +1445,18 @@ async def update_conference_service_provider(
 async def delete_conference_service_provider(
     conference_id: UUID,
     provider_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a conference service provider and its attachments."""
     from app.models.attachment import Attachment
+
+    # Check admin access: tenant admin OR conference-specific admin
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
 
     conference = await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
 

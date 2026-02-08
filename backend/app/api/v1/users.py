@@ -76,6 +76,7 @@ async def list_tenant_users(
             pronouns=u.pronouns,
             role=u.role,
             is_active=u.is_active,
+            has_all_conference_access=u.has_all_conference_access,
             last_login=u.last_login,
             created_at=u.created_at,
             updated_at=u.updated_at,
@@ -187,6 +188,7 @@ async def create_tenant_user(
         pronouns=user.pronouns,
         role=user.role,
         is_active=user.is_active,
+        has_all_conference_access=user.has_all_conference_access,
         last_login=user.last_login,
         created_at=user.created_at,
         updated_at=user.updated_at,
@@ -218,6 +220,7 @@ async def get_tenant_user(
         pronouns=user.pronouns,
         role=user.role,
         is_active=user.is_active,
+        has_all_conference_access=user.has_all_conference_access,
         last_login=user.last_login,
         created_at=user.created_at,
         updated_at=user.updated_at,
@@ -251,8 +254,17 @@ async def update_tenant_user(
     if user.role == UserRole.SUPER_ADMIN.value and not current_user.is_super_admin:
         raise AuthorizationError("Cannot modify super admin users")
 
-    # Update fields
+    # Check email uniqueness if email is being changed
     update_data = user_data.model_dump(exclude_unset=True)
+    if "email" in update_data and update_data["email"] != user.email:
+        existing = await db.execute(
+            select(User)
+            .where(User.tenant_id == user.tenant_id)
+            .where(User.email == update_data["email"])
+            .where(User.id != user_id)
+        )
+        if existing.scalar_one_or_none():
+            raise ValidationError(f"User with email '{update_data['email']}' already exists in this tenant")
 
     # Handle password separately
     if "password" in update_data:
@@ -285,6 +297,7 @@ async def update_tenant_user(
         pronouns=user.pronouns,
         role=user.role,
         is_active=user.is_active,
+        has_all_conference_access=user.has_all_conference_access,
         last_login=user.last_login,
         created_at=user.created_at,
         updated_at=user.updated_at,
@@ -297,8 +310,9 @@ async def deactivate_tenant_user(
     current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
+    permanent: bool = Query(False, description="Permanently delete user (super admin only)"),
 ) -> dict:
-    """Deactivate a user (soft delete)."""
+    """Deactivate a user (soft delete) or permanently delete (super admin only)."""
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
@@ -309,14 +323,39 @@ async def deactivate_tenant_user(
     if not current_user.is_super_admin and user.tenant_id != current_user.tenant_id:
         raise NotFoundError(f"User with ID '{user_id}' not found")
 
-    # Cannot deactivate yourself
+    # Cannot delete yourself
     if user.id == current_user.user_id:
-        raise ValidationError("Cannot deactivate your own account")
+        raise ValidationError("Cannot delete your own account")
 
-    # Cannot deactivate super_admin (unless you are super_admin)
+    # Cannot delete super_admin (unless you are super_admin)
     if user.role == UserRole.SUPER_ADMIN.value and not current_user.is_super_admin:
-        raise AuthorizationError("Cannot deactivate super admin users")
+        raise AuthorizationError("Cannot delete super admin users")
 
+    # Permanent delete requires super admin
+    if permanent:
+        if not current_user.is_super_admin:
+            raise AuthorizationError("Only super admins can permanently delete users")
+
+        user_email = user.email
+        await db.delete(user)
+
+        # Log action
+        audit_log = AuditLog(
+            tenant_id=user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.USER_DELETE,
+            resource_type="user",
+            resource_id=user_id,
+            details={"email": user_email, "permanent": True},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+        db.add(audit_log)
+        await db.commit()
+
+        return {"message": f"User '{user_email}' has been permanently deleted"}
+
+    # Soft delete (deactivate)
     user.is_active = False
 
     # Log action

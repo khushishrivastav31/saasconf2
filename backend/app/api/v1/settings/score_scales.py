@@ -8,7 +8,6 @@ from sqlalchemy import select
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    TenantAdminDep,
     get_client_ip,
 )
 from app.core.exceptions import NotFoundError, ValidationError
@@ -22,7 +21,7 @@ from app.schemas.review import (
     ReviewScoreScaleUpdate,
 )
 
-from ._shared import _resolve_conference
+from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
 
@@ -83,12 +82,13 @@ async def list_score_scales(
 async def create_score_scale(
     conference_id: UUID,
     scale_data: ReviewScoreScaleCreate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> ReviewScoreScaleResponse:
     """Create a new score scale with nested options."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     # Check unique name within conference
     existing = await db.execute(
@@ -145,12 +145,13 @@ async def update_score_scale(
     conference_id: UUID,
     scale_id: UUID,
     scale_data: ReviewScoreScaleUpdate,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> ReviewScoreScaleResponse:
     """Update an existing score scale. If options array provided, replace all options."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(ReviewScoreScale).where(
@@ -217,12 +218,13 @@ async def update_score_scale(
 async def delete_score_scale(
     conference_id: UUID,
     scale_id: UUID,
-    current_user: TenantAdminDep,
+    current_user: CurrentUserDep,
     db: DbSessionDep,
     request: Request,
 ) -> dict:
     """Delete a score scale. Fails if any review question references it."""
     conference = await _resolve_conference(conference_id, current_user, db)
+    await _check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(ReviewScoreScale).where(
