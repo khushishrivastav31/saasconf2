@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from "vitest";
 import axios from "axios";
 
 // Mock axios before importing the module
@@ -364,7 +364,7 @@ describe("portalApi.ts", () => {
         "valid-refresh-token"
       );
 
-      vi.mocked(axios.post).mockResolvedValueOnce({
+      (axios.post as Mock).mockResolvedValueOnce({
         data: {
           access_token: "new-access-token",
           refresh_token: "new-refresh-token",
@@ -417,7 +417,7 @@ describe("portalApi.ts", () => {
         "expired-refresh-token"
       );
 
-      vi.mocked(axios.post).mockRejectedValueOnce(new Error("Refresh failed"));
+      (axios.post as Mock).mockRejectedValueOnce(new Error("Refresh failed"));
 
       const { portalApi } = await import("../portalApi");
 
