@@ -223,10 +223,11 @@ class TestSendVerificationEmail:
             )
 
         mock_send.assert_called_once()
-        call_args = mock_send.call_args
-        assert call_args[1]["to"] == "user@example.com"
-        assert "Verify your email" in call_args[1]["subject"]
-        assert "https://app.example.com/acme-corp/portal/user/verify-email?token=verification-token-123" in call_args[1]["html"]
+        # send_email is called with positional args: (to, subject, html, text)
+        args = mock_send.call_args[0]
+        assert args[0] == "user@example.com"  # to
+        assert "Verify your email" in args[1]  # subject
+        assert "https://app.example.com/acme-corp/portal/user/verify-email?token=verification-token-123" in args[2]  # html
 
     @pytest.mark.asyncio
     async def test_send_verification_email_uses_default_base_url(self):
@@ -240,8 +241,8 @@ class TestSendVerificationEmail:
                 tenant_slug="test-tenant",
             )
 
-        call_args = mock_send.call_args
-        assert "http://localhost:3002/test-tenant/portal/user/verify-email?token=token-abc" in call_args[1]["html"]
+        args = mock_send.call_args[0]
+        assert "http://localhost:3002/test-tenant/portal/user/verify-email?token=token-abc" in args[2]  # html
 
     @pytest.mark.asyncio
     async def test_send_verification_email_includes_text_version(self):
@@ -255,9 +256,9 @@ class TestSendVerificationEmail:
                 tenant_slug="my-tenant",
             )
 
-        call_args = mock_send.call_args
-        assert call_args[1]["text"] is not None
-        assert "verify your email" in call_args[1]["text"].lower()
+        args = mock_send.call_args[0]
+        assert args[3] is not None  # text
+        assert "verify your email" in args[3].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -284,13 +285,14 @@ class TestSendCospeakerInvitationEmail:
             )
 
         mock_send.assert_called_once()
-        call_args = mock_send.call_args
+        # send_email is called with positional args: (to, subject, html, text)
+        args = mock_send.call_args[0]
 
-        assert call_args[1]["to"] == "cospeaker@example.com"
-        assert "Machine Learning in Healthcare" in call_args[1]["subject"]
-        assert "Machine Learning in Healthcare" in call_args[1]["html"]
-        assert "TechConf 2026" in call_args[1]["html"]
-        assert "Dr. Jane Smith" in call_args[1]["html"]
+        assert args[0] == "cospeaker@example.com"  # to
+        assert "Machine Learning in Healthcare" in args[1]  # subject
+        assert "Machine Learning in Healthcare" in args[2]  # html
+        assert "TechConf 2026" in args[2]  # html
+        assert "Dr. Jane Smith" in args[2]  # html
 
     @pytest.mark.asyncio
     async def test_send_cospeaker_invitation_constructs_portal_url(self):
@@ -307,8 +309,8 @@ class TestSendCospeakerInvitationEmail:
                 base_url="https://app.test.com",
             )
 
-        call_args = mock_send.call_args
-        assert "https://app.test.com/my-tenant/portal/invitations" in call_args[1]["html"]
+        args = mock_send.call_args[0]
+        assert "https://app.test.com/my-tenant/portal/invitations" in args[2]  # html
 
     @pytest.mark.asyncio
     async def test_send_cospeaker_invitation_includes_text_version(self):
@@ -324,10 +326,10 @@ class TestSendCospeakerInvitationEmail:
                 tenant_slug="test-tenant",
             )
 
-        call_args = mock_send.call_args
-        assert call_args[1]["text"] is not None
-        assert "John Doe" in call_args[1]["text"]
-        assert "Test Paper" in call_args[1]["text"]
+        args = mock_send.call_args[0]
+        assert args[3] is not None  # text
+        assert "John Doe" in args[3]
+        assert "Test Paper" in args[3]
 
 
 # ---------------------------------------------------------------------------
@@ -352,11 +354,12 @@ class TestSendPasswordResetEmail:
             )
 
         mock_send.assert_called_once()
-        call_args = mock_send.call_args
+        # send_email is called with positional args: (to, subject, html, text)
+        args = mock_send.call_args[0]
 
-        assert call_args[1]["to"] == "user@example.com"
-        assert "Reset your password" in call_args[1]["subject"]
-        assert "https://corp.example.com/corp-tenant/portal/user/reset-password?token=reset-token-456" in call_args[1]["html"]
+        assert args[0] == "user@example.com"  # to
+        assert "Reset your password" in args[1]  # subject
+        assert "https://corp.example.com/corp-tenant/portal/user/reset-password?token=reset-token-456" in args[2]  # html
 
     @pytest.mark.asyncio
     async def test_send_password_reset_email_uses_default_base_url(self):
@@ -370,8 +373,8 @@ class TestSendPasswordResetEmail:
                 tenant_slug="default-tenant",
             )
 
-        call_args = mock_send.call_args
-        assert "http://localhost:3002/default-tenant/portal/user/reset-password?token=token-abc" in call_args[1]["html"]
+        args = mock_send.call_args[0]
+        assert "http://localhost:3002/default-tenant/portal/user/reset-password?token=token-abc" in args[2]  # html
 
     @pytest.mark.asyncio
     async def test_send_password_reset_email_includes_expiry_notice(self):
@@ -385,9 +388,9 @@ class TestSendPasswordResetEmail:
                 tenant_slug="my-tenant",
             )
 
-        call_args = mock_send.call_args
-        assert "1 hour" in call_args[1]["html"]
-        assert "1 hour" in call_args[1]["text"]
+        args = mock_send.call_args[0]
+        assert "1 hour" in args[2]  # html
+        assert "1 hour" in args[3]  # text
 
     @pytest.mark.asyncio
     async def test_send_password_reset_email_includes_ignore_notice(self):
@@ -401,6 +404,6 @@ class TestSendPasswordResetEmail:
                 tenant_slug="tenant",
             )
 
-        call_args = mock_send.call_args
-        assert "safely ignore" in call_args[1]["html"].lower()
-        assert "safely ignore" in call_args[1]["text"].lower()
+        args = mock_send.call_args[0]
+        assert "safely ignore" in args[2].lower()  # html
+        assert "safely ignore" in args[3].lower()  # text
