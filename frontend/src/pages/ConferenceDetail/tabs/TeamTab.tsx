@@ -95,14 +95,18 @@ function ConferenceTeamTab({
 
   const updateMutation = useMutation({
     mutationFn: async (members: TeamMember[]) => {
-      const response = await api.put(`/conferences/${conference.id}`, {
+      const response = await api.put<Conference>(`/conferences/${conference.id}`, {
         team_members: members,
       });
       return response.data;
     },
     onMutate: () => setSaveStatus("saving"),
-    onSuccess: () => {
+    onSuccess: (updatedConference) => {
       setSaveStatus("saved");
+      // Update local state with the response data to ensure consistency
+      setTeamMembers(updatedConference.team_members || []);
+      // Also update the query cache directly with the response
+      queryClient.setQueryData(["conference", conference.id], updatedConference);
       onUpdate();
       setTimeout(() => setSaveStatus("idle"), 2000);
     },

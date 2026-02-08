@@ -5,6 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, literal, select
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.api.v1.service_providers import build_service_provider_response
 from app.core.dependencies import (
@@ -380,6 +381,14 @@ async def update_conference(
 
     for field, value in update_data.items():
         setattr(conference, field, value)
+
+    # Explicitly mark JSONB columns as modified to ensure SQLAlchemy includes them in UPDATE
+    if "team_members" in update_data:
+        flag_modified(conference, "team_members")
+    if "social_links" in update_data:
+        flag_modified(conference, "social_links")
+    if "settings" in update_data:
+        flag_modified(conference, "settings")
 
     # Log action
     audit_log = AuditLog(
