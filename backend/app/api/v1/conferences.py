@@ -210,8 +210,8 @@ async def create_conference(
         timezone=conference_data.timezone,
         venue_type=conference_data.venue_type,
         virtual_platform_url=conference_data.virtual_platform_url,
-        social_links=conference_data.social_links.model_dump() if conference_data.social_links else {},
-        team_members=[tm.model_dump() for tm in conference_data.team_members] if conference_data.team_members else [],
+        social_links=conference_data.social_links.model_dump(mode='json') if conference_data.social_links else {},
+        team_members=[tm.model_dump(mode='json') for tm in conference_data.team_members] if conference_data.team_members else [],
         settings=conference_data.settings,
     )
     db.add(conference)
@@ -359,11 +359,13 @@ async def update_conference(
 
     # Handle special fields
     if "social_links" in update_data and update_data["social_links"] is not None:
-        update_data["social_links"] = update_data["social_links"].model_dump() if hasattr(update_data["social_links"], "model_dump") else update_data["social_links"]
+        # Use mode='json' to ensure proper JSON serialization for JSONB storage
+        update_data["social_links"] = update_data["social_links"].model_dump(mode='json') if hasattr(update_data["social_links"], "model_dump") else update_data["social_links"]
 
     if "team_members" in update_data and update_data["team_members"] is not None:
         team_members_data = [
-            tm.model_dump() if hasattr(tm, "model_dump") else tm
+            # Use mode='json' to serialize UUIDs as strings for JSONB storage
+            tm.model_dump(mode='json') if hasattr(tm, "model_dump") else tm
             for tm in update_data["team_members"]
         ]
         update_data["team_members"] = team_members_data
