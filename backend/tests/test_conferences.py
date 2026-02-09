@@ -248,17 +248,41 @@ async def test_update_conference_partial(
 # ── Delete conference ───────────────────────────────────────────────────
 
 
-async def test_delete_conference(
+async def test_delete_conference_requires_super_user(
     client: AsyncClient,
     tenant_with_modules: Tenant,
     tenant_admin_user: User,
     tenant_admin_token: str,
     conference: Conference,
 ) -> None:
-    """Tenant admin can delete a conference."""
+    """Regular tenant admin cannot delete a conference (requires super user)."""
     response = await client.delete(
         f"{BASE_URL}/{conference.id}",
         headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 403
+
+
+async def test_delete_conference(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    super_admin_user: User,
+    super_admin_token: str,
+    conference: Conference,
+) -> None:
+    """Super admin can delete a deactivated conference."""
+    # First deactivate the conference (required before deletion)
+    deactivate_response = await client.put(
+        f"{BASE_URL}/{conference.id}",
+        json={"is_active": False},
+        headers=auth_headers(super_admin_token),
+    )
+    assert deactivate_response.status_code == 200
+
+    # Now delete
+    response = await client.delete(
+        f"{BASE_URL}/{conference.id}",
+        headers=auth_headers(super_admin_token),
     )
     assert response.status_code == 200
     data = response.json()
@@ -267,7 +291,7 @@ async def test_delete_conference(
     # Verify the conference no longer exists
     get_response = await client.get(
         f"{BASE_URL}/{conference.id}",
-        headers=auth_headers(tenant_admin_token),
+        headers=auth_headers(super_admin_token),
     )
     assert get_response.status_code == 404
 
@@ -275,14 +299,14 @@ async def test_delete_conference(
 async def test_delete_conference_not_found(
     client: AsyncClient,
     tenant_with_modules: Tenant,
-    tenant_admin_user: User,
-    tenant_admin_token: str,
+    super_admin_user: User,
+    super_admin_token: str,
 ) -> None:
     """Deleting a non-existent conference returns 404."""
     fake_id = uuid.uuid4()
     response = await client.delete(
         f"{BASE_URL}/{fake_id}",
-        headers=auth_headers(tenant_admin_token),
+        headers=auth_headers(super_admin_token),
     )
     assert response.status_code == 404
 
