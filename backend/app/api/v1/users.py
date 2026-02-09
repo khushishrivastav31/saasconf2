@@ -11,6 +11,7 @@ from app.core.pagination import paginate
 from app.core.security import hash_password
 from app.models.audit import AuditAction, AuditLog
 from app.models.settings import PronounOption
+from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.schemas.user import (
     TenantUserCreate,
@@ -354,6 +355,15 @@ async def deactivate_tenant_user(
 
     # Soft delete (deactivate)
     user.is_active = False
+
+    # Clear super_user_id if this user was the tenant's super user
+    if user.tenant_id:
+        tenant_result = await db.execute(
+            select(Tenant).where(Tenant.id == user.tenant_id)
+        )
+        tenant = tenant_result.scalar_one_or_none()
+        if tenant and tenant.super_user_id == user.id:
+            tenant.super_user_id = None
 
     # Log action
     audit_log = AuditLog(

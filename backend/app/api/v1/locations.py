@@ -503,8 +503,18 @@ async def delete_location(
     current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
+    conference_id: UUID | None = Query(None, description="Conference to unlink from. If location is only in this conference, it will be deleted entirely."),
 ) -> dict:
-    """Delete a location."""
+    """
+    Delete or unlink a location.
+
+    If conference_id is provided:
+    - If location is linked to multiple conferences, only unlinks from the specified conference
+    - If location is only linked to this conference, deletes the location entirely
+
+    If conference_id is not provided:
+    - Deletes the location entirely (legacy behavior)
+    """
 
     result = await db.execute(
         select(Location).where(
@@ -519,7 +529,62 @@ async def delete_location(
 
     location_name = location.name
 
-    # Audit log
+    # If conference_id is provided, check how many conferences this location is linked to
+    if conference_id:
+        # Verify the conference exists and belongs to the tenant
+        conf_result = await db.execute(
+            select(Conference).where(
+                Conference.id == conference_id,
+                Conference.tenant_id == current_user.tenant_id,
+            )
+        )
+        conference = conf_result.scalar_one_or_none()
+        if not conference:
+            raise NotFoundError(f"Conference with ID '{conference_id}' not found")
+
+        # Check if location is linked to this conference
+        link_result = await db.execute(
+            select(ConferenceLocation).where(
+                ConferenceLocation.location_id == location_id,
+                ConferenceLocation.conference_id == conference_id,
+            )
+        )
+        link = link_result.scalar_one_or_none()
+        if not link:
+            raise ValidationError(f"Location is not linked to conference '{conference.name}'")
+
+        # Count how many conferences this location is linked to
+        count_result = await db.execute(
+            select(func.count()).where(ConferenceLocation.location_id == location_id)
+        )
+        link_count = count_result.scalar() or 0
+
+        if link_count > 1:
+            # Location is in multiple conferences - just unlink from this one
+            await db.delete(link)
+
+            # Audit log for unlink
+            audit_log = AuditLog(
+                tenant_id=current_user.tenant_id,
+                user_id=current_user.user_id,
+                action="location.unlink",
+                resource_type="location",
+                resource_id=location_id,
+                details={
+                    "name": location_name,
+                    "type": location.location_type,
+                    "conference_id": str(conference_id),
+                    "conference_name": conference.name,
+                },
+                ip_address=get_client_ip(request),
+                user_agent=request.headers.get("User-Agent"),
+            )
+            db.add(audit_log)
+
+            await db.commit()
+            return {"message": f"Location '{location_name}' unlinked from conference '{conference.name}'"}
+
+    # Delete location entirely (either no conference_id, or this is the only conference)
     audit_log = AuditLog(
         tenant_id=current_user.tenant_id,
         user_id=current_user.user_id,

@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.dependencies import (
     CurrentUserDep,
@@ -12,6 +12,7 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
+from app.models.cfp import CFPPaper
 from app.models.settings import SessionType
 from app.schemas.settings import (
     SessionTypeCreate,
@@ -219,6 +220,19 @@ async def delete_session_type(
         raise NotFoundError(f"Session type with ID '{session_type_id}' not found")
 
     st_name = session_type.name
+
+    # Check if any papers are using this session type
+    paper_count_result = await db.execute(
+        select(func.count()).where(CFPPaper.session_type_id == session_type_id)
+    )
+    paper_count = paper_count_result.scalar() or 0
+
+    if paper_count > 0:
+        raise ValidationError(
+            f"Cannot delete '{st_name}'. {paper_count} paper{'s' if paper_count > 1 else ''} "
+            f"{'are' if paper_count > 1 else 'is'} using this session type. "
+            f"Please reassign them to a different session type first."
+        )
 
     audit_log = AuditLog(
         tenant_id=conference.tenant_id,

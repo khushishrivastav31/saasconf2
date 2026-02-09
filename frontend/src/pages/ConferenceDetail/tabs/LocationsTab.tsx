@@ -193,7 +193,7 @@ export default function ConferenceLocationsTab({
 
   const locationDeleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/locations/${id}`);
+      await api.delete(`/locations/${id}?conference_id=${conference.id}`);
     },
     onSuccess: () => {
       setLinkError(null);
@@ -204,7 +204,7 @@ export default function ConferenceLocationsTab({
       queryClient.invalidateQueries({ queryKey: ["all-locations"] });
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, "Failed to delete location"));
+      setLinkError(parseApiError(error, "Failed to remove location"));
     },
   });
 
@@ -525,9 +525,9 @@ export default function ConferenceLocationsTab({
       {selectedLocation && (
         <ConfirmDialog
           open={showDeleteLocationConfirm}
-          title="Delete Location"
-          message={`Are you sure you want to delete "${selectedLocation.name}"? This will permanently remove it.`}
-          confirmLabel="Delete"
+          title="Remove Location"
+          message={`Are you sure you want to remove "${selectedLocation.name}" from this conference? If it is linked to other conferences, it will only be unlinked from this one.`}
+          confirmLabel="Remove"
           onConfirm={() => {
             locationDeleteMutation.mutate(selectedLocation.id);
             setShowDeleteLocationConfirm(false);

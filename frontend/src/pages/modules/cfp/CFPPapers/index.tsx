@@ -190,6 +190,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       setSelectedPaperId(null);
       queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, "Failed to delete paper"));
@@ -254,6 +255,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       setIsAdding(false);
       queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
       setSelectedPaperId(paper.id);
     } catch {
       // error is handled by onError
@@ -274,6 +276,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
     } catch {
       // error is handled by onError
     }

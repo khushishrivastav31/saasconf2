@@ -402,8 +402,18 @@ async def delete_volunteer(
     current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
+    conference_id: UUID | None = Query(None, description="Conference to unlink from. If volunteer is only in this conference, they will be deleted entirely."),
 ) -> dict:
-    """Delete a volunteer."""
+    """
+    Delete or unlink a volunteer.
+
+    If conference_id is provided:
+    - If volunteer is linked to multiple conferences, only unlinks from the specified conference
+    - If volunteer is only linked to this conference, deletes the volunteer entirely
+
+    If conference_id is not provided:
+    - Deletes the volunteer entirely (legacy behavior)
+    """
 
     result = await db.execute(
         select(Volunteer).where(
@@ -418,7 +428,62 @@ async def delete_volunteer(
 
     volunteer_name = volunteer.full_name
 
-    # Audit log
+    # If conference_id is provided, check how many conferences this volunteer is linked to
+    if conference_id:
+        # Verify the conference exists and belongs to the tenant
+        conf_result = await db.execute(
+            select(Conference).where(
+                Conference.id == conference_id,
+                Conference.tenant_id == current_user.tenant_id,
+            )
+        )
+        conference = conf_result.scalar_one_or_none()
+        if not conference:
+            raise NotFoundError(f"Conference with ID '{conference_id}' not found")
+
+        # Check if volunteer is linked to this conference
+        link_result = await db.execute(
+            select(ConferenceVolunteer).where(
+                ConferenceVolunteer.volunteer_id == volunteer_id,
+                ConferenceVolunteer.conference_id == conference_id,
+            )
+        )
+        link = link_result.scalar_one_or_none()
+        if not link:
+            raise ValidationError(f"Volunteer is not linked to conference '{conference.name}'")
+
+        # Count how many conferences this volunteer is linked to
+        count_result = await db.execute(
+            select(func.count()).where(ConferenceVolunteer.volunteer_id == volunteer_id)
+        )
+        link_count = count_result.scalar() or 0
+
+        if link_count > 1:
+            # Volunteer is in multiple conferences - just unlink from this one
+            await db.delete(link)
+
+            # Audit log for unlink
+            audit_log = AuditLog(
+                tenant_id=current_user.tenant_id,
+                user_id=current_user.user_id,
+                action="volunteer.unlink",
+                resource_type="volunteer",
+                resource_id=volunteer_id,
+                details={
+                    "email": volunteer.email,
+                    "name": volunteer_name,
+                    "conference_id": str(conference_id),
+                    "conference_name": conference.name,
+                },
+                ip_address=get_client_ip(request),
+                user_agent=request.headers.get("User-Agent"),
+            )
+            db.add(audit_log)
+
+            await db.commit()
+            return {"message": f"Volunteer '{volunteer_name}' unlinked from conference '{conference.name}'"}
+
+    # Delete volunteer entirely (either no conference_id, or this is the only conference)
     audit_log = AuditLog(
         tenant_id=current_user.tenant_id,
         user_id=current_user.user_id,

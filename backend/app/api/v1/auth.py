@@ -73,7 +73,8 @@ async def login(
     if not user.is_active:
         raise AuthenticationError("User account is deactivated")
 
-    # Check if the user's tenant is active
+    # Check if the user's tenant is active and if user is tenant super user
+    is_tenant_super_user = False
     if user.tenant_id:
         tenant_result = await db.execute(
             select(Tenant).where(Tenant.id == user.tenant_id)
@@ -81,6 +82,8 @@ async def login(
         tenant = tenant_result.scalar_one_or_none()
         if not tenant or not tenant.is_active:
             raise AuthenticationError("Your company account has been deactivated")
+        # Check if user is the designated tenant super user
+        is_tenant_super_user = tenant.super_user_id == user.id
 
     # Get user's modules if they belong to a tenant
     modules: list[str] = []
@@ -103,6 +106,7 @@ async def login(
         tenant_id=user.tenant_id,
         role=user.role,
         modules=modules,
+        is_tenant_super_user=is_tenant_super_user,
     )
 
     refresh_token, token_hash, expires_at = create_refresh_token(user_id=user.id)
@@ -173,7 +177,8 @@ async def refresh_token(
     if not user or not user.is_active:
         raise AuthenticationError("User not found or deactivated")
 
-    # Check if the user's tenant is active
+    # Check if the user's tenant is active and if user is tenant super user
+    is_tenant_super_user = False
     if user.tenant_id:
         tenant_result = await db.execute(
             select(Tenant).where(Tenant.id == user.tenant_id)
@@ -181,6 +186,8 @@ async def refresh_token(
         tenant = tenant_result.scalar_one_or_none()
         if not tenant or not tenant.is_active:
             raise AuthenticationError("Your company account has been deactivated")
+        # Check if user is the designated tenant super user
+        is_tenant_super_user = tenant.super_user_id == user.id
 
     # Get user's modules
     modules: list[str] = []
@@ -202,6 +209,7 @@ async def refresh_token(
         tenant_id=user.tenant_id,
         role=user.role,
         modules=modules,
+        is_tenant_super_user=is_tenant_super_user,
     )
 
     # Optionally rotate refresh token (for enhanced security)
@@ -293,13 +301,16 @@ async def get_current_user_info(
     if not user:
         raise AuthenticationError("User not found")
 
-    # Get tenant name and fresh modules from database
+    # Get tenant name, super user status, and fresh modules from database
     tenant_name = None
+    is_tenant_super_user = False
     modules: list[str] = []
     if user.tenant_id:
         await db.refresh(user, ["tenant"])
         if user.tenant:
             tenant_name = user.tenant.name
+            # Check if user is the designated tenant super user
+            is_tenant_super_user = user.tenant.super_user_id == user.id
 
         # Load modules from DB so assignments are reflected immediately
         result = await db.execute(
@@ -324,6 +335,7 @@ async def get_current_user_info(
         tenant_name=tenant_name,
         modules=modules,
         is_active=user.is_active,
+        is_tenant_super_user=is_tenant_super_user,
         last_login=user.last_login,
         created_at=user.created_at,
     )

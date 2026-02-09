@@ -10,6 +10,7 @@ export interface User {
   tenant_name: string | null;
   modules: string[];
   is_active: boolean;
+  is_tenant_super_user: boolean;
   last_login: string | null;
   created_at: string;
 }
@@ -54,6 +55,8 @@ export interface Tenant {
   contact_persons: ContactPerson[];
   // Comments
   comments: string | null;
+  // Super user (designated by SaaS admin to delete conferences)
+  super_user_id: string | null;
   created_at: string;
   updated_at: string;
   user_count: number;

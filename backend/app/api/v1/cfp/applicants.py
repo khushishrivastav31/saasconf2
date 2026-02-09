@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.dependencies import (
     CurrentUserDep,
@@ -11,12 +11,13 @@ from app.core.dependencies import (
     TenantAdminDep,
     require_module,
 )
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.core.security import hash_password
 from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
 from app.models.cfp import (
     CFPApplicant,
+    CFPCommitteeMember,
     CFPPaper,
     CFPPaperCospeaker,
 )
@@ -234,7 +235,10 @@ async def delete_applicant(
     current_user: TenantAdminDep,
     db: DbSessionDep,
 ) -> dict:
-    """Delete an applicant and their attachments."""
+    """Delete an applicant and their attachments.
+
+    Will fail if the applicant has papers or committee memberships.
+    """
     result = await db.execute(
         select(CFPApplicant).where(
             CFPApplicant.id == applicant_id,
@@ -245,6 +249,41 @@ async def delete_applicant(
 
     if not applicant:
         raise NotFoundError(f"Applicant with ID '{applicant_id}' not found")
+
+    applicant_name = f"{applicant.first_name} {applicant.last_name}"
+
+    # Check for papers as main speaker
+    papers_result = await db.execute(
+        select(func.count()).where(CFPPaper.main_speaker_id == applicant_id)
+    )
+    paper_count = papers_result.scalar() or 0
+
+    # Check for co-speaker invitations
+    cospeaker_result = await db.execute(
+        select(func.count()).where(CFPPaperCospeaker.applicant_id == applicant_id)
+    )
+    cospeaker_count = cospeaker_result.scalar() or 0
+
+    # Check for committee memberships
+    committee_result = await db.execute(
+        select(func.count()).where(CFPCommitteeMember.applicant_id == applicant_id)
+    )
+    committee_count = committee_result.scalar() or 0
+
+    # Build error message if there are dependencies
+    dependencies = []
+    if paper_count > 0:
+        dependencies.append(f"{paper_count} paper{'s' if paper_count > 1 else ''} as main speaker")
+    if cospeaker_count > 0:
+        dependencies.append(f"{cospeaker_count} co-speaker invitation{'s' if cospeaker_count > 1 else ''}")
+    if committee_count > 0:
+        dependencies.append(f"{committee_count} committee membership{'s' if committee_count > 1 else ''}")
+
+    if dependencies:
+        raise ValidationError(
+            f"Cannot delete '{applicant_name}'. This user has: {', '.join(dependencies)}. "
+            f"Please remove these associations first."
+        )
 
     # Delete any associated attachments (pictures and videos)
     attachments_result = await db.execute(
@@ -257,7 +296,6 @@ async def delete_applicant(
     for attachment in attachments_result.scalars().all():
         await db.delete(attachment)
 
-    applicant_name = f"{applicant.first_name} {applicant.last_name}"
     await db.delete(applicant)
     await db.commit()
 

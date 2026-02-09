@@ -158,7 +158,7 @@ function ConferenceVolunteersTab({
 
   const volunteerDeleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/volunteers/${id}`);
+      await api.delete(`/volunteers/${id}?conference_id=${conference.id}`);
     },
     onSuccess: () => {
       setLinkError(null);
@@ -168,7 +168,7 @@ function ConferenceVolunteersTab({
       queryClient.invalidateQueries({ queryKey: ["all-volunteers"] });
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, "Failed to delete volunteer"));
+      setLinkError(parseApiError(error, "Failed to remove volunteer"));
     },
   });
 
@@ -724,9 +724,9 @@ function ConferenceVolunteersTab({
 
       <ConfirmDialog
         open={!!deleteVolunteerTarget}
-        title="Delete Volunteer"
-        message={`Are you sure you want to delete "${deleteVolunteerTarget?.full_name}"? This will permanently remove them.`}
-        confirmLabel="Delete"
+        title="Remove Volunteer"
+        message={`Are you sure you want to remove "${deleteVolunteerTarget?.full_name}" from this conference? If they are linked to other conferences, they will only be unlinked from this one.`}
+        confirmLabel="Remove"
         onConfirm={() => {
           if (deleteVolunteerTarget)
             volunteerDeleteMutation.mutate(deleteVolunteerTarget.id);

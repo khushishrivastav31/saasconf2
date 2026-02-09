@@ -71,7 +71,11 @@ export default function TenantDetailModal({
         {activeTab === "users" && (
           <UsersTab
             tenantId={tenant.id}
+            superUserId={tenant.super_user_id}
             onAddUser={() => setIsAddUserOpen(true)}
+            onSuperUserChange={() => {
+              queryClient.invalidateQueries({ queryKey: ["tenants"] });
+            }}
           />
         )}
       </div>

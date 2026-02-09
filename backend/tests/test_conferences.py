@@ -95,6 +95,59 @@ async def test_create_conference_success(
     assert "tenant_id" in data
 
 
+async def test_create_conference_seeds_default_settings(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Creating a conference via API seeds default pronoun options and volunteer roles."""
+    # Create conference
+    response = await client.post(
+        BASE_URL,
+        json=CONFERENCE_PAYLOAD,
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 201
+    conference_id = response.json()["id"]
+
+    # Check that pronouns were seeded
+    pronouns_response = await client.get(
+        f"{BASE_URL}/{conference_id}/settings/pronouns",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert pronouns_response.status_code == 200
+    pronouns = pronouns_response.json()
+    assert pronouns["total"] >= 6  # At least 6 default pronouns
+
+    # Check that volunteer roles were seeded
+    roles_response = await client.get(
+        f"{BASE_URL}/{conference_id}/settings/volunteer-roles",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert roles_response.status_code == 200
+    roles = roles_response.json()
+    assert roles["total"] >= 6  # At least 6 default volunteer roles
+
+    # Check that committee roles were seeded
+    committee_roles_response = await client.get(
+        f"{BASE_URL}/{conference_id}/settings/committee-roles",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert committee_roles_response.status_code == 200
+    committee_roles = committee_roles_response.json()
+    assert committee_roles["total"] >= 4  # At least 4 default committee roles
+
+    # Check that score scales were seeded
+    scales_response = await client.get(
+        f"{BASE_URL}/{conference_id}/settings/score-scales",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert scales_response.status_code == 200
+    scales = scales_response.json()
+    assert scales["total"] >= 3  # At least 3 default score scales
+
+
 async def test_create_conference_forbidden_for_regular_user(
     client: AsyncClient,
     tenant_with_modules: Tenant,

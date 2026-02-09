@@ -142,6 +142,9 @@ class TenantResponse(BaseModel):
     # Comments
     comments: str | None
 
+    # Super user (designated by SaaS admin)
+    super_user_id: UUID | None = None
+
     created_at: datetime
     updated_at: datetime
     user_count: int = 0

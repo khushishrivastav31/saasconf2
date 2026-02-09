@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../config/api";
 import ConfirmDialog from "../../../components/ConfirmDialog";
@@ -26,6 +26,16 @@ export default function Tenants() {
       return response.data;
     },
   });
+
+  // Sync selectedTenant with latest data when query refetches
+  useEffect(() => {
+    if (selectedTenant && data?.items) {
+      const updatedTenant = data.items.find((t) => t.id === selectedTenant.id);
+      if (updatedTenant && updatedTenant.super_user_id !== selectedTenant.super_user_id) {
+        setSelectedTenant(updatedTenant);
+      }
+    }
+  }, [data, selectedTenant]);
 
   const createMutation = useMutation({
     mutationFn: async (data: TenantCreate) => {

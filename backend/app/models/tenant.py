@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -50,6 +50,14 @@ class Tenant(Base):
     # Comments/notes
     comments: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Tenant super user (assigned by SaaS super admin)
+    # This user has elevated privileges within the tenant (e.g., can delete conferences)
+    super_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -59,7 +67,15 @@ class Tenant(Base):
 
     # Relationships
     users: Mapped[list["User"]] = relationship(
-        "User", back_populates="tenant", cascade="all, delete-orphan"
+        "User",
+        back_populates="tenant",
+        cascade="all, delete-orphan",
+        foreign_keys="User.tenant_id",
+    )
+    super_user: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[super_user_id],
+        post_update=True,  # Handle circular dependency
     )
     tenant_modules: Mapped[list["TenantModule"]] = relationship(
         "TenantModule", back_populates="tenant", cascade="all, delete-orphan"

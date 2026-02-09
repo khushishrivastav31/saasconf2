@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.dependencies import (
     CurrentUserDep,
@@ -13,6 +13,7 @@ from app.core.dependencies import (
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
 from app.models.settings import SponsorPackage
+from app.models.sponsor import Sponsor
 from app.schemas.settings import (
     SponsorPackageCreate,
     SponsorPackageListResponse,
@@ -219,6 +220,19 @@ async def delete_sponsor_package(
         raise NotFoundError(f"Sponsor package with ID '{package_id}' not found")
 
     pkg_name = package.name
+
+    # Check if any sponsors are using this package
+    sponsor_count_result = await db.execute(
+        select(func.count()).where(Sponsor.sponsor_package_id == package_id)
+    )
+    sponsor_count = sponsor_count_result.scalar() or 0
+
+    if sponsor_count > 0:
+        raise ValidationError(
+            f"Cannot delete '{pkg_name}'. {sponsor_count} sponsor{'s' if sponsor_count > 1 else ''} "
+            f"{'are' if sponsor_count > 1 else 'is'} using this package. "
+            f"Please reassign them to a different package first."
+        )
 
     audit_log = AuditLog(
         tenant_id=conference.tenant_id,

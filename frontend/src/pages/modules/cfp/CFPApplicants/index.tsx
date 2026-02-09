@@ -5,6 +5,7 @@ import { useIsAdmin } from "../../../../hooks/useIsAdmin";
 import { useAuthMedia } from "../../../../hooks/useAuthMedia";
 import type { Applicant, Conference, PaginatedResponse } from "../../../../types";
 import { parseApiError } from "../../../../utils/apiError";
+import AlertDialog from "../../../../components/AlertDialog";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
 import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
 import { CloseIcon } from "../../../ConferenceDetail/icons";
@@ -113,6 +114,7 @@ export default function CFPApplicants({
 
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Applicant | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -252,7 +254,7 @@ export default function CFPApplicants({
       queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to delete applicant"));
+      setDeleteError(parseApiError(err, "Failed to delete applicant"));
       setDeleteTarget(null);
     },
   });
@@ -499,6 +501,14 @@ export default function CFPApplicants({
         confirmLabel="Delete"
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Delete Error Popup */}
+      <AlertDialog
+        open={!!deleteError}
+        title="Cannot Delete User"
+        message={deleteError || ""}
+        onClose={() => setDeleteError(null)}
       />
     </div>
   );

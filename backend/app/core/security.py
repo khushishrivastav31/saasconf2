@@ -59,6 +59,7 @@ def create_access_token(
     tenant_id: UUID | None,
     role: str,
     modules: list[str] | None = None,
+    is_tenant_super_user: bool = False,
 ) -> str:
     """
     Create a JWT access token.
@@ -68,6 +69,7 @@ def create_access_token(
         tenant_id: Tenant's UUID (None for super admin)
         role: User's role
         modules: List of module codes the user has access to
+        is_tenant_super_user: Whether the user is the designated super user for their tenant
 
     Returns:
         Encoded JWT token
@@ -79,6 +81,7 @@ def create_access_token(
         "tenant_id": str(tenant_id) if tenant_id else None,
         "role": role,
         "modules": modules or [],
+        "is_tenant_super_user": is_tenant_super_user,
         "exp": expire,
         "iat": datetime.utcnow(),
         "type": "access",

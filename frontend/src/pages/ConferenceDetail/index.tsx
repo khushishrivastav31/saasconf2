@@ -71,6 +71,9 @@ function ComingSoonContent({ name }: { name: string }) {
 
 interface DeletePreview {
   conference_name: string;
+  is_active: boolean;
+  can_delete: boolean;
+  must_deactivate_first: boolean;
   volunteers: {
     total_linked: number;
     will_delete: number;
@@ -78,6 +81,23 @@ interface DeletePreview {
   };
   locations: { total_linked: number; will_delete: number; will_unlink: number };
   cfps: { total_linked: number; will_delete: number; will_unlink: number };
+  invoices: {
+    count: number;
+    export_available: boolean;
+    export_url: string | null;
+  };
+  papers: {
+    count: number;
+    export_available: boolean;
+    export_url: string | null;
+  };
+  sponsors: {
+    count: number;
+  };
+  applicants: {
+    orphaned_count: number;
+    note: string;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -90,6 +110,8 @@ export default function ConferenceDetail() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useConferenceAdmin(conferenceId);
+  // Only super admins and tenant super users can delete conferences
+  const canDelete = user?.role === "super_admin" || user?.is_tenant_super_user;
   const [activeSection, setActiveSection] = useState<SectionId>("details");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -350,7 +372,7 @@ export default function ConferenceDetail() {
             {conference.status}
           </span>
         </div>
-        {isAdmin && (
+        {canDelete && (
           <div className="flex items-center gap-2">
             {deleteError && !showDeleteConfirm && (
               <span className="text-sm text-red-600">{deleteError}</span>
@@ -873,9 +895,14 @@ export default function ConferenceDetail() {
               cannot be undone.
             </p>
 
+            {/* Items that will be permanently deleted */}
             {(deletePreview.volunteers.will_delete > 0 ||
               deletePreview.locations.will_delete > 0 ||
-              deletePreview.cfps.will_delete > 0) && (
+              deletePreview.cfps.will_delete > 0 ||
+              deletePreview.sponsors.count > 0 ||
+              deletePreview.invoices.count > 0 ||
+              deletePreview.papers.count > 0 ||
+              deletePreview.applicants.orphaned_count > 0) && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm">
                 <p className="font-medium text-red-800 mb-2">
                   The following will be permanently deleted:
@@ -899,10 +926,36 @@ export default function ConferenceDetail() {
                       {deletePreview.cfps.will_delete !== 1 ? "s" : ""}
                     </li>
                   )}
+                  {deletePreview.papers.count > 0 && (
+                    <li>
+                      {deletePreview.papers.count} paper
+                      {deletePreview.papers.count !== 1 ? "s" : ""}
+                    </li>
+                  )}
+                  {deletePreview.applicants.orphaned_count > 0 && (
+                    <li>
+                      {deletePreview.applicants.orphaned_count} applicant
+                      {deletePreview.applicants.orphaned_count !== 1 ? "s" : ""}{" "}
+                      <span className="text-red-600">(only have papers in this conference)</span>
+                    </li>
+                  )}
+                  {deletePreview.sponsors.count > 0 && (
+                    <li>
+                      {deletePreview.sponsors.count} sponsor
+                      {deletePreview.sponsors.count !== 1 ? "s" : ""}
+                    </li>
+                  )}
+                  {deletePreview.invoices.count > 0 && (
+                    <li>
+                      {deletePreview.invoices.count} invoice
+                      {deletePreview.invoices.count !== 1 ? "s" : ""}
+                    </li>
+                  )}
                 </ul>
               </div>
             )}
 
+            {/* Items that will be unlinked (shared with other conferences) */}
             {(deletePreview.volunteers.will_unlink > 0 ||
               deletePreview.locations.will_unlink > 0 ||
               deletePreview.cfps.will_unlink > 0) && (

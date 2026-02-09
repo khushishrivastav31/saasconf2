@@ -41,6 +41,7 @@ class UserResponse(BaseModel):
     tenant_name: str | None = None
     modules: list[str] = []  # List of module codes the user has access to
     is_active: bool
+    is_tenant_super_user: bool = False
     last_login: datetime | None
     created_at: datetime
 

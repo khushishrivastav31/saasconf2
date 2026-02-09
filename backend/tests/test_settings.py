@@ -1,10 +1,14 @@
-"""Integration tests for conference-scoped settings endpoints: pronouns and volunteer roles."""
+"""Integration tests for conference-scoped settings endpoints: pronouns, volunteer roles, sponsor packages, session types."""
 
 import uuid
 
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.cfp import CFPApplicant, CFPPaper, CallForPapers
 from app.models.conference import Conference
+from app.models.settings import SessionType, SponsorPackage
+from app.models.sponsor import Sponsor
 from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import auth_headers
@@ -18,6 +22,16 @@ def _pronouns_url(conference_id: uuid.UUID) -> str:
 def _volunteer_roles_url(conference_id: uuid.UUID) -> str:
     """Build the base URL for volunteer roles under a conference."""
     return f"/api/v1/conferences/{conference_id}/settings/volunteer-roles"
+
+
+def _sponsor_packages_url(conference_id: uuid.UUID) -> str:
+    """Build the base URL for sponsor packages under a conference."""
+    return f"/api/v1/conferences/{conference_id}/settings/sponsor-packages"
+
+
+def _session_types_url(conference_id: uuid.UUID) -> str:
+    """Build the base URL for session types under a conference."""
+    return f"/api/v1/conferences/{conference_id}/settings/session-types"
 
 
 # ── Pronoun Options ─────────────────────────────────────────────────────
@@ -354,3 +368,159 @@ async def test_delete_volunteer_role(
     )
     assert list_resp.status_code == 200
     assert list_resp.json()["total"] == 0
+
+
+# ── Sponsor Packages ────────────────────────────────────────────────────
+
+
+async def test_delete_sponsor_package_without_sponsors(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Tenant admin can delete a sponsor package with no sponsors."""
+    # Create package
+    create_resp = await client.post(
+        _sponsor_packages_url(conference.id),
+        json={"name": "Gold", "description": "Gold tier sponsors", "price": 5000, "is_active": True},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert create_resp.status_code == 200
+    package_id = create_resp.json()["id"]
+
+    # Delete
+    delete_resp = await client.delete(
+        f"{_sponsor_packages_url(conference.id)}/{package_id}",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert delete_resp.status_code == 200
+
+
+async def test_delete_sponsor_package_with_sponsors_fails(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Deleting a sponsor package that has sponsors returns 400."""
+    # Create package via API
+    create_resp = await client.post(
+        _sponsor_packages_url(conference.id),
+        json={"name": "Platinum", "description": "Platinum tier", "price": 10000, "is_active": True},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert create_resp.status_code == 200
+    package_id = create_resp.json()["id"]
+
+    # Create a sponsor that uses this package directly in DB
+    sponsor = Sponsor(
+        id=uuid.uuid4(),
+        tenant_id=conference.tenant_id,
+        conference_id=conference.id,
+        sponsor_package_id=uuid.UUID(package_id),
+        company_name="Test Corp",
+    )
+    db_session.add(sponsor)
+    await db_session.commit()
+
+    # Try to delete package - should fail
+    delete_resp = await client.delete(
+        f"{_sponsor_packages_url(conference.id)}/{package_id}",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert delete_resp.status_code == 400
+    data = delete_resp.json()
+    assert "Cannot delete" in data["detail"]
+    assert "1 sponsor" in data["detail"]
+
+
+# ── Session Types ───────────────────────────────────────────────────────
+
+
+async def test_delete_session_type_without_papers(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Tenant admin can delete a session type with no papers."""
+    # Create session type
+    create_resp = await client.post(
+        _session_types_url(conference.id),
+        json={"name": "Workshop", "slug": "workshop", "duration_minutes": 120, "is_active": True},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert create_resp.status_code == 200
+    session_type_id = create_resp.json()["id"]
+
+    # Delete
+    delete_resp = await client.delete(
+        f"{_session_types_url(conference.id)}/{session_type_id}",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert delete_resp.status_code == 200
+
+
+async def test_delete_session_type_with_papers_fails(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Deleting a session type that has papers returns 400."""
+    # Create session type via API
+    create_resp = await client.post(
+        _session_types_url(conference.id),
+        json={"name": "Talk", "slug": "talk", "duration_minutes": 45, "is_active": True},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert create_resp.status_code == 200
+    session_type_id = create_resp.json()["id"]
+
+    # Create prerequisite data in DB: CFP -> Applicant -> Paper
+    cfp = CallForPapers(
+        id=uuid.uuid4(),
+        tenant_id=conference.tenant_id,
+        title="Test CFP",
+    )
+    db_session.add(cfp)
+    await db_session.flush()
+
+    applicant = CFPApplicant(
+        id=uuid.uuid4(),
+        tenant_id=conference.tenant_id,
+        email="speaker@test.com",
+        first_name="Test",
+        last_name="Speaker",
+        password_hash="dummy_hash_for_test",
+    )
+    db_session.add(applicant)
+    await db_session.flush()
+
+    paper = CFPPaper(
+        id=uuid.uuid4(),
+        tenant_id=conference.tenant_id,
+        cfp_id=cfp.id,
+        main_speaker_id=applicant.id,
+        session_type_id=uuid.UUID(session_type_id),
+        title="My Test Paper",
+    )
+    db_session.add(paper)
+    await db_session.commit()
+
+    # Try to delete session type - should fail
+    delete_resp = await client.delete(
+        f"{_session_types_url(conference.id)}/{session_type_id}",
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert delete_resp.status_code == 400
+    data = delete_resp.json()
+    assert "Cannot delete" in data["detail"]
+    assert "1 paper" in data["detail"]

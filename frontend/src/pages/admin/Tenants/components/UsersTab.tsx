@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../../config/api";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
 import Modal from "../../../../components/Modal";
+import { useAuth } from "../../../../hooks/useAuth";
 import type {
   TenantUser,
   TenantUserCreate,
@@ -12,11 +13,17 @@ import type {
 
 export default function UsersTab({
   tenantId,
+  superUserId,
   onAddUser,
+  onSuperUserChange,
 }: {
   tenantId: string;
+  superUserId: string | null;
   onAddUser: () => void;
+  onSuperUserChange: () => void;
 }) {
+  const { user: currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === "super_admin";
   const queryClient = useQueryClient();
   const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TenantUser | null>(null);
@@ -38,6 +45,8 @@ export default function UsersTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenant-users", tenantId] });
+      // Refresh tenants query in case deleted user was super user
+      onSuperUserChange();
     },
   });
 
@@ -47,6 +56,8 @@ export default function UsersTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenant-users", tenantId] });
+      // Refresh tenants query in case deleted user was super user
+      onSuperUserChange();
     },
   });
 
@@ -102,7 +113,14 @@ export default function UsersTab({
                     {user.email}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
-                    {`${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || "-"}
+                    <div className="flex items-center gap-2">
+                      {`${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || "-"}
+                      {user.id === superUserId && (
+                        <span className="px-1.5 py-0.5 text-xs font-semibold rounded bg-purple-100 text-purple-800">
+                          Super User
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {user.pronouns || "-"}
@@ -199,6 +217,10 @@ export default function UsersTab({
       {editingUser && (
         <EditUserModal
           user={editingUser}
+          tenantId={tenantId}
+          superUserId={superUserId}
+          isSuperAdmin={isSuperAdmin}
+          onSuperUserChange={onSuperUserChange}
           onClose={() => {
             setEditingUser(null);
             queryClient.invalidateQueries({
@@ -237,9 +259,17 @@ export default function UsersTab({
 
 function EditUserModal({
   user,
+  tenantId,
+  superUserId,
+  isSuperAdmin,
+  onSuperUserChange,
   onClose,
 }: {
   user: TenantUser;
+  tenantId: string;
+  superUserId: string | null;
+  isSuperAdmin: boolean;
+  onSuperUserChange: () => void;
   onClose: () => void;
 }) {
   const [formData, setFormData] = useState<TenantUserUpdate>({
@@ -254,6 +284,12 @@ function EditUserModal({
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isCurrentSuperUser, setIsCurrentSuperUser] = useState(user.id === superUserId);
+
+  // Sync local state when superUserId prop changes (after query invalidation)
+  useEffect(() => {
+    setIsCurrentSuperUser(user.id === superUserId);
+  }, [user.id, superUserId]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: TenantUserUpdate) => {
@@ -277,6 +313,42 @@ function EditUserModal({
       saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
     },
   });
+
+  const assignSuperUserMutation = useMutation({
+    mutationFn: async () => {
+      await api.put(`/admin/tenants/${tenantId}/super-user?user_id=${user.id}`);
+    },
+    onSuccess: () => {
+      setIsCurrentSuperUser(true);
+      onSuperUserChange();
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { detail?: string } } };
+      setErrorMessage(err.response?.data?.detail || "Failed to assign super user");
+    },
+  });
+
+  const removeSuperUserMutation = useMutation({
+    mutationFn: async () => {
+      await api.delete(`/admin/tenants/${tenantId}/super-user`);
+    },
+    onSuccess: () => {
+      setIsCurrentSuperUser(false);
+      onSuperUserChange();
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { detail?: string } } };
+      setErrorMessage(err.response?.data?.detail || "Failed to remove super user");
+    },
+  });
+
+  const handleSuperUserToggle = () => {
+    if (isCurrentSuperUser) {
+      removeSuperUserMutation.mutate();
+    } else {
+      assignSuperUserMutation.mutate();
+    }
+  };
 
   const handleSave = () => {
     const data: TenantUserUpdate = { ...formData };
@@ -428,6 +500,29 @@ function EditUserModal({
             <option value="tenant_admin">Tenant Admin</option>
           </select>
         </div>
+
+        {isSuperAdmin && (
+          <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700">Tenant Super User</label>
+              <p className="text-xs text-gray-500">Can delete deactivated conferences</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSuperUserToggle}
+              disabled={assignSuperUserMutation.isPending || removeSuperUserMutation.isPending}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 ${
+                isCurrentSuperUser ? "bg-purple-600" : "bg-gray-200"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  isCurrentSuperUser ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-gray-700">Active</label>

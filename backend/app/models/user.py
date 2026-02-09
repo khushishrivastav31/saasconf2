@@ -61,7 +61,11 @@ class User(Base):
     )
 
     # Relationships
-    tenant: Mapped["Tenant | None"] = relationship("Tenant", back_populates="users")
+    tenant: Mapped["Tenant | None"] = relationship(
+        "Tenant",
+        back_populates="users",
+        foreign_keys=[tenant_id],
+    )
     conference_access: Mapped[list["UserConferenceAccess"]] = relationship(
         "UserConferenceAccess",
         foreign_keys="UserConferenceAccess.user_id",
@@ -86,6 +90,13 @@ class User(Base):
     def is_tenant_admin(self) -> bool:
         """Check if user is a tenant admin."""
         return self.role == UserRole.TENANT_ADMIN.value
+
+    @property
+    def is_tenant_super_user(self) -> bool:
+        """Check if user is the designated super user for their tenant."""
+        if not self.tenant:
+            return False
+        return self.tenant.super_user_id == self.id
 
     def __repr__(self) -> str:
         return f"<User {self.email} ({self.role})>"
