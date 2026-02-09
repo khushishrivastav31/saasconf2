@@ -31,3 +31,62 @@ body {
 .ProseMirror a {
   @apply text-primary-600 underline;
 }
+
+/* Table styles */
+.ProseMirror table {
+  @apply border-collapse w-full my-2;
+}
+
+.ProseMirror th,
+.ProseMirror td {
+  @apply border border-gray-300 p-2 relative;
+  min-width: 50px;
+}
+
+.ProseMirror th {
+  @apply bg-gray-100 font-semibold;
+}
+
+/* Selected cell highlight for merge/split operations */
+.ProseMirror .selectedCell {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border: 2px solid #3b82f6 !important;
+}
+
+.ProseMirror .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+}
+
+/* Ensure table cells can be selected */
+.ProseMirror td,
+.ProseMirror th {
+  position: relative;
+  vertical-align: top;
+}
+
+/* Cell selection via CellSelection (prosemirror-tables) */
+.ProseMirror .tableWrapper {
+  overflow-x: auto;
+}
+
+.ProseMirror table .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(59, 130, 246, 0.15);
+  pointer-events: none;
+}
+
+/* Table resize handle */
+.ProseMirror .column-resize-handle {
+  @apply absolute top-0 right-0 w-1 h-full bg-primary-400 cursor-col-resize;
+}
+
+.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}

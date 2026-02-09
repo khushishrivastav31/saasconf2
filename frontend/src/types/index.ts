@@ -789,7 +789,6 @@ export interface SocialLinks {
 }
 
 export interface TeamMember {
-  user_id?: string;
   first_name: string;
   last_name: string;
   email?: string;
@@ -801,6 +800,7 @@ export interface TeamMember {
 export interface Conference {
   id: string;
   tenant_id: string;
+  tenant_slug: string | null;
   name: string;
   abbreviation: string | null;
   description: string | null;

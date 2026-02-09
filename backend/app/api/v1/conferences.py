@@ -3,11 +3,15 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from fastapi.responses import Response
 from sqlalchemy import func, literal, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.api.v1.service_providers import build_service_provider_response
+from app.config import get_settings
+from app.core.file_validation import sanitize_filename, validate_upload
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -20,11 +24,15 @@ from app.core.exceptions import AuthorizationError
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.pagination import paginate
 from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
+from app.models.attachment import Attachment
 from app.models.audit import AuditAction, AuditLog
 from app.models.cfp import CallForPapers
 from app.models.conference import Conference
 from app.models.location import Location
+from app.models.tenant import Tenant
 from app.models.service_provider import ServiceProvider
+from app.models.user import User
+from app.models.user_conference_access import UserConferenceAccess
 from app.models.volunteer import Volunteer
 from app.schemas.cfp import CFPListResponse, CFPResponse
 from app.schemas.conference import (
@@ -44,7 +52,6 @@ from app.schemas.service_provider import (
     ServiceProviderUpdate,
 )
 from app.schemas.volunteer import VolunteerListResponse, VolunteerResponse
-from app.api.v1.user_conference_access import grant_conference_access_for_team_member
 
 router = APIRouter()
 
@@ -58,7 +65,41 @@ def _tenant_filter(current_user: CurrentUserDep):
     return Conference.tenant_id == current_user.tenant_id
 
 
-def _build_conference_response(conf: Conference) -> ConferenceResponse:
+async def _get_accessible_conference_ids(
+    db: DbSessionDep, current_user: CurrentUserDep
+) -> list[UUID] | None:
+    """
+    Get list of conference IDs the user can access.
+
+    Returns None if user has access to all conferences (tenant_admin, super_admin,
+    or has_all_conference_access=True).
+
+    Returns list of conference IDs if user has restricted access.
+    """
+    # Super admins and tenant admins can see all conferences
+    if current_user.is_super_admin or current_user.is_tenant_admin:
+        return None
+
+    # Check if user has all conference access
+    user_result = await db.execute(
+        select(User.has_all_conference_access).where(User.id == current_user.user_id)
+    )
+    has_all_access = user_result.scalar_one_or_none()
+
+    if has_all_access is True:
+        return None
+
+    # Get explicit conference access records
+    access_result = await db.execute(
+        select(UserConferenceAccess.conference_id).where(
+            UserConferenceAccess.user_id == current_user.user_id
+        )
+    )
+    conference_ids = list(access_result.scalars().all())
+    return conference_ids
+
+
+def _build_conference_response(conf: Conference, tenant_slug: str | None = None) -> ConferenceResponse:
     """Build a ConferenceResponse from a Conference model."""
     # Calculate status
     today = date.today()
@@ -73,12 +114,13 @@ def _build_conference_response(conf: Conference) -> ConferenceResponse:
     else:
         status = "draft"
 
-    # Parse team members
+    # Parse team members (informational only, no user linking)
     team_members = []
     for tm in (conf.team_members or []):
+        # first_name is required with min_length=1, ensure we have a valid value
+        first_name = tm.get("first_name") or "(Unknown)"
         team_members.append(TeamMember(
-            user_id=tm.get("user_id"),
-            first_name=tm.get("first_name", ""),
+            first_name=first_name,
             last_name=tm.get("last_name", ""),
             email=tm.get("email"),
             phone=tm.get("phone"),
@@ -91,6 +133,7 @@ def _build_conference_response(conf: Conference) -> ConferenceResponse:
     return ConferenceResponse(
         id=conf.id,
         tenant_id=conf.tenant_id,
+        tenant_slug=tenant_slug,
         name=conf.name,
         abbreviation=conf.abbreviation,
         description=conf.description,
@@ -132,8 +175,19 @@ async def list_conferences(
     List conferences for the current tenant.
 
     Requires the 'conferences' module.
+    Users with restricted access only see conferences they have explicit access to.
     """
-    query = select(Conference).where(_tenant_filter(current_user))
+    query = select(Conference).options(selectinload(Conference.tenant)).where(_tenant_filter(current_user))
+
+    # Apply conference access filtering for non-admin users
+    accessible_ids = await _get_accessible_conference_ids(db, current_user)
+    if accessible_ids is not None:
+        if not accessible_ids:
+            # User has no conference access - return empty result
+            return ConferenceListResponse(
+                items=[], total=0, page=page, page_size=page_size, pages=0
+            )
+        query = query.where(Conference.id.in_(accessible_ids))
 
     if is_active is not None:
         query = query.where(Conference.is_active == is_active)
@@ -164,7 +218,7 @@ async def list_conferences(
     query = query.order_by(Conference.start_date.desc().nulls_last(), Conference.created_at.desc())
     result = await paginate(db, query, page, page_size)
 
-    items = [_build_conference_response(conf) for conf in result.items]
+    items = [_build_conference_response(conf, conf.tenant.slug if conf.tenant else None) for conf in result.items]
 
     pages = (result.total + page_size - 1) // page_size if page_size > 0 else 0
 
@@ -232,7 +286,11 @@ async def create_conference(
     await db.commit()
     await db.refresh(conference)
 
-    return _build_conference_response(conference)
+    # Get tenant slug for the response
+    tenant_result = await db.execute(select(Tenant.slug).where(Tenant.id == conference.tenant_id))
+    tenant_slug = tenant_result.scalar_one_or_none()
+
+    return _build_conference_response(conference, tenant_slug)
 
 
 @router.get("/stats", response_model=ConferenceStats, dependencies=[Depends(require_module(MODULE_CODE))])
@@ -244,49 +302,70 @@ async def get_conference_stats(
     Get conference statistics for the current tenant.
 
     Requires the 'conferences' module.
+    Stats only count conferences the user has access to.
     """
 
     today = date.today()
 
+    # Check access restrictions
+    accessible_ids = await _get_accessible_conference_ids(db, current_user)
+    if accessible_ids is not None and not accessible_ids:
+        # User has no conference access - return zeros
+        return ConferenceStats(
+            total=0, active=0, published=0, upcoming=0, ongoing=0, past=0
+        )
+
+    def _apply_access_filter(query):
+        """Apply conference access filter to a query."""
+        q = query.where(_tenant_filter(current_user))
+        if accessible_ids is not None:
+            q = q.where(Conference.id.in_(accessible_ids))
+        return q
+
     # Total conferences
     total = (await db.execute(
-        select(func.count()).select_from(Conference).where(_tenant_filter(current_user))
+        _apply_access_filter(select(func.count()).select_from(Conference))
     )).scalar() or 0
 
     # Active conferences
     active = (await db.execute(
-        select(func.count()).select_from(Conference)
-        .where(_tenant_filter(current_user))
-        .where(Conference.is_active == True)
+        _apply_access_filter(
+            select(func.count()).select_from(Conference)
+            .where(Conference.is_active == True)
+        )
     )).scalar() or 0
 
     # Published conferences
     published = (await db.execute(
-        select(func.count()).select_from(Conference)
-        .where(_tenant_filter(current_user))
-        .where(Conference.is_published == True)
+        _apply_access_filter(
+            select(func.count()).select_from(Conference)
+            .where(Conference.is_published == True)
+        )
     )).scalar() or 0
 
     # Upcoming conferences
     upcoming = (await db.execute(
-        select(func.count()).select_from(Conference)
-        .where(_tenant_filter(current_user))
-        .where(Conference.start_date > today)
+        _apply_access_filter(
+            select(func.count()).select_from(Conference)
+            .where(Conference.start_date > today)
+        )
     )).scalar() or 0
 
     # Ongoing conferences
     ongoing = (await db.execute(
-        select(func.count()).select_from(Conference)
-        .where(_tenant_filter(current_user))
-        .where(Conference.start_date <= today)
-        .where((Conference.end_date >= today) | (Conference.end_date.is_(None)))
+        _apply_access_filter(
+            select(func.count()).select_from(Conference)
+            .where(Conference.start_date <= today)
+            .where((Conference.end_date >= today) | (Conference.end_date.is_(None)))
+        )
     )).scalar() or 0
 
     # Past conferences
     past = (await db.execute(
-        select(func.count()).select_from(Conference)
-        .where(_tenant_filter(current_user))
-        .where(Conference.end_date < today)
+        _apply_access_filter(
+            select(func.count()).select_from(Conference)
+            .where(Conference.end_date < today)
+        )
     )).scalar() or 0
 
     return ConferenceStats(
@@ -309,10 +388,12 @@ async def get_conference(
     Get a conference by ID.
 
     Requires the 'conferences' module.
+    Users with restricted access can only view conferences they have explicit access to.
     """
 
     result = await db.execute(
         select(Conference)
+        .options(selectinload(Conference.tenant))
         .where(Conference.id == conference_id)
         .where(_tenant_filter(current_user))
     )
@@ -321,7 +402,195 @@ async def get_conference(
     if not conference:
         raise NotFoundError("Conference not found")
 
-    return _build_conference_response(conference)
+    # Check if user has access to this conference
+    accessible_ids = await _get_accessible_conference_ids(db, current_user)
+    if accessible_ids is not None and conference_id not in accessible_ids:
+        raise AuthorizationError("You don't have access to this conference")
+
+    return _build_conference_response(conference, conference.tenant.slug if conference.tenant else None)
+
+
+# --- Conference Logo Endpoints ---
+
+
+@router.post("/{conference_id}/logo", dependencies=[Depends(require_module(MODULE_CODE))])
+async def upload_conference_logo(
+    conference_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+    file: UploadFile = File(...),
+) -> dict:
+    """
+    Upload or replace the conference logo.
+
+    Only image files (JPEG, PNG, WebP, GIF) are allowed.
+    Replaces any existing logo.
+    """
+    # Check conference exists and user has admin access
+    await check_conference_admin_access(db, current_user.user_id, conference_id)
+
+    result = await db.execute(
+        select(Conference).where(Conference.id == conference_id)
+    )
+    conference = result.scalar_one_or_none()
+    if not conference:
+        raise NotFoundError("Conference not found")
+
+    # Read and validate file
+    file_data = await file.read()
+    file_size = len(file_data)
+
+    settings = get_settings()
+    max_size = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if file_size > max_size:
+        raise ValidationError(
+            f"File size ({file_size // (1024 * 1024)}MB) exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)"
+        )
+
+    content_type = file.content_type or "application/octet-stream"
+    verified_type = validate_upload(file_data, content_type, "conference_logo")
+    safe_filename = sanitize_filename(file.filename or "logo")
+
+    # Delete existing logo if any
+    existing_logo = await db.execute(
+        select(Attachment).where(
+            Attachment.tenant_id == conference.tenant_id,
+            Attachment.entity_type == "conference_logo",
+            Attachment.entity_id == conference_id,
+        )
+    )
+    old_logo = existing_logo.scalar_one_or_none()
+    if old_logo:
+        await db.delete(old_logo)
+
+    # Create new attachment
+    attachment = Attachment(
+        tenant_id=conference.tenant_id,
+        entity_type="conference_logo",
+        entity_id=conference_id,
+        filename=safe_filename,
+        content_type=verified_type,
+        file_size=file_size,
+        file_data=file_data,
+        description="Conference logo",
+        uploaded_by=current_user.user_id,
+    )
+    db.add(attachment)
+
+    # Update conference logo_url to point to download endpoint (relative to /api/v1)
+    conference.logo_url = f"/conferences/{conference_id}/logo"
+    flag_modified(conference, "logo_url")
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=conference.tenant_id,
+        user_id=current_user.user_id,
+        action=AuditAction.CONFERENCE_UPDATE,
+        resource_type="conference",
+        resource_id=conference_id,
+        details={"action": "logo_upload", "filename": safe_filename, "file_size": file_size},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+
+    return {
+        "message": "Logo uploaded successfully",
+        "logo_url": conference.logo_url,
+        "filename": safe_filename,
+        "content_type": verified_type,
+        "file_size": file_size,
+    }
+
+
+@router.get("/{conference_id}/logo")
+async def get_conference_logo(
+    conference_id: UUID,
+    db: DbSessionDep,
+) -> Response:
+    """
+    Download the conference logo (public endpoint).
+
+    Returns the logo image file. No authentication required since logos
+    are typically public content displayed on conference pages.
+    """
+    # Find logo attachment directly by conference_id
+    logo_result = await db.execute(
+        select(Attachment).where(
+            Attachment.entity_type == "conference_logo",
+            Attachment.entity_id == conference_id,
+        )
+    )
+    logo = logo_result.scalar_one_or_none()
+    if not logo:
+        raise NotFoundError("Conference logo not found")
+
+    return Response(
+        content=logo.file_data,
+        media_type=logo.content_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{logo.filename}"',
+            "Content-Length": str(logo.file_size),
+            "Cache-Control": "public, max-age=86400",
+        },
+    )
+
+
+@router.delete("/{conference_id}/logo", dependencies=[Depends(require_module(MODULE_CODE))])
+async def delete_conference_logo(
+    conference_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+) -> dict:
+    """
+    Delete the conference logo.
+    """
+    # Check conference exists and user has admin access
+    await check_conference_admin_access(db, current_user.user_id, conference_id)
+
+    result = await db.execute(
+        select(Conference).where(Conference.id == conference_id)
+    )
+    conference = result.scalar_one_or_none()
+    if not conference:
+        raise NotFoundError("Conference not found")
+
+    # Find and delete logo attachment (if exists)
+    logo_result = await db.execute(
+        select(Attachment).where(
+            Attachment.tenant_id == conference.tenant_id,
+            Attachment.entity_type == "conference_logo",
+            Attachment.entity_id == conference_id,
+        )
+    )
+    logo = logo_result.scalar_one_or_none()
+    if logo:
+        await db.delete(logo)
+
+    # Always clear logo_url (handles both actual attachments and stale URL data)
+    conference.logo_url = None
+    flag_modified(conference, "logo_url")
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=conference.tenant_id,
+        user_id=current_user.user_id,
+        action=AuditAction.CONFERENCE_UPDATE,
+        resource_type="conference",
+        resource_id=conference_id,
+        details={"action": "logo_delete"},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+
+    return {"message": "Logo deleted successfully"}
 
 
 @router.put("/{conference_id}", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])
@@ -363,23 +632,18 @@ async def update_conference(
         update_data["social_links"] = update_data["social_links"].model_dump(mode='json') if hasattr(update_data["social_links"], "model_dump") else update_data["social_links"]
 
     if "team_members" in update_data and update_data["team_members"] is not None:
-        team_members_data = [
-            # Use mode='json' to serialize UUIDs as strings for JSONB storage
-            tm.model_dump(mode='json') if hasattr(tm, "model_dump") else tm
-            for tm in update_data["team_members"]
-        ]
+        team_members_data = []
+        for tm in update_data["team_members"]:
+            # Serialize to dict
+            tm_dict = tm.model_dump(mode='json') if hasattr(tm, "model_dump") else tm
+            # Sanitize empty strings to None for optional fields
+            for key in ("email", "phone", "role"):
+                if tm_dict.get(key) == "":
+                    tm_dict[key] = None
+            # Remove user_id if present (team members are informational only, not linked to users)
+            tm_dict.pop("user_id", None)
+            team_members_data.append(tm_dict)
         update_data["team_members"] = team_members_data
-
-        # Auto-grant conference access for team members with user_id
-        for tm in team_members_data:
-            if tm.get("user_id"):
-                await grant_conference_access_for_team_member(
-                    db=db,
-                    user_id=UUID(tm["user_id"]) if isinstance(tm["user_id"], str) else tm["user_id"],
-                    conference_id=conference.id,
-                    is_manager=tm.get("is_manager", False),
-                    granted_by=current_user.user_id,
-                )
 
     for field, value in update_data.items():
         setattr(conference, field, value)
@@ -408,7 +672,11 @@ async def update_conference(
     await db.commit()
     await db.refresh(conference)
 
-    return _build_conference_response(conference)
+    # Get tenant slug for the response
+    tenant_result = await db.execute(select(Tenant.slug).where(Tenant.id == conference.tenant_id))
+    tenant_slug = tenant_result.scalar_one_or_none()
+
+    return _build_conference_response(conference, tenant_slug)
 
 
 @router.delete("/{conference_id}", dependencies=[Depends(require_module(MODULE_CODE))])
@@ -675,7 +943,11 @@ async def publish_conference(
     await db.commit()
     await db.refresh(conference)
 
-    return _build_conference_response(conference)
+    # Get tenant slug for the response
+    tenant_result = await db.execute(select(Tenant.slug).where(Tenant.id == conference.tenant_id))
+    tenant_slug = tenant_result.scalar_one_or_none()
+
+    return _build_conference_response(conference, tenant_slug)
 
 
 @router.post("/{conference_id}/unpublish", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])
@@ -724,7 +996,11 @@ async def unpublish_conference(
     await db.commit()
     await db.refresh(conference)
 
-    return _build_conference_response(conference)
+    # Get tenant slug for the response
+    tenant_result = await db.execute(select(Tenant.slug).where(Tenant.id == conference.tenant_id))
+    tenant_slug = tenant_result.scalar_one_or_none()
+
+    return _build_conference_response(conference, tenant_slug)
 
 
 # ---------------------------------------------------------------------------

@@ -23,15 +23,14 @@ class SocialLinks(BaseModel):
 
 
 class TeamMember(BaseModel):
-    """Schema for a conference team member."""
+    """Schema for a conference team member (informational only, no login access)."""
 
-    user_id: UUID | None = None  # Can link to a user in the system
     first_name: str = Field(..., min_length=1, max_length=255)
     last_name: str = Field(default="", max_length=255)
     email: str | None = Field(None, max_length=255)
     phone: str | None = Field(None, max_length=50)
     role: str | None = Field(None, max_length=100)  # e.g., "Conference Chair", "Program Committee"
-    is_manager: bool = False  # Whether this person is a conference manager
+    is_manager: bool = False  # Informational flag for conference manager role
 
     @field_validator("phone")
     @classmethod
@@ -129,6 +128,7 @@ class ConferenceResponse(BaseModel):
 
     id: UUID
     tenant_id: UUID
+    tenant_slug: str | None = None
     name: str
     abbreviation: str | None
     description: str | None

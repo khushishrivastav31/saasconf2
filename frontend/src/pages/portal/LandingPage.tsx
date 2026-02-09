@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import DOMPurify from "dompurify";
 import portalApi from "../../config/portalApi";
+import ConferenceLogo from "../../components/ConferenceLogo";
 import type { PortalLandingData } from "../../types/portal";
 
 function LandingPage() {
@@ -53,11 +54,15 @@ function LandingPage() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-12 text-center">
           {conference.logo_url && (
-            <img
-              src={conference.logo_url}
-              alt={conference.name}
-              className="h-16 mx-auto mb-4"
-            />
+            <div className="h-16 mx-auto mb-4 flex items-center justify-center">
+              <ConferenceLogo
+                logoUrl={conference.logo_url}
+                alt={conference.name}
+                className="max-h-16 object-contain"
+                apiInstance={portalApi}
+                showPlaceholder={false}
+              />
+            </div>
           )}
           <p className="text-sm text-gray-500 mb-2">{tenant_name}</p>
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
@@ -103,13 +108,13 @@ function LandingPage() {
           {/* Auth buttons */}
           <div className="flex items-center justify-center gap-3">
             <Link
-              to={`/${tenantSlug}/portal/user/register`}
+              to={`/${tenantSlug}/portal/user/register?cfp=${abbreviation}`}
               className="inline-flex items-center px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
             >
               Register to Submit
             </Link>
             <Link
-              to={`/${tenantSlug}/portal/user/login`}
+              to={`/${tenantSlug}/portal/user/login?cfp=${abbreviation}`}
               className="inline-flex items-center px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
             >
               Login
@@ -166,18 +171,90 @@ function LandingPage() {
                   )}
                 </div>
 
-                {cfp.guidelines_for_submissions && (
-                  <details className="mt-4">
-                    <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700">
-                      Submission Guidelines
-                    </summary>
-                    <div
-                      className="mt-2 text-sm text-gray-600 prose prose-sm"
-                      dangerouslySetInnerHTML={{
-                        __html: DOMPurify.sanitize(cfp.guidelines_for_submissions ?? ""),
-                      }}
-                    />
-                  </details>
+                {/* Rich text sections */}
+                {(cfp.guidelines_for_submissions || cfp.tips_for_submission || cfp.code_of_conduct || cfp.incentives_conditions || cfp.faqs) && (
+                  <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
+                    {cfp.guidelines_for_submissions && (
+                      <details className="group">
+                        <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-2">
+                          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          Submission Guidelines
+                        </summary>
+                        <div
+                          className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: DOMPurify.sanitize(cfp.guidelines_for_submissions ?? ""),
+                          }}
+                        />
+                      </details>
+                    )}
+                    {cfp.tips_for_submission && (
+                      <details className="group">
+                        <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-2">
+                          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          Tips for a Strong Submission
+                        </summary>
+                        <div
+                          className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: DOMPurify.sanitize(cfp.tips_for_submission ?? ""),
+                          }}
+                        />
+                      </details>
+                    )}
+                    {cfp.code_of_conduct && (
+                      <details className="group">
+                        <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-2">
+                          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          Code of Conduct
+                        </summary>
+                        <div
+                          className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: DOMPurify.sanitize(cfp.code_of_conduct ?? ""),
+                          }}
+                        />
+                      </details>
+                    )}
+                    {cfp.incentives_conditions && (
+                      <details className="group">
+                        <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-2">
+                          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          Incentives & Conditions
+                        </summary>
+                        <div
+                          className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: DOMPurify.sanitize(cfp.incentives_conditions ?? ""),
+                          }}
+                        />
+                      </details>
+                    )}
+                    {cfp.faqs && (
+                      <details className="group">
+                        <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-2">
+                          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          FAQs
+                        </summary>
+                        <div
+                          className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: DOMPurify.sanitize(cfp.faqs ?? ""),
+                          }}
+                        />
+                      </details>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

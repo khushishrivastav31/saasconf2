@@ -39,6 +39,7 @@ import InvitationsPage from "./pages/portal/InvitationsPage";
 import AssignedPapersTab from "./pages/portal/AssignedPapersTab";
 import EvaluatedPapersTab from "./pages/portal/EvaluatedPapersTab";
 import InfoPage from "./pages/portal/InfoPage";
+import LandingPage from "./pages/portal/LandingPage";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 
 function LegacyVerifyEmailRedirect() {
@@ -309,6 +310,12 @@ function App() {
       <Route
         path=":companySlug/portal/user/verify-email"
         element={<VerifyEmailPage />}
+      />
+
+      {/* CFP Landing Page — public route */}
+      <Route
+        path=":tenantSlug/portal/:abbreviation"
+        element={<LandingPage />}
       />
 
       {/* CFP Applicant Portal — authenticated routes */}
