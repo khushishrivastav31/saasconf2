@@ -630,9 +630,9 @@ function EditModuleModal({
         <p className="text-sm text-gray-500">{module.module_code}</p>
         <div className="flex items-center gap-2">
           {saveStatus === "saving" && (
-            <span className="text-xs text-gray-500 flex items-center gap-1">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
               <svg
-                className="animate-spin h-3 w-3"
+                className="animate-spin h-4 w-4"
                 fill="none"
                 viewBox="0 0 24 24"
               >
@@ -654,9 +654,9 @@ function EditModuleModal({
             </span>
           )}
           {saveStatus === "saved" && (
-            <span className="text-xs text-green-600 flex items-center gap-1">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
               <svg
-                className="h-3 w-3"
+                className="h-4 w-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -672,7 +672,12 @@ function EditModuleModal({
             </span>
           )}
           {saveStatus === "error" && (
-            <span className="text-xs text-red-600">Save failed</span>
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Save failed
+            </span>
           )}
         </div>
       </div>
