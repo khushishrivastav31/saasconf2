@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../config/api";
 import { useIsAdmin } from "../../../hooks/useIsAdmin";
@@ -197,6 +197,9 @@ function MemberForm({
 }) {
   const isEditing = !!member;
 
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [formData, setFormData] = useState<MemberFormData>(
     member
       ? {
@@ -280,6 +283,35 @@ function MemberForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [member?.id]);
 
+  // Track save status based on isSaving prop changes
+  useEffect(() => {
+    if (isSaving) {
+      setSaveStatus("saving");
+    }
+  }, [isSaving]);
+
+  // When saving completes (isSaving goes from true to false), update status
+  useEffect(() => {
+    if (saveStatus === "saving" && !isSaving) {
+      if (error) {
+        setSaveStatus("error");
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+      } else {
+        setSaveStatus("saved");
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+      }
+    }
+  }, [isSaving, error, saveStatus]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (phoneError) return;
@@ -289,6 +321,7 @@ function MemberForm({
       if (formData.mode === "create" && (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim() || !formData.password.trim())) return;
     }
 
+    setSaveStatus("saving");
     onSave(formData);
   };
 
@@ -548,9 +581,32 @@ function MemberForm({
           <button
             type="submit"
             disabled={isSaving || !!phoneError}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md disabled:opacity-50 transition-colors"
+            className={`px-4 py-2 text-sm font-medium text-white rounded-md disabled:opacity-50 transition-all duration-300 inline-flex items-center gap-2 ${
+              saveStatus === "saved"
+                ? "bg-green-600 hover:bg-green-700"
+                : saveStatus === "error"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-primary-600 hover:bg-primary-700"
+            }`}
           >
-            {isSaving ? "Saving..." : isEditing ? "Save Changes" : "Add to Committee"}
+            {saveStatus === "saving" && (
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
+            {saveStatus === "saved" && (
+              <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            {saveStatus === "saving"
+              ? "Saving..."
+              : saveStatus === "saved"
+                ? "Saved!"
+                : isEditing
+                  ? "Save Changes"
+                  : "Add to Committee"}
           </button>
         </div>
       </div>

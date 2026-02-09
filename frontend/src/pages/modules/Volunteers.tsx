@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../config/api";
 import { useIsAdmin } from "../../hooks/useIsAdmin";
@@ -80,6 +80,9 @@ export default function Volunteers() {
     },
   });
 
+  const [editSaveStatus, setEditSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const editSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: VolunteerUpdate }) => {
       const response = await api.put<Volunteer>(`/volunteers/${id}`, data);
@@ -88,7 +91,17 @@ export default function Volunteers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["volunteers"] });
       queryClient.invalidateQueries({ queryKey: ["volunteer-stats"] });
-      setEditingVolunteer(null);
+      setEditSaveStatus("saved");
+      if (editSaveTimeoutRef.current) clearTimeout(editSaveTimeoutRef.current);
+      editSaveTimeoutRef.current = setTimeout(() => {
+        setEditSaveStatus("idle");
+        setEditingVolunteer(null);
+      }, 2000);
+    },
+    onError: () => {
+      setEditSaveStatus("error");
+      if (editSaveTimeoutRef.current) clearTimeout(editSaveTimeoutRef.current);
+      editSaveTimeoutRef.current = setTimeout(() => setEditSaveStatus("idle"), 3000);
     },
   });
 
@@ -286,10 +299,12 @@ export default function Volunteers() {
         <EditVolunteerModal
           volunteer={editingVolunteer}
           onClose={() => setEditingVolunteer(null)}
-          onSubmit={(data) =>
-            updateMutation.mutate({ id: editingVolunteer.id, data })
-          }
+          onSubmit={(data) => {
+            setEditSaveStatus("saving");
+            updateMutation.mutate({ id: editingVolunteer.id, data });
+          }}
           isLoading={updateMutation.isPending}
+          saveStatus={editSaveStatus}
         />
       )}
 
@@ -585,11 +600,13 @@ function EditVolunteerModal({
   onClose,
   onSubmit,
   isLoading,
+  saveStatus,
 }: {
   volunteer: Volunteer;
   onClose: () => void;
   onSubmit: (data: VolunteerUpdate) => void;
   isLoading: boolean;
+  saveStatus: "idle" | "saving" | "saved" | "error";
 }) {
   const [formData, setFormData] = useState<VolunteerUpdate>({
     first_name: volunteer.first_name,
@@ -784,9 +801,34 @@ function EditVolunteerModal({
           <button
             type="submit"
             disabled={isLoading || !!phoneError}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
+            className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 transition-colors duration-200 ${
+              saveStatus === "saved"
+                ? "bg-green-600"
+                : saveStatus === "error"
+                  ? "bg-red-600"
+                  : "bg-primary-600 hover:bg-primary-700"
+            }`}
           >
-            {isLoading ? "Saving..." : "Save Changes"}
+            {saveStatus === "saving" ? (
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Saving...
+              </span>
+            ) : saveStatus === "saved" ? (
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Saved
+              </span>
+            ) : saveStatus === "error" ? (
+              "Save failed"
+            ) : (
+              "Save Changes"
+            )}
           </button>
         </div>
       </form>

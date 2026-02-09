@@ -482,8 +482,14 @@ async def grant_conference_access_for_team_member(
     - Adding a team member with a linked user account
     - Linking an existing user to a team member
 
-    Returns the access record if created, None if already exists.
+    Returns the access record if created, None if already exists or user doesn't exist.
     """
+    # Verify user exists (handles stale user_id references)
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    if not user_result.scalar_one_or_none():
+        # User doesn't exist - silently skip (stale data)
+        return None
+
     # Check if access already exists
     existing = await db.execute(
         select(UserConferenceAccess)
@@ -502,4 +508,8 @@ async def grant_conference_access_for_team_member(
         granted_by=granted_by,
     )
     db.add(access)
+
+    # Flush to make the insert visible to subsequent queries in the same transaction
+    await db.flush()
+
     return access

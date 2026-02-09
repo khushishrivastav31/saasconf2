@@ -481,14 +481,13 @@ export default function ConferenceLocationsTab({
       ) : selectedLocation ? (
         <LocationDetailPanel
           location={selectedLocation}
-          onSave={(updateData) =>
-            locationUpdateMutation.mutate({
+          onSave={async (updateData) => {
+            await locationUpdateMutation.mutateAsync({
               id: selectedLocation.id,
               data: updateData,
-            })
-          }
+            });
+          }}
           onDelete={() => setShowDeleteLocationConfirm(true)}
-          isSaving={locationUpdateMutation.isPending}
           locationTypes={locationTypesData?.items}
         />
       ) : data?.items && data.items.length > 0 ? (

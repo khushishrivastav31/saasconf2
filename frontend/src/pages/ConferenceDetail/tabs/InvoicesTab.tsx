@@ -237,14 +237,13 @@ export default function ConferenceInvoicesTab({
           <InvoiceDetailPanel
             invoice={selectedInvoice}
             currencies={currenciesData?.items || []}
-            onSave={(invoiceData) =>
-              updateMutation.mutate({
+            onSave={async (invoiceData) => {
+              await updateMutation.mutateAsync({
                 id: selectedInvoice.id,
                 data: invoiceData,
-              })
-            }
+              });
+            }}
             onDelete={(id) => deleteMutation.mutate(id)}
-            isSaving={updateMutation.isPending}
           />
         </>
       ) : (

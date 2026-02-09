@@ -1,19 +1,37 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useApplicantAuth } from "../../hooks/useApplicantAuth";
 import { usePortalBasePath } from "../../hooks/usePortalBasePath";
 import { parseApiError } from "../../utils/apiError";
+import portalApi from "../../config/portalApi";
+import ConferenceLogo from "../../components/ConferenceLogo";
+import type { PortalLandingData } from "../../types/portal";
 
 function LoginPage() {
   const { login } = useApplicantAuth();
   const navigate = useNavigate();
   const basePath = usePortalBasePath();
   const { companySlug } = useParams<{ companySlug: string }>();
+  const [searchParams] = useSearchParams();
+  const cfpAbbreviation = searchParams.get("cfp");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch conference data if coming from a specific CFP landing page
+  const { data: conferenceData } = useQuery({
+    queryKey: ["portal-landing", companySlug, cfpAbbreviation],
+    queryFn: async () => {
+      const res = await portalApi.get<PortalLandingData>(
+        `/portal/${companySlug}/${cfpAbbreviation}`,
+      );
+      return res.data;
+    },
+    enabled: !!companySlug && !!cfpAbbreviation,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,12 +49,25 @@ function LoginPage() {
     }
   };
 
+  const conference = conferenceData?.conference;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-sm w-full">
         <div className="text-center mb-8">
+          {conference?.logo_url && (
+            <div className="h-16 mx-auto mb-4 flex items-center justify-center">
+              <ConferenceLogo
+                logoUrl={conference.logo_url}
+                alt={conference.name}
+                className="max-h-16 object-contain"
+                apiInstance={portalApi}
+                showPlaceholder={false}
+              />
+            </div>
+          )}
           <h1 className="text-2xl font-bold text-gray-900">
-            {companySlug} User Portal
+            {conference?.name || `${companySlug} User Portal`}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             Sign in to access your portal
@@ -89,7 +120,7 @@ function LoginPage() {
         <p className="text-center text-sm text-gray-500 mt-4">
           Don't have an account?{" "}
           <Link
-            to={`${basePath}/user/register`}
+            to={`${basePath}/user/register${cfpAbbreviation ? `?cfp=${cfpAbbreviation}` : ""}`}
             className="text-primary-600 hover:text-primary-700 font-medium"
           >
             Register

@@ -1,12 +1,7 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../config/api";
-import type {
-  Conference,
-  TeamMember,
-  TenantUser,
-  PaginatedResponse,
-} from "../../../types";
+import type { Conference, TeamMember } from "../../../types";
 import { validatePhone } from "../../../utils/validators";
 import { parseApiError } from "../../../utils/apiError";
 import { ErrorBanner } from "../../../components/common/ErrorBanner";
@@ -34,7 +29,6 @@ function ConferenceTeamTab({
     role: "",
     is_manager: false,
   });
-  const [newPassword, setNewPassword] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<TeamMember>({
     first_name: "",
@@ -44,7 +38,6 @@ function ConferenceTeamTab({
     role: "",
     is_manager: false,
   });
-  const [editPassword, setEditPassword] = useState("");
   const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
   const [newPhoneError, setNewPhoneError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<
@@ -58,41 +51,6 @@ function ConferenceTeamTab({
     setTeamMembers(conference.team_members || []);
   }, [conference.team_members]);
 
-  // Fetch existing tenant users to match team members
-  const { data: usersData } = useQuery({
-    queryKey: ["team-users"],
-    queryFn: async () => {
-      const res = await api.get<PaginatedResponse<TenantUser>>(
-        "/users?page_size=200",
-      );
-      return res.data;
-    },
-  });
-
-  const usersByEmail: Record<string, TenantUser> = {};
-  const usersById: Record<string, TenantUser> = {};
-  for (const u of usersData?.items ?? []) {
-    usersByEmail[u.email.toLowerCase()] = u;
-    usersById[u.id] = u;
-  }
-
-  const findUserForMember = (member: TeamMember, originalEmail?: string): TenantUser | undefined => {
-    // First, try to find by user_id (most reliable)
-    if (member.user_id && usersById[member.user_id]) {
-      return usersById[member.user_id];
-    }
-    // Then try by current email
-    if (member.email) {
-      const user = usersByEmail[member.email.toLowerCase()];
-      if (user) return user;
-    }
-    // Finally, try by original email (handles email change scenarios)
-    if (originalEmail) {
-      return usersByEmail[originalEmail.toLowerCase()];
-    }
-    return undefined;
-  };
-
   const updateMutation = useMutation({
     mutationFn: async (members: TeamMember[]) => {
       const response = await api.put<Conference>(`/conferences/${conference.id}`, {
@@ -103,9 +61,7 @@ function ConferenceTeamTab({
     onMutate: () => setSaveStatus("saving"),
     onSuccess: (updatedConference) => {
       setSaveStatus("saved");
-      // Update local state with the response data to ensure consistency
       setTeamMembers(updatedConference.team_members || []);
-      // Also update the query cache directly with the response
       queryClient.setQueryData(["conference", conference.id], updatedConference);
       onUpdate();
       setTimeout(() => setSaveStatus("idle"), 2000);
@@ -117,41 +73,18 @@ function ConferenceTeamTab({
     },
   });
 
-  const addMember = async () => {
+  const addMember = () => {
     if (!newMember.first_name.trim() || !newMember.last_name.trim()) return;
     setUserError(null);
 
-    let userId: string | undefined;
-    const emailLower = newMember.email?.trim().toLowerCase();
-
-    // Check if a user with this email already exists
-    const existingUser = emailLower ? usersByEmail[emailLower] : undefined;
-
-    if (existingUser) {
-      // Link to existing user instead of creating a new one
-      userId = existingUser.id;
-    } else if (newMember.email?.trim() && newPassword.trim()) {
-      // No existing user, but email + password provided → create new user
-      try {
-        const res = await api.post<TenantUser>("/users", {
-          email: newMember.email.trim(),
-          password: newPassword.trim(),
-          first_name: newMember.first_name.trim(),
-          last_name: newMember.last_name.trim(),
-          role: newMember.is_manager ? "tenant_admin" : "user",
-        });
-        userId = res.data.id;
-        queryClient.invalidateQueries({ queryKey: ["team-users"] });
-      } catch (err) {
-        setUserError(parseApiError(err));
-        return;
-      }
-    }
-
-    const memberToAdd: TeamMember = { ...newMember };
-    if (userId) {
-      memberToAdd.user_id = userId;
-    }
+    const memberToAdd: TeamMember = {
+      first_name: newMember.first_name.trim(),
+      last_name: newMember.last_name.trim(),
+      email: newMember.email?.trim() || "",
+      phone: newMember.phone?.trim() || "",
+      role: newMember.role?.trim() || "",
+      is_manager: newMember.is_manager,
+    };
 
     const newMembers = [...teamMembers, memberToAdd];
     setTeamMembers(newMembers);
@@ -163,7 +96,6 @@ function ConferenceTeamTab({
       role: "",
       is_manager: false,
     });
-    setNewPassword("");
     setNewPhoneError(null);
     updateMutation.mutate(newMembers);
   };
@@ -179,7 +111,6 @@ function ConferenceTeamTab({
   const startEditing = (index: number) => {
     setEditingIndex(index);
     setEditForm({ ...teamMembers[index] });
-    setEditPassword("");
     setEditPhoneError(null);
     setUserError(null);
   };
@@ -190,74 +121,23 @@ function ConferenceTeamTab({
     setUserError(null);
   };
 
-  const saveEdit = async () => {
+  const saveEdit = () => {
     if (editingIndex === null || !editForm.first_name.trim() || !editForm.last_name.trim()) return;
     setUserError(null);
 
-    const existingMember = teamMembers[editingIndex];
-    // Try to find the user by user_id first, then by original email (handles email changes)
-    const existingUser = findUserForMember(existingMember, existingMember.email);
-
-    // If the member has a linked user account, update role/password
-    if (existingUser) {
-      const updates: Record<string, unknown> = {};
-      const newRole = editForm.is_manager ? "tenant_admin" : "user";
-      if (existingUser.role !== newRole) {
-        updates.role = newRole;
-      }
-      if (editForm.email && editForm.email !== existingUser.email) {
-        updates.email = editForm.email;
-      }
-      if (editForm.first_name && editForm.first_name !== existingUser.first_name) {
-        updates.first_name = editForm.first_name;
-      }
-      if (editForm.last_name && editForm.last_name !== existingUser.last_name) {
-        updates.last_name = editForm.last_name;
-      }
-      if (editPassword.trim()) {
-        updates.password = editPassword.trim();
-      }
-      if (Object.keys(updates).length > 0) {
-        try {
-          await api.put(`/users/${existingUser.id}`, updates);
-          queryClient.invalidateQueries({ queryKey: ["team-users"] });
-        } catch (err) {
-          setUserError(parseApiError(err));
-          return;
-        }
-      }
-      // Always preserve/set user_id on the team member to prevent future lookup issues
-      editForm.user_id = existingUser.id;
-    } else if (editForm.email?.trim()) {
-      // No linked user yet but email provided — check if user exists to link
-      const existingUserWithEmail = usersByEmail[editForm.email.toLowerCase()];
-      if (existingUserWithEmail) {
-        // Link to existing user instead of creating a new one
-        editForm.user_id = existingUserWithEmail.id;
-      } else if (editPassword.trim()) {
-        // No existing user, but password provided → create new user
-        try {
-          const res = await api.post<TenantUser>("/users", {
-            email: editForm.email.trim(),
-            password: editPassword.trim(),
-            first_name: editForm.first_name.trim(),
-            last_name: editForm.last_name.trim(),
-            role: editForm.is_manager ? "tenant_admin" : "user",
-          });
-          editForm.user_id = res.data.id;
-          queryClient.invalidateQueries({ queryKey: ["team-users"] });
-        } catch (err) {
-          setUserError(parseApiError(err));
-          return;
-        }
-      }
-    }
+    const updatedMember: TeamMember = {
+      first_name: editForm.first_name.trim(),
+      last_name: editForm.last_name.trim(),
+      email: editForm.email?.trim() || "",
+      phone: editForm.phone?.trim() || "",
+      role: editForm.role?.trim() || "",
+      is_manager: editForm.is_manager,
+    };
 
     const newMembers = [...teamMembers];
-    newMembers[editingIndex] = { ...editForm };
+    newMembers[editingIndex] = updatedMember;
     setTeamMembers(newMembers);
     setEditingIndex(null);
-    setEditPassword("");
     updateMutation.mutate(newMembers);
   };
 
@@ -269,8 +149,7 @@ function ConferenceTeamTab({
             Conference Team
           </h4>
           <p className="mt-0.5 text-xs text-gray-500">
-            Conference Managers have admin rights. Other members have read-only
-            access. Members with a password can log in.
+            Team members for this conference. For login access, add users in the Team page.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -370,7 +249,7 @@ function ConferenceTeamTab({
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Role
@@ -398,6 +277,8 @@ function ConferenceTeamTab({
                       }
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Phone
@@ -421,60 +302,6 @@ function ConferenceTeamTab({
                   </div>
                 </div>
 
-                {/* Login access section */}
-                <div className="mt-3 pt-3 border-t border-blue-200">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        {findUserForMember(teamMembers[editingIndex], teamMembers[editingIndex]?.email)
-                          ? "New Password"
-                          : "Password"}
-                      </label>
-                      <input
-                        type="password"
-                        placeholder={
-                          findUserForMember(teamMembers[editingIndex], teamMembers[editingIndex]?.email)
-                            ? "Leave empty to keep current"
-                            : "Set to enable login"
-                        }
-                        minLength={8}
-                        className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                        value={editPassword}
-                        onChange={(e) => setEditPassword(e.target.value)}
-                      />
-                      {editPassword && editPassword.length < 8 && (
-                        <p className="mt-1 text-xs text-red-600">
-                          Minimum 8 characters
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-end pb-1">
-                      {findUserForMember(teamMembers[editingIndex], teamMembers[editingIndex]?.email) ? (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                            />
-                          </svg>
-                          Has login access
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-500">
-                          Enter email + password to grant login access
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
                 <div className="mt-3 flex items-center justify-between">
                   <div className="flex items-center">
                     <input
@@ -495,9 +322,6 @@ function ConferenceTeamTab({
                     >
                       Conference Manager
                     </label>
-                    <span className="ml-2 text-xs text-gray-500">
-                      ({editForm.is_manager ? "Admin rights" : "Read-only"})
-                    </span>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -510,12 +334,7 @@ function ConferenceTeamTab({
                     <button
                       type="button"
                       onClick={saveEdit}
-                      disabled={
-                        !editForm.first_name.trim() ||
-                        !editForm.last_name.trim() ||
-                        !!editPhoneError ||
-                        (editPassword.length > 0 && editPassword.length < 8)
-                      }
+                      disabled={!editForm.first_name.trim() || !editForm.last_name.trim() || !!editPhoneError}
                       className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
                     >
                       Save Changes
@@ -544,17 +363,6 @@ function ConferenceTeamTab({
                           Manager
                         </span>
                       )}
-                      {findUserForMember(member) ? (
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded ${
-                            member.is_manager
-                              ? "bg-purple-100 text-purple-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {member.is_manager ? "Admin" : "Read-only"}
-                        </span>
-                      ) : null}
                     </div>
                     <div className="mt-1 text-sm text-gray-500 space-x-3">
                       {member.email && <span>{member.email}</span>}
@@ -625,7 +433,7 @@ function ConferenceTeamTab({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 Role
@@ -653,6 +461,8 @@ function ConferenceTeamTab({
                 }
               />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 Phone
@@ -674,35 +484,6 @@ function ConferenceTeamTab({
             </div>
           </div>
 
-          {/* Login access section */}
-          <div className="mt-3 pt-3 border-t border-blue-200">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Password
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="password"
-                placeholder="Set to enable login"
-                minLength={8}
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-              <div className="flex items-center">
-                <span className="text-xs text-gray-500">
-                  {newMember.email && newPassword.length >= 8
-                    ? "Login account will be created"
-                    : "Enter email + password (min. 8 chars) to grant login access"}
-                </span>
-              </div>
-            </div>
-            {newPassword && newPassword.length < 8 && (
-              <p className="mt-1 text-xs text-red-600">
-                Minimum 8 characters
-              </p>
-            )}
-          </div>
-
           <div className="mt-3 flex items-center justify-between">
             <div className="flex items-center">
               <input
@@ -720,19 +501,11 @@ function ConferenceTeamTab({
               >
                 Conference Manager
               </label>
-              <span className="ml-2 text-xs text-gray-500">
-                ({newMember.is_manager ? "Admin rights" : "Read-only"})
-              </span>
             </div>
             <button
               type="button"
               onClick={addMember}
-              disabled={
-                !newMember.first_name.trim() ||
-                !newMember.last_name.trim() ||
-                !!newPhoneError ||
-                (newPassword.length > 0 && newPassword.length < 8)
-              }
+              disabled={!newMember.first_name.trim() || !newMember.last_name.trim() || !!newPhoneError}
               className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
             >
               <svg
@@ -759,10 +532,10 @@ function ConferenceTeamTab({
         title="Remove Team Member"
         message={
           removeTarget
-            ? `Are you sure you want to remove "${[removeTarget.member.first_name, removeTarget.member.last_name].filter(Boolean).join(" ")}" from this conference's team? This only removes them from this conference - their user account (if any) will not be affected.`
+            ? `Are you sure you want to remove "${[removeTarget.member.first_name, removeTarget.member.last_name].filter(Boolean).join(" ")}" from this conference's team?`
             : ""
         }
-        confirmLabel="Remove from Team"
+        confirmLabel="Remove"
         onConfirm={confirmRemoveMember}
         onCancel={() => setRemoveTarget(null)}
       />

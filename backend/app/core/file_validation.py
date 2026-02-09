@@ -10,6 +10,7 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "applicant_picture": {"image/jpeg", "image/png", "image/webp"},
     "applicant_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
     "paper_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
+    "conference_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
 }
 
 # Default allowed types for general attachments

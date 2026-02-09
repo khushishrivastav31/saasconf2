@@ -260,14 +260,13 @@ function ConferenceSponsorsTab({
             sponsor={selectedSponsor}
             sponsorPackages={sponsorPackagesData?.items || []}
             currencies={currenciesData?.items || []}
-            onSave={(sponsorData) =>
-              updateMutation.mutate({
+            onSave={async (sponsorData) => {
+              await updateMutation.mutateAsync({
                 id: selectedSponsor.id,
                 data: sponsorData,
-              })
-            }
+              });
+            }}
             onDelete={(id) => deleteMutation.mutate(id)}
-            isSaving={updateMutation.isPending}
           />
         </>
       ) : (

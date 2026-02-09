@@ -47,7 +47,7 @@ export default function Team() {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
-      await api.delete(`/users/${userId}`);
+      await api.delete(`/users/${userId}?permanent=true`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-users"] });
@@ -300,7 +300,7 @@ export default function Team() {
       {/* Edit Member Modal */}
       {editingUser && (
         <EditMemberModal
-          key={`${editingUser.id}-${editingUser.updated_at}`}
+          key={editingUser.id}
           user={editingUser}
           onClose={() => {
             setEditingUserId(null);

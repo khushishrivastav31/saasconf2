@@ -331,11 +331,8 @@ async def deactivate_tenant_user(
     if user.role == UserRole.SUPER_ADMIN.value and not current_user.is_super_admin:
         raise AuthorizationError("Cannot delete super admin users")
 
-    # Permanent delete requires super admin
+    # Permanent delete
     if permanent:
-        if not current_user.is_super_admin:
-            raise AuthorizationError("Only super admins can permanently delete users")
-
         user_email = user.email
         await db.delete(user)
 

@@ -214,11 +214,10 @@ export default function Locations() {
             {selectedLocation ? (
               <LocationDetailPanel
                 location={selectedLocation}
-                onSave={isAdmin ? (data) =>
-                  updateMutation.mutate({ id: selectedLocation.id, data })
-                : undefined}
+                onSave={isAdmin ? async (data) => {
+                  await updateMutation.mutateAsync({ id: selectedLocation.id, data });
+                } : undefined}
                 onDelete={isAdmin ? (id) => deleteMutation.mutate(id) : undefined}
-                isSaving={updateMutation.isPending}
               />
             ) : (
               <div className="bg-white rounded-lg shadow flex flex-col items-center justify-center h-full py-16 text-center">

@@ -5,6 +5,7 @@ import api from "../config/api";
 import { parseApiError } from "../utils/apiError";
 import { useIsAdmin } from "../hooks/useIsAdmin";
 import CreateConferenceModal from "../components/CreateConferenceModal";
+import ConferenceLogo from "../components/ConferenceLogo";
 import type {
   Conference,
   ConferenceCreate,
@@ -159,15 +160,26 @@ export default function Conferences() {
             >
               <div className="p-6">
                 <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {conference.name}
-                    </h3>
-                    {conference.abbreviation && (
-                      <p className="text-sm text-gray-500">
-                        {conference.abbreviation}
-                      </p>
+                  <div className="flex items-start gap-3">
+                    {conference.logo_url && (
+                      <div className="w-12 h-12 flex-shrink-0 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                        <ConferenceLogo
+                          logoUrl={conference.logo_url}
+                          className="max-w-full max-h-full object-contain"
+                          showPlaceholder={false}
+                        />
+                      </div>
                     )}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {conference.name}
+                      </h3>
+                      {conference.abbreviation && (
+                        <p className="text-sm text-gray-500">
+                          {conference.abbreviation}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <span
                     className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(conference.status)}`}

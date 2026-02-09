@@ -162,6 +162,13 @@ async def unhandled_error_handler(
         sentry_sdk.capture_exception(exc)
     if settings.DEBUG:
         traceback.print_exc()
+        # Return actual error details in debug mode to help diagnose issues
+        return _cors_response(
+            request, 500, {
+                "detail": f"{type(exc).__name__}: {str(exc)}",
+                "type": "server_error",
+            }
+        )
     return _cors_response(
         request, 500, {"detail": "Internal server error", "type": "server_error"}
     )
