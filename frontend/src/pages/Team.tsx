@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../config/api";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -572,6 +572,7 @@ function EditMemberModal({
     "idle" | "saving" | "saved" | "error"
   >("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateMutation = useMutation({
     mutationFn: async (data: TenantUserUpdate) => {
@@ -581,19 +582,25 @@ function EditMemberModal({
       setSaveStatus("saved");
       setNewPassword("");
       queryClient.invalidateQueries({ queryKey: ["team-users"] });
-      setTimeout(() => setSaveStatus("idle"), 2000);
+      // Clear any existing timeout before setting a new one
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     },
     onError: (err) => {
       setSaveStatus("error");
       setErrorMessage(parseApiError(err));
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      // Clear any existing timeout before setting a new one
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
     },
   });
 
   // Helper to show save feedback
   const showSaved = () => {
     setSaveStatus("saved");
-    setTimeout(() => setSaveStatus("idle"), 2000);
+    // Clear any existing timeout before setting a new one to prevent race conditions
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
   };
 
   // Grant conference access mutation
@@ -609,12 +616,20 @@ function EditMemberModal({
         access_level: accessLevel,
       });
     },
+    onMutate: () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      setSaveStatus("saving");
+    },
     onSuccess: () => {
       refetchUserAccess();
       queryClient.invalidateQueries({ queryKey: ["team-users"] });
       showSaved();
     },
-    onError: (err) => setErrorMessage(parseApiError(err)),
+    onError: (err) => {
+      setSaveStatus("error");
+      setErrorMessage(parseApiError(err));
+      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+    },
   });
 
   // Revoke conference access mutation
@@ -622,11 +637,19 @@ function EditMemberModal({
     mutationFn: async (accessId: string) => {
       await api.delete(`/user-conference-access/${accessId}`);
     },
+    onMutate: () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      setSaveStatus("saving");
+    },
     onSuccess: () => {
       refetchUserAccess();
       showSaved();
     },
-    onError: (err) => setErrorMessage(parseApiError(err)),
+    onError: (err) => {
+      setSaveStatus("error");
+      setErrorMessage(parseApiError(err));
+      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+    },
   });
 
   // Update access level mutation
@@ -636,14 +659,24 @@ function EditMemberModal({
         access_level: accessLevel,
       });
     },
+    onMutate: () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      setSaveStatus("saving");
+    },
     onSuccess: () => {
       refetchUserAccess();
       showSaved();
     },
-    onError: (err) => setErrorMessage(parseApiError(err)),
+    onError: (err) => {
+      setSaveStatus("error");
+      setErrorMessage(parseApiError(err));
+      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+    },
   });
 
   const handleSave = () => {
+    // Clear any pending timeout to prevent race conditions
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     // Immediately show saving state for instant feedback
     setSaveStatus("saving");
     setErrorMessage("");
@@ -767,13 +800,18 @@ function EditMemberModal({
                 onChange={async (e) => {
                   const newValue = e.target.checked;
                   setFormData({ ...formData, has_all_conference_access: newValue });
+                  // Clear any pending timeout before making changes
+                  if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                  setSaveStatus("saving");
                   try {
                     await api.put(`/users/${user.id}`, { has_all_conference_access: newValue });
                     queryClient.invalidateQueries({ queryKey: ["team-users"] });
                     showSaved();
                   } catch (err) {
+                    setSaveStatus("error");
                     setErrorMessage(parseApiError(err));
                     setFormData({ ...formData, has_all_conference_access: !newValue });
+                    saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
                   }
                 }}
                 className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
