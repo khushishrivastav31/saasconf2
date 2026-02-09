@@ -64,6 +64,9 @@ vi.mock("@tiptap/react", () => ({
   EditorContent: ({ editor }: { editor: unknown }) => (
     <div data-testid="editor-content">{editor ? "Editor active" : "No editor"}</div>
   ),
+  Extension: {
+    create: vi.fn(() => ({})),
+  },
 }));
 
 vi.mock("@tiptap/starter-kit", () => ({
