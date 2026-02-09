@@ -86,7 +86,9 @@ vi.mock("@tiptap/extension-link", () => ({
 }));
 
 vi.mock("@tiptap/extension-image", () => ({
-  default: {},
+  default: {
+    configure: vi.fn(() => ({})),
+  },
 }));
 
 vi.mock("@tiptap/extension-text-align", () => ({
@@ -144,7 +146,9 @@ vi.mock("@tiptap/extension-table-header", () => ({
 }));
 
 vi.mock("@tiptap/extension-task-list", () => ({
-  default: {},
+  default: {
+    configure: vi.fn(() => ({})),
+  },
 }));
 
 vi.mock("@tiptap/extension-task-item", () => ({
