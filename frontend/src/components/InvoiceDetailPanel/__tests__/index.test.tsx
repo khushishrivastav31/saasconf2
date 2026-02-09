@@ -157,9 +157,8 @@ describe("InvoiceDetailPanel", () => {
   const defaultProps = {
     invoice: mockInvoice,
     currencies: mockCurrencies,
-    onSave: vi.fn(),
+    onSave: vi.fn().mockResolvedValue(undefined),
     onDelete: vi.fn(),
-    isSaving: false,
   };
 
   beforeEach(() => {
@@ -208,26 +207,16 @@ describe("InvoiceDetailPanel", () => {
       expect(screen.getByRole("button", { name: "Save Changes" })).toBeInTheDocument();
     });
 
-    it("shows Saving... text when isSaving is true", () => {
-      renderWithProviders(<InvoiceDetailPanel {...defaultProps} isSaving={true} />);
-      expect(screen.getByRole("button", { name: "Saving..." })).toBeInTheDocument();
-    });
-
-    it("disables save button when isSaving is true", () => {
-      renderWithProviders(<InvoiceDetailPanel {...defaultProps} isSaving={true} />);
-      expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
-    });
-
     it("renders delete button when onDelete is provided", () => {
       renderWithProviders(<InvoiceDetailPanel {...defaultProps} />);
-      expect(screen.getByTitle("Delete invoice")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
     });
 
     it("does not render delete button when onDelete is not provided", () => {
       renderWithProviders(
         <InvoiceDetailPanel {...defaultProps} onDelete={undefined} />
       );
-      expect(screen.queryByTitle("Delete invoice")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
     });
   });
 
@@ -347,7 +336,7 @@ describe("InvoiceDetailPanel", () => {
       const user = userEvent.setup();
       renderWithProviders(<InvoiceDetailPanel {...defaultProps} />);
 
-      await user.click(screen.getByTitle("Delete invoice"));
+      await user.click(screen.getByRole("button", { name: "Delete" }));
 
       expect(screen.getByTestId("confirm-dialog")).toBeInTheDocument();
       expect(screen.getByText("Delete Invoice")).toBeInTheDocument();
@@ -359,7 +348,7 @@ describe("InvoiceDetailPanel", () => {
       const onDelete = vi.fn();
       renderWithProviders(<InvoiceDetailPanel {...defaultProps} onDelete={onDelete} />);
 
-      await user.click(screen.getByTitle("Delete invoice"));
+      await user.click(screen.getByRole("button", { name: "Delete" }));
       await user.click(screen.getByRole("button", { name: "Confirm" }));
 
       expect(onDelete).toHaveBeenCalledWith("inv-1");
@@ -369,7 +358,7 @@ describe("InvoiceDetailPanel", () => {
       const user = userEvent.setup();
       renderWithProviders(<InvoiceDetailPanel {...defaultProps} />);
 
-      await user.click(screen.getByTitle("Delete invoice"));
+      await user.click(screen.getByRole("button", { name: "Delete" }));
       expect(screen.getByTestId("confirm-dialog")).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Cancel" }));

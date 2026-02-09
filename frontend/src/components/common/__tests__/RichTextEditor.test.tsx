@@ -31,9 +31,19 @@ const mockChain = vi.fn(() => ({
 
 let mockIsActive = vi.fn(() => false);
 
+const mockCan = vi.fn(() => ({
+  undo: () => true,
+  redo: () => true,
+  sinkListItem: () => true,
+  liftListItem: () => true,
+  mergeCells: () => true,
+  splitCell: () => true,
+}));
+
 const mockEditor = {
   isActive: mockIsActive,
   chain: mockChain,
+  can: mockCan,
   getHTML: vi.fn(() => "<p>Test content</p>"),
   getText: vi.fn(() => "Test content"),
   getAttributes: vi.fn(() => ({})),
@@ -67,6 +77,80 @@ vi.mock("@tiptap/extension-underline", () => ({
 }));
 
 vi.mock("@tiptap/extension-link", () => ({
+  default: {
+    configure: vi.fn(() => ({})),
+  },
+}));
+
+vi.mock("@tiptap/extension-image", () => ({
+  default: {},
+}));
+
+vi.mock("@tiptap/extension-text-align", () => ({
+  default: {
+    configure: vi.fn(() => ({})),
+  },
+}));
+
+vi.mock("@tiptap/extension-highlight", () => ({
+  default: {
+    configure: vi.fn(() => ({})),
+  },
+}));
+
+vi.mock("@tiptap/extension-text-style", () => ({
+  TextStyle: {},
+}));
+
+vi.mock("@tiptap/extension-color", () => ({
+  default: {},
+}));
+
+vi.mock("@tiptap/extension-font-family", () => ({
+  default: {},
+}));
+
+vi.mock("@tiptap/extension-subscript", () => ({
+  default: {},
+}));
+
+vi.mock("@tiptap/extension-superscript", () => ({
+  default: {},
+}));
+
+vi.mock("@tiptap/extension-table", () => ({
+  Table: {
+    configure: vi.fn(() => ({})),
+  },
+}));
+
+vi.mock("@tiptap/extension-table-row", () => ({
+  default: {},
+}));
+
+vi.mock("@tiptap/extension-table-cell", () => ({
+  default: {
+    configure: vi.fn(() => ({})),
+  },
+}));
+
+vi.mock("@tiptap/extension-table-header", () => ({
+  default: {
+    configure: vi.fn(() => ({})),
+  },
+}));
+
+vi.mock("@tiptap/extension-task-list", () => ({
+  default: {},
+}));
+
+vi.mock("@tiptap/extension-task-item", () => ({
+  default: {
+    configure: vi.fn(() => ({})),
+  },
+}));
+
+vi.mock("@tiptap/extension-youtube", () => ({
   default: {
     configure: vi.fn(() => ({})),
   },
