@@ -61,8 +61,13 @@ async def _create_tables() -> None:
 
 
 async def _drop_tables() -> None:
+    """Drop all tables using raw SQL to handle circular FK dependencies."""
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        # Get all table names from our metadata
+        table_names = [f'"{t.name}"' for t in Base.metadata.sorted_tables]
+        if table_names:
+            # Use CASCADE to handle circular dependencies (tenants <-> users)
+            await conn.execute(text(f"DROP TABLE IF EXISTS {', '.join(table_names)} CASCADE"))
     await test_engine.dispose()
 
 
