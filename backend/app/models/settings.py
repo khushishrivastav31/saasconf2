@@ -466,3 +466,76 @@ class PronounOption(Base):
 
     def __repr__(self) -> str:
         return f"<PronounOption {self.name}>"
+
+
+class EmailTemplate(Base):
+    """
+    Email templates for system and conference communications.
+
+    System templates (tenant_id = null): Used for tenant user invitations.
+    Conference templates (tenant_id + conference_id set): Used for CFP portal
+    communications (applicant verification, submission confirmation, etc.).
+
+    Template types:
+    - tenant_user_welcome: Sent when a user is added to a tenant (system level)
+    - applicant_verification: Sent when an applicant registers (conference level)
+    - committee_verification: Sent when a committee member is added (conference level)
+    - submission_confirmation: Sent after a paper is submitted (conference level)
+    - co_speaker_invitation: Sent when inviting a co-speaker (conference level)
+    - password_reset: Sent for password reset requests (conference level)
+
+    Placeholders available:
+    - [User Type]: Role of the user (admin, user, etc.)
+    - [Company Name]: Tenant name
+    - [Conference Name]: Conference name
+    - [Paper Title]: Title of submitted paper
+    - [Speakers]: List of speaker names
+    - [Support Email]: Tenant support email
+    - [Verify Link]: Email verification URL
+    - [Reset Link]: Password reset URL
+    """
+
+    __tablename__ = "email_templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    # Null tenant_id means system-level template (super admin)
+    tenant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    # Null conference_id means tenant-level template (applies to all conferences)
+    conference_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("conferences.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    template_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    body_html: Mapped[str] = mapped_column(Text, nullable=False)
+    body_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("idx_email_templates_tenant", "tenant_id"),
+        Index("idx_email_templates_conference", "conference_id"),
+        Index(
+            "idx_email_templates_type",
+            "tenant_id",
+            "conference_id",
+            "template_type",
+            unique=True,
+        ),
+    )
+
+    def __repr__(self) -> str:
+        return f"<EmailTemplate {self.template_type}>"

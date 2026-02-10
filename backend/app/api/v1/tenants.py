@@ -83,6 +83,7 @@ async def list_tenants(
                 country=tenant.country,
                 vat_number=tenant.vat_number,
                 website=tenant.website,
+                logo_url=tenant.logo_url,
                 contact_persons=tenant.contact_persons or [],
                 comments=tenant.comments,
                 super_user_id=tenant.super_user_id,
@@ -176,6 +177,7 @@ async def create_tenant(
         country=tenant.country,
         vat_number=tenant.vat_number,
         website=tenant.website,
+        logo_url=tenant.logo_url,
         contact_persons=tenant.contact_persons or [],
         comments=tenant.comments,
         super_user_id=tenant.super_user_id,
@@ -222,6 +224,7 @@ async def get_tenant(
         country=tenant.country,
         vat_number=tenant.vat_number,
         website=tenant.website,
+        logo_url=tenant.logo_url,
         contact_persons=tenant.contact_persons or [],
         comments=tenant.comments,
         super_user_id=tenant.super_user_id,
@@ -301,6 +304,7 @@ async def update_tenant(
         country=tenant.country,
         vat_number=tenant.vat_number,
         website=tenant.website,
+        logo_url=tenant.logo_url,
         contact_persons=tenant.contact_persons or [],
         comments=tenant.comments,
         super_user_id=tenant.super_user_id,
@@ -769,3 +773,155 @@ async def remove_tenant_super_user(
     await db.commit()
 
     return {"message": f"Super user removed from tenant '{tenant.name}'"}
+
+
+# Tenant Logo endpoints
+
+
+@router.post("/{tenant_id}/logo")
+async def upload_tenant_logo(
+    tenant_id: UUID,
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> dict:
+    """
+    Upload a logo for a tenant.
+
+    Only accessible by super admins.
+    """
+    from fastapi import UploadFile, File
+    from app.models.attachment import Attachment
+
+    # Get form data
+    form = await request.form()
+    file: UploadFile | None = form.get("file")
+
+    if not file:
+        raise ValidationError("No file provided")
+
+    # Verify tenant exists
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+
+    if not tenant:
+        raise NotFoundError(f"Tenant with ID '{tenant_id}' not found")
+
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    content_type = file.content_type or "application/octet-stream"
+    if content_type not in allowed_types:
+        raise ValidationError(f"Invalid file type. Allowed: {', '.join(allowed_types)}")
+
+    # Read file data
+    file_data = await file.read()
+
+    # Check file size (10MB max)
+    if len(file_data) > 10 * 1024 * 1024:
+        raise ValidationError("File size exceeds 10MB limit")
+
+    # Delete existing logo attachment if present
+    if tenant.logo_url:
+        existing_attachment = await db.execute(
+            select(Attachment).where(
+                Attachment.entity_type == "tenant_logo",
+                Attachment.entity_id == tenant_id,
+            )
+        )
+        existing = existing_attachment.scalar_one_or_none()
+        if existing:
+            await db.delete(existing)
+
+    # Create attachment
+    attachment = Attachment(
+        tenant_id=tenant_id,
+        entity_type="tenant_logo",
+        entity_id=tenant_id,
+        filename=file.filename or "logo",
+        content_type=content_type,
+        file_size=len(file_data),
+        file_data=file_data,
+    )
+    db.add(attachment)
+
+    # Update tenant logo_url
+    tenant.logo_url = f"/admin/tenants/{tenant_id}/logo"
+
+    await db.commit()
+
+    return {"message": "Logo uploaded successfully", "logo_url": tenant.logo_url}
+
+
+@router.get("/{tenant_id}/logo")
+async def get_tenant_logo(
+    tenant_id: UUID,
+    db: DbSessionDep,
+) -> bytes:
+    """Get the tenant logo image."""
+    from fastapi.responses import Response
+    from app.models.attachment import Attachment
+    from app.db.session import set_rls_context
+
+    # Set RLS context to allow access (logos are public)
+    await set_rls_context(db, is_super_admin=True)
+
+    result = await db.execute(
+        select(Attachment).where(
+            Attachment.entity_type == "tenant_logo",
+            Attachment.entity_id == tenant_id,
+        )
+    )
+    attachment = result.scalar_one_or_none()
+
+    if not attachment:
+        raise NotFoundError("Logo not found")
+
+    return Response(
+        content=attachment.file_data,
+        media_type=attachment.content_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{attachment.filename}"',
+            "Cache-Control": "public, max-age=3600",
+        },
+    )
+
+
+@router.delete("/{tenant_id}/logo")
+async def delete_tenant_logo(
+    tenant_id: UUID,
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> dict:
+    """
+    Delete the tenant logo.
+
+    Only accessible by super admins.
+    """
+    from app.models.attachment import Attachment
+
+    # Verify tenant exists
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+
+    if not tenant:
+        raise NotFoundError(f"Tenant with ID '{tenant_id}' not found")
+
+    # Find and delete attachment
+    attachment_result = await db.execute(
+        select(Attachment).where(
+            Attachment.entity_type == "tenant_logo",
+            Attachment.entity_id == tenant_id,
+        )
+    )
+    attachment = attachment_result.scalar_one_or_none()
+
+    if attachment:
+        await db.delete(attachment)
+
+    # Clear logo_url
+    tenant.logo_url = None
+
+    await db.commit()
+
+    return {"message": "Logo deleted successfully"}

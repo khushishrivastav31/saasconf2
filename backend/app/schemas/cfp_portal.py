@@ -150,6 +150,15 @@ class PortalConferenceSummary(BaseModel):
     cfps: list[PortalCFPResponse] = []
 
 
+class PortalTenantResponse(BaseModel):
+    """Basic tenant info for the portal login page."""
+
+    id: UUID
+    name: str
+    slug: str
+    logo_url: str | None = None
+
+
 class PortalLandingResponse(BaseModel):
     """Landing page data for a specific conference."""
 

@@ -8,8 +8,9 @@ import ConferenceCommitteeRolesTab from "./settings/CommitteeRolesTab";
 import ConferenceScoreScalesTab from "./settings/ScoreScalesTab";
 import ConferenceReviewCriteriaTab from "./settings/ReviewCriteriaTab";
 import PronounOptionsTab from "../../PronounOptionsTab";
+import EmailTemplatesTab from "./settings/EmailTemplatesTab";
 
-type ConferenceSettingsActiveTab = "volunteer-roles" | "location-types" | "sponsor-packages" | "session-types" | "committee-roles" | "score-scales" | "review-criteria" | "pronoun-options";
+type ConferenceSettingsActiveTab = "volunteer-roles" | "location-types" | "sponsor-packages" | "session-types" | "committee-roles" | "score-scales" | "review-criteria" | "pronoun-options" | "email-templates";
 
 function ConferenceSettingsTab({ conference, isAdmin }: { conference: Conference; isAdmin: boolean }) {
   const [activeTab, setActiveTab] =
@@ -23,7 +24,7 @@ function ConferenceSettingsTab({ conference, isAdmin }: { conference: Conference
             Conference Settings
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Manage volunteer roles, location types, sponsor packages, session types, review configuration, and pronoun options for this conference
+            Manage volunteer roles, location types, sponsor packages, session types, review configuration, pronoun options, and email templates for this conference
           </p>
         </div>
       </div>
@@ -111,6 +112,16 @@ function ConferenceSettingsTab({ conference, isAdmin }: { conference: Conference
           >
             Pronoun Options
           </button>
+          <button
+            onClick={() => setActiveTab("email-templates")}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "email-templates"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Email Templates
+          </button>
         </nav>
       </div>
 
@@ -130,6 +141,8 @@ function ConferenceSettingsTab({ conference, isAdmin }: { conference: Conference
         <ConferenceReviewCriteriaTab conference={conference} isAdmin={isAdmin} />
       ) : activeTab === "pronoun-options" ? (
         <PronounOptionsTab conference={conference} isAdmin={isAdmin} />
+      ) : activeTab === "email-templates" ? (
+        <EmailTemplatesTab conference={conference} isAdmin={isAdmin} />
       ) : null}
     </div>
   );

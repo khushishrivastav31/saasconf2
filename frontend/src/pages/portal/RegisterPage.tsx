@@ -6,7 +6,7 @@ import { usePortalBasePath } from "../../hooks/usePortalBasePath";
 import { parseApiError } from "../../utils/apiError";
 import portalApi from "../../config/portalApi";
 import ConferenceLogo from "../../components/ConferenceLogo";
-import type { PortalLandingData } from "../../types/portal";
+import type { PortalLandingData, PortalTenant } from "../../types/portal";
 
 function RegisterPage() {
   const { register } = useApplicantAuth();
@@ -23,6 +23,18 @@ function RegisterPage() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch tenant info (for logo display)
+  const { data: tenantData } = useQuery({
+    queryKey: ["portal-tenant", companySlug],
+    queryFn: async () => {
+      const res = await portalApi.get<PortalTenant>(
+        `/portal/tenant/${companySlug}`,
+      );
+      return res.data;
+    },
+    enabled: !!companySlug,
+  });
 
   // Fetch conference data if coming from a specific CFP landing page
   const { data: conferenceData } = useQuery({
@@ -64,6 +76,11 @@ function RegisterPage() {
   };
 
   const conference = conferenceData?.conference;
+  const tenant = tenantData;
+
+  // Use conference logo if available, otherwise fall back to tenant logo
+  const logoUrl = conference?.logo_url || tenant?.logo_url;
+  const logoAlt = conference?.name || tenant?.name || companySlug || "Portal";
 
   if (successMessage) {
     return (
@@ -105,11 +122,11 @@ function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-sm w-full">
         <div className="text-center mb-8">
-          {conference?.logo_url && (
+          {logoUrl && (
             <div className="h-16 mx-auto mb-4 flex items-center justify-center">
               <ConferenceLogo
-                logoUrl={conference.logo_url}
-                alt={conference.name}
+                logoUrl={logoUrl}
+                alt={logoAlt}
                 className="max-h-16 object-contain"
                 apiInstance={portalApi}
                 showPlaceholder={false}
@@ -117,7 +134,7 @@ function RegisterPage() {
             </div>
           )}
           <h1 className="text-2xl font-bold text-gray-900">
-            {conference?.name || `${companySlug} User Portal`}
+            {conference?.name || tenant?.name || `${companySlug} User Portal`}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             Create your account

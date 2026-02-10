@@ -51,6 +51,7 @@ export interface Tenant {
   // Business fields
   vat_number: string | null;
   website: string | null;
+  logo_url: string | null;
   // Contact persons
   contact_persons: ContactPerson[];
   // Comments
@@ -809,6 +810,9 @@ export interface Conference {
   description: string | null;
   website: string | null;
   logo_url: string | null;
+  // Contact emails
+  support_email: string | null;
+  contact_email: string | null;
   // Dates
   start_date: string | null;
   end_date: string | null;
@@ -844,6 +848,8 @@ export interface ConferenceCreate {
   description?: string;
   website?: string;
   logo_url?: string;
+  support_email?: string;
+  contact_email?: string;
   start_date?: string;
   end_date?: string;
   venue_name?: string;
@@ -864,6 +870,8 @@ export interface ConferenceUpdate {
   description?: string;
   website?: string;
   logo_url?: string;
+  support_email?: string;
+  contact_email?: string;
   start_date?: string;
   end_date?: string;
   venue_name?: string;
@@ -1588,4 +1596,61 @@ export interface Attachment {
   uploaded_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Email Template types
+export type EmailTemplateType =
+  | "tenant_user_welcome"
+  | "applicant_verification"
+  | "committee_verification"
+  | "submission_confirmation"
+  | "co_speaker_invitation"
+  | "password_reset";
+
+export const EMAIL_TEMPLATE_TYPES = {
+  SYSTEM: ["tenant_user_welcome"] as const,
+  CONFERENCE: [
+    "applicant_verification",
+    "committee_verification",
+    "submission_confirmation",
+    "co_speaker_invitation",
+    "password_reset",
+  ] as const,
+};
+
+export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateType, string> = {
+  tenant_user_welcome: "Tenant User Welcome",
+  applicant_verification: "Applicant Verification",
+  committee_verification: "Committee Member Verification",
+  submission_confirmation: "Submission Confirmation",
+  co_speaker_invitation: "Co-Speaker Invitation",
+  password_reset: "Password Reset",
+};
+
+export interface EmailTemplate {
+  id: string | null;
+  tenant_id: string | null;
+  conference_id: string | null;
+  template_type: EmailTemplateType;
+  subject: string;
+  body_html: string;
+  body_text: string | null;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface EmailTemplateCreate {
+  template_type: EmailTemplateType;
+  subject: string;
+  body_html: string;
+  body_text?: string;
+  is_active?: boolean;
+}
+
+export interface EmailTemplateUpdate {
+  subject?: string;
+  body_html?: string;
+  body_text?: string;
+  is_active?: boolean;
 }

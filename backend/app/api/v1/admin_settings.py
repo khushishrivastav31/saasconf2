@@ -10,6 +10,13 @@ from app.core.exceptions import NotFoundError, ValidationError
 from app.core.pagination import paginate
 from app.models.audit import AuditAction, AuditLog
 from app.models.platform_currency import PlatformCurrency
+from app.models.settings import EmailTemplate
+from app.schemas.email_template import (
+    EmailTemplateListResponse,
+    EmailTemplateResponse,
+    EmailTemplateType,
+    EmailTemplateUpdate,
+)
 from app.schemas.platform_currency import (
     PlatformCurrencyCreate,
     PlatformCurrencyListResponse,
@@ -181,3 +188,106 @@ async def delete_platform_currency(
 
     await db.delete(currency)
     await db.commit()
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Email Templates (System Level)
+# ────────────────────────────────────────────────────────────────────────────
+
+
+@router.get("/email-templates", response_model=EmailTemplateListResponse)
+async def list_system_email_templates(
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+) -> EmailTemplateListResponse:
+    """List all system-level email templates (super admin only)."""
+    query = select(EmailTemplate).where(
+        EmailTemplate.tenant_id.is_(None),
+        EmailTemplate.conference_id.is_(None),
+    ).order_by(EmailTemplate.template_type)
+
+    result = await paginate(db, query, page, page_size)
+
+    items = [EmailTemplateResponse.model_validate(t) for t in result.items]
+
+    return EmailTemplateListResponse(
+        items=items,
+        total=result.total,
+        page=page,
+        page_size=page_size,
+        pages=(result.total + page_size - 1) // page_size,
+    )
+
+
+@router.get("/email-templates/{template_type}", response_model=EmailTemplateResponse)
+async def get_system_email_template(
+    template_type: str,
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+) -> EmailTemplateResponse:
+    """Get a specific system-level email template by type."""
+    if template_type not in EmailTemplateType.SYSTEM_TYPES:
+        raise ValidationError(f"Invalid system template type: {template_type}")
+
+    result = await db.execute(
+        select(EmailTemplate).where(
+            EmailTemplate.tenant_id.is_(None),
+            EmailTemplate.conference_id.is_(None),
+            EmailTemplate.template_type == template_type,
+        )
+    )
+    template = result.scalar_one_or_none()
+
+    if not template:
+        raise NotFoundError(f"Email template '{template_type}' not found")
+
+    return EmailTemplateResponse.model_validate(template)
+
+
+@router.put("/email-templates/{template_type}", response_model=EmailTemplateResponse)
+async def update_system_email_template(
+    template_type: str,
+    template_data: EmailTemplateUpdate,
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> EmailTemplateResponse:
+    """Update a system-level email template."""
+    if template_type not in EmailTemplateType.SYSTEM_TYPES:
+        raise ValidationError(f"Invalid system template type: {template_type}")
+
+    result = await db.execute(
+        select(EmailTemplate).where(
+            EmailTemplate.tenant_id.is_(None),
+            EmailTemplate.conference_id.is_(None),
+            EmailTemplate.template_type == template_type,
+        )
+    )
+    template = result.scalar_one_or_none()
+
+    if not template:
+        raise NotFoundError(f"Email template '{template_type}' not found")
+
+    update_data = template_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(template, field, value)
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=None,
+        user_id=current_user.user_id,
+        action=AuditAction.SETTINGS_UPDATE,
+        resource_type="email_template",
+        resource_id=template.id,
+        details={"template_type": template_type, **update_data},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(template)
+
+    return EmailTemplateResponse.model_validate(template)

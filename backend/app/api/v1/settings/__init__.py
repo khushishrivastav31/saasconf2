@@ -17,6 +17,7 @@ from .session_types import router as session_types_router
 from .sponsor_packages import router as sponsor_packages_router
 from .volunteer_roles import router as volunteer_roles_router
 from .pronouns import router as pronouns_router
+from .email_templates import router as email_templates_router
 
 router = APIRouter()
 
@@ -35,3 +36,4 @@ router.include_router(review_criteria_router)
 router.include_router(review_questions_router)
 router.include_router(review_form_settings_router)
 router.include_router(pronouns_router)
+router.include_router(email_templates_router)

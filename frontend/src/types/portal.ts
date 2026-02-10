@@ -97,6 +97,13 @@ export interface PortalLandingData {
   tenant_name: string;
 }
 
+export interface PortalTenant {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+}
+
 export interface PortalConferenceDetail {
   id: string;
   name: string;

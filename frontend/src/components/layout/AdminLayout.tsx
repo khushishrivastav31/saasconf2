@@ -307,6 +307,25 @@ export default function AdminLayout() {
                 <div
                   className={`${sidebarCollapsed ? "" : "mt-2"} space-y-1`}
                 >
+                  {/* My Company - tenant admin only */}
+                  {user?.role === "tenant_admin" && (
+                    <Link
+                      to="/my-company"
+                      title={sidebarCollapsed ? "My Company" : undefined}
+                      className={`flex items-center py-2 text-sm font-medium rounded-md ${
+                        sidebarCollapsed ? "justify-center px-2" : "px-3"
+                      } ${
+                        location.pathname === "/my-company"
+                          ? "bg-gray-800 text-white"
+                          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      }`}
+                    >
+                      <BuildingIcon />
+                      {!sidebarCollapsed && (
+                        <span className="ml-3">My Company</span>
+                      )}
+                    </Link>
+                  )}
                   <Link
                     to="/team"
                     title={sidebarCollapsed ? "Team" : undefined}

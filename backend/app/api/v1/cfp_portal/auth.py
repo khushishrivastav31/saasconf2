@@ -42,6 +42,7 @@ from app.schemas.cfp_portal import (
     PortalCommitteeMembershipUpdate,
     PortalConferenceSummary,
     PortalLandingResponse,
+    PortalTenantResponse,
     PortalTopicResponse,
     VerifyEmailRequest,
 )
@@ -118,9 +119,13 @@ async def register_applicant(
 
     # Send verification email
     await send_verification_email(
+        db,
         email=data.email,
         token=raw_token,
         tenant_slug=tenant_slug,
+        first_name=data.first_name,
+        last_name=data.last_name,
+        company_name=tenant.name,
     )
 
     return {"message": "Registration successful. Please check your email to verify your account."}
@@ -430,6 +435,26 @@ async def update_my_committee_membership(
             for t in member.topics
         ],
         created_at=member.created_at,
+    )
+
+
+# ──────────────────────────────────────────────
+#  PUBLIC TENANT INFO (for portal login page)
+# ──────────────────────────────────────────────
+
+
+@router.get("/portal/tenant/{tenant_slug}", response_model=PortalTenantResponse)
+async def get_tenant_info(
+    tenant_slug: str,
+    db: DbSessionDep,
+) -> PortalTenantResponse:
+    """Get basic tenant info for the portal login page."""
+    tenant = await _resolve_tenant(db, tenant_slug)
+    return PortalTenantResponse(
+        id=tenant.id,
+        name=tenant.name,
+        slug=tenant.slug,
+        logo_url=tenant.logo_url,
     )
 
 

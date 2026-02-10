@@ -42,6 +42,7 @@ class Tenant(Base):
     # Business fields
     vat_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     website: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Contact persons as JSONB array
     # Structure: [{"name": "John Doe", "email": "john@example.com", "phone": "+1234567890", "role": "Manager"}, ...]

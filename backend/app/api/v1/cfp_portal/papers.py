@@ -1,6 +1,7 @@
 """CFP Applicant Portal - Paper management and browsing endpoints."""
 
 from datetime import datetime
+from uuid import UUID
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
@@ -910,9 +911,12 @@ async def _sync_cospeakers(
             await db.delete(row)
 
     # Add or update co-speakers
-    # Pre-load conference name and tenant slug once (only needed if there are new additions)
+    # Pre-load conference info and tenant info once (only needed if there are new additions)
     conference_name: str | None = None
+    conference_id: UUID | None = None
+    conf_support_email: str | None = None
     tenant_slug: str | None = None
+    company_name: str | None = None
 
     for sort_order, applicant in new_applicants:
         existing_row = existing_by_applicant.get(applicant.id)
@@ -930,7 +934,7 @@ async def _sync_cospeakers(
             )
             db.add(cospeaker)
 
-            # Load conference name on first new addition
+            # Load conference info on first new addition
             if conference_name is None:
                 conf_result = await db.execute(
                     select(Conference)
@@ -940,20 +944,30 @@ async def _sync_cospeakers(
                 )
                 conf = conf_result.scalar_one_or_none()
                 conference_name = conf.name if conf else "Conference"
+                conference_id = conf.id if conf else None
+                conf_support_email = conf.support_email if conf else None
 
-            # Resolve tenant slug for email URLs
+            # Resolve tenant info for email URLs
             if tenant_slug is None:
                 tenant_result = await db.execute(
-                    select(Tenant.slug).where(Tenant.id == current.tenant_id)
+                    select(Tenant.slug, Tenant.name).where(Tenant.id == current.tenant_id)
                 )
-                tenant_slug = tenant_result.scalar_one()
+                row = tenant_result.one()
+                tenant_slug = row[0]
+                company_name = row[1]
 
             await send_cospeaker_invitation_email(
+                db,
                 email=applicant.email,
                 paper_title=paper.title,
+                conference_id=conference_id,
                 conference_name=conference_name,
+                company_name=company_name,
                 main_speaker_name=f"{current.applicant.first_name} {current.applicant.last_name}",
+                first_name=applicant.first_name,
+                last_name=applicant.last_name,
                 tenant_slug=tenant_slug,
+                support_email=conf_support_email or "",
             )
 
     await db.flush()

@@ -135,6 +135,7 @@ class TenantResponse(BaseModel):
     # Business fields
     vat_number: str | None
     website: str | None
+    logo_url: str | None = None
 
     # Contact persons
     contact_persons: list[ContactPersonResponse]

@@ -24,6 +24,7 @@ import Conferences from "./pages/Conferences";
 import ConferenceDetail from "./pages/ConferenceDetail";
 import ComingSoon from "./pages/modules/ComingSoon";
 import Team from "./pages/Team";
+import MyCompany from "./pages/MyCompany";
 
 // Portal (public-facing CFP applicant pages)
 import { ApplicantAuthProvider } from "./contexts/ApplicantAuthContext";
@@ -128,6 +129,17 @@ function TenantAdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function TenantOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+
+  // Only tenant_admin, not super_admin (super admins use /admin/tenants)
+  if (user?.role !== "tenant_admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <Routes>
@@ -177,6 +189,16 @@ function App() {
             <AdminRoute>
               <Settings />
             </AdminRoute>
+          }
+        />
+
+        {/* My Company (tenant admin only) */}
+        <Route
+          path="my-company"
+          element={
+            <TenantOnlyRoute>
+              <MyCompany />
+            </TenantOnlyRoute>
           }
         />
 

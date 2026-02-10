@@ -5,8 +5,20 @@ otherwise falls back to console logging for development.
 """
 
 import logging
+from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.core.email_templates import (
+    render_email,
+    build_verification_context,
+    build_submission_context,
+    build_cospeaker_context,
+    build_password_reset_context,
+    build_tenant_welcome_context,
+)
+from app.schemas.email_template import EmailTemplateType
 
 logger = logging.getLogger(__name__)
 
@@ -83,108 +95,200 @@ async def send_email(
 
 
 async def send_verification_email(
+    db: AsyncSession,
+    *,
     email: str,
     token: str,
     tenant_slug: str,
+    conference_id: UUID | None = None,
+    conference_name: str = "",
+    company_name: str = "",
+    first_name: str = "",
+    last_name: str = "",
+    is_committee: bool = False,
+    support_email: str = "",
     base_url: str = "http://localhost:3002",
-) -> None:
-    """Send an email verification link to a new applicant."""
+) -> bool:
+    """Send an email verification link to a new applicant or committee member."""
+    settings = get_settings()
     verification_url = f"{base_url}/{tenant_slug}/portal/user/verify-email?token={token}"
 
-    subject = "Verify your email address"
-    html = f"""
-    <h2>Welcome to SaaSConf!</h2>
-    <p>Please verify your email address by clicking the link below:</p>
-    <p><a href="{verification_url}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Verify Email</a></p>
-    <p>Or copy and paste this link into your browser:</p>
-    <p><a href="{verification_url}">{verification_url}</a></p>
-    <p>This link will expire in 24 hours.</p>
-    <p>If you didn't create an account, you can safely ignore this email.</p>
-    """
-    text = f"""
-Welcome to SaaSConf!
+    template_type = (
+        EmailTemplateType.COMMITTEE_VERIFICATION
+        if is_committee
+        else EmailTemplateType.APPLICANT_VERIFICATION
+    )
 
-Please verify your email address by visiting:
-{verification_url}
+    context = build_verification_context(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        conference_name=conference_name,
+        company_name=company_name,
+        verify_link=verification_url,
+        support_email=support_email or settings.RESEND_FROM_EMAIL,
+    )
 
-This link will expire in 24 hours.
+    rendered = await render_email(
+        db,
+        template_type,
+        context,
+        conference_id=conference_id,
+    )
 
-If you didn't create an account, you can safely ignore this email.
-"""
+    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
 
-    await send_email(email, subject, html, text)
+
+async def send_submission_confirmation_email(
+    db: AsyncSession,
+    *,
+    email: str,
+    conference_id: UUID,
+    conference_name: str,
+    company_name: str = "",
+    paper_title: str,
+    speakers: str,
+    first_name: str = "",
+    last_name: str = "",
+    tenant_slug: str,
+    support_email: str = "",
+    base_url: str = "http://localhost:3002",
+) -> bool:
+    """Send a submission confirmation email."""
+    settings = get_settings()
+    portal_url = f"{base_url}/{tenant_slug}/portal/dashboard"
+
+    context = build_submission_context(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        conference_name=conference_name,
+        company_name=company_name,
+        paper_title=paper_title,
+        speakers=speakers,
+        portal_link=portal_url,
+        support_email=support_email or settings.RESEND_FROM_EMAIL,
+    )
+
+    rendered = await render_email(
+        db,
+        EmailTemplateType.SUBMISSION_CONFIRMATION,
+        context,
+        conference_id=conference_id,
+    )
+
+    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
 
 
 async def send_cospeaker_invitation_email(
+    db: AsyncSession,
+    *,
     email: str,
     paper_title: str,
+    conference_id: UUID,
     conference_name: str,
+    company_name: str = "",
     main_speaker_name: str,
+    first_name: str = "",
+    last_name: str = "",
     tenant_slug: str,
+    support_email: str = "",
     base_url: str = "http://localhost:3002",
-) -> None:
+) -> bool:
     """Send a co-speaker invitation email."""
+    settings = get_settings()
     portal_url = f"{base_url}/{tenant_slug}/portal/invitations"
 
-    subject = f"You've been invited as a co-speaker for '{paper_title}'"
-    html = f"""
-    <h2>Co-Speaker Invitation</h2>
-    <p>Hi there!</p>
-    <p><strong>{main_speaker_name}</strong> has invited you to be a co-speaker for their presentation:</p>
-    <div style="margin: 20px 0; padding: 16px; background-color: #f3f4f6; border-radius: 8px;">
-        <p style="margin: 0; font-size: 18px; font-weight: 600;">{paper_title}</p>
-        <p style="margin: 8px 0 0 0; color: #6b7280;">{conference_name}</p>
-    </div>
-    <p>To view and respond to this invitation:</p>
-    <p><a href="{portal_url}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">View Invitation</a></p>
-    <p>Or copy and paste this link into your browser:</p>
-    <p><a href="{portal_url}">{portal_url}</a></p>
-    """
-    text = f"""
-Co-Speaker Invitation
+    context = build_cospeaker_context(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        conference_name=conference_name,
+        company_name=company_name,
+        paper_title=paper_title,
+        main_speaker_name=main_speaker_name,
+        portal_link=portal_url,
+        support_email=support_email or settings.RESEND_FROM_EMAIL,
+    )
 
-Hi there!
+    rendered = await render_email(
+        db,
+        EmailTemplateType.CO_SPEAKER_INVITATION,
+        context,
+        conference_id=conference_id,
+    )
 
-{main_speaker_name} has invited you to be a co-speaker for their presentation:
-
-"{paper_title}"
-{conference_name}
-
-To view and respond to this invitation, visit:
-{portal_url}
-"""
-
-    await send_email(email, subject, html, text)
+    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
 
 
 async def send_password_reset_email(
+    db: AsyncSession,
+    *,
     email: str,
     token: str,
+    conference_id: UUID,
+    conference_name: str = "",
+    company_name: str = "",
+    first_name: str = "",
+    last_name: str = "",
     tenant_slug: str,
+    support_email: str = "",
     base_url: str = "http://localhost:3002",
-) -> None:
+) -> bool:
     """Send a password reset email."""
+    settings = get_settings()
     reset_url = f"{base_url}/{tenant_slug}/portal/user/reset-password?token={token}"
 
-    subject = "Reset your password"
-    html = f"""
-    <h2>Password Reset Request</h2>
-    <p>You requested to reset your password. Click the button below to set a new password:</p>
-    <p><a href="{reset_url}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Reset Password</a></p>
-    <p>Or copy and paste this link into your browser:</p>
-    <p><a href="{reset_url}">{reset_url}</a></p>
-    <p>This link will expire in 1 hour.</p>
-    <p>If you didn't request a password reset, you can safely ignore this email.</p>
-    """
-    text = f"""
-Password Reset Request
+    context = build_password_reset_context(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        conference_name=conference_name,
+        company_name=company_name,
+        reset_link=reset_url,
+        support_email=support_email or settings.RESEND_FROM_EMAIL,
+    )
 
-You requested to reset your password. Visit the link below to set a new password:
-{reset_url}
+    rendered = await render_email(
+        db,
+        EmailTemplateType.PASSWORD_RESET,
+        context,
+        conference_id=conference_id,
+    )
 
-This link will expire in 1 hour.
+    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
 
-If you didn't request a password reset, you can safely ignore this email.
-"""
 
-    await send_email(email, subject, html, text)
+async def send_tenant_user_welcome_email(
+    db: AsyncSession,
+    *,
+    email: str,
+    token: str,
+    company_name: str,
+    user_type: str,
+    first_name: str = "",
+    last_name: str = "",
+    support_email: str = "",
+    base_url: str = "http://localhost:3001",
+) -> bool:
+    """Send a welcome email to a new tenant user."""
+    settings = get_settings()
+    verify_url = f"{base_url}/verify-email?token={token}"
+
+    context = build_tenant_welcome_context(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        company_name=company_name,
+        user_type=user_type,
+        verify_link=verify_url,
+        support_email=support_email or settings.RESEND_FROM_EMAIL,
+    )
+
+    rendered = await render_email(
+        db,
+        EmailTemplateType.TENANT_USER_WELCOME,
+        context,
+    )
+
+    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)

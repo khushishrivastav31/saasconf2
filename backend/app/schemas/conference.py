@@ -53,6 +53,10 @@ class ConferenceCreate(ConferenceBase):
     # Logo
     logo_url: str | None = Field(None, max_length=500)
 
+    # Contact emails
+    support_email: str | None = Field(None, max_length=255)
+    contact_email: str | None = Field(None, max_length=255)
+
     # Dates
     start_date: date | None = None
     end_date: date | None = None
@@ -96,6 +100,10 @@ class ConferenceUpdate(BaseModel):
     website: str | None = Field(None, max_length=500)
     logo_url: str | None = Field(None, max_length=500)
 
+    # Contact emails
+    support_email: str | None = Field(None, max_length=255)
+    contact_email: str | None = Field(None, max_length=255)
+
     # Dates
     start_date: date | None = None
     end_date: date | None = None
@@ -134,6 +142,10 @@ class ConferenceResponse(BaseModel):
     description: str | None
     website: str | None
     logo_url: str | None
+
+    # Contact emails
+    support_email: str | None = None
+    contact_email: str | None = None
 
     # Dates
     start_date: date | None

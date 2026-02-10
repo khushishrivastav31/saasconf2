@@ -16,6 +16,7 @@ from app.api.v1 import (
     service_providers,
     settings,
     sponsors,
+    tenant_company,
     tenants,
     user_conference_access,
     users,
@@ -39,6 +40,9 @@ api_router.include_router(
     prefix="/user-conference-access",
     tags=["User Conference Access"],
 )
+
+# Tenant company management (tenant admin)
+api_router.include_router(tenant_company.router, prefix="/my-company", tags=["My Company"])
 
 # Module-specific endpoints (requires module access)
 api_router.include_router(conferences.router, prefix="/conferences", tags=["Conferences"])

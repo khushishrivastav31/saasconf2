@@ -6,6 +6,86 @@ import RichTextEditor from "../../../components/common/RichTextEditor";
 import ConferenceLogo from "../../../components/ConferenceLogo";
 import { parseApiError } from "../../../utils/apiError";
 
+function PortalUrlField({
+  tenantSlug,
+  path,
+}: {
+  tenantSlug: string;
+  path: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  // Build the full portal URL
+  const baseUrl = window.location.origin;
+  const portalUrl = `${baseUrl}/${tenantSlug}/portal/${path}`;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(portalUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = portalUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="text"
+        readOnly
+        value={portalUrl}
+        className="flex-1 border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 text-gray-700 sm:text-sm cursor-text"
+        onClick={(e) => (e.target as HTMLInputElement).select()}
+      />
+      <button
+        type="button"
+        onClick={handleCopy}
+        className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+          copied
+            ? "bg-green-100 text-green-700"
+            : "bg-primary-600 text-white hover:bg-primary-700"
+        }`}
+      >
+        {copied ? (
+          <>
+            <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Copied
+          </>
+        ) : (
+          <>
+            <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Copy
+          </>
+        )}
+      </button>
+      <a
+        href={portalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+        title="Open in new tab"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      </a>
+    </div>
+  );
+}
+
 function ConferenceDetailsTab({
   conference,
   onUpdate,
@@ -20,6 +100,8 @@ function ConferenceDetailsTab({
     abbreviation: conference.abbreviation || "",
     description: conference.description || "",
     website: conference.website || "",
+    support_email: conference.support_email || "",
+    contact_email: conference.contact_email || "",
     start_date: conference.start_date || "",
     end_date: conference.end_date || "",
     venue_name: conference.venue_name || "",
@@ -330,6 +412,80 @@ function ConferenceDetailsTab({
             onChange={(e) => handleFieldChange("website", e.target.value)}
             disabled={!isAdmin}
           />
+        </div>
+
+        {/* Portal URLs */}
+        {conference.tenant_slug && (
+          <div className="border-t pt-4">
+            <h5 className="text-sm font-medium text-gray-700 mb-3">Portal URLs</h5>
+            <div className="space-y-4">
+              {/* General Portal Login */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  General Portal Login
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Share this URL for users to login/register to the portal.
+                </p>
+                <PortalUrlField
+                  tenantSlug={conference.tenant_slug}
+                  path="user/login"
+                />
+              </div>
+
+              {/* Conference-specific Landing Page */}
+              {conference.abbreviation && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Conference Landing Page
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Share this URL for applicants to access the CFP portal for this conference directly.
+                  </p>
+                  <PortalUrlField
+                    tenantSlug={conference.tenant_slug}
+                    path={conference.abbreviation}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Contact Emails */}
+        <div className="border-t pt-4">
+          <h5 className="text-sm font-medium text-gray-700 mb-3">Contact Emails</h5>
+          <p className="text-xs text-gray-500 mb-3">
+            These emails are used in email templates sent to applicants and attendees.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Support Email
+              </label>
+              <input
+                type="email"
+                placeholder="support@example.com"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                value={formData.support_email}
+                onChange={(e) => handleFieldChange("support_email", e.target.value)}
+                disabled={!isAdmin}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Contact Email
+              </label>
+              <input
+                type="email"
+                placeholder="contact@example.com"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                value={formData.contact_email}
+                onChange={(e) => handleFieldChange("contact_email", e.target.value)}
+                disabled={!isAdmin}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Dates */}
