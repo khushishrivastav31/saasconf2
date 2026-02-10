@@ -381,7 +381,7 @@ async def test_update_conference_no_access_record_forbidden(
     assert response.status_code == 403
 
 
-async def test_delete_conference_with_conference_admin_access(
+async def test_delete_conference_with_conference_admin_access_forbidden(
     db_session: AsyncSession,
     client: AsyncClient,
     tenant: Tenant,
@@ -389,12 +389,12 @@ async def test_delete_conference_with_conference_admin_access(
     user_with_admin_access: tuple[User, UserConferenceAccess],
     read_only_user_token: str,
 ) -> None:
-    """User with conference-specific admin access can delete the conference."""
+    """Conference-specific admin access is not sufficient for delete (requires super user)."""
     response = await client.delete(
         f"/api/v1/conferences/{conference.id}",
         headers=auth_headers(read_only_user_token),
     )
-    assert response.status_code == 200
+    assert response.status_code == 403
 
 
 async def test_delete_conference_without_admin_access_forbidden(
