@@ -12,8 +12,8 @@ interface ConferenceAccessResponse {
  * Hook to check if the current user has admin access to a specific conference.
  *
  * This considers:
- * 1. Super admin role (always admin)
- * 2. Tenant admin role (always admin)
+ * 1. Super admin role (read-only access - can view but not modify tenant data)
+ * 2. Tenant admin role (always admin - can modify their tenant's data)
  * 3. Conference-specific admin access granted via UserConferenceAccess
  *
  * @param conferenceId - The conference ID to check access for
@@ -26,9 +26,10 @@ export function useConferenceAdmin(conferenceId: string | undefined): {
 } {
   const { user } = useAuth();
 
-  // Quick check: if user is super_admin or tenant_admin, they're always admin
-  const isTenantAdmin =
-    user?.role === "super_admin" || user?.role === "tenant_admin";
+  // Super admins have read-only access to tenant data
+  const isSuperAdmin = user?.role === "super_admin";
+  // Tenant admins can manage their tenant's data
+  const isTenantAdmin = user?.role === "tenant_admin";
 
   const { data, isLoading } = useQuery({
     queryKey: ["conference-access", conferenceId, user?.id],
@@ -38,11 +39,21 @@ export function useConferenceAdmin(conferenceId: string | undefined): {
       );
       return response.data;
     },
-    enabled: !!conferenceId && !!user && !isTenantAdmin,
+    // Skip query for super admins (read-only) and tenant admins (always admin)
+    enabled: !!conferenceId && !!user && !isSuperAdmin && !isTenantAdmin,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // If user is tenant admin, they're always admin
+  // Super admins can view but NOT modify tenant data
+  if (isSuperAdmin) {
+    return {
+      isAdmin: false,
+      isLoading: false,
+      accessLevel: "read_only",
+    };
+  }
+
+  // Tenant admins are always admin for their conferences
   if (isTenantAdmin) {
     return {
       isAdmin: true,

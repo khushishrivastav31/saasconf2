@@ -16,6 +16,7 @@ interface SponsorDetailPanelProps {
   sponsor: Sponsor;
   sponsorPackages: SponsorPackage[];
   currencies: PlatformCurrency[];
+  defaultCurrency?: string;
   onSave: (data: SponsorUpdate) => Promise<void>;
   onDelete?: (id: string) => void;
 }
@@ -24,6 +25,7 @@ export default function SponsorDetailPanel({
   sponsor,
   sponsorPackages,
   currencies,
+  defaultCurrency,
   onSave,
   onDelete,
 }: SponsorDetailPanelProps) {
@@ -36,7 +38,7 @@ export default function SponsorDetailPanel({
     company_name: sponsor.company_name,
     sponsor_package_id: sponsor.sponsor_package_id,
     price: sponsor.price ?? undefined,
-    currency: sponsor.currency || "",
+    currency: sponsor.currency || defaultCurrency || "",
     phone: sponsor.phone || "",
     website: sponsor.website || "",
     address_line1: sponsor.address_line1 || "",
@@ -67,7 +69,7 @@ export default function SponsorDetailPanel({
       company_name: sponsor.company_name,
       sponsor_package_id: sponsor.sponsor_package_id,
       price: sponsor.price ?? undefined,
-      currency: sponsor.currency || "",
+      currency: sponsor.currency || defaultCurrency || "",
       phone: sponsor.phone || "",
       website: sponsor.website || "",
       address_line1: sponsor.address_line1 || "",
@@ -84,24 +86,24 @@ export default function SponsorDetailPanel({
     setNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
     setPhoneError(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sponsor.id]);
+  }, [sponsor.id, defaultCurrency]);
 
   const handlePackageChange = (packageId: string) => {
     if (!packageId) {
-      setFormData({ ...formData, sponsor_package_id: null });
+      // No package selected - use conference default currency
+      setFormData({ ...formData, sponsor_package_id: null, currency: defaultCurrency || "" });
       return;
     }
     const pkg = sponsorPackages.find((p) => p.id === packageId);
     if (pkg) {
       const updates: Partial<SponsorUpdate> = {
         sponsor_package_id: pkg.id,
+        // Always use package currency (or fall back to default)
+        currency: pkg.currency || defaultCurrency || "",
       };
-      // Auto-fill price/currency from package if fields are currently empty
+      // Auto-fill price from package if field is currently empty
       if (!formData.price && pkg.price != null) {
         updates.price = pkg.price;
-      }
-      if (!formData.currency && pkg.currency) {
-        updates.currency = pkg.currency;
       }
       setFormData({ ...formData, ...updates });
     }
@@ -147,6 +149,9 @@ export default function SponsorDetailPanel({
         { ...newContact },
       ];
     }
+    // Derive currency from package (or use default)
+    const pkg = sponsorPackages.find(p => p.id === finalData.sponsor_package_id);
+    finalData.currency = pkg?.currency || defaultCurrency || "";
     setSaveStatus("saving");
     try {
       await onSave(finalData);
@@ -288,20 +293,15 @@ export default function SponsorDetailPanel({
                   <label className="block text-sm font-medium text-gray-700">
                     Currency
                   </label>
-                  <select
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    value={formData.currency || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, currency: e.target.value })
-                    }
-                  >
-                    <option value="">-- Select Currency --</option>
-                    {currencies.map((c) => (
-                      <option key={c.id} value={c.code}>
-                        {c.code} - {c.name} ({c.symbol})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="mt-1 block w-full border border-gray-200 bg-gray-50 rounded-md py-2 px-3 text-sm text-gray-700">
+                    {(() => {
+                      const pkg = sponsorPackages.find(p => p.id === formData.sponsor_package_id);
+                      const currencyCode = pkg?.currency || defaultCurrency;
+                      if (!currencyCode) return "—";
+                      const currency = currencies.find(c => c.code === currencyCode);
+                      return currency ? `${currency.code} - ${currency.name}` : currencyCode;
+                    })()}
+                  </div>
                 </div>
               </div>
 

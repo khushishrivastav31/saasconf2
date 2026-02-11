@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -66,6 +66,11 @@ class Conference(Base):
 
     # Settings
     settings: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+    # Currency (ISO 4217 code, e.g., EUR, USD)
+    currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    # Optional second currency for invoices
+    invoice_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
 
     # Status
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

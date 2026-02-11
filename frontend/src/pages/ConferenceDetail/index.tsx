@@ -867,6 +867,7 @@ export default function ConferenceDetail() {
               <ConferenceBookingTab
                 conferenceId={conference.id}
                 isAdmin={isAdmin}
+                conferenceCurrency={conference.currency}
               />
             )}
             {activeSection === "settings" && (

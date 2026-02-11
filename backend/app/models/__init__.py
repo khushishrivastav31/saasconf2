@@ -1,5 +1,6 @@
 """SQLAlchemy models."""
 
+from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 from app.models.applicant_token import ApplicantEmailVerification, ApplicantRefreshToken
 from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
 from app.models.attachment import Attachment
@@ -21,9 +22,10 @@ from app.models.review import (
 )
 from app.models.service_provider import ServiceProvider
 from app.models.settings import (
-    BookingPackage,
+    BookingOption,
     BookingPeriod,
     DiscountCode,
+    DiscountCodeOption,
     EmailTemplate,
     PronounOption,
     SessionType,
@@ -38,11 +40,13 @@ from app.models.user_conference_access import UserConferenceAccess
 from app.models.volunteer import Volunteer
 
 __all__ = [
+    "ApplicantActivityLog",
+    "ApplicantActivityType",
     "ApplicantEmailVerification",
     "ApplicantRefreshToken",
     "Attachment",
     "AuditLog",
-    "BookingPackage",
+    "BookingOption",
     "BookingPeriod",
     "CFPApplicant",
     "CallForPapers",
@@ -51,6 +55,7 @@ __all__ = [
     "ConferenceLocation",
     "ConferenceVolunteer",
     "DiscountCode",
+    "DiscountCodeOption",
     "EmailTemplate",
     "Invoice",
     "Location",

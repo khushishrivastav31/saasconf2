@@ -198,10 +198,6 @@ function CreateTenantModal({
     role: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
 
   const addContact = () => {
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
@@ -247,43 +243,141 @@ function CreateTenantModal({
     string | null
   >(null);
 
+  // Validation state
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showErrors, setShowErrors] = useState(false);
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = "Company name is required";
+    }
+
+    if (!formData.slug.trim()) {
+      newErrors.slug = "Slug is required";
+    } else if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(formData.slug)) {
+      newErrors.slug = "Slug must contain only lowercase letters, numbers, and hyphens";
+    }
+
+    // Admin user validation - required for creating a functional company
+    if (!formData.admin_email?.trim()) {
+      newErrors.admin_email = "Admin email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.admin_email)) {
+      newErrors.admin_email = "Please enter a valid email address";
+    }
+
+    if (!formData.admin_password?.trim()) {
+      newErrors.admin_password = "Admin password is required";
+    } else if (formData.admin_password.length < 8) {
+      newErrors.admin_password = "Password must be at least 8 characters";
+    }
+
+    if (!formData.admin_first_name?.trim()) {
+      newErrors.admin_first_name = "Admin first name is required";
+    }
+
+    if (!formData.admin_last_name?.trim()) {
+      newErrors.admin_last_name = "Admin last name is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowErrors(true);
+
+    if (validateForm()) {
+      onSubmit(formData);
+    }
+  };
+
   return (
     <Modal open={true} onClose={onClose} title="Create Company">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleFormSubmit} noValidate>
         <div className="px-6 py-4 space-y-4">
+          {/* Error Alert */}
+          {showErrors && Object.keys(errors).length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <div className="flex">
+                <svg className="h-5 w-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    Please fix the following errors:
+                  </h3>
+                  <ul className="mt-2 text-sm text-red-700 list-disc list-inside">
+                    {Object.values(errors).map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Company Name *
+                Company Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                  showErrors && errors.name
+                    ? "border-red-300 bg-red-50"
+                    : "border-gray-300"
+                }`}
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  if (showErrors && errors.name && e.target.value.trim()) {
+                    setErrors((prev) => {
+                      const { name, ...rest } = prev;
+                      return rest;
+                    });
+                  }
+                }}
               />
+              {showErrors && errors.name && (
+                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Slug *
+                Slug <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                required
-                pattern="^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                  showErrors && errors.slug
+                    ? "border-red-300 bg-red-50"
+                    : "border-gray-300"
+                }`}
                 value={formData.slug}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    slug: e.target.value.toLowerCase(),
-                  })
-                }
+                onChange={(e) => {
+                  const slug = e.target.value.toLowerCase();
+                  setFormData({ ...formData, slug });
+                  if (showErrors && errors.slug) {
+                    if (slug.trim() && /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(slug)) {
+                      setErrors((prev) => {
+                        const { slug, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }
+                }}
               />
+              {showErrors && errors.slug && (
+                <p className="mt-1 text-sm text-red-600">{errors.slug}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Lowercase letters, numbers, and hyphens only. Used in the portal URL.
+              </p>
             </div>
           </div>
 
@@ -700,64 +794,122 @@ function CreateTenantModal({
           {/* Admin User */}
           <div className="border-t border-gray-200 pt-4">
             <h4 className="text-sm font-medium text-gray-900 mb-3">
-              Admin User (Optional)
+              Admin User
             </h4>
+            <p className="text-xs text-gray-500 mb-3">
+              An admin user is required to manage the company.
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Admin Email
+                  Admin Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                    showErrors && errors.admin_email
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-300"
+                  }`}
                   value={formData.admin_email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, admin_email: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, admin_email: e.target.value });
+                    if (showErrors && errors.admin_email) {
+                      const value = e.target.value.trim();
+                      if (value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                        setErrors((prev) => {
+                          const { admin_email, ...rest } = prev;
+                          return rest;
+                        });
+                      }
+                    }
+                  }}
                 />
+                {showErrors && errors.admin_email && (
+                  <p className="mt-1 text-sm text-red-600">{errors.admin_email}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Admin Password
+                  Admin Password <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
                   minLength={8}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                    showErrors && errors.admin_password
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-300"
+                  }`}
                   value={formData.admin_password}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      admin_password: e.target.value,
-                    })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, admin_password: e.target.value });
+                    if (showErrors && errors.admin_password) {
+                      if (e.target.value.trim() && e.target.value.length >= 8) {
+                        setErrors((prev) => {
+                          const { admin_password, ...rest } = prev;
+                          return rest;
+                        });
+                      }
+                    }
+                  }}
                 />
+                {showErrors && errors.admin_password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.admin_password}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Admin First Name
+                  Admin First Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                    showErrors && errors.admin_first_name
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-300"
+                  }`}
                   value={formData.admin_first_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, admin_first_name: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, admin_first_name: e.target.value });
+                    if (showErrors && errors.admin_first_name && e.target.value.trim()) {
+                      setErrors((prev) => {
+                        const { admin_first_name, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }}
                 />
+                {showErrors && errors.admin_first_name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.admin_first_name}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Admin Last Name
+                  Admin Last Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                    showErrors && errors.admin_last_name
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-300"
+                  }`}
                   value={formData.admin_last_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, admin_last_name: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, admin_last_name: e.target.value });
+                    if (showErrors && errors.admin_last_name && e.target.value.trim()) {
+                      setErrors((prev) => {
+                        const { admin_last_name, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }}
                 />
+                {showErrors && errors.admin_last_name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.admin_last_name}</p>
+                )}
               </div>
             </div>
           </div>

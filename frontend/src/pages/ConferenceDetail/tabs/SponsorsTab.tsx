@@ -41,7 +41,7 @@ function ConferenceSponsorsTab({
     company_name: "",
     sponsor_package_id: undefined,
     price: undefined,
-    currency: "",
+    currency: conference.currency || "",
     phone: "",
     website: "",
     address_line1: "",
@@ -171,19 +171,21 @@ function ConferenceSponsorsTab({
 
   const handleCreatePackageChange = (packageId: string) => {
     if (!packageId) {
-      setCreateForm({ ...createForm, sponsor_package_id: undefined });
+      // No package - use conference default currency
+      setCreateForm({ ...createForm, sponsor_package_id: undefined, currency: conference.currency || "" });
       return;
     }
     const pkg = (sponsorPackagesData?.items || []).find(
       (p) => p.id === packageId,
     );
     if (pkg) {
-      const updates: Partial<SponsorCreate> = { sponsor_package_id: pkg.id };
+      const updates: Partial<SponsorCreate> = {
+        sponsor_package_id: pkg.id,
+        // Always use package currency (or fall back to conference default)
+        currency: pkg.currency || conference.currency || "",
+      };
       if (!createForm.price && pkg.price != null) {
         updates.price = pkg.price;
-      }
-      if (!createForm.currency && pkg.currency) {
-        updates.currency = pkg.currency;
       }
       setCreateForm({ ...createForm, ...updates });
     }
@@ -199,6 +201,9 @@ function ConferenceSponsorsTab({
         { ...createNewContact },
       ];
     }
+    // Derive currency from package (or use conference default)
+    const pkg = (sponsorPackagesData?.items || []).find(p => p.id === finalData.sponsor_package_id);
+    finalData.currency = pkg?.currency || conference.currency || "";
     createMutation.mutate(finalData);
   };
 
@@ -260,6 +265,7 @@ function ConferenceSponsorsTab({
             sponsor={selectedSponsor}
             sponsorPackages={sponsorPackagesData?.items || []}
             currencies={currenciesData?.items || []}
+            defaultCurrency={conference.currency || undefined}
             onSave={async (sponsorData) => {
               await updateMutation.mutateAsync({
                 id: selectedSponsor.id,
@@ -396,23 +402,15 @@ function ConferenceSponsorsTab({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Currency
                   </label>
-                  <select
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.currency || ""}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        currency: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">-- Select Currency --</option>
-                    {(currenciesData?.items || []).map((c) => (
-                      <option key={c.id} value={c.code}>
-                        {c.code} - {c.name} ({c.symbol})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="block w-full border border-gray-200 bg-gray-50 rounded-md py-2 px-3 text-sm text-gray-700">
+                    {(() => {
+                      const pkg = (sponsorPackagesData?.items || []).find(p => p.id === createForm.sponsor_package_id);
+                      const currencyCode = pkg?.currency || conference.currency;
+                      if (!currencyCode) return "—";
+                      const currency = (currenciesData?.items || []).find(c => c.code === currencyCode);
+                      return currency ? `${currency.code} - ${currency.name}` : currencyCode;
+                    })()}
+                  </div>
                 </div>
               </div>
 

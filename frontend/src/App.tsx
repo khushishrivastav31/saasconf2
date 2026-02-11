@@ -25,6 +25,7 @@ import ConferenceDetail from "./pages/ConferenceDetail";
 import ComingSoon from "./pages/modules/ComingSoon";
 import Team from "./pages/Team";
 import MyCompany from "./pages/MyCompany";
+import ApplicantActivityLog from "./pages/ApplicantActivityLog";
 
 // Portal (public-facing CFP applicant pages)
 import { ApplicantAuthProvider } from "./contexts/ApplicantAuthContext";
@@ -211,6 +212,17 @@ function App() {
             </TenantAdminRoute>
           }
         />
+
+        {/* Applicant Activity Log (tenant admin only) */}
+        <Route
+          path="applicant-activity"
+          element={
+            <TenantOnlyRoute>
+              <ApplicantActivityLog />
+            </TenantOnlyRoute>
+          }
+        />
+
         {/* Module routes */}
         <Route
           path="modules/conferences"

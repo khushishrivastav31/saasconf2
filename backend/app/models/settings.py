@@ -239,15 +239,15 @@ class BookingPeriod(Base):
         return f"<BookingPeriod {self.name}>"
 
 
-class BookingPackage(Base):
+class BookingOption(Base):
     """
-    Conference-scoped booking package definitions (matrix rows).
+    Conference-scoped booking option definitions (matrix rows).
 
-    Each package defines what an attendee can buy (e.g. "Tutorial", "2-Day Pass").
+    Each option defines what an attendee can buy (e.g. "Tutorial", "2-Day Pass").
     Prices are stored on the BookingPeriod side.
     """
 
-    __tablename__ = "booking_packages"
+    __tablename__ = "booking_options"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -275,13 +275,13 @@ class BookingPackage(Base):
     )
 
     __table_args__ = (
-        Index("idx_booking_packages_tenant", "tenant_id"),
-        Index("idx_booking_packages_conference", "conference_id"),
-        Index("idx_booking_packages_name", "tenant_id", "conference_id", "name", unique=True),
+        Index("idx_booking_options_tenant", "tenant_id"),
+        Index("idx_booking_options_conference", "conference_id"),
+        Index("idx_booking_options_name", "tenant_id", "conference_id", "name", unique=True),
     )
 
     def __repr__(self) -> str:
-        return f"<BookingPackage {self.name}>"
+        return f"<BookingOption {self.name}>"
 
 
 class DiscountCode(Base):
@@ -333,6 +333,50 @@ class DiscountCode(Base):
 
     def __repr__(self) -> str:
         return f"<DiscountCode {self.code}>"
+
+
+class DiscountCodeOption(Base):
+    """
+    Association table linking discount codes to specific booking options.
+
+    When a discount code has associated options, it only applies to those options.
+    If a discount code has no associated options, it applies to all options.
+    """
+
+    __tablename__ = "discount_code_options"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    discount_code_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("discount_codes.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    booking_option_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("booking_options.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("idx_discount_code_options_tenant", "tenant_id"),
+        Index("idx_discount_code_options_discount", "discount_code_id"),
+        Index("idx_discount_code_options_option", "booking_option_id"),
+        Index("uq_discount_code_option", "discount_code_id", "booking_option_id", unique=True),
+    )
+
+    def __repr__(self) -> str:
+        return f"<DiscountCodeOption discount={self.discount_code_id} option={self.booking_option_id}>"
 
 
 class SessionType(Base):

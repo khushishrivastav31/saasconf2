@@ -353,6 +353,58 @@ async def delete_tenant(
     return {"message": f"Tenant '{tenant.name}' has been deactivated"}
 
 
+@router.delete("/{tenant_id}/permanent")
+async def permanently_delete_tenant(
+    tenant_id: UUID,
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> dict:
+    """
+    Permanently delete a tenant and all associated data.
+
+    WARNING: This is irreversible. All data associated with this tenant will be deleted:
+    - All users
+    - All conferences
+    - All CFPs, papers, applicants
+    - All volunteers, locations, sponsors
+    - All attachments and settings
+
+    Only accessible by super admins.
+    """
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+
+    if not tenant:
+        raise NotFoundError(f"Tenant with ID '{tenant_id}' not found")
+
+    tenant_name = tenant.name
+    tenant_slug = tenant.slug
+
+    # Log action before deletion (audit log will have tenant_id set to NULL via ON DELETE SET NULL)
+    audit_log = AuditLog(
+        tenant_id=None,  # Set to None since tenant will be deleted
+        user_id=current_user.user_id,
+        action=AuditAction.TENANT_DELETE,
+        resource_type="tenant",
+        resource_id=tenant_id,
+        details={
+            "name": tenant_name,
+            "slug": tenant_slug,
+            "permanent": True,
+        },
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    # Delete tenant - cascade will handle all related data
+    await db.delete(tenant)
+    await db.commit()
+
+    return {"message": f"Tenant '{tenant_name}' and all associated data have been permanently deleted"}
+
+
 # Module assignment endpoints
 
 

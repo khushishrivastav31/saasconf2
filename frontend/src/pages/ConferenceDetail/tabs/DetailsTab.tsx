@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "../../../config/api";
-import type { Conference, ConferenceUpdate } from "../../../types";
+import type { Conference, ConferenceUpdate, PlatformCurrency, PaginatedResponse } from "../../../types";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import ConferenceLogo from "../../../components/ConferenceLogo";
 import { parseApiError } from "../../../utils/apiError";
@@ -111,6 +111,20 @@ function ConferenceDetailsTab({
     timezone: conference.timezone || "",
     venue_type: conference.venue_type,
     virtual_platform_url: conference.virtual_platform_url || "",
+    currency: conference.currency || "",
+    invoice_currency: conference.invoice_currency || "",
+  });
+
+  // Fetch platform currencies for currency selector
+  const { data: currencyOptions } = useQuery({
+    queryKey: ["platform-currencies"],
+    queryFn: async () => {
+      const response = await api.get<PaginatedResponse<PlatformCurrency>>(
+        "/admin/settings/currencies",
+        { params: { page_size: 100, is_active: true } },
+      );
+      return response.data.items;
+    },
   });
 
   const [saveStatus, setSaveStatus] = useState<
@@ -122,7 +136,14 @@ function ConferenceDetailsTab({
 
   const updateMutation = useMutation({
     mutationFn: async (data: ConferenceUpdate) => {
-      await api.put(`/conferences/${conference.id}`, data);
+      // Convert empty strings to null for currency fields so they get saved as null
+      const payload = {
+        ...data,
+        currency: data.currency || null,
+        invoice_currency: data.invoice_currency || null,
+      };
+      console.log("Saving conference with payload:", { currency: payload.currency, invoice_currency: payload.invoice_currency });
+      await api.put(`/conferences/${conference.id}`, payload);
     },
     onMutate: () => setSaveStatus("saving"),
     onSuccess: () => {
@@ -130,7 +151,8 @@ function ConferenceDetailsTab({
       onUpdate();
       setTimeout(() => setSaveStatus("idle"), 2000);
     },
-    onError: () => {
+    onError: (err) => {
+      console.error("Conference update failed:", err);
       setSaveStatus("error");
       setTimeout(() => setSaveStatus("idle"), 3000);
     },
@@ -197,7 +219,7 @@ function ConferenceDetailsTab({
 
   const handleFieldChange = (
     field: keyof ConferenceUpdate,
-    value: string | boolean | undefined,
+    value: string | boolean | number | undefined,
   ) => {
     const newFormData = { ...formData, [field]: value };
     setFormData(newFormData);
@@ -389,6 +411,49 @@ function ConferenceDetailsTab({
           </div>
         </div>
 
+        {/* Dates */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Start Date
+            </label>
+            <input
+              type="date"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              value={formData.start_date}
+              onChange={(e) => {
+                const newStart = e.target.value;
+                const adjustEnd = formData.end_date && newStart && formData.end_date < newStart;
+                const newFormData = {
+                  ...formData,
+                  start_date: newStart,
+                  ...(adjustEnd ? { end_date: newStart } : {}),
+                };
+                setFormData(newFormData);
+                if (saveTimeout) clearTimeout(saveTimeout);
+                const timeout = setTimeout(() => {
+                  updateMutation.mutate(newFormData);
+                }, 500);
+                setSaveTimeout(timeout);
+              }}
+              disabled={!isAdmin}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              End Date
+            </label>
+            <input
+              type="date"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              value={formData.end_date}
+              min={formData.start_date}
+              onChange={(e) => handleFieldChange("end_date", e.target.value)}
+              disabled={!isAdmin}
+            />
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Description
@@ -412,6 +477,58 @@ function ConferenceDetailsTab({
             onChange={(e) => handleFieldChange("website", e.target.value)}
             disabled={!isAdmin}
           />
+        </div>
+
+        {/* Financial Settings */}
+        <div className="border-t pt-4">
+          <h5 className="text-sm font-medium text-gray-700 mb-3">Financial Settings</h5>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Primary Currency
+                </label>
+                <select
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.currency}
+                  onChange={(e) => handleFieldChange("currency", e.target.value)}
+                  disabled={!isAdmin}
+                >
+                  <option value="">Select currency...</option>
+                  {(currencyOptions || []).map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code} — {c.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Used for all pricing in this conference.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Second Currency
+                  <span className="ml-1 text-xs text-gray-400">(optional)</span>
+                </label>
+                <select
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.invoice_currency}
+                  onChange={(e) => handleFieldChange("invoice_currency", e.target.value)}
+                  disabled={!isAdmin}
+                >
+                  <option value="">Same as primary</option>
+                  {(currencyOptions || []).map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code} — {c.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Alternative currency for invoices.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Portal URLs */}
@@ -482,52 +599,6 @@ function ConferenceDetailsTab({
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.contact_email}
                 onChange={(e) => handleFieldChange("contact_email", e.target.value)}
-                disabled={!isAdmin}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Dates */}
-        <div className="border-t pt-4">
-          <h5 className="text-sm font-medium text-gray-700 mb-3">Dates</h5>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Start Date
-              </label>
-              <input
-                type="date"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.start_date}
-                onChange={(e) => {
-                  const newStart = e.target.value;
-                  const adjustEnd = formData.end_date && newStart && formData.end_date < newStart;
-                  const newFormData = {
-                    ...formData,
-                    start_date: newStart,
-                    ...(adjustEnd ? { end_date: newStart } : {}),
-                  };
-                  setFormData(newFormData);
-                  if (saveTimeout) clearTimeout(saveTimeout);
-                  const timeout = setTimeout(() => {
-                    updateMutation.mutate(newFormData);
-                  }, 500);
-                  setSaveTimeout(timeout);
-                }}
-                disabled={!isAdmin}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                End Date
-              </label>
-              <input
-                type="date"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.end_date}
-                min={formData.start_date}
-                onChange={(e) => handleFieldChange("end_date", e.target.value)}
                 disabled={!isAdmin}
               />
             </div>

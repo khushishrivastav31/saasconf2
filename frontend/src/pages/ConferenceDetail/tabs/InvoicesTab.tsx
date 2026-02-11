@@ -44,6 +44,9 @@ export default function ConferenceInvoicesTab({
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
 
+  // Use conference currency if set
+  const isCurrencyLocked = !!conference.currency;
+
   const emptyCreateForm: InvoiceCreate = {
     invoice_number: "",
     status: "draft",
@@ -63,7 +66,7 @@ export default function ConferenceInvoicesTab({
     tax_rate: undefined,
     tax_amount: undefined,
     total: undefined,
-    currency: "",
+    currency: conference.currency || "",
     notes: "",
     contact_persons: [],
     is_active: true,
@@ -237,6 +240,7 @@ export default function ConferenceInvoicesTab({
           <InvoiceDetailPanel
             invoice={selectedInvoice}
             currencies={currenciesData?.items || []}
+            conferenceCurrency={conference.currency}
             onSave={async (invoiceData) => {
               await updateMutation.mutateAsync({
                 id: selectedInvoice.id,
@@ -410,23 +414,33 @@ export default function ConferenceInvoicesTab({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Currency
                   </label>
-                  <select
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.currency || ""}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        currency: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">-- Select Currency --</option>
-                    {(currenciesData?.items || []).map((c) => (
-                      <option key={c.id} value={c.code}>
-                        {c.code} - {c.name} ({c.symbol})
-                      </option>
-                    ))}
-                  </select>
+                  {isCurrencyLocked ? (
+                    <input
+                      type="text"
+                      value={conference.currency || ""}
+                      disabled
+                      title="Set by conference"
+                      className="block w-full border border-gray-300 rounded-md bg-gray-100 shadow-sm py-2 px-3 text-sm text-gray-600"
+                    />
+                  ) : (
+                    <select
+                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      value={createForm.currency || ""}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          currency: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">-- Select Currency --</option>
+                      {(currenciesData?.items || []).map((c) => (
+                        <option key={c.id} value={c.code}>
+                          {c.code} - {c.name} ({c.symbol})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div className="flex items-end">
                   <label className="inline-flex items-center gap-2">

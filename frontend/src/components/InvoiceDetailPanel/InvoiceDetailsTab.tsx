@@ -17,13 +17,17 @@ interface InvoiceDetailsTabProps {
   formData: InvoiceUpdate;
   setFormData: (data: InvoiceUpdate) => void;
   currencies: PlatformCurrency[];
+  conferenceCurrency?: string | null;
 }
 
 export default function InvoiceDetailsTab({
   formData,
   setFormData,
   currencies,
+  conferenceCurrency,
 }: InvoiceDetailsTabProps) {
+  // Use conference currency if set
+  const isCurrencyLocked = !!conferenceCurrency;
   return (
     <div className="px-6 py-5 space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -268,20 +272,30 @@ export default function InvoiceDetailsTab({
             <label className="block text-sm font-medium text-gray-700">
               Currency
             </label>
-            <select
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.currency || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, currency: e.target.value })
-              }
-            >
-              <option value="">-- Select Currency --</option>
-              {currencies.map((c) => (
-                <option key={c.id} value={c.code}>
-                  {c.code} - {c.name} ({c.symbol})
-                </option>
-              ))}
-            </select>
+            {isCurrencyLocked ? (
+              <input
+                type="text"
+                value={conferenceCurrency || ""}
+                disabled
+                title="Set by conference"
+                className="mt-1 block w-full border border-gray-300 rounded-md bg-gray-100 shadow-sm py-2 px-3 text-sm text-gray-600"
+              />
+            ) : (
+              <select
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                value={formData.currency || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, currency: e.target.value })
+                }
+              >
+                <option value="">-- Select Currency --</option>
+                {currencies.map((c) => (
+                  <option key={c.id} value={c.code}>
+                    {c.code} - {c.name} ({c.symbol})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="flex items-end">
             <label className="inline-flex items-center gap-2">

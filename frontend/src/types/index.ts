@@ -166,6 +166,19 @@ export interface TenantModuleUpdate {
 }
 
 // Audit types
+export interface AuditLogUser {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+export interface AuditLogTenant {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface AuditLog {
   id: string;
   tenant_id: string | null;
@@ -177,6 +190,34 @@ export interface AuditLog {
   ip_address: string | null;
   user_agent: string | null;
   created_at: string;
+  user: AuditLogUser | null;
+  tenant: AuditLogTenant | null;
+}
+
+// Applicant Activity Log types
+export type ApplicantActivityType =
+  | "registered"
+  | "confirmation_sent"
+  | "email_verified"
+  | "account_deleted";
+
+export interface ApplicantActivityLog {
+  id: string;
+  tenant_id: string;
+  applicant_id: string | null;
+  applicant_email: string;
+  applicant_first_name: string;
+  applicant_last_name: string;
+  activity_type: ApplicantActivityType;
+  created_at: string;
+}
+
+export interface ApplicantGroupedActivity {
+  applicant_email: string;
+  applicant_first_name: string;
+  applicant_last_name: string;
+  applicant_id: string | null;
+  activities: ApplicantActivityLog[];
 }
 
 // Pagination types
@@ -830,6 +871,10 @@ export interface Conference {
   team_members: TeamMember[];
   // Settings
   settings: Record<string, unknown>;
+  // Currency (ISO 4217 code)
+  currency: string | null;
+  // Optional second currency for invoices
+  invoice_currency: string | null;
   // Status
   is_active: boolean;
   is_published: boolean;
@@ -862,6 +907,8 @@ export interface ConferenceCreate {
   social_links?: SocialLinks;
   team_members?: TeamMember[];
   settings?: Record<string, unknown>;
+  currency?: string;
+  invoice_currency?: string;
 }
 
 export interface ConferenceUpdate {
@@ -884,6 +931,8 @@ export interface ConferenceUpdate {
   social_links?: SocialLinks;
   team_members?: TeamMember[];
   settings?: Record<string, unknown>;
+  currency?: string;
+  invoice_currency?: string;
   is_active?: boolean;
   is_published?: boolean;
 }
@@ -1309,6 +1358,22 @@ export interface PlatformCurrencyUpdate {
   is_active?: boolean;
 }
 
+export interface SuggestedNumberFormat {
+  decimal_separator: string;
+  thousands_separator: string;
+  currency_position: string;
+  decimal_places: number;
+}
+
+export interface NumberFormatPreset {
+  code: string;
+  label: string;
+  decimal_separator: string;
+  thousands_separator: string;
+  currency_position: string;
+  decimal_places: number;
+}
+
 // Booking Options types
 export interface BookingPeriod {
   id: string;
@@ -1345,7 +1410,7 @@ export interface BookingPeriodUpdate {
   is_active?: boolean;
 }
 
-export interface BookingPackage {
+export interface BookingOption {
   id: string;
   tenant_id: string;
   conference_id: string;
@@ -1357,14 +1422,14 @@ export interface BookingPackage {
   updated_at: string;
 }
 
-export interface BookingPackageCreate {
+export interface BookingOptionCreate {
   name: string;
   description?: string;
   sort_order?: number;
   is_active?: boolean;
 }
 
-export interface BookingPackageUpdate {
+export interface BookingOptionUpdate {
   name?: string;
   description?: string;
   sort_order?: number;
@@ -1373,7 +1438,7 @@ export interface BookingPackageUpdate {
 
 export interface BookingMatrix {
   periods: BookingPeriod[];
-  packages: BookingPackage[];
+  options: BookingOption[];
 }
 
 // Discount Code types
@@ -1391,6 +1456,7 @@ export interface DiscountCode {
   max_uses: number;
   usage_count: number;
   is_active: boolean;
+  applicable_option_ids: string[];
   created_at: string;
   updated_at: string;
 }
@@ -1405,6 +1471,7 @@ export interface DiscountCodeCreate {
   end_date?: string | null;
   max_uses?: number;
   is_active?: boolean;
+  applicable_option_ids?: string[];
 }
 
 export interface DiscountCodeUpdate {
@@ -1417,6 +1484,7 @@ export interface DiscountCodeUpdate {
   end_date?: string | null;
   max_uses?: number;
   is_active?: boolean;
+  applicable_option_ids?: string[];
 }
 
 // Paper Assignment types

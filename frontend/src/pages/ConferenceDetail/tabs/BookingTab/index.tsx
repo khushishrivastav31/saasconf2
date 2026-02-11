@@ -4,7 +4,7 @@ import api from "../../../../config/api";
 import type {
   BookingPeriod,
   BookingPeriodCreate,
-  BookingPackageCreate,
+  BookingOptionCreate,
   BookingMatrix,
   PlatformCurrency,
   PaginatedResponse,
@@ -17,38 +17,38 @@ import { ErrorBanner } from "../../../../components/common/ErrorBanner";
 import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
 import PricingMatrixSection from "./PricingMatrixSection";
 import DiscountCodesSection from "./DiscountCodesSection";
+import AddOptionModal from "./AddOptionModal";
+import AddPeriodModal from "./AddPeriodModal";
+import AddDiscountModal from "./AddDiscountModal";
+import EditDiscountModal from "./EditDiscountModal";
 
-function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string; isAdmin: boolean }) {
+interface BookingTabProps {
+  conferenceId: string;
+  isAdmin: boolean;
+  conferenceCurrency?: string | null;
+}
+
+function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: BookingTabProps) {
   const queryClient = useQueryClient();
+
+  // Modal state
   const [showAddPeriod, setShowAddPeriod] = useState(false);
-  const [showAddPackage, setShowAddPackage] = useState(false);
-  const [newPeriodName, setNewPeriodName] = useState("");
-  const [newPeriodStartDate, setNewPeriodStartDate] = useState("");
-  const [newPeriodEndDate, setNewPeriodEndDate] = useState("");
-  const [newPackageName, setNewPackageName] = useState("");
-  const [newPeriodCurrency, setNewPeriodCurrency] = useState("EUR");
-  const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
-  const [editingPackageName, setEditingPackageName] = useState("");
+  const [showAddOption, setShowAddOption] = useState(false);
+  const [showAddDiscount, setShowAddDiscount] = useState(false);
+  const [editingDiscount, setEditingDiscount] = useState<DiscountCode | null>(null);
+
+  // Inline editing state (kept for table row editing)
+  const [editingOptionId, setEditingOptionId] = useState<string | null>(null);
+  const [editingOptionName, setEditingOptionName] = useState("");
   const [editingPeriodId, setEditingPeriodId] = useState<string | null>(null);
   const [editingPeriodName, setEditingPeriodName] = useState("");
   const [editingPeriodStartDate, setEditingPeriodStartDate] = useState("");
   const [editingPeriodEndDate, setEditingPeriodEndDate] = useState("");
   const [editingPeriodCurrency, setEditingPeriodCurrency] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<{ type: "period" | "package" | "discount"; id: string; name: string } | null>(null);
-  const [apiError, setApiError] = useState("");
 
-  // --- Discount code state ---
-  const [showAddDiscount, setShowAddDiscount] = useState(false);
-  const [newDiscountName, setNewDiscountName] = useState("");
-  const [newDiscountCode, setNewDiscountCode] = useState("");
-  const [newDiscountType, setNewDiscountType] = useState<"fixed" | "percentage">("percentage");
-  const [newDiscountValue, setNewDiscountValue] = useState("");
-  const [newDiscountCurrency, setNewDiscountCurrency] = useState("");
-  const [newDiscountStartDate, setNewDiscountStartDate] = useState("");
-  const [newDiscountEndDate, setNewDiscountEndDate] = useState("");
-  const [newDiscountMaxUses, setNewDiscountMaxUses] = useState("0");
-  const [editingDiscountId, setEditingDiscountId] = useState<string | null>(null);
-  const [editingDiscount, setEditingDiscount] = useState<Partial<DiscountCode>>({});
+  // Delete confirmation and errors
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "period" | "option" | "discount"; id: string; name: string } | null>(null);
+  const [apiError, setApiError] = useState("");
 
   // Fetch booking matrix
   const { data: matrix, isLoading } = useQuery({
@@ -101,9 +101,6 @@ function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string;
     onSuccess: () => {
       invalidate();
       setShowAddPeriod(false);
-      setNewPeriodName("");
-      setNewPeriodStartDate("");
-      setNewPeriodEndDate("");
       setApiError("");
     },
     onError: (error) => setApiError(parseApiError(error)),
@@ -133,23 +130,22 @@ function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string;
     onError: (error) => setApiError(parseApiError(error)),
   });
 
-  // --- Package mutations ---
-  const createPackageMutation = useMutation({
-    mutationFn: async (data: BookingPackageCreate) => {
-      await api.post(`/conferences/${conferenceId}/settings/booking-packages`, data);
+  // --- Option mutations ---
+  const createOptionMutation = useMutation({
+    mutationFn: async (data: BookingOptionCreate) => {
+      await api.post(`/conferences/${conferenceId}/settings/booking-options`, data);
     },
     onSuccess: () => {
       invalidate();
-      setShowAddPackage(false);
-      setNewPackageName("");
+      setShowAddOption(false);
       setApiError("");
     },
     onError: (error) => setApiError(parseApiError(error)),
   });
 
-  const deletePackageMutation = useMutation({
+  const deleteOptionMutation = useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/conferences/${conferenceId}/settings/booking-packages/${id}`);
+      await api.delete(`/conferences/${conferenceId}/settings/booking-options/${id}`);
     },
     onSuccess: () => {
       invalidate();
@@ -159,13 +155,13 @@ function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string;
     onError: (error) => setApiError(parseApiError(error)),
   });
 
-  const updatePackageMutation = useMutation({
+  const updateOptionMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
-      await api.put(`/conferences/${conferenceId}/settings/booking-packages/${id}`, data);
+      await api.put(`/conferences/${conferenceId}/settings/booking-options/${id}`, data);
     },
     onSuccess: () => {
       invalidate();
-      setEditingPackageId(null);
+      setEditingOptionId(null);
       setApiError("");
     },
     onError: (error: unknown) => setApiError(parseApiError(error)),
@@ -179,14 +175,6 @@ function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string;
     onSuccess: () => {
       invalidateDiscounts();
       setShowAddDiscount(false);
-      setNewDiscountName("");
-      setNewDiscountCode("");
-      setNewDiscountType("percentage");
-      setNewDiscountValue("");
-      setNewDiscountCurrency("");
-      setNewDiscountStartDate("");
-      setNewDiscountEndDate("");
-      setNewDiscountMaxUses("0");
       setApiError("");
     },
     onError: (error) => setApiError(parseApiError(error)),
@@ -198,8 +186,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string;
     },
     onSuccess: () => {
       invalidateDiscounts();
-      setEditingDiscountId(null);
-      setEditingDiscount({});
+      setEditingDiscount(null);
       setApiError("");
     },
     onError: (error: unknown) => setApiError(parseApiError(error)),
@@ -253,8 +240,8 @@ function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string;
     if (!deleteTarget) return;
     if (deleteTarget.type === "period") {
       deletePeriodMutation.mutate(deleteTarget.id);
-    } else if (deleteTarget.type === "package") {
-      deletePackageMutation.mutate(deleteTarget.id);
+    } else if (deleteTarget.type === "option") {
+      deleteOptionMutation.mutate(deleteTarget.id);
     } else if (deleteTarget.type === "discount") {
       deleteDiscountMutation.mutate(deleteTarget.id);
     }
@@ -265,7 +252,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string;
   }
 
   const periods = matrix?.periods || [];
-  const packages = matrix?.packages || [];
+  const options = matrix?.options || [];
 
   const startEditPeriod = (period: BookingPeriod) => {
     setEditingPeriodId(period.id);
@@ -282,24 +269,11 @@ function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string;
       <PricingMatrixSection
         isAdmin={isAdmin}
         periods={periods}
-        packages={packages}
+        options={options}
         currencyOptions={currencyOptions}
-        showAddPeriod={showAddPeriod}
-        setShowAddPeriod={setShowAddPeriod}
-        newPeriodName={newPeriodName}
-        setNewPeriodName={setNewPeriodName}
-        newPeriodStartDate={newPeriodStartDate}
-        setNewPeriodStartDate={setNewPeriodStartDate}
-        newPeriodEndDate={newPeriodEndDate}
-        setNewPeriodEndDate={setNewPeriodEndDate}
-        newPeriodCurrency={newPeriodCurrency}
-        setNewPeriodCurrency={setNewPeriodCurrency}
-        onCreatePeriod={(data) => createPeriodMutation.mutate(data)}
-        showAddPackage={showAddPackage}
-        setShowAddPackage={setShowAddPackage}
-        newPackageName={newPackageName}
-        setNewPackageName={setNewPackageName}
-        onCreatePackage={(data) => createPackageMutation.mutate(data)}
+        conferenceCurrency={conferenceCurrency}
+        onAddPeriod={() => setShowAddPeriod(true)}
+        onAddOption={() => setShowAddOption(true)}
         editingPeriodId={editingPeriodId}
         setEditingPeriodId={setEditingPeriodId}
         editingPeriodName={editingPeriodName}
@@ -312,52 +286,64 @@ function ConferenceBookingTab({ conferenceId, isAdmin }: { conferenceId: string;
         setEditingPeriodCurrency={setEditingPeriodCurrency}
         onSavePeriodEdits={handleSavePeriodEdits}
         onStartEditPeriod={startEditPeriod}
-        editingPackageId={editingPackageId}
-        setEditingPackageId={setEditingPackageId}
-        editingPackageName={editingPackageName}
-        setEditingPackageName={setEditingPackageName}
-        onUpdatePackage={(id, data) => updatePackageMutation.mutate({ id, data })}
+        editingOptionId={editingOptionId}
+        setEditingOptionId={setEditingOptionId}
+        editingOptionName={editingOptionName}
+        setEditingOptionName={setEditingOptionName}
+        onUpdateOption={(id, data) => updateOptionMutation.mutate({ id, data })}
         onPriceChange={handlePriceChange}
         onDeleteTarget={setDeleteTarget}
-        setApiError={setApiError}
       />
 
       <DiscountCodesSection
         isAdmin={isAdmin}
         discountCodes={discountCodes}
-        currencyOptions={currencyOptions}
-        showAddDiscount={showAddDiscount}
-        setShowAddDiscount={setShowAddDiscount}
-        newDiscountName={newDiscountName}
-        setNewDiscountName={setNewDiscountName}
-        newDiscountCode={newDiscountCode}
-        setNewDiscountCode={setNewDiscountCode}
-        newDiscountType={newDiscountType}
-        setNewDiscountType={setNewDiscountType}
-        newDiscountValue={newDiscountValue}
-        setNewDiscountValue={setNewDiscountValue}
-        newDiscountCurrency={newDiscountCurrency}
-        setNewDiscountCurrency={setNewDiscountCurrency}
-        newDiscountStartDate={newDiscountStartDate}
-        setNewDiscountStartDate={setNewDiscountStartDate}
-        newDiscountEndDate={newDiscountEndDate}
-        setNewDiscountEndDate={setNewDiscountEndDate}
-        newDiscountMaxUses={newDiscountMaxUses}
-        setNewDiscountMaxUses={setNewDiscountMaxUses}
-        onCreateDiscount={(data) => createDiscountMutation.mutate(data)}
-        editingDiscountId={editingDiscountId}
-        setEditingDiscountId={setEditingDiscountId}
-        editingDiscount={editingDiscount}
-        setEditingDiscount={setEditingDiscount}
-        onUpdateDiscount={(id, data) => updateDiscountMutation.mutate({ id, data })}
+        bookingOptions={options}
+        onAddDiscount={() => setShowAddDiscount(true)}
+        onEditDiscount={(dc) => setEditingDiscount(dc)}
         onDeleteTarget={setDeleteTarget}
-        setApiError={setApiError}
+      />
+
+      {/* Modals */}
+      <AddPeriodModal
+        open={showAddPeriod}
+        onClose={() => setShowAddPeriod(false)}
+        onSubmit={(data) => createPeriodMutation.mutate(data)}
+        existingCount={periods.length}
+        currencyOptions={currencyOptions}
+        conferenceCurrency={conferenceCurrency}
+      />
+
+      <AddOptionModal
+        open={showAddOption}
+        onClose={() => setShowAddOption(false)}
+        onSubmit={(data) => createOptionMutation.mutate(data)}
+        existingCount={options.length}
+      />
+
+      <AddDiscountModal
+        open={showAddDiscount}
+        onClose={() => setShowAddDiscount(false)}
+        onSubmit={(data) => createDiscountMutation.mutate(data)}
+        bookingOptions={options}
+        currencyOptions={currencyOptions}
+        conferenceCurrency={conferenceCurrency}
+      />
+
+      <EditDiscountModal
+        open={!!editingDiscount}
+        onClose={() => setEditingDiscount(null)}
+        onSubmit={(id, data) => updateDiscountMutation.mutate({ id, data })}
+        discount={editingDiscount}
+        bookingOptions={options}
+        currencyOptions={currencyOptions}
+        conferenceCurrency={conferenceCurrency}
       />
 
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         open={!!deleteTarget}
-        title={`Delete ${deleteTarget?.type === "period" ? "Period" : deleteTarget?.type === "package" ? "Package" : "Discount Code"}`}
+        title={`Delete ${deleteTarget?.type === "period" ? "Period" : deleteTarget?.type === "option" ? "Option" : "Discount Code"}`}
         message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={handleConfirmDelete}

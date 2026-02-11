@@ -153,6 +153,24 @@ function TeamIcon() {
   );
 }
 
+function ActivityIcon() {
+  return (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+      />
+    </svg>
+  );
+}
+
 export default function AdminLayout() {
   const { user, logout, refreshUser } = useAuth();
   const location = useLocation();
@@ -342,6 +360,25 @@ export default function AdminLayout() {
                       <span className="ml-3">Team</span>
                     )}
                   </Link>
+                  {/* Applicant Activity - tenant admin only */}
+                  {user?.role === "tenant_admin" && (
+                    <Link
+                      to="/applicant-activity"
+                      title={sidebarCollapsed ? "Activity Log" : undefined}
+                      className={`flex items-center py-2 text-sm font-medium rounded-md ${
+                        sidebarCollapsed ? "justify-center px-2" : "px-3"
+                      } ${
+                        location.pathname === "/applicant-activity"
+                          ? "bg-gray-800 text-white"
+                          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      }`}
+                    >
+                      <ActivityIcon />
+                      {!sidebarCollapsed && (
+                        <span className="ml-3">Activity Log</span>
+                      )}
+                    </Link>
+                  )}
                 </div>
               </div>
             )}

@@ -13,6 +13,7 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.security import hash_password
+from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
 from app.models.cfp import (
@@ -295,6 +296,17 @@ async def delete_applicant(
     )
     for attachment in attachments_result.scalars().all():
         await db.delete(attachment)
+
+    # Log account deletion event before deleting
+    activity_log = ApplicantActivityLog(
+        tenant_id=current_user.tenant_id,
+        applicant_id=None,  # Will be deleted, so set to None
+        applicant_email=applicant.email,
+        applicant_first_name=applicant.first_name,
+        applicant_last_name=applicant.last_name,
+        activity_type=ApplicantActivityType.ACCOUNT_DELETED.value,
+    )
+    db.add(activity_log)
 
     await db.delete(applicant)
     await db.commit()

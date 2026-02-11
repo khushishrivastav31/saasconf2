@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../config/api";
 import { parseApiError } from "../utils/apiError";
-import { useIsAdmin } from "../hooks/useIsAdmin";
+import { useIsTenantAdmin } from "../hooks/useIsAdmin";
 import CreateConferenceModal from "../components/CreateConferenceModal";
 import ConferenceLogo from "../components/ConferenceLogo";
 import type {
@@ -18,7 +18,7 @@ export default function Conferences() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const isAdmin = useIsAdmin();
+  const isTenantAdmin = useIsTenantAdmin();
 
   const { data, isLoading } = useQuery({
     queryKey: ["conferences", statusFilter],
@@ -80,7 +80,7 @@ export default function Conferences() {
             Manage your conferences and events
           </p>
         </div>
-        {isAdmin && (
+        {isTenantAdmin && (
           <button
             onClick={() => setIsCreateModalOpen(true)}
             className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
@@ -304,7 +304,7 @@ export default function Conferences() {
           <p className="mt-1 text-sm text-gray-500">
             Get started by creating your first conference.
           </p>
-          {isAdmin && (
+          {isTenantAdmin && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="mt-4 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"

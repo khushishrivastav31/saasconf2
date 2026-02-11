@@ -145,6 +145,8 @@ def _build_conference_response(conf: Conference, tenant_slug: str | None = None)
         description=conf.description,
         website=conf.website,
         logo_url=conf.logo_url,
+        support_email=conf.support_email,
+        contact_email=conf.contact_email,
         start_date=conf.start_date,
         end_date=conf.end_date,
         venue_name=conf.venue_name,
@@ -157,6 +159,8 @@ def _build_conference_response(conf: Conference, tenant_slug: str | None = None)
         social_links=conf.social_links or {},
         team_members=team_members,
         settings=conf.settings or {},
+        currency=conf.currency,
+        invoice_currency=conf.invoice_currency,
         is_active=conf.is_active,
         is_published=conf.is_published,
         created_at=conf.created_at,
@@ -273,6 +277,7 @@ async def create_conference(
         social_links=conference_data.social_links.model_dump(mode='json') if conference_data.social_links else {},
         team_members=[tm.model_dump(mode='json') for tm in conference_data.team_members] if conference_data.team_members else [],
         settings=conference_data.settings,
+        currency=conference_data.currency,
     )
     db.add(conference)
     await db.flush()  # Get the conference ID before seeding default settings

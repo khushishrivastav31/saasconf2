@@ -351,3 +351,107 @@ async def test_get_conference_stats_with_conference(
     data = response.json()
     assert data["total"] == 1
     assert data["active"] == 1  # conference fixture has is_active=True
+
+
+# ── Currency field ─────────────────────────────────────────────────────
+
+
+async def test_create_conference_with_currency(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Tenant admin can create a conference with a currency."""
+    payload = {
+        **CONFERENCE_PAYLOAD,
+        "currency": "EUR",
+    }
+    response = await client.post(
+        BASE_URL,
+        json=payload,
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["currency"] == "EUR"
+
+
+async def test_create_conference_without_currency(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Conference created without currency has null currency."""
+    response = await client.post(
+        BASE_URL,
+        json=CONFERENCE_PAYLOAD,
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["currency"] is None
+
+
+async def test_update_conference_currency(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+    conference: Conference,
+) -> None:
+    """Tenant admin can update conference currency."""
+    response = await client.put(
+        f"{BASE_URL}/{conference.id}",
+        json={"currency": "USD"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["currency"] == "USD"
+
+
+async def test_update_conference_currency_to_null(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+    conference: Conference,
+) -> None:
+    """Tenant admin can clear conference currency."""
+    # First set a currency
+    await client.put(
+        f"{BASE_URL}/{conference.id}",
+        json={"currency": "EUR"},
+        headers=auth_headers(tenant_admin_token),
+    )
+
+    # Then clear it
+    response = await client.put(
+        f"{BASE_URL}/{conference.id}",
+        json={"currency": None},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["currency"] is None
+
+
+async def test_invalid_currency_length(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Currency code must be exactly 3 characters."""
+    payload = {
+        **CONFERENCE_PAYLOAD,
+        "currency": "EU",  # Too short
+    }
+    response = await client.post(
+        BASE_URL,
+        json=payload,
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 422

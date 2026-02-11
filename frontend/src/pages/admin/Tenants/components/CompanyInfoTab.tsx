@@ -22,12 +22,24 @@ export default function CompanyInfoTab({
 }) {
   const queryClient = useQueryClient();
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const toggleActiveMutation = useMutation({
     mutationFn: async () => {
       await api.put(`/admin/tenants/${tenant.id}`, {
         is_active: !tenant.is_active,
       });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenants"] });
+      onClose();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await api.delete(`/admin/tenants/${tenant.id}/permanent`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenants"] });
@@ -198,6 +210,27 @@ export default function CompanyInfoTab({
   );
   const [editContactPhoneError, setEditContactPhoneError] = useState<string | null>(null);
   const [newContactPhoneError, setNewContactPhoneError] = useState<string | null>(null);
+  const [portalUrlCopied, setPortalUrlCopied] = useState(false);
+
+  const portalUrl = `${window.location.origin}/${tenant.slug}/portal/user/login`;
+
+  const copyPortalUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(portalUrl);
+      setPortalUrlCopied(true);
+      setTimeout(() => setPortalUrlCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = portalUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setPortalUrlCopied(true);
+      setTimeout(() => setPortalUrlCopied(false), 2000);
+    }
+  };
 
   return (
     <div>
@@ -390,6 +423,60 @@ export default function CompanyInfoTab({
               onChange={(e) => handleFieldChange("vat_number", e.target.value)}
             />
           </div>
+        </div>
+
+        {/* Portal URL */}
+        <div className="border-t pt-4">
+          <h5 className="text-sm font-medium text-gray-700 mb-2">Portal URL</h5>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={portalUrl}
+              className="flex-1 bg-gray-50 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm text-gray-600 cursor-default"
+            />
+            <button
+              type="button"
+              onClick={copyPortalUrl}
+              className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border transition-colors ${
+                portalUrlCopied
+                  ? "bg-green-50 text-green-700 border-green-300"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+              title="Copy URL"
+            >
+              {portalUrlCopied ? (
+                <>
+                  <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Copied
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy
+                </>
+              )}
+            </button>
+            <a
+              href={portalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              title="Open in new tab"
+            >
+              <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Open
+            </a>
+          </div>
+          <p className="mt-1.5 text-xs text-gray-500">
+            Share this URL with applicants to access the speaker portal for this company.
+          </p>
         </div>
 
         {/* Address */}
@@ -775,6 +862,33 @@ export default function CompanyInfoTab({
             </div>
           </div>
         </div>
+
+        {/* Delete Company (Permanent) */}
+        <div className="border-t pt-4">
+          <h5 className="text-sm font-medium text-gray-700 mb-2">
+            Danger Zone
+          </h5>
+          <div className="rounded-lg p-4 bg-red-50 border-2 border-red-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-900">
+                  Delete Company Permanently
+                </p>
+                <p className="text-sm mt-1 text-red-700">
+                  This will permanently delete the company and all associated data including conferences, CFPs, papers, users, and attachments. This action cannot be undone.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={deleteMutation.isPending}
+                className="ml-4 inline-flex items-center px-4 py-2 border-2 border-red-600 text-sm font-medium rounded-md text-red-600 bg-white hover:bg-red-50 disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete Company"}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <ConfirmDialog
@@ -804,6 +918,97 @@ export default function CompanyInfoTab({
         }}
         onCancel={() => setDeleteContactIndex(null)}
       />
+
+      {/* Custom Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteConfirmText("");
+              }}
+            />
+            <div className="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+              <div className="bg-white px-4 pb-4 pt-5 sm:p-6">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <svg
+                      className="h-6 w-6 text-red-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left flex-1">
+                    <h3 className="text-lg font-semibold leading-6 text-gray-900">
+                      Delete Company Permanently
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        This action <strong>cannot be undone</strong>. This will permanently delete
+                        the company <strong>"{tenant.name}"</strong> and all associated data including:
+                      </p>
+                      <ul className="mt-2 text-sm text-gray-500 list-disc list-inside space-y-1">
+                        <li>All users and their accounts</li>
+                        <li>All conferences and their settings</li>
+                        <li>All CFPs, papers, and submissions</li>
+                        <li>All applicants and reviewers</li>
+                        <li>All attachments and uploaded files</li>
+                      </ul>
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Type <strong>{tenant.name}</strong> to confirm:
+                        </label>
+                        <input
+                          type="text"
+                          value={deleteConfirmText}
+                          onChange={(e) => setDeleteConfirmText(e.target.value)}
+                          className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                          placeholder="Enter company name"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                <button
+                  type="button"
+                  disabled={deleteConfirmText !== tenant.name || deleteMutation.isPending}
+                  onClick={() => {
+                    deleteMutation.mutate();
+                    setShowDeleteConfirm(false);
+                    setDeleteConfirmText("");
+                  }}
+                  className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleteMutation.isPending ? "Deleting..." : "Delete permanently"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeleteConfirmText("");
+                  }}
+                  className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

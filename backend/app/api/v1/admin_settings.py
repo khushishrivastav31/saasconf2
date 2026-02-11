@@ -3,8 +3,10 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
+from pydantic import BaseModel
 from sqlalchemy import case, select
 
+from app.core.currency_formats import get_format_as_dict, get_preset_list
 from app.core.dependencies import CurrentUserDep, DbSessionDep, SuperAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.pagination import paginate
@@ -188,6 +190,49 @@ async def delete_platform_currency(
 
     await db.delete(currency)
     await db.commit()
+
+
+class SuggestedNumberFormat(BaseModel):
+    """Suggested number format for a currency."""
+
+    decimal_separator: str
+    thousands_separator: str
+    currency_position: str
+    decimal_places: int
+
+
+@router.get("/currencies/{currency_code}/suggested-format", response_model=SuggestedNumberFormat)
+async def get_suggested_number_format(
+    currency_code: str,
+    current_user: CurrentUserDep,
+) -> SuggestedNumberFormat:
+    """Get suggested number format for a currency code.
+
+    Returns standard formatting conventions for the given currency.
+    This is a suggestion that can be overridden by the user.
+    """
+    format_dict = get_format_as_dict(currency_code)
+    return SuggestedNumberFormat(**format_dict)
+
+
+class NumberFormatPreset(BaseModel):
+    """Number format preset for dropdown."""
+
+    code: str
+    label: str
+    decimal_separator: str
+    thousands_separator: str
+    currency_position: str
+    decimal_places: int
+
+
+@router.get("/number-format-presets", response_model=list[NumberFormatPreset])
+async def list_number_format_presets(
+    current_user: CurrentUserDep,
+) -> list[NumberFormatPreset]:
+    """Get list of number format presets for dropdown selection."""
+    presets = get_preset_list()
+    return [NumberFormatPreset(**p) for p in presets]
 
 
 # ────────────────────────────────────────────────────────────────────────────

@@ -248,11 +248,11 @@ class BookingPeriodListResponse(BaseModel):
     total: int
 
 
-# --- Booking Package Schemas ---
+# --- Booking Option Schemas ---
 
 
-class BookingPackageCreate(BaseModel):
-    """Schema for creating a booking package."""
+class BookingOptionCreate(BaseModel):
+    """Schema for creating a booking option."""
 
     name: str = Field(..., min_length=1, max_length=200)
     description: str | None = None
@@ -260,8 +260,8 @@ class BookingPackageCreate(BaseModel):
     is_active: bool = True
 
 
-class BookingPackageUpdate(BaseModel):
-    """Schema for updating a booking package."""
+class BookingOptionUpdate(BaseModel):
+    """Schema for updating a booking option."""
 
     name: str | None = Field(None, min_length=1, max_length=200)
     description: str | None = None
@@ -269,8 +269,8 @@ class BookingPackageUpdate(BaseModel):
     is_active: bool | None = None
 
 
-class BookingPackageResponse(BaseModel):
-    """Booking package response schema."""
+class BookingOptionResponse(BaseModel):
+    """Booking option response schema."""
 
     id: UUID
     tenant_id: UUID
@@ -286,10 +286,10 @@ class BookingPackageResponse(BaseModel):
         from_attributes = True
 
 
-class BookingPackageListResponse(BaseModel):
-    """List of booking packages."""
+class BookingOptionListResponse(BaseModel):
+    """List of booking options."""
 
-    items: list[BookingPackageResponse]
+    items: list[BookingOptionResponse]
     total: int
 
 
@@ -297,10 +297,10 @@ class BookingPackageListResponse(BaseModel):
 
 
 class BookingMatrixResponse(BaseModel):
-    """Combined view of periods and packages for the booking matrix UI."""
+    """Combined view of periods and options for the booking matrix UI."""
 
     periods: list[BookingPeriodResponse]
-    packages: list[BookingPackageResponse]
+    options: list[BookingOptionResponse]
 
 
 # --- Discount Code Schemas ---
@@ -318,6 +318,9 @@ class DiscountCodeCreate(BaseModel):
     end_date: date | None = None
     max_uses: int = Field(0, ge=0)
     is_active: bool = True
+    applicable_option_ids: list[UUID] | None = Field(
+        None, description="List of booking option IDs this discount applies to. Empty means applies to all."
+    )
 
     @model_validator(mode="after")
     def validate_discount(self) -> "DiscountCodeCreate":
@@ -341,6 +344,9 @@ class DiscountCodeUpdate(BaseModel):
     end_date: date | None = None
     max_uses: int | None = Field(None, ge=0)
     is_active: bool | None = None
+    applicable_option_ids: list[UUID] | None = Field(
+        None, description="List of booking option IDs this discount applies to. Empty list means applies to all."
+    )
 
 
 class DiscountCodeResponse(BaseModel):
@@ -359,6 +365,7 @@ class DiscountCodeResponse(BaseModel):
     max_uses: int
     usage_count: int
     is_active: bool
+    applicable_option_ids: list[UUID] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 

@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Request
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.core.dependencies import (
     CurrentUserDep,
@@ -12,7 +12,7 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
-from app.models.settings import DiscountCode
+from app.models.settings import DiscountCode, DiscountCodeOption
 from app.schemas.settings import (
     DiscountCodeCreate,
     DiscountCodeListResponse,
@@ -23,6 +23,62 @@ from app.schemas.settings import (
 from ._shared import _resolve_conference, _check_conference_admin
 
 router = APIRouter()
+
+
+async def _get_applicable_option_ids(db: DbSessionDep, discount_code_id: UUID) -> list[UUID]:
+    """Get the list of applicable booking option IDs for a discount code."""
+    result = await db.execute(
+        select(DiscountCodeOption.booking_option_id).where(
+            DiscountCodeOption.discount_code_id == discount_code_id
+        )
+    )
+    return [row[0] for row in result.fetchall()]
+
+
+async def _set_applicable_option_ids(
+    db: DbSessionDep,
+    discount_code_id: UUID,
+    tenant_id: UUID,
+    option_ids: list[UUID] | None,
+) -> None:
+    """Set the applicable booking option IDs for a discount code."""
+    # Delete existing associations
+    await db.execute(
+        delete(DiscountCodeOption).where(
+            DiscountCodeOption.discount_code_id == discount_code_id
+        )
+    )
+
+    # Add new associations if provided
+    if option_ids:
+        for option_id in option_ids:
+            db.add(DiscountCodeOption(
+                tenant_id=tenant_id,
+                discount_code_id=discount_code_id,
+                booking_option_id=option_id,
+            ))
+
+
+def _build_response(discount: DiscountCode, applicable_option_ids: list[UUID]) -> DiscountCodeResponse:
+    """Build a DiscountCodeResponse from a DiscountCode model."""
+    return DiscountCodeResponse(
+        id=discount.id,
+        tenant_id=discount.tenant_id,
+        conference_id=discount.conference_id,
+        name=discount.name,
+        code=discount.code,
+        discount_type=discount.discount_type,
+        discount_value=discount.discount_value,
+        currency=discount.currency,
+        start_date=discount.start_date,
+        end_date=discount.end_date,
+        max_uses=discount.max_uses,
+        usage_count=discount.usage_count,
+        is_active=discount.is_active,
+        applicable_option_ids=applicable_option_ids,
+        created_at=discount.created_at,
+        updated_at=discount.updated_at,
+    )
 
 
 @router.get("/discount-codes", response_model=DiscountCodeListResponse)
@@ -45,26 +101,10 @@ async def list_discount_codes(
     result = await db.execute(query)
     codes = result.scalars().all()
 
-    items = [
-        DiscountCodeResponse(
-            id=c.id,
-            tenant_id=c.tenant_id,
-            conference_id=c.conference_id,
-            name=c.name,
-            code=c.code,
-            discount_type=c.discount_type,
-            discount_value=c.discount_value,
-            currency=c.currency,
-            start_date=c.start_date,
-            end_date=c.end_date,
-            max_uses=c.max_uses,
-            usage_count=c.usage_count,
-            is_active=c.is_active,
-            created_at=c.created_at,
-            updated_at=c.updated_at,
-        )
-        for c in codes
-    ]
+    items = []
+    for c in codes:
+        option_ids = await _get_applicable_option_ids(db, c.id)
+        items.append(_build_response(c, option_ids))
 
     return DiscountCodeListResponse(items=items, total=len(items))
 
@@ -106,6 +146,12 @@ async def create_discount_code(
         is_active=code_data.is_active,
     )
     db.add(discount)
+    await db.flush()  # Get the ID before adding associations
+
+    # Set applicable options
+    await _set_applicable_option_ids(
+        db, discount.id, conference.tenant_id, code_data.applicable_option_ids
+    )
 
     audit_log = AuditLog(
         tenant_id=conference.tenant_id,
@@ -113,7 +159,12 @@ async def create_discount_code(
         action="discount_code.create",
         resource_type="discount_code",
         resource_id=discount.id,
-        details={"code": discount.code, "name": discount.name, "conference_id": str(conference.id)},
+        details={
+            "code": discount.code,
+            "name": discount.name,
+            "conference_id": str(conference.id),
+            "applicable_option_ids": [str(oid) for oid in (code_data.applicable_option_ids or [])],
+        },
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
@@ -122,23 +173,8 @@ async def create_discount_code(
     await db.commit()
     await db.refresh(discount)
 
-    return DiscountCodeResponse(
-        id=discount.id,
-        tenant_id=discount.tenant_id,
-        conference_id=discount.conference_id,
-        name=discount.name,
-        code=discount.code,
-        discount_type=discount.discount_type,
-        discount_value=discount.discount_value,
-        currency=discount.currency,
-        start_date=discount.start_date,
-        end_date=discount.end_date,
-        max_uses=discount.max_uses,
-        usage_count=discount.usage_count,
-        is_active=discount.is_active,
-        created_at=discount.created_at,
-        updated_at=discount.updated_at,
-    )
+    option_ids = await _get_applicable_option_ids(db, discount.id)
+    return _build_response(discount, option_ids)
 
 
 @router.put("/discount-codes/{discount_code_id}", response_model=DiscountCodeResponse)
@@ -177,9 +213,18 @@ async def update_discount_code(
         if existing.scalar_one_or_none():
             raise ValidationError(f"A discount code '{code_data.code}' already exists")
 
+    # Handle applicable_option_ids separately
     update_data = code_data.model_dump(exclude_unset=True)
+    applicable_option_ids = update_data.pop("applicable_option_ids", None)
+
     for field, value in update_data.items():
         setattr(discount, field, value)
+
+    # Update applicable options if provided
+    if applicable_option_ids is not None:
+        await _set_applicable_option_ids(
+            db, discount.id, conference.tenant_id, applicable_option_ids
+        )
 
     audit_log = AuditLog(
         tenant_id=conference.tenant_id,
@@ -187,7 +232,7 @@ async def update_discount_code(
         action="discount_code.update",
         resource_type="discount_code",
         resource_id=discount.id,
-        details={"updated_fields": list(update_data.keys())},
+        details={"updated_fields": list(code_data.model_dump(exclude_unset=True).keys())},
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
@@ -196,23 +241,8 @@ async def update_discount_code(
     await db.commit()
     await db.refresh(discount)
 
-    return DiscountCodeResponse(
-        id=discount.id,
-        tenant_id=discount.tenant_id,
-        conference_id=discount.conference_id,
-        name=discount.name,
-        code=discount.code,
-        discount_type=discount.discount_type,
-        discount_value=discount.discount_value,
-        currency=discount.currency,
-        start_date=discount.start_date,
-        end_date=discount.end_date,
-        max_uses=discount.max_uses,
-        usage_count=discount.usage_count,
-        is_active=discount.is_active,
-        created_at=discount.created_at,
-        updated_at=discount.updated_at,
-    )
+    option_ids = await _get_applicable_option_ids(db, discount.id)
+    return _build_response(discount, option_ids)
 
 
 @router.delete("/discount-codes/{discount_code_id}")
@@ -251,6 +281,7 @@ async def delete_discount_code(
     )
     db.add(audit_log)
 
+    # Associations will be deleted by CASCADE
     await db.delete(discount)
     await db.commit()
 

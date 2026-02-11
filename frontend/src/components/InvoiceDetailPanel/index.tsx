@@ -24,6 +24,7 @@ const STATUS_COLORS: Record<InvoiceStatus, string> = {
 interface InvoiceDetailPanelProps {
   invoice: Invoice;
   currencies: PlatformCurrency[];
+  conferenceCurrency?: string | null;
   onSave: (data: InvoiceUpdate) => Promise<void>;
   onDelete?: (id: string) => void;
 }
@@ -35,6 +36,7 @@ function emptyLineItem(): InvoiceLineItem {
 export default function InvoiceDetailPanel({
   invoice,
   currencies,
+  conferenceCurrency,
   onSave,
   onDelete,
 }: InvoiceDetailPanelProps) {
@@ -273,6 +275,7 @@ export default function InvoiceDetailPanel({
               formData={formData}
               setFormData={setFormData}
               currencies={currencies}
+              conferenceCurrency={conferenceCurrency}
             />
           )}
 

@@ -1,11 +1,13 @@
 """CFP Applicant Portal - Authentication and profile management endpoints."""
 
 from datetime import datetime, timedelta
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
@@ -20,6 +22,7 @@ from app.core.email import send_verification_email
 from app.core.exceptions import AuthenticationError, NotFoundError
 from app.core.security import hash_password, hash_token, verify_password
 from app.db.session import set_rls_context
+from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 from app.models.applicant_token import ApplicantEmailVerification, ApplicantRefreshToken
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
@@ -29,6 +32,7 @@ from app.models.cfp import (
     CFPTopic,
 )
 from app.models.settings import PronounOption
+from app.models.user import User, UserRole
 from app.schemas.cfp_portal import (
     ApplicantLoginRequest,
     ApplicantProfileResponse,
@@ -57,6 +61,27 @@ from .shared import (
 settings = get_settings()
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
+
+
+async def log_applicant_activity(
+    db: AsyncSession,
+    tenant_id: UUID,
+    applicant_id: UUID | None,
+    applicant_email: str,
+    applicant_first_name: str,
+    applicant_last_name: str,
+    activity_type: ApplicantActivityType,
+) -> None:
+    """Log an applicant activity event."""
+    log = ApplicantActivityLog(
+        tenant_id=tenant_id,
+        applicant_id=applicant_id,
+        applicant_email=applicant_email,
+        applicant_first_name=applicant_first_name,
+        applicant_last_name=applicant_last_name,
+        activity_type=activity_type.value,
+    )
+    db.add(log)
 
 
 # ──────────────────────────────────────────────
@@ -101,9 +126,30 @@ async def register_applicant(
     db.add(applicant)
     await db.flush()
 
+    # Log registration event
+    await log_applicant_activity(
+        db,
+        tenant_id=tenant.id,
+        applicant_id=applicant.id,
+        applicant_email=normalized_email,
+        applicant_first_name=data.first_name,
+        applicant_last_name=data.last_name,
+        activity_type=ApplicantActivityType.REGISTERED,
+    )
+
     # In debug mode, auto-verify the email so developers can log in immediately
     if settings.DEBUG:
         applicant.email_verified_at = datetime.utcnow()
+        # Log auto-verification in debug mode
+        await log_applicant_activity(
+            db,
+            tenant_id=tenant.id,
+            applicant_id=applicant.id,
+            applicant_email=normalized_email,
+            applicant_first_name=data.first_name,
+            applicant_last_name=data.last_name,
+            activity_type=ApplicantActivityType.EMAIL_VERIFIED,
+        )
         await db.commit()
         return {"message": "Registration successful. Email auto-verified (debug mode). You can now log in."}
 
@@ -115,6 +161,17 @@ async def register_applicant(
         expires_at=datetime.utcnow() + timedelta(hours=24),
     )
     db.add(verification)
+
+    # Log confirmation email sent event
+    await log_applicant_activity(
+        db,
+        tenant_id=tenant.id,
+        applicant_id=applicant.id,
+        applicant_email=normalized_email,
+        applicant_first_name=data.first_name,
+        applicant_last_name=data.last_name,
+        activity_type=ApplicantActivityType.CONFIRMATION_SENT,
+    )
     await db.commit()
 
     # Send verification email
@@ -165,6 +222,17 @@ async def verify_email(
         raise HTTPException(status_code=400, detail="Applicant not found")
 
     applicant.email_verified_at = datetime.utcnow()
+
+    # Log email verified event
+    await log_applicant_activity(
+        db,
+        tenant_id=tenant.id,
+        applicant_id=applicant.id,
+        applicant_email=applicant.email,
+        applicant_first_name=applicant.first_name,
+        applicant_last_name=applicant.last_name,
+        activity_type=ApplicantActivityType.EMAIL_VERIFIED,
+    )
     await db.commit()
 
     return {"message": "Email verified successfully. You can now log in."}
@@ -180,6 +248,27 @@ async def login_applicant(
 ) -> ApplicantTokenResponse:
     """Authenticate an applicant and return tokens."""
     tenant = await _resolve_tenant(db, tenant_slug)
+
+    # Check if this email belongs to a tenant admin - they should use the admin portal
+    admin_result = await db.execute(
+        select(User).where(
+            User.tenant_id == tenant.id,
+            func.lower(User.email) == data.email.strip().lower(),
+            User.role == UserRole.TENANT_ADMIN.value,
+            User.is_active == True,
+        )
+    )
+    admin_user = admin_result.scalar_one_or_none()
+
+    if admin_user and verify_password(data.password, admin_user.password_hash):
+        # Admin user with correct credentials trying to use portal
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "TENANT_ADMIN_REDIRECT",
+                "message": "You are a tenant administrator. Please use the admin portal to log in.",
+            },
+        )
 
     result = await db.execute(
         select(CFPApplicant).where(

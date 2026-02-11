@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     admin_settings,
+    applicant_activity,
     attachments,
     audit,
     auth,
@@ -43,6 +44,13 @@ api_router.include_router(
 
 # Tenant company management (tenant admin)
 api_router.include_router(tenant_company.router, prefix="/my-company", tags=["My Company"])
+
+# Applicant activity logs (tenant admin)
+api_router.include_router(
+    applicant_activity.router,
+    prefix="/applicant-activity",
+    tags=["Applicant Activity"],
+)
 
 # Module-specific endpoints (requires module access)
 api_router.include_router(conferences.router, prefix="/conferences", tags=["Conferences"])

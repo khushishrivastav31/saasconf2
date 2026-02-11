@@ -79,6 +79,11 @@ class ConferenceCreate(ConferenceBase):
     # Settings
     settings: dict = Field(default_factory=dict)
 
+    # Currency (ISO 4217 code)
+    currency: str | None = Field(None, min_length=3, max_length=3)
+    # Optional second currency for invoices
+    invoice_currency: str | None = Field(None, min_length=3, max_length=3)
+
     @field_validator("end_date")
     @classmethod
     def validate_end_date(cls, v: date | None, info) -> date | None:
@@ -126,6 +131,11 @@ class ConferenceUpdate(BaseModel):
     # Settings
     settings: dict | None = None
 
+    # Currency (ISO 4217 code)
+    currency: str | None = Field(None, min_length=3, max_length=3)
+    # Optional second currency for invoices
+    invoice_currency: str | None = Field(None, min_length=3, max_length=3)
+
     # Status
     is_active: bool | None = None
     is_published: bool | None = None
@@ -168,6 +178,11 @@ class ConferenceResponse(BaseModel):
 
     # Settings
     settings: dict
+
+    # Currency (ISO 4217 code)
+    currency: str | None = None
+    # Optional second currency for invoices
+    invoice_currency: str | None = None
 
     # Status
     is_active: bool

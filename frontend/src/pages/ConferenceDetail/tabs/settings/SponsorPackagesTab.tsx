@@ -230,6 +230,7 @@ function ConferenceSponsorPackagesTab({
         open={isModalOpen}
         sponsorPackage={editingPackage}
         currencies={currenciesData?.items ?? []}
+        conferenceCurrency={conference.currency}
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}
@@ -257,6 +258,7 @@ function ConferenceSponsorPackageModal({
   open,
   sponsorPackage,
   currencies,
+  conferenceCurrency,
   onClose,
   onSubmit,
   isLoading,
@@ -265,16 +267,20 @@ function ConferenceSponsorPackageModal({
   open: boolean;
   sponsorPackage: SponsorPackage | null;
   currencies: PlatformCurrency[];
+  conferenceCurrency?: string | null;
   onClose: () => void;
   onSubmit: (data: SponsorPackageCreate) => void;
   isLoading: boolean;
   error: string | null;
 }) {
+  // Use conference currency if set
+  const isCurrencyLocked = !!conferenceCurrency;
+
   const [formData, setFormData] = useState<SponsorPackageCreate>({
     name: "",
     description: "",
     price: 0,
-    currency: "",
+    currency: conferenceCurrency || "",
     is_active: true,
   });
 
@@ -284,11 +290,11 @@ function ConferenceSponsorPackageModal({
         name: sponsorPackage?.name || "",
         description: sponsorPackage?.description || "",
         price: sponsorPackage?.price ?? 0,
-        currency: sponsorPackage?.currency || "",
+        currency: isCurrencyLocked ? conferenceCurrency : (sponsorPackage?.currency || ""),
         is_active: sponsorPackage?.is_active ?? true,
       });
     }
-  }, [open, sponsorPackage]);
+  }, [open, sponsorPackage, isCurrencyLocked, conferenceCurrency]);
 
   const activeCurrencies = currencies.filter((c) => c.is_active);
 
@@ -363,20 +369,30 @@ function ConferenceSponsorPackageModal({
               <label className="block text-sm font-medium text-gray-700">
                 Currency
               </label>
-              <select
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.currency || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, currency: e.target.value })
-                }
-              >
-                <option value="">-- None --</option>
-                {activeCurrencies.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.code} ({c.symbol})
-                  </option>
-                ))}
-              </select>
+              {isCurrencyLocked ? (
+                <input
+                  type="text"
+                  value={conferenceCurrency || ""}
+                  disabled
+                  title="Set by conference"
+                  className="mt-1 block w-full border border-gray-300 rounded-md bg-gray-100 shadow-sm py-2 px-3 text-sm text-gray-600"
+                />
+              ) : (
+                <select
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.currency || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, currency: e.target.value })
+                  }
+                >
+                  <option value="">-- None --</option>
+                  {activeCurrencies.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code} ({c.symbol})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 
