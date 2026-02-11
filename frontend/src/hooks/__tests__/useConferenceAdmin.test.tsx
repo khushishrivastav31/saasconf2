@@ -62,7 +62,7 @@ describe("useConferenceAdmin", () => {
   };
 
   describe("super_admin role", () => {
-    it("returns isAdmin=true without making API call", async () => {
+    it("returns isAdmin=false (read-only access) without making API call", async () => {
       const superAdminUser = createMockUser("super_admin");
       const wrapper = createWrapper(superAdminUser);
 
@@ -71,9 +71,10 @@ describe("useConferenceAdmin", () => {
         { wrapper }
       );
 
-      expect(result.current.isAdmin).toBe(true);
+      // Super admins can view but NOT modify tenant data
+      expect(result.current.isAdmin).toBe(false);
       expect(result.current.isLoading).toBe(false);
-      expect(result.current.accessLevel).toBe("admin");
+      expect(result.current.accessLevel).toBe("read_only");
       // Should not make API call for super_admin
       expect(api.get).not.toHaveBeenCalled();
     });
