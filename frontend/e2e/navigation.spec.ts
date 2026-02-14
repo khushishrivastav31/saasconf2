@@ -12,16 +12,25 @@ test.describe('Navigation', () => {
     await expect(page.getByRole('link', { name: /conferences/i })).toBeVisible();
   });
 
-  test('should navigate to admin pages', async ({ page }) => {
+  test('should navigate to management or admin pages', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 10000 });
 
-    // Navigate to Companies (Tenants)
+    // Admin section is only visible to super_admin; management is visible to tenant_admin+
     const companiesLink = page.getByRole('link', { name: /companies/i });
-    if (await companiesLink.isVisible()) {
+    const teamLink = page.getByRole('link', { name: /team/i });
+    const hasAdmin = await companiesLink.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasManagement = await teamLink.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (hasAdmin) {
       await companiesLink.click();
       await expect(page).toHaveURL(/tenants/i, { timeout: 5000 });
+    } else if (hasManagement) {
+      await teamLink.click();
+      await expect(page).toHaveURL(/team/i, { timeout: 5000 });
     }
+    // At least one management/admin section should exist for any logged-in user
+    expect(hasAdmin || hasManagement).toBeTruthy();
   });
 
   test('should navigate between main sections', async ({ page }) => {
