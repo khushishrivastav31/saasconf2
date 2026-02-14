@@ -368,20 +368,21 @@ class TestSendCospeakerInvitationEmail:
             body_text="Jane invited you",
         )
 
-        with patch("app.core.email.render_email", return_value=mock_rendered):
-            with patch("app.core.email.send_email", return_value=True) as mock_send:
-                with patch("app.core.email.get_settings") as mock_settings:
-                    mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@test.com"
+        with patch("app.core.email._is_email_enabled_for_conference", return_value=True):
+            with patch("app.core.email.render_email", return_value=mock_rendered):
+                with patch("app.core.email.send_email", return_value=True) as mock_send:
+                    with patch("app.core.email.get_settings") as mock_settings:
+                        mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@test.com"
 
-                    result = await send_cospeaker_invitation_email(
-                        mock_db,
-                        email="cospeaker@example.com",
-                        paper_title="Machine Learning 101",
-                        conference_id=uuid4(),
-                        conference_name="TechConf",
-                        main_speaker_name="Jane Smith",
-                        tenant_slug="techconf",
-                    )
+                        result = await send_cospeaker_invitation_email(
+                            mock_db,
+                            email="cospeaker@example.com",
+                            paper_title="Machine Learning 101",
+                            conference_id=uuid4(),
+                            conference_name="TechConf",
+                            main_speaker_name="Jane Smith",
+                            tenant_slug="techconf",
+                        )
 
         assert result is True
         mock_send.assert_called_once()
