@@ -63,18 +63,13 @@ test.describe('Authentication', () => {
     // Wait for dashboard
     await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 10000 });
 
-    // Find and click logout button in sidebar
-    const logoutButton = page.getByRole('button', { name: /logout|sign out|abmelden/i });
-    if (await logoutButton.isVisible()) {
-      await logoutButton.click();
-    } else {
-      // Try finding it in a dropdown menu
-      const userMenu = page.locator('[data-testid="user-menu"]').or(page.getByText(/user|profile|account/i).first());
-      if (await userMenu.isVisible()) {
-        await userMenu.click();
-        await page.getByRole('menuitem', { name: /logout|sign out/i }).click();
-      }
-    }
+    // Open user dropdown menu (header button with chevron icon)
+    // The menu trigger shows the user's name + role, with a chevron SVG
+    const userMenuTrigger = page.locator('header button:has(svg)').last();
+    await userMenuTrigger.click();
+
+    // Click the Logout button inside the dropdown
+    await page.getByRole('button', { name: /logout|sign out/i }).click();
 
     // Should redirect to login
     await expect(page).toHaveURL(/login/i, { timeout: 10000 });
