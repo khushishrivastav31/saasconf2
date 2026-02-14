@@ -121,6 +121,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "img-src 'self' data: blob:; "
             "font-src 'self'; "
             "connect-src 'self'; "
+            "worker-src 'self' blob:; "
             "frame-ancestors 'none'"
         )
         if not settings.DEBUG:

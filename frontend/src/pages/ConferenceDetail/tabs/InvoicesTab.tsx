@@ -102,7 +102,7 @@ export default function ConferenceInvoicesTab({
         "/admin/settings/currencies",
         { params: { page_size: 100, is_active: true } },
       );
-      return response.data;
+      return response.data.items;
     },
   });
 
@@ -239,7 +239,7 @@ export default function ConferenceInvoicesTab({
 
           <InvoiceDetailPanel
             invoice={selectedInvoice}
-            currencies={currenciesData?.items || []}
+            currencies={currenciesData || []}
             conferenceCurrency={conference.currency}
             onSave={async (invoiceData) => {
               await updateMutation.mutateAsync({
@@ -434,7 +434,7 @@ export default function ConferenceInvoicesTab({
                       }
                     >
                       <option value="">-- Select Currency --</option>
-                      {(currenciesData?.items || []).map((c) => (
+                      {(currenciesData || []).map((c) => (
                         <option key={c.id} value={c.code}>
                           {c.code} - {c.name} ({c.symbol})
                         </option>

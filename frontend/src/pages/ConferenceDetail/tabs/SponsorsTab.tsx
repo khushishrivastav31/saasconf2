@@ -99,7 +99,7 @@ function ConferenceSponsorsTab({
         "/admin/settings/currencies",
         { params: { page_size: 100, is_active: true } },
       );
-      return response.data;
+      return response.data.items;
     },
   });
 
@@ -264,7 +264,7 @@ function ConferenceSponsorsTab({
           <SponsorDetailPanel
             sponsor={selectedSponsor}
             sponsorPackages={sponsorPackagesData?.items || []}
-            currencies={currenciesData?.items || []}
+            currencies={currenciesData || []}
             defaultCurrency={conference.currency || undefined}
             onSave={async (sponsorData) => {
               await updateMutation.mutateAsync({
@@ -408,7 +408,7 @@ function ConferenceSponsorsTab({
                       const pkg = (sponsorPackagesData?.items || []).find(p => p.id === createForm.sponsor_package_id);
                       const currencyCode = pkg?.currency || conference.currency;
                       if (!currencyCode) return "—";
-                      const currency = (currenciesData?.items || []).find(c => c.code === currencyCode);
+                      const currency = (currenciesData || []).find(c => c.code === currencyCode);
                       return currency ? `${currency.code} - ${currency.name}` : currencyCode;
                     })()}
                   </div>

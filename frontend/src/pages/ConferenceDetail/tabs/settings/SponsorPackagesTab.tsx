@@ -66,13 +66,13 @@ function ConferenceSponsorPackagesTab({
         "/admin/settings/currencies",
         { params: { page_size: 100, is_active: true } },
       );
-      return response.data;
+      return response.data.items;
     },
   });
 
   const currencyMap = useMemo(() => {
     const map: Record<string, PlatformCurrency> = {};
-    for (const c of currenciesData?.items ?? []) {
+    for (const c of currenciesData ?? []) {
       map[c.code] = c;
     }
     return map;
@@ -229,7 +229,7 @@ function ConferenceSponsorPackagesTab({
         key={editingPackage?.id || "create"}
         open={isModalOpen}
         sponsorPackage={editingPackage}
-        currencies={currenciesData?.items ?? []}
+        currencies={currenciesData ?? []}
         conferenceCurrency={conference.currency}
         onClose={handleCloseModal}
         onSubmit={handleSubmit}
