@@ -550,7 +550,7 @@ export default function ConferenceDetail() {
               />
             )}
             {activeSection === "program" && (
-              <ComingSoonContent name="Program" />
+              <ProgramDesignTab conference={conference} isAdmin={isAdmin} />
             )}
             {activeSection === "program-design" && (
               <ProgramDesignTab conference={conference} isAdmin={isAdmin} />
