@@ -11,9 +11,12 @@ from app.api.v1 import (
     cfp,
     cfp_portal,
     conferences,
+    form_schema,
     invoices,
     locations,
+    messaging,
     modules,
+    program,
     service_providers,
     settings,
     sponsors,
@@ -61,6 +64,9 @@ api_router.include_router(cfp.router, prefix="/cfp", tags=["Call for Papers"])
 # Conference-scoped settings (tenant admin or super admin)
 api_router.include_router(settings.router, prefix="/conferences/{conference_id}/settings", tags=["Settings"])
 
+# Paper form schema (conference-scoped)
+api_router.include_router(form_schema.router, prefix="/conferences/{conference_id}/paper-form-schema", tags=["Paper Form Schema"])
+
 # Service providers (nested under locations)
 api_router.include_router(service_providers.router, prefix="/locations/{location_id}/service-providers", tags=["Service Providers"])
 
@@ -69,6 +75,12 @@ api_router.include_router(sponsors.router, prefix="/conferences/{conference_id}/
 
 # Invoices (conference-scoped)
 api_router.include_router(invoices.router, prefix="/conferences/{conference_id}/invoices", tags=["Invoices"])
+
+# Program design (conference-scoped)
+api_router.include_router(program.router, prefix="/conferences/{conference_id}/program", tags=["Program"])
+
+# Messaging (conference-scoped)
+api_router.include_router(messaging.router, prefix="/conferences/{conference_id}/messaging", tags=["Messaging"])
 
 # File attachments
 api_router.include_router(attachments.router, prefix="/attachments", tags=["Attachments"])

@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.email import send_cospeaker_invitation_email
 from app.core.exceptions import NotFoundError
-from app.core.file_validation import validate_upload, sanitize_filename
+from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
 from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
 from app.models.cfp import (
@@ -551,9 +551,22 @@ async def upload_portal_attachment(
             raise HTTPException(status_code=400, detail="Can only upload video for draft papers")
 
     file_data = await file.read()
-    verified_type = validate_upload(file_data, file.content_type or "application/octet-stream", entity_type)
-    safe_filename = sanitize_filename(file.filename or "upload")
     file_size = len(file_data)
+
+    from app.config import get_settings
+    settings = get_settings()
+    max_size = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if file_size > max_size:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File size ({file_size // (1024 * 1024)}MB) exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)",
+        )
+
+    verified_type = validate_upload(file_data, file.content_type or "application/octet-stream", entity_type)
+    if entity_type == "applicant_picture":
+        file_data = strip_image_metadata(file_data, verified_type)
+        file_size = len(file_data)
+    safe_filename = sanitize_filename(file.filename or "upload")
 
     # Delete existing attachment of same type for this entity (only keep latest)
     existing_result = await db.execute(
@@ -603,7 +616,7 @@ async def download_portal_attachment(
         content=attachment.file_data,
         media_type=attachment.content_type,
         headers={
-            "Content-Disposition": f'inline; filename="{attachment.filename}"',
+            "Content-Disposition": safe_content_disposition(attachment.filename, "inline"),
             "Content-Length": str(attachment.file_size),
         },
     )

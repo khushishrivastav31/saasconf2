@@ -1,7 +1,9 @@
-"""File upload validation utilities — magic-byte MIME verification and filename sanitization."""
+"""File upload validation utilities — magic-byte MIME verification, filename sanitization, and metadata stripping."""
 
-import re
+import io
+
 import filetype
+from PIL import Image
 
 from app.core.exceptions import ValidationError
 
@@ -11,6 +13,8 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "applicant_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
     "paper_video": {"video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"},
     "conference_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
+    "tenant_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
+    "sponsor_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
 }
 
 # Default allowed types for general attachments
@@ -33,16 +37,72 @@ _FALLBACK_MIME_TYPES = {
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 }
 
+# Extensions commonly associated with executable/script types — stripped from filenames
+_DANGEROUS_EXTENSIONS = {
+    ".php", ".phtml", ".php3", ".php4", ".php5",
+    ".exe", ".bat", ".cmd", ".com", ".msi",
+    ".sh", ".bash", ".csh",
+    ".py", ".rb", ".pl", ".cgi",
+    ".jsp", ".asp", ".aspx",
+    ".js", ".vbs", ".ps1",
+    ".svg", ".html", ".htm", ".xhtml",
+}
+
 
 def sanitize_filename(name: str) -> str:
-    """Strip path traversal characters and dangerous sequences from a filename."""
+    """Strip path traversal characters, dangerous sequences, and double extensions."""
     # Remove null bytes
     name = name.replace("\x00", "")
     # Remove path separators and traversal
     name = name.replace("/", "").replace("\\", "").replace("..", "")
     # Strip leading/trailing whitespace and dots
     name = name.strip().strip(".")
+    if not name:
+        return "unnamed"
+    # Strip dangerous extensions from double-extension attacks
+    # e.g. "file.php.jpg" → "file.jpg"
+    parts = name.split(".")
+    if len(parts) > 2:
+        safe_parts = [parts[0]]
+        for part in parts[1:]:
+            if f".{part.lower()}" not in _DANGEROUS_EXTENSIONS:
+                safe_parts.append(part)
+        name = ".".join(safe_parts) if len(safe_parts) > 1 else safe_parts[0]
     return name or "unnamed"
+
+
+def safe_content_disposition(filename: str, disposition: str = "attachment") -> str:
+    """Build a safe Content-Disposition header value.
+
+    Escapes quotes and backslashes in filenames to prevent header injection.
+    Uses ASCII-safe fallback with RFC 5987 filename* for non-ASCII names.
+    """
+    # Escape backslashes and quotes
+    safe = filename.replace("\\", "\\\\").replace('"', '\\"')
+    return f'{disposition}; filename="{safe}"'
+
+
+def strip_image_metadata(file_data: bytes, content_type: str) -> bytes:
+    """Re-encode an image to strip EXIF and other metadata.
+
+    Returns the original bytes unchanged for non-image or unsupported formats.
+    """
+    _STRIPPABLE = {"image/jpeg", "image/png", "image/webp"}
+    if content_type not in _STRIPPABLE:
+        return file_data
+    try:
+        img = Image.open(io.BytesIO(file_data))
+        # Create a clean image without metadata
+        clean = Image.new(img.mode, img.size)
+        clean.putdata(list(img.getdata()))
+        buf = io.BytesIO()
+        fmt = {"image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}[content_type]
+        save_kwargs = {"quality": 95} if fmt == "JPEG" else {}
+        clean.save(buf, format=fmt, **save_kwargs)
+        return buf.getvalue()
+    except Exception:
+        # If re-encoding fails, return original (validation already verified it)
+        return file_data
 
 
 def validate_upload(

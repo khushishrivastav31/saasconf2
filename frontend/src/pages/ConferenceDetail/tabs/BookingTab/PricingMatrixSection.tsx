@@ -3,7 +3,7 @@ import type {
   BookingOption,
   PlatformCurrency,
 } from "../../../../types";
-import { DeleteIcon } from "../../icons";
+import { EditIcon, DeleteIcon } from "../../icons";
 
 export interface PricingMatrixSectionProps {
   isAdmin: boolean;
@@ -198,13 +198,16 @@ export default function PricingMatrixSection({
                           </span>
                         )}
                         {isAdmin && (
-                          <div className="flex gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="text-xs text-primary-500 font-medium">Edit</span>
+                          <div className="flex gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity items-center">
+                            <span className="text-primary-500" title="Edit period">
+                              <EditIcon />
+                            </span>
                             <button
                               onClick={(e) => { e.stopPropagation(); onDeleteTarget({ type: "period", id: period.id, name: period.name }); }}
-                              className="text-xs text-red-400 hover:text-red-600 font-medium"
+                              className="text-gray-300 hover:text-red-500 transition-colors"
+                              title="Delete period"
                             >
-                              Delete
+                              <DeleteIcon />
                             </button>
                           </div>
                         )}

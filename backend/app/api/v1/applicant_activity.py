@@ -12,6 +12,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
+from app.core.file_validation import safe_content_disposition
 from app.core.pagination import paginate
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 
@@ -338,6 +339,6 @@ async def export_applicant_activities(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": safe_content_disposition(filename),
         },
     )

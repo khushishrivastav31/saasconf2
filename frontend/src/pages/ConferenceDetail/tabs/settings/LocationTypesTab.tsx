@@ -138,7 +138,7 @@ function ConferenceLocationTypesTab({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data?.items.map((locationType) => (
+              {data?.items?.map((locationType) => (
                 <tr key={locationType.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
@@ -207,6 +207,7 @@ function ConferenceLocationTypesTab({
       )}
 
       <ConferenceLocationTypeModal
+        key={editingType?.id ?? "new"}
         open={isModalOpen}
         locationType={editingType}
         onClose={handleCloseModal}

@@ -39,6 +39,7 @@ export default function ConferenceLocationsTab({
     location_type: "room" as LocationCreate["location_type"],
     description: "",
     capacity: "" as string | number,
+    parent_id: "" as string,
     building: "",
     floor: "",
     city: "",
@@ -151,6 +152,7 @@ export default function ConferenceLocationsTab({
         location_type: "room",
         description: "",
         capacity: "",
+        parent_id: "",
         building: "",
         floor: "",
         city: "",
@@ -223,6 +225,7 @@ export default function ConferenceLocationsTab({
     if (createForm.description) payload.description = createForm.description;
     if (createForm.capacity !== "")
       payload.capacity = Number(createForm.capacity);
+    if (createForm.parent_id) payload.parent_id = createForm.parent_id;
     if (createForm.building) payload.building = createForm.building;
     if (createForm.floor) payload.floor = createForm.floor;
     if (createForm.city) payload.city = createForm.city;
@@ -238,6 +241,41 @@ export default function ConferenceLocationsTab({
   const linkedIds = new Set(data?.items?.map((l) => l.id) || []);
   const unlinkableLocations =
     allLocations?.items?.filter((l) => !linkedIds.has(l.id)) || [];
+
+  // Organize locations into hierarchy: venues (no parent) and their children
+  const locationTree = useMemo(() => {
+    if (!data?.items) return [];
+    const items = data.items;
+    const parentLocations = items.filter((loc) => !loc.parent_id);
+    const childrenByParent = new Map<string, Location[]>();
+
+    items.forEach((loc) => {
+      if (loc.parent_id) {
+        const children = childrenByParent.get(loc.parent_id) || [];
+        children.push(loc);
+        childrenByParent.set(loc.parent_id, children);
+      }
+    });
+
+    // Build flat list with hierarchy info
+    const result: { location: Location; level: number; hasChildren: boolean }[] = [];
+    parentLocations.forEach((parent) => {
+      const children = childrenByParent.get(parent.id) || [];
+      result.push({ location: parent, level: 0, hasChildren: children.length > 0 });
+      children.forEach((child) => {
+        result.push({ location: child, level: 1, hasChildren: false });
+      });
+    });
+
+    // Add orphan children (parent not in current conference) at top level
+    items.forEach((loc) => {
+      if (loc.parent_id && !items.find((p) => p.id === loc.parent_id)) {
+        result.push({ location: loc, level: 0, hasChildren: false });
+      }
+    });
+
+    return result;
+  }, [data?.items]);
 
   return (
     <div>
@@ -337,19 +375,48 @@ export default function ConferenceLocationsTab({
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700">
-              Capacity
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={createForm.capacity}
-              onChange={(e) =>
-                setCreateForm({ ...createForm, capacity: e.target.value })
-              }
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700">
+                Parent Location
+              </label>
+              <select
+                value={createForm.parent_id}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, parent_id: e.target.value })
+                }
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">None (top-level venue)</option>
+                {data?.items
+                  ?.filter((loc) => !loc.parent_id) // Only show top-level locations as parents
+                  .map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </option>
+                  ))}
+              </select>
+              <p className="mt-0.5 text-xs text-gray-400">
+                Select a venue if this is a room within it
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700">
+                Capacity
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={createForm.capacity}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, capacity: e.target.value })
+                }
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              />
+              <p className="mt-0.5 text-xs text-gray-400">
+                Max attendees
+              </p>
+            </div>
           </div>
           {isVirtual ? (
             <div className="grid grid-cols-2 gap-3">
@@ -473,48 +540,107 @@ export default function ConferenceLocationsTab({
         </form>
       )}
 
-      {/* Detail Panel (tree is in the sidebar) */}
       {isLoading ? (
         <div className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
         </div>
-      ) : selectedLocation ? (
-        <LocationDetailPanel
-          location={selectedLocation}
-          onSave={async (updateData) => {
-            await locationUpdateMutation.mutateAsync({
-              id: selectedLocation.id,
-              data: updateData,
-            });
-          }}
-          onDelete={() => setShowDeleteLocationConfirm(true)}
-          locationTypes={locationTypesData?.items}
-        />
       ) : data?.items && data.items.length > 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <svg
-            className="w-12 h-12 text-gray-300 mb-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-          <p className="text-sm font-medium text-gray-500">Select a location</p>
-          <p className="text-xs text-gray-400 mt-1">
-            Choose a location from the sidebar to view and edit its details
-          </p>
+        <div className="flex gap-6">
+          {/* Location List */}
+          <div className="w-64 flex-shrink-0">
+            <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+              <div className="px-3 py-2 bg-gray-100 border-b border-gray-200">
+                <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Locations
+                </h5>
+              </div>
+              <ul className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+                {locationTree.map(({ location: loc, level, hasChildren }) => (
+                  <li key={loc.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLocationId(loc.id)}
+                      className={`w-full flex items-center gap-2 py-2.5 text-sm text-left transition-colors ${
+                        loc.id === selectedLocationId
+                          ? "bg-primary-50 text-primary-700 font-medium"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                      style={{ paddingLeft: level === 0 ? "0.75rem" : "1.75rem" }}
+                    >
+                      {level === 0 && hasChildren ? (
+                        <svg className="flex-shrink-0 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      ) : level === 1 ? (
+                        <svg className="flex-shrink-0 w-3 h-3 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      ) : (
+                        <span
+                          className={`flex-shrink-0 w-2 h-2 rounded-full ${
+                            loc.is_active ? "bg-green-400" : "bg-red-400"
+                          }`}
+                        />
+                      )}
+                      <span className="truncate flex-1">{loc.name}</span>
+                      {loc.capacity && (
+                        <span className="text-xs text-gray-400" title="Capacity">
+                          {loc.capacity}
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-400 w-12 text-right">
+                        {loc.location_type}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Detail Panel */}
+          <div className="flex-1 min-w-0">
+            {selectedLocation ? (
+              <LocationDetailPanel
+                location={selectedLocation}
+                onSave={async (updateData) => {
+                  await locationUpdateMutation.mutateAsync({
+                    id: selectedLocation.id,
+                    data: updateData,
+                  });
+                }}
+                onDelete={() => setShowDeleteLocationConfirm(true)}
+                locationTypes={locationTypesData?.items}
+                allLocations={data?.items}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 rounded-lg border border-gray-200">
+                <svg
+                  className="w-12 h-12 text-gray-300 mb-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                <p className="text-sm font-medium text-gray-500">Select a location</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Choose a location from the list to view and edit its details
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="text-center py-8 text-sm text-gray-500 bg-gray-50 rounded-lg border border-gray-200">

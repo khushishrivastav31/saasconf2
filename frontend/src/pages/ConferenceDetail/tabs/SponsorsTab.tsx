@@ -369,8 +369,9 @@ function ConferenceSponsorsTab({
                       }
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">
-                      Active
+                    <span className="text-sm text-gray-700">
+                      <span className="font-medium">Visible</span>
+                      <span className="text-gray-500 ml-1">(show on website)</span>
                     </span>
                   </label>
                 </div>
@@ -657,7 +658,7 @@ function ConferenceSponsorsTab({
                       City
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Active
+                      Visible
                     </th>
                     {isAdmin && (
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -691,7 +692,7 @@ function ConferenceSponsorsTab({
                               : "bg-gray-100 text-gray-700"
                           }`}
                         >
-                          {sponsor.is_active ? "Active" : "Inactive"}
+                          {sponsor.is_active ? "Yes" : "No"}
                         </span>
                       </td>
                       {isAdmin && (

@@ -14,7 +14,10 @@ import {
   ServiceProvidersIcon,
   InvoicesIcon,
   ProgramIcon,
+  ProgramDesignIcon,
+  ProgramBuildIcon,
   AnalyticsIcon,
+  MessagingIcon,
   CfpTagIcon,
   CfpUsersGroupIcon,
   CfpInboxIcon,
@@ -34,6 +37,7 @@ export type SectionId =
   | "team"
   | "social"
   | "booking"
+  | "messaging"
   | "volunteers"
   | "locations"
   | "cfp"
@@ -52,6 +56,8 @@ export type SectionId =
   | "analytics"
   | "service_providers"
   | "program"
+  | "program-design"
+  | "program-build"
   | "invoices"
   | "settings";
 
@@ -74,46 +80,11 @@ export const coreSections: SectionDef[] = [
   { id: "team", name: "Team", icon: UsersIcon },
   { id: "social", name: "Social Media", icon: ShareIcon },
   { id: "booking", name: "Booking Options", icon: BookingIcon },
+  { id: "messaging", name: "Messages", icon: MessagingIcon },
   { id: "settings", name: "Settings", icon: SettingsGearIcon },
 ];
 
 export const moduleSections: SectionDef[] = [
-  {
-    id: "sessions",
-    name: "Sessions",
-    icon: SessionsIcon,
-    moduleCode: "sessions",
-  },
-  {
-    id: "speakers",
-    name: "Speakers",
-    icon: SpeakerIcon,
-    moduleCode: "speakers",
-  },
-  {
-    id: "attendees",
-    name: "Attendees",
-    icon: AttendeesIcon,
-    moduleCode: "attendees",
-  },
-  {
-    id: "volunteers",
-    name: "Volunteers",
-    icon: PeopleIcon,
-    moduleCode: "volunteers",
-  },
-  {
-    id: "sponsors",
-    name: "Sponsors",
-    icon: SponsorsIcon,
-    moduleCode: "sponsors",
-  },
-  {
-    id: "locations",
-    name: "Locations",
-    icon: MapIcon,
-    moduleCode: "locations",
-  },
   {
     id: "cfp",
     name: "Call for Papers",
@@ -151,6 +122,52 @@ export const moduleSections: SectionDef[] = [
     ],
   },
   {
+    id: "sessions",
+    name: "Sessions",
+    icon: SessionsIcon,
+    moduleCode: "sessions",
+  },
+  {
+    id: "program",
+    name: "Program",
+    icon: ProgramIcon,
+    moduleCode: "program",
+    children: [
+      { id: "program-design", name: "Design", icon: ProgramDesignIcon },
+      { id: "program-build", name: "Build", icon: ProgramBuildIcon },
+    ],
+  },
+  {
+    id: "speakers",
+    name: "Speakers",
+    icon: SpeakerIcon,
+    moduleCode: "speakers",
+  },
+  {
+    id: "attendees",
+    name: "Attendees",
+    icon: AttendeesIcon,
+    moduleCode: "attendees",
+  },
+  {
+    id: "volunteers",
+    name: "Volunteers",
+    icon: PeopleIcon,
+    moduleCode: "volunteers",
+  },
+  {
+    id: "sponsors",
+    name: "Sponsors",
+    icon: SponsorsIcon,
+    moduleCode: "sponsors",
+  },
+  {
+    id: "locations",
+    name: "Locations",
+    icon: MapIcon,
+    moduleCode: "locations",
+  },
+  {
     id: "service_providers",
     name: "Service Providers",
     icon: ServiceProvidersIcon,
@@ -161,12 +178,6 @@ export const moduleSections: SectionDef[] = [
     name: "Invoices",
     icon: InvoicesIcon,
     moduleCode: "invoices",
-  },
-  {
-    id: "program",
-    name: "Program",
-    icon: ProgramIcon,
-    moduleCode: "program",
   },
   {
     id: "analytics",

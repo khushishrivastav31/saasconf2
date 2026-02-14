@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
+from app.core.html_sanitize import sanitize_html
 from app.core.validators import validate_phone
 
 # Valid values for the configurable required-field arrays
@@ -72,11 +73,20 @@ class CFPBase(BaseModel):
         if invalid:
             raise ValueError(f"Invalid paper fields: {', '.join(sorted(invalid))}")
         return v
+
     code_of_conduct: str | None = None
     incentives_conditions: str | None = None
     tips_for_submission: str | None = None
     guidelines_for_submissions: str | None = None
     faqs: str | None = None
+
+    @field_validator(
+        "code_of_conduct", "incentives_conditions", "tips_for_submission",
+        "guidelines_for_submissions", "faqs",
+    )
+    @classmethod
+    def sanitize_rich_text(cls, v: str | None) -> str | None:
+        return sanitize_html(v) if v else v
 
 
 class CFPCreate(CFPBase):
@@ -121,12 +131,21 @@ class CFPUpdate(BaseModel):
             if invalid:
                 raise ValueError(f"Invalid paper fields: {', '.join(sorted(invalid))}")
         return v
+
     settings: dict | None = None
     code_of_conduct: str | None = None
     incentives_conditions: str | None = None
     tips_for_submission: str | None = None
     guidelines_for_submissions: str | None = None
     faqs: str | None = None
+
+    @field_validator(
+        "code_of_conduct", "incentives_conditions", "tips_for_submission",
+        "guidelines_for_submissions", "faqs",
+    )
+    @classmethod
+    def sanitize_rich_text(cls, v: str | None) -> str | None:
+        return sanitize_html(v) if v else v
 
 
 class CFPResponse(BaseModel):
@@ -602,6 +621,7 @@ class PaperCreate(BaseModel):
     level: PaperLevel | None = None
     learning_objectives: str | None = None
     importance: str | None = None
+    custom_field_answers: dict | None = None
 
     @field_validator("co_speaker_ids")
     @classmethod
@@ -624,6 +644,7 @@ class PaperUpdate(BaseModel):
     level: PaperLevel | None = None
     learning_objectives: str | None = None
     importance: str | None = None
+    custom_field_answers: dict | None = None
     status: PaperStatus | None = None
 
     @field_validator("co_speaker_ids")
@@ -656,6 +677,7 @@ class PaperResponse(BaseModel):
     level: str | None
     learning_objectives: str | None
     importance: str | None
+    custom_field_answers: dict | None = None
     status: str
     display_status: str | None = None
     video_url: str | None = None

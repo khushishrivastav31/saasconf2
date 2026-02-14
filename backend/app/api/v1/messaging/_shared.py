@@ -1,0 +1,237 @@
+"""Shared helpers and constants for admin messaging endpoints."""
+
+import logging
+import uuid
+from datetime import datetime, timezone
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from fastapi.responses import Response
+from sqlalchemy import delete as sa_delete, func, select
+from sqlalchemy.orm import selectinload
+
+logger = logging.getLogger(__name__)
+
+from app.core.dependencies import (
+    CurrentUserDep,
+    DbSessionDep,
+    check_conference_admin_access,
+    get_client_ip,
+    require_module,
+)
+from app.config import get_settings
+from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
+from app.core.file_validation import validate_upload, sanitize_filename
+from app.models.attachment import Attachment
+from app.models.audit import AuditLog
+from app.models.cfp import CFPApplicant, CFPPaper, CFPCommitteeMember
+from app.models.conference import Conference
+from app.models.tenant import Tenant
+from app.models.messaging import Message, MessageParticipant, MessageThread
+from app.models.user import User
+from app.schemas.messaging import (
+    AdminBulkSend,
+    AdminCreateThread,
+    BulkSendResponse,
+    BulkThreadSummary,
+    CreateThreadResponse,
+    MessageAttachmentInfo,
+    MessageResponse,
+    ParticipantInfo,
+    ReplyCreate,
+    SenderInfo,
+    ThreadDetailResponse,
+    ThreadListItem,
+    ThreadListResponse,
+    UnreadCountResponse,
+)
+from app.schemas.attachment import AttachmentResponse
+
+MODULE_CODE = "cfp"
+
+
+async def _notify_participants(
+    db,
+    thread,
+    sender_type: str,
+    sender_id: UUID,
+    conference_name: str,
+    tenant_slug: str,
+    conference_id: UUID,
+    base_url: str = "http://localhost:3002",
+) -> None:
+    """Send email notifications to other participants if they have notifications enabled."""
+    from app.core.email import send_new_message_notification
+
+    # Get all participants except the sender
+    result = await db.execute(
+        select(MessageParticipant).where(
+            MessageParticipant.thread_id == thread.id,
+            ~(
+                (MessageParticipant.participant_type == sender_type)
+                & (MessageParticipant.participant_id == sender_id)
+            ),
+        )
+    )
+    other_participants = result.scalars().all()
+
+    for p in other_participants:
+        # Check notification preference
+        if p.participant_type == "applicant":
+            applicant_result = await db.execute(
+                select(CFPApplicant).where(CFPApplicant.id == p.participant_id)
+            )
+            applicant = applicant_result.scalar_one_or_none()
+            if not applicant or not applicant.message_notifications_enabled:
+                continue
+            messages_link = f"{base_url}/{tenant_slug}/portal/messages/{thread.id}"
+            try:
+                await send_new_message_notification(
+                    db,
+                    email=applicant.email,
+                    first_name=applicant.first_name,
+                    conference_id=conference_id,
+                    conference_name=conference_name,
+                    message_subject=thread.subject,
+                    messages_link=messages_link,
+                )
+            except Exception:
+                logger.exception(f"Failed to send message notification to {applicant.email}")
+        elif p.participant_type == "user":
+            user_result = await db.execute(
+                select(User).where(User.id == p.participant_id)
+            )
+            user = user_result.scalar_one_or_none()
+            if not user or not user.message_notifications_enabled:
+                continue
+            messages_link = f"http://localhost:3001/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
+            try:
+                await send_new_message_notification(
+                    db,
+                    email=user.email,
+                    first_name=user.first_name or "",
+                    conference_id=conference_id,
+                    conference_name=conference_name,
+                    message_subject=thread.subject,
+                    messages_link=messages_link,
+                )
+            except Exception:
+                logger.exception(f"Failed to send message notification to {user.email}")
+
+
+async def _check_messaging_access(
+    db, current_user, conference_id: UUID
+) -> None:
+    """Verify user has admin access to this conference."""
+    if current_user.is_super_admin:
+        return
+    if current_user.is_tenant_admin:
+        return
+    has_access = await check_conference_admin_access(
+        db, current_user.user_id, conference_id
+    )
+    if not has_access:
+        raise AuthorizationError("Admin access to this conference required")
+
+
+async def _get_conference_for_tenant(
+    db, conference_id: UUID, tenant_id: UUID
+) -> Conference:
+    """Fetch conference ensuring tenant ownership."""
+    result = await db.execute(
+        select(Conference).where(
+            Conference.id == conference_id,
+            Conference.tenant_id == tenant_id,
+        )
+    )
+    conference = result.scalar_one_or_none()
+    if not conference:
+        raise NotFoundError("Conference not found")
+    return conference
+
+
+async def _resolve_senders(
+    db, sender_pairs: set[tuple[str, UUID]]
+) -> dict[tuple[str, UUID], SenderInfo]:
+    """Batch-resolve sender info from (type, id) pairs."""
+    result_map: dict[tuple[str, UUID], SenderInfo] = {}
+    user_ids = [pid for ptype, pid in sender_pairs if ptype == "user"]
+    applicant_ids = [pid for ptype, pid in sender_pairs if ptype == "applicant"]
+
+    if user_ids:
+        result = await db.execute(select(User).where(User.id.in_(user_ids)))
+        for user in result.scalars():
+            result_map[("user", user.id)] = SenderInfo(
+                id=user.id,
+                type="user",
+                first_name=user.first_name or "",
+                last_name=user.last_name or "",
+                email=user.email,
+            )
+
+    if applicant_ids:
+        result = await db.execute(
+            select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids))
+        )
+        for applicant in result.scalars():
+            result_map[("applicant", applicant.id)] = SenderInfo(
+                id=applicant.id,
+                type="applicant",
+                first_name=applicant.first_name,
+                last_name=applicant.last_name,
+                email=applicant.email,
+            )
+
+    return result_map
+
+
+def _strip_html(html: str, max_len: int = 120) -> str:
+    """Strip HTML tags for preview text."""
+    import re
+    text = re.sub(r"<[^>]+>", "", html)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) > max_len:
+        return text[:max_len] + "..."
+    return text
+
+
+async def _fetch_message_attachments(
+    db, message_ids: list[UUID]
+) -> dict[UUID, list[MessageAttachmentInfo]]:
+    """Batch-fetch attachments for messages."""
+    if not message_ids:
+        return {}
+    result = await db.execute(
+        select(Attachment).where(
+            Attachment.entity_type == "message",
+            Attachment.entity_id.in_(message_ids),
+        )
+    )
+    attachment_map: dict[UUID, list[MessageAttachmentInfo]] = {}
+    for a in result.scalars():
+        attachment_map.setdefault(a.entity_id, []).append(
+            MessageAttachmentInfo(
+                id=a.id,
+                filename=a.filename,
+                content_type=a.content_type,
+                file_size=a.file_size,
+            )
+        )
+    return attachment_map
+
+
+async def _link_attachments_to_message(
+    db, attachment_ids: list[UUID], message_id: UUID, tenant_id: UUID
+) -> None:
+    """Update pre-uploaded attachments to point to the real message."""
+    if not attachment_ids:
+        return
+    result = await db.execute(
+        select(Attachment).where(
+            Attachment.id.in_(attachment_ids),
+            Attachment.tenant_id == tenant_id,
+            Attachment.entity_type == "message",
+        )
+    )
+    for a in result.scalars():
+        a.entity_id = message_id

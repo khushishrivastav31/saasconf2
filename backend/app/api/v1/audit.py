@@ -13,6 +13,7 @@ from sqlalchemy import String, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import DbSessionDep, SuperAdminDep
+from app.core.file_validation import safe_content_disposition
 from app.core.pagination import paginate
 from app.models.audit import AuditLog
 from app.models.tenant import Tenant
@@ -304,6 +305,6 @@ async def export_audit_logs(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": safe_content_disposition(filename),
         },
     )

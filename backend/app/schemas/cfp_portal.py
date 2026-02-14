@@ -58,6 +58,19 @@ class VerifyEmailRequest(BaseModel):
     token: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Forgot password request — send a reset link."""
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Reset password with token."""
+
+    token: str
+    new_password: str = Field(..., min_length=6)
+
+
 # --- Profile Schemas ---
 
 class ApplicantProfileResponse(BaseModel):
@@ -76,6 +89,7 @@ class ApplicantProfileResponse(BaseModel):
     needs_accessibility: bool = False
     accessibility_details: str | None = None
     agrees_to_recording: bool = False
+    message_notifications_enabled: bool = True
     picture_url: str | None = None
     video_url: str | None = None
     created_at: datetime
@@ -98,6 +112,7 @@ class ApplicantProfileUpdate(BaseModel):
     needs_accessibility: bool | None = None
     accessibility_details: str | None = None
     agrees_to_recording: bool | None = None
+    message_notifications_enabled: bool | None = None
 
 
 # --- Conference / CFP Schemas ---
@@ -206,6 +221,7 @@ class PortalPaperResponse(BaseModel):
     level: str | None = None
     learning_objectives: str | None = None
     importance: str | None = None
+    custom_field_answers: dict | None = None
     status: str
     video_url: str | None = None
     is_main_speaker: bool = True
@@ -235,6 +251,7 @@ class PortalPaperCreateRequest(BaseModel):
     level: str | None = None
     learning_objectives: str | None = None
     importance: str | None = None
+    custom_field_answers: dict | None = None
     cospeaker_emails: list[EmailStr] = Field(default_factory=list, max_length=3)
 
 
@@ -248,6 +265,7 @@ class PortalPaperUpdateRequest(BaseModel):
     level: str | None = None
     learning_objectives: str | None = None
     importance: str | None = None
+    custom_field_answers: dict | None = None
     cospeaker_emails: list[EmailStr] | None = Field(None, max_length=3)
 
 

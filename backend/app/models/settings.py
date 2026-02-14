@@ -284,6 +284,95 @@ class BookingOption(Base):
         return f"<BookingOption {self.name}>"
 
 
+class BookingPackage(Base):
+    """
+    Conference-scoped booking package (bundle of options).
+
+    Packages are compositions of booking options (e.g., "Tutorial Only",
+    "Tutorial + Day 1", "Full Conference"). Package prices are calculated
+    dynamically by summing component option prices for each period.
+    """
+
+    __tablename__ = "booking_packages"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    conference_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("conferences.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("idx_booking_packages_tenant", "tenant_id"),
+        Index("idx_booking_packages_conference", "conference_id"),
+        Index("idx_booking_packages_name", "tenant_id", "conference_id", "name", unique=True),
+    )
+
+    def __repr__(self) -> str:
+        return f"<BookingPackage {self.name}>"
+
+
+class BookingPackageOption(Base):
+    """
+    Junction table linking packages to their component options.
+
+    When a package is created, entries are added here for each included option.
+    """
+
+    __tablename__ = "booking_package_options"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    booking_package_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("booking_packages.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    booking_option_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("booking_options.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("idx_booking_package_options_tenant", "tenant_id"),
+        Index("idx_booking_package_options_package", "booking_package_id"),
+        Index("idx_booking_package_options_option", "booking_option_id"),
+        Index("uq_booking_package_option", "booking_package_id", "booking_option_id", unique=True),
+    )
+
+    def __repr__(self) -> str:
+        return f"<BookingPackageOption package={self.booking_package_id} option={self.booking_option_id}>"
+
+
 class DiscountCode(Base):
     """
     Conference-scoped discount code definitions.

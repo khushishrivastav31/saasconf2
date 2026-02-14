@@ -118,7 +118,7 @@ export default function PronounOptionsTab({ conference, isAdmin }: { conference:
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data?.items.map((pronoun) => (
+              {data?.items?.map((pronoun) => (
                 <tr key={pronoun.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">

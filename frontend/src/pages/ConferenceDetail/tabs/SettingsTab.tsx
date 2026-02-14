@@ -7,143 +7,283 @@ import ConferenceSessionTypesTab from "./settings/SessionTypesTab";
 import ConferenceCommitteeRolesTab from "./settings/CommitteeRolesTab";
 import ConferenceScoreScalesTab from "./settings/ScoreScalesTab";
 import ConferenceReviewCriteriaTab from "./settings/ReviewCriteriaTab";
+import PaperFormBuilderTab from "./settings/PaperFormBuilderTab";
 import PronounOptionsTab from "../../PronounOptionsTab";
 import EmailTemplatesTab from "./settings/EmailTemplatesTab";
+import EmailSettingsTab from "./settings/EmailSettingsTab";
 
-type ConferenceSettingsActiveTab = "volunteer-roles" | "location-types" | "sponsor-packages" | "session-types" | "committee-roles" | "score-scales" | "review-criteria" | "pronoun-options" | "email-templates";
+type ConferenceSettingsActiveTab =
+  | "volunteer-roles"
+  | "location-types"
+  | "sponsor-packages"
+  | "session-types"
+  | "committee-roles"
+  | "score-scales"
+  | "review-criteria"
+  | "paper-form-builder"
+  | "pronoun-options"
+  | "email-templates"
+  | "email-settings";
 
-function ConferenceSettingsTab({ conference, isAdmin }: { conference: Conference; isAdmin: boolean }) {
+interface SettingsNavItem {
+  key: ConferenceSettingsActiveTab;
+  label: string;
+  icon: React.ReactNode;
+  group: string;
+}
+
+const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
+  // People & Roles
+  {
+    key: "volunteer-roles",
+    label: "Volunteer Roles",
+    group: "People & Roles",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
+    key: "committee-roles",
+    label: "Committee Roles",
+    group: "People & Roles",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+    ),
+  },
+  {
+    key: "pronoun-options",
+    label: "Pronoun Options",
+    group: "People & Roles",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    ),
+  },
+  // Conference Setup
+  {
+    key: "location-types",
+    label: "Location Types",
+    group: "Conference Setup",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  {
+    key: "session-types",
+    label: "Session Types",
+    group: "Conference Setup",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    key: "sponsor-packages",
+    label: "Sponsor Packages",
+    group: "Conference Setup",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  // CFP & Reviews
+  {
+    key: "paper-form-builder",
+    label: "Paper Form",
+    group: "CFP & Reviews",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
+  {
+    key: "score-scales",
+    label: "Score Scales",
+    group: "CFP & Reviews",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+      </svg>
+    ),
+  },
+  {
+    key: "review-criteria",
+    label: "Review Criteria",
+    group: "CFP & Reviews",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    ),
+  },
+  // Communication
+  {
+    key: "email-settings",
+    label: "Email Settings",
+    group: "Communication",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  {
+    key: "email-templates",
+    label: "Email Templates",
+    group: "Communication",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+];
+
+// Group items by their group property
+const groupedItems = SETTINGS_NAV_ITEMS.reduce(
+  (acc, item) => {
+    if (!acc[item.group]) {
+      acc[item.group] = [];
+    }
+    acc[item.group].push(item);
+    return acc;
+  },
+  {} as Record<string, SettingsNavItem[]>
+);
+
+const GROUP_ORDER = ["People & Roles", "Conference Setup", "CFP & Reviews", "Communication"];
+
+function ConferenceSettingsTab({
+  conference,
+  isAdmin,
+}: {
+  conference: Conference;
+  isAdmin: boolean;
+}) {
   const [activeTab, setActiveTab] =
     useState<ConferenceSettingsActiveTab>("volunteer-roles");
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "volunteer-roles":
+        return <ConferenceVolunteerRolesTab conference={conference} isAdmin={isAdmin} />;
+      case "location-types":
+        return <ConferenceLocationTypesTab conference={conference} isAdmin={isAdmin} />;
+      case "sponsor-packages":
+        return <ConferenceSponsorPackagesTab conference={conference} isAdmin={isAdmin} />;
+      case "session-types":
+        return <ConferenceSessionTypesTab conference={conference} isAdmin={isAdmin} />;
+      case "committee-roles":
+        return <ConferenceCommitteeRolesTab conference={conference} isAdmin={isAdmin} />;
+      case "score-scales":
+        return <ConferenceScoreScalesTab conference={conference} isAdmin={isAdmin} />;
+      case "review-criteria":
+        return <ConferenceReviewCriteriaTab conference={conference} isAdmin={isAdmin} />;
+      case "paper-form-builder":
+        return <PaperFormBuilderTab conference={conference} isAdmin={isAdmin} />;
+      case "pronoun-options":
+        return <PronounOptionsTab conference={conference} isAdmin={isAdmin} />;
+      case "email-templates":
+        return <EmailTemplatesTab conference={conference} isAdmin={isAdmin} />;
+      case "email-settings":
+        return <EmailSettingsTab conference={conference} isAdmin={isAdmin} />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div>
-      <div className="sm:flex sm:items-center sm:justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Conference Settings
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage volunteer roles, location types, sponsor packages, session types, review configuration, pronoun options, and email templates for this conference
-          </p>
+    <div className="flex gap-6">
+      {/* Vertical Sidebar Navigation */}
+      <nav
+        className={`flex-shrink-0 transition-all duration-200 ${
+          isCollapsed ? "w-14" : "w-56"
+        }`}
+      >
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {/* Collapse Toggle */}
+          <div className="flex items-center justify-end px-2 py-2 border-b border-gray-200 bg-gray-50">
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              <svg
+                className={`w-5 h-5 transition-transform duration-200 ${
+                  isCollapsed ? "rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {GROUP_ORDER.map((group, groupIndex) => (
+            <div key={group}>
+              {groupIndex > 0 && <div className="border-t border-gray-200" />}
+              {!isCollapsed && (
+                <div className="px-3 py-2 bg-gray-50">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    {group}
+                  </h3>
+                </div>
+              )}
+              <ul className="py-1">
+                {groupedItems[group]?.map((item) => (
+                  <li key={item.key}>
+                    <button
+                      onClick={() => setActiveTab(item.key)}
+                      title={isCollapsed ? item.label : undefined}
+                      className={`w-full flex items-center gap-3 py-2 text-sm transition-colors ${
+                        isCollapsed ? "justify-center px-2" : "px-3"
+                      } ${
+                        activeTab === item.key
+                          ? "bg-primary-50 text-primary-700 border-l-2 border-primary-600"
+                          : "text-gray-700 hover:bg-gray-50 border-l-2 border-transparent"
+                      }`}
+                    >
+                      <span
+                        className={
+                          activeTab === item.key ? "text-primary-600" : "text-gray-400"
+                        }
+                      >
+                        {item.icon}
+                      </span>
+                      {!isCollapsed && (
+                        <span className="font-medium truncate">{item.label}</span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
-      </div>
+      </nav>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab("volunteer-roles")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "volunteer-roles"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Volunteer Roles
-          </button>
-          <button
-            onClick={() => setActiveTab("location-types")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "location-types"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Location Types
-          </button>
-          <button
-            onClick={() => setActiveTab("sponsor-packages")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "sponsor-packages"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Sponsor Packages
-          </button>
-          <button
-            onClick={() => setActiveTab("session-types")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "session-types"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Session Types
-          </button>
-          <button
-            onClick={() => setActiveTab("committee-roles")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "committee-roles"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Committee Roles
-          </button>
-          <button
-            onClick={() => setActiveTab("score-scales")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "score-scales"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Score Scales
-          </button>
-          <button
-            onClick={() => setActiveTab("review-criteria")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "review-criteria"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Review Criteria
-          </button>
-          <button
-            onClick={() => setActiveTab("pronoun-options")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "pronoun-options"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Pronoun Options
-          </button>
-          <button
-            onClick={() => setActiveTab("email-templates")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "email-templates"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Email Templates
-          </button>
-        </nav>
-      </div>
-
-      {activeTab === "volunteer-roles" ? (
-        <ConferenceVolunteerRolesTab conference={conference} isAdmin={isAdmin} />
-      ) : activeTab === "location-types" ? (
-        <ConferenceLocationTypesTab conference={conference} isAdmin={isAdmin} />
-      ) : activeTab === "sponsor-packages" ? (
-        <ConferenceSponsorPackagesTab conference={conference} isAdmin={isAdmin} />
-      ) : activeTab === "session-types" ? (
-        <ConferenceSessionTypesTab conference={conference} isAdmin={isAdmin} />
-      ) : activeTab === "committee-roles" ? (
-        <ConferenceCommitteeRolesTab conference={conference} isAdmin={isAdmin} />
-      ) : activeTab === "score-scales" ? (
-        <ConferenceScoreScalesTab conference={conference} isAdmin={isAdmin} />
-      ) : activeTab === "review-criteria" ? (
-        <ConferenceReviewCriteriaTab conference={conference} isAdmin={isAdmin} />
-      ) : activeTab === "pronoun-options" ? (
-        <PronounOptionsTab conference={conference} isAdmin={isAdmin} />
-      ) : activeTab === "email-templates" ? (
-        <EmailTemplatesTab conference={conference} isAdmin={isAdmin} />
-      ) : null}
+      {/* Content Area */}
+      <div className="flex-1 min-w-0">{renderContent()}</div>
     </div>
   );
 }

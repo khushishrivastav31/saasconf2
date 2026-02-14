@@ -5,6 +5,8 @@ import type {
   BookingPeriod,
   BookingPeriodCreate,
   BookingOptionCreate,
+  BookingPackage,
+  BookingPackageCreate,
   BookingMatrix,
   PlatformCurrency,
   PaginatedResponse,
@@ -16,9 +18,12 @@ import ConfirmDialog from "../../../../components/ConfirmDialog";
 import { ErrorBanner } from "../../../../components/common/ErrorBanner";
 import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
 import PricingMatrixSection from "./PricingMatrixSection";
+import PackagesSection from "./PackagesSection";
 import DiscountCodesSection from "./DiscountCodesSection";
 import AddOptionModal from "./AddOptionModal";
 import AddPeriodModal from "./AddPeriodModal";
+import AddPackageModal from "./AddPackageModal";
+import EditPackageModal from "./EditPackageModal";
 import AddDiscountModal from "./AddDiscountModal";
 import EditDiscountModal from "./EditDiscountModal";
 
@@ -34,6 +39,8 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
   // Modal state
   const [showAddPeriod, setShowAddPeriod] = useState(false);
   const [showAddOption, setShowAddOption] = useState(false);
+  const [showAddPackage, setShowAddPackage] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<BookingPackage | null>(null);
   const [showAddDiscount, setShowAddDiscount] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState<DiscountCode | null>(null);
 
@@ -47,7 +54,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
   const [editingPeriodCurrency, setEditingPeriodCurrency] = useState("");
 
   // Delete confirmation and errors
-  const [deleteTarget, setDeleteTarget] = useState<{ type: "period" | "option" | "discount"; id: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "period" | "option" | "package" | "discount"; id: string; name: string } | null>(null);
   const [apiError, setApiError] = useState("");
 
   // Fetch booking matrix
@@ -204,6 +211,43 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onError: (error) => setApiError(parseApiError(error)),
   });
 
+  // --- Package mutations ---
+  const createPackageMutation = useMutation({
+    mutationFn: async (data: BookingPackageCreate) => {
+      await api.post(`/conferences/${conferenceId}/settings/booking-packages`, data);
+    },
+    onSuccess: () => {
+      invalidate();
+      setShowAddPackage(false);
+      setApiError("");
+    },
+    onError: (error) => setApiError(parseApiError(error)),
+  });
+
+  const updatePackageMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
+      await api.put(`/conferences/${conferenceId}/settings/booking-packages/${id}`, data);
+    },
+    onSuccess: () => {
+      invalidate();
+      setEditingPackage(null);
+      setApiError("");
+    },
+    onError: (error: unknown) => setApiError(parseApiError(error)),
+  });
+
+  const deletePackageMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/conferences/${conferenceId}/settings/booking-packages/${id}`);
+    },
+    onSuccess: () => {
+      invalidate();
+      setDeleteTarget(null);
+      setApiError("");
+    },
+    onError: (error) => setApiError(parseApiError(error)),
+  });
+
   // --- Price cell update ---
   const handlePriceChange = (period: BookingPeriod, packageId: string, value: string) => {
     const numValue = parseFloat(value);
@@ -242,6 +286,8 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
       deletePeriodMutation.mutate(deleteTarget.id);
     } else if (deleteTarget.type === "option") {
       deleteOptionMutation.mutate(deleteTarget.id);
+    } else if (deleteTarget.type === "package") {
+      deletePackageMutation.mutate(deleteTarget.id);
     } else if (deleteTarget.type === "discount") {
       deleteDiscountMutation.mutate(deleteTarget.id);
     }
@@ -253,6 +299,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
 
   const periods = matrix?.periods || [];
   const options = matrix?.options || [];
+  const packages = matrix?.packages || [];
 
   const startEditPeriod = (period: BookingPeriod) => {
     setEditingPeriodId(period.id);
@@ -295,6 +342,17 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
         onDeleteTarget={setDeleteTarget}
       />
 
+      <PackagesSection
+        isAdmin={isAdmin}
+        packages={packages}
+        options={options}
+        periods={periods}
+        conferenceCurrency={conferenceCurrency}
+        onAddPackage={() => setShowAddPackage(true)}
+        onEditPackage={(pkg) => setEditingPackage(pkg)}
+        onDeleteTarget={setDeleteTarget}
+      />
+
       <DiscountCodesSection
         isAdmin={isAdmin}
         discountCodes={discountCodes}
@@ -321,6 +379,22 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
         existingCount={options.length}
       />
 
+      <AddPackageModal
+        open={showAddPackage}
+        onClose={() => setShowAddPackage(false)}
+        onSubmit={(data) => createPackageMutation.mutate(data)}
+        bookingOptions={options}
+        existingCount={packages.length}
+      />
+
+      <EditPackageModal
+        open={!!editingPackage}
+        onClose={() => setEditingPackage(null)}
+        onSubmit={(id, data) => updatePackageMutation.mutate({ id, data })}
+        package_={editingPackage}
+        bookingOptions={options}
+      />
+
       <AddDiscountModal
         open={showAddDiscount}
         onClose={() => setShowAddDiscount(false)}
@@ -343,7 +417,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         open={!!deleteTarget}
-        title={`Delete ${deleteTarget?.type === "period" ? "Period" : deleteTarget?.type === "option" ? "Option" : "Discount Code"}`}
+        title={`Delete ${deleteTarget?.type === "period" ? "Period" : deleteTarget?.type === "option" ? "Option" : deleteTarget?.type === "package" ? "Package" : "Discount Code"}`}
         message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={handleConfirmDelete}

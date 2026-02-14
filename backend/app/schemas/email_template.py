@@ -66,6 +66,7 @@ class EmailTemplateType:
     SUBMISSION_CONFIRMATION = "submission_confirmation"
     CO_SPEAKER_INVITATION = "co_speaker_invitation"
     PASSWORD_RESET = "password_reset"
+    NEW_MESSAGE_NOTIFICATION = "new_message_notification"
 
     # System templates (no tenant_id)
     SYSTEM_TYPES = [TENANT_USER_WELCOME]
@@ -77,6 +78,7 @@ class EmailTemplateType:
         SUBMISSION_CONFIRMATION,
         CO_SPEAKER_INVITATION,
         PASSWORD_RESET,
+        NEW_MESSAGE_NOTIFICATION,
     ]
 
     ALL_TYPES = SYSTEM_TYPES + CONFERENCE_TYPES

@@ -330,7 +330,7 @@ export default function AuditLogs() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {data?.items.map((log) => (
+                {data?.items?.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(log.created_at)}

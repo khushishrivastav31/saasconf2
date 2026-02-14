@@ -177,6 +177,8 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const lastRefreshRef = useRef(0);
 
   // Refresh user data on route changes to pick up module assignment changes
@@ -188,6 +190,19 @@ export default function AdminLayout() {
       refreshUser();
     }
   }, [location.pathname, refreshUser]);
+
+  // Close user menu on click outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [userMenuOpen]);
 
   const handleLogout = async () => {
     await logout();
@@ -449,21 +464,43 @@ export default function AdminLayout() {
               </svg>
             </button>
 
-            <div className="flex items-center gap-4">
-              <div className="text-sm">
-                <p className="font-medium text-gray-900">
-                  {`${user?.first_name || ""} ${user?.last_name || ""}`.trim() || user?.email}
-                </p>
-                <p className="text-gray-500 text-xs capitalize">
-                  {user?.role?.replace("_", " ")}
-                </p>
-              </div>
+            <div ref={userMenuRef} className="relative ml-auto flex items-center gap-4">
               <button
-                onClick={handleLogout}
-                className="text-sm text-gray-500 hover:text-gray-700"
+                onClick={() => setUserMenuOpen((v) => !v)}
+                className="flex items-center gap-2 text-sm hover:bg-gray-50 rounded-md px-2 py-1"
               >
-                Logout
+                <div className="text-left">
+                  <p className="font-medium text-gray-900">
+                    {`${user?.first_name || ""} ${user?.last_name || ""}`.trim() || user?.email}
+                  </p>
+                  <p className="text-gray-500 text-xs capitalize">
+                    {user?.role?.replace("_", " ")}
+                  </p>
+                </div>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-medium text-gray-900">
+                      {`${user?.first_name || ""} ${user?.last_name || ""}`.trim()}
+                    </p>
+                    <p className="text-xs text-gray-500">{user?.email}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

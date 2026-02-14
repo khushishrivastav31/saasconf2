@@ -3,7 +3,12 @@ import { Navigate, Outlet, Link, useLocation, useParams } from "react-router-dom
 import { useQuery } from "@tanstack/react-query";
 import { useApplicantAuth } from "../../hooks/useApplicantAuth";
 import portalApi from "../../config/portalApi";
-import type { PortalConferenceSummary } from "../../types/portal";
+import ConferenceLogo from "../../components/ConferenceLogo";
+import type {
+  PortalConferenceSummary,
+  PortalTenant,
+  PortalCommitteeMembershipListResponse,
+} from "../../types/portal";
 
 function DocumentIcon() {
   return (
@@ -96,6 +101,19 @@ function UserIcon() {
   );
 }
 
+function ChatBubbleIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+      />
+    </svg>
+  );
+}
+
 function PortalLayout() {
   const { applicant, isLoading, logout } = useApplicantAuth();
   const location = useLocation();
@@ -114,6 +132,17 @@ function PortalLayout() {
     enabled: !!applicant,
   });
 
+  const { data: tenant } = useQuery({
+    queryKey: ["portal-tenant", companySlug],
+    queryFn: async () => {
+      const res = await portalApi.get<PortalTenant>(
+        `/portal/tenant/${companySlug}`,
+      );
+      return res.data;
+    },
+    enabled: !!companySlug,
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -127,14 +156,74 @@ function PortalLayout() {
   }
 
 
-  const navigation = [
-    { name: "My Papers", href: `${basePath}/dashboard`, icon: DocumentIcon },
-    { name: "Submit Paper", href: `${basePath}/papers/new`, icon: PlusIcon },
-    { name: "Invitations", href: `${basePath}/invitations`, icon: MailIcon },
-    { name: "Assigned Papers", href: `${basePath}/assigned-papers`, icon: ClipboardListIcon },
-    { name: "Evaluated Papers", href: `${basePath}/evaluated-papers`, icon: ClipboardCheckIcon },
-    { name: "Profile", href: `${basePath}/profile`, icon: UserIcon },
+  // Unread message count
+  const { data: unreadData } = useQuery({
+    queryKey: ["portal-unread-count"],
+    queryFn: async () => {
+      const res = await portalApi.get("/portal/messages/unread-count");
+      return res.data as { unread_count: number };
+    },
+    enabled: !!applicant,
+    refetchInterval: 30000, // Poll every 30s
+  });
+  const unreadCount = unreadData?.unread_count ?? 0;
+
+  // Committee membership check
+  const { data: committeeMemberships } = useQuery({
+    queryKey: ["portal-committee-memberships"],
+    queryFn: async () => {
+      const res = await portalApi.get<PortalCommitteeMembershipListResponse>(
+        "/portal/me/committee-memberships",
+      );
+      return res.data;
+    },
+    enabled: !!applicant,
+  });
+  const isCommitteeMember = (committeeMemberships?.items.length ?? 0) > 0;
+
+  type NavItem = {
+    name: string;
+    href: string;
+    icon: () => React.JSX.Element;
+    badge?: number;
+  };
+  type NavSection = { label: string; items: NavItem[] };
+
+  const navSections: NavSection[] = [
+    {
+      label: "Profile",
+      items: [
+        { name: "My Account", href: `${basePath}/profile`, icon: UserIcon },
+      ],
+    },
+    {
+      label: "Papers",
+      items: [
+        { name: "Submit Paper", href: `${basePath}/papers/new`, icon: PlusIcon },
+        { name: "My Papers", href: `${basePath}/dashboard`, icon: DocumentIcon },
+        { name: "Co-Speaker Invitations", href: `${basePath}/invitations`, icon: MailIcon },
+      ],
+    },
+    ...(isCommitteeMember
+      ? [
+          {
+            label: "Program Committee",
+            items: [
+              { name: "Assigned Papers", href: `${basePath}/assigned-papers`, icon: ClipboardListIcon },
+              { name: "Evaluated Papers", href: `${basePath}/evaluated-papers`, icon: ClipboardCheckIcon },
+            ],
+          },
+        ]
+      : []),
   ];
+
+  // Messages as standalone item (with badge)
+  const messagesItem: NavItem = {
+    name: "Messages",
+    href: `${basePath}/messages`,
+    icon: ChatBubbleIcon,
+    badge: unreadCount,
+  };
 
   const isActive = (href: string) =>
     location.pathname === href || location.pathname.startsWith(href + "/");
@@ -152,67 +241,146 @@ function PortalLayout() {
           sidebarCollapsed ? "w-16" : "w-64"
         }`}
       >
-        <div className="flex h-16 items-center justify-between bg-gray-900 px-3 flex-shrink-0">
+        <div className={`flex flex-col items-center bg-gray-900 px-3 flex-shrink-0 ${
+          !sidebarCollapsed && tenant?.logo_url ? "pt-5 pb-4" : "h-16 justify-center"
+        }`}>
           {!sidebarCollapsed && (
-            <Link
-              to={`${basePath}/dashboard`}
-              className="text-xl font-bold text-white ml-1 hover:text-gray-200"
-            >
-              CFP Portal
-            </Link>
-          )}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={`p-1.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 ${
-              sidebarCollapsed ? "mx-auto" : ""
-            }`}
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {sidebarCollapsed ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                />
-              )}
-            </svg>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <nav className={`mt-6 ${sidebarCollapsed ? "px-2" : "px-3"}`}>
-            <div className="space-y-1">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  title={sidebarCollapsed ? item.name : undefined}
-                  className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                    sidebarCollapsed ? "justify-center px-2" : "px-3"
-                  } ${
-                    isActive(item.href)
-                      ? "bg-gray-800 text-white"
-                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                  }`}
-                >
-                  <item.icon />
-                  {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
-                </Link>
-              ))}
+            <div className="flex items-center justify-between w-full">
+              <Link
+                to={`${basePath}/dashboard`}
+                className={`flex flex-col items-center hover:opacity-90 ${
+                  tenant?.logo_url ? "flex-1" : "flex-1 ml-1"
+                }`}
+              >
+                {tenant?.logo_url ? (
+                  <div className="w-28 h-28 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden mb-2">
+                    <ConferenceLogo
+                      logoUrl={tenant.logo_url}
+                      apiInstance={portalApi}
+                      alt={tenant.name}
+                      className="w-24 h-24 object-contain"
+                      showPlaceholder={false}
+                    />
+                  </div>
+                ) : null}
+                <span className="text-lg font-bold text-white">Portal</span>
+              </Link>
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-1.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 self-start"
+                title="Collapse sidebar"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                  />
+                </svg>
+              </button>
             </div>
+          )}
+          {sidebarCollapsed && (
+            <div className="flex flex-col items-center gap-2">
+              {tenant?.logo_url && (
+                <Link
+                  to={`${basePath}/dashboard`}
+                  className="flex items-center justify-center w-10 h-10 rounded bg-white/10 overflow-hidden hover:opacity-90"
+                >
+                  <ConferenceLogo
+                    logoUrl={tenant.logo_url}
+                    apiInstance={portalApi}
+                    alt={tenant.name}
+                    className="w-8 h-8 object-contain"
+                    showPlaceholder={false}
+                  />
+                </Link>
+              )}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-1.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-700"
+                title="Expand sidebar"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <nav className={`mt-4 ${sidebarCollapsed ? "px-2" : "px-3"}`}>
+            {/* Messages (standalone with badge) */}
+            <div className="mb-2">
+              <Link
+                to={messagesItem.href}
+                title={sidebarCollapsed ? messagesItem.name : undefined}
+                className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
+                  sidebarCollapsed ? "justify-center px-2" : "px-3"
+                } ${
+                  isActive(messagesItem.href)
+                    ? "bg-gray-800 text-white"
+                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                }`}
+              >
+                <messagesItem.icon />
+                {!sidebarCollapsed && (
+                  <span className="ml-3 flex-1 flex items-center justify-between">
+                    {messagesItem.name}
+                    {(messagesItem.badge ?? 0) > 0 && (
+                      <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+                        {messagesItem.badge}
+                      </span>
+                    )}
+                  </span>
+                )}
+                {sidebarCollapsed && (messagesItem.badge ?? 0) > 0 && (
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </Link>
+            </div>
+
+            {/* Grouped sections */}
+            {navSections.map((section) => (
+              <div key={section.label} className={`mt-4 ${sidebarCollapsed ? "" : "pt-3 border-t border-gray-700"}`}>
+                {!sidebarCollapsed && (
+                  <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                    {section.label}
+                  </p>
+                )}
+                <div className="space-y-0.5">
+                  {section.items.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      title={sidebarCollapsed ? item.name : undefined}
+                      className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
+                        sidebarCollapsed ? "justify-center px-2" : "px-3"
+                      } ${
+                        isActive(item.href)
+                          ? "bg-gray-800 text-white"
+                          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      }`}
+                    >
+                      <item.icon />
+                      {!sidebarCollapsed && (
+                        <span className="ml-3">{item.name}</span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
 
             {/* Conference sections */}
             {conferencesWithCfps.length > 0 && (
-              <div className={`mt-6 ${sidebarCollapsed ? "" : "pt-4 border-t border-gray-700"}`}>
+              <div className={`mt-4 ${sidebarCollapsed ? "" : "pt-3 border-t border-gray-700"}`}>
                 {!sidebarCollapsed && (
                   <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
                     Conferences

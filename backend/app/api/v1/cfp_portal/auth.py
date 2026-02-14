@@ -18,12 +18,12 @@ from app.core.applicant_security import (
     decode_applicant_token,
     generate_email_verification_token,
 )
-from app.core.email import send_verification_email
+from app.core.email import send_password_reset_email, send_verification_email
 from app.core.exceptions import AuthenticationError, NotFoundError
 from app.core.security import hash_password, hash_token, verify_password
 from app.db.session import set_rls_context
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
-from app.models.applicant_token import ApplicantEmailVerification, ApplicantRefreshToken
+from app.models.applicant_token import ApplicantEmailVerification, ApplicantPasswordReset, ApplicantRefreshToken
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
     CallForPapers,
@@ -46,8 +46,10 @@ from app.schemas.cfp_portal import (
     PortalCommitteeMembershipUpdate,
     PortalConferenceSummary,
     PortalLandingResponse,
+    ForgotPasswordRequest,
     PortalTenantResponse,
     PortalTopicResponse,
+    ResetPasswordRequest,
     VerifyEmailRequest,
 )
 
@@ -236,6 +238,119 @@ async def verify_email(
     await db.commit()
 
     return {"message": "Email verified successfully. You can now log in."}
+
+
+@router.post("/portal/{tenant_slug}/forgot-password")
+@limiter.limit("3/minute")
+async def forgot_password(
+    request: Request,
+    tenant_slug: str,
+    data: ForgotPasswordRequest,
+    db: DbSessionDep,
+) -> dict:
+    """Request a password reset email.
+
+    Always returns success to prevent email enumeration.
+    """
+    tenant = await _resolve_tenant(db, tenant_slug)
+    await set_rls_context(db, tenant_id=str(tenant.id), is_super_admin=False)
+
+    normalized_email = data.email.strip().lower()
+
+    result = await db.execute(
+        select(CFPApplicant).where(
+            CFPApplicant.tenant_id == tenant.id,
+            func.lower(CFPApplicant.email) == normalized_email,
+        )
+    )
+    applicant = result.scalar_one_or_none()
+
+    if applicant:
+        raw_token, token_hash_val = generate_email_verification_token()
+        reset = ApplicantPasswordReset(
+            applicant_id=applicant.id,
+            token_hash=token_hash_val,
+            expires_at=datetime.utcnow() + timedelta(hours=1),
+        )
+        db.add(reset)
+
+        await log_applicant_activity(
+            db,
+            tenant_id=tenant.id,
+            applicant_id=applicant.id,
+            applicant_email=applicant.email,
+            applicant_first_name=applicant.first_name,
+            applicant_last_name=applicant.last_name,
+            activity_type=ApplicantActivityType.PASSWORD_RESET_REQUESTED,
+        )
+        await db.commit()
+
+        await send_password_reset_email(
+            db,
+            email=applicant.email,
+            token=raw_token,
+            conference_id=None,
+            company_name=tenant.name,
+            first_name=applicant.first_name,
+            last_name=applicant.last_name,
+            tenant_slug=tenant_slug,
+        )
+
+    # Always return success to prevent email enumeration
+    return {"message": "If an account with this email exists, a password reset link has been sent."}
+
+
+@router.post("/portal/{tenant_slug}/reset-password")
+@limiter.limit("5/minute")
+async def reset_password(
+    request: Request,
+    tenant_slug: str,
+    data: ResetPasswordRequest,
+    db: DbSessionDep,
+) -> dict:
+    """Reset password using a valid reset token."""
+    tenant = await _resolve_tenant(db, tenant_slug)
+    await set_rls_context(db, tenant_id=str(tenant.id), is_super_admin=False)
+
+    token_hash_val = hash_token(data.token)
+
+    result = await db.execute(
+        select(ApplicantPasswordReset)
+        .where(ApplicantPasswordReset.token_hash == token_hash_val)
+        .where(ApplicantPasswordReset.used_at.is_(None))
+    )
+    reset = result.scalar_one_or_none()
+
+    if not reset or not reset.is_valid:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    # Load applicant
+    applicant_result = await db.execute(
+        select(CFPApplicant).where(
+            CFPApplicant.id == reset.applicant_id,
+            CFPApplicant.tenant_id == tenant.id,
+        )
+    )
+    applicant = applicant_result.scalar_one_or_none()
+    if not applicant:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    # Update password and mark token as used
+    applicant.password_hash = hash_password(data.new_password)
+    reset.used_at = datetime.utcnow()
+
+    await log_applicant_activity(
+        db,
+        tenant_id=tenant.id,
+        applicant_id=applicant.id,
+        applicant_email=applicant.email,
+        applicant_first_name=applicant.first_name,
+        applicant_last_name=applicant.last_name,
+        activity_type=ApplicantActivityType.PASSWORD_RESET_COMPLETED,
+    )
+    await db.commit()
+
+    return {"message": "Password has been reset successfully. You can now log in."}
 
 
 @router.post("/portal/{tenant_slug}/login", response_model=ApplicantTokenResponse)

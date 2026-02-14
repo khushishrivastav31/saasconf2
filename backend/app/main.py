@@ -51,12 +51,30 @@ def _cors_response(request: Request, status_code: int, content: dict) -> JSONRes
     return response
 
 
+def _check_production_safety() -> None:
+    """Emit warnings for insecure settings in non-development environments."""
+    import logging
+
+    logger = logging.getLogger("saasconf.security")
+    is_prod = settings.SENTRY_ENVIRONMENT not in ("development", "test")
+
+    if is_prod and settings.DEBUG:
+        logger.warning("SECURITY: DEBUG=True in '%s' environment — disable for production", settings.SENTRY_ENVIRONMENT)
+    if is_prod and settings.SUPER_ADMIN_EMAIL == "admin@saasconf.com":
+        logger.warning("SECURITY: SUPER_ADMIN_EMAIL is still the default — change for production")
+    if is_prod and any("localhost" in o or "127.0.0.1" in o for o in settings.CORS_ORIGINS):
+        logger.warning("SECURITY: CORS_ORIGINS contains localhost entries — remove for production")
+    if is_prod and not settings.RESEND_API_KEY:
+        logger.warning("SECURITY: RESEND_API_KEY not set — emails will only be logged, not sent")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler."""
     from app.core.token_blacklist import init_redis, close_redis
     # Startup
     print(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    _check_production_safety()
     await init_redis()
     yield
     # Shutdown
@@ -96,6 +114,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'"
+        )
         if not settings.DEBUG:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response

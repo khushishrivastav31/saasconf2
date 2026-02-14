@@ -265,7 +265,7 @@ export default function EditDiscountModal({
           {bookingOptions.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Applies to <span className="text-gray-400">(leave empty for all options)</span>
+                Applies to <span className="text-red-500">*</span>
               </label>
               <div className="border border-gray-200 rounded-md p-3 bg-gray-50">
                 <div className="flex flex-wrap gap-x-4 gap-y-2">
@@ -296,7 +296,7 @@ export default function EditDiscountModal({
           </button>
           <button
             type="submit"
-            disabled={!name.trim() || !code.trim() || !discountValue}
+            disabled={!name.trim() || !code.trim() || !discountValue || (bookingOptions.length > 0 && applicableOptions.length === 0)}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Changes

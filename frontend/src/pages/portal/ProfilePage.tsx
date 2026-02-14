@@ -45,6 +45,7 @@ function ProfilePage() {
   const [needsAccessibility, setNeedsAccessibility] = useState(false);
   const [accessibilityDetails, setAccessibilityDetails] = useState("");
   const [agreesToRecording, setAgreesToRecording] = useState(false);
+  const [messageNotifications, setMessageNotifications] = useState(true);
   const [saveStatus, setSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -88,6 +89,7 @@ function ProfilePage() {
       setNeedsAccessibility(applicant.needs_accessibility);
       setAccessibilityDetails(applicant.accessibility_details || "");
       setAgreesToRecording(applicant.agrees_to_recording);
+      setMessageNotifications(applicant.message_notifications_enabled ?? true);
     }
   }, [applicant]);
 
@@ -208,6 +210,7 @@ function ProfilePage() {
         ? accessibilityDetails || undefined
         : undefined,
       agrees_to_recording: agreesToRecording,
+      message_notifications_enabled: messageNotifications,
     });
 
     // Upload picture/video if selected
@@ -735,6 +738,25 @@ function ProfilePage() {
             <span className="block text-xs text-gray-500 mt-0.5">
               I agree that any selected session from me can be recorded and
               shared publicly.
+            </span>
+          </label>
+        </div>
+
+        {/* Message Notifications */}
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            id="message_notifications"
+            checked={messageNotifications}
+            onChange={(e) => setMessageNotifications(e.target.checked)}
+            className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+          />
+          <label htmlFor="message_notifications" className="flex-1">
+            <span className="block text-sm font-medium text-gray-700">
+              Email notifications for new messages
+            </span>
+            <span className="block text-xs text-gray-500 mt-0.5">
+              Receive an email when you get a new message on the platform.
             </span>
           </label>
         </div>

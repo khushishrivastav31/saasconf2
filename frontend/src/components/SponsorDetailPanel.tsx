@@ -3,6 +3,7 @@ import AttachmentList from "./AttachmentList";
 import ContactPersonList from "./ContactPersonList";
 import ConfirmDialog from "./ConfirmDialog";
 import RichTextEditor from "./common/RichTextEditor";
+import SponsorLogoUpload from "./SponsorLogoUpload";
 import { validatePhone } from "../utils/validators";
 import type {
   Sponsor,
@@ -215,6 +216,9 @@ export default function SponsorDetailPanel({
         <form id="sponsor-detail-form" onSubmit={handleSubmit}>
           {activeTab === "details" && (
             <div className="px-6 py-5 space-y-4">
+              {/* Logo Upload */}
+              <SponsorLogoUpload sponsorId={sponsor.id} />
+
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Company Name *
@@ -261,8 +265,9 @@ export default function SponsorDetailPanel({
                       }
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">
-                      Active
+                    <span className="text-sm text-gray-700">
+                      <span className="font-medium">Visible</span>
+                      <span className="text-gray-500 ml-1">(show on website)</span>
                     </span>
                   </label>
                 </div>

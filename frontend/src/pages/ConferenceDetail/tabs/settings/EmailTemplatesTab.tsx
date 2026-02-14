@@ -1,4 +1,5 @@
 import { useState } from "react";
+import DOMPurify from "dompurify";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../../config/api";
 import type {
@@ -128,7 +129,7 @@ function EmailTemplatesTab({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data?.items.map((template) => (
+              {data?.items?.map((template) => (
                 <tr key={template.template_type} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -177,6 +178,7 @@ function EmailTemplatesTab({
 
       {/* Edit Template Modal */}
       <Modal
+        key={editingTemplate?.id ?? "new"}
         open={isModalOpen}
         onClose={handleCloseModal}
         title={`Edit ${editingTemplate ? EMAIL_TEMPLATE_LABELS[editingTemplate.template_type as EmailTemplateType] || editingTemplate.template_type : "Template"}`}
@@ -473,7 +475,7 @@ function EmailTemplateForm({
             {activePreviewTab === "html" ? (
               <div
                 className="prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: bodyHtml }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(bodyHtml) }}
               />
             ) : (
               <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700">

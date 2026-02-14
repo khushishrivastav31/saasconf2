@@ -34,7 +34,6 @@ export default function CallForPapersPage() {
     close_date: "",
     max_submissions_per_speaker: "",
     required_speaker_fields: [] as string[],
-    required_paper_fields: [] as string[],
     allowed_formats: [] as string[],
     tracks: [] as string[],
     is_anonymous_review: false,
@@ -108,7 +107,6 @@ export default function CallForPapersPage() {
       close_date: "",
       max_submissions_per_speaker: "",
       required_speaker_fields: [],
-      required_paper_fields: [],
       allowed_formats: [],
       tracks: [],
       is_anonymous_review: false,
@@ -128,7 +126,6 @@ export default function CallForPapersPage() {
       max_submissions_per_speaker:
         cfp.max_submissions_per_speaker?.toString() || "",
       required_speaker_fields: cfp.required_speaker_fields || [],
-      required_paper_fields: cfp.required_paper_fields || [],
       allowed_formats: cfp.allowed_formats,
       tracks: cfp.tracks,
       is_anonymous_review: cfp.is_anonymous_review,
@@ -151,7 +148,6 @@ export default function CallForPapersPage() {
           ? parseInt(formData.max_submissions_per_speaker)
           : null,
         required_speaker_fields: formData.required_speaker_fields,
-        required_paper_fields: formData.required_paper_fields,
         allowed_formats: formData.allowed_formats,
         tracks: formData.tracks,
         is_anonymous_review: formData.is_anonymous_review,
@@ -588,38 +584,6 @@ export default function CallForPapersPage() {
                         ? [...formData.required_speaker_fields, key]
                         : formData.required_speaker_fields.filter((f) => f !== key);
                       setFormData({ ...formData, required_speaker_fields: fields });
-                    }}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">{label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Required Paper Fields */}
-          <div className="border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Required Paper Fields</h3>
-            <div className="flex flex-wrap gap-4">
-              {[
-                { key: "abstract_short", label: "Short Abstract" },
-                { key: "abstract_long", label: "Detailed Abstract" },
-                { key: "level", label: "Level" },
-                { key: "learning_objectives", label: "Learning Objectives" },
-                { key: "importance", label: "Why is this important?" },
-                { key: "session_type", label: "Session Type" },
-                { key: "topics", label: "Topics" },
-                { key: "video", label: "Video" },
-              ].map(({ key, label }) => (
-                <label key={key} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.required_paper_fields.includes(key)}
-                    onChange={(e) => {
-                      const fields = e.target.checked
-                        ? [...formData.required_paper_fields, key]
-                        : formData.required_paper_fields.filter((f) => f !== key);
-                      setFormData({ ...formData, required_paper_fields: fields });
                     }}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />

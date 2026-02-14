@@ -9,14 +9,14 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
-from app.core.file_validation import validate_upload, sanitize_filename
+from app.core.file_validation import sanitize_filename, safe_content_disposition, strip_image_metadata, validate_upload
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.schemas.attachment import AttachmentListResponse, AttachmentResponse
 
 router = APIRouter()
 
-ALLOWED_ENTITY_TYPES = {"location", "volunteer", "conference", "service_provider", "applicant_picture", "applicant_video", "paper_video"}
+ALLOWED_ENTITY_TYPES = {"location", "volunteer", "conference", "service_provider", "applicant_picture", "applicant_video", "paper_video", "sponsor_logo"}
 
 
 @router.get("", response_model=AttachmentListResponse)
@@ -99,6 +99,9 @@ async def upload_attachment(
     # Validate MIME type via magic bytes
     content_type = file.content_type or "application/octet-stream"
     verified_type = validate_upload(file_data, content_type, entity_type)
+    if entity_type in {"applicant_picture", "sponsor_logo"}:
+        file_data = strip_image_metadata(file_data, verified_type)
+        file_size = len(file_data)
     safe_filename = sanitize_filename(file.filename or "unnamed")
 
     attachment = Attachment(
@@ -175,7 +178,7 @@ async def download_attachment(
         content=attachment.file_data,
         media_type=attachment.content_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{attachment.filename}"',
+            "Content-Disposition": safe_content_disposition(attachment.filename),
             "Content-Length": str(attachment.file_size),
         },
     )

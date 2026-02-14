@@ -265,7 +265,7 @@ export default function ApplicantActivityLog() {
         </div>
       ) : (
         <div className="space-y-4">
-          {data?.items.map((group) => (
+          {data?.items?.map((group) => (
             <div key={group.applicant_email} className="bg-white shadow rounded-lg overflow-hidden">
               <button
                 type="button"

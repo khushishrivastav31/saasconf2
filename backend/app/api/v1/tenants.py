@@ -5,8 +5,10 @@ from uuid import UUID
 from fastapi import APIRouter, Query, Request
 from sqlalchemy import func, select
 
+from app.config import get_settings
 from app.core.dependencies import DbSessionDep, SuperAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
 from app.core.pagination import paginate
 from app.core.security import hash_password
 from app.models.audit import AuditAction, AuditLog
@@ -859,18 +861,22 @@ async def upload_tenant_logo(
     if not tenant:
         raise NotFoundError(f"Tenant with ID '{tenant_id}' not found")
 
-    # Validate file type
-    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
-    content_type = file.content_type or "application/octet-stream"
-    if content_type not in allowed_types:
-        raise ValidationError(f"Invalid file type. Allowed: {', '.join(allowed_types)}")
-
-    # Read file data
+    # Read and validate file
     file_data = await file.read()
+    file_size = len(file_data)
 
-    # Check file size (10MB max)
-    if len(file_data) > 10 * 1024 * 1024:
-        raise ValidationError("File size exceeds 10MB limit")
+    settings = get_settings()
+    max_size = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if file_size > max_size:
+        raise ValidationError(
+            f"File size ({file_size // (1024 * 1024)}MB) exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)"
+        )
+
+    content_type = file.content_type or "application/octet-stream"
+    verified_type = validate_upload(file_data, content_type, "tenant_logo")
+    file_data = strip_image_metadata(file_data, verified_type)
+    file_size = len(file_data)
+    safe_filename = sanitize_filename(file.filename or "logo")
 
     # Delete existing logo attachment if present
     if tenant.logo_url:
@@ -889,9 +895,9 @@ async def upload_tenant_logo(
         tenant_id=tenant_id,
         entity_type="tenant_logo",
         entity_id=tenant_id,
-        filename=file.filename or "logo",
-        content_type=content_type,
-        file_size=len(file_data),
+        filename=safe_filename,
+        content_type=verified_type,
+        file_size=file_size,
         file_data=file_data,
     )
     db.add(attachment)
@@ -932,7 +938,7 @@ async def get_tenant_logo(
         content=attachment.file_data,
         media_type=attachment.content_type,
         headers={
-            "Content-Disposition": f'inline; filename="{attachment.filename}"',
+            "Content-Disposition": safe_content_disposition(attachment.filename, "inline"),
             "Cache-Control": "public, max-age=3600",
         },
     )

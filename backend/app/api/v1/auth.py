@@ -29,7 +29,7 @@ from app.models.module import TenantModule
 from app.models.tenant import Tenant
 from app.models.token import RefreshToken
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse, UserResponse
+from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse, UserPreferencesUpdate, UserResponse
 
 settings = get_settings()
 router = APIRouter()
@@ -336,6 +336,28 @@ async def get_current_user_info(
         modules=modules,
         is_active=user.is_active,
         is_tenant_super_user=is_tenant_super_user,
+        message_notifications_enabled=user.message_notifications_enabled,
         last_login=user.last_login,
         created_at=user.created_at,
     )
+
+
+@router.patch("/me/preferences", response_model=UserResponse)
+async def update_user_preferences(
+    data: UserPreferencesUpdate,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> UserResponse:
+    """Update current user's preferences (notification settings)."""
+    result = await db.execute(select(User).where(User.id == current_user.user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise AuthenticationError("User not found")
+
+    if data.message_notifications_enabled is not None:
+        user.message_notifications_enabled = data.message_notifications_enabled
+
+    await db.commit()
+    await db.refresh(user)
+
+    return await get_current_user_info(current_user, db)

@@ -120,7 +120,7 @@ export default function Settings() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {data?.items.map((currency) => (
+                {data?.items?.map((currency) => (
                   <tr key={currency.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {currency.code}

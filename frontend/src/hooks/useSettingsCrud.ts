@@ -22,6 +22,7 @@ interface SettingsCrudResult<TEntity, TCreate, TUpdate> {
   deleteMutation: ReturnType<typeof useMutation<void, unknown, string>>;
   error: string | null;
   setError: (error: string | null) => void;
+  refetch: () => void;
 }
 
 export function useSettingsCrud<TEntity, TCreate, TUpdate>(
@@ -39,6 +40,7 @@ export function useSettingsCrud<TEntity, TCreate, TUpdate>(
     isLoading,
     isError,
     error: queryError,
+    refetch,
   } = useQuery({
     queryKey: qk,
     queryFn: async () => {
@@ -101,5 +103,6 @@ export function useSettingsCrud<TEntity, TCreate, TUpdate>(
     deleteMutation,
     error,
     setError,
+    refetch,
   };
 }

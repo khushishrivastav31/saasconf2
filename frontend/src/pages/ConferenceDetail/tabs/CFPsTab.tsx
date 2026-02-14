@@ -58,7 +58,6 @@ interface CFPFormState {
   program_announcement_date: string;
   max_submissions_per_speaker: string;
   required_speaker_fields: string[];
-  required_paper_fields: string[];
   is_anonymous_review: boolean;
   reviewers_per_paper: string;
   code_of_conduct: string;
@@ -82,7 +81,6 @@ function cfpToForm(cfp: CallForPapers): CFPFormState {
         ? String(cfp.max_submissions_per_speaker)
         : "",
     required_speaker_fields: cfp.required_speaker_fields || [],
-    required_paper_fields: cfp.required_paper_fields || [],
     is_anonymous_review: cfp.is_anonymous_review,
     reviewers_per_paper: cfp.reviewers_per_paper != null ? String(cfp.reviewers_per_paper) : "3",
     code_of_conduct: cfp.code_of_conduct || "",
@@ -104,7 +102,6 @@ function emptyForm(): CFPFormState {
     program_announcement_date: "",
     max_submissions_per_speaker: "",
     required_speaker_fields: [],
-    required_paper_fields: [],
     is_anonymous_review: false,
     reviewers_per_paper: "3",
     code_of_conduct: "",
@@ -234,7 +231,6 @@ export default function ConferenceCFPsTab({
         ? Number(form.max_submissions_per_speaker)
         : null,
       required_speaker_fields: form.required_speaker_fields,
-      required_paper_fields: form.required_paper_fields,
       is_anonymous_review: form.is_anonymous_review,
       reviewers_per_paper: form.reviewers_per_paper ? Number(form.reviewers_per_paper) : 3,
       code_of_conduct: form.code_of_conduct || null,
@@ -493,38 +489,6 @@ export default function ConferenceCFPsTab({
                     ? [...form.required_speaker_fields, key]
                     : form.required_speaker_fields.filter((f) => f !== key);
                   updateField("required_speaker_fields", fields);
-                }}
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Required Paper Fields */}
-      <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-3">Required Paper Fields</h3>
-        <div className="flex flex-wrap gap-4">
-          {[
-            { key: "abstract_short", label: "Short Abstract" },
-            { key: "abstract_long", label: "Detailed Abstract" },
-            { key: "level", label: "Level" },
-            { key: "learning_objectives", label: "Learning Objectives" },
-            { key: "importance", label: "Why is this important?" },
-            { key: "session_type", label: "Session Type" },
-            { key: "topics", label: "Topics" },
-            { key: "video", label: "Video" },
-          ].map(({ key, label }) => (
-            <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={form.required_paper_fields.includes(key)}
-                onChange={(e) => {
-                  const fields = e.target.checked
-                    ? [...form.required_paper_fields, key]
-                    : form.required_paper_fields.filter((f) => f !== key);
-                  updateField("required_paper_fields", fields);
                 }}
                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />

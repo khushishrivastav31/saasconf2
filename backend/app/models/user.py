@@ -59,6 +59,9 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+    message_notifications_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true"
+    )
 
     # Relationships
     tenant: Mapped["Tenant | None"] = relationship(

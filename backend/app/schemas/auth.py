@@ -42,8 +42,15 @@ class UserResponse(BaseModel):
     modules: list[str] = []  # List of module codes the user has access to
     is_active: bool
     is_tenant_super_user: bool = False
+    message_notifications_enabled: bool = True
     last_login: datetime | None
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class UserPreferencesUpdate(BaseModel):
+    """Update user preferences (notification settings, etc.)."""
+
+    message_notifications_enabled: bool | None = None

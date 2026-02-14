@@ -41,6 +41,7 @@ import InvitationsPage from "./pages/portal/InvitationsPage";
 import AssignedPapersTab from "./pages/portal/AssignedPapersTab";
 import EvaluatedPapersTab from "./pages/portal/EvaluatedPapersTab";
 import InfoPage from "./pages/portal/InfoPage";
+import MessagesPage from "./pages/portal/MessagesPage";
 import LandingPage from "./pages/portal/LandingPage";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 
@@ -370,6 +371,7 @@ function App() {
         <Route path="invitations" element={<InvitationsPage />} />
         <Route path="assigned-papers" element={<AssignedPapersTab />} />
         <Route path="evaluated-papers" element={<EvaluatedPapersTab />} />
+        <Route path="messages" element={<MessagesPage />} />
         <Route path="info/:conferenceId" element={<InfoPage />} />
       </Route>
 

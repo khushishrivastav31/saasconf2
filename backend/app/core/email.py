@@ -7,6 +7,7 @@ otherwise falls back to console logging for development.
 import logging
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -17,6 +18,7 @@ from app.core.email_templates import (
     build_cospeaker_context,
     build_password_reset_context,
     build_tenant_welcome_context,
+    build_new_message_context,
 )
 from app.schemas.email_template import EmailTemplateType
 
@@ -94,6 +96,23 @@ async def send_email(
         return False
 
 
+async def _is_email_enabled_for_conference(
+    db: AsyncSession, conference_id: UUID | None
+) -> bool:
+    """Check if email sending is enabled for this conference."""
+    if conference_id is None:
+        return True
+    from app.models.conference import Conference
+
+    result = await db.execute(
+        select(Conference.settings).where(Conference.id == conference_id)
+    )
+    settings = result.scalar_one_or_none()
+    if settings is None:
+        return True
+    return settings.get("email_sending_enabled", True)
+
+
 async def send_verification_email(
     db: AsyncSession,
     *,
@@ -110,6 +129,7 @@ async def send_verification_email(
     base_url: str = "http://localhost:3002",
 ) -> bool:
     """Send an email verification link to a new applicant or committee member."""
+    # NOTE: Verification emails are always sent regardless of the email_sending_enabled setting
     settings = get_settings()
     verification_url = f"{base_url}/{tenant_slug}/portal/user/verify-email?token={token}"
 
@@ -155,6 +175,10 @@ async def send_submission_confirmation_email(
     base_url: str = "http://localhost:3002",
 ) -> bool:
     """Send a submission confirmation email."""
+    if not await _is_email_enabled_for_conference(db, conference_id):
+        logger.info(f"Email sending disabled for conference {conference_id}, skipping submission confirmation to {email}")
+        return False
+
     settings = get_settings()
     portal_url = f"{base_url}/{tenant_slug}/portal/dashboard"
 
@@ -196,6 +220,10 @@ async def send_cospeaker_invitation_email(
     base_url: str = "http://localhost:3002",
 ) -> bool:
     """Send a co-speaker invitation email."""
+    if not await _is_email_enabled_for_conference(db, conference_id):
+        logger.info(f"Email sending disabled for conference {conference_id}, skipping co-speaker invitation to {email}")
+        return False
+
     settings = get_settings()
     portal_url = f"{base_url}/{tenant_slug}/portal/invitations"
 
@@ -226,7 +254,7 @@ async def send_password_reset_email(
     *,
     email: str,
     token: str,
-    conference_id: UUID,
+    conference_id: UUID | None = None,
     conference_name: str = "",
     company_name: str = "",
     first_name: str = "",
@@ -289,6 +317,38 @@ async def send_tenant_user_welcome_email(
         db,
         EmailTemplateType.TENANT_USER_WELCOME,
         context,
+    )
+
+    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
+
+
+async def send_new_message_notification(
+    db: AsyncSession,
+    *,
+    email: str,
+    first_name: str = "",
+    conference_id: UUID,
+    conference_name: str = "",
+    message_subject: str = "",
+    messages_link: str = "",
+) -> bool:
+    """Send a notification email about a new platform message."""
+    if not await _is_email_enabled_for_conference(db, conference_id):
+        logger.info(f"Email sending disabled for conference {conference_id}, skipping message notification to {email}")
+        return False
+
+    context = build_new_message_context(
+        first_name=first_name,
+        conference_name=conference_name,
+        message_subject=message_subject,
+        messages_link=messages_link,
+    )
+
+    rendered = await render_email(
+        db,
+        EmailTemplateType.NEW_MESSAGE_NOTIFICATION,
+        context,
+        conference_id=conference_id,
     )
 
     return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)

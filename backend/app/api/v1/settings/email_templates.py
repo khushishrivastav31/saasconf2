@@ -160,6 +160,32 @@ If you didn't request a password reset, you can safely ignore this email.
 Warm regards,
 The [Conference Name] Team""",
     },
+    EmailTemplateType.NEW_MESSAGE_NOTIFICATION: {
+        "subject": "New message: [Message Subject]",
+        "body_html": """<h2>You have a new message</h2>
+<p>Hi [First Name],</p>
+<p>You have received a new message regarding <strong>[Conference Name]</strong>.</p>
+<p><strong>Subject:</strong> [Message Subject]</p>
+<p><a href="[Messages Link]" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">View Message</a></p>
+<p>Or copy and paste this link into your browser:</p>
+<p><a href="[Messages Link]">[Messages Link]</a></p>
+<p>You can manage your notification preferences in your profile settings.</p>
+<p>Warm regards,<br>The [Conference Name] Team</p>""",
+        "body_text": """You have a new message
+
+Hi [First Name],
+
+You have received a new message regarding [Conference Name].
+
+Subject: [Message Subject]
+
+View your message here: [Messages Link]
+
+You can manage your notification preferences in your profile settings.
+
+Warm regards,
+The [Conference Name] Team""",
+    },
 }
 
 

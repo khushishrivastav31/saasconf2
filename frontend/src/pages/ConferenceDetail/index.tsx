@@ -4,16 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../hooks/useAuth";
 import { useConferenceAdmin } from "../../hooks/useConferenceAdmin";
 import api from "../../config/api";
-import type {
-  Conference,
-  PaginatedResponse,
-  Location,
-  ServiceProvider,
-  Sponsor,
-  Invoice,
-  CommitteeMember,
-  Applicant,
-} from "../../types";
+import type { Conference } from "../../types";
 import Modal from "../../components/Modal";
 import { parseApiError } from "../../utils/apiError";
 import { BackIcon } from "./icons";
@@ -35,6 +26,9 @@ import ConferenceBookingTab from "./tabs/BookingTab";
 import ConferenceInvoicesTab from "./tabs/InvoicesTab";
 import ConferenceServiceProvidersTab from "./tabs/ServiceProvidersTab";
 import ConferenceSettingsTab from "./tabs/SettingsTab";
+import ProgramDesignTab from "./tabs/ProgramDesignTab";
+import ProgramBuildTab from "./tabs/ProgramBuildTab";
+import MessagingTab from "./tabs/MessagingTab";
 import { CFPTopics, CFPProgramCommittee, CFPApplicants, CFPPapers, CFPEvaluatedPapers, CFPSelectedPapers, CFPAssignments } from "../modules/cfp";
 
 // ---------------------------------------------------------------------------
@@ -193,82 +187,6 @@ export default function ConferenceDetail() {
     enabled: !!conferenceId,
   });
 
-  // Location data for the sidebar tree
-  const { data: conferenceLocationsData } = useQuery({
-    queryKey: ["conference-locations", conferenceId],
-    queryFn: async () => {
-      const response = await api.get<PaginatedResponse<Location>>(
-        `/conferences/${conferenceId}/locations`,
-      );
-      return response.data;
-    },
-    enabled: !!conferenceId,
-  });
-
-  // Service provider data for the sidebar list
-  const { data: conferenceServiceProvidersData } = useQuery({
-    queryKey: ["conference-service-providers", conferenceId],
-    queryFn: async () => {
-      const response = await api.get<{
-        items: ServiceProvider[];
-        total: number;
-      }>(`/conferences/${conferenceId}/service-providers`);
-      return response.data;
-    },
-    enabled: !!conferenceId,
-  });
-
-  // Sponsor data for the sidebar list
-  const { data: conferenceSponsorsData } = useQuery({
-    queryKey: ["conference-sponsors", conferenceId],
-    queryFn: async () => {
-      const response = await api.get<{
-        items: Sponsor[];
-        total: number;
-      }>(`/conferences/${conferenceId}/sponsors`);
-      return response.data;
-    },
-    enabled: !!conferenceId,
-  });
-
-  // Invoice data for the sidebar list
-  const { data: conferenceInvoicesData } = useQuery({
-    queryKey: ["conference-invoices", conferenceId],
-    queryFn: async () => {
-      const response = await api.get<{
-        items: Invoice[];
-        total: number;
-      }>(`/conferences/${conferenceId}/invoices`);
-      return response.data;
-    },
-    enabled: !!conferenceId,
-  });
-
-  // Committee member data for the sidebar list (filtered by conference)
-  const { data: committeeMembersData } = useQuery({
-    queryKey: ["cfp-committee-members", conferenceId ?? "all"],
-    queryFn: async () => {
-      const params = conferenceId ? { conference_id: conferenceId } : {};
-      const response = await api.get<{
-        items: CommitteeMember[];
-        total: number;
-      }>("/cfp/committee-members", { params });
-      return response.data;
-    },
-  });
-
-  // Applicant data for the sidebar list (filtered by conference)
-  const { data: applicantsData } = useQuery({
-    queryKey: ["cfp-applicants", conferenceId ?? "all"],
-    queryFn: async () => {
-      const params = conferenceId ? { conference_id: conferenceId } : {};
-      const response = await api.get<{
-        items: Applicant[];
-        total: number;
-      }>("/cfp/applicants", { params });
-      return response.data;
-    },
-  });
 
   const handleDeleteClick = async () => {
     try {
@@ -393,15 +311,7 @@ export default function ConferenceDetail() {
         {/* Section navigation sidebar */}
         <nav
           className={`flex-shrink-0 transition-all duration-200 ${
-            sidebarCollapsed
-              ? "w-14"
-              : activeSection === "locations" ||
-                  activeSection === "service_providers" ||
-                  activeSection === "sponsors" ||
-                  activeSection === "invoices" ||
-                  expandedSections.has("cfp")
-                ? "w-64"
-                : "w-56"
+            sidebarCollapsed ? "w-14" : "w-56"
           }`}
         >
           <div
@@ -500,252 +410,31 @@ export default function ConferenceDetail() {
                     expandedSections.has(section.id) &&
                     !sidebarCollapsed && (
                       <div className="ml-4 mb-1 space-y-0.5">
-                        {section.children.flatMap((child) => {
-                          const items: React.ReactNode[] = [
-                            <button
-                              key={child.id}
-                              type="button"
-                              onClick={() => {
-                                setActiveSection(child.id);
-                                if (child.id === "cfp-program-committee") {
-                                  setSelectedCommitteeMemberId(null);
-                                }
-                                if (child.id === "cfp-applicants") {
-                                  setSelectedApplicantId(null);
-                                }
-                              }}
-                              className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                                activeSection === child.id
-                                  ? "bg-primary-50 text-primary-700 font-medium"
-                                  : "text-gray-600 hover:bg-gray-100"
-                              }`}
-                            >
-                              <child.icon />
-                              <span className="truncate text-left">
-                                {child.name}
-                              </span>
-                            </button>,
-                          ];
-                          if (
-                            child.id === "cfp-program-committee" &&
-                            activeSection === "cfp-program-committee"
-                          ) {
-                            items.push(
-                              <div
-                                key="committee-members-list"
-                                className="ml-4 space-y-0.5 my-0.5"
-                              >
-                                {(committeeMembersData?.items || []).map(
-                                  (m) => (
-                                    <button
-                                      key={m.id}
-                                      type="button"
-                                      onClick={() =>
-                                        setSelectedCommitteeMemberId(m.id)
-                                      }
-                                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                                        m.id === selectedCommitteeMemberId
-                                          ? "bg-primary-50 text-primary-700 font-medium"
-                                          : "text-gray-600 hover:bg-gray-100"
-                                      }`}
-                                    >
-                                      <span className="flex-shrink-0 w-2 h-2 rounded-full bg-primary-400" />
-                                      <span className="truncate text-left flex-1">
-                                        {`${m.first_name} ${m.last_name}`.trim()}
-                                      </span>
-                                      <span className="text-[10px] text-gray-400 capitalize flex-shrink-0">
-                                        {m.role?.replace("_", " ")}
-                                      </span>
-                                    </button>
-                                  ),
-                                )}
-                                {(committeeMembersData?.items || []).length ===
-                                  0 && (
-                                  <p className="text-xs text-gray-400 px-3 py-2">
-                                    No members
-                                  </p>
-                                )}
-                              </div>,
-                            );
-                          }
-                          if (
-                            child.id === "cfp-applicants" &&
-                            activeSection === "cfp-applicants"
-                          ) {
-                            items.push(
-                              <div
-                                key="applicants-list"
-                                className="ml-4 space-y-0.5 my-0.5"
-                              >
-                                {(applicantsData?.items || []).map((a) => (
-                                  <button
-                                    key={a.id}
-                                    type="button"
-                                    onClick={() => setSelectedApplicantId(a.id)}
-                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                                      a.id === selectedApplicantId
-                                        ? "bg-primary-50 text-primary-700 font-medium"
-                                        : "text-gray-600 hover:bg-gray-100"
-                                    }`}
-                                  >
-                                    <span className="flex-shrink-0 w-2 h-2 rounded-full bg-primary-400" />
-                                    <span className="truncate text-left">
-                                      {`${a.first_name} ${a.last_name}`.trim()}
-                                    </span>
-                                  </button>
-                                ))}
-                                {(applicantsData?.items || []).length === 0 && (
-                                  <p className="text-xs text-gray-400 px-3 py-2">
-                                    No users
-                                  </p>
-                                )}
-                              </div>,
-                            );
-                          }
-                          return items;
-                        })}
-                      </div>
-                    )}
-                  {/* Inline location list right below the Locations button */}
-                  {section.id === "locations" &&
-                    activeSection === "locations" &&
-                    !sidebarCollapsed && (
-                      <div className="ml-4 mb-1 space-y-0.5">
-                        {(conferenceLocationsData?.items || []).map((loc) => (
+                        {section.children.map((child) => (
                           <button
-                            key={loc.id}
+                            key={child.id}
                             type="button"
-                            onClick={() => setSelectedLocationId(loc.id)}
-                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                              loc.id === selectedLocationId
-                                ? "bg-primary-50 text-primary-700 font-medium"
-                                : "text-gray-600 hover:bg-gray-100"
-                            }`}
-                          >
-                            <span
-                              className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                                loc.is_active ? "bg-green-400" : "bg-red-400"
-                              }`}
-                            />
-                            <span className="truncate text-left">
-                              {loc.name}
-                            </span>
-                          </button>
-                        ))}
-                        {(conferenceLocationsData?.items || []).length ===
-                          0 && (
-                          <p className="text-xs text-gray-400 px-3 py-2">
-                            No locations
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  {/* Inline service provider list */}
-                  {section.id === "service_providers" &&
-                    activeSection === "service_providers" &&
-                    !sidebarCollapsed && (
-                      <div className="ml-4 mb-1 space-y-0.5">
-                        {(conferenceServiceProvidersData?.items || []).map(
-                          (sp) => (
-                            <button
-                              key={sp.id}
-                              type="button"
-                              onClick={() =>
-                                setSelectedServiceProviderId(sp.id)
+                            onClick={() => {
+                              setActiveSection(child.id);
+                              if (child.id === "cfp-program-committee") {
+                                setSelectedCommitteeMemberId(null);
                               }
-                              className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                                sp.id === selectedServiceProviderId
-                                  ? "bg-primary-50 text-primary-700 font-medium"
-                                  : "text-gray-600 hover:bg-gray-100"
-                              }`}
-                            >
-                              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-primary-400" />
-                              <span className="truncate text-left">
-                                {sp.company_name}
-                              </span>
-                            </button>
-                          ),
-                        )}
-                        {(conferenceServiceProvidersData?.items || [])
-                          .length === 0 && (
-                          <p className="text-xs text-gray-400 px-3 py-2">
-                            No providers
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  {/* Inline sponsor list */}
-                  {section.id === "sponsors" &&
-                    activeSection === "sponsors" &&
-                    !sidebarCollapsed && (
-                      <div className="ml-4 mb-1 space-y-0.5">
-                        {(conferenceSponsorsData?.items || []).map((sp) => (
-                          <button
-                            key={sp.id}
-                            type="button"
-                            onClick={() => setSelectedSponsorId(sp.id)}
+                              if (child.id === "cfp-applicants") {
+                                setSelectedApplicantId(null);
+                              }
+                            }}
                             className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                              sp.id === selectedSponsorId
+                              activeSection === child.id
                                 ? "bg-primary-50 text-primary-700 font-medium"
                                 : "text-gray-600 hover:bg-gray-100"
                             }`}
                           >
-                            <span
-                              className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                                sp.is_active ? "bg-green-400" : "bg-red-400"
-                              }`}
-                            />
+                            <child.icon />
                             <span className="truncate text-left">
-                              {sp.company_name}
+                              {child.name}
                             </span>
                           </button>
                         ))}
-                        {(conferenceSponsorsData?.items || []).length === 0 && (
-                          <p className="text-xs text-gray-400 px-3 py-2">
-                            No sponsors
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  {/* Inline invoice list */}
-                  {section.id === "invoices" &&
-                    activeSection === "invoices" &&
-                    !sidebarCollapsed && (
-                      <div className="ml-4 mb-1 space-y-0.5">
-                        {(conferenceInvoicesData?.items || []).map((inv) => (
-                          <button
-                            key={inv.id}
-                            type="button"
-                            onClick={() => setSelectedInvoiceId(inv.id)}
-                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                              inv.id === selectedInvoiceId
-                                ? "bg-primary-50 text-primary-700 font-medium"
-                                : "text-gray-600 hover:bg-gray-100"
-                            }`}
-                          >
-                            <span
-                              className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                                inv.status === "paid"
-                                  ? "bg-green-400"
-                                  : inv.status === "overdue"
-                                    ? "bg-red-400"
-                                    : inv.status === "sent"
-                                      ? "bg-blue-400"
-                                      : inv.status === "cancelled"
-                                        ? "bg-yellow-400"
-                                        : "bg-gray-400"
-                              }`}
-                            />
-                            <span className="truncate text-left">
-                              {inv.invoice_number}
-                            </span>
-                          </button>
-                        ))}
-                        {(conferenceInvoicesData?.items || []).length === 0 && (
-                          <p className="text-xs text-gray-400 px-3 py-2">
-                            No invoices
-                          </p>
-                        )}
                       </div>
                     )}
                 </div>
@@ -863,12 +552,21 @@ export default function ConferenceDetail() {
             {activeSection === "program" && (
               <ComingSoonContent name="Program" />
             )}
+            {activeSection === "program-design" && (
+              <ProgramDesignTab conference={conference} isAdmin={isAdmin} />
+            )}
+            {activeSection === "program-build" && (
+              <ProgramBuildTab conference={conference} isAdmin={isAdmin} />
+            )}
             {activeSection === "booking" && conference && (
               <ConferenceBookingTab
                 conferenceId={conference.id}
                 isAdmin={isAdmin}
                 conferenceCurrency={conference.currency}
               />
+            )}
+            {activeSection === "messaging" && conference && (
+              <MessagingTab conference={conference} />
             )}
             {activeSection === "settings" && (
               <ConferenceSettingsTab conference={conference} isAdmin={isAdmin} />

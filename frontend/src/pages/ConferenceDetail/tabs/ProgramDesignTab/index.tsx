@@ -1,0 +1,465 @@
+import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import api from "../../../../config/api";
+import type {
+  Conference,
+  SessionType,
+  ProgramSession,
+} from "../../../../types";
+import { parseApiError } from "../../../../utils/apiError";
+import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
+import { useToast } from "../../../../components/Toast";
+
+import { useProgramDays, useProgramGrid } from "./hooks/useProgramGrid";
+import { useProgramMutations } from "./hooks/useProgramMutations";
+import DayTabs from "./DayTabs";
+import ProgramGrid from "./ProgramGrid";
+import SessionModal from "./SessionModal";
+import { SessionCardOverlay } from "./SessionCard";
+import ConfirmDialog from "../../../../components/ConfirmDialog";
+
+interface ProgramDesignTabProps {
+  conference: Conference;
+  isAdmin: boolean;
+}
+
+export default function ProgramDesignTab({ conference, isAdmin }: ProgramDesignTabProps) {
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
+  const [editingSession, setEditingSession] = useState<ProgramSession | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [activeDragData, setActiveDragData] = useState<unknown>(null);
+  const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null);
+  const { showToast } = useToast();
+
+  // Configure drag sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  // Fetch program days
+  const { data: daysData, isLoading: daysLoading } = useProgramDays({
+    conferenceId: conference.id,
+  });
+
+  // Fetch grid data for selected day
+  const { data: gridData, isLoading: gridLoading } = useProgramGrid({
+    conferenceId: conference.id,
+    dayId: selectedDayId,
+    enabled: !!selectedDayId,
+  });
+
+  // Fetch session types for session modal
+  const { data: sessionTypesData } = useQuery({
+    queryKey: ["session-types", conference.id],
+    queryFn: async () => {
+      const response = await api.get<{ items: SessionType[]; total: number }>(
+        `/conferences/${conference.id}/settings/session-types`
+      );
+      return response.data.items;
+    },
+  });
+
+  // Mutations
+  const mutations = useProgramMutations(conference.id);
+
+  // Auto-select first day when days load
+  useEffect(() => {
+    if (daysData?.items && daysData.items.length > 0 && !selectedDayId) {
+      setSelectedDayId(daysData.items[0].id);
+    }
+  }, [daysData, selectedDayId]);
+
+  // Handlers for day management
+  const handleCreateDay = useCallback(
+    async (data: { date: string; name?: string }) => {
+      try {
+        const day = await mutations.createDay.mutateAsync(data);
+        setSelectedDayId(day.id);
+      } catch (error) {
+        showToast(parseApiError(error, "Failed to create day"));
+      }
+    },
+    [mutations.createDay]
+  );
+
+  const handleUpdateDay = useCallback(
+    async (dayId: string, data: { date?: string; name?: string }) => {
+      try {
+        await mutations.updateDay.mutateAsync({ dayId, data });
+      } catch (error) {
+        showToast(parseApiError(error, "Failed to update day"));
+      }
+    },
+    [mutations.updateDay]
+  );
+
+  const handleDeleteDay = useCallback(
+    async (dayId: string) => {
+      try {
+        await mutations.deleteDay.mutateAsync(dayId);
+        if (selectedDayId === dayId) {
+          const remaining = daysData?.items.filter((d) => d.id !== dayId);
+          setSelectedDayId(remaining && remaining.length > 0 ? remaining[0].id : null);
+        }
+      } catch (error) {
+        showToast(parseApiError(error, "Failed to delete day"));
+      }
+    },
+    [mutations.deleteDay, selectedDayId, daysData]
+  );
+
+  // Handlers for time slot management
+  const handleUpdateSlot = useCallback(
+    async (slotId: string, data: { start_time?: string; end_time?: string; is_session_free?: boolean }) => {
+      try {
+        await mutations.updateTimeSlot.mutateAsync({ slotId, data });
+      } catch (error) {
+        showToast(parseApiError(error, "Failed to update time slot"));
+      }
+    },
+    [mutations.updateTimeSlot]
+  );
+
+  const handleDeleteSlot = useCallback(
+    async (slotId: string) => {
+      try {
+        await mutations.deleteTimeSlot.mutateAsync(slotId);
+      } catch (error) {
+        showToast(parseApiError(error, "Failed to delete time slot"));
+      }
+    },
+    [mutations.deleteTimeSlot]
+  );
+
+  // Handlers for track management
+  const handleUpdateTrack = useCallback(
+    async (
+      trackId: string,
+      data: { name?: string; color?: string; location_id?: string; is_active?: boolean }
+    ) => {
+      try {
+        await mutations.updateTrack.mutateAsync({ trackId, data });
+      } catch (error) {
+        showToast(parseApiError(error, "Failed to update track"));
+      }
+    },
+    [mutations.updateTrack]
+  );
+
+  const handleDeleteTrack = useCallback(
+    async (trackId: string) => {
+      try {
+        await mutations.deleteTrack.mutateAsync(trackId);
+      } catch (error) {
+        showToast(parseApiError(error, "Failed to delete track"));
+      }
+    },
+    [mutations.deleteTrack]
+  );
+
+  // Handlers for session management
+  const handleUpdateSession = useCallback(
+    async (sessionId: string, data: Parameters<typeof mutations.updateSession.mutateAsync>[0]["data"]) => {
+      try {
+        await mutations.updateSession.mutateAsync({ sessionId, data });
+      } catch (error) {
+        showToast(parseApiError(error, "Failed to update session"));
+      }
+    },
+    [mutations.updateSession]
+  );
+
+  const handleDeleteSession = useCallback(
+    (sessionId: string) => {
+      const sessions = gridData?.sessions || [];
+      const session = sessions.find((s) => s.id === sessionId);
+      if (session?.paper_id) {
+        setPendingDeleteSessionId(sessionId);
+        return;
+      }
+      mutations.deleteSession.mutateAsync(sessionId).catch((error) => {
+        showToast(parseApiError(error, "Failed to delete session"));
+      });
+    },
+    [mutations.deleteSession, gridData?.sessions]
+  );
+
+  const confirmDeleteSession = useCallback(async () => {
+    if (!pendingDeleteSessionId) return;
+    try {
+      await mutations.deleteSession.mutateAsync(pendingDeleteSessionId);
+    } catch (error) {
+      showToast(parseApiError(error, "Failed to delete session"));
+    }
+    setPendingDeleteSessionId(null);
+  }, [pendingDeleteSessionId, mutations.deleteSession]);
+
+  const handleResizeSession = useCallback(
+    async (sessionId: string, slotSpan: number, trackSpan: number) => {
+      try {
+        await mutations.updateSession.mutateAsync({
+          sessionId,
+          data: { slot_span: slotSpan, track_span: trackSpan },
+        });
+      } catch (error) {
+        showToast(parseApiError(error, "Failed to resize session"));
+      }
+    },
+    [mutations.updateSession]
+  );
+
+  // Quick-add handlers for grid "+" buttons
+  const handleQuickAddTrack = useCallback(async () => {
+    if (!selectedDayId) return;
+    try {
+      const currentTracks = gridData?.tracks || [];
+      const maxOrder = currentTracks.reduce((max, t) => Math.max(max, t.sort_order), 0);
+      const name = `Track ${currentTracks.length + 1}`;
+      await mutations.createTrack.mutateAsync({ name, sort_order: maxOrder + 1, program_day_id: selectedDayId });
+    } catch (error) {
+      showToast(parseApiError(error, "Failed to add track"));
+    }
+  }, [mutations.createTrack, gridData?.tracks, selectedDayId]);
+
+  const handleQuickAddSlot = useCallback(async () => {
+    if (!selectedDayId) return;
+    try {
+      const currentSlots = gridData?.slots || [];
+      // Start from last slot's end time, or 09:00 if no slots
+      const sorted = [...currentSlots].sort((a, b) => a.start_time.localeCompare(b.start_time));
+      const lastEndRaw = sorted.length > 0 ? sorted[sorted.length - 1].end_time : "09:00:00";
+      const parts = lastEndRaw.split(":").map(Number);
+      const h = parts[0] || 0;
+      const m = parts[1] || 0;
+      const startMinutes = h * 60 + m;
+      // Cannot start at or past 23:59
+      if (startMinutes >= 23 * 60 + 59) {
+        showToast("Cannot add more time slots past 23:59", "warning");
+        return;
+      }
+      // Default 30-min slot, but cap end time at 23:59
+      const maxEnd = 23 * 60 + 59;
+      const endMinutes = Math.min(startMinutes + 30, maxEnd);
+      const startTime = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+      const endH = String(Math.floor(endMinutes / 60)).padStart(2, "0");
+      const endM = String(endMinutes % 60).padStart(2, "0");
+      const endTime = `${endH}:${endM}:00`;
+      await mutations.createTimeSlot.mutateAsync({
+        dayId: selectedDayId,
+        data: { start_time: startTime, end_time: endTime },
+      });
+    } catch (error) {
+      showToast(parseApiError(error, "Failed to add time slot"));
+    }
+  }, [mutations.createTimeSlot, selectedDayId, gridData?.slots]);
+
+  const handleMergeCells = useCallback(
+    async (data: { start_slot_id: string; start_track_id: string; slot_span: number; track_span: number; sessionId?: string; spansBreakSlot?: boolean; visibleCells?: Array<{ slot_id: string; track_id: string }> }) => {
+      try {
+        const settings = data.visibleCells ? { visible_cells: data.visibleCells } : undefined;
+        if (data.sessionId) {
+          // Extend existing session
+          const updated = await mutations.updateSession.mutateAsync({
+            sessionId: data.sessionId,
+            data: {
+              start_slot_id: data.start_slot_id,
+              start_track_id: data.start_track_id,
+              slot_span: data.slot_span,
+              track_span: data.track_span,
+              allow_in_session_free: data.spansBreakSlot || undefined,
+              settings,
+            },
+          });
+          setEditingSession(updated);
+        } else {
+          // Create new merged session — open modal so user can set type, title, etc.
+          const created = await mutations.createSession.mutateAsync({
+            start_slot_id: data.start_slot_id,
+            start_track_id: data.start_track_id,
+            slot_span: data.slot_span,
+            track_span: data.track_span,
+            title: "Session",
+            color: "#9CA3AF",
+            allow_in_session_free: data.spansBreakSlot || false,
+            settings,
+          });
+          setEditingSession(created);
+        }
+      } catch (error) {
+        showToast(parseApiError(error, "Failed to merge cells"));
+      }
+    },
+    [mutations.createSession, mutations.updateSession]
+  );
+
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+    setActiveDragData(event.active.data.current);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveDragId(null);
+    setActiveDragData(null);
+
+    const { active, over } = event;
+    if (!over || !active.data.current) return;
+
+    const dragData = active.data.current;
+    const dropData = over.data.current as { slotId: string; trackId: string | null };
+
+    if (!dropData?.slotId) return;
+
+    try {
+      // Moving existing session
+      if (dragData.type === "session") {
+        await mutations.moveSession.mutateAsync({
+          sessionId: dragData.session.id,
+          data: {
+            start_slot_id: dropData.slotId,
+            start_track_id: dropData.trackId || undefined,
+          },
+        });
+        return;
+      }
+    } catch (error) {
+      showToast(parseApiError(error, "Failed to create/move session"));
+    }
+  };
+
+  // Loading state
+  if (daysLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  const days = daysData?.items || [];
+  const slots = gridData?.slots || [];
+  const tracks = gridData?.tracks || [];
+  const sessions = gridData?.sessions || [];
+  const sessionTypes = sessionTypesData || [];
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">Program Design</h2>
+      </div>
+
+      {/* Day tabs */}
+      <DayTabs
+        days={days}
+        selectedDayId={selectedDayId}
+        onSelectDay={setSelectedDayId}
+        onCreateDay={handleCreateDay}
+        onUpdateDay={handleUpdateDay}
+        onDeleteDay={handleDeleteDay}
+        isAdmin={isAdmin}
+      />
+
+      {selectedDayId && (
+        <>
+          {/* Main grid area */}
+          {gridLoading ? (
+            <div className="flex justify-center py-12">
+              <LoadingSpinner />
+            </div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="overflow-x-auto" style={{ height: Math.max(400, 48 + slots.length * 60 + (isAdmin ? 48 : 0)) }}>
+                <ProgramGrid
+                  slots={slots}
+                  tracks={tracks}
+                  sessions={sessions}
+                  onSessionClick={(session) => setEditingSession(session)}
+                  onDeleteSession={handleDeleteSession}
+                  onResizeSession={handleResizeSession}
+                  onUpdateSlot={handleUpdateSlot}
+                  onDeleteSlot={handleDeleteSlot}
+                  onUpdateTrack={handleUpdateTrack}
+                  onDeleteTrack={handleDeleteTrack}
+                  onMergeCells={isAdmin ? handleMergeCells : undefined}
+                  onAddTrack={isAdmin ? handleQuickAddTrack : undefined}
+                  onAddSlot={isAdmin ? handleQuickAddSlot : undefined}
+                  isAdmin={isAdmin}
+                  activeSessionId={activeDragId}
+                />
+              </div>
+
+              {/* Drag overlay */}
+              <DragOverlay>
+                {activeDragId && activeDragData ? (
+                  (() => {
+                    const data = activeDragData as Record<string, unknown>;
+                    if (data.type === "session") {
+                      return <SessionCardOverlay session={data.session as ProgramSession} />;
+                    }
+                    return null;
+                  })()
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </>
+      )}
+
+      {/* No day selected state */}
+      {!selectedDayId && days.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <svg className="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Program Days</h3>
+          <p className="text-sm text-gray-500 mb-4 text-center max-w-md">
+            Add program days to start building your conference schedule.
+          </p>
+        </div>
+      )}
+
+      {/* Session edit modal */}
+      <SessionModal
+        open={!!editingSession}
+        onClose={() => setEditingSession(null)}
+        session={editingSession}
+        sessionTypes={sessionTypes}
+        slots={slots}
+        maxSlotSpan={Math.max(slots.length, 1)}
+        maxTrackSpan={Math.max(tracks.length, 1)}
+        onUpdate={handleUpdateSession}
+        onDelete={handleDeleteSession}
+        isAdmin={isAdmin}
+      />
+
+      <ConfirmDialog
+        open={!!pendingDeleteSessionId}
+        title="Delete session with assigned paper"
+        message="This session has a paper assigned. Deleting it will automatically unassign the paper. Do you want to continue?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="warning"
+        onConfirm={confirmDeleteSession}
+        onCancel={() => setPendingDeleteSessionId(null)}
+      />
+    </div>
+  );
+}

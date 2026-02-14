@@ -293,14 +293,65 @@ class BookingOptionListResponse(BaseModel):
     total: int
 
 
+# --- Booking Package Schemas ---
+
+
+class BookingPackageCreate(BaseModel):
+    """Schema for creating a booking package."""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    description: str | None = None
+    sort_order: int = 0
+    is_active: bool = True
+    option_ids: list[UUID] = Field(
+        ..., min_length=1, description="Booking option IDs included in this package"
+    )
+
+
+class BookingPackageUpdate(BaseModel):
+    """Schema for updating a booking package."""
+
+    name: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = None
+    sort_order: int | None = None
+    is_active: bool | None = None
+    option_ids: list[UUID] | None = None
+
+
+class BookingPackageResponse(BaseModel):
+    """Booking package response schema."""
+
+    id: UUID
+    tenant_id: UUID
+    conference_id: UUID
+    name: str
+    description: str | None
+    sort_order: int
+    is_active: bool
+    option_ids: list[UUID]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BookingPackageListResponse(BaseModel):
+    """List of booking packages."""
+
+    items: list[BookingPackageResponse]
+    total: int
+
+
 # --- Booking Matrix (combined view) ---
 
 
 class BookingMatrixResponse(BaseModel):
-    """Combined view of periods and options for the booking matrix UI."""
+    """Combined view of periods, options, and packages for the booking matrix UI."""
 
     periods: list[BookingPeriodResponse]
     options: list[BookingOptionResponse]
+    packages: list[BookingPackageResponse]
 
 
 # --- Discount Code Schemas ---

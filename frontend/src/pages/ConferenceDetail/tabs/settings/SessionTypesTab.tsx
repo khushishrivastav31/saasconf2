@@ -146,7 +146,7 @@ function ConferenceSessionTypesTab({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data?.items.map((sessionType) => (
+              {data?.items?.map((sessionType) => (
                 <tr key={sessionType.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
@@ -197,7 +197,7 @@ function ConferenceSessionTypesTab({
                   )}
                 </tr>
               ))}
-              {data?.items.length === 0 && (
+              {data?.items?.length === 0 && (
                 <tr>
                   <td
                     colSpan={6}
@@ -214,6 +214,7 @@ function ConferenceSessionTypesTab({
       )}
 
       <ConferenceSessionTypeModal
+        key={editingType?.id ?? "new"}
         open={isModalOpen}
         sessionType={editingType}
         onClose={handleCloseModal}

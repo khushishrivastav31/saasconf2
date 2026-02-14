@@ -1,8 +1,10 @@
 """Email template rendering with placeholder replacement.
 
 Fetches templates from DB (with fallback to defaults) and replaces placeholders.
+Context values are HTML-escaped before insertion to prevent XSS.
 """
 
+from html import escape as html_escape
 from uuid import UUID
 
 from sqlalchemy import select
@@ -22,12 +24,20 @@ class RenderedEmail:
         self.body_text = body_text
 
 
-def replace_placeholders(text: str, context: dict[str, str]) -> str:
-    """Replace all placeholders in text with values from context."""
+def replace_placeholders(text: str, context: dict[str, str], *, is_html: bool = False) -> str:
+    """Replace all placeholders in text with values from context.
+
+    Args:
+        text: Template text containing [Placeholder] tokens.
+        context: Mapping of placeholder names to values.
+        is_html: When True, context values are HTML-escaped before insertion
+                 to prevent XSS via user-supplied data (e.g. paper titles).
+    """
     result = text
     for key, value in context.items():
+        safe_value = html_escape(value) if is_html else value
         # Support both [Key] and [key] formats
-        result = result.replace(f"[{key}]", value)
+        result = result.replace(f"[{key}]", safe_value)
     return result
 
 
@@ -106,7 +116,7 @@ async def render_email(
     )
 
     rendered_subject = replace_placeholders(subject, context)
-    rendered_html = replace_placeholders(body_html, context)
+    rendered_html = replace_placeholders(body_html, context, is_html=True)
     rendered_text = replace_placeholders(body_text, context) if body_text else None
 
     return RenderedEmail(rendered_subject, rendered_html, rendered_text)
@@ -239,4 +249,20 @@ def build_tenant_welcome_context(
         "User Type": user_type,
         "Verify Link": verify_link,
         "Support Email": support_email,
+    }
+
+
+def build_new_message_context(
+    *,
+    first_name: str = "",
+    conference_name: str = "",
+    message_subject: str = "",
+    messages_link: str = "",
+) -> dict[str, str]:
+    """Build context for new message notification emails."""
+    return {
+        "First Name": first_name,
+        "Conference Name": conference_name,
+        "Message Subject": message_subject,
+        "Messages Link": messages_link,
     }

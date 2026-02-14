@@ -95,8 +95,13 @@ describe("AdminLayout", () => {
       expect(screen.getByText("tenant admin")).toBeInTheDocument();
     });
 
-    it("renders the logout button", () => {
+    it("renders the logout button in the user menu dropdown", async () => {
+      const user = userEvent.setup();
       render(<AdminLayout />);
+
+      // Open the user menu dropdown
+      const userMenuButton = screen.getByText("Test User").closest("button")!;
+      await user.click(userMenuButton);
 
       expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument();
     });
@@ -270,6 +275,10 @@ describe("AdminLayout", () => {
       mockLogout.mockResolvedValue(undefined);
 
       render(<AdminLayout />);
+
+      // Open the user menu dropdown first
+      const userMenuButton = screen.getByText("Test User").closest("button")!;
+      await user.click(userMenuButton);
 
       const logoutButton = screen.getByRole("button", { name: "Logout" });
       await user.click(logoutButton);

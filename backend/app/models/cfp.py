@@ -322,6 +322,9 @@ class CFPApplicant(Base):
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    message_notifications_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true"
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -439,6 +442,9 @@ class CFPPaper(Base):
     level: Mapped[str | None] = mapped_column(String(20), nullable=True)
     learning_objectives: Mapped[str | None] = mapped_column(Text, nullable=True)
     importance: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Custom field answers (from form builder)
+    custom_field_answers: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Status
     status: Mapped[str] = mapped_column(

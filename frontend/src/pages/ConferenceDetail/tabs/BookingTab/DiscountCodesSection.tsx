@@ -1,3 +1,4 @@
+import { EditIcon, DeleteIcon } from "../../icons";
 import type {
   BookingOption,
   DiscountCode,
@@ -80,7 +81,7 @@ export default function DiscountCodesSection({
                   </td>
                   <td className="px-4 py-3">
                     {dc.applicable_option_ids.length === 0 ? (
-                      <span className="text-xs text-gray-400">All options</span>
+                      <span className="text-xs text-gray-400 italic">None selected</span>
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {dc.applicable_option_ids.map((optId) => {
@@ -118,15 +119,17 @@ export default function DiscountCodesSection({
                       <div className="flex gap-2 justify-center">
                         <button
                           onClick={() => onEditDiscount(dc)}
-                          className="text-xs text-primary-500 hover:text-primary-700 font-medium"
+                          className="text-gray-400 hover:text-primary-600 transition-colors"
+                          title="Edit discount code"
                         >
-                          Edit
+                          <EditIcon />
                         </button>
                         <button
                           onClick={() => onDeleteTarget({ type: "discount", id: dc.id, name: dc.code })}
-                          className="text-xs text-red-400 hover:text-red-600 font-medium"
+                          className="text-gray-300 hover:text-red-500 transition-colors"
+                          title="Delete discount code"
                         >
-                          Delete
+                          <DeleteIcon />
                         </button>
                       </div>
                     </td>

@@ -18,6 +18,7 @@ export interface LocationUpdateData {
   location_type?: string;
   description?: string;
   capacity?: number | null;
+  parent_id?: string | null;
   address_line1?: string;
   address_line2?: string;
   city?: string;
@@ -40,6 +41,7 @@ interface LocationDetailPanelProps {
   onSave?: (data: LocationUpdateData) => Promise<void>;
   onDelete?: (id: string) => void;
   locationTypes?: TenantLocationType[];
+  allLocations?: Location[];
 }
 
 export default function LocationDetailPanel({
@@ -47,6 +49,7 @@ export default function LocationDetailPanel({
   onSave,
   onDelete,
   locationTypes: propLocationTypes,
+  allLocations,
 }: LocationDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<
     "details" | "contacts" | "documents"
@@ -59,6 +62,7 @@ export default function LocationDetailPanel({
     location_type: location.location_type,
     description: location.description || "",
     capacity: location.capacity,
+    parent_id: location.parent_id,
     address_line1: location.address_line1 || "",
     address_line2: location.address_line2 || "",
     city: location.city || "",
@@ -94,6 +98,7 @@ export default function LocationDetailPanel({
       location_type: location.location_type,
       description: location.description || "",
       capacity: location.capacity,
+      parent_id: location.parent_id,
       address_line1: location.address_line1 || "",
       address_line2: location.address_line2 || "",
       city: location.city || "",
@@ -261,7 +266,7 @@ export default function LocationDetailPanel({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Type *
@@ -288,11 +293,36 @@ export default function LocationDetailPanel({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
+                    Parent Location
+                  </label>
+                  <select
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    value={formData.parent_id || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        parent_id: e.target.value || null,
+                      })
+                    }
+                  >
+                    <option value="">None (top-level venue)</option>
+                    {allLocations
+                      ?.filter((loc) => !loc.parent_id && loc.id !== location.id)
+                      .map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
                     Capacity
                   </label>
                   <input
                     type="number"
                     min="0"
+                    placeholder="Max attendees"
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                     value={formData.capacity ?? ""}
                     onChange={(e) =>

@@ -1,9 +1,10 @@
-"""Conference-scoped settings endpoints for volunteer roles, location types, currencies, sponsor packages, and discount codes."""
+"""Conference-scoped settings endpoints for volunteer roles, location types, currencies, sponsor packages, booking, and discount codes."""
 
 from fastapi import APIRouter
 
 from .booking_matrix import router as booking_matrix_router
 from .booking_options import router as booking_options_router
+from .booking_packages import router as booking_packages_router
 from .booking_periods import router as booking_periods_router
 from .committee_roles import router as committee_roles_router
 from .currencies import router as currencies_router
@@ -27,6 +28,7 @@ router.include_router(currencies_router)
 router.include_router(sponsor_packages_router)
 router.include_router(booking_periods_router)
 router.include_router(booking_options_router)
+router.include_router(booking_packages_router)
 router.include_router(booking_matrix_router)
 router.include_router(discount_codes_router)
 router.include_router(session_types_router)

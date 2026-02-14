@@ -35,6 +35,7 @@ export interface ApplicantProfile {
   needs_accessibility: boolean;
   accessibility_details: string | null;
   agrees_to_recording: boolean;
+  message_notifications_enabled: boolean;
   picture_url: string | null;
   video_url: string | null;
   created_at: string;
@@ -52,6 +53,7 @@ export interface ApplicantProfileUpdate {
   needs_accessibility?: boolean;
   accessibility_details?: string;
   agrees_to_recording?: boolean;
+  message_notifications_enabled?: boolean;
 }
 
 // --- Conference / CFP ---
@@ -144,6 +146,7 @@ export interface PortalPaper {
   main_speaker_first_name: string | null;
   main_speaker_last_name: string | null;
   cospeakers: PortalCospeaker[];
+  custom_field_answers: Record<string, unknown> | null;
   submitted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -164,6 +167,7 @@ export interface PortalPaperCreateRequest {
   learning_objectives?: string;
   importance?: string;
   cospeaker_emails?: string[];
+  custom_field_answers?: Record<string, unknown>;
 }
 
 export interface PortalPaperUpdateRequest {
@@ -175,6 +179,7 @@ export interface PortalPaperUpdateRequest {
   learning_objectives?: string;
   importance?: string;
   cospeaker_emails?: string[];
+  custom_field_answers?: Record<string, unknown>;
 }
 
 // --- Invitation ---
@@ -335,4 +340,122 @@ export interface PortalSpeakerFeedback {
 export interface PortalSpeakerFeedbackListResponse {
   items: PortalSpeakerFeedback[];
   total: number;
+}
+
+// --- Paper Form Schema ---
+
+export type PortalFieldType =
+  | "text"
+  | "textarea"
+  | "richtext"
+  | "checkbox"
+  | "checkbox_group"
+  | "dropdown"
+  | "file_upload";
+
+export interface PortalFieldOption {
+  value: string;
+  label: string;
+}
+
+export interface PortalValidationRules {
+  min_length?: number;
+  max_length?: number;
+  allowed_file_types?: string[];
+  max_file_size_mb?: number;
+}
+
+export interface PortalBuiltinFieldConfig {
+  visible: boolean;
+  required: boolean;
+  display_order?: number;
+}
+
+export interface PortalPaperFormField {
+  id: string;
+  field_key: string;
+  field_type: PortalFieldType;
+  label: string;
+  description: string | null;
+  placeholder: string | null;
+  help_text: string | null;
+  display_order: number;
+  is_visible: boolean;
+  is_required: boolean;
+  validation_rules: PortalValidationRules | null;
+  options: PortalFieldOption[] | null;
+}
+
+export interface PortalPaperFormSchema {
+  id: string;
+  conference_id: string;
+  version: number;
+  builtin_fields_config: Record<string, PortalBuiltinFieldConfig>;
+  fields: PortalPaperFormField[];
+}
+
+// Portal messaging types
+export interface PortalSenderInfo {
+  id: string;
+  type: "user" | "applicant";
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
+export interface PortalMessageAttachmentInfo {
+  id: string;
+  filename: string;
+  content_type: string;
+  file_size: number;
+}
+
+export interface PortalMessageResponse {
+  id: string;
+  thread_id: string;
+  sender: PortalSenderInfo;
+  body_html: string;
+  attachments: PortalMessageAttachmentInfo[];
+  created_at: string;
+}
+
+export interface PortalThreadListItem {
+  id: string;
+  subject: string;
+  last_message_at: string;
+  last_message_preview: string;
+  last_message_sender: PortalSenderInfo;
+  other_participants: PortalSenderInfo[];
+  unread: boolean;
+  message_count: number;
+  created_at: string;
+}
+
+export interface PortalThreadListResponse {
+  items: PortalThreadListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface PortalParticipantInfo {
+  id: string;
+  type: "user" | "applicant";
+  first_name: string;
+  last_name: string;
+  email: string;
+  last_read_at: string | null;
+}
+
+export interface PortalThreadDetailResponse {
+  id: string;
+  subject: string;
+  participants: PortalParticipantInfo[];
+  messages: PortalMessageResponse[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PortalUnreadCountResponse {
+  unread_count: number;
 }

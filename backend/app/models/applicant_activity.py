@@ -22,6 +22,8 @@ class ApplicantActivityType(str, Enum):
     REGISTERED = "registered"
     CONFIRMATION_SENT = "confirmation_sent"
     EMAIL_VERIFIED = "email_verified"
+    PASSWORD_RESET_REQUESTED = "password_reset_requested"
+    PASSWORD_RESET_COMPLETED = "password_reset_completed"
     ACCOUNT_DELETED = "account_deleted"
 
 
