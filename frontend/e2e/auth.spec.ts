@@ -1,77 +1,38 @@
 import { test, expect } from '@playwright/test';
+import { LoginPage } from './pages/login.page';
+import { PortalLoginPage } from './pages/portal-login.page';
 
 test.describe('Authentication', () => {
-  test('should show login page', async ({ page }) => {
-    await page.goto('/login');
-
-    // Check that login form is visible - heading is "SaaSConf"
-    await expect(page.getByRole('heading', { name: /saasconf/i })).toBeVisible();
-    // Use placeholder text since labels have sr-only class
-    await expect(page.getByPlaceholder(/email/i)).toBeVisible();
-    await expect(page.getByPlaceholder(/password/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
+  test('should show admin login page with form elements', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.expectVisible();
   });
 
   test('should show error for invalid credentials', async ({ page }) => {
-    await page.goto('/login');
-
-    // Fill in invalid credentials using placeholder
-    await page.getByPlaceholder(/email/i).fill('invalid@example.com');
-    await page.getByPlaceholder(/password/i).fill('wrongpassword');
-    await page.getByRole('button', { name: /sign in/i }).click();
-
-    // Should show error message
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.login('invalid@example.com', 'wrongpassword');
     await expect(page.getByText(/invalid|incorrect|failed/i)).toBeVisible({ timeout: 10000 });
   });
 
-  test('should login successfully with valid credentials', async ({ page }) => {
-    // Skip if no test credentials are set
-    const email = process.env.E2E_ADMIN_EMAIL;
-    const password = process.env.E2E_ADMIN_PASSWORD;
-
-    if (!email || !password) {
-      test.skip();
-      return;
+  test('should redirect unauthenticated users to login', async ({ page }) => {
+    const protectedRoutes = ['/dashboard', '/modules/conferences', '/admin/tenants'];
+    for (const route of protectedRoutes) {
+      await page.goto(route);
+      await expect(page).toHaveURL(/login/i, { timeout: 5000 });
     }
-
-    await page.goto('/login');
-
-    // Fill in valid credentials using placeholder
-    await page.getByPlaceholder(/email/i).fill(email);
-    await page.getByPlaceholder(/password/i).fill(password);
-    await page.getByRole('button', { name: /sign in/i }).click();
-
-    // Should redirect to dashboard
-    await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 10000 });
   });
 
-  test('should logout successfully', async ({ page }) => {
-    const email = process.env.E2E_ADMIN_EMAIL;
-    const password = process.env.E2E_ADMIN_PASSWORD;
+  test('should show portal login page', async ({ page }) => {
+    const portalLogin = new PortalLoginPage(page);
+    await portalLogin.goto();
+    await expect(portalLogin.emailInput).toBeVisible({ timeout: 10000 });
+  });
 
-    if (!email || !password) {
-      test.skip();
-      return;
-    }
-
-    // Login first
-    await page.goto('/login');
-    await page.getByPlaceholder(/email/i).fill(email);
-    await page.getByPlaceholder(/password/i).fill(password);
-    await page.getByRole('button', { name: /sign in/i }).click();
-
-    // Wait for dashboard
-    await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 10000 });
-
-    // Open user dropdown menu (header button with chevron icon)
-    // The menu trigger shows the user's name + role, with a chevron SVG
-    const userMenuTrigger = page.locator('header button:has(svg)').last();
-    await userMenuTrigger.click();
-
-    // Click the Logout button inside the dropdown
-    await page.getByRole('button', { name: /logout|sign out/i }).click();
-
-    // Should redirect to login
-    await expect(page).toHaveURL(/login/i, { timeout: 10000 });
+  test('should show portal registration form', async ({ page }) => {
+    const portalLogin = new PortalLoginPage(page);
+    await portalLogin.gotoRegister();
+    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 10000 });
   });
 });

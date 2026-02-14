@@ -46,6 +46,9 @@ logs/
 htmlcov/
 .pytest_cache/
 .tox/
+playwright/.auth/
+test-results/
+playwright-report/
 
 # Build
 build/

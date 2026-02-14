@@ -244,19 +244,30 @@ jobs:
         working-directory: frontend
         run: npx playwright install chromium
 
+      - name: Create auth storage directory
+        working-directory: frontend
+        run: mkdir -p playwright/.auth
+
       - name: Run E2E tests
         working-directory: frontend
         env:
           E2E_BASE_URL: https://staging.sonrisa.ventures
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          E2E_PORTAL_EMAIL: ${{ secrets.E2E_PORTAL_EMAIL }}
+          E2E_PORTAL_PASSWORD: ${{ secrets.E2E_PORTAL_PASSWORD }}
+          E2E_TENANT_SLUG: ${{ secrets.E2E_TENANT_SLUG }}
+          E2E_CONFERENCE_ID: ${{ secrets.E2E_CONFERENCE_ID }}
+          E2E_CONFERENCE_NAME: ${{ secrets.E2E_CONFERENCE_NAME }}
           E2E_PORTAL_PATH: /demo/portal
-        run: npx playwright test --reporter=github
+        run: npx playwright test
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: playwright-report
-          path: frontend/playwright-report/
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
           retention-days: 7

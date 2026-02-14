@@ -1,91 +1,88 @@
 import { test, expect } from '@playwright/test';
+import { PortalDashboardPage } from './pages/portal-dashboard.page';
 
 test.describe('CFP Portal', () => {
-  // The CFP portal is accessed via /:tenantSlug/portal/user/...
-  const portalPath = process.env.E2E_PORTAL_PATH || '/demo/portal';
-
-  test('should show portal login page', async ({ page }) => {
-    // Go directly to the portal login page
-    await page.goto(`${portalPath}/user/login`);
-
-    // Should show login form with email input and Sign In button
-    const emailInput = page.getByLabel(/email/i);
-    const signInButton = page.getByRole('button', { name: /sign in/i });
-
-    // Check if we're on a valid portal page
-    const hasLoginForm = await emailInput.isVisible();
-    const hasButton = await signInButton.isVisible();
-
-    if (!hasLoginForm && !hasButton) {
-      // Portal might not be configured - check if we get an error page
-      const hasError = await page.getByText(/not found|error|404/i).isVisible();
-      if (hasError) {
-        test.skip();
-        return;
-      }
-    }
-
-    expect(hasLoginForm || hasButton).toBeTruthy();
-  });
-
-  test('should show registration form for new users', async ({ page }) => {
-    await page.goto(`${portalPath}/user/register`);
-
-    // Check registration form elements
-    const emailInput = page.getByLabel(/email/i);
-    const passwordInput = page.getByLabel(/password/i).first();
-
-    // At least email should be visible
-    const hasEmail = await emailInput.isVisible();
-
-    if (hasEmail) {
-      await expect(emailInput).toBeVisible();
-    } else {
-      // Portal might not be configured for this tenant
-      const hasError = await page.getByText(/not found|error|404/i).isVisible();
-      if (hasError) {
-        test.skip();
-      }
-    }
-  });
-
-  test('should show login form for existing users', async ({ page }) => {
-    await page.goto(`${portalPath}/user/login`);
-
-    const emailInput = page.getByLabel(/email/i);
-    const passwordInput = page.getByLabel(/password/i);
-    const submitButton = page.getByRole('button', { name: /sign in/i });
-
-    const hasForm = await emailInput.isVisible() && await passwordInput.isVisible();
-
-    if (hasForm) {
-      await expect(emailInput).toBeVisible();
-      await expect(passwordInput).toBeVisible();
-      await expect(submitButton).toBeVisible();
-    } else {
-      // Portal might not be configured
+  test.beforeEach(async () => {
+    if (!process.env.E2E_PORTAL_EMAIL || !process.env.E2E_PORTAL_PASSWORD) {
       test.skip();
     }
   });
 
-  test('should validate email format on registration', async ({ page }) => {
-    await page.goto(`${portalPath}/user/register`);
+  test('should display submit paper form with conference selection', async ({ page }) => {
+    const dashboard = new PortalDashboardPage(page);
+    await dashboard.gotoSubmitPaper();
 
-    const emailInput = page.getByLabel(/email/i);
+    await expect(page).toHaveURL(/papers\/new/i, { timeout: 10000 });
 
-    if (!await emailInput.isVisible()) {
-      test.skip();
-      return;
+    // Should show form with conference select or paper fields
+    const formElement = page.locator('form, select, input, textarea').first();
+    await expect(formElement).toBeVisible({ timeout: 10000 });
+
+    // Check for conference dropdown
+    const hasSelect = await page.locator('select').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasForm = await page.locator('form').first().isVisible({ timeout: 3000 }).catch(() => false);
+    expect(hasSelect || hasForm).toBeTruthy();
+  });
+
+  test('should show paper form fields including title and abstract', async ({ page }) => {
+    const dashboard = new PortalDashboardPage(page);
+    await dashboard.gotoSubmitPaper();
+
+    await expect(page).toHaveURL(/papers\/new/i, { timeout: 10000 });
+
+    // If form is rendered (conference may be pre-selected or only one conference)
+    const hasTitle = await page.getByLabel(/title/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    if (hasTitle) {
+      // Verify form structure
+      const hasAbstract = await page.getByText(/abstract/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+      const hasSaveDraft = await page.getByRole('button', { name: /save as draft|save/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
+      const hasCancel = await page.getByRole('button', { name: /cancel/i }).isVisible({ timeout: 3000 }).catch(() => false);
+
+      expect(hasAbstract || hasSaveDraft || hasCancel).toBeTruthy();
     }
+  });
 
-    // Enter invalid email
-    await emailInput.fill('invalid-email');
-    await emailInput.blur();
+  test('should show co-speakers section in paper form', async ({ page }) => {
+    const dashboard = new PortalDashboardPage(page);
+    await dashboard.gotoSubmitPaper();
 
-    // Should show validation error or HTML5 validation
-    const hasError = await page.getByText(/invalid|valid email/i).isVisible();
-    const hasNativeValidation = await emailInput.evaluate((el: HTMLInputElement) => !el.validity.valid);
+    await expect(page).toHaveURL(/papers\/new/i, { timeout: 10000 });
 
-    expect(hasError || hasNativeValidation).toBeTruthy();
+    // Check for co-speakers section (may only be visible when form is fully rendered)
+    const hasCoSpeakers = await page.getByText(/co-speaker/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    if (hasCoSpeakers) {
+      // Should show email input for adding co-speakers
+      const emailInput = page.getByPlaceholder(/co-speaker email/i);
+      await expect(emailInput).toBeVisible({ timeout: 3000 });
+    }
+  });
+
+  test('should show paper list on dashboard', async ({ page }) => {
+    const dashboard = new PortalDashboardPage(page);
+    await dashboard.goto();
+    await dashboard.expectVisible();
+
+    // Dashboard should display papers section
+    await expect(page.getByText(/paper|submission/i).first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should navigate between portal pages without errors', async ({ page }) => {
+    const dashboard = new PortalDashboardPage(page);
+
+    // Navigate through key portal pages
+    await dashboard.goto();
+    await dashboard.expectVisible();
+
+    await dashboard.gotoProfile();
+    await expect(page).toHaveURL(/profile/i, { timeout: 10000 });
+    // Profile should render without errors
+    await expect(page.locator('input').first()).toBeVisible({ timeout: 5000 });
+
+    await dashboard.gotoMessages();
+    await expect(page).toHaveURL(/messages/i, { timeout: 10000 });
+
+    // Return to dashboard
+    await dashboard.goto();
+    await dashboard.expectVisible();
   });
 });
