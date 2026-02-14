@@ -45,7 +45,7 @@ export default defineConfig({
     // Unauthenticated tests (no setup dependency)
     {
       name: 'unauth-tests',
-      testMatch: '**/auth.spec.ts',
+      testMatch: /^(auth|portal-auth)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
 
@@ -63,7 +63,7 @@ export default defineConfig({
     // Portal tests (depend on portal-setup)
     {
       name: 'portal-tests',
-      testMatch: /portal.*\.spec\.ts/,
+      testMatch: /portal-(?!auth).*\.spec\.ts|cfp-portal\.spec\.ts/,
       dependencies: ['portal-setup'],
       use: {
         ...devices['Desktop Chrome'],
