@@ -6,6 +6,10 @@ Covers models, schemas, and all admin messaging API endpoints:
 - Mark as read
 - Unread count
 - Bulk send
+- Message templates CRUD
+- Recipient lists CRUD
+- Thread flags, archive, notes, export
+- Bulk send filters (all_applicants, paper_status, committee_role, recipient_list)
 """
 
 import uuid
@@ -18,9 +22,18 @@ from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, hash_password
-from app.models.cfp import CFPApplicant
+from app.models.associations import ConferenceCFP
+from app.models.cfp import CFPApplicant, CFPCommitteeMember, CFPPaper, CallForPapers
 from app.models.conference import Conference
-from app.models.messaging import Message, MessageParticipant, MessageThread
+from app.models.messaging import (
+    Message,
+    MessageParticipant,
+    MessageTemplate,
+    MessageThread,
+    RecipientList,
+    RecipientListMember,
+    ThreadFlag,
+)
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
@@ -30,9 +43,15 @@ from app.schemas.messaging import (
     BulkRecipientFilter,
     BulkSendResponse,
     CreateThreadResponse,
+    InternalNoteCreate,
     MessageAttachmentInfo,
     MessageResponse,
+    MessageTemplateCreate,
+    MessageTemplateResponse,
+    MessageTemplateUpdate,
     ParticipantInfo,
+    RecipientListCreate,
+    RecipientListResponse,
     ReplyCreate,
     SenderInfo,
     ThreadDetailResponse,
@@ -1710,3 +1729,1431 @@ class TestEndToEndFlow:
         assert list_resp.status_code == 200
         thread_ids = [item["id"] for item in list_resp.json()["items"]]
         assert thread_id in thread_ids
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 4. PHASE 2: ADDITIONAL FIXTURES
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest_asyncio.fixture()
+async def cfp_with_paper(
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+    applicant: CFPApplicant,
+) -> CFPPaper:
+    """Create a CallForPapers linked to the conference, plus a paper from the applicant."""
+    cfp = CallForPapers(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        title="TestConf CFP 2026",
+        status="open",
+    )
+    db_session.add(cfp)
+    await db_session.flush()
+
+    # Link CFP to conference
+    db_session.add(ConferenceCFP(
+        id=uuid.uuid4(),
+        conference_id=conference.id,
+        cfp_id=cfp.id,
+    ))
+
+    paper = CFPPaper(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        cfp_id=cfp.id,
+        main_speaker_id=applicant.id,
+        title="Building Async APIs with Python",
+        status="submitted",
+    )
+    db_session.add(paper)
+    await db_session.commit()
+    return paper
+
+
+@pytest_asyncio.fixture()
+async def second_paper(
+    db_session: AsyncSession,
+    tenant: Tenant,
+    second_applicant: CFPApplicant,
+    cfp_with_paper: CFPPaper,
+) -> CFPPaper:
+    """Create a second paper from the second applicant in the same CFP."""
+    paper = CFPPaper(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        cfp_id=cfp_with_paper.cfp_id,
+        main_speaker_id=second_applicant.id,
+        title="Scaling Microservices",
+        status="accepted",
+    )
+    db_session.add(paper)
+    await db_session.commit()
+    return paper
+
+
+@pytest_asyncio.fixture()
+async def committee_member(
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+    applicant: CFPApplicant,
+) -> CFPCommitteeMember:
+    """Create a committee member for the conference."""
+    cm = CFPCommitteeMember(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        applicant_id=applicant.id,
+        role="reviewer",
+    )
+    db_session.add(cm)
+    await db_session.commit()
+    return cm
+
+
+@pytest_asyncio.fixture()
+async def recipient_list_with_members(
+    db_session: AsyncSession,
+    tenant: Tenant,
+    applicant: CFPApplicant,
+    second_applicant: CFPApplicant,
+) -> RecipientList:
+    """Create a recipient list with two members."""
+    rl = RecipientList(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        name="VIP Speakers",
+        description="Important speakers list",
+    )
+    db_session.add(rl)
+    await db_session.flush()
+
+    db_session.add(RecipientListMember(
+        id=uuid.uuid4(), list_id=rl.id, applicant_id=applicant.id,
+    ))
+    db_session.add(RecipientListMember(
+        id=uuid.uuid4(), list_id=rl.id, applicant_id=second_applicant.id,
+    ))
+    await db_session.commit()
+    return rl
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 5. MESSAGE TEMPLATES CRUD
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestListTemplates:
+    """GET /conferences/{id}/messaging/templates"""
+
+    async def test_list_templates_empty(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """Returns empty list when no templates exist."""
+        url = _messaging_url(conference.id, "templates")
+        response = await client.get(url, headers=auth_headers(messaging_admin_token))
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["items"] == []
+        assert data["total"] == 0
+
+    async def test_list_templates_with_data(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_with_cfp: Tenant,
+        tenant: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """Returns templates when they exist."""
+        # Seed a template
+        db_session.add(MessageTemplate(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            name="Welcome",
+            subject="Welcome [First Name]!",
+            body_html="<p>Hello [First Name]</p>",
+        ))
+        await db_session.commit()
+
+        url = _messaging_url(conference.id, "templates")
+        response = await client.get(url, headers=auth_headers(messaging_admin_token))
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["name"] == "Welcome"
+
+    async def test_list_templates_requires_auth(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        conference: Conference,
+    ) -> None:
+        url = _messaging_url(conference.id, "templates")
+        response = await client.get(url)
+        assert response.status_code == 401
+
+
+class TestCreateTemplate:
+    """POST /conferences/{id}/messaging/templates"""
+
+    async def test_create_template_success(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        url = _messaging_url(conference.id, "templates")
+        payload = {
+            "name": "Acceptance Notice",
+            "subject": "Your paper has been accepted!",
+            "body_html": "<p>Congrats [First Name]!</p>",
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "Acceptance Notice"
+        assert data["subject"] == "Your paper has been accepted!"
+        assert data["body_html"] == "<p>Congrats [First Name]!</p>"
+        assert "id" in data
+        assert "created_at" in data
+
+    async def test_create_template_duplicate_name_rejected(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        url = _messaging_url(conference.id, "templates")
+        payload = {
+            "name": "Dup Template",
+            "subject": "Subject",
+            "body_html": "<p>Body</p>",
+        }
+        # Create first
+        resp1 = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+        assert resp1.status_code == 201
+
+        # Duplicate
+        resp2 = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+        assert resp2.status_code == 400
+
+    async def test_create_template_empty_name_rejected(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        url = _messaging_url(conference.id, "templates")
+        payload = {"name": "", "subject": "Subj", "body_html": "<p>Body</p>"}
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 422
+
+
+class TestUpdateTemplate:
+    """PUT /conferences/{id}/messaging/templates/{template_id}"""
+
+    async def test_update_template_success(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        # Create first
+        create_url = _messaging_url(conference.id, "templates")
+        create_resp = await client.post(
+            create_url,
+            json={"name": "Draft", "subject": "Old Subj", "body_html": "<p>Old</p>"},
+            headers=auth_headers(messaging_admin_token),
+        )
+        template_id = create_resp.json()["id"]
+
+        # Update
+        update_url = _messaging_url(conference.id, f"templates/{template_id}")
+        response = await client.put(
+            update_url,
+            json={"name": "Final", "subject": "New Subj"},
+            headers=auth_headers(messaging_admin_token),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Final"
+        assert data["subject"] == "New Subj"
+        assert data["body_html"] == "<p>Old</p>"  # unchanged
+
+    async def test_update_template_not_found(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        fake_id = uuid.uuid4()
+        url = _messaging_url(conference.id, f"templates/{fake_id}")
+        response = await client.put(
+            url,
+            json={"name": "Nope"},
+            headers=auth_headers(messaging_admin_token),
+        )
+        assert response.status_code == 404
+
+    async def test_update_template_duplicate_name_rejected(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        create_url = _messaging_url(conference.id, "templates")
+        # Template A
+        await client.post(
+            create_url,
+            json={"name": "Alpha", "subject": "S", "body_html": "<p>B</p>"},
+            headers=auth_headers(messaging_admin_token),
+        )
+        # Template B
+        resp_b = await client.post(
+            create_url,
+            json={"name": "Beta", "subject": "S", "body_html": "<p>B</p>"},
+            headers=auth_headers(messaging_admin_token),
+        )
+        template_b_id = resp_b.json()["id"]
+
+        # Try renaming B to Alpha
+        update_url = _messaging_url(conference.id, f"templates/{template_b_id}")
+        response = await client.put(
+            update_url,
+            json={"name": "Alpha"},
+            headers=auth_headers(messaging_admin_token),
+        )
+        assert response.status_code == 400
+
+
+class TestDeleteTemplate:
+    """DELETE /conferences/{id}/messaging/templates/{template_id}"""
+
+    async def test_delete_template_success(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        # Create
+        create_url = _messaging_url(conference.id, "templates")
+        resp = await client.post(
+            create_url,
+            json={"name": "ToDelete", "subject": "S", "body_html": "<p>B</p>"},
+            headers=auth_headers(messaging_admin_token),
+        )
+        template_id = resp.json()["id"]
+
+        # Delete
+        delete_url = _messaging_url(conference.id, f"templates/{template_id}")
+        response = await client.delete(
+            delete_url, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 204
+
+        # Verify gone
+        list_url = _messaging_url(conference.id, "templates")
+        list_resp = await client.get(
+            list_url, headers=auth_headers(messaging_admin_token)
+        )
+        assert list_resp.json()["total"] == 0
+
+    async def test_delete_template_not_found(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        fake_id = uuid.uuid4()
+        url = _messaging_url(conference.id, f"templates/{fake_id}")
+        response = await client.delete(
+            url, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 404
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 6. RECIPIENT LISTS CRUD
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestListRecipientLists:
+    """GET /conferences/{id}/messaging/recipient-lists"""
+
+    async def test_list_recipient_lists_empty(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        url = _messaging_url(conference.id, "recipient-lists")
+        response = await client.get(url, headers=auth_headers(messaging_admin_token))
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["items"] == []
+        assert data["total"] == 0
+
+    async def test_list_recipient_lists_with_data(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        second_applicant: CFPApplicant,
+        recipient_list_with_members: RecipientList,
+    ) -> None:
+        url = _messaging_url(conference.id, "recipient-lists")
+        response = await client.get(url, headers=auth_headers(messaging_admin_token))
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["name"] == "VIP Speakers"
+        assert data["items"][0]["member_count"] == 2
+
+
+class TestCreateRecipientList:
+    """POST /conferences/{id}/messaging/recipient-lists"""
+
+    async def test_create_recipient_list_success(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+    ) -> None:
+        url = _messaging_url(conference.id, "recipient-lists")
+        payload = {
+            "name": "Keynote Speakers",
+            "description": "Selected keynote presenters",
+            "applicant_ids": [str(applicant.id)],
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "Keynote Speakers"
+        assert len(data["members"]) == 1
+        assert data["members"][0]["id"] == str(applicant.id)
+
+    async def test_create_recipient_list_duplicate_name_rejected(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+    ) -> None:
+        url = _messaging_url(conference.id, "recipient-lists")
+        payload = {
+            "name": "Dup List",
+            "applicant_ids": [str(applicant.id)],
+        }
+        resp1 = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+        assert resp1.status_code == 201
+
+        resp2 = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+        assert resp2.status_code == 400
+
+    async def test_create_recipient_list_invalid_applicants(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        url = _messaging_url(conference.id, "recipient-lists")
+        payload = {
+            "name": "Ghost List",
+            "applicant_ids": [str(uuid.uuid4())],
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 404
+
+
+class TestGetRecipientListDetail:
+    """GET /conferences/{id}/messaging/recipient-lists/{list_id}"""
+
+    async def test_get_recipient_list_detail(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        second_applicant: CFPApplicant,
+        recipient_list_with_members: RecipientList,
+    ) -> None:
+        url = _messaging_url(
+            conference.id, f"recipient-lists/{recipient_list_with_members.id}"
+        )
+        response = await client.get(url, headers=auth_headers(messaging_admin_token))
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "VIP Speakers"
+        assert len(data["members"]) == 2
+
+    async def test_get_recipient_list_not_found(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        fake_id = uuid.uuid4()
+        url = _messaging_url(conference.id, f"recipient-lists/{fake_id}")
+        response = await client.get(url, headers=auth_headers(messaging_admin_token))
+        assert response.status_code == 404
+
+
+class TestUpdateRecipientList:
+    """PUT /conferences/{id}/messaging/recipient-lists/{list_id}"""
+
+    async def test_update_recipient_list_name(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        second_applicant: CFPApplicant,
+        recipient_list_with_members: RecipientList,
+    ) -> None:
+        url = _messaging_url(
+            conference.id, f"recipient-lists/{recipient_list_with_members.id}"
+        )
+        response = await client.put(
+            url,
+            json={"name": "Updated VIPs"},
+            headers=auth_headers(messaging_admin_token),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["name"] == "Updated VIPs"
+
+    async def test_update_recipient_list_members(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        second_applicant: CFPApplicant,
+        recipient_list_with_members: RecipientList,
+    ) -> None:
+        """Update members to only include one applicant."""
+        url = _messaging_url(
+            conference.id, f"recipient-lists/{recipient_list_with_members.id}"
+        )
+        response = await client.put(
+            url,
+            json={"applicant_ids": [str(applicant.id)]},
+            headers=auth_headers(messaging_admin_token),
+        )
+
+        assert response.status_code == 200
+        assert len(response.json()["members"]) == 1
+
+
+class TestDeleteRecipientList:
+    """DELETE /conferences/{id}/messaging/recipient-lists/{list_id}"""
+
+    async def test_delete_recipient_list_success(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        second_applicant: CFPApplicant,
+        recipient_list_with_members: RecipientList,
+    ) -> None:
+        url = _messaging_url(
+            conference.id, f"recipient-lists/{recipient_list_with_members.id}"
+        )
+        response = await client.delete(
+            url, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 204
+
+        # Verify deleted
+        get_resp = await client.get(
+            url, headers=auth_headers(messaging_admin_token)
+        )
+        assert get_resp.status_code == 404
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 7. THREAD FLAGS, ARCHIVE, NOTES, EXPORT
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestToggleThreadFlag:
+    """POST /conferences/{id}/messaging/threads/{thread_id}/flag"""
+
+    async def test_flag_toggle_on(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/flag")
+        response = await client.post(url, headers=auth_headers(messaging_admin_token))
+
+        assert response.status_code == 200
+        assert response.json()["flagged"] is True
+
+    async def test_flag_toggle_off(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/flag")
+        # Flag on
+        await client.post(url, headers=auth_headers(messaging_admin_token))
+        # Flag off
+        response = await client.post(url, headers=auth_headers(messaging_admin_token))
+
+        assert response.status_code == 200
+        assert response.json()["flagged"] is False
+
+    async def test_flag_appears_in_thread_list(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        """Flagged threads have is_flagged=True in list response."""
+        flag_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/flag")
+        await client.post(flag_url, headers=auth_headers(messaging_admin_token))
+
+        list_url = _messaging_url(conference.id, "threads")
+        response = await client.get(
+            list_url, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 200
+        item = response.json()["items"][0]
+        assert item["is_flagged"] is True
+
+    async def test_filter_by_flagged(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        """Filter threads by flagged=true only returns flagged threads."""
+        flag_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/flag")
+        await client.post(flag_url, headers=auth_headers(messaging_admin_token))
+
+        list_url = _messaging_url(conference.id, "threads")
+
+        # Flagged filter
+        resp = await client.get(
+            list_url,
+            params={"flagged": "true"},
+            headers=auth_headers(messaging_admin_token),
+        )
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 1
+
+    async def test_flag_nonexistent_thread(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        fake_id = uuid.uuid4()
+        url = _messaging_url(conference.id, f"threads/{fake_id}/flag")
+        response = await client.post(url, headers=auth_headers(messaging_admin_token))
+        assert response.status_code == 404
+
+
+class TestArchiveThread:
+    """POST /conferences/{id}/messaging/threads/{thread_id}/archive + unarchive"""
+
+    async def test_archive_thread(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/archive")
+        response = await client.post(url, headers=auth_headers(messaging_admin_token))
+
+        assert response.status_code == 200
+        assert response.json()["ok"] is True
+
+    async def test_archived_thread_hidden_from_default_list(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        """Archived threads are hidden from the default (non-archived) list."""
+        archive_url = _messaging_url(
+            conference.id, f"threads/{thread_with_message.id}/archive"
+        )
+        await client.post(archive_url, headers=auth_headers(messaging_admin_token))
+
+        list_url = _messaging_url(conference.id, "threads")
+        # Default list (archived=false)
+        response = await client.get(
+            list_url, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 200
+        assert response.json()["total"] == 0
+
+        # Archived list
+        response = await client.get(
+            list_url,
+            params={"archived": "true"},
+            headers=auth_headers(messaging_admin_token),
+        )
+        assert response.status_code == 200
+        assert response.json()["total"] == 1
+
+    async def test_unarchive_thread(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        # Archive first
+        archive_url = _messaging_url(
+            conference.id, f"threads/{thread_with_message.id}/archive"
+        )
+        await client.post(archive_url, headers=auth_headers(messaging_admin_token))
+
+        # Unarchive
+        unarchive_url = _messaging_url(
+            conference.id, f"threads/{thread_with_message.id}/unarchive"
+        )
+        response = await client.post(
+            unarchive_url, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 200
+        assert response.json()["ok"] is True
+
+        # Verify back in default list
+        list_url = _messaging_url(conference.id, "threads")
+        resp = await client.get(
+            list_url, headers=auth_headers(messaging_admin_token)
+        )
+        assert resp.json()["total"] == 1
+
+    async def test_archive_nonexistent_thread(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        fake_id = uuid.uuid4()
+        url = _messaging_url(conference.id, f"threads/{fake_id}/archive")
+        response = await client.post(url, headers=auth_headers(messaging_admin_token))
+        assert response.status_code == 404
+
+
+class TestInternalNotes:
+    """POST /conferences/{id}/messaging/threads/{thread_id}/note"""
+
+    async def test_create_internal_note(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/note")
+        payload = {"body_html": "<p>Internal: needs follow-up.</p>"}
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["is_internal_note"] is True
+        assert data["body_html"] == "<p>Internal: needs follow-up.</p>"
+        assert data["sender"]["type"] == "user"
+
+    async def test_internal_note_visible_in_thread_detail(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        note_url = _messaging_url(
+            conference.id, f"threads/{thread_with_message.id}/note"
+        )
+        await client.post(
+            note_url,
+            json={"body_html": "<p>Note for team</p>"},
+            headers=auth_headers(messaging_admin_token),
+        )
+
+        detail_url = _messaging_url(
+            conference.id, f"threads/{thread_with_message.id}"
+        )
+        response = await client.get(
+            detail_url, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 200
+        messages = response.json()["messages"]
+        assert len(messages) == 2  # original + note
+        note_msg = [m for m in messages if m["is_internal_note"]]
+        assert len(note_msg) == 1
+
+    async def test_create_note_nonexistent_thread(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        fake_id = uuid.uuid4()
+        url = _messaging_url(conference.id, f"threads/{fake_id}/note")
+        response = await client.post(
+            url,
+            json={"body_html": "<p>Note</p>"},
+            headers=auth_headers(messaging_admin_token),
+        )
+        assert response.status_code == 404
+
+    async def test_create_note_empty_body_rejected(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/note")
+        response = await client.post(
+            url,
+            json={"body_html": ""},
+            headers=auth_headers(messaging_admin_token),
+        )
+        assert response.status_code == 422
+
+
+class TestExportThread:
+    """GET /conferences/{id}/messaging/threads/{thread_id}/export"""
+
+    async def test_export_text_format(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        url = _messaging_url(
+            conference.id, f"threads/{thread_with_message.id}/export"
+        )
+        response = await client.get(
+            url,
+            params={"format": "text"},
+            headers=auth_headers(messaging_admin_token),
+        )
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/plain; charset=utf-8"
+        assert "Content-Disposition" in response.headers
+        content = response.text
+        assert "Subject: Test Thread Subject" in content
+        assert "Hello, this is the first message." in content
+
+    async def test_export_html_format(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        url = _messaging_url(
+            conference.id, f"threads/{thread_with_message.id}/export"
+        )
+        response = await client.get(
+            url,
+            params={"format": "html"},
+            headers=auth_headers(messaging_admin_token),
+        )
+
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        content = response.text
+        assert "<h1>Test Thread Subject</h1>" in content
+        assert "Hello, this is the first message." in content
+
+    async def test_export_with_internal_note(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        thread_with_message: MessageThread,
+    ) -> None:
+        """Internal notes are labeled in export."""
+        note_url = _messaging_url(
+            conference.id, f"threads/{thread_with_message.id}/note"
+        )
+        await client.post(
+            note_url,
+            json={"body_html": "<p>Secret note</p>"},
+            headers=auth_headers(messaging_admin_token),
+        )
+
+        export_url = _messaging_url(
+            conference.id, f"threads/{thread_with_message.id}/export"
+        )
+        response = await client.get(
+            export_url,
+            params={"format": "text"},
+            headers=auth_headers(messaging_admin_token),
+        )
+
+        assert response.status_code == 200
+        assert "[INTERNAL NOTE]" in response.text
+
+    async def test_export_nonexistent_thread(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        fake_id = uuid.uuid4()
+        url = _messaging_url(conference.id, f"threads/{fake_id}/export")
+        response = await client.get(url, headers=auth_headers(messaging_admin_token))
+        assert response.status_code == 404
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 8. BULK SEND WITH ADVANCED FILTERS
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestBulkSendAllApplicants:
+    """Bulk send using all_applicants filter (requires papers linked via ConferenceCFP)."""
+
+    async def test_bulk_send_all_applicants(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        second_applicant: CFPApplicant,
+        cfp_with_paper: CFPPaper,
+        second_paper: CFPPaper,
+    ) -> None:
+        """Bulk send to all_applicants finds applicants who submitted papers."""
+        url = _messaging_url(conference.id, "bulk-send")
+        payload = {
+            "subject": "To all speakers",
+            "body_html": "<p>Hello everyone</p>",
+            "recipients": {"all_applicants": True},
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["threads_created"] == 2
+
+    async def test_bulk_send_all_applicants_no_papers(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """all_applicants with no papers linked returns 404."""
+        url = _messaging_url(conference.id, "bulk-send")
+        payload = {
+            "subject": "Hello",
+            "body_html": "<p>Body</p>",
+            "recipients": {"all_applicants": True},
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 404
+
+
+class TestBulkSendByPaperStatus:
+    """Bulk send filtering by paper_status."""
+
+    async def test_bulk_send_by_paper_status_submitted(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        second_applicant: CFPApplicant,
+        cfp_with_paper: CFPPaper,
+        second_paper: CFPPaper,
+    ) -> None:
+        """Filter by submitted status finds only the first applicant."""
+        url = _messaging_url(conference.id, "bulk-send")
+        payload = {
+            "subject": "Submission received",
+            "body_html": "<p>Thanks for submitting</p>",
+            "recipients": {"paper_status": "submitted"},
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        assert response.json()["threads_created"] == 1
+
+    async def test_bulk_send_by_paper_status_accepted(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        second_applicant: CFPApplicant,
+        cfp_with_paper: CFPPaper,
+        second_paper: CFPPaper,
+    ) -> None:
+        """Filter by accepted status finds only the second applicant."""
+        url = _messaging_url(conference.id, "bulk-send")
+        payload = {
+            "subject": "Congrats!",
+            "body_html": "<p>Your paper was accepted</p>",
+            "recipients": {"paper_status": "accepted"},
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        assert response.json()["threads_created"] == 1
+
+    async def test_bulk_send_by_paper_status_no_match(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        cfp_with_paper: CFPPaper,
+    ) -> None:
+        """Filter by a status that no papers have returns 404."""
+        url = _messaging_url(conference.id, "bulk-send")
+        payload = {
+            "subject": "Rejected",
+            "body_html": "<p>Sorry</p>",
+            "recipients": {"paper_status": "rejected"},
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 404
+
+
+class TestBulkSendByCommitteeRole:
+    """Bulk send filtering by committee_role."""
+
+    async def test_bulk_send_by_committee_role(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        committee_member: CFPCommitteeMember,
+    ) -> None:
+        url = _messaging_url(conference.id, "bulk-send")
+        payload = {
+            "subject": "Reviewer update",
+            "body_html": "<p>New papers assigned</p>",
+            "recipients": {"committee_role": "reviewer"},
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        assert response.json()["threads_created"] == 1
+
+    async def test_bulk_send_by_committee_role_no_match(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        url = _messaging_url(conference.id, "bulk-send")
+        payload = {
+            "subject": "Chair notice",
+            "body_html": "<p>Hello chairs</p>",
+            "recipients": {"committee_role": "chair"},
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 404
+
+
+class TestBulkSendByRecipientList:
+    """Bulk send filtering by recipient_list_id."""
+
+    async def test_bulk_send_by_recipient_list(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        second_applicant: CFPApplicant,
+        recipient_list_with_members: RecipientList,
+    ) -> None:
+        url = _messaging_url(conference.id, "bulk-send")
+        payload = {
+            "subject": "VIP announcement",
+            "body_html": "<p>Exclusive update for VIPs</p>",
+            "recipients": {
+                "recipient_list_id": str(recipient_list_with_members.id),
+            },
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        assert response.json()["threads_created"] == 2
+
+    async def test_bulk_send_by_empty_recipient_list(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_with_cfp: Tenant,
+        tenant: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """Bulk send with a list that has no members returns 404."""
+        empty_list = RecipientList(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            name="Empty List",
+        )
+        db_session.add(empty_list)
+        await db_session.commit()
+
+        url = _messaging_url(conference.id, "bulk-send")
+        payload = {
+            "subject": "Nobody",
+            "body_html": "<p>Ghost</p>",
+            "recipients": {"recipient_list_id": str(empty_list.id)},
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+        assert response.status_code == 404
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 9. TEMPLATE VARIABLE SUBSTITUTION
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestTemplateVariableSubstitution:
+    """Test that [First Name], [Last Name], etc. are substituted in thread creation."""
+
+    async def test_variables_substituted_in_create_thread(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+    ) -> None:
+        """Template variables in subject and body are replaced with applicant data."""
+        url = _messaging_url(conference.id, "threads")
+        payload = {
+            "recipient_applicant_ids": [str(applicant.id)],
+            "subject": "Hello [First Name] [Last Name]!",
+            "body_html": "<p>Dear [First Name], your email is [Email].</p>",
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        thread = response.json()["first_thread"]
+        assert thread["subject"] == f"Hello {applicant.first_name} {applicant.last_name}!"
+        msg_body = thread["messages"][0]["body_html"]
+        assert applicant.first_name in msg_body
+        assert applicant.email in msg_body
+
+    async def test_conference_name_variable(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+    ) -> None:
+        url = _messaging_url(conference.id, "threads")
+        payload = {
+            "recipient_applicant_ids": [str(applicant.id)],
+            "subject": "Welcome to [Conference Name]",
+            "body_html": "<p>See you at [Conference Name]!</p>",
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        thread = response.json()["first_thread"]
+        assert thread["subject"] == f"Welcome to {conference.name}"
+
+    async def test_paper_title_variable(
+        self,
+        client: AsyncClient,
+        tenant_with_cfp: Tenant,
+        tenant_admin_user: User,
+        messaging_admin_token: str,
+        conference: Conference,
+        applicant: CFPApplicant,
+        cfp_with_paper: CFPPaper,
+    ) -> None:
+        """[Paper Title] is replaced with the applicant's latest paper title."""
+        url = _messaging_url(conference.id, "threads")
+        payload = {
+            "recipient_applicant_ids": [str(applicant.id)],
+            "subject": "About your paper: [Paper Title]",
+            "body_html": "<p>Your paper [Paper Title] is great.</p>",
+        }
+        response = await client.post(
+            url, json=payload, headers=auth_headers(messaging_admin_token)
+        )
+
+        assert response.status_code == 201
+        thread = response.json()["first_thread"]
+        assert thread["subject"] == f"About your paper: {cfp_with_paper.title}"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 10. ADDITIONAL SCHEMA TESTS
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestInternalNoteCreateSchema:
+    """Tests for InternalNoteCreate schema."""
+
+    def test_valid_note(self) -> None:
+        data = InternalNoteCreate(body_html="<p>Note</p>")
+        assert data.body_html == "<p>Note</p>"
+
+    def test_empty_body_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            InternalNoteCreate(body_html="")
+
+
+class TestMessageTemplateCreateSchema:
+    """Tests for MessageTemplateCreate schema."""
+
+    def test_valid_create(self) -> None:
+        data = MessageTemplateCreate(
+            name="Welcome",
+            subject="Hello [First Name]",
+            body_html="<p>Welcome!</p>",
+        )
+        assert data.name == "Welcome"
+
+    def test_empty_name_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            MessageTemplateCreate(name="", subject="S", body_html="<p>B</p>")
+
+    def test_long_name_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            MessageTemplateCreate(name="x" * 201, subject="S", body_html="<p>B</p>")
+
+    def test_empty_subject_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            MessageTemplateCreate(name="N", subject="", body_html="<p>B</p>")
+
+    def test_empty_body_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            MessageTemplateCreate(name="N", subject="S", body_html="")
+
+
+class TestMessageTemplateUpdateSchema:
+    """Tests for MessageTemplateUpdate schema."""
+
+    def test_partial_update(self) -> None:
+        data = MessageTemplateUpdate(name="New Name")
+        assert data.name == "New Name"
+        assert data.subject is None
+        assert data.body_html is None
+
+    def test_full_update(self) -> None:
+        data = MessageTemplateUpdate(
+            name="N", subject="S", body_html="<p>B</p>"
+        )
+        assert data.name == "N"
+        assert data.subject == "S"
+
+
+class TestRecipientListCreateSchema:
+    """Tests for RecipientListCreate schema."""
+
+    def test_valid_create(self) -> None:
+        data = RecipientListCreate(
+            name="Test List",
+            description="A test",
+            applicant_ids=[uuid.uuid4()],
+        )
+        assert data.name == "Test List"
+        assert len(data.applicant_ids) == 1
+
+    def test_empty_name_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            RecipientListCreate(name="", applicant_ids=[uuid.uuid4()])
+
+    def test_empty_applicants_rejected(self) -> None:
+        with pytest.raises(PydanticValidationError):
+            RecipientListCreate(name="List", applicant_ids=[])
+
+
+class TestBulkRecipientFilterRecipientList:
+    """Tests for BulkRecipientFilter with recipient_list_id."""
+
+    def test_recipient_list_id_filter(self) -> None:
+        lid = uuid.uuid4()
+        f = BulkRecipientFilter(recipient_list_id=lid)
+        assert f.recipient_list_id == lid
+        assert f.all_applicants is False

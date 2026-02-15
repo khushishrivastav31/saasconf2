@@ -179,8 +179,8 @@ describe("ThreadList", () => {
           selectedId="thread-abc"
         />
       );
-      const button = container.querySelector("button");
-      expect(button).toHaveClass("bg-blue-50", "border-l-2", "border-l-blue-600");
+      const clickable = container.querySelector(".cursor-pointer");
+      expect(clickable).toHaveClass("bg-blue-50", "border-l-2", "border-l-blue-600");
     });
 
     it("does not highlight non-selected threads", () => {
@@ -192,8 +192,8 @@ describe("ThreadList", () => {
           selectedId="different-thread"
         />
       );
-      const button = container.querySelector("button");
-      expect(button).not.toHaveClass("border-l-2");
+      const clickable = container.querySelector(".cursor-pointer");
+      expect(clickable).not.toHaveClass("border-l-2");
     });
 
     it("does not highlight any thread when selectedId is null", () => {
@@ -204,9 +204,9 @@ describe("ThreadList", () => {
       const { container } = render(
         <ThreadList {...defaultProps} threads={threads} selectedId={null} />
       );
-      const buttons = container.querySelectorAll("button");
-      buttons.forEach((btn) => {
-        expect(btn).not.toHaveClass("border-l-2");
+      const clickables = container.querySelectorAll(".cursor-pointer");
+      clickables.forEach((el) => {
+        expect(el).not.toHaveClass("border-l-2");
       });
     });
   });

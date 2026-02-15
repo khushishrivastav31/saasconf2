@@ -254,6 +254,7 @@ async def update_recipient_list(
         )
         for m in existing_members.scalars():
             await db.delete(m)
+        await db.flush()
 
         # Add new members
         for aid in valid_ids:
