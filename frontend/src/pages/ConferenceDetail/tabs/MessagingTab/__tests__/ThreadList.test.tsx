@@ -290,15 +290,15 @@ describe("ThreadList", () => {
       expect(screen.getByText("Yesterday")).toBeInTheDocument();
     });
 
-    it("shows short weekday for messages within the past week", () => {
+    it("shows formatted date for messages within the past week", () => {
       // 3 days ago = Thursday June 12
       const threeDaysAgo = new Date("2025-06-12T08:00:00Z");
       const thread = makeThread({
         last_message_at: threeDaysAgo.toISOString(),
       });
       render(<ThreadList {...defaultProps} threads={[thread]} />);
-      // Should show short weekday like "Thu" in the date span
-      expect(screen.getByText("Thu")).toBeInTheDocument();
+      // Should show formatted date like "Jun 12, 2025"
+      expect(screen.getByText(/Jun\s+12/)).toBeInTheDocument();
     });
 
     it('shows month and day for older messages (e.g. "Jan 5")', () => {
