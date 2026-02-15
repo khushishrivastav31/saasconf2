@@ -1,14 +1,12 @@
 /**
- * Phone number validation utilities.
+ * Phone number validation utilities using libphonenumber-js.
  */
 
-// Phone number pattern: optional + at start, then only digits
-const PHONE_PATTERN = /^\+?[0-9]+$/;
+import { isValidPhoneNumber } from "libphonenumber-js";
 
 /**
- * Validate phone number format.
- * Phone numbers must contain only digits, optionally starting with +.
- * Examples: +491234545, 00491234566
+ * Validate phone number using libphonenumber.
+ * Requires international format with country code (e.g. +49123456789).
  *
  * @param value - The phone number to validate
  * @returns Error message if invalid, null if valid
@@ -17,8 +15,8 @@ export function validatePhone(value: string | null | undefined): string | null {
   if (!value || value === "") {
     return null; // Empty is valid (phone is optional)
   }
-  if (!PHONE_PATTERN.test(value)) {
-    return "Phone number must contain only digits, optionally starting with +. Examples: +491234545, 00491234566";
+  if (!isValidPhoneNumber(value)) {
+    return "Invalid phone number. Use international format with country code, e.g. +49123456789";
   }
   return null;
 }

@@ -18,6 +18,7 @@ import type {
   ProgramSession,
 } from "../../../../types";
 import { parseApiError } from "../../../../utils/apiError";
+import { formatDate } from "../../../../utils/formatDate";
 import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
 import { useToast } from "../../../../components/Toast";
 
@@ -217,7 +218,7 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
               Published{" "}
-              {new Date(conference.program_published_at!).toLocaleDateString()}
+              {formatDate(conference.program_published_at!)}
             </span>
           )}
         </div>

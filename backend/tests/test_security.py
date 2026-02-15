@@ -14,8 +14,10 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
 import hashlib
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
+
+from app.core.utils import utcnow
 
 import pytest
 from jose import jwt
@@ -121,14 +123,14 @@ class TestAccessToken:
         assert payload["modules"] == []
 
     def test_access_token_contains_exp_and_iat(self):
-        before = datetime.utcnow()
+        before = utcnow()
         token = create_access_token(uuid4(), uuid4(), "admin")
         payload = decode_token(token, token_type="access")
 
         assert "exp" in payload
         assert "iat" in payload
         # exp should be roughly ACCESS_TOKEN_EXPIRE_MINUTES from now
-        exp_dt = datetime.utcfromtimestamp(payload["exp"])
+        exp_dt = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
         expected = before + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         # Allow a 5-second tolerance for test execution time
         assert abs((exp_dt - expected).total_seconds()) < 5
@@ -179,7 +181,7 @@ class TestRefreshToken:
         assert token_hash == expected_hash
 
     def test_refresh_token_expiry(self):
-        before = datetime.utcnow()
+        before = utcnow()
         _, _, expire = create_refresh_token(uuid4())
         expected = before + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         assert abs((expire - expected).total_seconds()) < 5
@@ -228,8 +230,8 @@ class TestExpiredToken:
             "tenant_id": str(uuid4()),
             "role": "admin",
             "modules": [],
-            "exp": datetime.utcnow() - timedelta(seconds=10),
-            "iat": datetime.utcnow() - timedelta(minutes=20),
+            "exp": utcnow() - timedelta(seconds=10),
+            "iat": utcnow() - timedelta(minutes=20),
             "type": "access",
         }
         token = jwt.encode(
@@ -241,8 +243,8 @@ class TestExpiredToken:
     def test_expired_refresh_token_raises(self):
         payload = {
             "sub": str(uuid4()),
-            "exp": datetime.utcnow() - timedelta(seconds=10),
-            "iat": datetime.utcnow() - timedelta(days=8),
+            "exp": utcnow() - timedelta(seconds=10),
+            "iat": utcnow() - timedelta(days=8),
             "type": "refresh",
             "jti": "expired-jti",
         }
@@ -276,8 +278,8 @@ class TestInvalidToken:
             "tenant_id": None,
             "role": "admin",
             "modules": [],
-            "exp": datetime.utcnow() + timedelta(minutes=30),
-            "iat": datetime.utcnow(),
+            "exp": utcnow() + timedelta(minutes=30),
+            "iat": utcnow(),
             "type": "access",
         }
         token = jwt.encode(

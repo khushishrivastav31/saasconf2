@@ -1,6 +1,5 @@
 """Paper management, assignments, reviews, and cospeaker endpoints."""
 
-from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -15,6 +14,7 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import NotFoundError
+from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
@@ -791,7 +791,7 @@ async def submit_paper(
         raise ValidationError(f"Paper cannot be submitted. Current status: {paper.status}")
 
     paper.status = PaperStatus.SUBMITTED.value
-    paper.submitted_at = datetime.utcnow()
+    paper.submitted_at = utcnow()
 
     # Audit log
     audit_log = AuditLog(

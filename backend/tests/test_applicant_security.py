@@ -13,8 +13,10 @@ os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
+
+from app.core.utils import utcnow
 
 import pytest
 from jose import jwt
@@ -70,7 +72,7 @@ class TestCreateApplicantAccessToken:
         applicant_id = uuid4()
         tenant_id = uuid4()
 
-        before = datetime.utcnow()
+        before = utcnow()
         token = create_applicant_access_token(applicant_id, tenant_id)
         payload = jwt.decode(
             token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
@@ -80,7 +82,7 @@ class TestCreateApplicantAccessToken:
         assert "iat" in payload
 
         # Verify expiry is roughly ACCESS_TOKEN_EXPIRE_MINUTES from now
-        exp_dt = datetime.utcfromtimestamp(payload["exp"])
+        exp_dt = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
         expected = before + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         assert abs((exp_dt - expected).total_seconds()) < 5
 
@@ -139,7 +141,7 @@ class TestCreateApplicantRefreshToken:
 
     def test_expiry_is_correct(self):
         """Expiry is REFRESH_TOKEN_EXPIRE_DAYS in the future."""
-        before = datetime.utcnow()
+        before = utcnow()
         _, _, expire = create_applicant_refresh_token(uuid4())
 
         expected = before + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
@@ -230,8 +232,8 @@ class TestDecodeApplicantToken:
         payload = {
             "sub": str(uuid4()),
             "tenant_id": str(uuid4()),
-            "exp": datetime.utcnow() - timedelta(seconds=10),
-            "iat": datetime.utcnow() - timedelta(minutes=30),
+            "exp": utcnow() - timedelta(seconds=10),
+            "iat": utcnow() - timedelta(minutes=30),
             "type": "applicant_access",
         }
         token = jwt.encode(
@@ -256,8 +258,8 @@ class TestDecodeApplicantToken:
         payload = {
             "sub": str(uuid4()),
             "tenant_id": str(uuid4()),
-            "exp": datetime.utcnow() + timedelta(minutes=30),
-            "iat": datetime.utcnow(),
+            "exp": utcnow() + timedelta(minutes=30),
+            "iat": utcnow(),
             "type": "applicant_access",
         }
         token = jwt.encode(

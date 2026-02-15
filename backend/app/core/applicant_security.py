@@ -10,6 +10,7 @@ from jose import JWTError, jwt
 
 from app.config import get_settings
 from app.core.exceptions import AuthenticationError
+from app.core.utils import utcnow
 
 settings = get_settings()
 
@@ -19,13 +20,13 @@ def create_applicant_access_token(
     tenant_id: UUID,
 ) -> str:
     """Create a JWT access token for an applicant."""
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     payload = {
         "sub": str(applicant_id),
         "tenant_id": str(tenant_id),
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": utcnow(),
         "type": "applicant_access",
     }
 
@@ -38,14 +39,14 @@ def create_applicant_refresh_token(applicant_id: UUID) -> tuple[str, str, dateti
     Returns:
         Tuple of (raw_token, token_hash, expiry_datetime)
     """
-    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
     jti = secrets.token_urlsafe(32)
 
     payload = {
         "sub": str(applicant_id),
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": utcnow(),
         "type": "applicant_refresh",
         "jti": jti,
     }

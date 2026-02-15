@@ -134,17 +134,16 @@ class Location(Base):
 
     @property
     def full_address(self) -> str | None:
-        """Get formatted full address."""
-        parts = [
-            self.address_line1,
-            self.address_line2,
-            self.city,
-            self.state,
-            self.postal_code,
-            self.country,
-        ]
-        parts = [p for p in parts if p]
-        return ", ".join(parts) if parts else None
+        """Get formatted full address (country-specific formatting)."""
+        from app.core.address import format_address
+        return format_address(
+            address_line1=self.address_line1,
+            address_line2=self.address_line2,
+            city=self.city,
+            state=self.state,
+            postal_code=self.postal_code,
+            country=self.country,
+        )
 
     def __repr__(self) -> str:
         return f"<Location {self.name} ({self.location_type})>"

@@ -7,6 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.utils import utcnow
 from app.db.base import Base
 
 
@@ -44,7 +45,7 @@ class ApplicantRefreshToken(Base):
         """Check if token is still valid (not expired and not revoked)."""
         if self.revoked_at is not None:
             return False
-        return datetime.utcnow() < self.expires_at.replace(tzinfo=None)
+        return utcnow() < self.expires_at
 
     def __repr__(self) -> str:
         return f"<ApplicantRefreshToken applicant={self.applicant_id} valid={self.is_valid}>"
@@ -84,7 +85,7 @@ class ApplicantEmailVerification(Base):
         """Check if verification token is still valid."""
         if self.used_at is not None:
             return False
-        return datetime.utcnow() < self.expires_at.replace(tzinfo=None)
+        return utcnow() < self.expires_at
 
     def __repr__(self) -> str:
         return f"<ApplicantEmailVerification applicant={self.applicant_id}>"
@@ -122,7 +123,7 @@ class ApplicantPasswordReset(Base):
         """Check if reset token is still valid."""
         if self.used_at is not None:
             return False
-        return datetime.utcnow() < self.expires_at.replace(tzinfo=None)
+        return utcnow() < self.expires_at
 
     def __repr__(self) -> str:
         return f"<ApplicantPasswordReset applicant={self.applicant_id}>"

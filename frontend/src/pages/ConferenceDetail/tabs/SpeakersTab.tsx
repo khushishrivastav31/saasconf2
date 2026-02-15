@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../../config/api";
+import { formatDate } from "../../../utils/formatDate";
 import type {
   Conference,
   ProgramFullGrid,
@@ -67,11 +68,7 @@ export default function SpeakersTab({ conference }: SpeakersTabProps) {
           ? trackMap.get(session.start_track_id)
           : null;
 
-        const dayName = dayGrid.day.name || new Date(dayGrid.day.date + "T00:00:00").toLocaleDateString(undefined, {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        });
+        const dayName = dayGrid.day.name || formatDate(dayGrid.day.date);
 
         const existing = speakerMap.get(session.speaker_name);
         const sessionInfo = {

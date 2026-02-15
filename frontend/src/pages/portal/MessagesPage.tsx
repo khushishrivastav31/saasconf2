@@ -8,6 +8,7 @@ import RichTextDisplay from "../../components/common/RichTextDisplay";
 import MessageFileAttach, {
   type StagedAttachment,
 } from "../../components/MessageFileAttach";
+import { formatDate, formatDateTime, formatTime } from "../../utils/formatDate";
 import type {
   PortalThreadListResponse,
   PortalThreadDetailResponse,
@@ -15,24 +16,15 @@ import type {
   PortalMessageAttachmentInfo,
 } from "../../types/portal";
 
-function formatDate(dateStr: string) {
+function formatRelativeDate(dateStr: string) {
   const d = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / 86400000);
-  if (diffDays === 0) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (diffDays === 0) return formatTime(dateStr);
   if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return d.toLocaleDateString([], { weekday: "short" });
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
-}
-
-function formatTimestamp(dateStr: string) {
-  return new Date(dateStr).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (diffDays < 7) return formatDate(dateStr);
+  return formatDate(dateStr);
 }
 
 function formatFileSize(bytes: number): string {
@@ -294,7 +286,7 @@ export default function MessagesPage() {
                           </span>
                         </div>
                         <span className="text-xs text-gray-400 flex-shrink-0">
-                          {formatDate(thread.last_message_at)}
+                          {formatRelativeDate(thread.last_message_at)}
                         </span>
                       </div>
                       {thread.last_message_preview && (
@@ -420,7 +412,7 @@ export default function MessagesPage() {
                                 isMe ? "text-blue-200" : "text-gray-400"
                               }`}
                             >
-                              {formatTimestamp(msg.created_at)}
+                              {formatDateTime(msg.created_at)}
                             </span>
                           </div>
                           <div className={`text-sm ${isMe ? "prose-invert" : ""}`}>

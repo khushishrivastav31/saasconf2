@@ -1,6 +1,5 @@
 """CFP CRUD, Topic CRUD, CFP stats, and Submission endpoints."""
 
-from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -15,6 +14,8 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import NotFoundError
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
+from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
 from app.models.audit import AuditLog
 from app.models.cfp import (
@@ -73,7 +74,7 @@ async def list_cfps(
         query = query.where(CallForPapers.status == status)
 
     if search:
-        search_filter = CallForPapers.title.ilike(f"%{search}%")
+        search_filter = unaccent_ilike(CallForPapers.title, search)
         query = query.where(search_filter)
 
     query = query.order_by(CallForPapers.created_at.desc())
@@ -637,10 +638,10 @@ async def list_submissions(
 
     if search:
         search_filter = (
-            Submission.title.ilike(f"%{search}%")
-            | Submission.speaker_first_name.ilike(f"%{search}%")
-            | Submission.speaker_last_name.ilike(f"%{search}%")
-            | Submission.speaker_email.ilike(f"%{search}%")
+            unaccent_ilike(Submission.title, search)
+            | unaccent_ilike(Submission.speaker_first_name, search)
+            | unaccent_ilike(Submission.speaker_last_name, search)
+            | unaccent_ilike(Submission.speaker_email, search)
         )
         query = query.where(search_filter)
 
@@ -906,7 +907,7 @@ async def update_submission(
 
     # Track status change for reviewed_at
     if "status" in update_data and update_data["status"] in ["accepted", "rejected", "waitlisted"]:
-        submission.reviewed_at = datetime.utcnow()
+        submission.reviewed_at = utcnow()
 
     for field, value in update_data.items():
         setattr(submission, field, value)

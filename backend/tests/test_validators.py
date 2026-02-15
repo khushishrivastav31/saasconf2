@@ -18,54 +18,49 @@ from app.core.validators import validate_phone
 
 
 # ---------------------------------------------------------------------------
-# validate_phone tests
+# validate_phone tests (uses libphonenumber, E.164 normalization)
 # ---------------------------------------------------------------------------
 
 
 class TestValidatePhone:
-    """Tests for the validate_phone function."""
+    """Tests for the validate_phone function with libphonenumber."""
 
-    # --- Valid phone numbers ---
+    # --- Valid phone numbers (E.164 normalized) ---
 
-    def test_validate_phone_simple_digits(self):
-        """Accepts simple digit-only phone number."""
-        result = validate_phone("1234567890")
-        assert result == "1234567890"
+    def test_validate_phone_german_number(self):
+        """Accepts German phone number and normalizes to E.164."""
+        result = validate_phone("+491701234567")
+        assert result == "+491701234567"
 
-    def test_validate_phone_with_plus_prefix(self):
-        """Accepts phone number with + prefix."""
-        result = validate_phone("+491234567890")
-        assert result == "+491234567890"
+    def test_validate_phone_german_with_spaces(self):
+        """Accepts German number with spaces and normalizes."""
+        result = validate_phone("+49 170 123 4567")
+        assert result == "+491701234567"
 
-    def test_validate_phone_international_format(self):
-        """Accepts international format with 00 prefix."""
-        result = validate_phone("00491234567890")
-        assert result == "00491234567890"
-
-    def test_validate_phone_us_format(self):
-        """Accepts US-style phone number."""
+    def test_validate_phone_us_number(self):
+        """Accepts US phone number and normalizes to E.164."""
         result = validate_phone("+12025551234")
         assert result == "+12025551234"
 
-    def test_validate_phone_short_number(self):
-        """Accepts short phone numbers."""
-        result = validate_phone("12345")
-        assert result == "12345"
+    def test_validate_phone_us_with_formatting(self):
+        """Accepts US number with parentheses/dashes and normalizes."""
+        result = validate_phone("+1 (202) 555-1234")
+        assert result == "+12025551234"
 
-    def test_validate_phone_long_number(self):
-        """Accepts long phone numbers."""
-        result = validate_phone("+123456789012345")
-        assert result == "+123456789012345"
+    def test_validate_phone_uk_number(self):
+        """Accepts UK phone number and normalizes to E.164."""
+        result = validate_phone("+442071234567")
+        assert result == "+442071234567"
 
-    def test_validate_phone_single_digit(self):
-        """Accepts single digit."""
-        result = validate_phone("1")
-        assert result == "1"
+    def test_validate_phone_austrian_number(self):
+        """Accepts Austrian phone number."""
+        result = validate_phone("+4312345678")
+        assert result == "+4312345678"
 
-    def test_validate_phone_plus_only_digit(self):
-        """Accepts + followed by single digit."""
-        result = validate_phone("+1")
-        assert result == "+1"
+    def test_validate_phone_swiss_number(self):
+        """Accepts Swiss phone number."""
+        result = validate_phone("+41441234567")
+        assert result == "+41441234567"
 
     # --- None and empty values ---
 
@@ -81,105 +76,42 @@ class TestValidatePhone:
 
     # --- Invalid phone numbers ---
 
-    def test_validate_phone_with_spaces_raises(self):
-        """Raises ValueError for phone numbers with spaces."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("123 456 7890")
+    def test_validate_phone_no_country_code_raises(self):
+        """Raises ValueError for number without country code."""
+        with pytest.raises(ValueError, match="Invalid phone number"):
+            validate_phone("1234567890")
 
-    def test_validate_phone_with_dashes_raises(self):
-        """Raises ValueError for phone numbers with dashes."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("123-456-7890")
-
-    def test_validate_phone_with_parentheses_raises(self):
-        """Raises ValueError for phone numbers with parentheses."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("(123) 456-7890")
-
-    def test_validate_phone_with_dots_raises(self):
-        """Raises ValueError for phone numbers with dots."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("123.456.7890")
-
-    def test_validate_phone_with_letters_raises(self):
-        """Raises ValueError for phone numbers with letters."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("123abc456")
+    def test_validate_phone_invalid_number_raises(self):
+        """Raises ValueError for invalid number."""
+        with pytest.raises(ValueError, match="Invalid phone number"):
+            validate_phone("+49123")  # Too short for Germany
 
     def test_validate_phone_only_plus_raises(self):
         """Raises ValueError for only + sign."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
+        with pytest.raises(ValueError, match="Invalid phone number"):
             validate_phone("+")
+
+    def test_validate_phone_letters_raises(self):
+        """Raises ValueError for phone numbers with letters."""
+        with pytest.raises(ValueError, match="Invalid phone number"):
+            validate_phone("+49abc123456")
 
     def test_validate_phone_plus_in_middle_raises(self):
         """Raises ValueError for + in the middle of number."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
+        with pytest.raises(ValueError, match="Invalid phone number"):
             validate_phone("12+34567890")
-
-    def test_validate_phone_plus_at_end_raises(self):
-        """Raises ValueError for + at end of number."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("1234567890+")
-
-    def test_validate_phone_multiple_plus_raises(self):
-        """Raises ValueError for multiple + signs."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("++1234567890")
-
-    def test_validate_phone_special_characters_raises(self):
-        """Raises ValueError for special characters."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("123#456*7890")
 
     def test_validate_phone_whitespace_only_raises(self):
         """Raises ValueError for whitespace only."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
+        with pytest.raises(ValueError, match="Invalid phone number"):
             validate_phone("   ")
-
-    def test_validate_phone_leading_whitespace_raises(self):
-        """Raises ValueError for leading whitespace."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone(" 1234567890")
-
-    def test_validate_phone_trailing_whitespace_raises(self):
-        """Raises ValueError for trailing whitespace."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("1234567890 ")
-
-    def test_validate_phone_newline_raises(self):
-        """Raises ValueError for newline in number."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("123\n456")
-
-    def test_validate_phone_tab_raises(self):
-        """Raises ValueError for tab in number."""
-        with pytest.raises(ValueError, match="Phone number must contain only digits"):
-            validate_phone("123\t456")
-
-    # --- Edge cases ---
-
-    def test_validate_phone_all_zeros(self):
-        """Accepts all zeros."""
-        result = validate_phone("0000000000")
-        assert result == "0000000000"
-
-    def test_validate_phone_all_nines(self):
-        """Accepts all nines."""
-        result = validate_phone("9999999999")
-        assert result == "9999999999"
-
-    def test_validate_phone_mixed_digits(self):
-        """Accepts mixed digits."""
-        result = validate_phone("1029384756")
-        assert result == "1029384756"
 
     # --- Error message content ---
 
-    def test_validate_phone_error_message_contains_examples(self):
-        """Error message contains valid examples."""
+    def test_validate_phone_error_message_contains_example(self):
+        """Error message contains valid example."""
         with pytest.raises(ValueError) as exc_info:
             validate_phone("invalid-phone")
 
         error_message = str(exc_info.value)
-        assert "+491234545" in error_message
-        assert "00491234566" in error_message
+        assert "+49123456789" in error_message

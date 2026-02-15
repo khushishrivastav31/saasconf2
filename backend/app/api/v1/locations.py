@@ -14,6 +14,7 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
 from app.models.associations import ConferenceLocation
 from app.models.audit import AuditLog
 from app.models.conference import Conference
@@ -115,9 +116,9 @@ async def list_locations(
 
     if search:
         search_filter = (
-            Location.name.ilike(f"%{search}%")
-            | Location.code.ilike(f"%{search}%")
-            | Location.city.ilike(f"%{search}%")
+            unaccent_ilike(Location.name, search)
+            | unaccent_ilike(Location.code, search)
+            | unaccent_ilike(Location.city, search)
         )
         query = query.where(search_filter)
 

@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.core.dependencies import CurrentUserDep, DbSessionDep, check_conference_admin_access, get_client_ip, require_module
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.models.conference import Conference
@@ -99,8 +100,8 @@ async def list_invoices(
 
     if search:
         query = query.where(
-            Invoice.invoice_number.ilike(f"%{search}%")
-            | Invoice.recipient_name.ilike(f"%{search}%")
+            unaccent_ilike(Invoice.invoice_number, search)
+            | unaccent_ilike(Invoice.recipient_name, search)
         )
 
     if status is not None:

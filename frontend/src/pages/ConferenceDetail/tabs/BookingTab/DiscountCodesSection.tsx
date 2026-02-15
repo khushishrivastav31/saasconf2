@@ -1,4 +1,5 @@
 import { EditIcon, DeleteIcon } from "../../icons";
+import { formatDate } from "../../../../utils/formatDate";
 import type {
   BookingOption,
   DiscountCode,
@@ -98,9 +99,9 @@ export default function DiscountCodesSection({
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {dc.start_date || dc.end_date ? (
                       <>
-                        {dc.start_date ? new Date(dc.start_date + "T00:00:00").toLocaleDateString() : "---"}
+                        {dc.start_date ? formatDate(dc.start_date) : "---"}
                         {" — "}
-                        {dc.end_date ? new Date(dc.end_date + "T00:00:00").toLocaleDateString() : "---"}
+                        {dc.end_date ? formatDate(dc.end_date) : "---"}
                       </>
                     ) : (
                       <span className="text-gray-400">No expiry</span>

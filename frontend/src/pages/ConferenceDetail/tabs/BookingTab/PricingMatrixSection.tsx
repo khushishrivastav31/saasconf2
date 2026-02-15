@@ -4,6 +4,7 @@ import type {
   PlatformCurrency,
 } from "../../../../types";
 import { EditIcon, DeleteIcon } from "../../icons";
+import { formatDate } from "../../../../utils/formatDate";
 
 export interface PricingMatrixSectionProps {
   isAdmin: boolean;
@@ -190,7 +191,7 @@ export default function PricingMatrixSection({
                           {period.name}
                         </span>
                         <span className={`text-xs text-gray-400 ${isAdmin ? "group-hover:text-gray-500" : ""}`}>
-                          {new Date(period.start_date + "T00:00:00").toLocaleDateString()} — {new Date(period.end_date + "T00:00:00").toLocaleDateString()}
+                          {formatDate(period.start_date)} — {formatDate(period.end_date)}
                         </span>
                         {period.currency && (
                           <span className={`mt-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 ${isAdmin ? "group-hover:bg-primary-50 group-hover:text-primary-700" : ""}`}>

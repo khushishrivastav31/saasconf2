@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDate } from "../../../../utils/formatDate";
 import type { ProgramDay } from "../../../../types";
 import Modal from "../../../../components/Modal";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
@@ -11,15 +12,6 @@ interface DayTabsProps {
   onUpdateDay: (dayId: string, data: { date?: string; name?: string }) => void;
   onDeleteDay: (dayId: string) => void;
   isAdmin: boolean;
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export default function DayTabs({

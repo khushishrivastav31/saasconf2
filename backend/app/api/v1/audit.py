@@ -15,6 +15,8 @@ from sqlalchemy.orm import selectinload
 from app.core.dependencies import DbSessionDep, SuperAdminDep
 from app.core.file_validation import safe_content_disposition
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
+from app.core.utils import utcnow
 from app.models.audit import AuditLog
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -112,16 +114,16 @@ def _build_audit_query(
 
     # Text search - search in action, resource_type, ip_address, and details
     if search:
-        search_term = f"%{search}%"
+        search_term = search
         query = query.outerjoin(AuditLog.user).where(
             or_(
-                AuditLog.action.ilike(search_term),
-                AuditLog.resource_type.ilike(search_term),
-                func.cast(AuditLog.ip_address, String).ilike(search_term),
-                func.cast(AuditLog.details, String).ilike(search_term),
-                User.email.ilike(search_term),
-                User.first_name.ilike(search_term),
-                User.last_name.ilike(search_term),
+                unaccent_ilike(AuditLog.action, search_term),
+                unaccent_ilike(AuditLog.resource_type, search_term),
+                unaccent_ilike(func.cast(AuditLog.ip_address, String), search_term),
+                unaccent_ilike(func.cast(AuditLog.details, String), search_term),
+                unaccent_ilike(User.email, search_term),
+                unaccent_ilike(User.first_name, search_term),
+                unaccent_ilike(User.last_name, search_term),
             )
         )
 
@@ -299,11 +301,12 @@ async def export_audit_logs(
 
     # Prepare the response
     output.seek(0)
-    filename = f"audit_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"audit_logs_{utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
 
     return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
+        iter([csv_bytes]),
+        media_type="text/csv; charset=utf-8",
         headers={
             "Content-Disposition": safe_content_disposition(filename),
         },

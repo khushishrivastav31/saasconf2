@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import portalApi from "../../config/portalApi";
 import { usePortalBasePath } from "../../hooks/usePortalBasePath";
+import { formatDate } from "../../utils/formatDate";
 import type { PortalPaperListResponse, PortalPaper } from "../../types/portal";
 import PaperStatusLifeline from "../../components/PaperStatusLifeline";
 
@@ -183,7 +184,7 @@ function DashboardPage() {
                             {paper.submitted_at && (
                               <span className="text-gray-400">
                                 {paper.cfp_title || paper.cospeakers.length > 0 ? " · " : ""}
-                                Submitted {new Date(paper.submitted_at).toLocaleDateString()}
+                                Submitted {formatDate(paper.submitted_at)}
                               </span>
                             )}
                           </p>

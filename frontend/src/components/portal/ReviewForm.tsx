@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import portalApi from "../../config/portalApi";
+import { formatDateTime } from "../../utils/formatDate";
 import type {
   PortalReviewConfig,
   PortalReviewCriterion,
@@ -191,13 +192,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
           </span>
           {existingReview.submitted_at && (
             <span className="text-xs text-gray-500">
-              Submitted on {new Date(existingReview.submitted_at).toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              Submitted on {formatDateTime(existingReview.submitted_at)}
             </span>
           )}
         </div>

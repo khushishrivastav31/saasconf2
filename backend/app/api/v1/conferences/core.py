@@ -23,6 +23,7 @@ from app.core.default_settings import seed_default_settings
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.core.file_validation import safe_content_disposition
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
 from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
 from app.models.attachment import Attachment
 from app.models.audit import AuditAction, AuditLog
@@ -85,9 +86,9 @@ async def list_conferences(
 
     if search:
         search_filter = (
-            Conference.name.ilike(f"%{search}%")
-            | Conference.abbreviation.ilike(f"%{search}%")
-            | Conference.city.ilike(f"%{search}%")
+            unaccent_ilike(Conference.name, search)
+            | unaccent_ilike(Conference.abbreviation, search)
+            | unaccent_ilike(Conference.city, search)
         )
         query = query.where(search_filter)
 
@@ -916,10 +917,11 @@ async def export_conference_invoices(
 
     output.seek(0)
     filename = f"{conference.abbreviation or conference.name}_invoices.csv".replace(" ", "_")
+    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
 
     return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
+        iter([csv_bytes]),
+        media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": safe_content_disposition(filename)},
     )
 
@@ -965,9 +967,10 @@ async def export_conference_papers(
         writer.writerow(["No papers found for this conference"])
         output.seek(0)
         filename = f"{conference.abbreviation or conference.name}_papers.csv".replace(" ", "_")
+        csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
         return StreamingResponse(
-            iter([output.getvalue()]),
-            media_type="text/csv",
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": safe_content_disposition(filename)},
         )
 
@@ -1016,10 +1019,11 @@ async def export_conference_papers(
 
     output.seek(0)
     filename = f"{conference.abbreviation or conference.name}_papers.csv".replace(" ", "_")
+    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
 
     return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
+        iter([csv_bytes]),
+        media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": safe_content_disposition(filename)},
     )
 

@@ -64,7 +64,7 @@ async def get_cfp_paper_form_schema(
             "topics": {"visible": True, "required": False},
         }
         # Create a temporary response without persisting
-        from datetime import datetime
+        from app.core.utils import utcnow
         return PaperFormSchemaResponse(
             id=UUID("00000000-0000-0000-0000-000000000000"),
             tenant_id=cfp.tenant_id,
@@ -72,8 +72,8 @@ async def get_cfp_paper_form_schema(
             version=1,
             builtin_fields_config=default_config,
             fields=[],
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+            created_at=utcnow(),
+            updated_at=utcnow(),
         )
 
     return PaperFormSchemaResponse(

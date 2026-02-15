@@ -77,9 +77,26 @@ def safe_content_disposition(filename: str, disposition: str = "attachment") -> 
     Escapes quotes and backslashes in filenames to prevent header injection.
     Uses ASCII-safe fallback with RFC 5987 filename* for non-ASCII names.
     """
-    # Escape backslashes and quotes
+    from urllib.parse import quote
+
+    # Escape backslashes and quotes for the ASCII fallback
     safe = filename.replace("\\", "\\\\").replace('"', '\\"')
-    return f'{disposition}; filename="{safe}"'
+
+    # Check if filename contains non-ASCII characters
+    try:
+        filename.encode("ascii")
+        # Pure ASCII — simple header is fine
+        return f'{disposition}; filename="{safe}"'
+    except UnicodeEncodeError:
+        # Non-ASCII — use RFC 5987 filename* with UTF-8 encoding,
+        # plus an ASCII-safe fallback for older clients
+        ascii_fallback = filename.encode("ascii", errors="replace").decode("ascii")
+        ascii_fallback = ascii_fallback.replace("\\", "\\\\").replace('"', '\\"')
+        utf8_encoded = quote(filename, safe="")
+        return (
+            f'{disposition}; filename="{ascii_fallback}"; '
+            f"filename*=UTF-8''{utf8_encoded}"
+        )
 
 
 def strip_image_metadata(file_data: bytes, content_type: str) -> bytes:

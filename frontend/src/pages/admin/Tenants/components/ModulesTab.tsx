@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../../config/api";
 import Modal from "../../../../components/Modal";
+import { formatDate } from "../../../../utils/formatDate";
 import type {
   Module,
   TenantModule,
@@ -86,13 +87,13 @@ export default function ModulesTab({
                     <div>
                       <span className="text-gray-500">Start:</span>{" "}
                       {tm.start_date
-                        ? new Date(tm.start_date).toLocaleDateString()
+                        ? formatDate(tm.start_date)
                         : "Not set"}
                     </div>
                     <div>
                       <span className="text-gray-500">End:</span>{" "}
                       {tm.end_date
-                        ? new Date(tm.end_date).toLocaleDateString()
+                        ? formatDate(tm.end_date)
                         : "No expiry"}
                     </div>
                     <div>

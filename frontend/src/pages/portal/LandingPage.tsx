@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import DOMPurify from "dompurify";
 import portalApi from "../../config/portalApi";
 import ConferenceLogo from "../../components/ConferenceLogo";
+import { formatDate } from "../../utils/formatDate";
 import type { PortalLandingData } from "../../types/portal";
 
 function LandingPage() {
@@ -78,10 +79,10 @@ function LandingPage() {
           <div className="flex items-center justify-center gap-4 text-sm text-gray-600 mb-6">
             {conference.start_date && (
               <span>
-                {new Date(conference.start_date).toLocaleDateString()}
+                {formatDate(conference.start_date)}
                 {conference.end_date &&
                   conference.end_date !== conference.start_date &&
-                  ` – ${new Date(conference.end_date).toLocaleDateString()}`}
+                  ` – ${formatDate(conference.end_date)}`}
               </span>
             )}
             {(conference.city || conference.country) && (
@@ -160,13 +161,13 @@ function LandingPage() {
                   {cfp.open_date && (
                     <span>
                       Opens:{" "}
-                      {new Date(cfp.open_date).toLocaleDateString()}
+                      {formatDate(cfp.open_date)}
                     </span>
                   )}
                   {cfp.close_date && (
                     <span>
                       Closes:{" "}
-                      {new Date(cfp.close_date).toLocaleDateString()}
+                      {formatDate(cfp.close_date)}
                     </span>
                   )}
                 </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../../../config/api";
 import { useAuthMedia } from "../../../../hooks/useAuthMedia";
+import { formatDate } from "../../../../utils/formatDate";
 import type {
   Paper,
   PaperLevel,
@@ -604,7 +605,7 @@ export function PaperForm({
                     )}
                   </span>
                   <span className="text-xs text-gray-400">
-                    {new Date(comment.created_at).toLocaleDateString()}
+                    {formatDate(comment.created_at)}
                   </span>
                 </div>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>

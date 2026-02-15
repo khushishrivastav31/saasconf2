@@ -12,6 +12,7 @@ from jose import JWTError, jwt
 
 from app.config import get_settings
 from app.core.exceptions import AuthenticationError
+from app.core.utils import utcnow
 
 settings = get_settings()
 
@@ -74,7 +75,7 @@ def create_access_token(
     Returns:
         Encoded JWT token
     """
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     payload = {
         "sub": str(user_id),
@@ -83,7 +84,7 @@ def create_access_token(
         "modules": modules or [],
         "is_tenant_super_user": is_tenant_super_user,
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": utcnow(),
         "type": "access",
         "jti": secrets.token_urlsafe(16),
     }
@@ -101,7 +102,7 @@ def create_refresh_token(user_id: UUID) -> tuple[str, str, datetime]:
     Returns:
         Tuple of (raw_token, token_hash, expiry_datetime)
     """
-    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
     # Generate a unique token ID
     jti = secrets.token_urlsafe(32)
@@ -109,7 +110,7 @@ def create_refresh_token(user_id: UUID) -> tuple[str, str, datetime]:
     payload = {
         "sub": str(user_id),
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": utcnow(),
         "type": "refresh",
         "jti": jti,
     }

@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../config/api";
+import { formatDate } from "../utils/formatDate";
 import ConfirmDialog from "./ConfirmDialog";
 import type { Attachment } from "../types";
 
@@ -143,7 +144,7 @@ export default function AttachmentList({
                   {formatFileSize(attachment.file_size)}
                   {attachment.description && ` - ${attachment.description}`}
                   {" - "}
-                  {new Date(attachment.created_at).toLocaleDateString()}
+                  {formatDate(attachment.created_at)}
                 </p>
               </div>
               <div className="flex gap-2 ml-3">

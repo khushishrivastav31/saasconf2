@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../config/api";
+import { formatDateTime } from "../utils/formatDate";
 import type { ApplicantGroupedActivity, PaginatedResponse } from "../types";
 
 interface ActivityFilters {
@@ -73,8 +74,8 @@ export default function ApplicantActivityLog() {
     },
   });
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+  const formatDateCol = (dateString: string) => {
+    return formatDateTime(dateString);
   };
 
   const formatApplicantName = (first: string, last: string): string => {
@@ -340,7 +341,7 @@ export default function ApplicantActivityLog() {
                               {ACTIVITY_TYPE_LABELS[activity.activity_type] || activity.activity_type}
                             </span>
                             <span className="text-xs text-gray-500">
-                              {formatDate(activity.created_at)}
+                              {formatDateCol(activity.created_at)}
                             </span>
                           </div>
                         </div>

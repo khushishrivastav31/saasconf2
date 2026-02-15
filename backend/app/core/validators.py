@@ -1,22 +1,31 @@
 """Custom validators for the application."""
 
-import re
-
-# Phone number pattern: optional + at start, then only digits
-_PHONE_PATTERN = re.compile(r"^\+?[0-9]+$")
+import phonenumbers
 
 
 def validate_phone(value: str | None) -> str | None:
-    """Validate phone number format: optional + prefix followed by digits only.
+    """Validate and normalize phone number to E.164 format.
 
-    Returns the value if valid, raises ValueError if invalid.
+    Uses libphonenumber for proper international phone validation.
+    Requires international format with country code (e.g. +49123456789).
+
+    Returns the E.164 normalized value if valid, raises ValueError if invalid.
     Can be used directly in Pydantic field_validator decorators.
     """
     if value is None or value == "":
         return value
-    if not _PHONE_PATTERN.match(value):
-        raise ValueError(
-            "Phone number must contain only digits, optionally starting with +. "
-            "Examples: +491234545, 00491234566"
+    try:
+        parsed = phonenumbers.parse(value, None)
+        if not phonenumbers.is_valid_number(parsed):
+            raise ValueError(
+                "Invalid phone number. Use international format with country code, "
+                "e.g. +49123456789"
+            )
+        return phonenumbers.format_number(
+            parsed, phonenumbers.PhoneNumberFormat.E164
         )
-    return value
+    except phonenumbers.NumberParseException as e:
+        raise ValueError(
+            "Invalid phone number format. Use international format with country code, "
+            "e.g. +49123456789"
+        ) from e

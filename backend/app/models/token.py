@@ -7,6 +7,7 @@ from sqlalchemy import DateTime, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.utils import utcnow
 from app.db.base import Base
 
 
@@ -48,7 +49,7 @@ class RefreshToken(Base):
         """Check if token is still valid (not expired and not revoked)."""
         if self.revoked_at is not None:
             return False
-        return datetime.utcnow() < self.expires_at.replace(tzinfo=None)
+        return utcnow() < self.expires_at
 
     def __repr__(self) -> str:
         return f"<RefreshToken user={self.user_id} valid={self.is_valid}>"

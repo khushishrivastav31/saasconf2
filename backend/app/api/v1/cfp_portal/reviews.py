@@ -1,12 +1,11 @@
 """CFP Applicant Portal - Review workflow endpoints."""
 
-from datetime import datetime
-
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import func, select
 
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import NotFoundError
+from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
     CallForPapers,
@@ -373,7 +372,7 @@ async def submit_or_save_review(
 
         review.total_score = (total_weighted_score / total_weight) if total_weight > 0 else None
         review.status = ReviewStatus.SUBMITTED.value
-        review.submitted_at = datetime.utcnow()
+        review.submitted_at = utcnow()
 
         # Build config snapshot
         criteria_result = await db.execute(

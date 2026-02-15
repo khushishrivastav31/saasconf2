@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../../config/api";
 import { useIsAdmin } from "../../hooks/useIsAdmin";
+import { formatDate } from "../../utils/formatDate";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import Modal from "../../components/Modal";
 import RichTextEditor from "../../components/common/RichTextEditor";
@@ -348,12 +349,12 @@ export default function CallForPapersPage() {
                 <td className="px-6 py-4 text-sm text-gray-500">
                   {cfp.open_date && (
                     <div>
-                      Opens: {new Date(cfp.open_date).toLocaleDateString()}
+                      Opens: {formatDate(cfp.open_date)}
                     </div>
                   )}
                   {cfp.close_date && (
                     <div>
-                      Closes: {new Date(cfp.close_date).toLocaleDateString()}
+                      Closes: {formatDate(cfp.close_date)}
                     </div>
                   )}
                   {!cfp.open_date && !cfp.close_date && (

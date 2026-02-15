@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "../../../config/api";
+import { formatDateTime } from "../../../utils/formatDate";
 
 interface ReviewAnswer {
   id: string;
@@ -122,7 +123,7 @@ export default function ReviewsPanel({ paperId }: { paperId: string }) {
 
           {review.submitted_at && (
             <p className="text-[10px] text-gray-400 mt-2">
-              Submitted {new Date(review.submitted_at).toLocaleString()}
+              Submitted {formatDateTime(review.submitted_at)}
             </p>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../../../config/api";
+import { formatDateTime } from "../../../../utils/formatDate";
 import RichTextEditor from "../../../../components/common/RichTextEditor";
 import RichTextDisplay from "../../../../components/common/RichTextDisplay";
 import MessageFileAttach, {
@@ -29,13 +30,7 @@ interface ThreadDetailProps {
 }
 
 function formatTimestamp(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(dateStr);
 }
 
 function formatFileSize(bytes: number): string {

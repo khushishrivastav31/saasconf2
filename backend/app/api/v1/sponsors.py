@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.core.dependencies import CurrentUserDep, DbSessionDep, check_conference_admin_access, get_client_ip, require_module
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.models.conference import Conference
@@ -109,8 +110,8 @@ async def list_sponsors(
 
     if search:
         query = query.where(
-            Sponsor.company_name.ilike(f"%{search}%")
-            | Sponsor.city.ilike(f"%{search}%")
+            unaccent_ilike(Sponsor.company_name, search)
+            | unaccent_ilike(Sponsor.city, search)
         )
 
     if sponsor_package_id is not None:

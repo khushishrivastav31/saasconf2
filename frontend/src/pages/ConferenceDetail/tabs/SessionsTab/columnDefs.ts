@@ -1,3 +1,4 @@
+import { formatDate } from "../../../../utils/formatDate";
 import type { EnrichedSession, CustomFieldMeta } from "../../../../types";
 
 export type ColumnGroup = "session" | "paper" | "speaker" | "custom";
@@ -10,18 +11,9 @@ export interface ColumnDef {
   getValue: (session: EnrichedSession) => string;
 }
 
-function formatTime(t: string | null): string {
+function formatSlotTime(t: string | null): string {
   if (!t) return "";
   return t.slice(0, 5); // HH:MM
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "";
-  return new Date(dateStr + "T00:00:00").toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export const BUILTIN_COLUMNS: ColumnDef[] = [
@@ -30,7 +22,7 @@ export const BUILTIN_COLUMNS: ColumnDef[] = [
     label: "Day",
     group: "session",
     defaultVisible: true,
-    getValue: (s) => s.day_name || formatDate(s.day_date),
+    getValue: (s) => s.day_name || formatDate(s.day_date) || "",
   },
   {
     key: "time",
@@ -38,8 +30,8 @@ export const BUILTIN_COLUMNS: ColumnDef[] = [
     group: "session",
     defaultVisible: true,
     getValue: (s) => {
-      const start = formatTime(s.start_time);
-      const end = formatTime(s.end_time);
+      const start = formatSlotTime(s.start_time);
+      const end = formatSlotTime(s.end_time);
       return end ? `${start} - ${end}` : start;
     },
   },

@@ -13,6 +13,7 @@ from sqlalchemy import select, update
 
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.file_validation import safe_content_disposition
 from app.core.html_sanitize import sanitize_html
 from app.models.associations import ConferenceCFP
 from app.models.audit import AuditLog
@@ -726,8 +727,11 @@ async def export_sessions(
     output.seek(0)
     filename = f"program-sessions-{conference.name.replace(' ', '-').lower()}.csv"
 
+    # Encode as UTF-8 with BOM so Excel opens accented characters correctly
+    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
+
     return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        iter([csv_bytes]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": safe_content_disposition(filename)},
     )

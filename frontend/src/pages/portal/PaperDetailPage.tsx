@@ -5,6 +5,7 @@ import DOMPurify from "dompurify";
 import portalApi from "../../config/portalApi";
 import { useApplicantAuth } from "../../hooks/useApplicantAuth";
 import { usePortalBasePath } from "../../hooks/usePortalBasePath";
+import { formatDate } from "../../utils/formatDate";
 import type {
   PortalPaper,
   PortalPaperUpdateRequest,
@@ -954,7 +955,7 @@ function PaperDetailPage() {
             {paper.submitted_at && (
               <div className="pt-4 border-t border-gray-100 text-xs text-gray-400">
                 Submitted on{" "}
-                {new Date(paper.submitted_at).toLocaleDateString()}
+                {formatDate(paper.submitted_at)}
               </div>
             )}
           </div>

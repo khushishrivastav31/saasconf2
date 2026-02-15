@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
 from app.core.security import hash_password
 from app.models.audit import AuditAction, AuditLog
 from app.models.settings import PronounOption
@@ -55,9 +56,9 @@ async def list_tenant_users(
 
     if search:
         query = query.where(
-            User.email.ilike(f"%{search}%")
-            | User.first_name.ilike(f"%{search}%")
-            | User.last_name.ilike(f"%{search}%")
+            unaccent_ilike(User.email, search)
+            | unaccent_ilike(User.first_name, search)
+            | unaccent_ilike(User.last_name, search)
         )
 
     if is_active is not None:

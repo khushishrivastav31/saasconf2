@@ -14,6 +14,8 @@ from sqlalchemy.orm import selectinload
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.file_validation import safe_content_disposition
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
+from app.core.utils import utcnow
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 
 router = APIRouter()
@@ -89,12 +91,12 @@ def _build_activity_query(
         query = query.where(ApplicantActivityLog.created_at <= end_date)
 
     if search:
-        search_term = f"%{search}%"
+        search_term = search
         query = query.where(
             or_(
-                ApplicantActivityLog.applicant_email.ilike(search_term),
-                ApplicantActivityLog.applicant_first_name.ilike(search_term),
-                ApplicantActivityLog.applicant_last_name.ilike(search_term),
+                unaccent_ilike(ApplicantActivityLog.applicant_email, search_term),
+                unaccent_ilike(ApplicantActivityLog.applicant_first_name, search_term),
+                unaccent_ilike(ApplicantActivityLog.applicant_last_name, search_term),
             )
         )
 
@@ -197,12 +199,12 @@ async def list_applicant_activities_grouped(
     if end_date:
         subquery = subquery.where(ApplicantActivityLog.created_at <= end_date)
     if search:
-        search_term = f"%{search}%"
+        search_term = search
         subquery = subquery.where(
             or_(
-                ApplicantActivityLog.applicant_email.ilike(search_term),
-                ApplicantActivityLog.applicant_first_name.ilike(search_term),
-                ApplicantActivityLog.applicant_last_name.ilike(search_term),
+                unaccent_ilike(ApplicantActivityLog.applicant_email, search_term),
+                unaccent_ilike(ApplicantActivityLog.applicant_first_name, search_term),
+                unaccent_ilike(ApplicantActivityLog.applicant_last_name, search_term),
             )
         )
 
@@ -333,11 +335,12 @@ async def export_applicant_activities(
 
     # Prepare the response
     output.seek(0)
-    filename = f"applicant_activity_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"applicant_activity_{utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
 
     return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
+        iter([csv_bytes]),
+        media_type="text/csv; charset=utf-8",
         headers={
             "Content-Disposition": safe_content_disposition(filename),
         },

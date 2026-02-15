@@ -67,6 +67,7 @@ class ConferenceCreate(ConferenceBase):
     city: str | None = Field(None, max_length=100)
     country: str | None = Field(None, max_length=100)
     timezone: str | None = Field(None, max_length=50)
+    locale: str | None = Field("en", max_length=10)
     venue_type: str = "onsite"  # onsite, virtual, hybrid
     virtual_platform_url: str | None = Field(None, max_length=500)
 
@@ -119,6 +120,7 @@ class ConferenceUpdate(BaseModel):
     city: str | None = Field(None, max_length=100)
     country: str | None = Field(None, max_length=100)
     timezone: str | None = Field(None, max_length=50)
+    locale: str | None = Field(None, max_length=10)
     venue_type: str | None = None  # onsite, virtual, hybrid
     virtual_platform_url: str | None = Field(None, max_length=500)
 
@@ -167,6 +169,7 @@ class ConferenceResponse(BaseModel):
     city: str | None
     country: str | None
     timezone: str | None
+    locale: str | None = "en"
     venue_type: str
     virtual_platform_url: str | None
 

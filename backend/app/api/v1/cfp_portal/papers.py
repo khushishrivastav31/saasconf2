@@ -1,6 +1,5 @@
 """CFP Applicant Portal - Paper management and browsing endpoints."""
 
-from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -13,6 +12,7 @@ from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.email import send_cospeaker_invitation_email
 from app.core.exceptions import NotFoundError
 from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
+from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
 from app.models.cfp import (
@@ -363,7 +363,7 @@ async def submit_paper(
             )
 
     paper.status = PaperStatus.SUBMITTED.value
-    paper.submitted_at = datetime.utcnow()
+    paper.submitted_at = utcnow()
     await db.commit()
     await db.refresh(paper)
     return await _build_portal_paper_response(db, paper, current.applicant_id)
@@ -490,7 +490,7 @@ async def accept_invitation(
         raise HTTPException(status_code=400, detail="Invitation has already been responded to")
 
     row.invitation_status = CospeakerInvitationStatus.ACCEPTED.value
-    row.responded_at = datetime.utcnow()
+    row.responded_at = utcnow()
     await db.commit()
 
     return {"message": "Invitation accepted"}
@@ -517,7 +517,7 @@ async def decline_invitation(
         raise HTTPException(status_code=400, detail="Invitation has already been responded to")
 
     row.invitation_status = CospeakerInvitationStatus.DECLINED.value
-    row.responded_at = datetime.utcnow()
+    row.responded_at = utcnow()
     await db.commit()
 
     return {"message": "Invitation declined"}

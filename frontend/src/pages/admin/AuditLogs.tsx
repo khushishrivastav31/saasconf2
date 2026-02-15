@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../config/api";
+import { formatDateTime } from "../../utils/formatDate";
 import type { AuditLog, PaginatedResponse } from "../../types";
 
 interface AuditFilters {
@@ -72,8 +73,8 @@ export default function AuditLogs() {
     },
   });
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+  const formatDateCol = (dateString: string) => {
+    return formatDateTime(dateString);
   };
 
   const formatUserName = (log: AuditLog): string => {
@@ -333,7 +334,7 @@ export default function AuditLogs() {
                 {data?.items?.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(log.created_at)}
+                      {formatDateCol(log.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {log.user ? (

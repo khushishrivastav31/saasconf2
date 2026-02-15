@@ -10,6 +10,7 @@ from app.core.dependencies import DbSessionDep, SuperAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
 from app.core.security import hash_password
 from app.models.audit import AuditAction, AuditLog
 from app.models.module import TenantModule
@@ -45,7 +46,7 @@ async def list_tenants(
 
     if search:
         query = query.where(
-            Tenant.name.ilike(f"%{search}%") | Tenant.slug.ilike(f"%{search}%")
+            unaccent_ilike(Tenant.name, search) | unaccent_ilike(Tenant.slug, search)
         )
 
     if is_active is not None:

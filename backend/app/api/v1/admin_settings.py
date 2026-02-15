@@ -10,6 +10,7 @@ from app.core.currency_formats import get_format_as_dict, get_preset_list
 from app.core.dependencies import CurrentUserDep, DbSessionDep, SuperAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
 from app.models.audit import AuditAction, AuditLog
 from app.models.platform_currency import PlatformCurrency
 from app.models.settings import EmailTemplate
@@ -43,8 +44,8 @@ async def list_platform_currencies(
 
     if search:
         query = query.where(
-            PlatformCurrency.name.ilike(f"%{search}%")
-            | PlatformCurrency.code.ilike(f"%{search}%")
+            unaccent_ilike(PlatformCurrency.name, search)
+            | unaccent_ilike(PlatformCurrency.code, search)
         )
 
     if is_active is not None:

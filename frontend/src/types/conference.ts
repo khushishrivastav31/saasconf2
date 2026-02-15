@@ -33,6 +33,7 @@ export interface Conference {
   city: string | null;
   country: string | null;
   timezone: string | null;
+  locale: string | null;
   venue_type: "onsite" | "virtual" | "hybrid";
   virtual_platform_url: string | null;
   // Social links
@@ -74,6 +75,7 @@ export interface ConferenceCreate {
   city?: string;
   country?: string;
   timezone?: string;
+  locale?: string;
   venue_type?: "onsite" | "virtual" | "hybrid";
   virtual_platform_url?: string;
   social_links?: SocialLinks;
@@ -98,6 +100,7 @@ export interface ConferenceUpdate {
   city?: string;
   country?: string;
   timezone?: string;
+  locale?: string;
   venue_type?: "onsite" | "virtual" | "hybrid";
   virtual_platform_url?: string;
   social_links?: SocialLinks;

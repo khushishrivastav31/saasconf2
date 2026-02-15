@@ -1,6 +1,5 @@
 """Volunteer management endpoints."""
 
-from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -15,6 +14,8 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.pagination import paginate
+from app.core.search import unaccent_ilike
+from app.core.utils import utcnow
 from app.models.associations import ConferenceVolunteer
 from app.models.audit import AuditLog
 from app.models.conference import Conference
@@ -63,9 +64,9 @@ async def list_volunteers(
 
     if search:
         search_filter = (
-            Volunteer.first_name.ilike(f"%{search}%")
-            | Volunteer.last_name.ilike(f"%{search}%")
-            | Volunteer.email.ilike(f"%{search}%")
+            unaccent_ilike(Volunteer.first_name, search)
+            | unaccent_ilike(Volunteer.last_name, search)
+            | unaccent_ilike(Volunteer.email, search)
         )
         query = query.where(search_filter)
 
@@ -346,7 +347,7 @@ async def update_volunteer(
     if "status" in update_data:
         new_status = update_data["status"]
         if new_status == VolunteerStatus.APPROVED.value and old_status != VolunteerStatus.APPROVED.value:
-            volunteer.approved_date = datetime.utcnow()
+            volunteer.approved_date = utcnow()
 
     # Audit log
     audit_log = AuditLog(
@@ -523,7 +524,7 @@ async def approve_volunteer(
         raise NotFoundError(f"Volunteer with ID '{volunteer_id}' not found")
 
     volunteer.status = VolunteerStatus.APPROVED.value
-    volunteer.approved_date = datetime.utcnow()
+    volunteer.approved_date = utcnow()
 
     # Audit log
     audit_log = AuditLog(

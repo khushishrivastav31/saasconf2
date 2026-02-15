@@ -18,6 +18,7 @@ from app.core.dependencies import (
 )
 from app.core.html_sanitize import sanitize_html
 from app.core.exceptions import NotFoundError
+from app.core.search import unaccent_ilike
 from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
@@ -102,15 +103,15 @@ async def list_threads(
             # Full-text search: match subject OR message body
             matching_thread_ids = (
                 select(Message.thread_id)
-                .where(Message.body_html.ilike(f"%{search}%"))
+                .where(unaccent_ilike(Message.body_html, search))
                 .distinct()
             )
             query = query.where(
-                MessageThread.subject.ilike(f"%{search}%")
+                unaccent_ilike(MessageThread.subject, search)
                 | MessageThread.id.in_(matching_thread_ids)
             )
         else:
-            query = query.where(MessageThread.subject.ilike(f"%{search}%"))
+            query = query.where(unaccent_ilike(MessageThread.subject, search))
     if bulk_id:
         query = query.where(MessageThread.bulk_id == bulk_id)
 
@@ -147,12 +148,11 @@ async def list_threads(
 
     # Filter: participant name
     if participant_name:
-        pname = f"%{participant_name}%"
         # Find threads where any applicant participant matches name
         applicant_ids_q = (
             select(CFPApplicant.id).where(
-                (CFPApplicant.first_name.ilike(pname))
-                | (CFPApplicant.last_name.ilike(pname))
+                (unaccent_ilike(CFPApplicant.first_name, participant_name))
+                | (unaccent_ilike(CFPApplicant.last_name, participant_name))
             )
         )
         matching_thread_ids_by_name = (

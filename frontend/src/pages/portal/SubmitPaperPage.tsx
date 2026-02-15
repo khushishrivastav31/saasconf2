@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import portalApi from "../../config/portalApi";
 import { useApplicantAuth } from "../../hooks/useApplicantAuth";
 import RichTextEditor from "../../components/common/RichTextEditor";
+import { formatDate } from "../../utils/formatDate";
 import type {
   PortalConferenceSummary,
   PortalConferenceDetail,
@@ -456,7 +457,7 @@ function SubmitPaperPage() {
                 <span className="font-medium text-gray-900">{selectedCfp.title}</span>
                 {selectedCfp.close_date && (
                   <span className="text-gray-500 ml-2">
-                    (closes {new Date(selectedCfp.close_date).toLocaleDateString()})
+                    (closes {formatDate(selectedCfp.close_date)})
                   </span>
                 )}
               </div>

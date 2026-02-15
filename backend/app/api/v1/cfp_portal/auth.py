@@ -1,6 +1,6 @@
 """CFP Applicant Portal - Authentication and profile management endpoints."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request
@@ -21,6 +21,7 @@ from app.core.applicant_security import (
 from app.core.email import send_password_reset_email, send_verification_email
 from app.core.exceptions import AuthenticationError, NotFoundError
 from app.core.security import hash_password, hash_token, verify_password
+from app.core.utils import utcnow
 from app.db.session import set_rls_context
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 from app.models.applicant_token import ApplicantEmailVerification, ApplicantPasswordReset, ApplicantRefreshToken
@@ -141,7 +142,7 @@ async def register_applicant(
 
     # In debug mode, auto-verify the email so developers can log in immediately
     if settings.DEBUG:
-        applicant.email_verified_at = datetime.utcnow()
+        applicant.email_verified_at = utcnow()
         # Log auto-verification in debug mode
         await log_applicant_activity(
             db,
@@ -160,7 +161,7 @@ async def register_applicant(
     verification = ApplicantEmailVerification(
         applicant_id=applicant.id,
         token_hash=token_hash,
-        expires_at=datetime.utcnow() + timedelta(hours=24),
+        expires_at=utcnow() + timedelta(hours=24),
     )
     db.add(verification)
 
@@ -213,7 +214,7 @@ async def verify_email(
         raise HTTPException(status_code=400, detail="Invalid or expired verification token")
 
     # Mark token as used
-    verification.used_at = datetime.utcnow()
+    verification.used_at = utcnow()
 
     # Verify the applicant's email
     applicant_result = await db.execute(
@@ -223,7 +224,7 @@ async def verify_email(
     if not applicant:
         raise HTTPException(status_code=400, detail="Applicant not found")
 
-    applicant.email_verified_at = datetime.utcnow()
+    applicant.email_verified_at = utcnow()
 
     # Log email verified event
     await log_applicant_activity(
@@ -270,7 +271,7 @@ async def forgot_password(
         reset = ApplicantPasswordReset(
             applicant_id=applicant.id,
             token_hash=token_hash_val,
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=utcnow() + timedelta(hours=1),
         )
         db.add(reset)
 
@@ -337,7 +338,7 @@ async def reset_password(
 
     # Update password and mark token as used
     applicant.password_hash = hash_password(data.new_password)
-    reset.used_at = datetime.utcnow()
+    reset.used_at = utcnow()
 
     await log_applicant_activity(
         db,
@@ -470,7 +471,7 @@ async def refresh_applicant_token(
     )
 
     # Revoke old, store new
-    db_token.revoked_at = datetime.utcnow()
+    db_token.revoked_at = utcnow()
     new_db_token = ApplicantRefreshToken(
         applicant_id=applicant.id,
         token_hash=new_hash,

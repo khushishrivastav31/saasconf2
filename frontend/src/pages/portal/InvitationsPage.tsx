@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import portalApi from "../../config/portalApi";
+import { formatDate } from "../../utils/formatDate";
 import type { PortalInvitationListResponse } from "../../types/portal";
 import { INVITATION_STATUS_COLORS } from "../../config/statusColors";
 
@@ -83,7 +84,7 @@ function InvitationsPage() {
                 </div>
                 {invitation.invited_at && (
                   <div className="mt-0.5 text-xs text-gray-400">
-                    {new Date(invitation.invited_at).toLocaleDateString()}
+                    {formatDate(invitation.invited_at)}
                   </div>
                 )}
               </div>

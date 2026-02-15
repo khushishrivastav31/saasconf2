@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDate, formatTime } from "../../../../utils/formatDate";
 import type { ThreadListItem } from "../../../../types";
 
 interface ThreadListProps {
@@ -10,17 +11,15 @@ interface ThreadListProps {
   showArchived?: boolean;
 }
 
-function formatDate(dateStr: string) {
+function formatRelativeDate(dateStr: string) {
   const d = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / 86400000);
-  if (diffDays === 0) {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
+  if (diffDays === 0) return formatTime(dateStr);
   if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return d.toLocaleDateString([], { weekday: "short" });
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  if (diffDays < 7) return formatDate(dateStr);
+  return formatDate(dateStr);
 }
 
 export default function ThreadList({
@@ -90,7 +89,7 @@ export default function ThreadList({
                   )}
                 </div>
                 <span className="text-xs text-gray-400 flex-shrink-0">
-                  {formatDate(thread.last_message_at)}
+                  {formatRelativeDate(thread.last_message_at)}
                 </span>
               </div>
               <p className={`text-xs truncate ${thread.unread ? "font-medium text-gray-700" : "text-gray-500"}`}>

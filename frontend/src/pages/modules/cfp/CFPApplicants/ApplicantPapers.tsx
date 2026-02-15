@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../../../config/api";
 import { PAPER_STATUS_COLORS, PAPER_STATUS_LABELS } from "../../../../config/statusColors";
+import { formatDate } from "../../../../utils/formatDate";
 import type { Paper } from "../../../../types";
 
 interface PaperListResponse {
@@ -186,12 +187,12 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
                         {paper.submitted_at ? (
                           <span className="text-xs text-gray-400">
                             Submitted{" "}
-                            {new Date(paper.submitted_at).toLocaleDateString()}
+                            {formatDate(paper.submitted_at)}
                           </span>
                         ) : (
                           <span className="text-xs text-gray-400">
                             Created{" "}
-                            {new Date(paper.created_at).toLocaleDateString()}
+                            {formatDate(paper.created_at)}
                           </span>
                         )}
                       </div>

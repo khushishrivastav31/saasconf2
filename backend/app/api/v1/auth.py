@@ -1,7 +1,8 @@
 """Authentication endpoints."""
 
-from datetime import datetime
 from typing import Annotated
+
+from app.core.utils import utcnow
 
 from fastapi import APIRouter, Depends, Request
 from slowapi import Limiter
@@ -120,7 +121,7 @@ async def login(
     db.add(db_refresh_token)
 
     # Update last login
-    user.last_login = datetime.utcnow()
+    user.last_login = utcnow()
 
     # Log successful login
     audit_log = AuditLog(
@@ -218,7 +219,7 @@ async def refresh_token(
     )
 
     # Revoke old refresh token
-    db_token.revoked_at = datetime.utcnow()
+    db_token.revoked_at = utcnow()
 
     # Store new refresh token
     new_db_token = RefreshToken(
@@ -256,7 +257,7 @@ async def logout(
     tokens = result.scalars().all()
 
     for tk in tokens:
-        tk.revoked_at = datetime.utcnow()
+        tk.revoked_at = utcnow()
 
     # Blacklist the current access token
     try:
@@ -264,7 +265,7 @@ async def logout(
         jti = payload.get("jti")
         if jti:
             exp = payload.get("exp", 0)
-            remaining = int(exp - datetime.utcnow().timestamp())
+            remaining = int(exp - utcnow().timestamp())
             if remaining > 0:
                 await blacklist_token(jti, remaining)
     except Exception:

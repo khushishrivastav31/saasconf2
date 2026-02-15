@@ -4,6 +4,7 @@ import api from "../config/api";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
 import { parseApiError } from "../utils/apiError";
+import { formatDate } from "../utils/formatDate";
 import type {
   TenantUser,
   TenantUserCreate,
@@ -208,7 +209,7 @@ export default function Team() {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     {user.last_login
-                      ? new Date(user.last_login).toLocaleDateString()
+                      ? formatDate(user.last_login)
                       : "Never"}
                   </td>
                   <td className="px-6 py-4 text-right">
