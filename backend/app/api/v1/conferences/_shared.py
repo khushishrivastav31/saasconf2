@@ -122,6 +122,7 @@ def _build_conference_response(conf: Conference, tenant_slug: str | None = None)
         invoice_currency=conf.invoice_currency,
         is_active=conf.is_active,
         is_published=conf.is_published,
+        program_published_at=conf.program_published_at,
         created_at=conf.created_at,
         updated_at=conf.updated_at,
         managers_count=managers_count,

@@ -5,7 +5,10 @@ export type EmailTemplateType =
   | "committee_verification"
   | "submission_confirmation"
   | "co_speaker_invitation"
-  | "password_reset";
+  | "password_reset"
+  | "new_message_notification"
+  | "paper_acceptance"
+  | "paper_rejection";
 
 export const EMAIL_TEMPLATE_TYPES = {
   SYSTEM: ["tenant_user_welcome"] as const,
@@ -15,6 +18,9 @@ export const EMAIL_TEMPLATE_TYPES = {
     "submission_confirmation",
     "co_speaker_invitation",
     "password_reset",
+    "new_message_notification",
+    "paper_acceptance",
+    "paper_rejection",
   ] as const,
 };
 
@@ -25,6 +31,9 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateType, string> = {
   submission_confirmation: "Submission Confirmation",
   co_speaker_invitation: "Co-Speaker Invitation",
   password_reset: "Password Reset",
+  new_message_notification: "New Message Notification",
+  paper_acceptance: "Paper Acceptance",
+  paper_rejection: "Paper Rejection",
 };
 
 export interface EmailTemplate {

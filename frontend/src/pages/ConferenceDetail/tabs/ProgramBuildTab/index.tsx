@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   DragOverlay,
@@ -10,23 +10,24 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import api from "../../../config/api";
+import api from "../../../../config/api";
 import type {
   Conference,
   SessionType,
   Paper,
   ProgramSession,
-} from "../../../types";
-import { parseApiError } from "../../../utils/apiError";
-import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
-import { useToast } from "../../../components/Toast";
+} from "../../../../types";
+import { parseApiError } from "../../../../utils/apiError";
+import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
+import { useToast } from "../../../../components/Toast";
 
-import { useProgramDays, useProgramGrid } from "./ProgramDesignTab/hooks/useProgramGrid";
-import { useProgramMutations } from "./ProgramDesignTab/hooks/useProgramMutations";
-import DayTabs from "./ProgramDesignTab/DayTabs";
-import ProgramGrid from "./ProgramDesignTab/ProgramGrid";
-import SessionModal from "./ProgramDesignTab/SessionModal";
-import PaperSidebar, { PaperCardOverlay } from "./ProgramDesignTab/PaperSidebar";
+import { useProgramDays, useProgramGrid } from "../ProgramDesignTab/hooks/useProgramGrid";
+import { useProgramMutations } from "../ProgramDesignTab/hooks/useProgramMutations";
+import DayTabs from "../ProgramDesignTab/DayTabs";
+import ProgramGrid from "../ProgramDesignTab/ProgramGrid";
+import SessionModal from "../ProgramDesignTab/SessionModal";
+import PaperSidebar, { PaperCardOverlay } from "../ProgramDesignTab/PaperSidebar";
+import PublishConfirmModal from "./PublishConfirmModal";
 
 interface ProgramBuildTabProps {
   conference: Conference;
@@ -39,7 +40,11 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeDragData, setActiveDragData] = useState<unknown>(null);
+  const [showPublishModal, setShowPublishModal] = useState(false);
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
+
+  const isPublished = !!conference.program_published_at;
 
   // Configure drag sensors (for paper drag-and-drop)
   const sensors = useSensors(
@@ -181,6 +186,12 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
     }
   };
 
+  const handlePublished = () => {
+    queryClient.invalidateQueries({ queryKey: ["conference"] });
+    queryClient.invalidateQueries({ queryKey: ["program-grid"] });
+    queryClient.invalidateQueries({ queryKey: ["program-publish-preview"] });
+  };
+
   // Loading state
   if (daysLoading) {
     return (
@@ -198,8 +209,45 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
 
   return (
     <div className="space-y-4">
+      {/* Header with publish controls */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Program Build</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold text-gray-900">Program Build</h2>
+          {isPublished && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+              Published{" "}
+              {new Date(conference.program_published_at!).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setShowPublishModal(true)}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md shadow-sm ${
+              isPublished
+                ? "text-amber-700 bg-amber-50 border border-amber-300 hover:bg-amber-100"
+                : "text-white bg-primary-600 border border-transparent hover:bg-primary-700"
+            }`}
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            {isPublished ? "Update Program" : "Publish Program"}
+          </button>
+        )}
       </div>
 
       {/* Day tabs (read-only) */}
@@ -227,7 +275,7 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
               onDragEnd={handleDragEnd}
             >
               <div className="flex gap-4">
-                {/* Grid area (read-only, but droppable for paper assignment) */}
+                {/* Grid area (droppable for paper assignment) */}
                 <div className="flex-1 min-w-0 overflow-x-auto" style={{ height: Math.max(400, 48 + slots.length * 60) }}>
                   <ProgramGrid
                     slots={slots}
@@ -244,7 +292,7 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
                   />
                 </div>
 
-                {/* Paper sidebar */}
+                {/* Paper sidebar (search, filter, drag source) */}
                 {isAdmin && (
                   <PaperSidebar
                     conferenceId={conference.id}
@@ -305,6 +353,15 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
         }}
         onDelete={() => {}}
         isAdmin={false}
+      />
+
+      {/* Publish confirmation modal */}
+      <PublishConfirmModal
+        open={showPublishModal}
+        onClose={() => setShowPublishModal(false)}
+        conferenceId={conference.id}
+        isUpdate={isPublished}
+        onPublished={handlePublished}
       />
     </div>
   );

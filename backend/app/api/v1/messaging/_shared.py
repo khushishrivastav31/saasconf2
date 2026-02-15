@@ -290,12 +290,13 @@ def substitute_template_variables(
     email: str = "",
     conference_name: str = "",
     paper_title: str = "",
+    paper_list: str = "",
 ) -> str:
     """Replace template placeholder variables in text.
 
     Supported placeholders:
       [First Name], [Last Name], [Email],
-      [Conference Name], [Paper Title]
+      [Conference Name], [Paper Title], [Paper List]
     """
     replacements = {
         "[First Name]": first_name,
@@ -303,6 +304,7 @@ def substitute_template_variables(
         "[Email]": email,
         "[Conference Name]": conference_name,
         "[Paper Title]": paper_title,
+        "[Paper List]": paper_list,
     }
     for placeholder, value in replacements.items():
         text = text.replace(placeholder, value)

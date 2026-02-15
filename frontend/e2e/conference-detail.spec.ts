@@ -194,3 +194,106 @@ test.describe('Conference Service Providers Tab', () => {
     expect(hasAddBtn || hasEmpty || hasProviders).toBeTruthy();
   });
 });
+
+test.describe('Conference Sessions Tab', () => {
+  test.beforeEach(async () => {
+    if (!conferenceId) test.skip();
+  });
+
+  test('should show Sessions heading with table or empty state', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Sessions');
+
+    // Should show sessions heading
+    await expect(page.getByRole('heading', { name: /sessions/i })).toBeVisible({ timeout: 10000 });
+
+    // Should show table or empty state
+    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasEmpty = await page.getByText(/no sessions yet/i).isVisible({ timeout: 5000 }).catch(() => false);
+
+    expect(hasTable || hasEmpty).toBeTruthy();
+  });
+
+  test('should show default columns when sessions exist', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Sessions');
+
+    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    if (hasTable) {
+      const table = page.locator('table').first();
+      // Default visible columns
+      await expect(table.getByText(/day/i).first()).toBeVisible();
+      await expect(table.getByText(/time/i).first()).toBeVisible();
+      await expect(table.getByText(/track/i).first()).toBeVisible();
+      await expect(table.getByText(/session/i).first()).toBeVisible();
+      await expect(table.getByText(/type/i).first()).toBeVisible();
+      await expect(table.getByText(/speaker/i).first()).toBeVisible();
+    }
+  });
+
+  test('should show column picker and toggle columns', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Sessions');
+
+    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    if (hasTable) {
+      // Click the Columns button to open the picker
+      const columnsBtn = page.getByRole('button', { name: /columns/i });
+      await expect(columnsBtn).toBeVisible({ timeout: 5000 });
+      await columnsBtn.click();
+
+      // Column picker dropdown should appear with group labels
+      await expect(page.getByText(/session/i).first()).toBeVisible({ timeout: 3000 });
+      await expect(page.getByText(/speaker/i).first()).toBeVisible({ timeout: 3000 });
+
+      // Should have a Reset to defaults link
+      await expect(page.getByText(/reset to defaults/i)).toBeVisible({ timeout: 3000 });
+    }
+  });
+
+  test('should filter sessions with search and type filter', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Sessions');
+
+    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    if (hasTable) {
+      // Search input should exist
+      const searchInput = page.getByPlaceholder(/search/i);
+      await expect(searchInput).toBeVisible({ timeout: 5000 });
+
+      // Filter dropdown should exist with options
+      const filterSelect = page.locator('select');
+      await expect(filterSelect).toBeVisible({ timeout: 5000 });
+      const options = await filterSelect.locator('option').allTextContents();
+      expect(options).toContain('All Sessions');
+      expect(options).toContain('With Paper');
+      expect(options).toContain('General Events');
+    }
+  });
+
+  test('should show Export CSV button for admin', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Sessions');
+
+    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    if (hasTable) {
+      const exportBtn = page.getByRole('button', { name: /export csv/i });
+      await expect(exportBtn).toBeVisible({ timeout: 5000 });
+    }
+  });
+});

@@ -150,3 +150,53 @@ export interface ProgramGrid {
   tracks: ProgramTrack[];
   sessions: ProgramSession[];
 }
+
+export interface ProgramFullGrid {
+  days: ProgramGrid[];
+  total_days: number;
+}
+
+// ============================================================================
+// Enriched Sessions types (for customizable Sessions tab)
+// ============================================================================
+
+export interface CustomFieldMeta {
+  field_key: string;
+  label: string;
+  field_type: string;
+}
+
+export interface EnrichedSession {
+  id: string;
+  title: string;
+  description: string | null;
+  session_type_id: string | null;
+  session_type_name: string | null;
+  is_general_event: boolean;
+  color: string | null;
+  notes: string | null;
+  paper_id: string | null;
+  paper_title: string | null;
+  paper_abstract_short: string | null;
+  paper_level: string | null;
+  paper_learning_objectives: string | null;
+  paper_importance: string | null;
+  paper_status: string | null;
+  paper_custom_field_answers: Record<string, unknown> | null;
+  speaker_name: string | null;
+  speaker_email: string | null;
+  speaker_company: string | null;
+  cospeakers: string | null;
+  day_id: string | null;
+  day_name: string | null;
+  day_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  track_name: string | null;
+}
+
+export interface EnrichedSessionsResponse {
+  items: EnrichedSession[];
+  total: number;
+  custom_fields: CustomFieldMeta[];
+}

@@ -2,6 +2,7 @@
 
 from datetime import date as date_type
 from datetime import datetime, time as time_type
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -287,3 +288,93 @@ class ProgramDaysGenerateResponse(BaseModel):
 
     created: list[ProgramDayResponse]
     skipped: int = Field(0, description="Days that already existed")
+
+
+# ============================================================================
+# Program Publication Schemas
+# ============================================================================
+
+
+class PaperPreviewItem(BaseModel):
+    """Paper info for publish preview."""
+
+    id: UUID
+    title: str
+    speaker_name: str
+
+
+class ProgramPublishPreview(BaseModel):
+    """Dry-run preview of what publishing will do."""
+
+    papers_to_accept: int
+    papers_to_reject: int
+    speakers_to_notify: int
+    already_published: bool
+    accepted_papers: list[PaperPreviewItem]
+    rejected_papers: list[PaperPreviewItem]
+
+
+class ProgramPublishResponse(BaseModel):
+    """Result of publishing or updating the program."""
+
+    papers_accepted: int
+    papers_rejected: int
+    notifications_sent: int
+    published_at: datetime
+
+
+# ============================================================================
+# Enriched Sessions Schemas
+# ============================================================================
+
+
+class CustomFieldMeta(BaseModel):
+    """Metadata for a custom paper form field."""
+
+    field_key: str
+    label: str
+    field_type: str
+
+
+class EnrichedSessionResponse(BaseModel):
+    """Session with full paper, speaker, and context data pre-resolved."""
+
+    # Session fields
+    id: UUID
+    title: str
+    description: str | None = None
+    session_type_id: UUID | None = None
+    session_type_name: str | None = None
+    is_general_event: bool
+    color: str | None = None
+    notes: str | None = None
+    # Paper data
+    paper_id: UUID | None = None
+    paper_title: str | None = None
+    paper_abstract_short: str | None = None
+    paper_level: str | None = None
+    paper_learning_objectives: str | None = None
+    paper_importance: str | None = None
+    paper_status: str | None = None
+    paper_custom_field_answers: dict[str, Any] | None = None
+    # Speaker data
+    speaker_name: str | None = None
+    speaker_email: str | None = None
+    speaker_company: str | None = None
+    # Co-speakers
+    cospeakers: str | None = None
+    # Resolved context
+    day_id: UUID | None = None
+    day_name: str | None = None
+    day_date: date_type | None = None
+    start_time: time_type | None = None
+    end_time: time_type | None = None
+    track_name: str | None = None
+
+
+class EnrichedSessionsResponse(BaseModel):
+    """Enriched session list with custom field metadata."""
+
+    items: list[EnrichedSessionResponse]
+    total: int
+    custom_fields: list[CustomFieldMeta]

@@ -200,11 +200,10 @@ export default function PaperSidebar({
   const [showAssigned, setShowAssigned] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["papers", conferenceId, "accepted"],
+    queryKey: ["papers", conferenceId, "all"],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append("conference_id", conferenceId);
-      params.append("status", "accepted");
       params.append("page_size", "500");
       const response = await api.get<PaperListResponse>(
         `/cfp/papers?${params.toString()}`

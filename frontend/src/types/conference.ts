@@ -48,6 +48,8 @@ export interface Conference {
   // Status
   is_active: boolean;
   is_published: boolean;
+  // Program publication
+  program_published_at: string | null;
   // Timestamps
   created_at: string;
   updated_at: string;

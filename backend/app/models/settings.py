@@ -616,12 +616,16 @@ class EmailTemplate(Base):
     - submission_confirmation: Sent after a paper is submitted (conference level)
     - co_speaker_invitation: Sent when inviting a co-speaker (conference level)
     - password_reset: Sent for password reset requests (conference level)
+    - new_message_notification: Sent when a new message is received (conference level)
+    - paper_acceptance: Sent when papers are accepted via program publish (conference level)
+    - paper_rejection: Sent when papers are rejected via program publish (conference level)
 
     Placeholders available:
     - [User Type]: Role of the user (admin, user, etc.)
     - [Company Name]: Tenant name
     - [Conference Name]: Conference name
     - [Paper Title]: Title of submitted paper
+    - [Paper List]: HTML list of paper titles (acceptance/rejection templates)
     - [Speakers]: List of speaker names
     - [Support Email]: Tenant support email
     - [Verify Link]: Email verification URL

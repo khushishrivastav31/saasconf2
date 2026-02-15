@@ -76,6 +76,11 @@ class Conference(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Program publication
+    program_published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

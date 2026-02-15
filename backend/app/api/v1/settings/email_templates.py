@@ -186,6 +186,45 @@ You can manage your notification preferences in your profile settings.
 Warm regards,
 The [Conference Name] Team""",
     },
+    EmailTemplateType.PAPER_ACCEPTANCE: {
+        "subject": "Paper Acceptance - [Conference Name]",
+        "body_html": """<p>Dear [First Name],</p>
+<p>We are pleased to inform you that the following paper(s) have been accepted for <strong>[Conference Name]</strong>:</p>
+[Paper List]
+<p>We will be in touch with further details about the schedule and logistics.</p>
+<p>Thank you for your contribution!</p>
+<p>Warm regards,<br>The [Conference Name] Team</p>""",
+        "body_text": """Dear [First Name],
+
+We are pleased to inform you that the following paper(s) have been accepted for [Conference Name]:
+
+[Paper List]
+
+We will be in touch with further details about the schedule and logistics.
+
+Thank you for your contribution!
+
+Warm regards,
+The [Conference Name] Team""",
+    },
+    EmailTemplateType.PAPER_REJECTION: {
+        "subject": "Paper Decision - [Conference Name]",
+        "body_html": """<p>Dear [First Name],</p>
+<p>Thank you for your submission(s) to <strong>[Conference Name]</strong>. After careful review, we regret to inform you that the following paper(s) were not selected for this year's program:</p>
+[Paper List]
+<p>We appreciate your interest and encourage you to submit again in the future.</p>
+<p>Warm regards,<br>The [Conference Name] Team</p>""",
+        "body_text": """Dear [First Name],
+
+Thank you for your submission(s) to [Conference Name]. After careful review, we regret to inform you that the following paper(s) were not selected for this year's program:
+
+[Paper List]
+
+We appreciate your interest and encourage you to submit again in the future.
+
+Warm regards,
+The [Conference Name] Team""",
+    },
 }
 
 

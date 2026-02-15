@@ -12,6 +12,7 @@ from fastapi import APIRouter
 
 from .days import router as days_router
 from .grid import router as grid_router
+from .publish import router as publish_router
 from .sessions import router as sessions_router
 from .slots import router as slots_router
 from .tracks import router as tracks_router
@@ -22,3 +23,4 @@ router.include_router(slots_router)
 router.include_router(tracks_router)
 router.include_router(sessions_router)
 router.include_router(grid_router)
+router.include_router(publish_router)

@@ -944,3 +944,119 @@ async def test_grid_returns_paper_title(
     session = next(s for s in grid["sessions"] if s["title"] == "Paper Session")
     assert session["paper_id"] == str(paper.id)
     assert session["paper_title"] == "Grid Paper"
+
+
+# ── Enriched Sessions Tests ───────────────────────────────────────────
+
+
+def _enriched_url(conference_id: uuid.UUID) -> str:
+    return f"/api/v1/conferences/{conference_id}/program/sessions/enriched"
+
+
+@pytest.mark.asyncio
+async def test_enriched_sessions_empty(
+    client: AsyncClient,
+    conference: Conference,
+    program_module: Module,
+    tenant_admin_user: User,
+    program_module_token: str,
+) -> None:
+    """Enriched endpoint returns empty list when no sessions exist."""
+    resp = await client.get(
+        _enriched_url(conference.id),
+        headers=auth_headers(program_module_token),
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["items"] == []
+    assert data["total"] == 0
+    assert data["custom_fields"] == []
+
+
+@pytest.mark.asyncio
+async def test_enriched_sessions_returns_session_fields(
+    client: AsyncClient,
+    conference: Conference,
+    program_module: Module,
+    tenant_admin_user: User,
+    program_module_token: str,
+) -> None:
+    """Enriched endpoint returns resolved day, time, and track names."""
+    day = await _seed_day(client, conference.id, program_module_token)
+    day_id = uuid.UUID(day["id"])
+    slot = await _seed_slot(client, conference.id, day_id, program_module_token)
+    track = await _seed_track(client, conference.id, program_module_token, name="Room A", day_id=day_id)
+
+    await client.post(
+        _sessions_url(conference.id),
+        json={
+            "start_slot_id": slot["id"],
+            "start_track_id": track["id"],
+            "title": "Enriched Session",
+            "color": "#10B981",
+        },
+        headers=auth_headers(program_module_token),
+    )
+
+    resp = await client.get(
+        _enriched_url(conference.id),
+        headers=auth_headers(program_module_token),
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+
+    item = data["items"][0]
+    assert item["title"] == "Enriched Session"
+    assert item["day_name"] == "Day 1"
+    assert item["day_date"] == "2026-06-01"
+    assert item["start_time"] == "09:00:00"
+    assert item["end_time"] == "09:30:00"
+    assert item["track_name"] == "Room A"
+    assert item["color"] == "#10B981"
+    assert item["paper_id"] is None
+    assert item["speaker_name"] is None
+
+
+@pytest.mark.asyncio
+async def test_enriched_sessions_with_paper(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    tenant: Tenant,
+    program_module: Module,
+    tenant_admin_user: User,
+    program_module_token: str,
+) -> None:
+    """Enriched endpoint returns paper and speaker data."""
+    paper = await _seed_paper(db_session, tenant.id, conference.id, "Deep Learning Talk")
+    day = await _seed_day(client, conference.id, program_module_token)
+    day_id = uuid.UUID(day["id"])
+    slot = await _seed_slot(client, conference.id, day_id, program_module_token)
+    track = await _seed_track(client, conference.id, program_module_token, day_id=day_id)
+
+    await client.post(
+        _sessions_url(conference.id),
+        json={
+            "start_slot_id": slot["id"],
+            "start_track_id": track["id"],
+            "title": "ML Session",
+            "color": "#6366F1",
+            "paper_id": str(paper.id),
+        },
+        headers=auth_headers(program_module_token),
+    )
+
+    resp = await client.get(
+        _enriched_url(conference.id),
+        headers=auth_headers(program_module_token),
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+
+    item = data["items"][0]
+    assert item["paper_id"] == str(paper.id)
+    assert item["paper_title"] == "Deep Learning Talk"
+    assert item["speaker_name"] == "Jane Speaker"
+    assert item["paper_status"] == "accepted"

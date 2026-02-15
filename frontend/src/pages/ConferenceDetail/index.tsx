@@ -28,6 +28,8 @@ import ConferenceServiceProvidersTab from "./tabs/ServiceProvidersTab";
 import ConferenceSettingsTab from "./tabs/SettingsTab";
 import ProgramDesignTab from "./tabs/ProgramDesignTab";
 import ProgramBuildTab from "./tabs/ProgramBuildTab";
+import SessionsTab from "./tabs/SessionsTab";
+import SpeakersTab from "./tabs/SpeakersTab";
 import MessagingTab from "./tabs/MessagingTab";
 import { CFPTopics, CFPProgramCommittee, CFPApplicants, CFPPapers, CFPEvaluatedPapers, CFPSelectedPapers, CFPAssignments } from "../modules/cfp";
 
@@ -514,10 +516,10 @@ export default function ConferenceDetail() {
               <CFPSelectedPapers filter="rejected" />
             )}
             {activeSection === "sessions" && (
-              <ComingSoonContent name="Sessions" />
+              <SessionsTab conference={conference} isAdmin={isAdmin} />
             )}
             {activeSection === "speakers" && (
-              <ComingSoonContent name="Speakers" />
+              <SpeakersTab conference={conference} isAdmin={isAdmin} />
             )}
             {activeSection === "attendees" && (
               <ComingSoonContent name="Attendees" />

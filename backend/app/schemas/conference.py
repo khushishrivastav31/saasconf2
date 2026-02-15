@@ -188,6 +188,9 @@ class ConferenceResponse(BaseModel):
     is_active: bool
     is_published: bool
 
+    # Program publication
+    program_published_at: datetime | None = None
+
     # Timestamps
     created_at: datetime
     updated_at: datetime

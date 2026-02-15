@@ -217,6 +217,7 @@ const VALID_PLACEHOLDERS = [
   "Conference Name",
   "Company Name",
   "Paper Title",
+  "Paper List",
   "Speakers",
   "Main Speaker Name",
   "User Type",
@@ -224,6 +225,8 @@ const VALID_PLACEHOLDERS = [
   "Reset Link",
   "Portal Link",
   "Support Email",
+  "Message Subject",
+  "Messages Link",
 ];
 
 // Extract all placeholders from text (anything in [brackets])
@@ -430,6 +433,7 @@ function EmailTemplateForm({
             <div><code>[Conference Name]</code> - Conference name</div>
             <div><code>[Company Name]</code> - Tenant/Company name</div>
             <div><code>[Paper Title]</code> - Submitted paper title</div>
+            <div><code>[Paper List]</code> - List of paper titles (acceptance/rejection)</div>
             <div><code>[Speakers]</code> - List of speakers</div>
             <div><code>[Main Speaker Name]</code> - Main speaker name</div>
             <div><code>[User Type]</code> - Role (Admin, Reviewer, etc.)</div>
