@@ -37,6 +37,7 @@ class MessageResponse(BaseModel):
     thread_id: UUID
     sender: SenderInfo
     body_html: str
+    is_internal_note: bool = False
     attachments: list[MessageAttachmentInfo] = []
     created_at: datetime
 
@@ -68,8 +69,11 @@ class ThreadListItem(BaseModel):
     other_participants: list[SenderInfo] = []
     unread: bool
     message_count: int
+    is_flagged: bool = False
+    has_attachments: bool = False
     created_at: datetime
     bulk_id: UUID | None = None
+    archived_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -92,6 +96,7 @@ class ThreadDetailResponse(BaseModel):
     id: UUID
     subject: str
     bulk_id: UUID | None = None
+    archived_at: datetime | None = None
     participants: list[ParticipantInfo]
     messages: list[MessageResponse]
     created_at: datetime
@@ -135,6 +140,7 @@ class BulkRecipientFilter(BaseModel):
     paper_status: str | None = None
     committee_role: str | None = None
     applicant_ids: list[UUID] | None = None
+    recipient_list_id: UUID | None = None
 
 
 class AdminBulkSend(BaseModel):
@@ -182,3 +188,129 @@ class NotificationPreferenceUpdate(BaseModel):
     """Toggle message notification emails."""
 
     message_notifications_enabled: bool
+
+
+# --- Message Templates ---
+
+class MessageTemplateCreate(BaseModel):
+    """Create a new message template."""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    subject: str = Field(..., min_length=1, max_length=500)
+    body_html: str = Field(..., min_length=1)
+
+
+class MessageTemplateUpdate(BaseModel):
+    """Update a message template."""
+
+    name: str | None = Field(None, min_length=1, max_length=200)
+    subject: str | None = Field(None, min_length=1, max_length=500)
+    body_html: str | None = Field(None, min_length=1)
+
+
+class MessageTemplateResponse(BaseModel):
+    """Message template response."""
+
+    id: UUID
+    name: str
+    subject: str
+    body_html: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MessageTemplateListResponse(BaseModel):
+    """Paginated message template list."""
+
+    items: list[MessageTemplateResponse]
+    total: int
+
+
+# --- Recipient Lists ---
+
+class RecipientListCreate(BaseModel):
+    """Create a new recipient list."""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    description: str | None = None
+    applicant_ids: list[UUID] = Field(..., min_length=1)
+
+
+class RecipientListUpdate(BaseModel):
+    """Update a recipient list."""
+
+    name: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = None
+    applicant_ids: list[UUID] | None = None
+
+
+class RecipientListMemberInfo(BaseModel):
+    """Recipient list member info."""
+
+    id: UUID
+    first_name: str
+    last_name: str
+    email: str
+
+
+class RecipientListResponse(BaseModel):
+    """Recipient list summary response."""
+
+    id: UUID
+    name: str
+    description: str | None = None
+    member_count: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RecipientListDetailResponse(BaseModel):
+    """Recipient list with members."""
+
+    id: UUID
+    name: str
+    description: str | None = None
+    members: list[RecipientListMemberInfo]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RecipientListListResponse(BaseModel):
+    """Paginated recipient list response."""
+
+    items: list[RecipientListResponse]
+    total: int
+
+
+# --- Global unread ---
+
+class ConferenceUnreadCount(BaseModel):
+    """Unread count for a single conference."""
+
+    conference_id: UUID
+    conference_name: str
+    unread_count: int
+
+
+class GlobalUnreadCountResponse(BaseModel):
+    """Unread thread count across all conferences."""
+
+    total_unread_count: int
+    conferences: list[ConferenceUnreadCount] = []
+
+
+# --- Internal Notes ---
+
+class InternalNoteCreate(BaseModel):
+    """Create an internal note on a thread."""
+
+    body_html: str = Field(..., min_length=1)

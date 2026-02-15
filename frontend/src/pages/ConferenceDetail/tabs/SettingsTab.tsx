@@ -11,6 +11,9 @@ import PaperFormBuilderTab from "./settings/PaperFormBuilderTab";
 import PronounOptionsTab from "../../PronounOptionsTab";
 import EmailTemplatesTab from "./settings/EmailTemplatesTab";
 import EmailSettingsTab from "./settings/EmailSettingsTab";
+import MessagingSettingsTab from "./settings/MessagingSettingsTab";
+import MessageTemplatesTab from "./settings/MessageTemplatesTab";
+import RecipientListsTab from "./settings/RecipientListsTab";
 
 type ConferenceSettingsActiveTab =
   | "volunteer-roles"
@@ -23,7 +26,10 @@ type ConferenceSettingsActiveTab =
   | "paper-form-builder"
   | "pronoun-options"
   | "email-templates"
-  | "email-settings";
+  | "email-settings"
+  | "messaging-settings"
+  | "message-templates"
+  | "recipient-lists";
 
 interface SettingsNavItem {
   key: ConferenceSettingsActiveTab;
@@ -149,6 +155,36 @@ const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
       </svg>
     ),
   },
+  {
+    key: "messaging-settings",
+    label: "Messaging",
+    group: "Communication",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+    ),
+  },
+  {
+    key: "message-templates",
+    label: "Msg Templates",
+    group: "Communication",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+      </svg>
+    ),
+  },
+  {
+    key: "recipient-lists",
+    label: "Recipient Lists",
+    group: "Communication",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+    ),
+  },
 ];
 
 // Group items by their group property
@@ -200,6 +236,12 @@ function ConferenceSettingsTab({
         return <EmailTemplatesTab conference={conference} isAdmin={isAdmin} />;
       case "email-settings":
         return <EmailSettingsTab conference={conference} isAdmin={isAdmin} />;
+      case "messaging-settings":
+        return <MessagingSettingsTab conference={conference} isAdmin={isAdmin} />;
+      case "message-templates":
+        return <MessageTemplatesTab conference={conference} isAdmin={isAdmin} />;
+      case "recipient-lists":
+        return <RecipientListsTab conference={conference} isAdmin={isAdmin} />;
       default:
         return null;
     }

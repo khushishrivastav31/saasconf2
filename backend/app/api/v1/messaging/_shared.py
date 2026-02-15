@@ -235,3 +235,75 @@ async def _link_attachments_to_message(
     )
     for a in result.scalars():
         a.entity_id = message_id
+
+
+def _get_messaging_mode(conference: Conference) -> str:
+    """Get the messaging mode for a conference.
+
+    Returns "in_app" (default) or "email_only".
+    """
+    if conference.settings and isinstance(conference.settings, dict):
+        return conference.settings.get("messaging_mode", "in_app")
+    return "in_app"
+
+
+async def _send_direct_emails(
+    db,
+    recipients: list,
+    subject: str,
+    body_html: str,
+    conference_name: str,
+    sender_name: str,
+    reply_to: str | None = None,
+) -> int:
+    """Send direct email messages (for email-only mode).
+
+    recipients: list of objects with .email and .first_name attributes
+    reply_to: conference contact email used as reply-to address
+    Returns count of emails sent.
+    """
+    from app.core.email import send_direct_message_email
+
+    sent = 0
+    for r in recipients:
+        try:
+            await send_direct_message_email(
+                email=r.email,
+                first_name=getattr(r, "first_name", ""),
+                subject=subject,
+                body_html=body_html,
+                conference_name=conference_name,
+                sender_name=sender_name,
+                reply_to=reply_to,
+            )
+            sent += 1
+        except Exception:
+            logger.exception(f"Failed to send direct email to {r.email}")
+    return sent
+
+
+def substitute_template_variables(
+    text: str,
+    *,
+    first_name: str = "",
+    last_name: str = "",
+    email: str = "",
+    conference_name: str = "",
+    paper_title: str = "",
+) -> str:
+    """Replace template placeholder variables in text.
+
+    Supported placeholders:
+      [First Name], [Last Name], [Email],
+      [Conference Name], [Paper Title]
+    """
+    replacements = {
+        "[First Name]": first_name,
+        "[Last Name]": last_name,
+        "[Email]": email,
+        "[Conference Name]": conference_name,
+        "[Paper Title]": paper_title,
+    }
+    for placeholder, value in replacements.items():
+        text = text.replace(placeholder, value)
+    return text

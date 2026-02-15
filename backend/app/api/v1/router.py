@@ -82,6 +82,10 @@ api_router.include_router(program.router, prefix="/conferences/{conference_id}/p
 # Messaging (conference-scoped)
 api_router.include_router(messaging.router, prefix="/conferences/{conference_id}/messaging", tags=["Messaging"])
 
+# Cross-conference messaging (global unread count)
+from app.api.v1.messaging.global_unread import router as global_unread_router
+api_router.include_router(global_unread_router, prefix="/messaging", tags=["Messaging"])
+
 # File attachments
 api_router.include_router(attachments.router, prefix="/attachments", tags=["Attachments"])
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AdminLayout from "../AdminLayout";
 import type { User } from "../../../types";
 
@@ -32,6 +33,17 @@ vi.mock("../../../hooks/useAuth", () => ({
   }),
 }));
 
+function renderWithProviders() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <AdminLayout />
+    </QueryClientProvider>
+  );
+}
+
 describe("AdminLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -54,14 +66,14 @@ describe("AdminLayout", () => {
 
   describe("rendering", () => {
     it("renders the layout with sidebar and main content area", () => {
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByText("SaaSConf")).toBeInTheDocument();
       expect(screen.getByTestId("outlet")).toBeInTheDocument();
     });
 
     it("renders the user name in the header", () => {
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByText("Test User")).toBeInTheDocument();
     });
@@ -73,13 +85,13 @@ describe("AdminLayout", () => {
         last_name: null,
       };
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByText("test@example.com")).toBeInTheDocument();
     });
 
     it("renders the user role", () => {
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByText("user")).toBeInTheDocument();
     });
@@ -90,14 +102,14 @@ describe("AdminLayout", () => {
         role: "tenant_admin",
       };
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByText("tenant admin")).toBeInTheDocument();
     });
 
     it("renders the logout button in the user menu dropdown", async () => {
       const user = userEvent.setup();
-      render(<AdminLayout />);
+      renderWithProviders();
 
       // Open the user menu dropdown
       const userMenuButton = screen.getByText("Test User").closest("button")!;
@@ -107,7 +119,7 @@ describe("AdminLayout", () => {
     });
 
     it("renders Dashboard navigation link", () => {
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByRole("link", { name: /dashboard/i })).toBeInTheDocument();
     });
@@ -115,7 +127,7 @@ describe("AdminLayout", () => {
 
   describe("sidebar navigation", () => {
     it("renders module navigation for users with module access", () => {
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByRole("link", { name: /conferences/i })).toBeInTheDocument();
     });
@@ -126,7 +138,7 @@ describe("AdminLayout", () => {
         modules: [],
       };
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.queryByRole("link", { name: /conferences/i })).not.toBeInTheDocument();
     });
@@ -137,7 +149,7 @@ describe("AdminLayout", () => {
         modules: ["conferences"],
       };
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByRole("link", { name: /conferences/i })).toBeInTheDocument();
     });
@@ -148,7 +160,7 @@ describe("AdminLayout", () => {
         role: "tenant_admin",
       };
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByRole("link", { name: /team/i })).toBeInTheDocument();
     });
@@ -159,7 +171,7 @@ describe("AdminLayout", () => {
         role: "user",
       };
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.queryByRole("link", { name: /team/i })).not.toBeInTheDocument();
     });
@@ -170,7 +182,7 @@ describe("AdminLayout", () => {
         role: "super_admin",
       };
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByRole("link", { name: /companies/i })).toBeInTheDocument();
       expect(screen.getByRole("link", { name: /modules/i })).toBeInTheDocument();
@@ -184,7 +196,7 @@ describe("AdminLayout", () => {
         role: "tenant_admin",
       };
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.queryByRole("link", { name: /companies/i })).not.toBeInTheDocument();
       expect(screen.queryByRole("link", { name: /audit logs/i })).not.toBeInTheDocument();
@@ -197,7 +209,7 @@ describe("AdminLayout", () => {
         modules: [],
       };
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(screen.getByRole("link", { name: /conferences/i })).toBeInTheDocument();
     });
@@ -205,7 +217,7 @@ describe("AdminLayout", () => {
 
   describe("sidebar collapse toggle", () => {
     it("renders collapse/expand toggle button", () => {
-      render(<AdminLayout />);
+      renderWithProviders();
 
       const toggleButton = screen.getByTitle("Collapse sidebar");
       expect(toggleButton).toBeInTheDocument();
@@ -213,7 +225,7 @@ describe("AdminLayout", () => {
 
     it("collapses sidebar when toggle is clicked", async () => {
       const user = userEvent.setup();
-      render(<AdminLayout />);
+      renderWithProviders();
 
       const collapseButton = screen.getByTitle("Collapse sidebar");
       await user.click(collapseButton);
@@ -224,7 +236,7 @@ describe("AdminLayout", () => {
 
     it("expands sidebar when toggle is clicked again", async () => {
       const user = userEvent.setup();
-      render(<AdminLayout />);
+      renderWithProviders();
 
       const collapseButton = screen.getByTitle("Collapse sidebar");
       await user.click(collapseButton);
@@ -239,7 +251,7 @@ describe("AdminLayout", () => {
 
   describe("mobile menu toggle", () => {
     it("renders mobile menu toggle button", () => {
-      render(<AdminLayout />);
+      renderWithProviders();
 
       // The mobile menu button is an svg icon button in the header
       const buttons = screen.getAllByRole("button");
@@ -252,7 +264,7 @@ describe("AdminLayout", () => {
 
     it("toggles mobile sidebar state when menu button is clicked", async () => {
       const user = userEvent.setup();
-      render(<AdminLayout />);
+      renderWithProviders();
 
       // Find the mobile menu button (it's the one with -ml-2 class)
       const buttons = screen.getAllByRole("button");
@@ -274,7 +286,7 @@ describe("AdminLayout", () => {
       const user = userEvent.setup();
       mockLogout.mockResolvedValue(undefined);
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       // Open the user menu dropdown first
       const userMenuButton = screen.getByText("Test User").closest("button")!;
@@ -295,7 +307,7 @@ describe("AdminLayout", () => {
 
   describe("route-based user refresh", () => {
     it("calls refreshUser on initial render", () => {
-      render(<AdminLayout />);
+      renderWithProviders();
 
       expect(mockRefreshUser).toHaveBeenCalled();
     });
@@ -305,7 +317,7 @@ describe("AdminLayout", () => {
     it("highlights Dashboard link when on dashboard path", () => {
       mockLocation.pathname = "/dashboard";
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       const dashboardLink = screen.getByRole("link", { name: /dashboard/i });
       expect(dashboardLink.className).toContain("bg-gray-800");
@@ -314,7 +326,7 @@ describe("AdminLayout", () => {
     it("highlights module link when on module path", () => {
       mockLocation.pathname = "/modules/conferences";
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       const conferencesLink = screen.getByRole("link", { name: /conferences/i });
       expect(conferencesLink.className).toContain("bg-gray-800");
@@ -327,7 +339,7 @@ describe("AdminLayout", () => {
         role: "super_admin",
       };
 
-      render(<AdminLayout />);
+      renderWithProviders();
 
       const companiesLink = screen.getByRole("link", { name: /companies/i });
       expect(companiesLink.className).toContain("bg-gray-800");

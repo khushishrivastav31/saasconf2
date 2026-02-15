@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../../../../config/api";
 import RichTextEditor from "../../../../components/common/RichTextEditor";
 import RichTextDisplay from "../../../../components/common/RichTextDisplay";
 import MessageFileAttach, {
   type StagedAttachment,
 } from "../../../../components/MessageFileAttach";
-import type { ThreadDetailResponse, MessageAttachmentInfo } from "../../../../types";
+import type {
+  ThreadDetailResponse,
+  MessageAttachmentInfo,
+} from "../../../../types";
+import type { MessageTemplateListResponse } from "../../../../types/messaging";
 
 interface ThreadDetailProps {
   thread: ThreadDetailResponse;
@@ -14,6 +19,13 @@ interface ThreadDetailProps {
   onReply: (bodyHtml: string, attachmentIds: string[]) => void;
   onBack: () => void;
   replying: boolean;
+  onArchive?: (archive: boolean) => void;
+  onDoubleClickMessage?: (subject: string, bodyHtml: string) => void;
+  onFlag?: () => void;
+  onCreateNote?: (bodyHtml: string) => void;
+  noteSending?: boolean;
+  /** When true, always shows the back/close button (used in popup modal) */
+  isPopup?: boolean;
 }
 
 function formatTimestamp(dateStr: string) {
@@ -90,12 +102,33 @@ export default function ThreadDetail({
   onReply,
   onBack,
   replying,
+  onArchive,
+  onDoubleClickMessage,
+  onFlag,
+  onCreateNote,
+  noteSending,
+  isPopup,
 }: ThreadDetailProps) {
   const [replyHtml, setReplyHtml] = useState("");
   const [replyAttachments, setReplyAttachments] = useState<StagedAttachment[]>(
     []
   );
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch templates for reply
+  const { data: templatesData } = useQuery<MessageTemplateListResponse>({
+    queryKey: ["message-templates", conferenceId],
+    queryFn: () =>
+      api
+        .get(`/conferences/${conferenceId}/messaging/templates`)
+        .then((r) => r.data),
+  });
+
+  const templates = templatesData?.items ?? [];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -111,13 +144,38 @@ export default function ThreadDetail({
     setReplyAttachments([]);
   };
 
+  const handleApplyTemplate = (templateId: string) => {
+    const tmpl = templates.find((t) => t.id === templateId);
+    if (tmpl) {
+      setReplyHtml(tmpl.body_html);
+    }
+    setShowTemplatePicker(false);
+  };
+
+  // Read receipt: find other participants who have read
+  const otherParticipants = thread.participants.filter(
+    (p) => !(p.type === "user" && p.id === currentUserId)
+  );
+
+  // Determine "seen" for each message sent by current user
+  const getSeenInfo = (msgCreatedAt: string) => {
+    const msgTime = new Date(msgCreatedAt).getTime();
+    const readers = otherParticipants.filter(
+      (p) => p.last_read_at && new Date(p.last_read_at).getTime() >= msgTime
+    );
+    return readers;
+  };
+
+  const isArchived = !!thread.archived_at;
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b bg-white">
         <button
           onClick={onBack}
-          className="text-gray-400 hover:text-gray-600 lg:hidden"
+          className={`text-gray-400 hover:text-gray-600 ${isPopup ? "" : "lg:hidden"}`}
+          title={isPopup ? "Close" : "Back"}
         >
           <svg
             className="w-5 h-5"
@@ -125,12 +183,11 @@ export default function ThreadDetail({
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
+            {isPopup ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            )}
           </svg>
         </button>
         <div className="min-w-0 flex-1">
@@ -142,6 +199,98 @@ export default function ThreadDetail({
           </h3>
           <p className="text-xs text-gray-500 truncate">{thread.subject}</p>
         </div>
+        <div className="flex items-center gap-1.5">
+          {/* Flag button */}
+          {onFlag && (
+            <button
+              onClick={onFlag}
+              className="p-1.5 rounded-md text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 transition-colors"
+              title="Toggle flag"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+            </button>
+          )}
+          {/* Export dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              title="Export thread"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                <button
+                  onClick={async () => {
+                    setShowExportMenu(false);
+                    const resp = await api.get(
+                      `/conferences/${conferenceId}/messaging/threads/${thread.id}/export?format=html`,
+                      { responseType: "blob" }
+                    );
+                    const url = window.URL.createObjectURL(new Blob([resp.data]));
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.setAttribute("download", `thread-${thread.id}.html`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                >
+                  Export as HTML
+                </button>
+                <button
+                  onClick={async () => {
+                    setShowExportMenu(false);
+                    const resp = await api.get(
+                      `/conferences/${conferenceId}/messaging/threads/${thread.id}/export?format=text`,
+                      { responseType: "blob" }
+                    );
+                    const url = window.URL.createObjectURL(new Blob([resp.data]));
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.setAttribute("download", `thread-${thread.id}.txt`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                >
+                  Export as Text
+                </button>
+              </div>
+            )}
+          </div>
+          {/* Archive button */}
+          {onArchive && (
+            <button
+              onClick={() => {
+                if (isArchived) {
+                  onArchive(false);
+                } else {
+                  setShowArchiveConfirm(true);
+                }
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                isArchived
+                  ? "text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                  : "text-gray-600 bg-gray-50 border-gray-200 hover:bg-gray-100"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+              {isArchived ? "Unarchive" : "Archive"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Messages */}
@@ -149,17 +298,48 @@ export default function ThreadDetail({
         {thread.messages.map((msg) => {
           const isMe =
             msg.sender.type === "user" && msg.sender.id === currentUserId;
+          const readers = isMe ? getSeenInfo(msg.created_at) : [];
+
+          // Internal note: distinct centered styling
+          if (msg.is_internal_note) {
+            return (
+              <div key={msg.id} className="flex justify-center">
+                <div className="max-w-[85%] rounded-lg p-3 bg-amber-50 border border-dashed border-amber-300">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                      Internal Note
+                    </span>
+                    <span className="text-xs text-amber-600">
+                      {msg.sender.first_name} {msg.sender.last_name}
+                    </span>
+                    <span className="text-xs text-amber-400">
+                      {formatTimestamp(msg.created_at)}
+                    </span>
+                  </div>
+                  <div className="text-sm text-amber-900">
+                    <RichTextDisplay content={msg.body_html} />
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div
               key={msg.id}
               className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+              onDoubleClick={() => {
+                if (onDoubleClickMessage) {
+                  onDoubleClickMessage(thread.subject, msg.body_html);
+                }
+              }}
             >
               <div
                 className={`max-w-[80%] rounded-lg p-3 ${
                   isMe
                     ? "bg-blue-600 text-white"
                     : "bg-white border border-gray-200"
-                }`}
+                } ${onDoubleClickMessage ? "cursor-pointer" : ""}`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span
@@ -198,6 +378,17 @@ export default function ThreadDetail({
                     ))}
                   </div>
                 )}
+                {/* Read receipt */}
+                {isMe && readers.length > 0 && (
+                  <div className="mt-1.5 text-right">
+                    <span className="text-[10px] text-blue-200">
+                      Seen by{" "}
+                      {readers
+                        .map((r) => `${r.first_name} ${r.last_name}`.trim())
+                        .join(", ")}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -207,6 +398,35 @@ export default function ThreadDetail({
 
       {/* Reply */}
       <div className="border-t bg-white px-5 py-3">
+        <div className="flex items-center gap-2 mb-2">
+          {/* Template picker button */}
+          {templates.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowTemplatePicker(!showTemplatePicker)}
+                className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 px-2 py-1 border border-gray-200 rounded"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Template
+              </button>
+              {showTemplatePicker && (
+                <div className="absolute bottom-full left-0 mb-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                  {templates.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleApplyTemplate(t.id)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                    >
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <RichTextEditor
           value={replyHtml}
           onChange={setReplyHtml}
@@ -229,6 +449,75 @@ export default function ThreadDetail({
           </button>
         </div>
       </div>
+
+      {/* Internal note input */}
+      {onCreateNote && (
+        <div className="border-t border-dashed border-amber-300 bg-amber-50/50 px-5 py-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && noteText.trim()) {
+                  onCreateNote(noteText.trim());
+                  setNoteText("");
+                }
+              }}
+              placeholder="Add an internal note (only visible to your team)..."
+              className="flex-1 px-3 py-1.5 text-sm bg-white border border-amber-200 rounded-md placeholder-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+            />
+            <button
+              onClick={() => {
+                if (noteText.trim()) {
+                  onCreateNote(noteText.trim());
+                  setNoteText("");
+                }
+              }}
+              disabled={!noteText.trim() || noteSending}
+              className="px-3 py-1.5 text-xs font-medium text-amber-800 bg-amber-100 border border-amber-300 rounded-md hover:bg-amber-200 disabled:opacity-50"
+            >
+              {noteSending ? "Saving..." : "Add Note"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Archive confirmation dialog */}
+      {showArchiveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-amber-100 rounded-full">
+                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-sm font-semibold text-gray-900">Archive this thread?</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              This thread will be moved to the archive. You can restore it later from the archived view.
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowArchiveConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowArchiveConfirm(false);
+                  onArchive?.(true);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700"
+              >
+                Archive
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

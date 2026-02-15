@@ -105,6 +105,7 @@ export default function MessagesPage() {
   const [replyHtml, setReplyHtml] = useState("");
   const [replyAttachments, setReplyAttachments] = useState<StagedAttachment[]>([]);
   const [showCompose, setShowCompose] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -113,9 +114,10 @@ export default function MessagesPage() {
 
   // Thread list
   const { data: threadList, isLoading } = useQuery({
-    queryKey: ["portal-messages"],
+    queryKey: ["portal-messages", showArchived],
     queryFn: async () => {
-      const resp = await portalApi.get("/portal/messages");
+      const params = new URLSearchParams({ archived: String(showArchived) });
+      const resp = await portalApi.get(`/portal/messages?${params}`);
       return resp.data as PortalThreadListResponse;
     },
   });
@@ -170,6 +172,21 @@ export default function MessagesPage() {
     },
   });
 
+  // Archive / unarchive
+  const archiveMutation = useMutation({
+    mutationFn: async ({ threadId, archive }: { threadId: string; archive: boolean }) => {
+      await portalApi.post(
+        `/portal/messages/${threadId}/${archive ? "archive" : "unarchive"}`
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portal-messages"] });
+      queryClient.invalidateQueries({
+        queryKey: ["portal-message-thread", selectedThreadId],
+      });
+    },
+  });
+
   // Mark read on select
   const handleSelectThread = useCallback(
     async (threadId: string) => {
@@ -192,10 +209,40 @@ export default function MessagesPage() {
 
   const threads = threadList?.items ?? [];
 
+  // Read receipt helpers
+  const otherParticipants = threadDetail?.participants.filter(
+    (p) => !(p.type === "applicant" && p.id === applicant?.id)
+  ) ?? [];
+
+  const getSeenInfo = (msgCreatedAt: string) => {
+    const msgTime = new Date(msgCreatedAt).getTime();
+    return otherParticipants.filter(
+      (p) => p.last_read_at && new Date(p.last_read_at).getTime() >= msgTime
+    );
+  };
+
+  const isArchived = !!threadDetail?.archived_at;
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+          <button
+            onClick={() => {
+              setShowArchived(!showArchived);
+              setSelectedThreadId(null);
+              setSearchParams({});
+            }}
+            className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
+              showArchived
+                ? "bg-gray-700 text-white"
+                : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+            }`}
+          >
+            {showArchived ? "Showing Archived" : "Archived"}
+          </button>
+        </div>
         <button
           onClick={() => setShowCompose(true)}
           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
@@ -217,43 +264,62 @@ export default function MessagesPage() {
               </div>
             ) : threads.length === 0 ? (
               <div className="p-8 text-center text-gray-500 text-sm">
-                No messages yet. Click "New Message" to start a conversation.
+                {showArchived
+                  ? "No archived messages."
+                  : 'No messages yet. Click "New Message" to start a conversation.'}
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {threads.map((thread) => (
-                  <button
-                    key={thread.id}
-                    onClick={() => handleSelectThread(thread.id)}
-                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-                      selectedThreadId === thread.id ? "bg-blue-50 border-l-2 border-l-blue-600" : ""
-                    } ${thread.unread ? "bg-blue-50/40" : ""}`}
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {thread.unread && (
-                          <span className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
-                        )}
-                        <span
-                          className={`text-sm truncate ${
-                            thread.unread
-                              ? "font-semibold text-gray-900"
-                              : "font-medium text-gray-800"
-                          }`}
-                        >
-                          {thread.subject}
+                  <div key={thread.id} className="relative group">
+                    <button
+                      onClick={() => handleSelectThread(thread.id)}
+                      className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                        selectedThreadId === thread.id ? "bg-blue-50 border-l-2 border-l-blue-600" : ""
+                      } ${thread.unread ? "bg-blue-50/40" : ""}`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {thread.unread && (
+                            <span className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
+                          )}
+                          <span
+                            className={`text-sm truncate ${
+                              thread.unread
+                                ? "font-semibold text-gray-900"
+                                : "font-medium text-gray-800"
+                            }`}
+                          >
+                            {thread.subject}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-400 flex-shrink-0">
+                          {formatDate(thread.last_message_at)}
                         </span>
                       </div>
-                      <span className="text-xs text-gray-400 flex-shrink-0">
-                        {formatDate(thread.last_message_at)}
-                      </span>
-                    </div>
-                    {thread.last_message_preview && (
-                      <p className="text-xs text-gray-400 truncate">
-                        {thread.last_message_preview}
-                      </p>
-                    )}
-                  </button>
+                      {thread.last_message_preview && (
+                        <p className="text-xs text-gray-400 truncate">
+                          {thread.last_message_preview}
+                        </p>
+                      )}
+                    </button>
+                    {/* Archive action on hover */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        archiveMutation.mutate({
+                          threadId: thread.id,
+                          archive: !thread.archived_at,
+                        });
+                      }}
+                      className="absolute top-2 right-2 p-1 rounded bg-white shadow-sm border border-gray-200 text-gray-400 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title={thread.archived_at ? "Unarchive" : "Archive"}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -298,6 +364,25 @@ export default function MessagesPage() {
                       Conversation with Organizer
                     </p>
                   </div>
+                  {/* Archive button */}
+                  <button
+                    onClick={() =>
+                      archiveMutation.mutate({
+                        threadId: threadDetail.id,
+                        archive: !isArchived,
+                      })
+                    }
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                      isArchived
+                        ? "text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                        : "text-gray-600 bg-gray-50 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                    {isArchived ? "Unarchive" : "Archive"}
+                  </button>
                 </div>
 
                 {/* Messages */}
@@ -306,6 +391,8 @@ export default function MessagesPage() {
                     const isMe =
                       msg.sender.type === "applicant" &&
                       msg.sender.id === applicant?.id;
+                    const readers = isMe ? getSeenInfo(msg.created_at) : [];
+
                     return (
                       <div
                         key={msg.id}
@@ -349,6 +436,17 @@ export default function MessagesPage() {
                                   isMe={isMe}
                                 />
                               ))}
+                            </div>
+                          )}
+                          {/* Read receipt */}
+                          {isMe && readers.length > 0 && (
+                            <div className="mt-1.5 text-right">
+                              <span className="text-[10px] text-blue-200">
+                                Seen by{" "}
+                                {readers
+                                  .map((r) => `${r.first_name} ${r.last_name}`.trim())
+                                  .join(", ")}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -450,9 +548,9 @@ function PortalComposeModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 flex flex-col" style={{ height: "min(80vh, 700px)" }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
           <h2 className="text-lg font-semibold">New Message</h2>
           <button
             onClick={onClose}
@@ -519,7 +617,7 @@ function PortalComposeModal({
             />
           </div>
           {/* Body */}
-          <div>
+          <div className="flex-1 min-h-0">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Message
             </label>
@@ -527,7 +625,7 @@ function PortalComposeModal({
               value={bodyHtml}
               onChange={setBodyHtml}
               placeholder="Write your message..."
-              rows={6}
+              rows={10}
             />
           </div>
           {/* Attachments */}
@@ -538,7 +636,7 @@ function PortalComposeModal({
             onAttachmentsChange={setAttachments}
           />
         </div>
-        <div className="flex justify-end gap-3 px-6 py-4 border-t">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
@@ -555,7 +653,7 @@ function PortalComposeModal({
               })
             }
             disabled={!canSend || sending}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
             {sending ? "Sending..." : "Send"}
           </button>

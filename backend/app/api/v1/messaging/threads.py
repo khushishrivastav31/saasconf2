@@ -1,11 +1,13 @@
 """Admin messaging thread endpoints."""
 
+import re
 import uuid
 from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import func, select
+from fastapi.responses import Response
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import (
@@ -16,16 +18,18 @@ from app.core.dependencies import (
 )
 from app.core.html_sanitize import sanitize_html
 from app.core.exceptions import NotFoundError
+from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
-from app.models.cfp import CFPApplicant
+from app.models.cfp import CFPApplicant, CFPPaper
 from app.models.conference import Conference
 from app.models.tenant import Tenant
-from app.models.messaging import Message, MessageParticipant, MessageThread
+from app.models.messaging import Message, MessageParticipant, MessageThread, ThreadFlag
 from app.models.user import User
 from app.schemas.messaging import (
     AdminCreateThread,
     CreateThreadResponse,
+    InternalNoteCreate,
     MessageAttachmentInfo,
     MessageResponse,
     ParticipantInfo,
@@ -41,10 +45,13 @@ from ._shared import (
     _check_messaging_access,
     _fetch_message_attachments,
     _get_conference_for_tenant,
+    _get_messaging_mode,
     _link_attachments_to_message,
     _notify_participants,
     _resolve_senders,
+    _send_direct_emails,
     _strip_html,
+    substitute_template_variables,
 )
 
 router = APIRouter()
@@ -62,7 +69,13 @@ async def list_threads(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     search: str | None = None,
+    search_body: bool = False,
     bulk_id: UUID | None = None,
+    archived: bool = False,
+    flagged: bool | None = None,
+    has_attachments: bool | None = None,
+    unread_only: bool | None = None,
+    participant_name: str | None = None,
 ) -> ThreadListResponse:
     """List message threads for this conference."""
     tenant_id = current_user.tenant_id
@@ -78,10 +91,77 @@ async def list_threads(
         .order_by(MessageThread.updated_at.desc())
     )
 
+    # Filter by archived status
+    if archived:
+        query = query.where(MessageThread.archived_at.isnot(None))
+    else:
+        query = query.where(MessageThread.archived_at.is_(None))
+
     if search:
-        query = query.where(MessageThread.subject.ilike(f"%{search}%"))
+        if search_body:
+            # Full-text search: match subject OR message body
+            matching_thread_ids = (
+                select(Message.thread_id)
+                .where(Message.body_html.ilike(f"%{search}%"))
+                .distinct()
+            )
+            query = query.where(
+                MessageThread.subject.ilike(f"%{search}%")
+                | MessageThread.id.in_(matching_thread_ids)
+            )
+        else:
+            query = query.where(MessageThread.subject.ilike(f"%{search}%"))
     if bulk_id:
         query = query.where(MessageThread.bulk_id == bulk_id)
+
+    # Filter: flagged by current user
+    if flagged is True:
+        flagged_thread_ids = (
+            select(ThreadFlag.thread_id).where(
+                ThreadFlag.user_id == current_user.user_id
+            )
+        )
+        query = query.where(MessageThread.id.in_(flagged_thread_ids))
+
+    # Filter: has attachments
+    if has_attachments is True:
+        query = query.where(MessageThread.has_attachments.is_(True))
+
+    # Filter: unread only
+    if unread_only is True:
+        unread_thread_ids = (
+            select(MessageParticipant.thread_id)
+            .join(
+                Message,
+                Message.thread_id == MessageParticipant.thread_id,
+            )
+            .where(
+                MessageParticipant.participant_type == "user",
+                MessageParticipant.participant_id == current_user.user_id,
+                (MessageParticipant.last_read_at.is_(None))
+                | (Message.created_at > MessageParticipant.last_read_at),
+            )
+            .distinct()
+        )
+        query = query.where(MessageThread.id.in_(unread_thread_ids))
+
+    # Filter: participant name
+    if participant_name:
+        pname = f"%{participant_name}%"
+        # Find threads where any applicant participant matches name
+        applicant_ids_q = (
+            select(CFPApplicant.id).where(
+                (CFPApplicant.first_name.ilike(pname))
+                | (CFPApplicant.last_name.ilike(pname))
+            )
+        )
+        matching_thread_ids_by_name = (
+            select(MessageParticipant.thread_id).where(
+                MessageParticipant.participant_type == "applicant",
+                MessageParticipant.participant_id.in_(applicant_ids_q),
+            )
+        )
+        query = query.where(MessageThread.id.in_(matching_thread_ids_by_name))
 
     # Count
     count_q = select(func.count()).select_from(query.subquery())
@@ -161,6 +241,15 @@ async def list_threads(
         if info:
             other_participants_map.setdefault(p.thread_id, []).append(info)
 
+    # Fetch flags for current user
+    flag_result = await db.execute(
+        select(ThreadFlag.thread_id).where(
+            ThreadFlag.thread_id.in_(thread_ids),
+            ThreadFlag.user_id == current_user.user_id,
+        )
+    )
+    flagged_ids = set(flag_result.scalars().all())
+
     items = []
     for thread in threads:
         last_msg = last_msgs.get(thread.id)
@@ -186,8 +275,11 @@ async def list_threads(
                 other_participants=other_participants_map.get(thread.id, []),
                 unread=unread,
                 message_count=msg_counts.get(thread.id, 0),
+                is_flagged=thread.id in flagged_ids,
+                has_attachments=thread.has_attachments,
                 created_at=thread.created_at,
                 bulk_id=thread.bulk_id,
+                archived_at=thread.archived_at,
             )
         )
 
@@ -263,6 +355,7 @@ async def get_thread(
                     thread_id=m.thread_id,
                     sender=sender,
                     body_html=m.body_html,
+                    is_internal_note=m.is_internal_note,
                     attachments=attachment_map.get(m.id, []),
                     created_at=m.created_at,
                 )
@@ -272,6 +365,7 @@ async def get_thread(
         id=thread.id,
         subject=thread.subject,
         bulk_id=thread.bulk_id,
+        archived_at=thread.archived_at,
         participants=participants,
         messages=messages,
         created_at=thread.created_at,
@@ -308,15 +402,56 @@ async def create_thread(
     if not applicants:
         raise NotFoundError("No valid applicants found")
 
+    messaging_mode = _get_messaging_mode(conference)
+    conf_name = conference.name or ""
+
+    # Fetch latest paper title per applicant for variable substitution
+    applicant_ids_list = [a.id for a in applicants]
+    paper_titles: dict[UUID, str] = {}
+    if applicant_ids_list:
+        conference_cfp_ids = select(ConferenceCFP.cfp_id).where(
+            ConferenceCFP.conference_id == conference_id
+        )
+        paper_result = await db.execute(
+            select(CFPPaper.main_speaker_id, CFPPaper.title)
+            .where(
+                CFPPaper.main_speaker_id.in_(applicant_ids_list),
+                CFPPaper.tenant_id == tenant_id,
+                CFPPaper.cfp_id.in_(conference_cfp_ids),
+            )
+            .order_by(CFPPaper.created_at.desc())
+        )
+        for row in paper_result.all():
+            if row[0] not in paper_titles:
+                paper_titles[row[0]] = row[1] or ""
+
     now = datetime.now(timezone.utc)
     first_thread = None
     first_message_id = None
 
     for applicant in applicants:
+        # Substitute template variables per recipient
+        subj = substitute_template_variables(
+            data.subject,
+            first_name=applicant.first_name or "",
+            last_name=applicant.last_name or "",
+            email=applicant.email or "",
+            conference_name=conf_name,
+            paper_title=paper_titles.get(applicant.id, ""),
+        )
+        body = substitute_template_variables(
+            sanitize_html(data.body_html),
+            first_name=applicant.first_name or "",
+            last_name=applicant.last_name or "",
+            email=applicant.email or "",
+            conference_name=conf_name,
+            paper_title=paper_titles.get(applicant.id, ""),
+        )
+
         thread = MessageThread(
             tenant_id=tenant_id,
             conference_id=conference_id,
-            subject=data.subject,
+            subject=subj,
         )
         db.add(thread)
         await db.flush()
@@ -342,7 +477,7 @@ async def create_thread(
             thread_id=thread.id,
             sender_type="user",
             sender_id=current_user.user_id,
-            body_html=sanitize_html(data.body_html),
+            body_html=body,
         )
         db.add(msg)
         await db.flush()
@@ -353,6 +488,8 @@ async def create_thread(
     # Link pre-uploaded attachments to the first message
     if data.attachment_ids and first_message_id:
         await _link_attachments_to_message(db, data.attachment_ids, first_message_id, tenant_id)
+        if first_thread:
+            first_thread.has_attachments = True
 
     # Audit log
     recipient_names = ", ".join(
@@ -365,7 +502,7 @@ async def create_thread(
             action="create",
             resource_type="message_thread",
             resource_id=first_thread.id,
-            details=f"Created thread '{data.subject}' to {len(applicants)} recipient(s): {recipient_names}",
+            details={"message": f"Created thread '{data.subject}' to {len(applicants)} recipient(s): {recipient_names}"},
             ip_address=get_client_ip(request),
             user_agent=request.headers.get("user-agent"),
         )
@@ -373,25 +510,38 @@ async def create_thread(
 
     await db.commit()
 
-    # Send email notifications for each thread
+    # Send email notifications
     tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     tenant_obj = tenant_result.scalar_one_or_none()
     tenant_slug = tenant_obj.slug if tenant_obj else ""
 
-    # Re-query threads created in this batch to notify
-    created_threads_result = await db.execute(
-        select(MessageThread).where(
-            MessageThread.tenant_id == tenant_id,
-            MessageThread.conference_id == conference_id,
-            MessageThread.subject == data.subject,
-            MessageThread.created_at >= now,
+    if messaging_mode == "email_only":
+        # Send actual message content directly via email
+        user_result = await db.execute(
+            select(User).where(User.id == current_user.user_id)
         )
-    )
-    for t in created_threads_result.scalars():
-        await _notify_participants(
-            db, t, "user", current_user.user_id,
-            conference.name, tenant_slug, conference_id,
+        user = user_result.scalar_one()
+        sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+        await _send_direct_emails(
+            db, applicants, data.subject, sanitize_html(data.body_html),
+            conference.name, sender_name,
+            reply_to=conference.contact_email,
         )
+    else:
+        # Send notification emails with link to message
+        created_threads_result = await db.execute(
+            select(MessageThread).where(
+                MessageThread.tenant_id == tenant_id,
+                MessageThread.conference_id == conference_id,
+                MessageThread.subject == data.subject,
+                MessageThread.created_at >= now,
+            )
+        )
+        for t in created_threads_result.scalars():
+            await _notify_participants(
+                db, t, "user", current_user.user_id,
+                conference.name, tenant_slug, conference_id,
+            )
 
     first_thread_detail = await get_thread(
         conference_id, first_thread.id, current_user, db
@@ -466,6 +616,7 @@ async def reply_to_thread(
     # Link pre-uploaded attachments
     if data.attachment_ids:
         await _link_attachments_to_message(db, data.attachment_ids, message.id, tenant_id)
+        thread.has_attachments = True
 
     # Touch thread updated_at
     thread.updated_at = datetime.now(timezone.utc)
@@ -477,10 +628,37 @@ async def reply_to_thread(
     tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     tenant_obj = tenant_result.scalar_one_or_none()
     tenant_slug = tenant_obj.slug if tenant_obj else ""
-    await _notify_participants(
-        db, thread, "user", current_user.user_id,
-        conference.name, tenant_slug, conference_id,
-    )
+
+    messaging_mode = _get_messaging_mode(conference)
+    if messaging_mode == "email_only":
+        # Resolve other applicant participants and send direct emails
+        other_p_result = await db.execute(
+            select(MessageParticipant).where(
+                MessageParticipant.thread_id == thread_id,
+                MessageParticipant.participant_type == "applicant",
+            )
+        )
+        applicant_ids = [p.participant_id for p in other_p_result.scalars()]
+        if applicant_ids:
+            app_result = await db.execute(
+                select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids))
+            )
+            recipients = list(app_result.scalars().all())
+            user_result = await db.execute(
+                select(User).where(User.id == current_user.user_id)
+            )
+            user = user_result.scalar_one()
+            sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+            await _send_direct_emails(
+                db, recipients, thread.subject, sanitize_html(data.body_html),
+                conference.name, sender_name,
+                reply_to=conference.contact_email,
+            )
+    else:
+        await _notify_participants(
+            db, thread, "user", current_user.user_id,
+            conference.name, tenant_slug, conference_id,
+        )
 
     # Resolve sender
     user_result = await db.execute(
@@ -502,9 +680,273 @@ async def reply_to_thread(
             email=user.email,
         ),
         body_html=message.body_html,
+        is_internal_note=message.is_internal_note,
         attachments=attachment_map.get(message.id, []),
         created_at=message.created_at,
     )
+
+
+@router.post(
+    "/threads/{thread_id}/archive",
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def archive_thread(
+    conference_id: UUID,
+    thread_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> dict:
+    """Archive a thread."""
+    tenant_id = current_user.tenant_id
+
+    result = await db.execute(
+        select(MessageThread).where(
+            MessageThread.id == thread_id,
+            MessageThread.tenant_id == tenant_id,
+            MessageThread.conference_id == conference_id,
+        )
+    )
+    thread = result.scalar_one_or_none()
+    if not thread:
+        raise NotFoundError("Thread not found")
+
+    thread.archived_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post(
+    "/threads/{thread_id}/unarchive",
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def unarchive_thread(
+    conference_id: UUID,
+    thread_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> dict:
+    """Unarchive a thread."""
+    tenant_id = current_user.tenant_id
+
+    result = await db.execute(
+        select(MessageThread).where(
+            MessageThread.id == thread_id,
+            MessageThread.tenant_id == tenant_id,
+            MessageThread.conference_id == conference_id,
+        )
+    )
+    thread = result.scalar_one_or_none()
+    if not thread:
+        raise NotFoundError("Thread not found")
+
+    thread.archived_at = None
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post(
+    "/threads/{thread_id}/flag",
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def toggle_thread_flag(
+    conference_id: UUID,
+    thread_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> dict:
+    """Toggle flag/star on a thread for the current user."""
+    tenant_id = current_user.tenant_id
+
+    # Verify thread exists
+    result = await db.execute(
+        select(MessageThread).where(
+            MessageThread.id == thread_id,
+            MessageThread.tenant_id == tenant_id,
+            MessageThread.conference_id == conference_id,
+        )
+    )
+    if not result.scalar_one_or_none():
+        raise NotFoundError("Thread not found")
+
+    # Check if flag exists
+    flag_result = await db.execute(
+        select(ThreadFlag).where(
+            ThreadFlag.thread_id == thread_id,
+            ThreadFlag.user_id == current_user.user_id,
+        )
+    )
+    existing = flag_result.scalar_one_or_none()
+
+    if existing:
+        await db.delete(existing)
+        await db.commit()
+        return {"flagged": False}
+    else:
+        db.add(ThreadFlag(
+            thread_id=thread_id,
+            user_id=current_user.user_id,
+        ))
+        await db.commit()
+        return {"flagged": True}
+
+
+@router.post(
+    "/threads/{thread_id}/note",
+    response_model=MessageResponse,
+    status_code=201,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def create_internal_note(
+    conference_id: UUID,
+    thread_id: UUID,
+    data: InternalNoteCreate,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> MessageResponse:
+    """Create an internal note on a thread (visible only to admins)."""
+    tenant_id = current_user.tenant_id
+    await _get_conference_for_tenant(db, conference_id, tenant_id)
+
+    # Verify thread
+    result = await db.execute(
+        select(MessageThread).where(
+            MessageThread.id == thread_id,
+            MessageThread.tenant_id == tenant_id,
+            MessageThread.conference_id == conference_id,
+        )
+    )
+    thread = result.scalar_one_or_none()
+    if not thread:
+        raise NotFoundError("Thread not found")
+
+    # Create internal note message
+    message = Message(
+        tenant_id=tenant_id,
+        thread_id=thread_id,
+        sender_type="user",
+        sender_id=current_user.user_id,
+        body_html=sanitize_html(data.body_html),
+        is_internal_note=True,
+    )
+    db.add(message)
+
+    # Touch thread updated_at
+    thread.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(message)
+
+    # Resolve sender
+    user_result = await db.execute(
+        select(User).where(User.id == current_user.user_id)
+    )
+    user = user_result.scalar_one()
+
+    return MessageResponse(
+        id=message.id,
+        thread_id=message.thread_id,
+        sender=SenderInfo(
+            id=user.id,
+            type="user",
+            first_name=user.first_name or "",
+            last_name=user.last_name or "",
+            email=user.email,
+        ),
+        body_html=message.body_html,
+        is_internal_note=True,
+        attachments=[],
+        created_at=message.created_at,
+    )
+
+
+@router.get(
+    "/threads/{thread_id}/export",
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def export_thread(
+    conference_id: UUID,
+    thread_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    format: str = Query("text", regex="^(html|text)$"),
+) -> Response:
+    """Export a thread as HTML or plain text file."""
+    tenant_id = current_user.tenant_id
+    await _get_conference_for_tenant(db, conference_id, tenant_id)
+
+    result = await db.execute(
+        select(MessageThread)
+        .options(selectinload(MessageThread.messages))
+        .where(
+            MessageThread.id == thread_id,
+            MessageThread.tenant_id == tenant_id,
+            MessageThread.conference_id == conference_id,
+        )
+    )
+    thread = result.scalar_one_or_none()
+    if not thread:
+        raise NotFoundError("Thread not found")
+
+    # Resolve all senders
+    sender_pairs = {(m.sender_type, m.sender_id) for m in thread.messages}
+    sender_map = await _resolve_senders(db, sender_pairs)
+
+    sorted_messages = sorted(thread.messages, key=lambda x: x.created_at)
+
+    if format == "html":
+        lines = [
+            "<!DOCTYPE html>",
+            "<html><head><meta charset='utf-8'>",
+            f"<title>{thread.subject}</title>",
+            "<style>body{font-family:sans-serif;max-width:800px;margin:auto;padding:20px}"
+            ".msg{border-bottom:1px solid #eee;padding:12px 0}"
+            ".sender{font-weight:bold}.time{color:#888;font-size:0.85em}"
+            ".note{background:#fffbeb;border:1px dashed #f59e0b;padding:8px;border-radius:4px}"
+            "</style></head><body>",
+            f"<h1>{thread.subject}</h1>",
+        ]
+        for m in sorted_messages:
+            sender = sender_map.get((m.sender_type, m.sender_id))
+            name = f"{sender.first_name} {sender.last_name}".strip() if sender else "Unknown"
+            ts = m.created_at.strftime("%Y-%m-%d %H:%M UTC")
+            note_class = ' class="note"' if m.is_internal_note else ""
+            note_label = " [INTERNAL NOTE]" if m.is_internal_note else ""
+            lines.append(f'<div class="msg"{note_class}>')
+            lines.append(f'<span class="sender">{name}{note_label}</span> ')
+            lines.append(f'<span class="time">{ts}</span>')
+            lines.append(f"<div>{m.body_html}</div>")
+            lines.append("</div>")
+        lines.append("</body></html>")
+        content = "\n".join(lines)
+        return Response(
+            content=content,
+            media_type="text/html",
+            headers={
+                "Content-Disposition": f'attachment; filename="thread-{thread_id}.html"',
+            },
+        )
+    else:
+        lines = [f"Subject: {thread.subject}", ""]
+        for m in sorted_messages:
+            sender = sender_map.get((m.sender_type, m.sender_id))
+            name = f"{sender.first_name} {sender.last_name}".strip() if sender else "Unknown"
+            ts = m.created_at.strftime("%Y-%m-%d %H:%M UTC")
+            note_label = " [INTERNAL NOTE]" if m.is_internal_note else ""
+            # Strip HTML for plain text
+            body_text = re.sub(r"<[^>]+>", "", m.body_html)
+            body_text = re.sub(r"\s+", " ", body_text).strip()
+            lines.append(f"{name}{note_label} — {ts}")
+            lines.append(body_text)
+            lines.append("---")
+            lines.append("")
+        content = "\n".join(lines)
+        return Response(
+            content=content,
+            media_type="text/plain",
+            headers={
+                "Content-Disposition": f'attachment; filename="thread-{thread_id}.txt"',
+            },
+        )
 
 
 @router.post(

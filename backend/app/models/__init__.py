@@ -10,7 +10,15 @@ from app.models.conference import Conference
 from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
 from app.models.invoice import Invoice
 from app.models.location import Location
-from app.models.messaging import Message, MessageParticipant, MessageThread
+from app.models.messaging import (
+    Message,
+    MessageParticipant,
+    MessageTemplate,
+    MessageThread,
+    RecipientList,
+    RecipientListMember,
+    ThreadFlag,
+)
 from app.models.module import Module, TenantModule
 from app.models.platform_currency import PlatformCurrency
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
@@ -65,7 +73,10 @@ __all__ = [
     "Location",
     "Message",
     "MessageParticipant",
+    "MessageTemplate",
     "MessageThread",
+    "RecipientList",
+    "RecipientListMember",
     "Module",
     "PaperFormField",
     "PaperReview",
@@ -89,6 +100,7 @@ __all__ = [
     "Tenant",
     "TenantLocationType",
     "TenantModule",
+    "ThreadFlag",
     "User",
     "UserConferenceAccess",
     "Volunteer",

@@ -288,6 +288,7 @@ async def list_my_threads(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     conference_id: UUID | None = None,
+    archived: bool = False,
 ) -> ThreadListResponse:
     """List applicant's message threads."""
     tenant_id = current_applicant.tenant_id
@@ -310,6 +311,12 @@ async def list_my_threads(
         .order_by(MessageThread.updated_at.desc())
     )
 
+    # Filter by archived status
+    if archived:
+        query = query.where(MessageThread.archived_at.isnot(None))
+    else:
+        query = query.where(MessageThread.archived_at.is_(None))
+
     if conference_id:
         query = query.where(MessageThread.conference_id == conference_id)
 
@@ -329,13 +336,16 @@ async def list_my_threads(
 
     thread_ids = [t.id for t in threads]
 
-    # Last message per thread
+    # Last message per thread (exclude internal notes from portal)
     last_msg_subq = (
         select(
             Message.thread_id,
             func.max(Message.created_at).label("max_created"),
         )
-        .where(Message.thread_id.in_(thread_ids))
+        .where(
+            Message.thread_id.in_(thread_ids),
+            Message.is_internal_note.is_(False),
+        )
         .group_by(Message.thread_id)
         .subquery()
     )
@@ -348,10 +358,13 @@ async def list_my_threads(
     )
     last_msgs = {m.thread_id: m for m in last_msgs_result.scalars()}
 
-    # Message counts
+    # Message counts (exclude internal notes)
     count_result = await db.execute(
         select(Message.thread_id, func.count(Message.id))
-        .where(Message.thread_id.in_(thread_ids))
+        .where(
+            Message.thread_id.in_(thread_ids),
+            Message.is_internal_note.is_(False),
+        )
         .group_by(Message.thread_id)
     )
     msg_counts = dict(count_result.all())
@@ -418,10 +431,80 @@ async def list_my_threads(
                 message_count=msg_counts.get(thread.id, 0),
                 created_at=thread.created_at,
                 bulk_id=thread.bulk_id,
+                archived_at=thread.archived_at,
             )
         )
 
     return ThreadListResponse(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.post("/portal/messages/{thread_id}/archive")
+async def archive_portal_thread(
+    thread_id: UUID,
+    current_applicant: CurrentApplicantDep,
+    db: DbSessionDep,
+) -> dict:
+    """Archive a thread for the applicant."""
+    tenant_id = current_applicant.tenant_id
+
+    result = await db.execute(
+        select(MessageThread).where(
+            MessageThread.id == thread_id,
+            MessageThread.tenant_id == tenant_id,
+        )
+    )
+    thread = result.scalar_one_or_none()
+    if not thread:
+        raise NotFoundError("Thread not found")
+
+    # Verify participation
+    p_result = await db.execute(
+        select(MessageParticipant).where(
+            MessageParticipant.thread_id == thread_id,
+            MessageParticipant.participant_type == "applicant",
+            MessageParticipant.participant_id == current_applicant.applicant_id,
+        )
+    )
+    if not p_result.scalar_one_or_none():
+        raise NotFoundError("Thread not found")
+
+    thread.archived_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/portal/messages/{thread_id}/unarchive")
+async def unarchive_portal_thread(
+    thread_id: UUID,
+    current_applicant: CurrentApplicantDep,
+    db: DbSessionDep,
+) -> dict:
+    """Unarchive a thread for the applicant."""
+    tenant_id = current_applicant.tenant_id
+
+    result = await db.execute(
+        select(MessageThread).where(
+            MessageThread.id == thread_id,
+            MessageThread.tenant_id == tenant_id,
+        )
+    )
+    thread = result.scalar_one_or_none()
+    if not thread:
+        raise NotFoundError("Thread not found")
+
+    p_result = await db.execute(
+        select(MessageParticipant).where(
+            MessageParticipant.thread_id == thread_id,
+            MessageParticipant.participant_type == "applicant",
+            MessageParticipant.participant_id == current_applicant.applicant_id,
+        )
+    )
+    if not p_result.scalar_one_or_none():
+        raise NotFoundError("Thread not found")
+
+    thread.archived_at = None
+    await db.commit()
+    return {"ok": True}
 
 
 @router.get("/portal/messages/unread-count", response_model=UnreadCountResponse)
@@ -526,12 +609,15 @@ async def get_portal_thread(
                 )
             )
 
-    # Fetch attachments for all messages
-    message_ids = [m.id for m in thread.messages]
+    # Filter out internal notes — portal should never see them
+    visible_messages = [m for m in thread.messages if not m.is_internal_note]
+
+    # Fetch attachments for visible messages only
+    message_ids = [m.id for m in visible_messages]
     attachment_map = await _fetch_message_attachments(db, message_ids)
 
     messages = []
-    for m in sorted(thread.messages, key=lambda x: x.created_at):
+    for m in sorted(visible_messages, key=lambda x: x.created_at):
         sender = info_map.get((m.sender_type, m.sender_id))
         if sender:
             messages.append(
@@ -549,6 +635,7 @@ async def get_portal_thread(
         id=thread.id,
         subject=thread.subject,
         bulk_id=thread.bulk_id,
+        archived_at=thread.archived_at,
         participants=participants,
         messages=messages,
         created_at=thread.created_at,

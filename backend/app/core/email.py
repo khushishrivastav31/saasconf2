@@ -67,6 +67,7 @@ async def send_email(
     subject: str,
     html: str,
     text: str | None = None,
+    reply_to: str | None = None,
 ) -> bool:
     """
     Send an email using Resend.
@@ -82,13 +83,16 @@ async def send_email(
         return True
 
     try:
-        resend.Emails.send({
+        payload: dict = {
             "from": f"{settings.RESEND_FROM_NAME} <{settings.RESEND_FROM_EMAIL}>",
             "to": [to],
             "subject": subject,
             "html": html,
             "text": text,
-        })
+        }
+        if reply_to:
+            payload["reply_to"] = reply_to
+        resend.Emails.send(payload)
         logger.info(f"Email sent to {to}: {subject}")
         return True
     except Exception as e:
@@ -320,6 +324,53 @@ async def send_tenant_user_welcome_email(
     )
 
     return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
+
+
+async def send_direct_message_email(
+    *,
+    email: str,
+    first_name: str = "",
+    subject: str = "",
+    body_html: str = "",
+    conference_name: str = "",
+    sender_name: str = "",
+    reply_to: str | None = None,
+) -> bool:
+    """Send a direct message as email (for email-only messaging mode).
+
+    Unlike send_new_message_notification which sends a notification with a link,
+    this sends the actual message content directly.
+    The reply_to address is typically the conference's contact email.
+    """
+    import re
+    body_text = re.sub(r"<[^>]+>", "", body_html)
+    body_text = re.sub(r"\s+", " ", body_text).strip()
+
+    full_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <p>Hi {first_name or 'there'},</p>
+        <p>You have received a message regarding <strong>{conference_name}</strong> from {sender_name}:</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+        <div style="padding: 16px; background-color: #f9fafb; border-radius: 8px;">
+            {body_html}
+        </div>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+        <p style="color: #6b7280; font-size: 14px;">
+            This message was sent via email because in-app messaging is disabled for this conference.
+            Please reply directly to this email if needed.
+        </p>
+    </div>
+    """
+
+    full_text = (
+        f"Hi {first_name or 'there'},\n\n"
+        f"You have received a message regarding {conference_name} from {sender_name}:\n\n"
+        f"---\n{body_text}\n---\n\n"
+        f"This message was sent via email because in-app messaging is disabled for this conference."
+    )
+
+    email_subject = f"[{conference_name}] {subject}" if conference_name else subject
+    return await send_email(email, email_subject, full_html, full_text, reply_to=reply_to)
 
 
 async def send_new_message_notification(

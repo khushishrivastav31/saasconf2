@@ -15,9 +15,10 @@ from app.core.dependencies import (
 )
 from app.core.html_sanitize import sanitize_html
 from app.core.exceptions import NotFoundError
+from app.models.associations import ConferenceCFP
 from app.models.audit import AuditLog
 from app.models.cfp import CFPApplicant, CFPPaper, CFPCommitteeMember
-from app.models.messaging import Message, MessageParticipant, MessageThread
+from app.models.messaging import Message, MessageParticipant, MessageThread, RecipientListMember
 from app.schemas.messaging import (
     AdminBulkSend,
     BulkSendResponse,
@@ -29,6 +30,7 @@ from ._shared import (
     MODULE_CODE,
     _check_messaging_access,
     _get_conference_for_tenant,
+    substitute_template_variables,
 )
 
 router = APIRouter()
@@ -55,13 +57,18 @@ async def bulk_send(
     # Resolve recipients
     applicant_ids: set[UUID] = set()
 
+    # Subquery: CFP IDs linked to this conference
+    conference_cfp_ids = select(ConferenceCFP.cfp_id).where(
+        ConferenceCFP.conference_id == conference_id
+    )
+
     if data.recipients.all_applicants:
         # All applicants who have submitted papers to this conference
         result = await db.execute(
             select(CFPPaper.main_speaker_id)
             .where(
                 CFPPaper.tenant_id == tenant_id,
-                CFPPaper.conference_id == conference_id,
+                CFPPaper.cfp_id.in_(conference_cfp_ids),
             )
             .distinct()
         )
@@ -72,10 +79,10 @@ async def bulk_send(
 
     if data.recipients.paper_status:
         result = await db.execute(
-            select(CFPPaper.applicant_id)
+            select(CFPPaper.main_speaker_id)
             .where(
                 CFPPaper.tenant_id == tenant_id,
-                CFPPaper.conference_id == conference_id,
+                CFPPaper.cfp_id.in_(conference_cfp_ids),
                 CFPPaper.status == data.recipients.paper_status,
             )
             .distinct()
@@ -93,26 +100,74 @@ async def bulk_send(
         )
         applicant_ids.update(row[0] for row in result.all())
 
+    if data.recipients.recipient_list_id:
+        result = await db.execute(
+            select(RecipientListMember.applicant_id).where(
+                RecipientListMember.list_id == data.recipients.recipient_list_id,
+            )
+        )
+        applicant_ids.update(row[0] for row in result.all())
+
     if not applicant_ids:
         raise NotFoundError("No recipients found matching the criteria")
 
-    # Verify applicants exist
+    # Fetch applicant details for variable substitution
     result = await db.execute(
-        select(CFPApplicant.id).where(
+        select(CFPApplicant).where(
             CFPApplicant.id.in_(list(applicant_ids)),
             CFPApplicant.tenant_id == tenant_id,
         )
     )
-    valid_ids = {row[0] for row in result.all()}
+    applicants = {a.id: a for a in result.scalars().all()}
+    valid_ids = set(applicants.keys())
+
+    # Fetch conference name
+    conference = await _get_conference_for_tenant(db, conference_id, tenant_id)
+    conf_name = conference.name or ""
+
+    # Fetch latest paper title per applicant (for [Paper Title] variable)
+    paper_titles: dict[UUID, str] = {}
+    if valid_ids:
+        paper_result = await db.execute(
+            select(CFPPaper.main_speaker_id, CFPPaper.title)
+            .where(
+                CFPPaper.main_speaker_id.in_(list(valid_ids)),
+                CFPPaper.tenant_id == tenant_id,
+                CFPPaper.cfp_id.in_(conference_cfp_ids),
+            )
+            .order_by(CFPPaper.created_at.desc())
+        )
+        for row in paper_result.all():
+            if row[0] not in paper_titles:
+                paper_titles[row[0]] = row[1] or ""
 
     bulk_id = uuid.uuid4()
     now = datetime.now(timezone.utc)
 
     for applicant_id in valid_ids:
+        applicant = applicants[applicant_id]
+        # Substitute template variables per recipient
+        subj = substitute_template_variables(
+            data.subject,
+            first_name=applicant.first_name or "",
+            last_name=applicant.last_name or "",
+            email=applicant.email or "",
+            conference_name=conf_name,
+            paper_title=paper_titles.get(applicant_id, ""),
+        )
+        body = substitute_template_variables(
+            sanitize_html(data.body_html),
+            first_name=applicant.first_name or "",
+            last_name=applicant.last_name or "",
+            email=applicant.email or "",
+            conference_name=conf_name,
+            paper_title=paper_titles.get(applicant_id, ""),
+        )
+
         thread = MessageThread(
             tenant_id=tenant_id,
             conference_id=conference_id,
-            subject=data.subject,
+            subject=subj,
             bulk_id=bulk_id,
         )
         db.add(thread)
@@ -141,7 +196,7 @@ async def bulk_send(
                 thread_id=thread.id,
                 sender_type="user",
                 sender_id=current_user.user_id,
-                body_html=sanitize_html(data.body_html),
+                body_html=body,
             )
         )
 
@@ -153,7 +208,7 @@ async def bulk_send(
             action="bulk_send",
             resource_type="message_thread",
             resource_id=bulk_id,
-            details=f"Bulk sent '{data.subject}' to {len(valid_ids)} recipients",
+            details={"message": f"Bulk sent '{data.subject}' to {len(valid_ids)} recipients"},
             ip_address=get_client_ip(request),
             user_agent=request.headers.get("user-agent"),
         )

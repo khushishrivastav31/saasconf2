@@ -429,6 +429,7 @@ export interface PortalThreadListItem {
   unread: boolean;
   message_count: number;
   created_at: string;
+  archived_at: string | null;
 }
 
 export interface PortalThreadListResponse {
@@ -450,6 +451,7 @@ export interface PortalParticipantInfo {
 export interface PortalThreadDetailResponse {
   id: string;
   subject: string;
+  archived_at: string | null;
   participants: PortalParticipantInfo[];
   messages: PortalMessageResponse[];
   created_at: string;
