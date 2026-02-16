@@ -52,7 +52,7 @@ export default function ConferenceLogo({
           setBlobUrl(URL.createObjectURL(blob));
         }
       })
-      .catch((err) => {
+      .catch(() => {
         // Silently handle logo load failures (expected on unauthenticated pages)
         if (!cancelled) {
           setBlobUrl(null);
