@@ -1,5 +1,6 @@
 """Tenant management endpoints (super admin only)."""
 
+import time
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
@@ -903,8 +904,8 @@ async def upload_tenant_logo(
     )
     db.add(attachment)
 
-    # Update tenant logo_url
-    tenant.logo_url = f"/admin/tenants/{tenant_id}/logo"
+    # Update tenant logo_url (timestamp busts browser cache on replace)
+    tenant.logo_url = f"/admin/tenants/{tenant_id}/logo?v={int(time.time())}"
 
     await db.commit()
 

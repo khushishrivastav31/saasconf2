@@ -666,6 +666,43 @@ async def list_assigned_papers(
     return PortalAssignedPaperListResponse(items=items, total=len(items))
 
 
+@router.get("/portal/assigned-papers/pending-count")
+async def get_pending_assignment_count(
+    current: CurrentApplicantDep,
+    db: DbSessionDep,
+) -> dict:
+    """Return the number of assigned papers that have not yet been reviewed."""
+    memberships_result = await db.execute(
+        select(CFPCommitteeMember.id).where(
+            CFPCommitteeMember.applicant_id == current.applicant_id,
+            CFPCommitteeMember.tenant_id == current.tenant_id,
+        )
+    )
+    member_ids = [row[0] for row in memberships_result.all()]
+
+    if not member_ids:
+        return {"pending_count": 0}
+
+    # Count assignments that have no submitted review
+    assignments_result = await db.execute(
+        select(func.count())
+        .select_from(CFPPaperAssignment)
+        .outerjoin(
+            PaperReview,
+            PaperReview.assignment_id == CFPPaperAssignment.id,
+        )
+        .where(
+            CFPPaperAssignment.committee_member_id.in_(member_ids),
+            CFPPaperAssignment.tenant_id == current.tenant_id,
+            # No review at all, or review still in draft
+            (PaperReview.id.is_(None)) | (PaperReview.status != "submitted"),
+        )
+    )
+    count = assignments_result.scalar() or 0
+
+    return {"pending_count": count}
+
+
 @router.get("/portal/assigned-papers/{paper_id}", response_model=PortalAssignedPaperResponse)
 async def get_assigned_paper(
     paper_id: str,

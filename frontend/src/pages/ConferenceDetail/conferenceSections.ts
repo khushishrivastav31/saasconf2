@@ -18,6 +18,7 @@ import {
   ProgramBuildIcon,
   AnalyticsIcon,
   MessagingIcon,
+  NewsIcon,
   CfpTagIcon,
   CfpUsersGroupIcon,
   CfpInboxIcon,
@@ -38,6 +39,7 @@ export type SectionId =
   | "social"
   | "booking"
   | "messaging"
+  | "news"
   | "volunteers"
   | "locations"
   | "cfp"
@@ -81,6 +83,7 @@ export const coreSections: SectionDef[] = [
   { id: "social", name: "Social Media", icon: ShareIcon },
   { id: "booking", name: "Booking Options", icon: BookingIcon },
   { id: "messaging", name: "Messages", icon: MessagingIcon },
+  { id: "news", name: "News", icon: NewsIcon },
   { id: "settings", name: "Settings", icon: SettingsGearIcon },
 ];
 

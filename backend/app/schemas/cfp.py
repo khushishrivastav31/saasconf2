@@ -655,6 +655,16 @@ class PaperUpdate(BaseModel):
         return v
 
 
+class PaperReviewSummary(BaseModel):
+    """Lightweight review summary for paper cards."""
+
+    reviewer_first_name: str | None = None
+    reviewer_last_name: str | None = None
+    total_score: float | None = None
+    internal_comment: str | None = None
+    must_have: bool = False
+
+
 class PaperResponse(BaseModel):
     """Paper response schema."""
 
@@ -682,6 +692,9 @@ class PaperResponse(BaseModel):
     display_status: str | None = None
     video_url: str | None = None
     comments: list[PaperCommentResponse] = Field(default_factory=list)
+    must_have_count: int = 0
+    max_review_score: float | None = None
+    review_summaries: list[PaperReviewSummary] = Field(default_factory=list)
     submitted_at: datetime | None
     created_at: datetime
     updated_at: datetime

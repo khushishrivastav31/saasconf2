@@ -2,7 +2,7 @@ import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
+import { ResizableImage } from "./ResizableImage";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
 import { TextStyle } from "@tiptap/extension-text-style";
@@ -17,7 +17,7 @@ import TableHeader from "@tiptap/extension-table-header";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Youtube from "@tiptap/extension-youtube";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 // Custom extension for font size
 const FontSize = Extension.create({
@@ -84,6 +84,29 @@ export default function RichTextEditor({
   const [charCount, setCharCount] = useState(0);
   const [, setSelectionUpdate] = useState(0); // Force re-render on selection change
 
+  const editorRef = useRef<ReturnType<typeof useEditor>>(null) as React.MutableRefObject<ReturnType<typeof useEditor>>;
+
+  const handleImageFile = useCallback(
+    (file: File) => {
+      const ed = editorRef.current;
+      if (!ed) return false;
+      if (!file.type.startsWith("image/")) return false;
+      const maxSize = 5 * 1024 * 1024; // 5 MB
+      if (file.size > maxSize) {
+        alert("Image is too large. Maximum size is 5 MB.");
+        return true;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const src = reader.result as string;
+        ed.chain().focus().setImage({ src }).run();
+      };
+      reader.readAsDataURL(file);
+      return true;
+    },
+    [],
+  );
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -111,7 +134,7 @@ export default function RichTextEditor({
         openOnClick: false,
         HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
       }),
-      Image.configure({
+      ResizableImage.configure({
         inline: false,
         allowBase64: true,
         HTMLAttributes: {
@@ -173,6 +196,29 @@ export default function RichTextEditor({
         class: "prose prose-sm max-w-none focus:outline-none",
         style: `min-height: ${rows * 1.5}rem`,
       },
+      handleDrop: (_view, event, _slice, moved) => {
+        if (moved || !event.dataTransfer?.files?.length) return false;
+        const file = event.dataTransfer.files[0];
+        if (!file?.type.startsWith("image/")) return false;
+        event.preventDefault();
+        handleImageFile(file);
+        return true;
+      },
+      handlePaste: (_view, event) => {
+        const items = event.clipboardData?.items;
+        if (!items) return false;
+        for (const item of items) {
+          if (item.type.startsWith("image/")) {
+            const file = item.getAsFile();
+            if (file) {
+              event.preventDefault();
+              handleImageFile(file);
+              return true;
+            }
+          }
+        }
+        return false;
+      },
     },
     onUpdate: ({ editor: ed }) => {
       const html = ed.getHTML();
@@ -188,6 +234,9 @@ export default function RichTextEditor({
       setSelectionUpdate((n) => n + 1);
     },
   });
+
+  // Keep ref in sync so drop/paste handlers can access the editor
+  editorRef.current = editor;
 
   // Sync external value changes (only when editor is not focused)
   useEffect(() => {

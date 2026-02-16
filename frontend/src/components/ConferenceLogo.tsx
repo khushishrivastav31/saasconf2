@@ -8,12 +8,15 @@ interface ConferenceLogoProps {
   className?: string;
   placeholderClassName?: string;
   showPlaceholder?: boolean;
-  /** Optional axios instance to use (defaults to main api) */
+  /** Optional axios instance — only used to derive the base URL */
   apiInstance?: AxiosInstance;
 }
 
 /**
- * Displays a conference logo, fetching it as a blob to bypass CSP restrictions.
+ * Displays a logo, fetching it as a blob to bypass CSP restrictions.
+ *
+ * Uses native fetch() (no custom headers) so logo GET requests are
+ * "simple" CORS requests — no preflight needed, no auth headers sent.
  */
 export default function ConferenceLogo({
   logoUrl,
@@ -26,37 +29,45 @@ export default function ConferenceLogo({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const baseURL = apiInstance.defaults.baseURL || "";
+
   useEffect(() => {
     if (!logoUrl) {
       setBlobUrl(null);
       return;
     }
 
-    let revoked = false;
+    let cancelled = false;
     setLoading(true);
 
-    apiInstance.get(logoUrl, { responseType: "blob" })
+    const fullUrl = `${baseURL.replace(/\/+$/, "")}/${logoUrl.replace(/^\/+/, "")}`;
+
+    fetch(fullUrl)
       .then((res) => {
-        if (!revoked) {
-          const url = URL.createObjectURL(res.data);
-          setBlobUrl(url);
+        if (!res.ok) throw new Error(`Logo fetch failed: ${res.status} ${res.statusText}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (!cancelled) {
+          setBlobUrl(URL.createObjectURL(blob));
         }
       })
-      .catch(() => {
-        if (!revoked) {
+      .catch((err) => {
+        // Silently handle logo load failures (expected on unauthenticated pages)
+        if (!cancelled) {
           setBlobUrl(null);
         }
       })
       .finally(() => {
-        if (!revoked) {
+        if (!cancelled) {
           setLoading(false);
         }
       });
 
     return () => {
-      revoked = true;
+      cancelled = true;
     };
-  }, [logoUrl, apiInstance]);
+  }, [logoUrl, baseURL]);
 
   // Clean up blob URL when component unmounts or URL changes
   useEffect(() => {

@@ -188,6 +188,7 @@ class PaperReviewSubmit(BaseModel):
     answers: list[ReviewAnswerSubmit]
     speaker_feedback: str | None = None
     internal_comment: str | None = None
+    must_have: bool = False
 
 
 class PaperReviewResponse(BaseModel):
@@ -199,6 +200,7 @@ class PaperReviewResponse(BaseModel):
     total_score: float | None
     speaker_feedback: str | None
     internal_comment: str | None = None
+    must_have: bool = False
     answers: list[ReviewAnswerResponse]
     submitted_at: datetime | None
     created_at: datetime
@@ -225,6 +227,7 @@ class ReviewFormSettingsResponse(BaseModel):
     conference_id: UUID
     enable_speaker_feedback: bool
     enable_internal_comment: bool
+    enable_must_have: bool
     created_at: datetime
     updated_at: datetime
 
@@ -235,3 +238,4 @@ class ReviewFormSettingsResponse(BaseModel):
 class ReviewFormSettingsUpdate(BaseModel):
     enable_speaker_feedback: bool | None = None
     enable_internal_comment: bool | None = None
+    enable_must_have: bool | None = None

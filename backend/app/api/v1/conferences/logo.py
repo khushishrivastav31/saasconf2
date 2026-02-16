@@ -1,5 +1,6 @@
 """Conference logo management endpoints."""
 
+import time
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
@@ -17,6 +18,7 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import NotFoundError, ValidationError
+from app.db.session import set_rls_context
 from app.models.attachment import Attachment
 from app.models.audit import AuditAction, AuditLog
 from app.models.conference import Conference
@@ -94,7 +96,8 @@ async def upload_conference_logo(
     db.add(attachment)
 
     # Update conference logo_url to point to download endpoint (relative to /api/v1)
-    conference.logo_url = f"/conferences/{conference_id}/logo"
+    # Include timestamp to bust browser cache when logo is replaced
+    conference.logo_url = f"/conferences/{conference_id}/logo?v={int(time.time())}"
     flag_modified(conference, "logo_url")
 
     # Audit log
@@ -132,6 +135,9 @@ async def get_conference_logo(
     Returns the logo image file. No authentication required since logos
     are typically public content displayed on conference pages.
     """
+    # Logos are public — bypass RLS
+    await set_rls_context(db, is_super_admin=True)
+
     # Find logo attachment directly by conference_id
     logo_result = await db.execute(
         select(Attachment).where(

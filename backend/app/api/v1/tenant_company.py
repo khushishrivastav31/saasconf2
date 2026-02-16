@@ -1,5 +1,6 @@
 """Tenant company management endpoints (tenant admin only)."""
 
+import time
 from uuid import UUID
 
 from fastapi import APIRouter, Request, UploadFile
@@ -182,7 +183,8 @@ async def upload_my_company_logo(
     db.add(attachment)
 
     # Update tenant logo_url - use admin endpoint which doesn't require auth for GET
-    tenant.logo_url = f"/admin/tenants/{current_user.tenant_id}/logo"
+    # Include timestamp to bust browser cache when logo is replaced
+    tenant.logo_url = f"/admin/tenants/{current_user.tenant_id}/logo?v={int(time.time())}"
 
     await db.commit()
 

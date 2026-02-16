@@ -462,6 +462,28 @@ function ConferenceReviewCriteriaTab({
               </p>
             </div>
           </label>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              checked={formSettings?.enable_must_have ?? true}
+              disabled={!isAdmin}
+              onChange={(e) =>
+                updateFormSettingsMutation.mutate({
+                  enable_must_have: e.target.checked,
+                })
+              }
+            />
+            <div>
+              <span className="text-sm text-gray-900">
+                Must Have in Program
+              </span>
+              <p className="text-xs text-gray-500">
+                Reviewers can flag a paper as a must-have for the conference
+                program
+              </p>
+            </div>
+          </label>
         </div>
       </div>
 

@@ -101,6 +101,19 @@ function UserIcon() {
   );
 }
 
+function NewspaperIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+      />
+    </svg>
+  );
+}
+
 function ChatBubbleIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,19 +156,6 @@ function PortalLayout() {
     enabled: !!companySlug,
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  if (!applicant) {
-    return <Navigate to={`${basePath}/user/login`} replace />;
-  }
-
-
   // Unread message count
   const { data: unreadData } = useQuery({
     queryKey: ["portal-unread-count"],
@@ -167,6 +167,18 @@ function PortalLayout() {
     refetchInterval: 30000, // Poll every 30s
   });
   const unreadCount = unreadData?.unread_count ?? 0;
+
+  // Pending assignment count (for committee badge)
+  const { data: pendingData } = useQuery({
+    queryKey: ["portal-pending-assignments"],
+    queryFn: async () => {
+      const res = await portalApi.get("/portal/assigned-papers/pending-count");
+      return res.data as { pending_count: number };
+    },
+    enabled: !!applicant,
+    refetchInterval: 30000,
+  });
+  const pendingAssignments = pendingData?.pending_count ?? 0;
 
   // Committee membership check
   const { data: committeeMemberships } = useQuery({
@@ -181,6 +193,18 @@ function PortalLayout() {
   });
   const isCommitteeMember = (committeeMemberships?.items.length ?? 0) > 0;
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (!applicant) {
+    return <Navigate to={`${basePath}/user/login`} replace />;
+  }
+
   type NavItem = {
     name: string;
     href: string;
@@ -191,16 +215,10 @@ function PortalLayout() {
 
   const navSections: NavSection[] = [
     {
-      label: "Profile",
-      items: [
-        { name: "My Account", href: `${basePath}/profile`, icon: UserIcon },
-      ],
-    },
-    {
       label: "Papers",
       items: [
-        { name: "Submit Paper", href: `${basePath}/papers/new`, icon: PlusIcon },
         { name: "My Papers", href: `${basePath}/dashboard`, icon: DocumentIcon },
+        { name: "Submit Paper", href: `${basePath}/papers/new`, icon: PlusIcon },
         { name: "Co-Speaker Invitations", href: `${basePath}/invitations`, icon: MailIcon },
       ],
     },
@@ -209,12 +227,18 @@ function PortalLayout() {
           {
             label: "Program Committee",
             items: [
-              { name: "Assigned Papers", href: `${basePath}/assigned-papers`, icon: ClipboardListIcon },
+              { name: "Assigned Papers", href: `${basePath}/assigned-papers`, icon: ClipboardListIcon, badge: pendingAssignments },
               { name: "Evaluated Papers", href: `${basePath}/evaluated-papers`, icon: ClipboardCheckIcon },
             ],
           },
         ]
       : []),
+    {
+      label: "Account",
+      items: [
+        { name: "My Profile", href: `${basePath}/profile`, icon: UserIcon },
+      ],
+    },
   ];
 
   // Messages as standalone item (with badge)
@@ -223,6 +247,13 @@ function PortalLayout() {
     href: `${basePath}/messages`,
     icon: ChatBubbleIcon,
     badge: unreadCount,
+  };
+
+  // News as standalone item
+  const newsItem: NavItem = {
+    name: "News",
+    href: `${basePath}/news`,
+    icon: NewspaperIcon,
   };
 
   const isActive = (href: string) =>
@@ -316,34 +347,57 @@ function PortalLayout() {
         </div>
         <div className="flex-1 overflow-y-auto">
           <nav className={`mt-4 ${sidebarCollapsed ? "px-2" : "px-3"}`}>
-            {/* Messages (standalone with badge) */}
-            <div className="mb-2">
-              <Link
-                to={messagesItem.href}
-                title={sidebarCollapsed ? messagesItem.name : undefined}
-                className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
-                  sidebarCollapsed ? "justify-center px-2" : "px-3"
-                } ${
-                  isActive(messagesItem.href)
-                    ? "bg-gray-800 text-white"
-                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                }`}
-              >
-                <messagesItem.icon />
-                {!sidebarCollapsed && (
-                  <span className="ml-3 flex-1 flex items-center justify-between">
-                    {messagesItem.name}
-                    {(messagesItem.badge ?? 0) > 0 && (
-                      <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
-                        {messagesItem.badge}
-                      </span>
-                    )}
-                  </span>
-                )}
-                {sidebarCollapsed && (messagesItem.badge ?? 0) > 0 && (
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
-                )}
-              </Link>
+            {/* Communication (News & Messages) — first section */}
+            <div>
+              {!sidebarCollapsed && (
+                <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                  Communication
+                </p>
+              )}
+              <div className="space-y-0.5">
+                <Link
+                  to={newsItem.href}
+                  title={sidebarCollapsed ? newsItem.name : undefined}
+                  className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
+                    sidebarCollapsed ? "justify-center px-2" : "px-3"
+                  } ${
+                    isActive(newsItem.href)
+                      ? "bg-gray-800 text-white"
+                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                  }`}
+                >
+                  <newsItem.icon />
+                  {!sidebarCollapsed && (
+                    <span className="ml-3">{newsItem.name}</span>
+                  )}
+                </Link>
+                <Link
+                  to={messagesItem.href}
+                  title={sidebarCollapsed ? messagesItem.name : undefined}
+                  className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
+                    sidebarCollapsed ? "justify-center px-2" : "px-3"
+                  } ${
+                    isActive(messagesItem.href)
+                      ? "bg-gray-800 text-white"
+                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                  }`}
+                >
+                  <messagesItem.icon />
+                  {!sidebarCollapsed && (
+                    <span className="ml-3 flex-1 flex items-center justify-between">
+                      {messagesItem.name}
+                      {(messagesItem.badge ?? 0) > 0 && (
+                        <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+                          {messagesItem.badge}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (messagesItem.badge ?? 0) > 0 && (
+                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
+                  )}
+                </Link>
+              </div>
             </div>
 
             {/* Grouped sections */}
@@ -370,7 +424,17 @@ function PortalLayout() {
                     >
                       <item.icon />
                       {!sidebarCollapsed && (
-                        <span className="ml-3">{item.name}</span>
+                        <span className="ml-3 flex-1 flex items-center justify-between">
+                          {item.name}
+                          {(item.badge ?? 0) > 0 && (
+                            <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+                              {item.badge}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {sidebarCollapsed && (item.badge ?? 0) > 0 && (
+                        <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
                       )}
                     </Link>
                   ))}

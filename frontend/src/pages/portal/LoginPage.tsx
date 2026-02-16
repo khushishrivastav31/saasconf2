@@ -55,7 +55,7 @@ function LoginPage() {
 
     try {
       await login({ email, password });
-      navigate(`${basePath}/dashboard`);
+      navigate(`${basePath}/news`);
     } catch (err: unknown) {
       // Check if this is a tenant admin redirect response
       if (axios.isAxiosError(err) && err.response?.status === 403) {

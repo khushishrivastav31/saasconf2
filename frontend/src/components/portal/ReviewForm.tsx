@@ -43,6 +43,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
   const [answers, setAnswers] = useState<Map<string, AnswerState>>(new Map());
   const [speakerFeedback, setSpeakerFeedback] = useState<string>("");
   const [internalComment, setInternalComment] = useState<string>("");
+  const [mustHave, setMustHave] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   // Initialize form state from existing review or empty defaults
@@ -71,9 +72,11 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
       }
       setSpeakerFeedback(config.existing_review.speaker_feedback ?? "");
       setInternalComment(config.existing_review.internal_comment ?? "");
+      setMustHave(config.existing_review.must_have ?? false);
     } else {
       setSpeakerFeedback("");
       setInternalComment("");
+      setMustHave(false);
     }
 
     setAnswers(initial);
@@ -104,8 +107,9 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
       answers: answerList,
       speaker_feedback: speakerFeedback || null,
       internal_comment: internalComment || null,
+      must_have: mustHave,
     };
-  }, [answers, speakerFeedback, internalComment]);
+  }, [answers, speakerFeedback, internalComment, mustHave]);
 
   const saveDraftMutation = useMutation({
     mutationFn: async () => {
@@ -118,6 +122,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     onSuccess: () => {
       setFormError(null);
       queryClient.invalidateQueries({ queryKey: ["portal-review-config", assignmentId] });
+      queryClient.invalidateQueries({ queryKey: ["portal-assigned-papers"] });
       onReviewSubmitted?.();
     },
     onError: (err: unknown) => {
@@ -136,6 +141,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     onSuccess: () => {
       setFormError(null);
       queryClient.invalidateQueries({ queryKey: ["portal-review-config", assignmentId] });
+      queryClient.invalidateQueries({ queryKey: ["portal-assigned-papers"] });
       onReviewSubmitted?.();
     },
     onError: (err: unknown) => {
@@ -228,6 +234,15 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
             />
           </div>
         )}
+
+        {config.form_settings.enable_must_have && existingReview.must_have && (
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+            Must have in program
+          </div>
+        )}
       </div>
     );
   }
@@ -281,6 +296,27 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
             rows={4}
             maxLength={2000}
           />
+        </div>
+      )}
+
+      {/* Must Have checkbox */}
+      {config.form_settings.enable_must_have && (
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            id="must-have"
+            checked={mustHave}
+            onChange={(e) => setMustHave(e.target.checked)}
+            className="mt-0.5 h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+          />
+          <div>
+            <label htmlFor="must-have" className="text-sm font-semibold text-gray-900 cursor-pointer">
+              Must have in program
+            </label>
+            <p className="text-xs text-gray-500">
+              Flag this paper as a must-have for the conference program.
+            </p>
+          </div>
         </div>
       )}
 

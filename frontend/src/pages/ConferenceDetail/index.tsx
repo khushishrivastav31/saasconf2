@@ -31,6 +31,7 @@ import ProgramBuildTab from "./tabs/ProgramBuildTab";
 import SessionsTab from "./tabs/SessionsTab";
 import SpeakersTab from "./tabs/SpeakersTab";
 import MessagingTab from "./tabs/MessagingTab";
+import NewsTab from "./tabs/NewsTab";
 import { CFPTopics, CFPProgramCommittee, CFPApplicants, CFPPapers, CFPEvaluatedPapers, CFPSelectedPapers, CFPAssignments } from "../modules/cfp";
 
 // ---------------------------------------------------------------------------
@@ -569,6 +570,9 @@ export default function ConferenceDetail() {
             )}
             {activeSection === "messaging" && conference && (
               <MessagingTab conference={conference} />
+            )}
+            {activeSection === "news" && conference && (
+              <NewsTab conference={conference} isAdmin={isAdmin} />
             )}
             {activeSection === "settings" && (
               <ConferenceSettingsTab conference={conference} isAdmin={isAdmin} />

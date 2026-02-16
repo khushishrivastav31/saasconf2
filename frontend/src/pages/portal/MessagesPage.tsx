@@ -112,6 +112,7 @@ export default function MessagesPage() {
       const resp = await portalApi.get(`/portal/messages?${params}`);
       return resp.data as PortalThreadListResponse;
     },
+    refetchInterval: 30000,
   });
 
   // Thread detail
@@ -122,6 +123,7 @@ export default function MessagesPage() {
       return resp.data as PortalThreadDetailResponse;
     },
     enabled: !!selectedThreadId,
+    refetchInterval: selectedThreadId ? 15000 : false,
   });
 
   // Reply

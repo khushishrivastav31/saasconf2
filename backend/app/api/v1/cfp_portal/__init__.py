@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from .auth import router as auth_router
 from .form_schema import router as form_schema_router
 from .messaging import router as messaging_router
+from .news import router as news_router
 from .papers import router as papers_router
 from .reviews import router as reviews_router
 
@@ -15,5 +16,6 @@ router = APIRouter()
 router.include_router(papers_router)
 router.include_router(reviews_router)
 router.include_router(messaging_router)
+router.include_router(news_router)
 router.include_router(form_schema_router)
 router.include_router(auth_router)

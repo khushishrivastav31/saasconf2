@@ -189,7 +189,11 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       setDeleteTarget(null);
       setSelectedPaperId(null);
       queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-reviews"] });
       queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
     },
     onError: (err: unknown) => {
@@ -206,6 +210,8 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
     onSuccess: () => {
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
     },
     onError: (err: unknown) => {
@@ -225,6 +231,8 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
       queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-reviews"] });
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, "Failed to update paper status"));
@@ -254,6 +262,8 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       setError(null);
       setIsAdding(false);
       queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
       queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
       setSelectedPaperId(paper.id);
@@ -275,6 +285,8 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       }
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
       queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
       queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
     } catch {

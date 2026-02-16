@@ -50,6 +50,14 @@ function EvaluatedPaperCard({
                   {paper.session_type_name}
                 </span>
               )}
+              {paper.must_have_count > 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  {paper.must_have_count} must-have
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
               <span>Speaker: {paper.main_speaker ? `${paper.main_speaker.first_name} ${paper.main_speaker.last_name}` : "Unknown"}</span>
@@ -67,6 +75,40 @@ function EvaluatedPaperCard({
                 ))}
               </div>
             )}
+            {paper.review_summaries && paper.review_summaries.length > 0 && (() => {
+              const scored = paper.review_summaries.filter((r) => r.total_score != null);
+              const avgScore = scored.length > 0
+                ? scored.reduce((sum, r) => sum + r.total_score!, 0) / scored.length
+                : null;
+              const maxScore = paper.max_review_score;
+              const maxSuffix = maxScore != null ? ` / ${maxScore.toFixed(1)}` : "";
+              return (
+                <div className="mt-2 space-y-1">
+                  {paper.review_summaries.map((rev, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs">
+                      <span className="font-medium text-gray-700 min-w-[100px]">
+                        {rev.reviewer_first_name
+                          ? `${rev.reviewer_first_name} ${rev.reviewer_last_name || ""}`.trim()
+                          : "Anonymous"}
+                      </span>
+                      {rev.total_score != null && (
+                        <span className="font-semibold text-primary-700 bg-primary-50 px-1.5 py-0.5 rounded">
+                          {rev.total_score.toFixed(1)}{maxSuffix}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {avgScore != null && (
+                    <div className="flex items-center gap-2 text-xs pt-1 border-t border-gray-100">
+                      <span className="font-medium text-gray-700 min-w-[100px]">Avg. Score</span>
+                      <span className="font-bold text-primary-800 bg-primary-100 px-1.5 py-0.5 rounded">
+                        {avgScore.toFixed(1)}{maxSuffix}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <div className="flex-shrink-0 w-48">
             <PaperStatusLifeline status={displayStatus} compact />
@@ -139,6 +181,27 @@ function EvaluatedPaperCard({
             </div>
           )}
 
+          {/* Internal comments from reviewers */}
+          {paper.review_summaries.some((r) => r.internal_comment) && (
+            <div>
+              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">Internal Comments</h4>
+              <div className="space-y-2">
+                {paper.review_summaries
+                  .filter((r) => r.internal_comment)
+                  .map((rev, idx) => (
+                    <div key={idx} className="bg-white rounded border border-gray-200 px-3 py-2">
+                      <span className="text-xs font-medium text-gray-700">
+                        {rev.reviewer_first_name
+                          ? `${rev.reviewer_first_name} ${rev.reviewer_last_name || ""}`.trim()
+                          : "Anonymous"}
+                      </span>
+                      <RichTextDisplay content={rev.internal_comment} className="text-sm text-gray-600 mt-0.5" />
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {paper.cospeakers.length > 0 && (
             <div>
               <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">Co-speakers</h4>
@@ -156,7 +219,7 @@ function EvaluatedPaperCard({
           <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">
             Reviews
           </h4>
-          <ReviewsPanel paperId={paper.id} />
+          <ReviewsPanel paperId={paper.id} maxReviewScore={paper.max_review_score} />
         </div>
       )}
     </div>
@@ -196,6 +259,9 @@ export default function CFPEvaluatedPapers() {
       queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
       queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
       queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-reviews"] });
     },
     onError: (err: unknown) => {
       setMutationError(parseApiError(err, "Failed to update paper status"));

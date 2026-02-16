@@ -426,6 +426,7 @@ class PortalExistingReviewResponse(BaseModel):
     total_score: float | None = None
     speaker_feedback: str | None = None
     internal_comment: str | None = None
+    must_have: bool = False
     answers: list[PortalReviewAnswerResponse] = []
     submitted_at: datetime | None = None
 
@@ -435,6 +436,7 @@ class PortalReviewFormSettingsResponse(BaseModel):
 
     enable_speaker_feedback: bool = True
     enable_internal_comment: bool = True
+    enable_must_have: bool = True
 
 
 class PortalReviewConfigResponse(BaseModel):

@@ -69,6 +69,7 @@ function PaperDetailPage() {
       );
       return res.data;
     },
+    refetchInterval: 30000,
   });
 
   const { data: feedbackData } = useQuery({
@@ -172,6 +173,8 @@ function PaperDetailPage() {
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ["portal-paper", paperId] });
       queryClient.invalidateQueries({ queryKey: ["portal-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["portal-assigned-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["portal-pending-assignments"] });
     },
     onError: (err: unknown) => {
       const detail = isAxiosError(err) ? err.response?.data?.detail : undefined;
@@ -214,6 +217,8 @@ function PaperDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal-paper", paperId] });
       queryClient.invalidateQueries({ queryKey: ["portal-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["portal-assigned-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["portal-pending-assignments"] });
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, "Failed to revert paper to draft."));
@@ -226,6 +231,8 @@ function PaperDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["portal-assigned-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["portal-pending-assignments"] });
       navigate(`${basePath}/dashboard`);
     },
     onError: (err: unknown) => {

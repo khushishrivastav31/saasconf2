@@ -16,6 +16,7 @@ from app.api.v1 import (
     locations,
     messaging,
     modules,
+    news,
     program,
     service_providers,
     settings,
@@ -78,6 +79,9 @@ api_router.include_router(invoices.router, prefix="/conferences/{conference_id}/
 
 # Program design (conference-scoped)
 api_router.include_router(program.router, prefix="/conferences/{conference_id}/program", tags=["Program"])
+
+# News (conference-scoped)
+api_router.include_router(news.router, prefix="/conferences/{conference_id}/news", tags=["News"])
 
 # Messaging (conference-scoped)
 api_router.include_router(messaging.router, prefix="/conferences/{conference_id}/messaging", tags=["Messaging"])

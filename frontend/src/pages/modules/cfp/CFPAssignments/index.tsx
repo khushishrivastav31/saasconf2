@@ -63,6 +63,8 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
   const [search, setSearch] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "none" | "partial" | "complete">("all");
+  const [paperStatusFilter, setPaperStatusFilter] = useState<string>("all");
+  const [reviewerFilter, setReviewerFilter] = useState<string>("all");
   const [showAutoAssign, setShowAutoAssign] = useState(false);
   const [autoAssignOnlySubmitted, setAutoAssignOnlySubmitted] = useState(true);
   const [autoAssignResult, setAutoAssignResult] = useState<AutoAssignResponse | null>(null);
@@ -117,6 +119,7 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
       return res.data;
     },
     enabled: !!selectedConferenceId,
+    refetchInterval: 15000,
   });
   const papers = (papersData?.items ?? []).filter((p) => p.status !== "draft");
 
@@ -129,6 +132,7 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
       return res.data;
     },
     enabled: !!selectedConferenceId,
+    refetchInterval: 15000,
   });
   const allAssignments = useMemo(() => allAssignmentsData?.items ?? [], [allAssignmentsData?.items]);
 
@@ -166,8 +170,17 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     return map;
   }, [allAssignments]);
 
+  const paperStatuses = useMemo(() => {
+    const set = new Set<string>(["submitted", "in_evaluation", "final_consideration", "accepted", "rejected"]);
+    for (const p of papers) set.add(p.status);
+    return Array.from(set).sort();
+  }, [papers]);
+
   const filteredPapers = useMemo(() => {
     let result = papers;
+    if (paperStatusFilter !== "all") {
+      result = result.filter((p) => p.status === paperStatusFilter);
+    }
     if (search) {
       const lower = search.toLowerCase();
       result = result.filter(
@@ -184,13 +197,27 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
         return count > 0 && count < cfpSettings.reviewers_per_paper;
       });
     }
-    return result;
-  }, [papers, search, statusFilter, assignmentsByPaper, cfpSettings.reviewers_per_paper]);
+    if (reviewerFilter !== "all") {
+      result = result.filter((p) => {
+        const assigns = assignmentsByPaper.get(p.id) || [];
+        return assigns.some((a) => a.committee_member_id === reviewerFilter);
+      });
+    }
+    return result.sort((a, b) => {
+      const aCount = (assignmentsByPaper.get(a.id) || []).length;
+      const bCount = (assignmentsByPaper.get(b.id) || []).length;
+      if (aCount !== bCount) return aCount - bCount;
+      return a.title.localeCompare(b.title);
+    });
+  }, [papers, search, statusFilter, paperStatusFilter, reviewerFilter, assignmentsByPaper, cfpSettings.reviewers_per_paper]);
 
   const filteredMembers = useMemo(() => {
-    if (!memberSearch) return members;
+    const sorted = [...members].sort((a, b) =>
+      `${a.first_name} ${a.last_name}`.trim().localeCompare(`${b.first_name} ${b.last_name}`.trim())
+    );
+    if (!memberSearch) return sorted;
     const lower = memberSearch.toLowerCase();
-    return members.filter(
+    return sorted.filter(
       (m) =>
         `${m.first_name} ${m.last_name}`.trim().toLowerCase().includes(lower) ||
         m.email?.toLowerCase().includes(lower) ||
@@ -236,6 +263,8 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conference-assignments", selectedConferenceId] });
+      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
       setError(null);
     },
     onError: (err) => setError(parseApiError(err)),
@@ -247,6 +276,8 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conference-assignments", selectedConferenceId] });
+      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
     },
     onError: (err) => setError(parseApiError(err)),
   });
@@ -264,6 +295,8 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     onSuccess: (data) => {
       setAutoAssignResult(data);
       queryClient.invalidateQueries({ queryKey: ["conference-assignments", selectedConferenceId] });
+      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
     },
     onError: (err) => setError(parseApiError(err)),
   });
@@ -475,31 +508,59 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
 
           {/* ── Right: Papers ──────────────────────────────────────────── */}
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <h2 className="text-sm font-semibold text-gray-700">
                 Papers
                 <span className="ml-1.5 text-gray-400 font-normal">({filteredPapers.length})</span>
               </h2>
-              <div className="flex items-center gap-1">
-                {([
-                  { value: "all" as const, label: "All", dot: "" },
-                  { value: "none" as const, label: "None", dot: "bg-gray-300" },
-                  { value: "partial" as const, label: "Partial", dot: "bg-yellow-500" },
-                  { value: "complete" as const, label: "Complete", dot: "bg-green-500" },
-                ]).map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setStatusFilter(opt.value)}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                      statusFilter === opt.value
-                        ? "bg-primary-100 text-primary-700"
-                        : "text-gray-500 hover:bg-gray-100"
-                    }`}
-                  >
-                    {opt.dot && <span className={`inline-block w-1.5 h-1.5 rounded-full ${opt.dot}`} />}
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <select
+                  value={paperStatusFilter}
+                  onChange={(e) => setPaperStatusFilter(e.target.value)}
+                  className="border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="all">All statuses</option>
+                  {paperStatuses.map((s) => (
+                    <option key={s} value={s}>
+                      {s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={reviewerFilter}
+                  onChange={(e) => setReviewerFilter(e.target.value)}
+                  className="border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="all">All reviewers</option>
+                  {[...members].sort((a, b) =>
+                    `${a.first_name} ${a.last_name}`.trim().localeCompare(`${b.first_name} ${b.last_name}`.trim())
+                  ).map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {`${m.first_name} ${m.last_name}`.trim()}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1">
+                  {([
+                    { value: "all" as const, label: "All", dot: "" },
+                    { value: "none" as const, label: "None", dot: "bg-gray-300" },
+                    { value: "partial" as const, label: "Partial", dot: "bg-yellow-500" },
+                    { value: "complete" as const, label: "Complete", dot: "bg-green-500" },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setStatusFilter(opt.value)}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                        statusFilter === opt.value
+                          ? "bg-primary-100 text-primary-700"
+                          : "text-gray-500 hover:bg-gray-100"
+                      }`}
+                    >
+                      {opt.dot && <span className={`inline-block w-1.5 h-1.5 rounded-full ${opt.dot}`} />}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="mb-3">

@@ -39,6 +39,7 @@ async def get_review_form_settings(
             conference_id=conference.id,
             enable_speaker_feedback=True,
             enable_internal_comment=True,
+            enable_must_have=True,
         )
         db.add(settings)
         await db.commit()

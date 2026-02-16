@@ -15,6 +15,7 @@ function InvitationsPage() {
       );
       return res.data;
     },
+    refetchInterval: 30000,
   });
 
   const acceptMutation = useMutation({

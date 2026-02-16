@@ -305,6 +305,7 @@ export interface PortalExistingReview {
   total_score: number | null;
   speaker_feedback: string | null;
   internal_comment: string | null;
+  must_have: boolean;
   answers: PortalReviewAnswer[];
   submitted_at: string | null;
 }
@@ -312,6 +313,7 @@ export interface PortalExistingReview {
 export interface PortalReviewFormSettings {
   enable_speaker_feedback: boolean;
   enable_internal_comment: boolean;
+  enable_must_have: boolean;
 }
 
 export interface PortalReviewConfig {
@@ -328,6 +330,7 @@ export interface PortalReviewSubmitRequest {
   }[];
   speaker_feedback?: string | null;
   internal_comment?: string | null;
+  must_have?: boolean;
 }
 
 // --- Speaker Feedback ---
@@ -460,4 +463,20 @@ export interface PortalThreadDetailResponse {
 
 export interface PortalUnreadCountResponse {
   unread_count: number;
+}
+
+// --- News ---
+
+export interface PortalNewsArticle {
+  id: string;
+  conference_id: string;
+  conference_name: string;
+  title: string;
+  body_html: string;
+  published_at: string;
+}
+
+export interface PortalNewsListResponse {
+  items: PortalNewsArticle[];
+  total: number;
 }

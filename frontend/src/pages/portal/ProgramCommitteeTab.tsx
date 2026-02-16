@@ -95,6 +95,7 @@ export default function ProgramCommitteeTab() {
         );
       return res.data;
     },
+    refetchInterval: 30000,
   });
 
   const { data: topicsData } = useQuery({

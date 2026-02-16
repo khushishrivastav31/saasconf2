@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import DbSessionDep
@@ -18,12 +18,14 @@ from app.models.cfp import (
     PaperStatus,
 )
 from app.models.conference import Conference
+from app.models.review import PaperReview, ReviewQuestion, ReviewScaleOption, ReviewStatus
 from app.models.settings import SessionType
 from app.schemas.cfp import (
     ApplicantResponse,
     CospeakerResponse,
     PaperCommentResponse,
     PaperResponse,
+    PaperReviewSummary,
     TopicResponse,
 )
 
@@ -214,6 +216,71 @@ async def _build_paper_response(
     )
     conference_name = conf_result.scalar_one_or_none()
 
+    # Count submitted reviews that flagged this paper as "must have"
+    must_have_result = await db.execute(
+        select(func.count()).where(
+            PaperReview.paper_id == paper.id,
+            PaperReview.tenant_id == tenant_id,
+            PaperReview.must_have.is_(True),
+            PaperReview.status == ReviewStatus.SUBMITTED.value,
+        )
+    )
+    must_have_count = must_have_result.scalar() or 0
+
+    # Build lightweight review summaries (submitted reviews only)
+    reviews_result = await db.execute(
+        select(PaperReview).where(
+            PaperReview.paper_id == paper.id,
+            PaperReview.tenant_id == tenant_id,
+            PaperReview.status == ReviewStatus.SUBMITTED.value,
+        ).order_by(PaperReview.submitted_at)
+    )
+    review_summaries = []
+    for rev in reviews_result.scalars().all():
+        member_result = await db.execute(
+            select(CFPCommitteeMember)
+            .options(selectinload(CFPCommitteeMember.applicant))
+            .where(CFPCommitteeMember.id == rev.committee_member_id)
+        )
+        member = member_result.scalar_one_or_none()
+        review_summaries.append(PaperReviewSummary(
+            reviewer_first_name=member.applicant.first_name if member and member.applicant else None,
+            reviewer_last_name=member.applicant.last_name if member and member.applicant else None,
+            total_score=rev.total_score,
+            internal_comment=rev.internal_comment,
+            must_have=rev.must_have,
+        ))
+
+    # Compute maximum possible review score from conference review criteria
+    max_review_score: float | None = None
+    conf_id_result = await db.execute(
+        select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == paper.cfp_id).limit(1)
+    )
+    conference_id = conf_id_result.scalar_one_or_none()
+    if conference_id:
+        questions_result = await db.execute(
+            select(ReviewQuestion).where(
+                ReviewQuestion.conference_id == conference_id,
+                ReviewQuestion.tenant_id == tenant_id,
+                ReviewQuestion.is_active.is_(True),
+                ReviewQuestion.count_in_score.is_(True),
+            )
+        )
+        total_max_weighted = 0.0
+        total_weight = 0.0
+        for q in questions_result.scalars().all():
+            if not q.score_scale or not q.score_scale.options:
+                continue
+            max_val = max(
+                (o.numeric_value for o in q.score_scale.options if o.numeric_value is not None and not o.is_unsure),
+                default=None,
+            )
+            if max_val is not None:
+                total_max_weighted += max_val * q.weight
+                total_weight += q.weight
+        if total_weight > 0:
+            max_review_score = total_max_weighted / total_weight
+
     return PaperResponse(
         id=paper.id,
         tenant_id=paper.tenant_id,
@@ -238,6 +305,9 @@ async def _build_paper_response(
         display_status=_compute_display_status(paper.status, paper.cfp.status),
         video_url=video_url,
         comments=comments_responses,
+        must_have_count=must_have_count,
+        max_review_score=max_review_score,
+        review_summaries=review_summaries,
         submitted_at=paper.submitted_at,
         created_at=paper.created_at,
         updated_at=paper.updated_at,

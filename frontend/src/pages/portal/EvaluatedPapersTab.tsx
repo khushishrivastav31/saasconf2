@@ -194,6 +194,7 @@ export default function EvaluatedPapersTab() {
       );
       return res.data;
     },
+    refetchInterval: 30000,
   });
 
   const papers = (data?.items ?? []).filter((p) => p.review_status === "submitted");

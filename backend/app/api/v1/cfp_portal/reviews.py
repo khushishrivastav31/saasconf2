@@ -112,6 +112,7 @@ async def get_review_config(
     form_settings = PortalReviewFormSettingsResponse(
         enable_speaker_feedback=form_settings_row.enable_speaker_feedback if form_settings_row else True,
         enable_internal_comment=form_settings_row.enable_internal_comment if form_settings_row else True,
+        enable_must_have=form_settings_row.enable_must_have if form_settings_row else True,
     )
 
     # Load active criteria with active questions (show_to_reviewers=true)
@@ -191,6 +192,7 @@ async def get_review_config(
             total_score=review.total_score,
             speaker_feedback=review.speaker_feedback,
             internal_comment=review.internal_comment,
+            must_have=review.must_have,
             answers=[
                 PortalReviewAnswerResponse(
                     question_id=a.question_id,
@@ -271,6 +273,7 @@ async def submit_or_save_review(
     # Update feedback fields
     review.speaker_feedback = data.speaker_feedback
     review.internal_comment = data.internal_comment
+    review.must_have = data.must_have
 
     # Delete existing answers and recreate
     # refresh ensures the answers collection is loaded (needed for newly created reviews
@@ -403,6 +406,9 @@ async def submit_or_save_review(
                 for c in snapshot_criteria
             ],
         }
+        # Flush so the review status change is visible to the count queries
+        await db.flush()
+
         # Check if all assignments for this paper now have submitted reviews
         total_assignments = (
             await db.execute(

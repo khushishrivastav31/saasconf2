@@ -11,6 +11,7 @@ import type {
   CFPTopic,
   SessionType,
 } from "../../../../types";
+import type { PaperAssignmentListResponse } from "../../../../types/review";
 import { ACCEPTED_VIDEO_FORMATS, validateVideo } from "../../../../utils/mediaValidation";
 import { DeleteIcon } from "../../../ConferenceDetail/icons";
 import { ErrorBanner } from "../../../../components/common/ErrorBanner";
@@ -224,6 +225,19 @@ export function PaperForm({
       return response.data;
     },
   });
+
+  // Fetch assignments for this paper
+  const { data: assignmentsData } = useQuery({
+    queryKey: ["paper-assignments", paper?.id],
+    queryFn: async () => {
+      const response = await api.get<PaperAssignmentListResponse>(
+        `/cfp/papers/${paper!.id}/assignments`
+      );
+      return response.data;
+    },
+    enabled: !!paper?.id,
+  });
+  const assignments = assignmentsData?.items || [];
 
   const applicants = useMemo(() => applicantsData?.items || [], [applicantsData?.items]);
   const topics = topicsData?.items || [];
@@ -612,6 +626,37 @@ export function PaperForm({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Assigned Reviewers (read-only) */}
+      {paper && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Assigned Reviewers
+            {assignments.length > 0 && (
+              <span className="text-gray-400 font-normal ml-1">
+                ({assignments.length})
+              </span>
+            )}
+          </label>
+          {assignments.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {assignments.map((a) => (
+                <span
+                  key={a.id}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700 border border-primary-200"
+                >
+                  {`${a.committee_member_first_name} ${a.committee_member_last_name}`.trim()}
+                  {a.is_anonymous && (
+                    <span className="px-1 rounded text-[9px] bg-yellow-100 text-yellow-700">anon</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">No reviewers assigned yet.</p>
+          )}
         </div>
       )}
 

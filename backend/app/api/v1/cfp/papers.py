@@ -29,7 +29,7 @@ from app.models.cfp import (
     PaperStatus,
     cfp_paper_topics,
 )
-from app.models.review import PaperReview
+from app.models.review import PaperReview, ReviewStatus
 from app.models.settings import SessionType
 from app.schemas.cfp import (
     AutoAssignRequest,
@@ -357,7 +357,34 @@ async def delete_paper_assignment(
     if not assignment:
         raise NotFoundError(f"Assignment with ID '{assignment_id}' not found")
 
+    paper_id = assignment.paper_id
     await db.delete(assignment)
+
+    # Re-check if the paper should transition to final_consideration now that
+    # an assignment has been removed (fewer assignments may already be covered
+    # by submitted reviews).
+    remaining_assignments = (
+        await db.execute(
+            select(func.count()).where(CFPPaperAssignment.paper_id == paper_id)
+        )
+    ).scalar() or 0
+    if remaining_assignments > 0:
+        submitted_reviews = (
+            await db.execute(
+                select(func.count()).where(
+                    PaperReview.paper_id == paper_id,
+                    PaperReview.status == ReviewStatus.SUBMITTED.value,
+                )
+            )
+        ).scalar() or 0
+        if submitted_reviews >= remaining_assignments:
+            paper_result = await db.execute(
+                select(CFPPaper).where(CFPPaper.id == paper_id)
+            )
+            paper = paper_result.scalar_one_or_none()
+            if paper and paper.status == PaperStatus.IN_EVALUATION.value:
+                paper.status = PaperStatus.FINAL_CONSIDERATION.value
+
     await db.commit()
     return {"message": "Assignment removed successfully"}
 
@@ -735,11 +762,17 @@ async def update_paper(
             paper.submitted_at = None
             # Delete reviews first (ReviewAnswers cascade via FK)
             await db.execute(
-                delete(PaperReview).where(PaperReview.paper_id == paper_id)
+                delete(PaperReview).where(
+                    PaperReview.paper_id == paper_id,
+                    PaperReview.tenant_id == current_user.tenant_id,
+                )
             )
             # Delete assignments
             await db.execute(
-                delete(CFPPaperAssignment).where(CFPPaperAssignment.paper_id == paper_id)
+                delete(CFPPaperAssignment).where(
+                    CFPPaperAssignment.paper_id == paper_id,
+                    CFPPaperAssignment.tenant_id == current_user.tenant_id,
+                )
             )
 
     # Update remaining fields
@@ -839,6 +872,21 @@ async def unsubmit_paper(
 
     paper.status = PaperStatus.DRAFT.value
     paper.submitted_at = None
+
+    # Delete reviews first (ReviewAnswers cascade via FK)
+    await db.execute(
+        delete(PaperReview).where(
+            PaperReview.paper_id == paper_id,
+            PaperReview.tenant_id == current_user.tenant_id,
+        )
+    )
+    # Delete assignments
+    await db.execute(
+        delete(CFPPaperAssignment).where(
+            CFPPaperAssignment.paper_id == paper_id,
+            CFPPaperAssignment.tenant_id == current_user.tenant_id,
+        )
+    )
 
     # Audit log
     audit_log = AuditLog(
@@ -961,7 +1009,7 @@ async def get_paper_reviews(
     paper_id: UUID,
     current_user: TenantAdminDep,
     db: DbSessionDep,
-) -> dict:
+):
     """Get all reviews for a paper with reviewer names (admin view)."""
     from app.models.review import PaperReview
     from app.schemas.review import AdminPaperReviewResponse, PaperReviewListResponse, ReviewAnswerResponse
@@ -1004,6 +1052,7 @@ async def get_paper_reviews(
             total_score=review.total_score,
             speaker_feedback=review.speaker_feedback,
             internal_comment=review.internal_comment,
+            must_have=review.must_have,
             answers=[
                 ReviewAnswerResponse(
                     id=a.id,

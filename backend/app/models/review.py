@@ -211,6 +211,7 @@ class PaperReview(Base):
     total_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     speaker_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     internal_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    must_have: Mapped[bool] = mapped_column(Boolean, default=False)
     config_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -306,6 +307,7 @@ class ReviewFormSettings(Base):
     )
     enable_speaker_feedback: Mapped[bool] = mapped_column(Boolean, default=True)
     enable_internal_comment: Mapped[bool] = mapped_column(Boolean, default=True)
+    enable_must_have: Mapped[bool] = mapped_column(Boolean, default=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

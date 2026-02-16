@@ -153,6 +153,7 @@ export interface ReviewFormSettings {
   conference_id: string;
   enable_speaker_feedback: boolean;
   enable_internal_comment: boolean;
+  enable_must_have: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -160,4 +161,5 @@ export interface ReviewFormSettings {
 export interface ReviewFormSettingsUpdate {
   enable_speaker_feedback?: boolean;
   enable_internal_comment?: boolean;
+  enable_must_have?: boolean;
 }

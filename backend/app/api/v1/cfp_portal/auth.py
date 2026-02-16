@@ -655,11 +655,54 @@ async def get_tenant_info(
 ) -> PortalTenantResponse:
     """Get basic tenant info for the portal login page."""
     tenant = await _resolve_tenant(db, tenant_slug)
+    # Rewrite logo_url to use the portal-accessible endpoint so the
+    # frontend can fetch it without admin auth / CORS issues.
+    portal_logo_url = None
+    if tenant.logo_url:
+        import re
+
+        portal_logo_url = re.sub(
+            r"^/admin/tenants/([^/]+)/logo",
+            rf"/portal/tenant/{tenant.id}/logo",
+            tenant.logo_url,
+        )
     return PortalTenantResponse(
         id=tenant.id,
         name=tenant.name,
         slug=tenant.slug,
-        logo_url=tenant.logo_url,
+        logo_url=portal_logo_url,
+    )
+
+
+@router.get("/portal/tenant/{tenant_id}/logo")
+async def get_tenant_logo_public(
+    tenant_id: UUID,
+    db: DbSessionDep,
+) -> bytes:
+    """Serve the tenant logo without authentication (public endpoint)."""
+    from fastapi.responses import Response
+    from app.core.file_validation import safe_content_disposition
+    from app.models.attachment import Attachment
+
+    await set_rls_context(db, is_super_admin=True)
+
+    result = await db.execute(
+        select(Attachment).where(
+            Attachment.entity_type == "tenant_logo",
+            Attachment.entity_id == tenant_id,
+        )
+    )
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        raise NotFoundError("Logo not found")
+
+    return Response(
+        content=attachment.file_data,
+        media_type=attachment.content_type,
+        headers={
+            "Content-Disposition": safe_content_disposition(attachment.filename, "inline"),
+            "Cache-Control": "public, max-age=3600",
+        },
     )
 
 

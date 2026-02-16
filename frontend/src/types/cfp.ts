@@ -294,6 +294,14 @@ export interface PaperComment {
   created_at: string;
 }
 
+export interface PaperReviewSummary {
+  reviewer_first_name: string | null;
+  reviewer_last_name: string | null;
+  total_score: number | null;
+  internal_comment: string | null;
+  must_have: boolean;
+}
+
 export interface Paper {
   id: string;
   tenant_id: string;
@@ -318,6 +326,9 @@ export interface Paper {
   display_status: PaperStatus | null;
   video_url: string | null;
   comments: PaperComment[];
+  must_have_count: number;
+  max_review_score: number | null;
+  review_summaries: PaperReviewSummary[];
   submitted_at: string | null;
   created_at: string;
   updated_at: string;

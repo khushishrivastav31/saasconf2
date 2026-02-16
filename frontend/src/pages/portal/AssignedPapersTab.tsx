@@ -209,6 +209,7 @@ export default function AssignedPapersTab() {
       );
       return res.data;
     },
+    refetchInterval: 30000,
   });
 
   const papers = (data?.items ?? []).filter((p) => p.review_status !== "submitted");
@@ -282,7 +283,7 @@ export default function AssignedPapersTab() {
           )}
           <div className="space-y-3">
             {group.papers.map((paper) => (
-              <PaperCard key={paper.id} paper={paper} onReviewSubmitted={() => queryClient.invalidateQueries({ queryKey: ["portal-assigned-papers"] })} />
+              <PaperCard key={paper.id} paper={paper} onReviewSubmitted={() => { queryClient.invalidateQueries({ queryKey: ["portal-assigned-papers"] }); queryClient.invalidateQueries({ queryKey: ["portal-pending-assignments"] }); }} />
             ))}
           </div>
         </div>

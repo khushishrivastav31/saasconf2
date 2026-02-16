@@ -157,7 +157,7 @@ function SelectedPaperCard({
           <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">
             Reviews
           </h4>
-          <ReviewsPanel paperId={paper.id} />
+          <ReviewsPanel paperId={paper.id} maxReviewScore={paper.max_review_score} />
         </div>
       )}
     </div>
@@ -204,6 +204,9 @@ export default function CFPSelectedPapers({ filter }: CFPSelectedPapersProps = {
       queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
       queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
       queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-reviews"] });
     },
     onError: (err: unknown) => {
       setMutationError(parseApiError(err, "Failed to update paper status"));

@@ -42,6 +42,7 @@ import AssignedPapersTab from "./pages/portal/AssignedPapersTab";
 import EvaluatedPapersTab from "./pages/portal/EvaluatedPapersTab";
 import InfoPage from "./pages/portal/InfoPage";
 import MessagesPage from "./pages/portal/MessagesPage";
+import NewsPage from "./pages/portal/NewsPage";
 import LandingPage from "./pages/portal/LandingPage";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 
@@ -68,7 +69,7 @@ function LegacyRegisterRedirect() {
 
 function LegacyCFPPortalRedirect() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
-  return <Navigate to={`/${tenantSlug}/portal/dashboard`} replace />;
+  return <Navigate to={`/${tenantSlug}/portal/news`} replace />;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -364,6 +365,7 @@ function App() {
           </ApplicantAuthProvider>
         }
       >
+        <Route index element={<Navigate to="news" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="papers/new" element={<SubmitPaperPage />} />
         <Route path="papers/:paperId" element={<PaperDetailPage />} />
@@ -372,6 +374,7 @@ function App() {
         <Route path="assigned-papers" element={<AssignedPapersTab />} />
         <Route path="evaluated-papers" element={<EvaluatedPapersTab />} />
         <Route path="messages" element={<MessagesPage />} />
+        <Route path="news" element={<NewsPage />} />
         <Route path="info/:conferenceId" element={<InfoPage />} />
       </Route>
 

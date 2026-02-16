@@ -24,6 +24,7 @@ function DashboardPage() {
         await portalApi.get<PortalPaperListResponse>("/portal/papers");
       return res.data;
     },
+    refetchInterval: 30000,
   });
 
   const papers = useMemo(() => data?.items || [], [data?.items]);
