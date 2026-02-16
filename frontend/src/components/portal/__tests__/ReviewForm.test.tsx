@@ -131,6 +131,7 @@ const mockReviewConfig: PortalReviewConfig = {
   form_settings: {
     enable_speaker_feedback: true,
     enable_internal_comment: true,
+    enable_must_have: true,
   },
 };
 
@@ -265,8 +266,8 @@ describe("ReviewForm", () => {
       const config = {
         ...mockReviewConfig,
         form_settings: {
+          ...mockReviewConfig.form_settings,
           enable_speaker_feedback: false,
-          enable_internal_comment: true,
         },
       };
       mockPortalApi.get.mockResolvedValueOnce({ data: config });
@@ -284,7 +285,7 @@ describe("ReviewForm", () => {
       const config = {
         ...mockReviewConfig,
         form_settings: {
-          enable_speaker_feedback: true,
+          ...mockReviewConfig.form_settings,
           enable_internal_comment: false,
         },
       };
@@ -571,6 +572,7 @@ describe("ReviewForm", () => {
           total_score: 3.5,
           speaker_feedback: "Great work!",
           internal_comment: "Accept this paper",
+          must_have: false,
           answers: [
             { question_id: "q-1", selected_option_id: "opt-q-1-3", comment: "Good depth" },
             { question_id: "q-2", selected_option_id: "opt-q-2-4", comment: null },
@@ -598,6 +600,7 @@ describe("ReviewForm", () => {
           total_score: 3.5,
           speaker_feedback: null,
           internal_comment: null,
+          must_have: false,
           answers: [],
           submitted_at: "2024-01-15T10:30:00Z",
         },
@@ -624,6 +627,7 @@ describe("ReviewForm", () => {
           total_score: 3.5,
           speaker_feedback: "Great speaker feedback",
           internal_comment: "Internal notes here",
+          must_have: false,
           answers: [
             { question_id: "q-1", selected_option_id: "opt-q-1-3", comment: "Good technical depth" },
           ],
@@ -655,6 +659,7 @@ describe("ReviewForm", () => {
           total_score: null,
           speaker_feedback: "Draft feedback",
           internal_comment: "Draft internal comment",
+          must_have: false,
           answers: [
             { question_id: "q-1", selected_option_id: "opt-q-1-2", comment: "Draft comment" },
           ],
@@ -673,6 +678,158 @@ describe("ReviewForm", () => {
       // Check that the rich text editor for speaker feedback has the value
       const richTextEditors = screen.getAllByTestId("rich-text-editor");
       expect(richTextEditors[0]).toHaveValue("Draft feedback");
+    });
+  });
+
+  describe("must-have feature", () => {
+    it("renders must-have checkbox when enabled", async () => {
+      mockPortalApi.get.mockResolvedValueOnce({ data: mockReviewConfig });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Review")).toBeInTheDocument();
+      });
+
+      const mustHaveCheckbox = screen.getByRole("checkbox", { name: /must have in program/i });
+      expect(mustHaveCheckbox).toBeInTheDocument();
+      expect(mustHaveCheckbox).not.toBeChecked();
+    });
+
+    it("hides must-have checkbox when disabled", async () => {
+      const config = {
+        ...mockReviewConfig,
+        form_settings: {
+          ...mockReviewConfig.form_settings,
+          enable_must_have: false,
+        },
+      };
+      mockPortalApi.get.mockResolvedValueOnce({ data: config });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Review")).toBeInTheDocument();
+      });
+
+      expect(screen.queryByRole("checkbox", { name: /must have in program/i })).not.toBeInTheDocument();
+    });
+
+    it("includes must_have in submission payload", async () => {
+      const user = userEvent.setup();
+      mockPortalApi.get.mockResolvedValueOnce({ data: mockReviewConfig });
+      mockPortalApi.post.mockResolvedValueOnce({});
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Review")).toBeInTheDocument();
+      });
+
+      // Check the must-have checkbox
+      const mustHaveCheckbox = screen.getByRole("checkbox", { name: /must have in program/i });
+      await user.click(mustHaveCheckbox);
+      expect(mustHaveCheckbox).toBeChecked();
+
+      // Submit the review
+      const submitButton = screen.getByRole("button", { name: "Submit Review" });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockPortalApi.post).toHaveBeenCalledWith(
+          "/portal/assignments/assign-123/review?submit=true",
+          expect.objectContaining({
+            must_have: true,
+          })
+        );
+      });
+    });
+
+    it("shows must-have badge for submitted reviews", async () => {
+      const configWithMustHaveReview: PortalReviewConfig = {
+        ...mockReviewConfig,
+        existing_review: {
+          id: "review-123",
+          status: "submitted",
+          total_score: 4.0,
+          speaker_feedback: null,
+          internal_comment: null,
+          must_have: true,
+          answers: [
+            { question_id: "q-1", selected_option_id: "opt-q-1-4", comment: null },
+            { question_id: "q-2", selected_option_id: "opt-q-2-4", comment: null },
+            { question_id: "q-3", selected_option_id: "opt-q-3-4", comment: null },
+          ],
+          submitted_at: "2024-01-15T10:30:00Z",
+        },
+      };
+
+      mockPortalApi.get.mockResolvedValueOnce({ data: configWithMustHaveReview });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Submitted")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Must have in program")).toBeInTheDocument();
+    });
+
+    it("does not show must-have badge when must_have is false on submitted review", async () => {
+      const configWithoutMustHave: PortalReviewConfig = {
+        ...mockReviewConfig,
+        existing_review: {
+          id: "review-123",
+          status: "submitted",
+          total_score: 3.5,
+          speaker_feedback: null,
+          internal_comment: null,
+          must_have: false,
+          answers: [
+            { question_id: "q-1", selected_option_id: "opt-q-1-3", comment: null },
+            { question_id: "q-2", selected_option_id: "opt-q-2-3", comment: null },
+            { question_id: "q-3", selected_option_id: "opt-q-3-3", comment: null },
+          ],
+          submitted_at: "2024-01-15T10:30:00Z",
+        },
+      };
+
+      mockPortalApi.get.mockResolvedValueOnce({ data: configWithoutMustHave });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Submitted")).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText("Must have in program")).not.toBeInTheDocument();
+    });
+
+    it("pre-fills must-have checkbox from existing draft review", async () => {
+      const configWithDraftMustHave: PortalReviewConfig = {
+        ...mockReviewConfig,
+        existing_review: {
+          id: "review-123",
+          status: "draft",
+          total_score: null,
+          speaker_feedback: null,
+          internal_comment: null,
+          must_have: true,
+          answers: [],
+          submitted_at: null,
+        },
+      };
+
+      mockPortalApi.get.mockResolvedValueOnce({ data: configWithDraftMustHave });
+
+      renderWithProviders(<ReviewForm assignmentId="assign-123" />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Save Draft" })).toBeInTheDocument();
+      });
+
+      const mustHaveCheckbox = screen.getByRole("checkbox", { name: /must have in program/i });
+      expect(mustHaveCheckbox).toBeChecked();
     });
   });
 
