@@ -57,6 +57,7 @@ RLS_BYPASS = text("SELECT set_config('app.is_super_admin', 'true', true)")
 
 async def _create_tables() -> None:
     async with test_engine.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS unaccent"))
         await conn.run_sync(Base.metadata.create_all)
 
 

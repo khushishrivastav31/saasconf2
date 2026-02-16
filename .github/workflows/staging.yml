@@ -259,6 +259,7 @@ jobs:
           E2E_TENANT_SLUG: ${{ secrets.E2E_TENANT_SLUG }}
           E2E_CONFERENCE_ID: ${{ secrets.E2E_CONFERENCE_ID }}
           E2E_CONFERENCE_NAME: ${{ secrets.E2E_CONFERENCE_NAME }}
+          E2E_API_URL: https://api.staging.sonrisa.ventures
           E2E_PORTAL_PATH: /demo/portal
         run: npx playwright test
 
