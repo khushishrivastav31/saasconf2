@@ -327,4 +327,5 @@ class ReviewFormSettings(Base):
 
 
 # Forward reference imports for type hints in relationships
-from app.models.cfp import CFPCommitteeMember, CFPPaper, CFPPaperAssignment  # noqa: E402
+from app.models.cfp import CFPCommitteeMember  # noqa: E402
+from app.models.cfp_papers import CFPPaper, CFPPaperAssignment  # noqa: E402

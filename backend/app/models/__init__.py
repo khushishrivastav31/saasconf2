@@ -5,7 +5,25 @@ from app.models.applicant_token import ApplicantEmailVerification, ApplicantRefr
 from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
-from app.models.cfp import CallForPapers, CFPApplicant, Submission
+from app.models.booking import (
+    BookingOption,
+    BookingPackage,
+    BookingPackageOption,
+    BookingPeriod,
+    DiscountCode,
+    DiscountCodeOption,
+)
+from app.models.cfp import CallForPapers, CFPCommitteeMember, CFPTopic, Submission
+from app.models.cfp_applicants import CFPApplicant
+from app.models.cfp_papers import (
+    CFPPaper,
+    CFPPaperAssignment,
+    CFPPaperComment,
+    CFPPaperCospeaker,
+    CospeakerInvitationStatus,
+    PaperLevel,
+    PaperStatus,
+)
 from app.models.conference import Conference
 from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
 from app.models.invoice import Invoice
@@ -34,13 +52,12 @@ from app.models.review import (
 )
 from app.models.service_provider import ServiceProvider
 from app.models.settings import (
-    BookingOption,
-    BookingPeriod,
-    DiscountCode,
-    DiscountCodeOption,
+    CFPCommitteeRole,
+    ConferenceCurrency,
     EmailTemplate,
     PronounOption,
     SessionType,
+    SponsorPackage,
     TenantLocationType,
     VolunteerRole,
 )
@@ -59,14 +76,25 @@ __all__ = [
     "Attachment",
     "AuditLog",
     "BookingOption",
+    "BookingPackage",
+    "BookingPackageOption",
     "BookingPeriod",
     "CFPApplicant",
+    "CFPCommitteeMember",
+    "CFPCommitteeRole",
+    "CFPPaper",
+    "CFPPaperAssignment",
+    "CFPPaperComment",
+    "CFPPaperCospeaker",
+    "CFPTopic",
     "CallForPapers",
     "Conference",
     "ConferenceCFP",
+    "ConferenceCurrency",
     "ConferenceLocation",
     "ConferencePaperFormSchema",
     "ConferenceVolunteer",
+    "CospeakerInvitationStatus",
     "DiscountCode",
     "DiscountCodeOption",
     "EmailTemplate",
@@ -76,18 +104,20 @@ __all__ = [
     "MessageParticipant",
     "MessageTemplate",
     "MessageThread",
-    "RecipientList",
-    "RecipientListMember",
     "Module",
     "NewsArticle",
     "PaperFormField",
+    "PaperLevel",
     "PaperReview",
+    "PaperStatus",
     "PlatformCurrency",
     "ProgramDay",
     "ProgramSession",
     "ProgramTimeSlot",
     "ProgramTrack",
     "PronounOption",
+    "RecipientList",
+    "RecipientListMember",
     "RefreshToken",
     "ReviewAnswer",
     "ReviewCriterion",
@@ -98,6 +128,7 @@ __all__ = [
     "ServiceProvider",
     "SessionType",
     "Sponsor",
+    "SponsorPackage",
     "Submission",
     "Tenant",
     "TenantLocationType",

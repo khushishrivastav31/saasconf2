@@ -22,10 +22,8 @@ import PackagesSection from "./PackagesSection";
 import DiscountCodesSection from "./DiscountCodesSection";
 import AddOptionModal from "./AddOptionModal";
 import AddPeriodModal from "./AddPeriodModal";
-import AddPackageModal from "./AddPackageModal";
-import EditPackageModal from "./EditPackageModal";
-import AddDiscountModal from "./AddDiscountModal";
-import EditDiscountModal from "./EditDiscountModal";
+import PackageModal from "./PackageModal";
+import DiscountModal from "./DiscountModal";
 
 interface BookingTabProps {
   conferenceId: string;
@@ -379,35 +377,21 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
         existingCount={options.length}
       />
 
-      <AddPackageModal
-        open={showAddPackage}
-        onClose={() => setShowAddPackage(false)}
-        onSubmit={(data) => createPackageMutation.mutate(data)}
+      <PackageModal
+        open={showAddPackage || !!editingPackage}
+        onClose={() => { setShowAddPackage(false); setEditingPackage(null); }}
+        onAdd={(data) => createPackageMutation.mutate(data)}
+        onEdit={(id, data) => updatePackageMutation.mutate({ id, data })}
+        pkg={editingPackage}
         bookingOptions={options}
         existingCount={packages.length}
       />
 
-      <EditPackageModal
-        open={!!editingPackage}
-        onClose={() => setEditingPackage(null)}
-        onSubmit={(id, data) => updatePackageMutation.mutate({ id, data })}
-        package_={editingPackage}
-        bookingOptions={options}
-      />
-
-      <AddDiscountModal
-        open={showAddDiscount}
-        onClose={() => setShowAddDiscount(false)}
-        onSubmit={(data) => createDiscountMutation.mutate(data)}
-        bookingOptions={options}
-        currencyOptions={currencyOptions}
-        conferenceCurrency={conferenceCurrency}
-      />
-
-      <EditDiscountModal
-        open={!!editingDiscount}
-        onClose={() => setEditingDiscount(null)}
-        onSubmit={(id, data) => updateDiscountMutation.mutate({ id, data })}
+      <DiscountModal
+        open={showAddDiscount || !!editingDiscount}
+        onClose={() => { setShowAddDiscount(false); setEditingDiscount(null); }}
+        onAdd={(data) => createDiscountMutation.mutate(data)}
+        onEdit={(id, data) => updateDiscountMutation.mutate({ id, data })}
         discount={editingDiscount}
         bookingOptions={options}
         currencyOptions={currencyOptions}
