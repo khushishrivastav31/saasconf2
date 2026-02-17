@@ -101,14 +101,15 @@ class TestLogEmail:
         assert "Subject: Test Subject" in caplog.text
         assert "Test body content" in caplog.text
 
-    def test_log_email_prints_to_console(self, capsys):
-        """Prints email details to stdout."""
-        _log_email("user@test.com", "My Subject", "Email body here")
+    def test_log_email_prints_to_console(self, caplog):
+        """Logs email details via logger."""
+        import logging
 
-        captured = capsys.readouterr()
-        assert "EMAIL (development mode)" in captured.out
-        assert "To: user@test.com" in captured.out
-        assert "Subject: My Subject" in captured.out
+        with caplog.at_level(logging.INFO):
+            _log_email("user@test.com", "My Subject", "Email body here")
+
+        assert "To: user@test.com" in caplog.text
+        assert "Subject: My Subject" in caplog.text
 
 
 # ---------------------------------------------------------------------------
@@ -120,21 +121,23 @@ class TestSendEmail:
     """Tests for the send_email function."""
 
     @pytest.mark.asyncio
-    async def test_send_email_falls_back_to_logging_when_no_resend(self, capsys):
+    async def test_send_email_falls_back_to_logging_when_no_resend(self, caplog):
         """Falls back to console logging when Resend is not configured."""
+        import logging
+
         email_module._resend_client = None
 
-        with patch("app.core.email._get_resend", return_value=None):
-            result = await send_email(
-                to="test@example.com",
-                subject="Test Email",
-                html="<p>Hello</p>",
-                text="Hello",
-            )
+        with caplog.at_level(logging.INFO):
+            with patch("app.core.email._get_resend", return_value=None):
+                result = await send_email(
+                    to="test@example.com",
+                    subject="Test Email",
+                    html="<p>Hello</p>",
+                    text="Hello",
+                )
 
         assert result is True
-        captured = capsys.readouterr()
-        assert "To: test@example.com" in captured.out
+        assert "To: test@example.com" in caplog.text
 
     @pytest.mark.asyncio
     async def test_send_email_uses_text_when_no_html_fallback(self, capsys):

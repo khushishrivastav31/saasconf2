@@ -16,7 +16,7 @@ import type {
 } from '../../types/portal';
 import { parseApiError } from '../../utils/apiError';
 
-const BUILTIN_FIELD_DEFS = [
+const BUILTIN_FIELD_DEFS: { key: string; label: string; alwaysRequired?: boolean }[] = [
   { key: 'title', label: 'Title', alwaysRequired: true },
   { key: 'abstract_short', label: 'Short Abstract' },
   { key: 'abstract_long', label: 'Detailed Abstract' },
@@ -25,7 +25,7 @@ const BUILTIN_FIELD_DEFS = [
   { key: 'importance', label: 'Why is this important?' },
   { key: 'session_type', label: 'Session Type' },
   { key: 'topics', label: 'Topics' },
-] as const;
+];
 
 // --- Dynamic Field Renderer ---
 

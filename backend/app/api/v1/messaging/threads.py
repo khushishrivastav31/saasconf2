@@ -869,7 +869,7 @@ async def export_thread(
     thread_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
-    format: str = Query("text", regex="^(html|text)$"),
+    format: str = Query("text", pattern="^(html|text)$"),
 ) -> Response:
     """Export a thread as HTML or plain text file."""
     tenant_id = current_user.tenant_id
