@@ -130,6 +130,9 @@ class CFPPaper(Base):
     # Custom field answers (from form builder)
     custom_field_answers: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
+    # Separately bookable (inherited from session type)
+    separately_bookable: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
     # Status
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default=PaperStatus.DRAFT.value

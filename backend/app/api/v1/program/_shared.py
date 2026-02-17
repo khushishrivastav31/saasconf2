@@ -85,6 +85,7 @@ def _build_session_response(
         speaker_name=speaker_name,
         notes=session.notes,
         allow_in_session_free=session.allow_in_session_free,
+        separately_bookable=session.separately_bookable,
         settings=session.settings or {},
         created_at=session.created_at,
         updated_at=session.updated_at,

@@ -85,6 +85,11 @@ class BookingOption(Base):
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    conference_day_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("program_days.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -99,6 +104,7 @@ class BookingOption(Base):
         Index("idx_booking_options_tenant", "tenant_id"),
         Index("idx_booking_options_conference", "conference_id"),
         Index("idx_booking_options_name", "tenant_id", "conference_id", "name", unique=True),
+        Index("idx_booking_options_day", "conference_day_id"),
     )
 
     def __repr__(self) -> str:

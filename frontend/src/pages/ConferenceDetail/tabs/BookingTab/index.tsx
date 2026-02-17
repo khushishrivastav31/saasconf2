@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../../config/api";
+import { useState, useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../../config/api';
 import type {
   BookingPeriod,
   BookingPeriodCreate,
@@ -12,18 +12,19 @@ import type {
   PaginatedResponse,
   DiscountCode,
   DiscountCodeCreate,
-} from "../../../../types";
-import { parseApiError } from "../../../../utils/apiError";
-import ConfirmDialog from "../../../../components/ConfirmDialog";
-import { ErrorBanner } from "../../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
-import PricingMatrixSection from "./PricingMatrixSection";
-import PackagesSection from "./PackagesSection";
-import DiscountCodesSection from "./DiscountCodesSection";
-import AddOptionModal from "./AddOptionModal";
-import AddPeriodModal from "./AddPeriodModal";
-import PackageModal from "./PackageModal";
-import DiscountModal from "./DiscountModal";
+} from '../../../../types';
+import { parseApiError } from '../../../../utils/apiError';
+import ConfirmDialog from '../../../../components/ConfirmDialog';
+import { ErrorBanner } from '../../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
+import { useProgramDays } from '../ProgramDesignTab/hooks/useProgramGrid';
+import PricingMatrixSection from './PricingMatrixSection';
+import PackagesSection from './PackagesSection';
+import DiscountCodesSection from './DiscountCodesSection';
+import AddOptionModal from './AddOptionModal';
+import AddPeriodModal from './AddPeriodModal';
+import PackageModal from './PackageModal';
+import DiscountModal from './DiscountModal';
 
 interface BookingTabProps {
   conferenceId: string;
@@ -44,20 +45,24 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
 
   // Inline editing state (kept for table row editing)
   const [editingOptionId, setEditingOptionId] = useState<string | null>(null);
-  const [editingOptionName, setEditingOptionName] = useState("");
+  const [editingOptionName, setEditingOptionName] = useState('');
   const [editingPeriodId, setEditingPeriodId] = useState<string | null>(null);
-  const [editingPeriodName, setEditingPeriodName] = useState("");
-  const [editingPeriodStartDate, setEditingPeriodStartDate] = useState("");
-  const [editingPeriodEndDate, setEditingPeriodEndDate] = useState("");
-  const [editingPeriodCurrency, setEditingPeriodCurrency] = useState("");
+  const [editingPeriodName, setEditingPeriodName] = useState('');
+  const [editingPeriodStartDate, setEditingPeriodStartDate] = useState('');
+  const [editingPeriodEndDate, setEditingPeriodEndDate] = useState('');
+  const [editingPeriodCurrency, setEditingPeriodCurrency] = useState('');
 
   // Delete confirmation and errors
-  const [deleteTarget, setDeleteTarget] = useState<{ type: "period" | "option" | "package" | "discount"; id: string; name: string } | null>(null);
-  const [apiError, setApiError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: 'period' | 'option' | 'package' | 'discount';
+    id: string;
+    name: string;
+  } | null>(null);
+  const [apiError, setApiError] = useState('');
 
   // Fetch booking matrix
   const { data: matrix, isLoading } = useQuery({
-    queryKey: ["booking-matrix", conferenceId],
+    queryKey: ['booking-matrix', conferenceId],
     queryFn: async () => {
       const response = await api.get<BookingMatrix>(
         `/conferences/${conferenceId}/settings/booking-matrix`
@@ -66,33 +71,61 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     },
   });
 
+  // Fetch conference days for linking to booking options
+  const { data: daysData } = useProgramDays({ conferenceId });
+  const days = daysData?.items || [];
+
+  // Auto-create booking options from program days (once per mount)
+  const hasSynced = useRef(false);
+  useEffect(() => {
+    if (hasSynced.current || !daysData || !matrix) return;
+    hasSynced.current = true;
+    const daysItems = daysData.items || [];
+    if (daysItems.length === 0) return;
+    // Check if any days are unlinked
+    const linkedDayIds = new Set(
+      (matrix.options || []).filter((o) => o.conference_day_id).map((o) => o.conference_day_id!)
+    );
+    const hasUnlinkedDays = daysItems.some((d) => !linkedDayIds.has(d.id));
+    if (hasUnlinkedDays) {
+      api
+        .post(`/conferences/${conferenceId}/settings/booking-options/sync-from-days`)
+        .then((res) => {
+          if (res.data.created > 0) {
+            queryClient.invalidateQueries({ queryKey: ['booking-matrix', conferenceId] });
+          }
+        })
+        .catch((err) => setApiError(parseApiError(err)));
+    }
+  }, [daysData, matrix, conferenceId, queryClient]);
+
   // Fetch platform currencies for currency selector
   const { data: currencyOptions } = useQuery({
-    queryKey: ["platform-currencies"],
+    queryKey: ['platform-currencies'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
-        "/admin/settings/currencies",
-        { params: { page_size: 100, is_active: true } },
+        '/admin/settings/currencies',
+        { params: { page_size: 100, is_active: true } }
       );
       return response.data.items;
     },
   });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["booking-matrix", conferenceId] });
+    queryClient.invalidateQueries({ queryKey: ['booking-matrix', conferenceId] });
   };
 
   const invalidateDiscounts = () => {
-    queryClient.invalidateQueries({ queryKey: ["discount-codes", conferenceId] });
+    queryClient.invalidateQueries({ queryKey: ['discount-codes', conferenceId] });
   };
 
   // Fetch discount codes
   const { data: discountCodes } = useQuery({
-    queryKey: ["discount-codes", conferenceId],
+    queryKey: ['discount-codes', conferenceId],
     queryFn: async () => {
       const response = await api.get<{ items: DiscountCode[]; total: number }>(
         `/conferences/${conferenceId}/settings/discount-codes`,
-        { params: { conference_id: conferenceId } },
+        { params: { conference_id: conferenceId } }
       );
       return response.data.items;
     },
@@ -106,7 +139,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidate();
       setShowAddPeriod(false);
-      setApiError("");
+      setApiError('');
     },
     onError: (error) => setApiError(parseApiError(error)),
   });
@@ -118,7 +151,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidate();
       setEditingPeriodId(null);
-      setApiError("");
+      setApiError('');
     },
     onError: (error: unknown) => setApiError(parseApiError(error)),
   });
@@ -130,7 +163,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidate();
       setDeleteTarget(null);
-      setApiError("");
+      setApiError('');
     },
     onError: (error) => setApiError(parseApiError(error)),
   });
@@ -143,7 +176,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidate();
       setShowAddOption(false);
-      setApiError("");
+      setApiError('');
     },
     onError: (error) => setApiError(parseApiError(error)),
   });
@@ -155,7 +188,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidate();
       setDeleteTarget(null);
-      setApiError("");
+      setApiError('');
     },
     onError: (error) => setApiError(parseApiError(error)),
   });
@@ -166,8 +199,10 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     },
     onSuccess: () => {
       invalidate();
+      // Option name syncs to program day name on the backend, so refresh program days too
+      queryClient.invalidateQueries({ queryKey: ['program-days', conferenceId] });
       setEditingOptionId(null);
-      setApiError("");
+      setApiError('');
     },
     onError: (error: unknown) => setApiError(parseApiError(error)),
   });
@@ -180,7 +215,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidateDiscounts();
       setShowAddDiscount(false);
-      setApiError("");
+      setApiError('');
     },
     onError: (error) => setApiError(parseApiError(error)),
   });
@@ -192,7 +227,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidateDiscounts();
       setEditingDiscount(null);
-      setApiError("");
+      setApiError('');
     },
     onError: (error: unknown) => setApiError(parseApiError(error)),
   });
@@ -204,7 +239,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidateDiscounts();
       setDeleteTarget(null);
-      setApiError("");
+      setApiError('');
     },
     onError: (error) => setApiError(parseApiError(error)),
   });
@@ -217,7 +252,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidate();
       setShowAddPackage(false);
-      setApiError("");
+      setApiError('');
     },
     onError: (error) => setApiError(parseApiError(error)),
   });
@@ -229,7 +264,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidate();
       setEditingPackage(null);
-      setApiError("");
+      setApiError('');
     },
     onError: (error: unknown) => setApiError(parseApiError(error)),
   });
@@ -241,7 +276,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onSuccess: () => {
       invalidate();
       setDeleteTarget(null);
-      setApiError("");
+      setApiError('');
     },
     onError: (error) => setApiError(parseApiError(error)),
   });
@@ -250,7 +285,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
   const handlePriceChange = (period: BookingPeriod, packageId: string, value: string) => {
     const numValue = parseFloat(value);
     const updatedPrices = { ...(period.prices || {}) };
-    if (value === "" || isNaN(numValue)) {
+    if (value === '' || isNaN(numValue)) {
       delete updatedPrices[packageId];
     } else {
       updatedPrices[packageId] = numValue;
@@ -266,9 +301,12 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     const updates: Record<string, unknown> = {};
     const trimmedName = editingPeriodName.trim();
     if (trimmedName && trimmedName !== period.name) updates.name = trimmedName;
-    if (editingPeriodStartDate && editingPeriodStartDate !== period.start_date) updates.start_date = editingPeriodStartDate;
-    if (editingPeriodEndDate && editingPeriodEndDate !== period.end_date) updates.end_date = editingPeriodEndDate;
-    if (editingPeriodCurrency !== (period.currency || "")) updates.currency = editingPeriodCurrency || null;
+    if (editingPeriodStartDate && editingPeriodStartDate !== period.start_date)
+      updates.start_date = editingPeriodStartDate;
+    if (editingPeriodEndDate && editingPeriodEndDate !== period.end_date)
+      updates.end_date = editingPeriodEndDate;
+    if (editingPeriodCurrency !== (period.currency || ''))
+      updates.currency = editingPeriodCurrency || null;
 
     if (Object.keys(updates).length > 0) {
       updatePeriodMutation.mutate({ id: period.id, data: updates });
@@ -280,13 +318,13 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
   // --- Handle delete confirmation ---
   const handleConfirmDelete = () => {
     if (!deleteTarget) return;
-    if (deleteTarget.type === "period") {
+    if (deleteTarget.type === 'period') {
       deletePeriodMutation.mutate(deleteTarget.id);
-    } else if (deleteTarget.type === "option") {
+    } else if (deleteTarget.type === 'option') {
       deleteOptionMutation.mutate(deleteTarget.id);
-    } else if (deleteTarget.type === "package") {
+    } else if (deleteTarget.type === 'package') {
       deletePackageMutation.mutate(deleteTarget.id);
-    } else if (deleteTarget.type === "discount") {
+    } else if (deleteTarget.type === 'discount') {
       deleteDiscountMutation.mutate(deleteTarget.id);
     }
   };
@@ -304,7 +342,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     setEditingPeriodName(period.name);
     setEditingPeriodStartDate(period.start_date);
     setEditingPeriodEndDate(period.end_date);
-    setEditingPeriodCurrency(period.currency || "");
+    setEditingPeriodCurrency(period.currency || '');
   };
 
   return (
@@ -315,6 +353,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
         isAdmin={isAdmin}
         periods={periods}
         options={options}
+        days={days}
         currencyOptions={currencyOptions}
         conferenceCurrency={conferenceCurrency}
         onAddPeriod={() => setShowAddPeriod(true)}
@@ -375,11 +414,16 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
         onClose={() => setShowAddOption(false)}
         onSubmit={(data) => createOptionMutation.mutate(data)}
         existingCount={options.length}
+        days={days}
+        options={options}
       />
 
       <PackageModal
         open={showAddPackage || !!editingPackage}
-        onClose={() => { setShowAddPackage(false); setEditingPackage(null); }}
+        onClose={() => {
+          setShowAddPackage(false);
+          setEditingPackage(null);
+        }}
         onAdd={(data) => createPackageMutation.mutate(data)}
         onEdit={(id, data) => updatePackageMutation.mutate({ id, data })}
         pkg={editingPackage}
@@ -389,7 +433,10 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
 
       <DiscountModal
         open={showAddDiscount || !!editingDiscount}
-        onClose={() => { setShowAddDiscount(false); setEditingDiscount(null); }}
+        onClose={() => {
+          setShowAddDiscount(false);
+          setEditingDiscount(null);
+        }}
         onAdd={(data) => createDiscountMutation.mutate(data)}
         onEdit={(id, data) => updateDiscountMutation.mutate({ id, data })}
         discount={editingDiscount}
@@ -401,7 +448,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         open={!!deleteTarget}
-        title={`Delete ${deleteTarget?.type === "period" ? "Period" : deleteTarget?.type === "option" ? "Option" : deleteTarget?.type === "package" ? "Package" : "Discount Code"}`}
+        title={`Delete ${deleteTarget?.type === 'period' ? 'Period' : deleteTarget?.type === 'option' ? 'Option' : deleteTarget?.type === 'package' ? 'Package' : 'Discount Code'}`}
         message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={handleConfirmDelete}

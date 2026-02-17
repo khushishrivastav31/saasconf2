@@ -49,6 +49,16 @@ async def seed_default_modules(session: AsyncSession) -> None:
             "description": "Create and manage conferences, including basic settings and branding.",
         },
         {
+            "code": "news",
+            "name": "News & Newsletters",
+            "description": "Publish news articles and newsletters to conference portal users.",
+        },
+        {
+            "code": "registration",
+            "name": "Registration",
+            "description": "Manage conference registration, tickets, and attendee check-in.",
+        },
+        {
             "code": "locations",
             "name": "Location Management",
             "description": "Manage venues, rooms, booths, and virtual locations for your conferences.",

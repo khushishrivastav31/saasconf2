@@ -97,6 +97,7 @@ export interface ProgramSession {
   session_type_name: string | null;
   is_general_event: boolean;
   allow_in_session_free: boolean; // Override to allow in session-free slots
+  separately_bookable: boolean;
   color: string | null;
   paper_id: string | null;
   paper_title: string | null;

@@ -345,8 +345,9 @@ async def create_session(
         if not track_result.scalar_one_or_none():
             raise NotFoundError("Track not found or not in this conference")
 
-    # Validate session type if provided
+    # Validate session type if provided and inherit separately_bookable
     session_type_name: str | None = None
+    inherit_bookable: bool = False
     if session_data.session_type_id:
         type_result = await db.execute(
             select(SessionType).where(
@@ -358,6 +359,7 @@ async def create_session(
         if not session_type:
             raise NotFoundError("Session type not found or not in this conference")
         session_type_name = session_type.name
+        inherit_bookable = session_type.separately_bookable
 
     session = ProgramSession(
         tenant_id=current_user.tenant_id,
@@ -369,6 +371,7 @@ async def create_session(
         title=session_data.title,
         description=session_data.description,
         session_type_id=session_data.session_type_id,
+        separately_bookable=inherit_bookable,
         is_general_event=session_data.is_general_event,
         color=session_data.color,
         paper_id=session_data.paper_id,
@@ -477,6 +480,18 @@ async def update_session(
         session.description = session_data.description
     if session_data.session_type_id is not None:
         session.session_type_id = session_data.session_type_id
+        # Sync separately_bookable from the new session type
+        if session_data.session_type_id:
+            st_result = await db.execute(
+                select(SessionType.separately_bookable).where(
+                    SessionType.id == session_data.session_type_id,
+                )
+            )
+            st_bookable = st_result.scalar_one_or_none()
+            if st_bookable is not None:
+                session.separately_bookable = st_bookable
+        else:
+            session.separately_bookable = False
     if session_data.is_general_event is not None:
         session.is_general_event = session_data.is_general_event
     if session_data.color is not None:
@@ -493,6 +508,15 @@ async def update_session(
                 session.title = paper.title
                 if paper.session_type_id:
                     session.session_type_id = paper.session_type_id
+                    # Sync separately_bookable from paper's session type
+                    paper_st_result = await db.execute(
+                        select(SessionType.separately_bookable).where(
+                            SessionType.id == paper.session_type_id,
+                        )
+                    )
+                    paper_st_bookable = paper_st_result.scalar_one_or_none()
+                    if paper_st_bookable is not None:
+                        session.separately_bookable = paper_st_bookable
         else:
             # Unassign: revert title to session type name
             if session.session_type_id:

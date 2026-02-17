@@ -1,7 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
-import type { ProgramSession, ProgramSessionUpdate, ProgramTimeSlot, SessionType } from "../../../../types";
-import Modal from "../../../../components/Modal";
-import ConfirmDialog from "../../../../components/ConfirmDialog";
+import { useState, useEffect, useMemo } from 'react';
+import type {
+  ProgramSession,
+  ProgramSessionUpdate,
+  ProgramTimeSlot,
+  SessionType,
+} from '../../../../types';
+import Modal from '../../../../components/Modal';
+import ConfirmDialog from '../../../../components/ConfirmDialog';
 
 interface SessionModalProps {
   open: boolean;
@@ -17,8 +22,16 @@ interface SessionModalProps {
 }
 
 const PRESET_COLORS = [
-  "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6",
-  "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1",
+  '#3B82F6',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#EC4899',
+  '#06B6D4',
+  '#84CC16',
+  '#F97316',
+  '#6366F1',
 ];
 
 export default function SessionModal({
@@ -33,29 +46,29 @@ export default function SessionModal({
   onDelete,
   isAdmin,
 }: SessionModalProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [sessionTypeId, setSessionTypeId] = useState<string>("");
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [sessionTypeId, setSessionTypeId] = useState<string>('');
   const [slotSpan, setSlotSpan] = useState(1);
   const [trackSpan, setTrackSpan] = useState(1);
   const [isGeneralEvent, setIsGeneralEvent] = useState(false);
   const [allowInSessionFree, setAllowInSessionFree] = useState(false);
   const [color, setColor] = useState(PRESET_COLORS[0]);
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showUnmergeConfirm, setShowUnmergeConfirm] = useState(false);
 
   useEffect(() => {
     if (session) {
       setTitle(session.title);
-      setDescription(session.description || "");
-      setSessionTypeId(session.session_type_id || "");
+      setDescription(session.description || '');
+      setSessionTypeId(session.session_type_id || '');
       setSlotSpan(session.slot_span);
       setTrackSpan(session.track_span);
       setIsGeneralEvent(session.is_general_event);
       setAllowInSessionFree(session.allow_in_session_free);
       setColor(session.color || PRESET_COLORS[0]);
-      setNotes(session.notes || "");
+      setNotes(session.notes || '');
     }
   }, [session]);
 
@@ -69,15 +82,16 @@ export default function SessionModal({
     let totalMinutes = 0;
     for (let i = startIdx; i < startIdx + slotSpan && i < sortedSlots.length; i++) {
       const slot = sortedSlots[i];
-      const [sh, sm] = slot.start_time.split(":").map(Number);
-      const [eh, em] = slot.end_time.split(":").map(Number);
-      totalMinutes += (eh * 60 + em) - (sh * 60 + sm);
+      const [sh, sm] = slot.start_time.split(':').map(Number);
+      const [eh, em] = slot.end_time.split(':').map(Number);
+      totalMinutes += eh * 60 + em - (sh * 60 + sm);
     }
     return totalMinutes;
   }, [session, slots, slotSpan]);
 
   // Check if selected session type duration exceeds the slot duration
-  const selectedSessionType = sessionTypes.find((st) => st.id === sessionTypeId);
+  const safeSessionTypes = Array.isArray(sessionTypes) ? sessionTypes : [];
+  const selectedSessionType = safeSessionTypes.find((st) => st.id === sessionTypeId);
   const durationExceedsSlots = selectedSessionType
     ? selectedSessionType.duration_minutes > slotDurationMinutes
     : false;
@@ -127,9 +141,7 @@ export default function SessionModal({
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -167,7 +179,10 @@ export default function SessionModal({
           <label htmlFor="allowInSessionFree" className="text-sm text-gray-700">
             Allow in break/lunch slots
           </label>
-          <span className="text-xs text-gray-400" title="Enable this to place the session in time slots marked as breaks or lunch">
+          <span
+            className="text-xs text-gray-400"
+            title="Enable this to place the session in time slots marked as breaks or lunch"
+          >
             (?)
           </span>
         </div>
@@ -176,11 +191,9 @@ export default function SessionModal({
         {!isGeneralEvent && (
           <>
             {/* Session Type */}
-            {sessionTypes.length > 0 && (
+            {safeSessionTypes.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Session Type
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Session Type</label>
                 <select
                   value={sessionTypeId}
                   onChange={(e) => setSessionTypeId(e.target.value)}
@@ -188,7 +201,7 @@ export default function SessionModal({
                   disabled={!isAdmin}
                 >
                   <option value="">No type</option>
-                  {sessionTypes
+                  {safeSessionTypes
                     .filter((st) => st.is_active)
                     .map((st) => (
                       <option key={st.id} value={st.id}>
@@ -220,7 +233,7 @@ export default function SessionModal({
               >
                 {Array.from({ length: maxTrackSpan }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>
-                    {n} track{n !== 1 ? "s" : ""}
+                    {n} track{n !== 1 ? 's' : ''}
                   </option>
                 ))}
               </select>
@@ -241,7 +254,7 @@ export default function SessionModal({
           >
             {Array.from({ length: maxSlotSpan }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>
-                {n} slot{n !== 1 ? "s" : ""}
+                {n} slot{n !== 1 ? 's' : ''}
               </option>
             ))}
           </select>
@@ -249,9 +262,7 @@ export default function SessionModal({
 
         {/* Color */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Color
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
           <div className="flex flex-wrap gap-2">
             {PRESET_COLORS.map((c) => (
               <button
@@ -260,8 +271,8 @@ export default function SessionModal({
                 onClick={() => setColor(c)}
                 disabled={!isAdmin}
                 className={`w-8 h-8 rounded-full border-2 ${
-                  color === c ? "border-gray-800" : "border-transparent"
-                } ${!isAdmin ? "opacity-50" : ""}`}
+                  color === c ? 'border-gray-800' : 'border-transparent'
+                } ${!isAdmin ? 'opacity-50' : ''}`}
                 style={{ backgroundColor: c }}
               />
             ))}
@@ -270,9 +281,7 @@ export default function SessionModal({
 
         {/* Notes */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Internal Notes
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Internal Notes</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -332,7 +341,7 @@ export default function SessionModal({
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
-              {isAdmin ? "Cancel" : "Close"}
+              {isAdmin ? 'Cancel' : 'Close'}
             </button>
             {isAdmin && (
               <button

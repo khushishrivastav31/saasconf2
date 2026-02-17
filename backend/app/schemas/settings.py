@@ -197,6 +197,7 @@ class SessionTypeCreate(BaseModel):
     slug: str = Field(..., min_length=1, max_length=50, pattern=r"^[a-z0-9_-]+$")
     duration_minutes: int = Field(..., gt=0)
     cfp_eligible: bool = True
+    separately_bookable: bool = False
     is_active: bool = True
 
 
@@ -207,6 +208,7 @@ class SessionTypeUpdate(BaseModel):
     slug: str | None = Field(None, min_length=1, max_length=50, pattern=r"^[a-z0-9_-]+$")
     duration_minutes: int | None = Field(None, gt=0)
     cfp_eligible: bool | None = None
+    separately_bookable: bool | None = None
     is_active: bool | None = None
 
 
@@ -220,6 +222,7 @@ class SessionTypeResponse(BaseModel):
     slug: str
     duration_minutes: int
     cfp_eligible: bool
+    separately_bookable: bool
     is_active: bool
     created_at: datetime
     updated_at: datetime

@@ -51,7 +51,7 @@ class ModuleResponse(BaseModel):
     name: str
     description: str | None
     is_active: bool
-    config_schema: dict
+    config_schema: dict = Field(default_factory=dict)
     created_at: datetime
     tenant_count: int = 0  # Number of tenants using this module
 

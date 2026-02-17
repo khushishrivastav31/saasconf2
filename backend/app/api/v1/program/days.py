@@ -10,6 +10,7 @@ from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, r
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
 from app.models.program import ProgramDay
+from app.models.settings import BookingOption
 from app.schemas.program import (
     ProgramDayCreate,
     ProgramDayListResponse,
@@ -24,6 +25,61 @@ from app.core.conference_helpers import check_conference_admin, get_conference_f
 from ._shared import MODULE_CODE, _build_day_response
 
 router = APIRouter()
+
+
+async def _auto_create_booking_option(db: DbSessionDep, day: ProgramDay) -> None:
+    """Auto-create a booking option linked to a new program day.
+
+    Booking options define the display name for conference days.
+    When a day is created, the corresponding option should exist automatically.
+    """
+    # Check if an option already exists for this day
+    existing = await db.execute(
+        select(BookingOption).where(
+            BookingOption.conference_day_id == day.id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        return
+
+    name = day.name or str(day.date)
+
+    # Check if an option with this name already exists (unique constraint)
+    name_check = await db.execute(
+        select(BookingOption).where(
+            BookingOption.conference_id == day.conference_id,
+            BookingOption.tenant_id == day.tenant_id,
+            BookingOption.name == name,
+        )
+    )
+    existing_opt = name_check.scalar_one_or_none()
+    if existing_opt:
+        # Link existing unlinked option to this day
+        if not existing_opt.conference_day_id:
+            existing_opt.conference_day_id = day.id
+        return
+
+    # Get next sort order
+    max_sort = await db.execute(
+        select(BookingOption.sort_order)
+        .where(
+            BookingOption.conference_id == day.conference_id,
+            BookingOption.tenant_id == day.tenant_id,
+        )
+        .order_by(BookingOption.sort_order.desc())
+        .limit(1)
+    )
+    row = max_sort.scalar_one_or_none()
+    next_sort = (row + 1) if row is not None else 0
+
+    option = BookingOption(
+        tenant_id=day.tenant_id,
+        conference_id=day.conference_id,
+        name=name,
+        conference_day_id=day.id,
+        sort_order=next_sort,
+    )
+    db.add(option)
 
 
 @router.get(
@@ -91,6 +147,9 @@ async def create_day(
     )
     db.add(day)
     await db.flush()  # Flush to get the ID
+
+    # Auto-create linked booking option
+    await _auto_create_booking_option(db, day)
 
     # Audit log
     db.add(
@@ -169,6 +228,11 @@ async def generate_days(
         sort_order += 1
 
     if created:
+        await db.flush()
+        # Auto-create linked booking options for all new days
+        for day in created:
+            await _auto_create_booking_option(db, day)
+
         # Audit log
         db.add(
             AuditLog(
@@ -237,6 +301,15 @@ async def update_day(
         day.name = day_data.name
     if day_data.sort_order is not None:
         day.sort_order = day_data.sort_order
+
+    # Sync name change to the linked booking option
+    if day_data.name is not None:
+        opt_result = await db.execute(
+            select(BookingOption).where(BookingOption.conference_day_id == day.id)
+        )
+        linked_opt = opt_result.scalar_one_or_none()
+        if linked_opt and linked_opt.name != day.name:
+            linked_opt.name = day.name
 
     db.add(
         AuditLog(

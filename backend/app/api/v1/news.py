@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
@@ -11,6 +11,7 @@ from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
     get_client_ip,
+    require_module,
 )
 from app.core.email import send_direct_message_email
 from app.core.exceptions import AuthorizationError, NotFoundError
@@ -29,7 +30,9 @@ from app.schemas.news import (
     NewsArticleUpdate,
 )
 
-router = APIRouter()
+MODULE_CODE = "news"
+
+router = APIRouter(dependencies=[Depends(require_module(MODULE_CODE))])
 
 
 def _build_response(

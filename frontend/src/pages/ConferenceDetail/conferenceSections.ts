@@ -20,6 +20,7 @@ import {
   AnalyticsIcon,
   MessagingIcon,
   NewsIcon,
+  RegistrationIcon,
   CfpTagIcon,
   CfpUsersGroupIcon,
   CfpInboxIcon,
@@ -62,6 +63,7 @@ export type SectionId =
   | 'program-design'
   | 'program-build'
   | 'invoices'
+  | 'registration'
   | 'settings';
 
 export interface SectionChild {
@@ -84,11 +86,16 @@ export const coreSections: SectionDef[] = [
   { id: 'social', name: 'Social Media', icon: ShareIcon },
   { id: 'booking', name: 'Booking Options', icon: BookingIcon },
   { id: 'messaging', name: 'Messages', icon: MessagingIcon },
-  { id: 'news', name: 'News', icon: NewsIcon },
   { id: 'settings', name: 'Settings', icon: SettingsGearIcon },
 ];
 
 export const moduleSections: SectionDef[] = [
+  {
+    id: 'news',
+    name: 'News',
+    icon: NewsIcon,
+    moduleCode: 'news',
+  },
   {
     id: 'cfp',
     name: 'Call for Papers',
@@ -182,6 +189,12 @@ export const moduleSections: SectionDef[] = [
     name: 'Invoices',
     icon: InvoicesIcon,
     moduleCode: 'invoices',
+  },
+  {
+    id: 'registration',
+    name: 'Registration',
+    icon: RegistrationIcon,
+    moduleCode: 'registration',
   },
   {
     id: 'analytics',

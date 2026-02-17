@@ -236,6 +236,9 @@ class ProgramSession(Base):
         nullable=True,
     )
 
+    # Separately bookable (inherited from session type)
+    separately_bookable: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
     # General events (breaks, lunch, etc.) - span all tracks
     is_general_event: Mapped[bool] = mapped_column(Boolean, default=False)
 

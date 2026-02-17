@@ -1,21 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
-import api from "../../config/api";
-import type { Module, PaginatedResponse } from "../../types";
+import { useQuery } from '@tanstack/react-query';
+import api from '../../config/api';
+import type { Module, PaginatedResponse } from '../../types';
 
 // Define the correct module order
 const MODULE_ORDER = [
-  "conference",
-  "locations",
-  "sponsors",
-  "cfp",
-  "speakers",
-  "sessions",
-  "attendees",
-  "analytics",
-  "volunteers",
-  "service_providers",
-  "program",
-  "invoices",
+  'conference',
+  'news',
+  'locations',
+  'sponsors',
+  'cfp',
+  'speakers',
+  'sessions',
+  'attendees',
+  'analytics',
+  'volunteers',
+  'service_providers',
+  'program',
+  'invoices',
+  'registration',
 ];
 
 function sortModules(modules: Module[]): Module[] {
@@ -31,10 +33,9 @@ function sortModules(modules: Module[]): Module[] {
 
 export default function Modules() {
   const { data, isLoading } = useQuery({
-    queryKey: ["modules"],
+    queryKey: ['modules'],
     queryFn: async () => {
-      const response =
-        await api.get<PaginatedResponse<Module>>("/admin/modules");
+      const response = await api.get<PaginatedResponse<Module>>('/admin/modules');
       return response.data;
     },
   });
@@ -59,30 +60,21 @@ export default function Modules() {
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {sortedModules.map((module) => (
-            <div
-              key={module.id}
-              className="bg-white overflow-hidden shadow rounded-lg"
-            >
+            <div key={module.id} className="bg-white overflow-hidden shadow rounded-lg">
               <div className="p-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {module.name}
-                  </h3>
+                  <h3 className="text-lg font-medium text-gray-900">{module.name}</h3>
                   <span
                     className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      module.is_active
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
+                      module.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}
                   >
-                    {module.is_active ? "Active" : "Inactive"}
+                    {module.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-gray-500">{module.code}</p>
                 {module.description && (
-                  <p className="mt-3 text-sm text-gray-600">
-                    {module.description}
-                  </p>
+                  <p className="mt-3 text-sm text-gray-600">{module.description}</p>
                 )}
                 <div className="mt-4 flex items-center text-sm text-gray-500">
                   <svg

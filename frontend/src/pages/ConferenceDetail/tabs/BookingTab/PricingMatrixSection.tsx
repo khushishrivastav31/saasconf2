@@ -1,15 +1,14 @@
-import type {
-  BookingPeriod,
-  BookingOption,
-  PlatformCurrency,
-} from "../../../../types";
-import { EditIcon, DeleteIcon } from "../../icons";
-import { formatDate } from "../../../../utils/formatDate";
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import type { BookingPeriod, BookingOption, PlatformCurrency, ProgramDay } from '../../../../types';
+import { EditIcon, DeleteIcon } from '../../icons';
+import { formatDate } from '../../../../utils/formatDate';
 
 export interface PricingMatrixSectionProps {
   isAdmin: boolean;
   periods: BookingPeriod[];
   options: BookingOption[];
+  days: ProgramDay[];
   currencyOptions: PlatformCurrency[] | undefined;
   conferenceCurrency?: string | null;
   // Modal triggers
@@ -36,13 +35,18 @@ export interface PricingMatrixSectionProps {
   onUpdateOption: (id: string, data: Record<string, unknown>) => void;
   // Price and delete
   onPriceChange: (period: BookingPeriod, optionId: string, value: string) => void;
-  onDeleteTarget: (target: { type: "period" | "option" | "discount"; id: string; name: string }) => void;
+  onDeleteTarget: (target: {
+    type: 'period' | 'option' | 'discount';
+    id: string;
+    name: string;
+  }) => void;
 }
 
 export default function PricingMatrixSection({
   isAdmin,
   periods,
   options,
+  days,
   currencyOptions,
   conferenceCurrency,
   onAddPeriod,
@@ -67,6 +71,47 @@ export default function PricingMatrixSection({
   onPriceChange,
   onDeleteTarget,
 }: PricingMatrixSectionProps) {
+  // Local state for day picker popover
+  const [dayPickerOptionId, setDayPickerOptionId] = useState<string | null>(null);
+  const [popoverPos, setPopoverPos] = useState<{
+    top: number;
+    left: number;
+    openUp: boolean;
+  } | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const openDayPicker = useCallback((optId: string) => {
+    const trigger = triggerRefs.current[optId];
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < 220;
+    setPopoverPos({
+      top: openUp ? rect.top : rect.bottom + 4,
+      left: rect.left,
+      openUp,
+    });
+    setDayPickerOptionId(optId);
+  }, []);
+
+  // Close day picker on outside click or scroll
+  useEffect(() => {
+    if (!dayPickerOptionId) return;
+    const handleClose = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setDayPickerOptionId(null);
+      }
+    };
+    const handleScroll = () => setDayPickerOptionId(null);
+    document.addEventListener('mousedown', handleClose);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClose);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [dayPickerOptionId]);
+
   // Use conference currency if set
   const isCurrencyLocked = !!conferenceCurrency;
   return (
@@ -75,7 +120,9 @@ export default function PricingMatrixSection({
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Booking Options</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Define attendee options and pricing periods for this conference.
+            {days.length > 0
+              ? 'Options are created from your conference days. Set pricing per period.'
+              : 'Define attendee options and pricing periods for this conference.'}
           </p>
         </div>
         {isAdmin && (
@@ -99,11 +146,23 @@ export default function PricingMatrixSection({
       {/* Pricing Matrix Table */}
       {periods.length === 0 && options.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+          <svg
+            className="mx-auto h-12 w-12 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+            />
           </svg>
           <p className="mt-2 text-sm text-gray-500">No booking options defined yet.</p>
-          <p className="text-sm text-gray-400">Add periods (columns) and options (rows) to build your pricing matrix.</p>
+          <p className="text-sm text-gray-400">
+            Add periods (columns) and options (rows) to build your pricing matrix.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -114,7 +173,10 @@ export default function PricingMatrixSection({
                   Option
                 </th>
                 {periods.map((period) => (
-                  <th key={period.id} className="px-4 py-4 text-center min-w-[200px] border-b border-gray-200">
+                  <th
+                    key={period.id}
+                    className="px-4 py-4 text-center min-w-[200px] border-b border-gray-200"
+                  >
                     {editingPeriodId === period.id ? (
                       <div className="flex flex-col gap-2 min-w-[180px]">
                         <input
@@ -149,7 +211,7 @@ export default function PricingMatrixSection({
                         {isCurrencyLocked ? (
                           <input
                             type="text"
-                            value={conferenceCurrency || ""}
+                            value={conferenceCurrency || ''}
                             disabled
                             className="w-full text-xs rounded-md border-gray-300 bg-gray-100 shadow-sm text-gray-600"
                             title="Currency set by conference"
@@ -162,7 +224,9 @@ export default function PricingMatrixSection({
                           >
                             <option value="">No currency</option>
                             {(currencyOptions || []).map((c) => (
-                              <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+                              <option key={c.code} value={c.code}>
+                                {c.code} — {c.name}
+                              </option>
                             ))}
                           </select>
                         )}
@@ -183,18 +247,24 @@ export default function PricingMatrixSection({
                       </div>
                     ) : (
                       <div
-                        className={`flex flex-col items-center gap-0.5 ${isAdmin ? "cursor-pointer group" : ""}`}
+                        className={`flex flex-col items-center gap-0.5 ${isAdmin ? 'cursor-pointer group' : ''}`}
                         onClick={isAdmin ? () => onStartEditPeriod(period) : undefined}
-                        title={isAdmin ? "Click to edit period" : undefined}
+                        title={isAdmin ? 'Click to edit period' : undefined}
                       >
-                        <span className={`text-sm font-semibold text-gray-800 ${isAdmin ? "group-hover:text-primary-600" : ""} transition-colors`}>
+                        <span
+                          className={`text-sm font-semibold text-gray-800 ${isAdmin ? 'group-hover:text-primary-600' : ''} transition-colors`}
+                        >
                           {period.name}
                         </span>
-                        <span className={`text-xs text-gray-400 ${isAdmin ? "group-hover:text-gray-500" : ""}`}>
+                        <span
+                          className={`text-xs text-gray-400 ${isAdmin ? 'group-hover:text-gray-500' : ''}`}
+                        >
                           {formatDate(period.start_date)} — {formatDate(period.end_date)}
                         </span>
                         {period.currency && (
-                          <span className={`mt-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 ${isAdmin ? "group-hover:bg-primary-50 group-hover:text-primary-700" : ""}`}>
+                          <span
+                            className={`mt-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 ${isAdmin ? 'group-hover:bg-primary-50 group-hover:text-primary-700' : ''}`}
+                          >
                             {period.currency}
                           </span>
                         )}
@@ -204,7 +274,14 @@ export default function PricingMatrixSection({
                               <EditIcon />
                             </span>
                             <button
-                              onClick={(e) => { e.stopPropagation(); onDeleteTarget({ type: "period", id: period.id, name: period.name }); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteTarget({
+                                  type: 'period',
+                                  id: period.id,
+                                  name: period.name,
+                                });
+                              }}
                               className="text-gray-300 hover:text-red-500 transition-colors"
                               title="Delete period"
                             >
@@ -217,8 +294,7 @@ export default function PricingMatrixSection({
                   </th>
                 ))}
                 {isAdmin && (
-                  <th className="px-4 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[60px] border-b border-gray-200">
-                  </th>
+                  <th className="px-4 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[60px] border-b border-gray-200"></th>
                 )}
               </tr>
             </thead>
@@ -226,76 +302,206 @@ export default function PricingMatrixSection({
               {options.map((opt) => (
                 <tr key={opt.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-5 py-3">
-                    {editingOptionId === opt.id ? (
-                      <input
-                        type="text"
-                        autoFocus
-                        value={editingOptionName}
-                        onChange={(e) => setEditingOptionName(e.target.value)}
-                        onBlur={() => {
-                          const trimmed = editingOptionName.trim();
-                          if (trimmed && trimmed !== opt.name) {
-                            onUpdateOption(opt.id, { name: trimmed });
-                          } else {
-                            setEditingOptionId(null);
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.currentTarget.blur();
-                          } else if (e.key === "Escape") {
-                            setEditingOptionId(null);
-                          }
-                        }}
-                        className="w-full text-sm font-medium rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                      />
-                    ) : (
-                      <div className={`flex items-center ${isAdmin ? "group" : ""}`}>
-                        <span
-                          className={`text-sm font-medium text-gray-900 ${isAdmin ? "cursor-pointer group-hover:text-primary-600" : ""} transition-colors`}
-                          onClick={isAdmin ? () => {
-                            setEditingOptionId(opt.id);
-                            setEditingOptionName(opt.name);
-                          } : undefined}
-                          title={isAdmin ? "Click to edit" : undefined}
-                        >
-                          {opt.name}
-                        </span>
-                        {isAdmin && (
-                          <svg
-                            className="ml-1.5 w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    {/* Option name — inline editable */}
+                    <div className={`${isAdmin ? 'group' : ''}`}>
+                      {editingOptionId === opt.id ? (
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editingOptionName}
+                          onChange={(e) => setEditingOptionName(e.target.value)}
+                          onBlur={() => {
+                            const trimmed = editingOptionName.trim();
+                            if (trimmed && trimmed !== opt.name) {
+                              onUpdateOption(opt.id, { name: trimmed });
+                            } else {
+                              setEditingOptionId(null);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.currentTarget.blur();
+                            } else if (e.key === 'Escape') {
+                              setEditingOptionId(null);
+                            }
+                          }}
+                          className="w-full text-sm font-medium rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                        />
+                      ) : (
+                        <div className="flex items-center">
+                          <span
+                            className={`text-sm font-medium text-gray-900 ${isAdmin ? 'cursor-pointer group-hover:text-primary-600' : ''} transition-colors`}
+                            onClick={
+                              isAdmin
+                                ? () => {
+                                    setEditingOptionId(opt.id);
+                                    setEditingOptionName(opt.name);
+                                  }
+                                : undefined
+                            }
+                            title={isAdmin ? 'Click to edit name' : undefined}
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        )}
-                      </div>
-                    )}
+                            {opt.name}
+                          </span>
+                          {isAdmin && (
+                            <svg
+                              className="ml-1.5 w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Day badge — always visible, clickable to change */}
+                      {days.length > 0 &&
+                        (() => {
+                          const linkedDay = opt.conference_day_id
+                            ? days.find((d) => d.id === opt.conference_day_id)
+                            : null;
+
+                          return (
+                            <div className="mt-1.5">
+                              {linkedDay ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <button
+                                    ref={(el) => {
+                                      triggerRefs.current[opt.id] = el;
+                                    }}
+                                    type="button"
+                                    onClick={
+                                      isAdmin
+                                        ? () => {
+                                            if (dayPickerOptionId === opt.id) {
+                                              setDayPickerOptionId(null);
+                                            } else {
+                                              openDayPicker(opt.id);
+                                            }
+                                          }
+                                        : undefined
+                                    }
+                                    className={`inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700 ${isAdmin ? 'hover:bg-primary-100 cursor-pointer' : ''} transition-colors`}
+                                    title={isAdmin ? 'Change linked day' : undefined}
+                                  >
+                                    <svg
+                                      className="w-3 h-3"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                      />
+                                    </svg>
+                                    {linkedDay.name
+                                      ? `${linkedDay.name} — ${formatDate(linkedDay.date)}`
+                                      : formatDate(linkedDay.date)}
+                                  </button>
+                                  {isAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onUpdateOption(opt.id, { conference_day_id: null });
+                                        setDayPickerOptionId(null);
+                                      }}
+                                      className="inline-flex items-center justify-center w-4 h-4 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                      title="Unlink day"
+                                    >
+                                      <svg
+                                        className="w-3 h-3"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M6 18L18 6M6 6l12 12"
+                                        />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </span>
+                              ) : isAdmin ? (
+                                <button
+                                  ref={(el) => {
+                                    triggerRefs.current[opt.id] = el;
+                                  }}
+                                  type="button"
+                                  onClick={() => {
+                                    if (dayPickerOptionId === opt.id) {
+                                      setDayPickerOptionId(null);
+                                    } else {
+                                      openDayPicker(opt.id);
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-gray-300 px-2.5 py-0.5 text-xs text-gray-400 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50/50 transition-colors cursor-pointer"
+                                >
+                                  <svg
+                                    className="w-3 h-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                  Link to day
+                                </button>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
+                    </div>
                   </td>
                   {periods.map((period) => {
                     const rawPrice = period.prices?.[opt.id];
                     const priceValue = rawPrice != null ? Number(rawPrice) : null;
-                    const displayValue = priceValue != null && !isNaN(priceValue) ? priceValue.toFixed(2) : "";
+                    const displayValue =
+                      priceValue != null && !isNaN(priceValue) ? priceValue.toFixed(2) : '';
                     return (
                       <td key={period.id} className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           {period.currency && (
-                            <span className="text-xs text-gray-400 font-medium flex-shrink-0">{period.currency}</span>
+                            <span className="text-xs text-gray-400 font-medium flex-shrink-0">
+                              {period.currency}
+                            </span>
                           )}
                           <input
-                            key={`${period.id}-${opt.id}-${displayValue || "empty"}`}
+                            key={`${period.id}-${opt.id}-${displayValue || 'empty'}`}
                             type="number"
                             step="0.01"
                             min="0"
                             defaultValue={displayValue}
                             readOnly={!isAdmin}
-                            onBlur={isAdmin ? (e) => {
-                              const newVal = e.target.value;
-                              if (newVal !== displayValue) {
-                                onPriceChange(period, opt.id, newVal);
-                              }
-                            } : undefined}
-                            className={`w-full max-w-[110px] text-right text-sm rounded-md border-gray-300 shadow-sm tabular-nums ${isAdmin ? "focus:border-primary-500 focus:ring-primary-500" : "bg-gray-50 cursor-default"}`}
+                            onBlur={
+                              isAdmin
+                                ? (e) => {
+                                    const newVal = e.target.value;
+                                    if (newVal !== displayValue) {
+                                      onPriceChange(period, opt.id, newVal);
+                                    }
+                                  }
+                                : undefined
+                            }
+                            className={`w-full max-w-[110px] text-right text-sm rounded-md border-gray-300 shadow-sm tabular-nums ${isAdmin ? 'focus:border-primary-500 focus:ring-primary-500' : 'bg-gray-50 cursor-default'}`}
                             placeholder="—"
                           />
                         </div>
@@ -305,7 +511,9 @@ export default function PricingMatrixSection({
                   {isAdmin && (
                     <td className="px-4 py-3 text-center">
                       <button
-                        onClick={() => onDeleteTarget({ type: "option", id: opt.id, name: opt.name })}
+                        onClick={() =>
+                          onDeleteTarget({ type: 'option', id: opt.id, name: opt.name })
+                        }
                         className="text-gray-300 hover:text-red-500 transition-colors"
                         title="Delete option"
                       >
@@ -319,6 +527,106 @@ export default function PricingMatrixSection({
           </table>
         </div>
       )}
+
+      {/* Day picker popover — rendered via portal to escape overflow clipping */}
+      {dayPickerOptionId &&
+        isAdmin &&
+        popoverPos &&
+        (() => {
+          const opt = options.find((o) => o.id === dayPickerOptionId);
+          if (!opt) return null;
+          const usedDayIds = new Set(
+            options
+              .filter((o) => o.id !== opt.id && o.conference_day_id)
+              .map((o) => o.conference_day_id!)
+          );
+          const availableDays = days.filter(
+            (d) => !usedDayIds.has(d.id) || d.id === opt.conference_day_id
+          );
+
+          return createPortal(
+            <div
+              ref={popoverRef}
+              className="fixed z-50 w-56 bg-white rounded-lg shadow-lg ring-1 ring-gray-200 py-1"
+              style={{
+                left: popoverPos.left,
+                ...(popoverPos.openUp
+                  ? { bottom: window.innerHeight - popoverPos.top + 4 }
+                  : { top: popoverPos.top }),
+              }}
+            >
+              {availableDays.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-gray-400">All days are assigned</div>
+              ) : (
+                availableDays.map((day) => (
+                  <button
+                    key={day.id}
+                    type="button"
+                    onClick={() => {
+                      onUpdateOption(opt.id, { conference_day_id: day.id });
+                      setDayPickerOptionId(null);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-primary-50 transition-colors flex items-center gap-2 ${day.id === opt.conference_day_id ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-700'}`}
+                  >
+                    <svg
+                      className="w-3.5 h-3.5 flex-shrink-0 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    <span>
+                      {day.name ? (
+                        <>
+                          <span className="font-medium">{day.name}</span> — {formatDate(day.date)}
+                        </>
+                      ) : (
+                        formatDate(day.date)
+                      )}
+                    </span>
+                    {day.id === opt.conference_day_id && (
+                      <svg
+                        className="w-4 h-4 ml-auto text-primary-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                ))
+              )}
+              {opt.conference_day_id && (
+                <>
+                  <div className="border-t border-gray-100 my-1" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateOption(opt.id, { conference_day_id: null });
+                      setDayPickerOptionId(null);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Unlink day
+                  </button>
+                </>
+              )}
+            </div>,
+            document.body
+          );
+        })()}
     </>
   );
 }

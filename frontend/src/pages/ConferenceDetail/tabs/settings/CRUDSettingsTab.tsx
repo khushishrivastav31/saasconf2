@@ -1,12 +1,12 @@
-import { useState, useEffect, type ReactNode } from "react";
-import { parseApiError } from "../../../../utils/apiError";
-import Modal from "../../../../components/Modal";
-import ConfirmDialog from "../../../../components/ConfirmDialog";
-import { ErrorBanner } from "../../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
-import ModalFooter from "../../../../components/common/ModalFooter";
-import { useSettingsCrud } from "../../../../hooks/useSettingsCrud";
-import { EditIcon, DeleteIcon } from "../../icons";
+import { useState, useEffect, type ReactNode } from 'react';
+import { parseApiError } from '../../../../utils/apiError';
+import Modal from '../../../../components/Modal';
+import ConfirmDialog from '../../../../components/ConfirmDialog';
+import { ErrorBanner } from '../../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
+import ModalFooter from '../../../../components/common/ModalFooter';
+import { useSettingsCrud } from '../../../../hooks/useSettingsCrud';
+import { EditIcon, DeleteIcon } from '../../icons';
 
 // ---------------------------------------------------------------------------
 // Column configuration
@@ -27,7 +27,7 @@ export interface ColumnConfig<T> {
 // Form field configuration (for simple forms rendered automatically)
 // ---------------------------------------------------------------------------
 
-export type FormFieldType = "text" | "textarea" | "richtext" | "number" | "checkbox" | "select";
+export type FormFieldType = 'text' | 'textarea' | 'richtext' | 'number' | 'checkbox' | 'select';
 
 export interface SelectOption {
   value: string;
@@ -164,7 +164,7 @@ export default function CRUDSettingsTab<
     columns,
     formFields,
     renderForm,
-    modalSize = "max-w-lg",
+    modalSize = 'max-w-lg',
     deleteConfig,
     getInitialFormData,
     transformSubmitData,
@@ -273,7 +273,7 @@ export default function CRUDSettingsTab<
                 {columns.map((col) => (
                   <th
                     key={col.key}
-                    className={`px-6 py-3 ${col.headerAlign ?? "text-left"} text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    className={`px-6 py-3 ${col.headerAlign ?? 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}
                   >
                     {col.label}
                   </th>
@@ -291,15 +291,15 @@ export default function CRUDSettingsTab<
                   {columns.map((col) => (
                     <td
                       key={col.key}
-                      className={`px-6 py-4 ${col.cellClassName ?? "whitespace-nowrap"}`}
+                      className={`px-6 py-4 ${col.cellClassName ?? 'whitespace-nowrap'}`}
                     >
-                      {col.render
-                        ? col.render(item)
-                        : (
-                            <div className="text-sm text-gray-900">
-                              {String((item as Record<string, unknown>)[col.key] ?? "")}
-                            </div>
-                          )}
+                      {col.render ? (
+                        col.render(item)
+                      ) : (
+                        <div className="text-sm text-gray-900">
+                          {String((item as Record<string, unknown>)[col.key] ?? '')}
+                        </div>
+                      )}
                     </td>
                   ))}
                   {isAdmin && (
@@ -315,7 +315,7 @@ export default function CRUDSettingsTab<
                         <button
                           disabled
                           className="text-gray-300 cursor-not-allowed p-1 rounded transition-colors"
-                          title={deleteConfig.disabledTitle?.(item) ?? "Cannot delete"}
+                          title={deleteConfig.disabledTitle?.(item) ?? 'Cannot delete'}
                         >
                           <DeleteIcon />
                         </button>
@@ -323,7 +323,7 @@ export default function CRUDSettingsTab<
                         <button
                           onClick={() => handleDelete(item)}
                           className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
-                          title={deleteConfig?.enabledTitle ?? "Delete"}
+                          title={deleteConfig?.enabledTitle ?? 'Delete'}
                         >
                           <DeleteIcon />
                         </button>
@@ -332,13 +332,14 @@ export default function CRUDSettingsTab<
                   )}
                 </tr>
               ))}
-              {data?.items.length === 0 && (
+              {data?.items?.length === 0 && (
                 <tr>
                   <td
                     colSpan={totalColumns}
                     className="px-6 py-12 text-center text-sm text-gray-500"
                   >
-                    No {title.toLowerCase()} defined yet. Click &quot;{addButtonLabel ?? `Add ${entityName}`}&quot; to create one.
+                    No {title.toLowerCase()} defined yet. Click &quot;
+                    {addButtonLabel ?? `Add ${entityName}`}&quot; to create one.
                   </td>
                 </tr>
               )}
@@ -350,7 +351,7 @@ export default function CRUDSettingsTab<
       {/* Modal ------------------------------------------------------------ */}
       {renderForm ? (
         <Modal
-          key={editingItem?.id ?? "new"}
+          key={editingItem?.id ?? 'new'}
           open={isModalOpen}
           onClose={handleCloseModal}
           title={editingItem ? `Edit ${entityName}` : `Add ${entityName}`}
@@ -366,7 +367,7 @@ export default function CRUDSettingsTab<
         </Modal>
       ) : (
         <DefaultFormModal<TEntity, TCreate>
-          key={editingItem?.id ?? "new"}
+          key={editingItem?.id ?? 'new'}
           open={isModalOpen}
           item={editingItem}
           entityName={entityName}
@@ -401,10 +402,7 @@ export default function CRUDSettingsTab<
 // Default form modal (used when formFields are provided instead of renderForm)
 // ---------------------------------------------------------------------------
 
-function DefaultFormModal<
-  TEntity extends { id: string; name: string },
-  TCreate,
->({
+function DefaultFormModal<TEntity extends { id: string; name: string }, TCreate>({
   open,
   item,
   entityName,
@@ -440,9 +438,10 @@ function DefaultFormModal<
         const defaults: Record<string, unknown> = {};
         for (const field of formFields) {
           if (item) {
-            defaults[field.key] = (item as Record<string, unknown>)[field.key] ?? field.defaultValue ?? "";
+            defaults[field.key] =
+              (item as Record<string, unknown>)[field.key] ?? field.defaultValue ?? '';
           } else {
-            defaults[field.key] = field.defaultValue ?? (field.type === "checkbox" ? true : "");
+            defaults[field.key] = field.defaultValue ?? (field.type === 'checkbox' ? true : '');
           }
         }
         setFormData(defaults);
@@ -456,7 +455,9 @@ function DefaultFormModal<
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = transformSubmitData ? transformSubmitData(formData) : (formData as unknown as TCreate);
+    const payload = transformSubmitData
+      ? transformSubmitData(formData)
+      : (formData as unknown as TCreate);
     onSubmit(payload);
   };
 
@@ -472,7 +473,7 @@ function DefaultFormModal<
           <ErrorBanner message={error} />
 
           {formFields.map((field) => {
-            if (field.type === "checkbox") {
+            if (field.type === 'checkbox') {
               return (
                 <div key={field.key} className="flex items-center">
                   <input
@@ -496,18 +497,18 @@ function DefaultFormModal<
               <div key={field.key}>
                 <label className="block text-sm font-medium text-gray-700">
                   {field.label}
-                  {field.required ? " *" : ""}
+                  {field.required ? ' *' : ''}
                 </label>
-                {field.type === "textarea" ? (
+                {field.type === 'textarea' ? (
                   <textarea
                     required={field.required}
                     rows={field.rows ?? 3}
                     placeholder={field.placeholder}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    value={String(formData[field.key] ?? "")}
+                    value={String(formData[field.key] ?? '')}
                     onChange={(e) => setField(field.key, e.target.value)}
                   />
-                ) : field.type === "number" ? (
+                ) : field.type === 'number' ? (
                   <input
                     type="number"
                     required={field.required}
@@ -515,14 +516,14 @@ function DefaultFormModal<
                     step={field.step}
                     placeholder={field.placeholder}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    value={String(formData[field.key] ?? "")}
+                    value={String(formData[field.key] ?? '')}
                     onChange={(e) => setField(field.key, parseFloat(e.target.value) || 0)}
                   />
-                ) : field.type === "select" ? (
+                ) : field.type === 'select' ? (
                   <select
                     required={field.required}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    value={String(formData[field.key] ?? "")}
+                    value={String(formData[field.key] ?? '')}
                     onChange={(e) => setField(field.key, e.target.value)}
                   >
                     {field.options?.map((opt) => (
@@ -541,7 +542,7 @@ function DefaultFormModal<
                       title={field.title}
                       placeholder={field.placeholder}
                       className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      value={String(formData[field.key] ?? "")}
+                      value={String(formData[field.key] ?? '')}
                       onChange={(e) => setField(field.key, e.target.value)}
                     />
                     {field.helpText && (

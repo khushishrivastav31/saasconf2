@@ -40,6 +40,7 @@ export interface BookingOption {
   conference_id: string;
   name: string;
   description: string | null;
+  conference_day_id: string | null;
   sort_order: number;
   is_active: boolean;
   created_at: string;
@@ -49,6 +50,7 @@ export interface BookingOption {
 export interface BookingOptionCreate {
   name: string;
   description?: string;
+  conference_day_id?: string | null;
   sort_order?: number;
   is_active?: boolean;
 }
@@ -56,6 +58,7 @@ export interface BookingOptionCreate {
 export interface BookingOptionUpdate {
   name?: string;
   description?: string;
+  conference_day_id?: string | null;
   sort_order?: number;
   is_active?: boolean;
 }
@@ -103,7 +106,7 @@ export interface DiscountCode {
   conference_id: string;
   name: string;
   code: string;
-  discount_type: "fixed" | "percentage";
+  discount_type: 'fixed' | 'percentage';
   discount_value: number;
   currency: string | null;
   start_date: string | null;
@@ -119,7 +122,7 @@ export interface DiscountCode {
 export interface DiscountCodeCreate {
   name: string;
   code: string;
-  discount_type: "fixed" | "percentage";
+  discount_type: 'fixed' | 'percentage';
   discount_value: number;
   currency?: string | null;
   start_date?: string | null;
@@ -132,7 +135,7 @@ export interface DiscountCodeCreate {
 export interface DiscountCodeUpdate {
   name?: string;
   code?: string;
-  discount_type?: "fixed" | "percentage";
+  discount_type?: 'fixed' | 'percentage';
   discount_value?: number;
   currency?: string | null;
   start_date?: string | null;

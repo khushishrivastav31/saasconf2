@@ -1,69 +1,74 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import type {
   Conference,
   SessionType,
   SessionTypeCreate,
   SessionTypeUpdate,
-} from "../../../../types";
-import StatusBadge from "../../../../components/common/StatusBadge";
-import { ErrorBanner } from "../../../../components/common/ErrorBanner";
-import ModalFooter from "../../../../components/common/ModalFooter";
-import CRUDSettingsTab, { type ColumnConfig } from "./CRUDSettingsTab";
+} from '../../../../types';
+import StatusBadge from '../../../../components/common/StatusBadge';
+import { ErrorBanner } from '../../../../components/common/ErrorBanner';
+import ModalFooter from '../../../../components/common/ModalFooter';
+import CRUDSettingsTab, { type ColumnConfig } from './CRUDSettingsTab';
 
 // Helper function to generate slug from name
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 // --- Column definitions -----------------------------------------------------
 
 const columns: ColumnConfig<SessionType>[] = [
   {
-    key: "name",
-    label: "Name",
+    key: 'name',
+    label: 'Name',
+    render: (st) => <div className="text-sm font-medium text-gray-900">{st.name}</div>,
+  },
+  {
+    key: 'slug',
+    label: 'Slug',
     render: (st) => (
-      <div className="text-sm font-medium text-gray-900">{st.name}</div>
+      <code className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{st.slug}</code>
     ),
   },
   {
-    key: "slug",
-    label: "Slug",
-    render: (st) => (
-      <code className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-        {st.slug}
-      </code>
-    ),
+    key: 'duration_minutes',
+    label: 'Duration',
+    render: (st) => <span className="text-sm text-gray-900">{st.duration_minutes} min</span>,
   },
   {
-    key: "duration_minutes",
-    label: "Duration",
-    render: (st) => (
-      <span className="text-sm text-gray-900">{st.duration_minutes} min</span>
-    ),
-  },
-  {
-    key: "cfp_eligible",
-    label: "CFP Eligible",
+    key: 'cfp_eligible',
+    label: 'CFP Eligible',
     render: (st) => (
       <span
         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-          st.cfp_eligible
-            ? "bg-blue-100 text-blue-800"
-            : "bg-gray-100 text-gray-600"
+          st.cfp_eligible ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
         }`}
       >
-        {st.cfp_eligible ? "Yes" : "No"}
+        {st.cfp_eligible ? 'Yes' : 'No'}
       </span>
     ),
   },
   {
-    key: "is_active",
-    label: "Active",
+    key: 'separately_bookable',
+    label: 'Bookable',
+    render: (st) => (
+      <span
+        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+          st.separately_bookable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+        }`}
+      >
+        {st.separately_bookable ? 'Yes' : 'No'}
+      </span>
+    ),
+  },
+  {
+    key: 'is_active',
+    label: 'Active',
     render: (st) => <StatusBadge isActive={st.is_active} />,
   },
 ];
@@ -84,10 +89,11 @@ function SessionTypeForm({
   error: string | null;
 }) {
   const [formData, setFormData] = useState<SessionTypeCreate>({
-    name: "",
-    slug: "",
+    name: '',
+    slug: '',
     duration_minutes: 30,
     cfp_eligible: true,
+    separately_bookable: false,
     is_active: true,
   });
   const [autoSlug, setAutoSlug] = useState(true);
@@ -99,15 +105,17 @@ function SessionTypeForm({
         slug: item.slug,
         duration_minutes: item.duration_minutes,
         cfp_eligible: item.cfp_eligible,
+        separately_bookable: item.separately_bookable,
         is_active: item.is_active,
       });
       setAutoSlug(false);
     } else {
       setFormData({
-        name: "",
-        slug: "",
+        name: '',
+        slug: '',
         duration_minutes: 30,
         cfp_eligible: true,
+        separately_bookable: false,
         is_active: true,
       });
       setAutoSlug(true);
@@ -135,14 +143,10 @@ function SessionTypeForm({
   return (
     <form onSubmit={handleSubmit}>
       <div className="px-6 py-4 space-y-4">
-        {error && (
-          <ErrorBanner message={error} />
-        )}
+        {error && <ErrorBanner message={error} />}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Name *
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Name *</label>
           <input
             type="text"
             required
@@ -154,13 +158,11 @@ function SessionTypeForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Slug *
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Slug *</label>
           <input
             type="text"
             required
-            pattern="^[a-z0-9_-]+$"
+            pattern="^[-a-z0-9_]+$"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm font-mono"
             value={formData.slug}
             onChange={(e) => handleSlugChange(e.target.value.toLowerCase())}
@@ -172,9 +174,7 @@ function SessionTypeForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Duration (minutes) *
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Duration (minutes) *</label>
           <input
             type="number"
             required
@@ -193,14 +193,9 @@ function SessionTypeForm({
             type="checkbox"
             className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             checked={formData.cfp_eligible ?? true}
-            onChange={(e) =>
-              setFormData({ ...formData, cfp_eligible: e.target.checked })
-            }
+            onChange={(e) => setFormData({ ...formData, cfp_eligible: e.target.checked })}
           />
-          <label
-            htmlFor="cfp-eligible"
-            className="ml-2 block text-sm text-gray-900"
-          >
+          <label htmlFor="cfp-eligible" className="ml-2 block text-sm text-gray-900">
             CFP Eligible
           </label>
           <span className="ml-2 text-xs text-gray-500">
@@ -210,18 +205,29 @@ function SessionTypeForm({
 
         <div className="flex items-center">
           <input
+            id="separately-bookable"
+            type="checkbox"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            checked={formData.separately_bookable ?? false}
+            onChange={(e) => setFormData({ ...formData, separately_bookable: e.target.checked })}
+          />
+          <label htmlFor="separately-bookable" className="ml-2 block text-sm text-gray-900">
+            Separately Bookable
+          </label>
+          <span className="ml-2 text-xs text-gray-500">
+            (session can be booked individually by attendees)
+          </span>
+        </div>
+
+        <div className="flex items-center">
+          <input
             id="session-type-active"
             type="checkbox"
             className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             checked={formData.is_active ?? true}
-            onChange={(e) =>
-              setFormData({ ...formData, is_active: e.target.checked })
-            }
+            onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
           />
-          <label
-            htmlFor="session-type-active"
-            className="ml-2 block text-sm text-gray-900"
-          >
+          <label htmlFor="session-type-active" className="ml-2 block text-sm text-gray-900">
             Active
           </label>
         </div>

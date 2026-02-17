@@ -41,6 +41,14 @@ from app.models.module import Module, TenantModule
 from app.models.news import NewsArticle
 from app.models.platform_currency import PlatformCurrency
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
+from app.models.registration import (
+    BillingProfile,
+    Registration,
+    RegistrationItem,
+    RegistrationItemType,
+    RegistrationMode,
+    RegistrationStatus,
+)
 from app.models.review import (
     PaperReview,
     ReviewAnswer,
@@ -115,6 +123,12 @@ __all__ = [
     "ProgramSession",
     "ProgramTimeSlot",
     "ProgramTrack",
+    "BillingProfile",
+    "Registration",
+    "RegistrationItem",
+    "RegistrationItemType",
+    "RegistrationMode",
+    "RegistrationStatus",
     "PronounOption",
     "RecipientList",
     "RecipientListMember",

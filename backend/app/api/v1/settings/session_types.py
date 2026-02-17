@@ -2,10 +2,11 @@
 
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from app.core.exceptions import ValidationError
 from app.models.cfp import CFPPaper
+from app.models.program import ProgramSession
 from app.models.settings import SessionType
 from app.schemas.settings import (
     SessionTypeCreate,
@@ -33,6 +34,25 @@ async def _check_papers_using_session_type(entity: Any, conference: Any, db: Any
         )
 
 
+async def _propagate_separately_bookable(
+    entity: Any, update_data: dict, conference: Any, db: Any
+) -> None:
+    """When separately_bookable changes, propagate to linked papers and sessions."""
+    if "separately_bookable" not in update_data:
+        return
+    new_value = entity.separately_bookable
+    await db.execute(
+        update(CFPPaper)
+        .where(CFPPaper.session_type_id == entity.id)
+        .values(separately_bookable=new_value)
+    )
+    await db.execute(
+        update(ProgramSession)
+        .where(ProgramSession.session_type_id == entity.id)
+        .values(separately_bookable=new_value)
+    )
+
+
 router = create_crud_router(
     prefix="session-types",
     entity_name="session_type",
@@ -47,4 +67,5 @@ router = create_crud_router(
     order_by=(("duration_minutes", "desc"), "name"),
     audit_create_fields=["name", "slug"],
     pre_delete_check=_check_papers_using_session_type,
+    post_update_hook=_propagate_separately_bookable,
 )

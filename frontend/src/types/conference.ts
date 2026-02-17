@@ -1,7 +1,7 @@
-import type { LocationContactPerson, SocialLinks } from "./common";
+import type { LocationContactPerson, SocialLinks } from './common';
 
 // Conference types
-export type ConferenceStatus = "draft" | "upcoming" | "ongoing" | "past";
+export type ConferenceStatus = 'draft' | 'upcoming' | 'ongoing' | 'past';
 
 export interface TeamMember {
   first_name: string;
@@ -34,7 +34,7 @@ export interface Conference {
   country: string | null;
   timezone: string | null;
   locale: string | null;
-  venue_type: "onsite" | "virtual" | "hybrid";
+  venue_type: 'onsite' | 'virtual' | 'hybrid';
   virtual_platform_url: string | null;
   // Social links
   social_links: SocialLinks;
@@ -76,7 +76,7 @@ export interface ConferenceCreate {
   country?: string;
   timezone?: string;
   locale?: string;
-  venue_type?: "onsite" | "virtual" | "hybrid";
+  venue_type?: 'onsite' | 'virtual' | 'hybrid';
   virtual_platform_url?: string;
   social_links?: SocialLinks;
   team_members?: TeamMember[];
@@ -101,7 +101,7 @@ export interface ConferenceUpdate {
   country?: string;
   timezone?: string;
   locale?: string;
-  venue_type?: "onsite" | "virtual" | "hybrid";
+  venue_type?: 'onsite' | 'virtual' | 'hybrid';
   virtual_platform_url?: string;
   social_links?: SocialLinks;
   team_members?: TeamMember[];
@@ -240,6 +240,7 @@ export interface SessionType {
   slug: string;
   duration_minutes: number;
   cfp_eligible: boolean;
+  separately_bookable: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -250,6 +251,7 @@ export interface SessionTypeCreate {
   slug: string;
   duration_minutes: number;
   cfp_eligible?: boolean;
+  separately_bookable?: boolean;
   is_active?: boolean;
 }
 
@@ -258,6 +260,7 @@ export interface SessionTypeUpdate {
   slug?: string;
   duration_minutes?: number;
   cfp_eligible?: boolean;
+  separately_bookable?: boolean;
   is_active?: boolean;
 }
 
@@ -347,7 +350,7 @@ export interface SponsorUpdate {
 }
 
 // Invoice types
-export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
+export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 
 export interface InvoiceLineItem {
   description: string;

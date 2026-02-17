@@ -217,6 +217,7 @@ class SessionType(Base):
     slug: Mapped[str] = mapped_column(String(50), nullable=False)
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     cfp_eligible: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    separately_bookable: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     created_at: Mapped[datetime] = mapped_column(

@@ -230,6 +230,7 @@ class ProgramSessionResponse(BaseModel):
     session_type_name: str | None = None
     is_general_event: bool
     allow_in_session_free: bool = False
+    separately_bookable: bool = False
     color: str | None = None
     paper_id: UUID | None = None
     paper_title: str | None = None

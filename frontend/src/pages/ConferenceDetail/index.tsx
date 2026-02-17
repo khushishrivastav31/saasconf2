@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useParams } from 'react-router';
 import Modal from '../../components/Modal';
 import { BackIcon } from './icons';
@@ -22,6 +22,7 @@ const SessionsTab = lazy(() => import('./tabs/SessionsTab'));
 const SpeakersTab = lazy(() => import('./tabs/SpeakersTab'));
 const MessagingTab = lazy(() => import('./tabs/MessagingTab'));
 const NewsTab = lazy(() => import('./tabs/NewsTab'));
+const RegistrationTab = lazy(() => import('./tabs/RegistrationTab'));
 const CFPTopics = lazy(() => import('../modules/cfp').then((m) => ({ default: m.CFPTopics })));
 const CFPProgramCommittee = lazy(() =>
   import('../modules/cfp').then((m) => ({ default: m.CFPProgramCommittee }))
@@ -74,6 +75,7 @@ function ComingSoonContent({ name }: { name: string }) {
 
 export default function ConferenceDetail() {
   const { conferenceId } = useParams<{ conferenceId: string }>();
+  const [papersKey, setPapersKey] = useState(0);
 
   const {
     // Conference data
@@ -303,6 +305,9 @@ export default function ConferenceDetail() {
                             if (child.id === 'cfp-applicants') {
                               setSelectedApplicantId(null);
                             }
+                            if (child.id === 'cfp-papers') {
+                              setPapersKey((k) => k + 1);
+                            }
                           }}
                           className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
                             activeSection === child.id
@@ -384,7 +389,7 @@ export default function ConferenceDetail() {
                   isAdmin={isAdmin}
                 />
               )}
-              {activeSection === 'cfp-papers' && <CFPPapers isAdmin={isAdmin} />}
+              {activeSection === 'cfp-papers' && <CFPPapers key={papersKey} isAdmin={isAdmin} />}
               {activeSection === 'cfp-assignments' && (
                 <CFPAssignments conferenceId={conferenceId} isAdmin={isAdmin} />
               )}
@@ -444,6 +449,9 @@ export default function ConferenceDetail() {
               )}
               {activeSection === 'news' && conference && (
                 <NewsTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'registration' && conference && (
+                <RegistrationTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'settings' && (
                 <ConferenceSettingsTab conference={conference} isAdmin={isAdmin} />

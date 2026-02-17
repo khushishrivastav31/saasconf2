@@ -1,4 +1,4 @@
-import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import { useEditor, EditorContent, Extension, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
@@ -84,9 +84,7 @@ export default function RichTextEditor({
   const [charCount, setCharCount] = useState(0);
   const [, setSelectionUpdate] = useState(0); // Force re-render on selection change
 
-  const editorRef = useRef<ReturnType<typeof useEditor>>(null) as React.MutableRefObject<
-    ReturnType<typeof useEditor>
-  >;
+  const editorRef = useRef<Editor | null>(null);
 
   const handleImageFile = useCallback((file: File) => {
     const ed = editorRef.current;
@@ -107,6 +105,8 @@ export default function RichTextEditor({
   }, []);
 
   const editor = useEditor({
+    // Prevent editor.view access before DOM is mounted (tiptap v3.19+)
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         // Disable link/underline from StarterKit v3.19+ — we add them separately with custom config
@@ -222,11 +222,15 @@ export default function RichTextEditor({
         return false;
       },
     },
-    onUpdate: ({ editor: ed }) => {
+    onUpdate: ({ editor: ed, transaction }) => {
       const html = ed.getHTML();
       const textLen = ed.getText().length;
       setCharCount(textLen);
-      onChange(html === EMPTY_BODY ? '' : html);
+      // Only notify parent of content changes from actual edits, not from
+      // programmatic updates like setEditable or setContent
+      if (transaction.docChanged) {
+        onChange(html === EMPTY_BODY ? '' : html);
+      }
     },
     onSelectionUpdate: () => {
       // Force re-render to update toolbar button states (e.g., merge cells)
@@ -266,7 +270,7 @@ export default function RichTextEditor({
   useEffect(() => {
     if (!editor) return;
     try {
-      editor.setEditable(!disabled);
+      editor.setEditable(!disabled, false);
     } catch {
       // Editor view not yet mounted
     }
@@ -434,16 +438,16 @@ export default function RichTextEditor({
           onChange={(e) => {
             if (e.target.value) {
               (
-                editor.chain().focus() as ReturnType<typeof editor.chain> & {
-                  setFontSize: (size: string) => ReturnType<typeof editor.chain>;
+                editor.chain().focus() as ReturnType<Editor['chain']> & {
+                  setFontSize: (size: string) => ReturnType<Editor['chain']>;
                 }
               )
                 .setFontSize(e.target.value)
                 .run();
             } else {
               (
-                editor.chain().focus() as ReturnType<typeof editor.chain> & {
-                  unsetFontSize: () => ReturnType<typeof editor.chain>;
+                editor.chain().focus() as ReturnType<Editor['chain']> & {
+                  unsetFontSize: () => ReturnType<Editor['chain']>;
                 }
               )
                 .unsetFontSize()
