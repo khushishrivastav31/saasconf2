@@ -77,14 +77,30 @@ async def cfp_module(db_session: AsyncSession) -> Module:
 
 
 @pytest_asyncio.fixture()
+async def news_module(db_session: AsyncSession) -> Module:
+    """Create the 'news' module."""
+    m = Module(
+        id=uuid.uuid4(),
+        name="News",
+        code="news",
+        description="News and newsletter management",
+        is_active=True,
+    )
+    db_session.add(m)
+    await db_session.commit()
+    return m
+
+
+@pytest_asyncio.fixture()
 async def tenant_with_cfp(
     db_session: AsyncSession,
     tenant: Tenant,
     conferences_module: Module,
     cfp_module: Module,
+    news_module: Module,
 ) -> Tenant:
-    """Associate both conferences and cfp modules with the test tenant."""
-    for mod in (conferences_module, cfp_module):
+    """Associate conferences, cfp, and news modules with the test tenant."""
+    for mod in (conferences_module, cfp_module, news_module):
         db_session.add(
             TenantModule(
                 id=uuid.uuid4(),
@@ -99,8 +115,8 @@ async def tenant_with_cfp(
 
 @pytest_asyncio.fixture()
 async def news_admin_token(tenant_admin_user: User) -> str:
-    """Return a valid access token that includes both conferences and cfp modules."""
-    return _make_token(tenant_admin_user, modules=["conferences", "cfp"])
+    """Return a valid access token that includes conferences, cfp, and news modules."""
+    return _make_token(tenant_admin_user, modules=["conferences", "cfp", "news"])
 
 
 @pytest_asyncio.fixture()
@@ -297,9 +313,10 @@ async def tenant_b_modules(
     tenant_b: Tenant,
     conferences_module: Module,
     cfp_module: Module,
+    news_module: Module,
 ) -> Tenant:
     """Associate modules with tenant B."""
-    for mod in (conferences_module, cfp_module):
+    for mod in (conferences_module, cfp_module, news_module):
         db_session.add(
             TenantModule(
                 id=uuid.uuid4(),
@@ -315,7 +332,7 @@ async def tenant_b_modules(
 @pytest_asyncio.fixture()
 async def tenant_b_token(tenant_b_admin: User) -> str:
     """Return a valid access token for tenant B's admin."""
-    return _make_token(tenant_b_admin, modules=["conferences", "cfp"])
+    return _make_token(tenant_b_admin, modules=["conferences", "cfp", "news"])
 
 
 # ═══════════════════════════════════════════════════════════════════════
