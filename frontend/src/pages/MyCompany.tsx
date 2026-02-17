@@ -1,11 +1,12 @@
-import { useState, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../config/api";
-import ConfirmDialog from "../components/ConfirmDialog";
-import RichTextEditor from "../components/common/RichTextEditor";
-import { validatePhone } from "../utils/validators";
-import { parseApiError } from "../utils/apiError";
-import type { Tenant, TenantUpdate, ContactPerson } from "../types";
+import { useState, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../config/api';
+import ConfirmDialog from '../components/ConfirmDialog';
+import RichTextEditor from '../components/common/RichTextEditor';
+import { validatePhone } from '../utils/validators';
+import { parseApiError } from '../utils/apiError';
+import { useSaveStatus } from '../hooks/useSaveStatus';
+import type { Tenant, TenantUpdate, ContactPerson } from '../types';
 
 export default function MyCompany() {
   const queryClient = useQueryClient();
@@ -16,9 +17,9 @@ export default function MyCompany() {
     isLoading,
     error,
   } = useQuery<Tenant>({
-    queryKey: ["my-company"],
+    queryKey: ['my-company'],
     queryFn: async () => {
-      const res = await api.get("/my-company");
+      const res = await api.get('/my-company');
       return res.data;
     },
   });
@@ -52,9 +53,7 @@ export default function MyCompany() {
         <div className="p-6">
           <CompanyForm
             tenant={tenant}
-            onUpdate={() =>
-              queryClient.invalidateQueries({ queryKey: ["my-company"] })
-            }
+            onUpdate={() => queryClient.invalidateQueries({ queryKey: ['my-company'] })}
           />
         </div>
       </div>
@@ -62,60 +61,52 @@ export default function MyCompany() {
   );
 }
 
-function CompanyForm({
-  tenant,
-  onUpdate,
-}: {
-  tenant: Tenant;
-  onUpdate: () => void;
-}) {
+function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => void }) {
   // Logo upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [logoStatus, setLogoStatus] = useState<
-    "idle" | "uploading" | "deleting" | "error"
-  >("idle");
+  const [logoStatus, setLogoStatus] = useState<'idle' | 'uploading' | 'deleting' | 'error'>('idle');
   const [logoError, setLogoError] = useState<string | null>(null);
 
   const uploadLogoMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
-      formData.append("file", file);
-      const res = await api.post("/my-company/logo", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      formData.append('file', file);
+      const res = await api.post('/my-company/logo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       return res.data;
     },
     onMutate: () => {
-      setLogoStatus("uploading");
+      setLogoStatus('uploading');
       setLogoError(null);
     },
     onSuccess: () => {
-      setLogoStatus("idle");
+      setLogoStatus('idle');
       onUpdate();
     },
     onError: (err) => {
-      setLogoStatus("error");
+      setLogoStatus('error');
       setLogoError(parseApiError(err));
-      setTimeout(() => setLogoStatus("idle"), 3000);
+      setTimeout(() => setLogoStatus('idle'), 3000);
     },
   });
 
   const deleteLogoMutation = useMutation({
     mutationFn: async () => {
-      await api.delete("/my-company/logo");
+      await api.delete('/my-company/logo');
     },
     onMutate: () => {
-      setLogoStatus("deleting");
+      setLogoStatus('deleting');
       setLogoError(null);
     },
     onSuccess: () => {
-      setLogoStatus("idle");
+      setLogoStatus('idle');
       onUpdate();
     },
     onError: (err) => {
-      setLogoStatus("error");
+      setLogoStatus('error');
       setLogoError(parseApiError(err));
-      setTimeout(() => setLogoStatus("idle"), 3000);
+      setTimeout(() => setLogoStatus('idle'), 3000);
     },
   });
 
@@ -125,87 +116,77 @@ function CompanyForm({
       uploadLogoMutation.mutate(file);
     }
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = '';
     }
   };
 
   const [formData, setFormData] = useState<TenantUpdate>({
     name: tenant.name,
-    address: tenant.address || "",
-    postal_code: tenant.postal_code || "",
-    city: tenant.city || "",
-    country: tenant.country || "",
-    vat_number: tenant.vat_number || "",
-    website: tenant.website || "",
+    address: tenant.address || '',
+    postal_code: tenant.postal_code || '',
+    city: tenant.city || '',
+    country: tenant.country || '',
+    vat_number: tenant.vat_number || '',
+    website: tenant.website || '',
     contact_persons: tenant.contact_persons || [],
-    comments: tenant.comments || "",
+    comments: tenant.comments || '',
   });
 
   const [newContact, setNewContact] = useState<ContactPerson>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    role: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    role: '',
   });
 
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
+  const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
 
   const updateMutation = useMutation({
     mutationFn: async (data: TenantUpdate) => {
-      await api.put("/my-company", data);
+      await api.put('/my-company', data);
     },
     onMutate: () => {
-      setSaveStatus("saving");
+      setSaving();
     },
     onSuccess: () => {
-      setSaveStatus("saved");
+      setSaved();
       onUpdate();
-      setTimeout(() => setSaveStatus("idle"), 2000);
     },
     onError: () => {
-      setSaveStatus("error");
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      setError();
     },
   });
 
   // Auto-save when form data changes (with debounce)
-  const [saveTimeout, setSaveTimeout] = useState<ReturnType<
-    typeof setTimeout
-  > | null>(null);
+  const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
-  const handleFieldChange = (
-    field: keyof TenantUpdate,
-    value: string | undefined
-  ) => {
+  const handleFieldChange = (field: keyof TenantUpdate, value: string | undefined) => {
     const newFormData = { ...formData, [field]: value };
     setFormData(newFormData);
 
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
     }
 
     const timeout = setTimeout(() => {
       updateMutation.mutate(newFormData);
     }, 500);
-    setSaveTimeout(timeout);
+    setDebounceTimeout(timeout);
   };
 
   const addContact = () => {
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
-      const newContacts = [
-        ...(formData.contact_persons || []),
-        { ...newContact },
-      ];
+      const newContacts = [...(formData.contact_persons || []), { ...newContact }];
       setFormData({ ...formData, contact_persons: newContacts });
       setNewContact({
-        first_name: "",
-        last_name: "",
-        email: "",
-        phone: "",
-        role: "",
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        role: '',
       });
       setNewContactPhoneError(null);
       updateMutation.mutate({ ...formData, contact_persons: newContacts });
@@ -213,45 +194,30 @@ function CompanyForm({
   };
 
   const removeContact = (index: number) => {
-    const newContacts =
-      formData.contact_persons?.filter((_, i) => i !== index) || [];
+    const newContacts = formData.contact_persons?.filter((_, i) => i !== index) || [];
     setFormData({ ...formData, contact_persons: newContacts });
     updateMutation.mutate({ ...formData, contact_persons: newContacts });
   };
 
   const updateContact = (index: number, contact: ContactPerson) => {
-    const newContacts =
-      formData.contact_persons?.map((c, i) => (i === index ? contact : c)) ||
-      [];
+    const newContacts = formData.contact_persons?.map((c, i) => (i === index ? contact : c)) || [];
     setFormData({ ...formData, contact_persons: newContacts });
     updateMutation.mutate({ ...formData, contact_persons: newContacts });
   };
 
-  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(
-    null
-  );
-  const [deleteContactIndex, setDeleteContactIndex] = useState<number | null>(
-    null
-  );
-  const [editContactPhoneError, setEditContactPhoneError] = useState<
-    string | null
-  >(null);
-  const [newContactPhoneError, setNewContactPhoneError] = useState<
-    string | null
-  >(null);
+  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);
+  const [deleteContactIndex, setDeleteContactIndex] = useState<number | null>(null);
+  const [editContactPhoneError, setEditContactPhoneError] = useState<string | null>(null);
+  const [newContactPhoneError, setNewContactPhoneError] = useState<string | null>(null);
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
         <h4 className="text-sm font-medium text-gray-900">Company Details</h4>
         <div className="flex items-center gap-2">
-          {saveStatus === "saving" && (
+          {saveStatus === 'saving' && (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
-              <svg
-                className="animate-spin h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -269,14 +235,9 @@ function CompanyForm({
               Saving...
             </span>
           )}
-          {saveStatus === "saved" && (
+          {saveStatus === 'saved' && (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -287,14 +248,9 @@ function CompanyForm({
               Saved
             </span>
           )}
-          {saveStatus === "error" && (
+          {saveStatus === 'error' && (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -311,9 +267,7 @@ function CompanyForm({
       <div className="space-y-4">
         {/* Logo */}
         <div className="border-b pb-4">
-          <h5 className="text-sm font-medium text-gray-700 mb-3">
-            Company Logo
-          </h5>
+          <h5 className="text-sm font-medium text-gray-700 mb-3">Company Logo</h5>
           <div className="flex items-start gap-4">
             {/* Logo preview */}
             <div className="min-w-24 max-w-48 h-24 border border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center p-2">
@@ -353,18 +307,14 @@ function CompanyForm({
               <label
                 htmlFor="logo-upload"
                 className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer ${
-                  logoStatus === "uploading"
-                    ? "bg-gray-100 text-gray-400 cursor-wait"
-                    : "bg-primary-600 text-white hover:bg-primary-700"
+                  logoStatus === 'uploading'
+                    ? 'bg-gray-100 text-gray-400 cursor-wait'
+                    : 'bg-primary-600 text-white hover:bg-primary-700'
                 }`}
               >
-                {logoStatus === "uploading" ? (
+                {logoStatus === 'uploading' ? (
                   <>
-                    <svg
-                      className="animate-spin h-4 w-4 mr-1.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="animate-spin h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24">
                       <circle
                         className="opacity-25"
                         cx="12"
@@ -396,7 +346,7 @@ function CompanyForm({
                         d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
-                    {tenant.logo_url ? "Replace Logo" : "Upload Logo"}
+                    {tenant.logo_url ? 'Replace Logo' : 'Upload Logo'}
                   </>
                 )}
               </label>
@@ -405,20 +355,16 @@ function CompanyForm({
                 <button
                   type="button"
                   onClick={() => deleteLogoMutation.mutate()}
-                  disabled={logoStatus === "deleting"}
+                  disabled={logoStatus === 'deleting'}
                   className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
-                    logoStatus === "deleting"
-                      ? "bg-gray-100 text-gray-400 cursor-wait"
-                      : "bg-white text-red-600 border border-red-300 hover:bg-red-50"
+                    logoStatus === 'deleting'
+                      ? 'bg-gray-100 text-gray-400 cursor-wait'
+                      : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
                   }`}
                 >
-                  {logoStatus === "deleting" ? (
+                  {logoStatus === 'deleting' ? (
                     <>
-                      <svg
-                        className="animate-spin h-4 w-4 mr-1.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
+                      <svg className="animate-spin h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24">
                         <circle
                           className="opacity-25"
                           cx="12"
@@ -458,9 +404,7 @@ function CompanyForm({
 
               {logoError && <p className="text-sm text-red-600">{logoError}</p>}
 
-              <p className="text-xs text-gray-500">
-                JPEG, PNG, WebP, or GIF. Max 10MB.
-              </p>
+              <p className="text-xs text-gray-500">JPEG, PNG, WebP, or GIF. Max 10MB.</p>
             </div>
           </div>
         </div>
@@ -468,37 +412,31 @@ function CompanyForm({
         {/* Basic Info */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Company Name
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Company Name</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.name}
-              onChange={(e) => handleFieldChange("name", e.target.value)}
+              onChange={(e) => handleFieldChange('name', e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Website
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Website</label>
             <input
               type="text"
               placeholder="www.example.com"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.website}
-              onChange={(e) => handleFieldChange("website", e.target.value)}
+              onChange={(e) => handleFieldChange('website', e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              VAT Number
-            </label>
+            <label className="block text-sm font-medium text-gray-700">VAT Number</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.vat_number}
-              onChange={(e) => handleFieldChange("vat_number", e.target.value)}
+              onChange={(e) => handleFieldChange('vat_number', e.target.value)}
             />
           </div>
         </div>
@@ -512,7 +450,7 @@ function CompanyForm({
               placeholder="Street Address"
               className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.address}
-              onChange={(e) => handleFieldChange("address", e.target.value)}
+              onChange={(e) => handleFieldChange('address', e.target.value)}
             />
             <div className="grid grid-cols-3 gap-3">
               <input
@@ -520,23 +458,21 @@ function CompanyForm({
                 placeholder="Postal Code"
                 className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.postal_code}
-                onChange={(e) =>
-                  handleFieldChange("postal_code", e.target.value)
-                }
+                onChange={(e) => handleFieldChange('postal_code', e.target.value)}
               />
               <input
                 type="text"
                 placeholder="City"
                 className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.city}
-                onChange={(e) => handleFieldChange("city", e.target.value)}
+                onChange={(e) => handleFieldChange('city', e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Country"
                 className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.country}
-                onChange={(e) => handleFieldChange("country", e.target.value)}
+                onChange={(e) => handleFieldChange('country', e.target.value)}
               />
             </div>
           </div>
@@ -544,17 +480,12 @@ function CompanyForm({
 
         {/* Contact Persons */}
         <div className="border-t pt-4">
-          <h5 className="text-sm font-medium text-gray-700 mb-2">
-            Contact Persons
-          </h5>
+          <h5 className="text-sm font-medium text-gray-700 mb-2">Contact Persons</h5>
 
           {formData.contact_persons && formData.contact_persons.length > 0 && (
             <div className="mb-4 space-y-2">
               {formData.contact_persons.map((contact, index) => (
-                <div
-                  key={index}
-                  className="bg-gray-50 border border-gray-200 rounded-lg p-3"
-                >
+                <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                   {editingContactIndex === index ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
@@ -599,7 +530,7 @@ function CompanyForm({
                           <input
                             type="text"
                             className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                            value={contact.role || ""}
+                            value={contact.role || ''}
                             onChange={(e) =>
                               updateContact(index, {
                                 ...contact,
@@ -615,7 +546,7 @@ function CompanyForm({
                           <input
                             type="email"
                             className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                            value={contact.email || ""}
+                            value={contact.email || ''}
                             onChange={(e) =>
                               updateContact(index, {
                                 ...contact,
@@ -631,8 +562,8 @@ function CompanyForm({
                           <input
                             type="tel"
                             placeholder="+491234545 or 00491234566"
-                            className={`w-full border ${editContactPhoneError ? "border-red-300" : "border-gray-300"} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
-                            value={contact.phone || ""}
+                            className={`w-full border ${editContactPhoneError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                            value={contact.phone || ''}
                             onChange={(e) => {
                               const value = e.target.value;
                               updateContact(index, { ...contact, phone: value });
@@ -640,9 +571,7 @@ function CompanyForm({
                             }}
                           />
                           {editContactPhoneError && (
-                            <p className="mt-1 text-xs text-red-600">
-                              {editContactPhoneError}
-                            </p>
+                            <p className="mt-1 text-xs text-red-600">{editContactPhoneError}</p>
                           )}
                         </div>
                       </div>
@@ -732,76 +661,56 @@ function CompanyForm({
 
           {/* Add new contact */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h6 className="text-sm font-medium text-blue-900 mb-3">
-              Add New Contact
-            </h6>
+            <h6 className="text-sm font-medium text-blue-900 mb-3">Add New Contact</h6>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  First Name *
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">First Name *</label>
                 <input
                   type="text"
                   placeholder="First name"
                   className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={newContact.first_name}
-                  onChange={(e) =>
-                    setNewContact({ ...newContact, first_name: e.target.value })
-                  }
+                  onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Last Name *
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Last Name *</label>
                 <input
                   type="text"
                   placeholder="Last name"
                   className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={newContact.last_name}
-                  onChange={(e) =>
-                    setNewContact({ ...newContact, last_name: e.target.value })
-                  }
+                  onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Role
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
                 <input
                   type="text"
                   placeholder="e.g., Manager, Technical"
                   className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={newContact.role}
-                  onChange={(e) =>
-                    setNewContact({ ...newContact, role: e.target.value })
-                  }
+                  onChange={(e) => setNewContact({ ...newContact, role: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Email
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
                 <input
                   type="email"
                   placeholder="email@example.com"
                   className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={newContact.email}
-                  onChange={(e) =>
-                    setNewContact({ ...newContact, email: e.target.value })
-                  }
+                  onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Phone
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
                 <input
                   type="tel"
                   placeholder="+491234545 or 00491234566"
-                  className={`w-full border ${newContactPhoneError ? "border-red-300" : "border-gray-300"} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                  className={`w-full border ${newContactPhoneError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                   value={newContact.phone}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -810,9 +719,7 @@ function CompanyForm({
                   }}
                 />
                 {newContactPhoneError && (
-                  <p className="mt-1 text-xs text-red-600">
-                    {newContactPhoneError}
-                  </p>
+                  <p className="mt-1 text-xs text-red-600">{newContactPhoneError}</p>
                 )}
               </div>
             </div>
@@ -848,12 +755,10 @@ function CompanyForm({
 
         {/* Comments */}
         <div className="border-t pt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Comments / Notes
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Comments / Notes</label>
           <RichTextEditor
             value={formData.comments}
-            onChange={(html) => handleFieldChange("comments", html)}
+            onChange={(html) => handleFieldChange('comments', html)}
             rows={3}
           />
         </div>
@@ -862,7 +767,7 @@ function CompanyForm({
       <ConfirmDialog
         open={deleteContactIndex !== null}
         title="Delete Contact"
-        message={`Are you sure you want to delete "${deleteContactIndex !== null ? `${formData.contact_persons?.[deleteContactIndex]?.first_name ?? ""} ${formData.contact_persons?.[deleteContactIndex]?.last_name ?? ""}`.trim() : ""}"?`}
+        message={`Are you sure you want to delete "${deleteContactIndex !== null ? `${formData.contact_persons?.[deleteContactIndex]?.first_name ?? ''} ${formData.contact_persons?.[deleteContactIndex]?.last_name ?? ''}`.trim() : ''}"?`}
         confirmLabel="Delete"
         onConfirm={() => {
           if (deleteContactIndex !== null) removeContact(deleteContactIndex);

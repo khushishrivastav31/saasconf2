@@ -53,13 +53,6 @@ def _log_email(to: str, subject: str, body: str) -> None:
         f"Body:\n{body}\n"
         f"============="
     )
-    print(
-        f"\n{'='*50}\n"
-        f"EMAIL (development mode)\n"
-        f"To: {to}\n"
-        f"Subject: {subject}\n"
-        f"{'='*50}\n"
-    )
 
 
 async def send_email(

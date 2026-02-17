@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
-import ConfirmDialog from "../ConfirmDialog";
-import InvoiceDetailsTab from "./InvoiceDetailsTab";
-import InvoiceLineItemsTab from "./InvoiceLineItemsTab";
-import InvoiceContactsTab from "./InvoiceContactsTab";
-import InvoiceDocumentsTab from "./InvoiceDocumentsTab";
+import { useState, useEffect } from 'react';
+import ConfirmDialog from '../ConfirmDialog';
+import { useSaveStatus } from '../../hooks/useSaveStatus';
+import InvoiceDetailsTab from './InvoiceDetailsTab';
+import InvoiceLineItemsTab from './InvoiceLineItemsTab';
+import InvoiceContactsTab from './InvoiceContactsTab';
+import InvoiceDocumentsTab from './InvoiceDocumentsTab';
 import type {
   Invoice,
   InvoiceUpdate,
@@ -11,14 +12,14 @@ import type {
   InvoiceStatus,
   PlatformCurrency,
   LocationContactPerson,
-} from "../../types";
+} from '../../types';
 
 const STATUS_COLORS: Record<InvoiceStatus, string> = {
-  draft: "bg-gray-100 text-gray-800",
-  sent: "bg-blue-100 text-blue-800",
-  paid: "bg-green-100 text-green-800",
-  overdue: "bg-red-100 text-red-800",
-  cancelled: "bg-yellow-100 text-yellow-800",
+  draft: 'bg-gray-100 text-gray-800',
+  sent: 'bg-blue-100 text-blue-800',
+  paid: 'bg-green-100 text-green-800',
+  overdue: 'bg-red-100 text-red-800',
+  cancelled: 'bg-yellow-100 text-yellow-800',
 };
 
 interface InvoiceDetailPanelProps {
@@ -30,7 +31,7 @@ interface InvoiceDetailPanelProps {
 }
 
 function emptyLineItem(): InvoiceLineItem {
-  return { description: "", quantity: 1, unit_price: 0, total: 0 };
+  return { description: '', quantity: 1, unit_price: 0, total: 0 };
 }
 
 export default function InvoiceDetailPanel({
@@ -40,73 +41,72 @@ export default function InvoiceDetailPanel({
   onSave,
   onDelete,
 }: InvoiceDetailPanelProps) {
-  const [activeTab, setActiveTab] = useState<
-    "details" | "line_items" | "contacts" | "documents"
-  >("details");
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [activeTab, setActiveTab] = useState<'details' | 'line_items' | 'contacts' | 'documents'>(
+    'details'
+  );
+  const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
   const [formData, setFormData] = useState<InvoiceUpdate>({
     invoice_number: invoice.invoice_number,
     status: invoice.status,
-    issue_date: invoice.issue_date || "",
-    due_date: invoice.due_date || "",
+    issue_date: invoice.issue_date || '',
+    due_date: invoice.due_date || '',
     recipient_name: invoice.recipient_name,
-    recipient_email: invoice.recipient_email || "",
-    recipient_address_line1: invoice.recipient_address_line1 || "",
-    recipient_address_line2: invoice.recipient_address_line2 || "",
-    recipient_city: invoice.recipient_city || "",
-    recipient_state: invoice.recipient_state || "",
-    recipient_postal_code: invoice.recipient_postal_code || "",
-    recipient_country: invoice.recipient_country || "",
-    recipient_vat_number: invoice.recipient_vat_number || "",
+    recipient_email: invoice.recipient_email || '',
+    recipient_address_line1: invoice.recipient_address_line1 || '',
+    recipient_address_line2: invoice.recipient_address_line2 || '',
+    recipient_city: invoice.recipient_city || '',
+    recipient_state: invoice.recipient_state || '',
+    recipient_postal_code: invoice.recipient_postal_code || '',
+    recipient_country: invoice.recipient_country || '',
+    recipient_vat_number: invoice.recipient_vat_number || '',
     line_items: invoice.line_items?.length ? invoice.line_items : [],
     subtotal: invoice.subtotal ?? undefined,
     tax_rate: invoice.tax_rate ?? undefined,
     tax_amount: invoice.tax_amount ?? undefined,
     total: invoice.total ?? undefined,
-    currency: invoice.currency || "",
-    notes: invoice.notes || "",
+    currency: invoice.currency || '',
+    notes: invoice.notes || '',
     contact_persons: invoice.contact_persons || [],
     is_active: invoice.is_active,
   });
   const [newContact, setNewContact] = useState<LocationContactPerson>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    comment: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Reset form when invoice changes
   useEffect(() => {
-    setActiveTab("details");
+    setActiveTab('details');
     setFormData({
       invoice_number: invoice.invoice_number,
       status: invoice.status,
-      issue_date: invoice.issue_date || "",
-      due_date: invoice.due_date || "",
+      issue_date: invoice.issue_date || '',
+      due_date: invoice.due_date || '',
       recipient_name: invoice.recipient_name,
-      recipient_email: invoice.recipient_email || "",
-      recipient_address_line1: invoice.recipient_address_line1 || "",
-      recipient_address_line2: invoice.recipient_address_line2 || "",
-      recipient_city: invoice.recipient_city || "",
-      recipient_state: invoice.recipient_state || "",
-      recipient_postal_code: invoice.recipient_postal_code || "",
-      recipient_country: invoice.recipient_country || "",
-      recipient_vat_number: invoice.recipient_vat_number || "",
+      recipient_email: invoice.recipient_email || '',
+      recipient_address_line1: invoice.recipient_address_line1 || '',
+      recipient_address_line2: invoice.recipient_address_line2 || '',
+      recipient_city: invoice.recipient_city || '',
+      recipient_state: invoice.recipient_state || '',
+      recipient_postal_code: invoice.recipient_postal_code || '',
+      recipient_country: invoice.recipient_country || '',
+      recipient_vat_number: invoice.recipient_vat_number || '',
       line_items: invoice.line_items?.length ? invoice.line_items : [],
       subtotal: invoice.subtotal ?? undefined,
       tax_rate: invoice.tax_rate ?? undefined,
       tax_amount: invoice.tax_amount ?? undefined,
       total: invoice.total ?? undefined,
-      currency: invoice.currency || "",
-      notes: invoice.notes || "",
+      currency: invoice.currency || '',
+      notes: invoice.notes || '',
       contact_persons: invoice.contact_persons || [],
       is_active: invoice.is_active,
     });
-    setNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoice.id]);
 
   // Recalculate totals when line items or tax rate change
@@ -122,22 +122,18 @@ export default function InvoiceDetailPanel({
     };
   };
 
-  const updateLineItem = (
-    index: number,
-    field: keyof InvoiceLineItem,
-    value: string | number
-  ) => {
+  const updateLineItem = (index: number, field: keyof InvoiceLineItem, value: string | number) => {
     const items = [...(formData.line_items || [])];
     const item = { ...items[index] };
 
-    if (field === "description") {
+    if (field === 'description') {
       item.description = value as string;
     } else {
       item[field] = Number(value) || 0;
     }
 
     // Auto-calculate line total
-    if (field === "quantity" || field === "unit_price") {
+    if (field === 'quantity' || field === 'unit_price') {
       item.total = Math.round(item.quantity * item.unit_price * 100) / 100;
     }
 
@@ -166,29 +162,23 @@ export default function InvoiceDetailPanel({
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
       setFormData({
         ...formData,
-        contact_persons: [
-          ...(formData.contact_persons || []),
-          { ...newContact },
-        ],
+        contact_persons: [...(formData.contact_persons || []), { ...newContact }],
       });
-      setNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     }
   };
 
   const removeContact = (index: number) => {
     setFormData({
       ...formData,
-      contact_persons:
-        formData.contact_persons?.filter((_, i) => i !== index) || [],
+      contact_persons: formData.contact_persons?.filter((_, i) => i !== index) || [],
     });
   };
 
   const updateContact = (index: number, contact: LocationContactPerson) => {
     setFormData({
       ...formData,
-      contact_persons:
-        formData.contact_persons?.map((c, i) => (i === index ? contact : c)) ||
-        [],
+      contact_persons: formData.contact_persons?.map((c, i) => (i === index ? contact : c)) || [],
     });
   };
 
@@ -196,35 +186,28 @@ export default function InvoiceDetailPanel({
     e.preventDefault();
     const finalData = { ...formData };
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
-      finalData.contact_persons = [
-        ...(finalData.contact_persons || []),
-        { ...newContact },
-      ];
+      finalData.contact_persons = [...(finalData.contact_persons || []), { ...newContact }];
     }
-    setSaveStatus("saving");
+    setSaving();
     try {
       await onSave(finalData);
-      setSaveStatus("saved");
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+      setSaved();
     } catch {
-      setSaveStatus("error");
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+      setError();
     }
   };
 
   const tabs = [
-    { id: "details" as const, label: "Details" },
+    { id: 'details' as const, label: 'Details' },
     {
-      id: "line_items" as const,
-      label: `Line Items${(formData.line_items?.length || 0) > 0 ? ` (${formData.line_items?.length})` : ""}`,
+      id: 'line_items' as const,
+      label: `Line Items${(formData.line_items?.length || 0) > 0 ? ` (${formData.line_items?.length})` : ''}`,
     },
     {
-      id: "contacts" as const,
-      label: `Contacts${(formData.contact_persons?.length || 0) > 0 ? ` (${formData.contact_persons?.length})` : ""}`,
+      id: 'contacts' as const,
+      label: `Contacts${(formData.contact_persons?.length || 0) > 0 ? ` (${formData.contact_persons?.length})` : ''}`,
     },
-    { id: "documents" as const, label: "Documents" },
+    { id: 'documents' as const, label: 'Documents' },
   ];
 
   return (
@@ -232,19 +215,14 @@ export default function InvoiceDetailPanel({
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
         <div className="mb-4">
-          <h3 className="text-lg font-medium text-gray-900">
-            {invoice.invoice_number}
-          </h3>
+          <h3 className="text-lg font-medium text-gray-900">{invoice.invoice_number}</h3>
           <div className="flex items-center gap-2 mt-1">
             <span
               className={`px-2 py-0.5 text-xs font-semibold rounded-full ${STATUS_COLORS[invoice.status]}`}
             >
-              {invoice.status.charAt(0).toUpperCase() +
-                invoice.status.slice(1)}
+              {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
             </span>
-            <span className="text-sm text-gray-500">
-              {invoice.recipient_name}
-            </span>
+            <span className="text-sm text-gray-500">{invoice.recipient_name}</span>
           </div>
         </div>
 
@@ -257,8 +235,8 @@ export default function InvoiceDetailPanel({
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? "border-primary-600 text-primary-600 bg-primary-50"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? 'border-primary-600 text-primary-600 bg-primary-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
               {tab.label}
@@ -270,7 +248,7 @@ export default function InvoiceDetailPanel({
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
         <form id="invoice-detail-form" onSubmit={handleSubmit}>
-          {activeTab === "details" && (
+          {activeTab === 'details' && (
             <InvoiceDetailsTab
               formData={formData}
               setFormData={setFormData}
@@ -279,7 +257,7 @@ export default function InvoiceDetailPanel({
             />
           )}
 
-          {activeTab === "line_items" && (
+          {activeTab === 'line_items' && (
             <InvoiceLineItemsTab
               formData={formData}
               updateLineItem={updateLineItem}
@@ -289,7 +267,7 @@ export default function InvoiceDetailPanel({
             />
           )}
 
-          {activeTab === "contacts" && (
+          {activeTab === 'contacts' && (
             <InvoiceContactsTab
               contacts={formData.contact_persons || []}
               newContact={newContact}
@@ -301,9 +279,7 @@ export default function InvoiceDetailPanel({
           )}
         </form>
 
-        {activeTab === "documents" && (
-          <InvoiceDocumentsTab invoiceId={invoice.id} />
-        )}
+        {activeTab === 'documents' && <InvoiceDocumentsTab invoiceId={invoice.id} />}
       </div>
 
       {/* Footer */}
@@ -321,34 +297,50 @@ export default function InvoiceDetailPanel({
         <button
           type="submit"
           form="invoice-detail-form"
-          disabled={saveStatus === "saving"}
+          disabled={saveStatus === 'saving'}
           className={`px-4 py-1.5 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 transition-colors duration-200 ${
-            saveStatus === "saved"
-              ? "bg-green-600"
-              : saveStatus === "error"
-                ? "bg-red-600"
-                : "bg-primary-600 hover:bg-primary-700"
+            saveStatus === 'saved'
+              ? 'bg-green-600'
+              : saveStatus === 'error'
+                ? 'bg-red-600'
+                : 'bg-primary-600 hover:bg-primary-700'
           }`}
         >
-          {saveStatus === "saving" ? (
+          {saveStatus === 'saving' ? (
             <span className="inline-flex items-center gap-1.5">
               <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
               </svg>
               Saving...
             </span>
-          ) : saveStatus === "saved" ? (
+          ) : saveStatus === 'saved' ? (
             <span className="inline-flex items-center gap-1.5">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
               Saved
             </span>
-          ) : saveStatus === "error" ? (
-            "Save failed"
+          ) : saveStatus === 'error' ? (
+            'Save failed'
           ) : (
-            "Save Changes"
+            'Save Changes'
           )}
         </button>
       </div>

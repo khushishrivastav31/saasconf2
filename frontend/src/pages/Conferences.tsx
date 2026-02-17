@@ -1,42 +1,35 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../config/api";
-import { parseApiError } from "../utils/apiError";
-import { formatDate } from "../utils/formatDate";
-import { useIsTenantAdmin } from "../hooks/useIsAdmin";
-import CreateConferenceModal from "../components/CreateConferenceModal";
-import ConferenceLogo from "../components/ConferenceLogo";
-import type {
-  Conference,
-  ConferenceCreate,
-  ConferenceStats,
-  PaginatedResponse,
-} from "../types";
+import { useState } from 'react';
+import { useNavigate } from 'react-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../config/api';
+import { parseApiError } from '../utils/apiError';
+import { formatDate } from '../utils/formatDate';
+import { useIsTenantAdmin } from '../hooks/useIsAdmin';
+import CreateConferenceModal from '../components/CreateConferenceModal';
+import ConferenceLogo from '../components/ConferenceLogo';
+import type { Conference, ConferenceCreate, ConferenceStats, PaginatedResponse } from '../types';
 
 export default function Conferences() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const isTenantAdmin = useIsTenantAdmin();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["conferences", statusFilter],
+    queryKey: ['conferences', statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (statusFilter) params.append("status", statusFilter);
-      const response = await api.get<PaginatedResponse<Conference>>(
-        `/conferences?${params}`,
-      );
+      if (statusFilter) params.append('status', statusFilter);
+      const response = await api.get<PaginatedResponse<Conference>>(`/conferences?${params}`);
       return response.data;
     },
   });
 
   const { data: stats } = useQuery({
-    queryKey: ["conference-stats"],
+    queryKey: ['conference-stats'],
     queryFn: async () => {
-      const response = await api.get<ConferenceStats>("/conferences/stats");
+      const response = await api.get<ConferenceStats>('/conferences/stats');
       return response.data;
     },
   });
@@ -45,30 +38,30 @@ export default function Conferences() {
 
   const createMutation = useMutation({
     mutationFn: async (data: ConferenceCreate) => {
-      const response = await api.post<Conference>("/conferences", data);
+      const response = await api.post<Conference>('/conferences', data);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conferences"] });
-      queryClient.invalidateQueries({ queryKey: ["conference-stats"] });
+      queryClient.invalidateQueries({ queryKey: ['conferences'] });
+      queryClient.invalidateQueries({ queryKey: ['conference-stats'] });
       setCreateError(null);
       setIsCreateModalOpen(false);
     },
     onError: (error: unknown) => {
-      setCreateError(parseApiError(error, "Failed to create conference"));
+      setCreateError(parseApiError(error, 'Failed to create conference'));
     },
   });
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case "upcoming":
-        return "bg-blue-100 text-blue-800";
-      case "ongoing":
-        return "bg-green-100 text-green-800";
-      case "past":
-        return "bg-gray-100 text-gray-800";
+      case 'upcoming':
+        return 'bg-blue-100 text-blue-800';
+      case 'ongoing':
+        return 'bg-green-100 text-green-800';
+      case 'past':
+        return 'bg-gray-100 text-gray-800';
       default:
-        return "bg-yellow-100 text-yellow-800";
+        return 'bg-yellow-100 text-yellow-800';
     }
   };
 
@@ -77,21 +70,14 @@ export default function Conferences() {
       <div className="sm:flex sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Conferences</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage your conferences and events
-          </p>
+          <p className="mt-1 text-sm text-gray-500">Manage your conferences and events</p>
         </div>
         {isTenantAdmin && (
           <button
             onClick={() => setIsCreateModalOpen(true)}
             className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
           >
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -109,21 +95,15 @@ export default function Conferences() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
             <div className="text-sm text-gray-500">Total</div>
-            <div className="text-2xl font-bold text-gray-900">
-              {stats.total}
-            </div>
+            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <div className="text-sm text-gray-500">Upcoming</div>
-            <div className="text-2xl font-bold text-blue-600">
-              {stats.upcoming}
-            </div>
+            <div className="text-2xl font-bold text-blue-600">{stats.upcoming}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <div className="text-sm text-gray-500">Ongoing</div>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.ongoing}
-            </div>
+            <div className="text-2xl font-bold text-green-600">{stats.ongoing}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <div className="text-sm text-gray-500">Past</div>
@@ -172,13 +152,9 @@ export default function Conferences() {
                       </div>
                     )}
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {conference.name}
-                      </h3>
+                      <h3 className="text-lg font-semibold text-gray-900">{conference.name}</h3>
                       {conference.abbreviation && (
-                        <p className="text-sm text-gray-500">
-                          {conference.abbreviation}
-                        </p>
+                        <p className="text-sm text-gray-500">{conference.abbreviation}</p>
                       )}
                     </div>
                   </div>
@@ -205,13 +181,9 @@ export default function Conferences() {
                       />
                     </svg>
                     {formatDate(conference.start_date)}
-                    {conference.end_date &&
-                      conference.end_date !== conference.start_date && (
-                        <>
-                          {" "}
-                          - {formatDate(conference.end_date)}
-                        </>
-                      )}
+                    {conference.end_date && conference.end_date !== conference.start_date && (
+                      <> - {formatDate(conference.end_date)}</>
+                    )}
                   </div>
                 )}
 
@@ -236,12 +208,10 @@ export default function Conferences() {
                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
-                    {[conference.city, conference.country]
-                      .filter(Boolean)
-                      .join(", ")}
-                    {conference.venue_type !== "onsite" && (
+                    {[conference.city, conference.country].filter(Boolean).join(', ')}
+                    {conference.venue_type !== 'onsite' && (
                       <span className="ml-2 text-blue-600">
-                        ({conference.venue_type === "hybrid" ? "Hybrid" : "Virtual"})
+                        ({conference.venue_type === 'hybrid' ? 'Hybrid' : 'Virtual'})
                       </span>
                     )}
                   </div>
@@ -263,9 +233,7 @@ export default function Conferences() {
                   </svg>
                   {conference.team_count} team members
                   {conference.managers_count > 0 && (
-                    <span className="ml-2">
-                      ({conference.managers_count} managers)
-                    </span>
+                    <span className="ml-2">({conference.managers_count} managers)</span>
                   )}
                 </div>
 
@@ -299,9 +267,7 @@ export default function Conferences() {
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">
-            No conferences
-          </h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No conferences</h3>
           <p className="mt-1 text-sm text-gray-500">
             Get started by creating your first conference.
           </p>

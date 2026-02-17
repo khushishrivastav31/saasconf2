@@ -1,9 +1,10 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
   server: {
     port: 3000,
     host: true,
@@ -30,10 +31,10 @@ export default defineConfig({
         'src/main.tsx',
       ],
       thresholds: {
-        statements: 50,
-        branches: 40,
-        functions: 50,
-        lines: 50,
+        statements: 70,
+        branches: 55,
+        functions: 70,
+        lines: 70,
       },
     },
   },

@@ -9,7 +9,7 @@ from sqlalchemy import case, select
 from app.core.currency_formats import get_format_as_dict, get_preset_list
 from app.core.dependencies import CurrentUserDep, DbSessionDep, SuperAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
-from app.core.pagination import paginate
+from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.models.audit import AuditAction, AuditLog
 from app.models.platform_currency import PlatformCurrency
@@ -67,7 +67,7 @@ async def list_platform_currencies(
         total=result.total,
         page=page,
         page_size=page_size,
-        pages=(result.total + page_size - 1) // page_size,
+        pages=calculate_pages(result.total, page_size),
     )
 
 
@@ -263,7 +263,7 @@ async def list_system_email_templates(
         total=result.total,
         page=page,
         page_size=page_size,
-        pages=(result.total + page_size - 1) // page_size,
+        pages=calculate_pages(result.total, page_size),
     )
 
 

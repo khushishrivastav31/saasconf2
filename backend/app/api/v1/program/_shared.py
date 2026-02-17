@@ -4,9 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from app.core.dependencies import check_conference_admin_access
-from app.core.exceptions import AuthorizationError, NotFoundError
-from app.models.conference import Conference
+from app.core.exceptions import NotFoundError
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
 from app.schemas.program import (
     ProgramDayResponse,
@@ -16,29 +14,6 @@ from app.schemas.program import (
 )
 
 MODULE_CODE = "program"
-
-
-async def _get_conference_for_tenant(db, conference_id: UUID, tenant_id: UUID) -> Conference:
-    """Fetch conference and raise 404 if not found or not owned by tenant."""
-    result = await db.execute(
-        select(Conference).where(
-            Conference.id == conference_id,
-            Conference.tenant_id == tenant_id,
-        )
-    )
-    conference = result.scalar_one_or_none()
-    if not conference:
-        raise NotFoundError(f"Conference with ID '{conference_id}' not found")
-    return conference
-
-
-async def _check_admin_access(db, current_user, conference_id: UUID) -> None:
-    """Check if user has admin access to the conference."""
-    if current_user.is_super_admin or current_user.is_tenant_admin:
-        return
-    has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-    if not has_access:
-        raise AuthorizationError("Admin access to this conference required")
 
 
 def _build_day_response(day: ProgramDay) -> ProgramDayResponse:

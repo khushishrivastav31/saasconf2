@@ -1,15 +1,16 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../config/api";
-import { useIsAdmin } from "../../../hooks/useIsAdmin";
-import { useAuthMedia } from "../../../hooks/useAuthMedia";
-import { DeleteIcon } from "../../ConferenceDetail/icons";
-import { ErrorBanner } from "../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
-import type { CommitteeMember, CFPTopic, Applicant, CFPCommitteeRole } from "../../../types";
-import { parseApiError } from "../../../utils/apiError";
-import { validatePhone } from "../../../utils/validators";
-import ConfirmDialog from "../../../components/ConfirmDialog";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../config/api';
+import { useIsAdmin } from '../../../hooks/useIsAdmin';
+import { useSaveStatus } from '../../../hooks/useSaveStatus';
+import { useAuthMedia } from '../../../hooks/useAuthMedia';
+import { DeleteIcon } from '../../ConferenceDetail/icons';
+import { ErrorBanner } from '../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import type { CommitteeMember, CFPTopic, Applicant, CFPCommitteeRole } from '../../../types';
+import { parseApiError } from '../../../utils/apiError';
+import { validatePhone } from '../../../utils/validators';
+import ConfirmDialog from '../../../components/ConfirmDialog';
 
 interface MemberListResponse {
   items: CommitteeMember[];
@@ -22,7 +23,7 @@ interface ApplicantListResponse {
 }
 
 interface MemberFormData {
-  mode: "link" | "create";
+  mode: 'link' | 'create';
   applicant_id: string | null;
   first_name: string;
   last_name: string;
@@ -34,14 +35,14 @@ interface MemberFormData {
 }
 
 const emptyForm: MemberFormData = {
-  mode: "link",
+  mode: 'link',
   applicant_id: null,
-  first_name: "",
-  last_name: "",
-  email: "",
-  phone: "",
-  password: "",
-  role: "",
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone: '',
+  password: '',
+  role: '',
   topic_ids: [],
 };
 
@@ -50,7 +51,7 @@ function getInitials(firstName: string, lastName: string): string {
     .map((p) => p?.[0])
     .filter(Boolean)
     .slice(0, 2)
-    .join("")
+    .join('')
     .toUpperCase();
 }
 
@@ -58,13 +59,7 @@ function getInitials(firstName: string, lastName: string): string {
 // Row in the all-members list view
 // ---------------------------------------------------------------------------
 
-function MemberListRow({
-  member,
-  onClick,
-}: {
-  member: CommitteeMember;
-  onClick: () => void;
-}) {
+function MemberListRow({ member, onClick }: { member: CommitteeMember; onClick: () => void }) {
   const imgSrc = useAuthMedia(member.picture_url);
 
   return (
@@ -124,12 +119,7 @@ function MemberListRow({
         stroke="currentColor"
         viewBox="0 0 24 24"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 5l7 7-7 7"
-        />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
       </svg>
     </button>
   );
@@ -161,12 +151,12 @@ function ReadOnlyUserInfo({ member }: { member: CommitteeMember }) {
           )}
         </div>
         <div>
-          <p className="text-sm font-medium text-gray-900">{member.first_name} {member.last_name}</p>
+          <p className="text-sm font-medium text-gray-900">
+            {member.first_name} {member.last_name}
+          </p>
           <p className="text-xs text-gray-500">{member.email}</p>
         </div>
-        {member.company && (
-          <span className="text-xs text-gray-400 ml-auto">{member.company}</span>
-        )}
+        {member.company && <span className="text-xs text-gray-400 ml-auto">{member.company}</span>}
       </div>
     </div>
   );
@@ -197,33 +187,32 @@ function MemberForm({
 }) {
   const isEditing = !!member;
 
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
 
   const [formData, setFormData] = useState<MemberFormData>(
     member
       ? {
-          mode: "link",
+          mode: 'link',
           applicant_id: member.applicant_id,
           first_name: member.first_name,
           last_name: member.last_name,
           email: member.email,
-          phone: "",
-          password: "",
+          phone: '',
+          password: '',
           role: member.role,
           topic_ids: member.topics?.map((t) => t.id) || [],
         }
-      : emptyForm,
+      : emptyForm
   );
   const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [applicantSearch, setApplicantSearch] = useState("");
+  const [applicantSearch, setApplicantSearch] = useState('');
 
   // Fetch available committee roles from settings
   const { data: rolesData } = useQuery({
-    queryKey: ["committee-roles", conferenceId],
+    queryKey: ['committee-roles', conferenceId],
     queryFn: async () => {
       const response = await api.get<{ items: CFPCommitteeRole[]; total: number }>(
-        `/conferences/${conferenceId}/settings/committee-roles`,
+        `/conferences/${conferenceId}/settings/committee-roles`
       );
       return response.data;
     },
@@ -233,9 +222,9 @@ function MemberForm({
 
   // Fetch available topics
   const { data: topicsData } = useQuery({
-    queryKey: ["cfp-topics"],
+    queryKey: ['cfp-topics'],
     queryFn: async () => {
-      const response = await api.get<{ items: CFPTopic[]; total: number }>("/cfp/topics");
+      const response = await api.get<{ items: CFPTopic[]; total: number }>('/cfp/topics');
       return response.data;
     },
   });
@@ -243,9 +232,9 @@ function MemberForm({
 
   // Fetch applicants for linking (only when creating in "link" mode)
   const { data: applicantsData } = useQuery({
-    queryKey: ["cfp-applicants-for-committee"],
+    queryKey: ['cfp-applicants-for-committee'],
     queryFn: async () => {
-      const response = await api.get<ApplicantListResponse>("/cfp/applicants?page_size=500");
+      const response = await api.get<ApplicantListResponse>('/cfp/applicants?page_size=500');
       return response.data;
     },
     enabled: !isEditing,
@@ -257,7 +246,7 @@ function MemberForm({
     ? allApplicants.filter(
         (a) =>
           `${a.first_name} ${a.last_name}`.toLowerCase().includes(applicantSearch.toLowerCase()) ||
-          a.email.toLowerCase().includes(applicantSearch.toLowerCase()),
+          a.email.toLowerCase().includes(applicantSearch.toLowerCase())
       )
     : allApplicants;
 
@@ -266,62 +255,58 @@ function MemberForm({
     setFormData(
       member
         ? {
-            mode: "link",
+            mode: 'link',
             applicant_id: member.applicant_id,
             first_name: member.first_name,
             last_name: member.last_name,
             email: member.email,
-            phone: "",
-            password: "",
+            phone: '',
+            password: '',
             role: member.role,
             topic_ids: member.topics?.map((t) => t.id) || [],
           }
-        : emptyForm,
+        : emptyForm
     );
     setPhoneError(null);
-    setApplicantSearch("");
+    setApplicantSearch('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [member?.id]);
 
   // Track save status based on isSaving prop changes
   useEffect(() => {
     if (isSaving) {
-      setSaveStatus("saving");
+      setSaving();
     }
-  }, [isSaving]);
+  }, [isSaving, setSaving]);
 
   // When saving completes (isSaving goes from true to false), update status
   useEffect(() => {
-    if (saveStatus === "saving" && !isSaving) {
+    if (saveStatus === 'saving' && !isSaving) {
       if (error) {
-        setSaveStatus("error");
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+        setSaveError();
       } else {
-        setSaveStatus("saved");
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+        setSaved();
       }
     }
-  }, [isSaving, error, saveStatus]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    };
-  }, []);
+  }, [isSaving, error, saveStatus, setSaveError, setSaved]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (phoneError) return;
 
     if (!isEditing) {
-      if (formData.mode === "link" && !formData.applicant_id) return;
-      if (formData.mode === "create" && (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim() || !formData.password.trim())) return;
+      if (formData.mode === 'link' && !formData.applicant_id) return;
+      if (
+        formData.mode === 'create' &&
+        (!formData.first_name.trim() ||
+          !formData.last_name.trim() ||
+          !formData.email.trim() ||
+          !formData.password.trim())
+      )
+        return;
     }
 
-    setSaveStatus("saving");
+    setSaving();
     onSave(formData);
   };
 
@@ -335,22 +320,22 @@ function MemberForm({
           <div className="flex rounded-md border border-gray-300 overflow-hidden w-fit">
             <button
               type="button"
-              onClick={() => setFormData((d) => ({ ...d, mode: "link", applicant_id: null }))}
+              onClick={() => setFormData((d) => ({ ...d, mode: 'link', applicant_id: null }))}
               className={`px-4 py-2 text-sm font-medium transition-colors ${
-                formData.mode === "link"
-                  ? "bg-primary-50 text-primary-700 border-r border-primary-200"
-                  : "bg-white text-gray-600 hover:bg-gray-50 border-r border-gray-300"
+                formData.mode === 'link'
+                  ? 'bg-primary-50 text-primary-700 border-r border-primary-200'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border-r border-gray-300'
               }`}
             >
               Link Existing User
             </button>
             <button
               type="button"
-              onClick={() => setFormData((d) => ({ ...d, mode: "create", applicant_id: null }))}
+              onClick={() => setFormData((d) => ({ ...d, mode: 'create', applicant_id: null }))}
               className={`px-4 py-2 text-sm font-medium transition-colors ${
-                formData.mode === "create"
-                  ? "bg-primary-50 text-primary-700"
-                  : "bg-white text-gray-600 hover:bg-gray-50"
+                formData.mode === 'create'
+                  ? 'bg-primary-50 text-primary-700'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
             >
               Create New User
@@ -360,7 +345,7 @@ function MemberForm({
       )}
 
       {/* Link existing user mode */}
-      {!isEditing && formData.mode === "link" && (
+      {!isEditing && formData.mode === 'link' && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Select User <span className="text-red-500">*</span>
@@ -386,8 +371,8 @@ function MemberForm({
                   }
                   className={`w-full flex items-center gap-3 px-3 py-2 text-left text-sm transition-colors border-b border-gray-100 last:border-b-0 ${
                     formData.applicant_id === a.id
-                      ? "bg-primary-50 text-primary-900"
-                      : "hover:bg-gray-50 text-gray-700"
+                      ? 'bg-primary-50 text-primary-900'
+                      : 'hover:bg-gray-50 text-gray-700'
                   }`}
                 >
                   <div className="w-7 h-7 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
@@ -396,19 +381,31 @@ function MemberForm({
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{a.first_name} {a.last_name}</p>
+                    <p className="font-medium truncate">
+                      {a.first_name} {a.last_name}
+                    </p>
                     <p className="text-xs text-gray-500 truncate">{a.email}</p>
                   </div>
                   {formData.applicant_id === a.id && (
-                    <svg className="w-5 h-5 text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-5 h-5 text-primary-600 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   )}
                 </button>
               ))
             ) : (
               <div className="px-3 py-4 text-center text-sm text-gray-400">
-                {applicantSearch ? "No users match your search." : "No users available."}
+                {applicantSearch ? 'No users match your search.' : 'No users available.'}
               </div>
             )}
           </div>
@@ -416,7 +413,7 @@ function MemberForm({
       )}
 
       {/* Create new user mode */}
-      {!isEditing && formData.mode === "create" && (
+      {!isEditing && formData.mode === 'create' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -455,9 +452,7 @@ function MemberForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
             <input
               type="tel"
               value={formData.phone}
@@ -467,7 +462,7 @@ function MemberForm({
                 setPhoneError(validatePhone(value));
               }}
               className={`w-full border rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
-                phoneError ? "border-red-300" : "border-gray-300"
+                phoneError ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="+491234545 or 00491234566"
             />
@@ -490,15 +485,11 @@ function MemberForm({
       )}
 
       {/* When editing: show user info as read-only */}
-      {isEditing && member && (
-        <ReadOnlyUserInfo member={member} />
-      )}
+      {isEditing && member && <ReadOnlyUserInfo member={member} />}
 
       {/* Role */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Role
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
         <select
           value={formData.role}
           onChange={(e) => setFormData((d) => ({ ...d, role: e.target.value }))}
@@ -516,12 +507,8 @@ function MemberForm({
       {/* Topics */}
       {allTopics.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Excluded Topics
-          </label>
-          <p className="text-xs text-gray-500 mb-2">
-            Select topics this member cannot review
-          </p>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Excluded Topics</label>
+          <p className="text-xs text-gray-500 mb-2">Select topics this member cannot review</p>
           <div className="flex flex-wrap gap-2">
             {allTopics.map((topic) => {
               const checked = formData.topic_ids.includes(topic.id);
@@ -530,8 +517,8 @@ function MemberForm({
                   key={topic.id}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm cursor-pointer transition-colors border ${
                     checked
-                      ? "bg-red-50 border-red-300 text-red-700"
-                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      ? 'bg-red-50 border-red-300 text-red-700'
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
                   <input
@@ -566,7 +553,7 @@ function MemberForm({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
             >
               <DeleteIcon />
-              {isDeleting ? "Removing..." : "Remove from Committee"}
+              {isDeleting ? 'Removing...' : 'Remove from Committee'}
             </button>
           )}
         </div>
@@ -582,31 +569,57 @@ function MemberForm({
             type="submit"
             disabled={isSaving || !!phoneError}
             className={`px-4 py-2 text-sm font-medium text-white rounded-md disabled:opacity-50 transition-all duration-300 inline-flex items-center gap-2 ${
-              saveStatus === "saved"
-                ? "bg-green-600 hover:bg-green-700"
-                : saveStatus === "error"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-primary-600 hover:bg-primary-700"
+              saveStatus === 'saved'
+                ? 'bg-green-600 hover:bg-green-700'
+                : saveStatus === 'error'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-primary-600 hover:bg-primary-700'
             }`}
           >
-            {saveStatus === "saving" && (
-              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            {saveStatus === 'saving' && (
+              <svg
+                className="animate-spin h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
             )}
-            {saveStatus === "saved" && (
-              <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            {saveStatus === 'saved' && (
+              <svg
+                className="h-4 w-4 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             )}
-            {saveStatus === "saving"
-              ? "Saving..."
-              : saveStatus === "saved"
-                ? "Saved!"
+            {saveStatus === 'saving'
+              ? 'Saving...'
+              : saveStatus === 'saved'
+                ? 'Saved!'
                 : isEditing
-                  ? "Save Changes"
-                  : "Add to Committee"}
+                  ? 'Save Changes'
+                  : 'Add to Committee'}
           </button>
         </div>
       </div>
@@ -641,10 +654,10 @@ export default function CFPProgramCommittee({
   const [deleteTarget, setDeleteTarget] = useState<CommitteeMember | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["cfp-committee-members", conferenceId ?? "all"],
+    queryKey: ['cfp-committee-members', conferenceId ?? 'all'],
     queryFn: async () => {
       const params = conferenceId ? { conference_id: conferenceId } : {};
-      const response = await api.get<MemberListResponse>("/cfp/committee-members", { params });
+      const response = await api.get<MemberListResponse>('/cfp/committee-members', { params });
       return response.data;
     },
   });
@@ -656,7 +669,7 @@ export default function CFPProgramCommittee({
         role: data.role,
         topic_ids: data.topic_ids,
       };
-      if (data.mode === "link" && data.applicant_id) {
+      if (data.mode === 'link' && data.applicant_id) {
         payload.applicant_id = data.applicant_id;
       } else {
         payload.first_name = data.first_name;
@@ -665,11 +678,11 @@ export default function CFPProgramCommittee({
         payload.password = data.password;
         if (data.phone.trim()) payload.phone = data.phone.trim();
       }
-      const response = await api.post<CommitteeMember>("/cfp/committee-members", payload);
+      const response = await api.post<CommitteeMember>('/cfp/committee-members', payload);
       return response.data;
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to create committee member"));
+      setError(parseApiError(err, 'Failed to create committee member'));
     },
   });
 
@@ -683,7 +696,7 @@ export default function CFPProgramCommittee({
       return response.data;
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to update committee member"));
+      setError(parseApiError(err, 'Failed to update committee member'));
     },
   });
 
@@ -695,10 +708,10 @@ export default function CFPProgramCommittee({
       setError(null);
       setDeleteTarget(null);
       setSelectedMemberId(null);
-      queryClient.invalidateQueries({ queryKey: ["cfp-committee-members"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-committee-members'] });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to remove committee member"));
+      setError(parseApiError(err, 'Failed to remove committee member'));
       setDeleteTarget(null);
     },
   });
@@ -708,7 +721,7 @@ export default function CFPProgramCommittee({
       const member = await createMutation.mutateAsync(formData);
       setError(null);
       setIsAdding(false);
-      queryClient.invalidateQueries({ queryKey: ["cfp-committee-members"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-committee-members'] });
       setSelectedMemberId(member.id);
     } catch {
       // error is handled by onError
@@ -720,7 +733,7 @@ export default function CFPProgramCommittee({
     try {
       await updateMutation.mutateAsync({ id: selectedMemberId, data: formData });
       setError(null);
-      queryClient.invalidateQueries({ queryKey: ["cfp-committee-members"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-committee-members'] });
     } catch {
       // error is handled by onError
     }
@@ -736,10 +749,10 @@ export default function CFPProgramCommittee({
         <div>
           <h2 className="text-lg font-semibold text-gray-900">
             {isAdding
-              ? "Add Committee Member"
+              ? 'Add Committee Member'
               : selectedMember
                 ? `${selectedMember.first_name} ${selectedMember.last_name}`
-                : "Program Committee"}
+                : 'Program Committee'}
             {!isAdding && !selectedMember && memberCount > 0 && (
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                 {memberCount}
@@ -748,10 +761,10 @@ export default function CFPProgramCommittee({
           </h2>
           <p className="text-sm text-gray-500">
             {isAdding
-              ? "Link an existing user or create a new one."
+              ? 'Link an existing user or create a new one.'
               : selectedMember
-                ? "Edit committee role and topics."
-                : "Manage program committee members."}
+                ? 'Edit committee role and topics.'
+                : 'Manage program committee members.'}
           </p>
         </div>
         {isAdmin && !isAdding && !selectedMember && (
@@ -801,11 +814,7 @@ export default function CFPProgramCommittee({
       ) : members.length > 0 ? (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           {members.map((m) => (
-            <MemberListRow
-              key={m.id}
-              member={m}
-              onClick={() => setSelectedMemberId(m.id)}
-            />
+            <MemberListRow key={m.id} member={m} onClick={() => setSelectedMemberId(m.id)} />
           ))}
         </div>
       ) : (

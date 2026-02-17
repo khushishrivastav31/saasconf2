@@ -131,21 +131,6 @@ def _build_conference_response(conf: Conference, tenant_slug: str | None = None)
     )
 
 
-async def _get_conference_for_tenant(
-    conference_id: UUID, tenant_id: UUID, db: DbSessionDep
-) -> Conference:
-    """Fetch a conference and verify it belongs to the tenant."""
-    result = await db.execute(
-        select(Conference)
-        .where(Conference.id == conference_id)
-        .where(Conference.tenant_id == tenant_id)
-    )
-    conference = result.scalar_one_or_none()
-    if not conference:
-        raise NotFoundError("Conference not found")
-    return conference
-
-
 def _build_volunteer_response(
     v: Volunteer, conference_ids: list[UUID] | None = None
 ) -> VolunteerResponse:

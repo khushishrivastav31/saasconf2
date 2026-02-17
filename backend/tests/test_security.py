@@ -20,7 +20,7 @@ from uuid import uuid4
 from app.core.utils import utcnow
 
 import pytest
-from jose import jwt
+import jwt
 
 from app.core.exceptions import AuthenticationError
 from app.core.security import (

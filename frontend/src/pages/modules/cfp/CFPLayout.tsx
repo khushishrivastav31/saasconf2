@@ -1,15 +1,15 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from 'react-router';
 
 const cfpTabs = [
-  { name: "All CFPs", href: "/modules/cfp" },
-  { name: "Topics", href: "/modules/cfp/topics" },
-  { name: "Program Committee", href: "/modules/cfp/program-committee" },
-  { name: "Applicants", href: "/modules/cfp/applicants" },
-  { name: "Papers", href: "/modules/cfp/papers" },
-  { name: "Assignments", href: "/modules/cfp/assignments" },
-  { name: "Evaluated Papers", href: "/modules/cfp/evaluated-papers" },
-  { name: "Accepted Papers", href: "/modules/cfp/accepted-papers" },
-  { name: "Rejected Papers", href: "/modules/cfp/rejected-papers" },
+  { name: 'All CFPs', href: '/modules/cfp' },
+  { name: 'Topics', href: '/modules/cfp/topics' },
+  { name: 'Program Committee', href: '/modules/cfp/program-committee' },
+  { name: 'Applicants', href: '/modules/cfp/applicants' },
+  { name: 'Papers', href: '/modules/cfp/papers' },
+  { name: 'Assignments', href: '/modules/cfp/assignments' },
+  { name: 'Evaluated Papers', href: '/modules/cfp/evaluated-papers' },
+  { name: 'Accepted Papers', href: '/modules/cfp/accepted-papers' },
+  { name: 'Rejected Papers', href: '/modules/cfp/rejected-papers' },
 ];
 
 export default function CFPLayout() {
@@ -27,8 +27,8 @@ export default function CFPLayout() {
                 to={tab.href}
                 className={`whitespace-nowrap border-b-2 py-3 px-1 text-sm font-medium ${
                   isActive
-                    ? "border-primary-500 text-primary-600"
-                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
                 {tab.name}

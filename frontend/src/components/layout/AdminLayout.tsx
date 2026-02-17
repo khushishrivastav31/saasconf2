@@ -1,36 +1,31 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "../../hooks/useAuth";
-import api from "../../config/api";
-import type { GlobalUnreadCountResponse } from "../../types/messaging";
+import { useState, useEffect, useRef } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../hooks/useAuth';
+import api from '../../config/api';
+import type { GlobalUnreadCountResponse } from '../../types/messaging';
 
-const navigation = [{ name: "Dashboard", href: "/dashboard", icon: HomeIcon }];
+const navigation = [{ name: 'Dashboard', href: '/dashboard', icon: HomeIcon }];
 
 const adminNavigation = [
-  { name: "Companies", href: "/admin/tenants", icon: BuildingIcon },
-  { name: "Modules", href: "/admin/modules", icon: CubeIcon },
-  { name: "Audit Logs", href: "/admin/audit-logs", icon: DocumentIcon },
-  { name: "Settings", href: "/admin/settings", icon: CogIcon },
+  { name: 'Companies', href: '/admin/tenants', icon: BuildingIcon },
+  { name: 'Modules', href: '/admin/modules', icon: CubeIcon },
+  { name: 'Audit Logs', href: '/admin/audit-logs', icon: DocumentIcon },
+  { name: 'Settings', href: '/admin/settings', icon: CogIcon },
 ];
 
 const moduleNavigation = [
   {
-    name: "Conferences",
-    href: "/modules/conferences",
+    name: 'Conferences',
+    href: '/modules/conferences',
     icon: CalendarIcon,
-    moduleCode: "conferences",
+    moduleCode: 'conferences',
   },
 ];
 
 function HomeIcon() {
   return (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -43,12 +38,7 @@ function HomeIcon() {
 
 function BuildingIcon() {
   return (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -61,12 +51,7 @@ function BuildingIcon() {
 
 function CubeIcon() {
   return (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -79,12 +64,7 @@ function CubeIcon() {
 
 function DocumentIcon() {
   return (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -97,12 +77,7 @@ function DocumentIcon() {
 
 function CalendarIcon() {
   return (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -115,12 +90,7 @@ function CalendarIcon() {
 
 function CogIcon() {
   return (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -137,15 +107,9 @@ function CogIcon() {
   );
 }
 
-
 function TeamIcon() {
   return (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -158,12 +122,7 @@ function TeamIcon() {
 
 function ActivityIcon() {
   return (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -177,8 +136,8 @@ function ActivityIcon() {
 function NotificationBell() {
   const navigate = useNavigate();
   const { data } = useQuery<GlobalUnreadCountResponse>({
-    queryKey: ["admin-global-unread"],
-    queryFn: () => api.get("/messaging/unread-count").then((r) => r.data),
+    queryKey: ['admin-global-unread'],
+    queryFn: () => api.get('/messaging/unread-count').then((r) => r.data),
     refetchInterval: 30_000,
     staleTime: 15_000,
   });
@@ -190,13 +149,11 @@ function NotificationBell() {
     <button
       onClick={() => {
         if (topConference) {
-          navigate(
-            `/modules/conferences/${topConference.conference_id}?section=messaging`
-          );
+          navigate(`/modules/conferences/${topConference.conference_id}?section=messaging`);
         }
       }}
       className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-      title={totalUnread > 0 ? `${totalUnread} unread message(s)` : "No unread messages"}
+      title={totalUnread > 0 ? `${totalUnread} unread message(s)` : 'No unread messages'}
     >
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -208,7 +165,7 @@ function NotificationBell() {
       </svg>
       {totalUnread > 0 && (
         <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
-          {totalUnread > 99 ? "99+" : totalUnread}
+          {totalUnread > 99 ? '99+' : totalUnread}
         </span>
       )}
     </button>
@@ -243,43 +200,36 @@ export default function AdminLayout() {
       }
     }
     if (userMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [userMenuOpen]);
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate('/login');
   };
 
-  const isSuperAdmin = user?.role === "super_admin";
+  const isSuperAdmin = user?.role === 'super_admin';
 
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 bg-gray-900 flex flex-col transform transition-all duration-200 ease-in-out lg:translate-x-0 ${
-          sidebarCollapsed ? "w-16" : "w-64"
+          sidebarCollapsed ? 'w-16' : 'w-64'
         }`}
       >
         <div className="flex h-16 items-center justify-between bg-gray-900 px-3 flex-shrink-0">
-          {!sidebarCollapsed && (
-            <h1 className="text-xl font-bold text-white ml-1">SaaSConf</h1>
-          )}
+          {!sidebarCollapsed && <h1 className="text-xl font-bold text-white ml-1">SaaSConf</h1>}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className={`p-1.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 ${
-              sidebarCollapsed ? "mx-auto" : ""
+              sidebarCollapsed ? 'mx-auto' : ''
             }`}
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {sidebarCollapsed ? (
                 <path
                   strokeLinecap="round"
@@ -300,7 +250,7 @@ export default function AdminLayout() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <nav className={`mt-6 ${sidebarCollapsed ? "px-2" : "px-3"}`}>
+          <nav className={`mt-6 ${sidebarCollapsed ? 'px-2' : 'px-3'}`}>
             <div className="space-y-1">
               {navigation.map((item) => (
                 <Link
@@ -308,18 +258,15 @@ export default function AdminLayout() {
                   to={item.href}
                   title={sidebarCollapsed ? item.name : undefined}
                   className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                    sidebarCollapsed ? "justify-center px-2" : "px-3"
+                    sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                   } ${
-                    location.pathname === item.href ||
-                    location.pathname.startsWith(item.href + "/")
-                      ? "bg-gray-800 text-white"
-                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                    location.pathname === item.href || location.pathname.startsWith(item.href + '/')
+                      ? 'bg-gray-800 text-white'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                   }`}
                 >
                   <item.icon />
-                  {!sidebarCollapsed && (
-                    <span className="ml-3">{item.name}</span>
-                  )}
+                  {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
                 </Link>
               ))}
             </div>
@@ -328,9 +275,7 @@ export default function AdminLayout() {
             {(() => {
               const availableModules = isSuperAdmin
                 ? moduleNavigation
-                : moduleNavigation.filter((item) =>
-                    user?.modules?.includes(item.moduleCode),
-                  );
+                : moduleNavigation.filter((item) => user?.modules?.includes(item.moduleCode));
               if (availableModules.length === 0) return null;
               return (
                 <div className="mt-8">
@@ -339,30 +284,24 @@ export default function AdminLayout() {
                       Modules
                     </h3>
                   )}
-                  {sidebarCollapsed && (
-                    <div className="border-t border-gray-700 mx-1 mb-2" />
-                  )}
-                  <div
-                    className={`${sidebarCollapsed ? "" : "mt-2"} space-y-1`}
-                  >
+                  {sidebarCollapsed && <div className="border-t border-gray-700 mx-1 mb-2" />}
+                  <div className={`${sidebarCollapsed ? '' : 'mt-2'} space-y-1`}>
                     {availableModules.map((item) => (
                       <Link
                         key={item.name}
                         to={item.href}
                         title={sidebarCollapsed ? item.name : undefined}
                         className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                          sidebarCollapsed ? "justify-center px-2" : "px-3"
+                          sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                         } ${
                           location.pathname === item.href ||
-                          location.pathname.startsWith(item.href + "/")
-                            ? "bg-gray-800 text-white"
-                            : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                          location.pathname.startsWith(item.href + '/')
+                            ? 'bg-gray-800 text-white'
+                            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                         }`}
                       >
                         <item.icon />
-                        {!sidebarCollapsed && (
-                          <span className="ml-3">{item.name}</span>
-                        )}
+                        {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
                       </Link>
                     ))}
                   </div>
@@ -371,71 +310,61 @@ export default function AdminLayout() {
             })()}
 
             {/* Team Management (tenant admin) */}
-            {(user?.role === "tenant_admin" || user?.role === "super_admin") && (
+            {(user?.role === 'tenant_admin' || user?.role === 'super_admin') && (
               <div className="mt-8">
                 {!sidebarCollapsed && (
                   <h3 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                     Management
                   </h3>
                 )}
-                {sidebarCollapsed && (
-                  <div className="border-t border-gray-700 mx-1 mb-2" />
-                )}
-                <div
-                  className={`${sidebarCollapsed ? "" : "mt-2"} space-y-1`}
-                >
+                {sidebarCollapsed && <div className="border-t border-gray-700 mx-1 mb-2" />}
+                <div className={`${sidebarCollapsed ? '' : 'mt-2'} space-y-1`}>
                   {/* My Company - tenant admin only */}
-                  {user?.role === "tenant_admin" && (
+                  {user?.role === 'tenant_admin' && (
                     <Link
                       to="/my-company"
-                      title={sidebarCollapsed ? "My Company" : undefined}
+                      title={sidebarCollapsed ? 'My Company' : undefined}
                       className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                        sidebarCollapsed ? "justify-center px-2" : "px-3"
+                        sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                       } ${
-                        location.pathname === "/my-company"
-                          ? "bg-gray-800 text-white"
-                          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                        location.pathname === '/my-company'
+                          ? 'bg-gray-800 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                       }`}
                     >
                       <BuildingIcon />
-                      {!sidebarCollapsed && (
-                        <span className="ml-3">My Company</span>
-                      )}
+                      {!sidebarCollapsed && <span className="ml-3">My Company</span>}
                     </Link>
                   )}
                   <Link
                     to="/team"
-                    title={sidebarCollapsed ? "Team" : undefined}
+                    title={sidebarCollapsed ? 'Team' : undefined}
                     className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                      sidebarCollapsed ? "justify-center px-2" : "px-3"
+                      sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                     } ${
-                      location.pathname === "/team"
-                        ? "bg-gray-800 text-white"
-                        : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      location.pathname === '/team'
+                        ? 'bg-gray-800 text-white'
+                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                     }`}
                   >
                     <TeamIcon />
-                    {!sidebarCollapsed && (
-                      <span className="ml-3">Team</span>
-                    )}
+                    {!sidebarCollapsed && <span className="ml-3">Team</span>}
                   </Link>
                   {/* Applicant Activity - tenant admin only */}
-                  {user?.role === "tenant_admin" && (
+                  {user?.role === 'tenant_admin' && (
                     <Link
                       to="/applicant-activity"
-                      title={sidebarCollapsed ? "Activity Log" : undefined}
+                      title={sidebarCollapsed ? 'Activity Log' : undefined}
                       className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                        sidebarCollapsed ? "justify-center px-2" : "px-3"
+                        sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                       } ${
-                        location.pathname === "/applicant-activity"
-                          ? "bg-gray-800 text-white"
-                          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                        location.pathname === '/applicant-activity'
+                          ? 'bg-gray-800 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                       }`}
                     >
                       <ActivityIcon />
-                      {!sidebarCollapsed && (
-                        <span className="ml-3">Activity Log</span>
-                      )}
+                      {!sidebarCollapsed && <span className="ml-3">Activity Log</span>}
                     </Link>
                   )}
                 </div>
@@ -449,28 +378,24 @@ export default function AdminLayout() {
                     Administration
                   </h3>
                 )}
-                {sidebarCollapsed && (
-                  <div className="border-t border-gray-700 mx-1 mb-2" />
-                )}
-                <div className={`${sidebarCollapsed ? "" : "mt-2"} space-y-1`}>
+                {sidebarCollapsed && <div className="border-t border-gray-700 mx-1 mb-2" />}
+                <div className={`${sidebarCollapsed ? '' : 'mt-2'} space-y-1`}>
                   {adminNavigation.map((item) => (
                     <Link
                       key={item.name}
                       to={item.href}
                       title={sidebarCollapsed ? item.name : undefined}
                       className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                        sidebarCollapsed ? "justify-center px-2" : "px-3"
+                        sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                       } ${
                         location.pathname === item.href ||
-                        location.pathname.startsWith(item.href + "/")
-                          ? "bg-gray-800 text-white"
-                          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                        location.pathname.startsWith(item.href + '/')
+                          ? 'bg-gray-800 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                       }`}
                     >
                       <item.icon />
-                      {!sidebarCollapsed && (
-                        <span className="ml-3">{item.name}</span>
-                      )}
+                      {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
                     </Link>
                   ))}
                 </div>
@@ -481,11 +406,7 @@ export default function AdminLayout() {
       </div>
 
       {/* Main content */}
-      <div
-        className={`transition-all duration-200 ${
-          sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"
-        }`}
-      >
+      <div className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
         {/* Header */}
         <header className="sticky top-0 z-40 bg-white shadow">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -493,12 +414,7 @@ export default function AdminLayout() {
               className="lg:hidden -ml-2 p-2 text-gray-500"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -516,14 +432,24 @@ export default function AdminLayout() {
               >
                 <div className="text-left">
                   <p className="font-medium text-gray-900">
-                    {`${user?.first_name || ""} ${user?.last_name || ""}`.trim() || user?.email}
+                    {`${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.email}
                   </p>
                   <p className="text-gray-500 text-xs capitalize">
-                    {user?.role?.replace("_", " ")}
+                    {user?.role?.replace('_', ' ')}
                   </p>
                 </div>
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <svg
+                  className="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
 
@@ -531,7 +457,7 @@ export default function AdminLayout() {
                 <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
                   <div className="px-4 py-3 border-b border-gray-100">
                     <p className="text-sm font-medium text-gray-900">
-                      {`${user?.first_name || ""} ${user?.last_name || ""}`.trim()}
+                      {`${user?.first_name || ''} ${user?.last_name || ''}`.trim()}
                     </p>
                     <p className="text-xs text-gray-500">{user?.email}</p>
                   </div>

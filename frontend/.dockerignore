@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.npm
+.yarn
+playwright-report/
+test-results/
+playwright/.auth/
+e2e/
+src/**/__tests__/
+src/**/*.test.*
+*.log
+.env
+.env.*
+.git
+.gitignore

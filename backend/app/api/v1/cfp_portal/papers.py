@@ -94,16 +94,20 @@ async def list_conferences(
     )
     conferences = result.scalars().all()
 
+    # Batch-load all CFPs for all conferences (single query instead of N+1)
+    conf_ids = [conf.id for conf in conferences]
+    cfps_by_conf: dict = {cid: [] for cid in conf_ids}
+    if conf_ids:
+        cfp_result = await db.execute(
+            select(ConferenceCFP.conference_id, CallForPapers)
+            .join(CallForPapers, CallForPapers.id == ConferenceCFP.cfp_id)
+            .where(ConferenceCFP.conference_id.in_(conf_ids))
+        )
+        for conference_id, cfp in cfp_result.all():
+            cfps_by_conf[conference_id].append(cfp)
+
     items = []
     for conf in conferences:
-        # Load CFPs
-        cfp_result = await db.execute(
-            select(CallForPapers)
-            .join(ConferenceCFP, ConferenceCFP.cfp_id == CallForPapers.id)
-            .where(ConferenceCFP.conference_id == conf.id)
-        )
-        cfps = cfp_result.scalars().all()
-
         items.append(PortalConferenceSummary(
             id=conf.id,
             name=conf.name,
@@ -115,7 +119,7 @@ async def list_conferences(
             country=conf.country,
             venue_type=conf.venue_type,
             logo_url=conf.logo_url,
-            cfps=[PortalCFPResponse.model_validate(cfp) for cfp in cfps],
+            cfps=[PortalCFPResponse.model_validate(cfp) for cfp in cfps_by_conf.get(conf.id, [])],
         ))
 
     return items
@@ -420,39 +424,54 @@ async def list_invitations(
     )
     cospeaker_rows = result.scalars().all()
 
+    # Batch-load all related data to avoid N+1 queries
+    paper_ids = list({row.paper_id for row in cospeaker_rows})
+    papers_map: dict = {}
+    speakers_map: dict = {}
+    cfps_map: dict = {}
+    conf_names_map: dict = {}
+
+    if paper_ids:
+        # Batch-load papers
+        papers_result = await db.execute(
+            select(CFPPaper).where(CFPPaper.id.in_(paper_ids))
+        )
+        papers_map = {p.id: p for p in papers_result.scalars().all()}
+
+        # Batch-load main speakers
+        speaker_ids = list({p.main_speaker_id for p in papers_map.values() if p.main_speaker_id})
+        if speaker_ids:
+            speakers_result = await db.execute(
+                select(CFPApplicant).where(CFPApplicant.id.in_(speaker_ids))
+            )
+            speakers_map = {s.id: s for s in speakers_result.scalars().all()}
+
+        # Batch-load CFPs
+        cfp_ids = list({p.cfp_id for p in papers_map.values() if p.cfp_id})
+        if cfp_ids:
+            cfps_result = await db.execute(
+                select(CallForPapers).where(CallForPapers.id.in_(cfp_ids))
+            )
+            cfps_map = {c.id: c for c in cfps_result.scalars().all()}
+
+            # Batch-load conference names via conference_cfps
+            conf_result = await db.execute(
+                select(ConferenceCFP.cfp_id, Conference.name)
+                .join(Conference, Conference.id == ConferenceCFP.conference_id)
+                .where(ConferenceCFP.cfp_id.in_(cfp_ids))
+            )
+            for cfp_id, conf_name in conf_result.all():
+                conf_names_map.setdefault(cfp_id, conf_name)
+
     items = []
     for row in cospeaker_rows:
-        # Load paper with main speaker and CFP
-        paper_result = await db.execute(
-            select(CFPPaper).where(CFPPaper.id == row.paper_id)
-        )
-        paper = paper_result.scalar_one_or_none()
+        paper = papers_map.get(row.paper_id)
         if not paper:
             continue
 
-        # Load main speaker
-        speaker_result = await db.execute(
-            select(CFPApplicant).where(CFPApplicant.id == paper.main_speaker_id)
-        )
-        main_speaker = speaker_result.scalar_one_or_none()
-
-        # Load CFP
-        cfp_result = await db.execute(
-            select(CallForPapers).where(CallForPapers.id == paper.cfp_id)
-        )
-        cfp = cfp_result.scalar_one_or_none()
-
-        # Load conference name via conference_cfps
-        conference_name = None
-        conf_result = await db.execute(
-            select(Conference)
-            .join(ConferenceCFP, ConferenceCFP.conference_id == Conference.id)
-            .where(ConferenceCFP.cfp_id == paper.cfp_id)
-            .limit(1)
-        )
-        conf = conf_result.scalar_one_or_none()
-        if conf:
-            conference_name = conf.name
+        main_speaker = speakers_map.get(paper.main_speaker_id)
+        cfp = cfps_map.get(paper.cfp_id)
+        conference_name = conf_names_map.get(paper.cfp_id)
 
         items.append(PortalInvitationResponse(
             paper_id=paper.id,
@@ -851,12 +870,18 @@ async def _build_portal_paper_response(
     )
     cospeaker_rows = cospeaker_result.scalars().all()
 
+    # Batch-load all cospeaker applicants in one query
+    cospeaker_applicant_ids = [row.applicant_id for row in cospeaker_rows if row.applicant_id]
+    applicants_map: dict = {}
+    if cospeaker_applicant_ids:
+        app_result = await db.execute(
+            select(CFPApplicant).where(CFPApplicant.id.in_(cospeaker_applicant_ids))
+        )
+        applicants_map = {a.id: a for a in app_result.scalars().all()}
+
     cospeakers = []
     for row in cospeaker_rows:
-        app_result = await db.execute(
-            select(CFPApplicant).where(CFPApplicant.id == row.applicant_id)
-        )
-        applicant = app_result.scalar_one_or_none()
+        applicant = applicants_map.get(row.applicant_id)
         if applicant:
             cospeakers.append(PortalCospeakerResponse(
                 applicant_id=applicant.id,
@@ -1085,12 +1110,18 @@ async def _build_assigned_paper_response(
         )
         cospeaker_rows = cospeaker_result.scalars().all()
 
+        # Batch-load all cospeaker applicants in one query
+        cospeaker_applicant_ids = [row.applicant_id for row in cospeaker_rows if row.applicant_id]
+        applicants_map: dict = {}
+        if cospeaker_applicant_ids:
+            app_result = await db.execute(
+                select(CFPApplicant).where(CFPApplicant.id.in_(cospeaker_applicant_ids))
+            )
+            applicants_map = {a.id: a for a in app_result.scalars().all()}
+
         cospeakers = []
         for row in cospeaker_rows:
-            app_result = await db.execute(
-                select(CFPApplicant).where(CFPApplicant.id == row.applicant_id)
-            )
-            applicant = app_result.scalar_one_or_none()
+            applicant = applicants_map.get(row.applicant_id)
             if applicant:
                 cospeakers.append(PortalCospeakerResponse(
                     applicant_id=applicant.id,

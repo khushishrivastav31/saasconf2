@@ -36,7 +36,9 @@ from app.schemas.program import (
     ProgramPublishResponse,
 )
 
-from ._shared import MODULE_CODE, _check_admin_access, _get_conference_for_tenant
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
+
+from ._shared import MODULE_CODE
 
 router = APIRouter()
 
@@ -301,8 +303,8 @@ async def publish_preview(
     db: DbSessionDep,
 ) -> ProgramPublishPreview:
     """Preview what publishing the program will do (dry run)."""
-    conference = await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    await _check_admin_access(db, current_user, conference_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
 
     session_paper_ids = await _get_session_paper_ids(db, conference_id, current_user.tenant_id)
     papers = await _get_conference_papers(db, conference_id, current_user.tenant_id)
@@ -383,8 +385,8 @@ async def publish_program(
 ) -> ProgramPublishResponse:
     """Publish the program: update paper statuses and send notifications."""
     tenant_id = current_user.tenant_id
-    conference = await _get_conference_for_tenant(db, conference_id, tenant_id)
-    await _check_admin_access(db, current_user, conference_id)
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
 
     session_paper_ids = await _get_session_paper_ids(db, conference_id, tenant_id)
     papers = await _get_conference_papers(db, conference_id, tenant_id)
@@ -469,8 +471,8 @@ async def update_program(
 ) -> ProgramPublishResponse:
     """Update a previously published program with differential notifications."""
     tenant_id = current_user.tenant_id
-    conference = await _get_conference_for_tenant(db, conference_id, tenant_id)
-    await _check_admin_access(db, current_user, conference_id)
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
 
     if conference.program_published_at is None:
         raise ValidationError("Program has not been published yet. Use publish instead.")
@@ -558,8 +560,8 @@ async def export_sessions(
 ) -> StreamingResponse:
     """Export all sessions as CSV for program designers."""
     tenant_id = current_user.tenant_id
-    conference = await _get_conference_for_tenant(db, conference_id, tenant_id)
-    await _check_admin_access(db, current_user, conference_id)
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
 
     # Fetch all sessions
     result = await db.execute(

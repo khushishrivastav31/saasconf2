@@ -1,15 +1,16 @@
-import { useState, useRef, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import ConfirmDialog from "../../../../components/ConfirmDialog";
-import Modal from "../../../../components/Modal";
-import { useAuth } from "../../../../hooks/useAuth";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import ConfirmDialog from '../../../../components/ConfirmDialog';
+import Modal from '../../../../components/Modal';
+import { useAuth } from '../../../../hooks/useAuth';
+import { useSaveStatus } from '../../../../hooks/useSaveStatus';
 import type {
   TenantUser,
   TenantUserCreate,
   TenantUserUpdate,
   PaginatedResponse,
-} from "../../../../types";
+} from '../../../../types';
 
 export default function UsersTab({
   tenantId,
@@ -23,18 +24,16 @@ export default function UsersTab({
   onSuperUserChange: () => void;
 }) {
   const { user: currentUser } = useAuth();
-  const isSuperAdmin = currentUser?.role === "super_admin";
+  const isSuperAdmin = currentUser?.role === 'super_admin';
   const queryClient = useQueryClient();
   const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TenantUser | null>(null);
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<TenantUser | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["tenant-users", tenantId],
+    queryKey: ['tenant-users', tenantId],
     queryFn: async () => {
-      const response = await api.get<PaginatedResponse<TenantUser>>(
-        `/users?tenant_id=${tenantId}`,
-      );
+      const response = await api.get<PaginatedResponse<TenantUser>>(`/users?tenant_id=${tenantId}`);
       return response.data;
     },
   });
@@ -44,7 +43,7 @@ export default function UsersTab({
       await api.delete(`/users/${userId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tenant-users", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['tenant-users', tenantId] });
       // Refresh tenants query in case deleted user was super user
       onSuperUserChange();
     },
@@ -55,7 +54,7 @@ export default function UsersTab({
       await api.delete(`/users/${userId}?permanent=true`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tenant-users", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['tenant-users', tenantId] });
       // Refresh tenants query in case deleted user was super user
       onSuperUserChange();
     },
@@ -109,12 +108,10 @@ export default function UsersTab({
             <tbody className="bg-white divide-y divide-gray-200">
               {data.items.map((user) => (
                 <tr key={user.id}>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {user.email}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{user.email}</td>
                   <td className="px-4 py-3 text-sm text-gray-500">
                     <div className="flex items-center gap-2">
-                      {`${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || "-"}
+                      {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '-'}
                       {user.id === superUserId && (
                         <span className="px-1.5 py-0.5 text-xs font-semibold rounded bg-purple-100 text-purple-800">
                           Super User
@@ -122,23 +119,17 @@ export default function UsersTab({
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {user.pronouns || "-"}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{user.pronouns || '-'}</td>
                   <td className="px-4 py-3 text-sm">
-                    <span className="capitalize">
-                      {user.role.replace("_", " ")}
-                    </span>
+                    <span className="capitalize">{user.role.replace('_', ' ')}</span>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.is_active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                        user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {user.is_active ? "Active" : "Inactive"}
+                      {user.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-right">
@@ -224,7 +215,7 @@ export default function UsersTab({
           onClose={() => {
             setEditingUser(null);
             queryClient.invalidateQueries({
-              queryKey: ["tenant-users", tenantId],
+              queryKey: ['tenant-users', tenantId],
             });
           }}
         />
@@ -274,16 +265,15 @@ function EditUserModal({
 }) {
   const [formData, setFormData] = useState<TenantUserUpdate>({
     email: user.email,
-    first_name: user.first_name ?? "",
-    last_name: user.last_name ?? "",
-    pronouns: user.pronouns ?? "",
+    first_name: user.first_name ?? '',
+    last_name: user.last_name ?? '',
+    pronouns: user.pronouns ?? '',
     role: user.role,
     is_active: user.is_active,
   });
-  const [newPassword, setNewPassword] = useState("");
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
+  const [errorMessage, setErrorMessage] = useState('');
   const [isCurrentSuperUser, setIsCurrentSuperUser] = useState(user.id === superUserId);
 
   // Sync local state when superUserId prop changes (after query invalidation)
@@ -296,21 +286,17 @@ function EditUserModal({
       await api.put(`/users/${user.id}`, data);
     },
     onMutate: () => {
-      setSaveStatus("saving");
-      setErrorMessage("");
+      setSaving();
+      setErrorMessage('');
     },
     onSuccess: () => {
-      setSaveStatus("saved");
-      setNewPassword("");
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+      setSaved();
+      setNewPassword('');
     },
     onError: (error: unknown) => {
-      setSaveStatus("error");
+      setSaveError();
       const err = error as { response?: { data?: { detail?: string } } };
-      setErrorMessage(err.response?.data?.detail || "Failed to update user");
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+      setErrorMessage(err.response?.data?.detail || 'Failed to update user');
     },
   });
 
@@ -324,7 +310,7 @@ function EditUserModal({
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { detail?: string } } };
-      setErrorMessage(err.response?.data?.detail || "Failed to assign super user");
+      setErrorMessage(err.response?.data?.detail || 'Failed to assign super user');
     },
   });
 
@@ -338,7 +324,7 @@ function EditUserModal({
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { detail?: string } } };
-      setErrorMessage(err.response?.data?.detail || "Failed to remove super user");
+      setErrorMessage(err.response?.data?.detail || 'Failed to remove super user');
     },
   });
 
@@ -355,28 +341,17 @@ function EditUserModal({
     if (newPassword.trim()) {
       data.password = newPassword.trim();
     }
-    setSaveStatus("saving");
     updateMutation.mutate(data);
   };
 
   return (
-    <Modal
-      open={true}
-      onClose={onClose}
-      title="Edit User"
-      size="max-w-md"
-      zIndex="z-[60]"
-    >
+    <Modal open={true} onClose={onClose} title="Edit User" size="max-w-md" zIndex="z-[60]">
       <div className="px-6 pb-2 -mt-2 flex justify-between items-center">
         <p className="text-sm text-gray-500">{user.email}</p>
         <div className="flex items-center gap-2">
-          {saveStatus === "saving" && (
+          {saveStatus === 'saving' && (
             <span className="text-xs text-gray-500 flex items-center gap-1">
-              <svg
-                className="animate-spin h-3 w-3"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
+              <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -394,14 +369,9 @@ function EditUserModal({
               Saving...
             </span>
           )}
-          {saveStatus === "saved" && (
+          {saveStatus === 'saved' && (
             <span className="text-xs text-green-600 flex items-center gap-1">
-              <svg
-                className="h-3 w-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -412,9 +382,7 @@ function EditUserModal({
               Saved
             </span>
           )}
-          {saveStatus === "error" && (
-            <span className="text-xs text-red-600">Save failed</span>
-          )}
+          {saveStatus === 'error' && <span className="text-xs text-red-600">Save failed</span>}
         </div>
       </div>
 
@@ -426,73 +394,55 @@ function EditUserModal({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Email
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Email</label>
           <input
             type="email"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.email}
-            onChange={(e) =>
-              setFormData({ ...formData, email: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            First Name
-          </label>
+          <label className="block text-sm font-medium text-gray-700">First Name</label>
           <input
             type="text"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.first_name}
-            onChange={(e) =>
-              setFormData({ ...formData, first_name: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Last Name
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Last Name</label>
           <input
             type="text"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.last_name}
-            onChange={(e) =>
-              setFormData({ ...formData, last_name: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Pronouns
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Pronouns</label>
           <input
             type="text"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.pronouns}
-            onChange={(e) =>
-              setFormData({ ...formData, pronouns: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, pronouns: e.target.value })}
             placeholder="e.g., they/them"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Role
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Role</label>
           <select
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.role}
             onChange={(e) =>
               setFormData({
                 ...formData,
-                role: e.target.value as "tenant_admin" | "user",
+                role: e.target.value as 'tenant_admin' | 'user',
               })
             }
           >
@@ -512,12 +462,12 @@ function EditUserModal({
               onClick={handleSuperUserToggle}
               disabled={assignSuperUserMutation.isPending || removeSuperUserMutation.isPending}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 ${
-                isCurrentSuperUser ? "bg-purple-600" : "bg-gray-200"
+                isCurrentSuperUser ? 'bg-purple-600' : 'bg-gray-200'
               }`}
             >
               <span
                 className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  isCurrentSuperUser ? "translate-x-5" : "translate-x-0"
+                  isCurrentSuperUser ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
             </button>
@@ -528,25 +478,21 @@ function EditUserModal({
           <label className="text-sm font-medium text-gray-700">Active</label>
           <button
             type="button"
-            onClick={() =>
-              setFormData({ ...formData, is_active: !formData.is_active })
-            }
+            onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-              formData.is_active ? "bg-primary-600" : "bg-gray-200"
+              formData.is_active ? 'bg-primary-600' : 'bg-gray-200'
             }`}
           >
             <span
               className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                formData.is_active ? "translate-x-5" : "translate-x-0"
+                formData.is_active ? 'translate-x-5' : 'translate-x-0'
               }`}
             />
           </button>
         </div>
 
         <div className="border-t border-gray-200 pt-4">
-          <label className="block text-sm font-medium text-gray-700">
-            New Password
-          </label>
+          <label className="block text-sm font-medium text-gray-700">New Password</label>
           <input
             type="password"
             minLength={8}
@@ -572,25 +518,18 @@ function EditUserModal({
         <button
           type="button"
           onClick={handleSave}
-          disabled={
-            updateMutation.isPending ||
-            (newPassword.length > 0 && newPassword.length < 8)
-          }
+          disabled={updateMutation.isPending || (newPassword.length > 0 && newPassword.length < 8)}
           className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 transition-colors duration-200 ${
-            saveStatus === "saved"
-              ? "bg-green-600 hover:bg-green-700"
-              : saveStatus === "error"
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-primary-600 hover:bg-primary-700"
+            saveStatus === 'saved'
+              ? 'bg-green-600 hover:bg-green-700'
+              : saveStatus === 'error'
+                ? 'bg-red-600 hover:bg-red-700'
+                : 'bg-primary-600 hover:bg-primary-700'
           }`}
         >
-          {saveStatus === "saving" ? (
+          {saveStatus === 'saving' ? (
             <span className="flex items-center gap-2">
-              <svg
-                className="animate-spin h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -607,14 +546,9 @@ function EditUserModal({
               </svg>
               Saving...
             </span>
-          ) : saveStatus === "saved" ? (
+          ) : saveStatus === 'saved' ? (
             <span className="flex items-center gap-2">
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -625,7 +559,7 @@ function EditUserModal({
               Saved
             </span>
           ) : (
-            "Save Changes"
+            'Save Changes'
           )}
         </button>
       </div>
@@ -633,20 +567,14 @@ function EditUserModal({
   );
 }
 
-function AddUserModal({
-  tenantId,
-  onClose,
-}: {
-  tenantId: string;
-  onClose: () => void;
-}) {
+function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => void }) {
   const [formData, setFormData] = useState<TenantUserCreate>({
-    email: "",
-    password: "",
-    first_name: "",
-    last_name: "",
-    pronouns: "",
-    role: "user",
+    email: '',
+    password: '',
+    first_name: '',
+    last_name: '',
+    pronouns: '',
+    role: 'user',
   });
 
   const createMutation = useMutation({
@@ -664,100 +592,72 @@ function AddUserModal({
   };
 
   return (
-    <Modal
-      open={true}
-      onClose={onClose}
-      title="Add User"
-      size="max-w-md"
-      zIndex="z-[60]"
-    >
+    <Modal open={true} onClose={onClose} title="Add User" size="max-w-md" zIndex="z-[60]">
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
             <input
               type="email"
               required
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Password</label>
             <input
               type="password"
               required
               minLength={8}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              First Name
-            </label>
+            <label className="block text-sm font-medium text-gray-700">First Name</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.first_name}
-              onChange={(e) =>
-                setFormData({ ...formData, first_name: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Last Name
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Last Name</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.last_name}
-              onChange={(e) =>
-                setFormData({ ...formData, last_name: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Pronouns
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Pronouns</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.pronouns}
-              onChange={(e) =>
-                setFormData({ ...formData, pronouns: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, pronouns: e.target.value })}
               placeholder="e.g., they/them"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Role
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Role</label>
             <select
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.role}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  role: e.target.value as "tenant_admin" | "user",
+                  role: e.target.value as 'tenant_admin' | 'user',
                 })
               }
             >
@@ -780,7 +680,7 @@ function AddUserModal({
             disabled={createMutation.isPending}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
           >
-            {createMutation.isPending ? "Creating..." : "Create"}
+            {createMutation.isPending ? 'Creating...' : 'Create'}
           </button>
         </div>
       </form>

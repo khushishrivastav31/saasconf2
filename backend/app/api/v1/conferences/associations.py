@@ -13,7 +13,7 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
-from app.core.pagination import paginate
+from app.core.pagination import calculate_pages, paginate
 from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
 from app.models.audit import AuditAction, AuditLog
 from app.models.cfp import CallForPapers, Submission
@@ -25,12 +25,13 @@ from app.schemas.conference import ConferenceAssociationRequest
 from app.schemas.location import LocationListResponse
 from app.schemas.volunteer import VolunteerListResponse
 
+from app.core.conference_helpers import get_conference_for_tenant
+
 from ._shared import (
     MODULE_CODE,
     _build_cfp_response,
     _build_location_response_assoc,
     _build_volunteer_response,
-    _get_conference_for_tenant,
 )
 
 router = APIRouter()
@@ -50,7 +51,7 @@ async def list_conference_volunteers(
     page_size: int = Query(20, ge=1, le=100),
 ) -> VolunteerListResponse:
     """List volunteers linked to a conference."""
-    await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     query = (
         select(Volunteer)
@@ -75,7 +76,7 @@ async def list_conference_volunteers(
             conf_ids_map[row.volunteer_id].append(row.conference_id)
 
     items = [_build_volunteer_response(v, conf_ids_map.get(v.id, [])) for v in volunteers]
-    pages = (result.total + page_size - 1) // page_size if page_size > 0 else 0
+    pages = calculate_pages(result.total, page_size)
 
     return VolunteerListResponse(
         items=items,
@@ -101,7 +102,7 @@ async def link_volunteer_to_conference(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     vol_result = await db.execute(
         select(Volunteer)
@@ -150,7 +151,7 @@ async def unlink_volunteer_from_conference(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ConferenceVolunteer)
@@ -200,7 +201,7 @@ async def list_conference_locations(
     page_size: int = Query(20, ge=1, le=100),
 ) -> LocationListResponse:
     """List locations linked to a conference."""
-    await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     query = (
         select(Location)
@@ -224,7 +225,7 @@ async def list_conference_locations(
             conf_ids_map[row.location_id].append(row.conference_id)
 
     items = [_build_location_response_assoc(loc, conf_ids_map.get(loc.id, [])) for loc in locations]
-    pages = (result.total + page_size - 1) // page_size if page_size > 0 else 0
+    pages = calculate_pages(result.total, page_size)
 
     return LocationListResponse(
         items=items,
@@ -250,7 +251,7 @@ async def link_location_to_conference(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     loc_result = await db.execute(
         select(Location)
@@ -299,7 +300,7 @@ async def unlink_location_from_conference(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ConferenceLocation)
@@ -349,7 +350,7 @@ async def list_conference_cfps(
     page_size: int = Query(20, ge=1, le=100),
 ) -> CFPListResponse:
     """List CFPs linked to a conference."""
-    await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     query = (
         select(CallForPapers)
@@ -387,7 +388,7 @@ async def list_conference_cfps(
         _build_cfp_response(c, conf_ids_map.get(c.id, []), sub_counts.get(c.id, 0))
         for c in cfps
     ]
-    pages = (result.total + page_size - 1) // page_size if page_size > 0 else 0
+    pages = calculate_pages(result.total, page_size)
 
     return CFPListResponse(
         items=items,
@@ -413,7 +414,7 @@ async def link_cfp_to_conference(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     cfp_result = await db.execute(
         select(CallForPapers)
@@ -462,7 +463,7 @@ async def unlink_cfp_from_conference(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ConferenceCFP)

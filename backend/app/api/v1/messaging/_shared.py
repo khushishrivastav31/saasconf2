@@ -134,22 +134,6 @@ async def _check_messaging_access(
         raise AuthorizationError("Admin access to this conference required")
 
 
-async def _get_conference_for_tenant(
-    db, conference_id: UUID, tenant_id: UUID
-) -> Conference:
-    """Fetch conference ensuring tenant ownership."""
-    result = await db.execute(
-        select(Conference).where(
-            Conference.id == conference_id,
-            Conference.tenant_id == tenant_id,
-        )
-    )
-    conference = result.scalar_one_or_none()
-    if not conference:
-        raise NotFoundError("Conference not found")
-    return conference
-
-
 async def _resolve_senders(
     db, sender_pairs: set[tuple[str, UUID]]
 ) -> dict[tuple[str, UUID], SenderInfo]:

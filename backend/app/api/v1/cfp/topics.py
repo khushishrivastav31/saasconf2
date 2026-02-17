@@ -13,7 +13,7 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import NotFoundError
-from app.core.pagination import paginate
+from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
@@ -139,7 +139,7 @@ async def list_cfps(
         total=total,
         page=page,
         page_size=page_size,
-        pages=(total + page_size - 1) // page_size,
+        pages=calculate_pages(total, page_size),
     )
 
 
@@ -687,7 +687,7 @@ async def list_submissions(
         total=total,
         page=page,
         page_size=page_size,
-        pages=(total + page_size - 1) // page_size,
+        pages=calculate_pages(total, page_size),
     )
 
 

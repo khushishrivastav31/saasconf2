@@ -41,11 +41,12 @@ from app.schemas.messaging import (
     ThreadListResponse,
 )
 
+from app.core.conference_helpers import get_conference_for_tenant
+
 from ._shared import (
     MODULE_CODE,
     _check_messaging_access,
     _fetch_message_attachments,
-    _get_conference_for_tenant,
     _get_messaging_mode,
     _link_attachments_to_message,
     _notify_participants,
@@ -80,7 +81,7 @@ async def list_threads(
 ) -> ThreadListResponse:
     """List message threads for this conference."""
     tenant_id = current_user.tenant_id
-    await _get_conference_for_tenant(db, conference_id, tenant_id)
+    await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Base query
     query = (
@@ -299,7 +300,7 @@ async def get_thread(
 ) -> ThreadDetailResponse:
     """Get thread with all messages."""
     tenant_id = current_user.tenant_id
-    await _get_conference_for_tenant(db, conference_id, tenant_id)
+    await get_conference_for_tenant(db, conference_id, tenant_id)
 
     result = await db.execute(
         select(MessageThread)
@@ -388,7 +389,7 @@ async def create_thread(
 ) -> CreateThreadResponse:
     """Create new message thread(s) to one or more applicants."""
     tenant_id = current_user.tenant_id
-    conference = await _get_conference_for_tenant(db, conference_id, tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
     await _check_messaging_access(db, current_user, conference_id)
 
     # Verify all applicants exist
@@ -567,7 +568,7 @@ async def reply_to_thread(
 ) -> MessageResponse:
     """Reply to an existing thread."""
     tenant_id = current_user.tenant_id
-    conference = await _get_conference_for_tenant(db, conference_id, tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Verify thread
     result = await db.execute(
@@ -805,7 +806,7 @@ async def create_internal_note(
 ) -> MessageResponse:
     """Create an internal note on a thread (visible only to admins)."""
     tenant_id = current_user.tenant_id
-    await _get_conference_for_tenant(db, conference_id, tenant_id)
+    await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Verify thread
     result = await db.execute(
@@ -872,7 +873,7 @@ async def export_thread(
 ) -> Response:
     """Export a thread as HTML or plain text file."""
     tenant_id = current_user.tenant_id
-    await _get_conference_for_tenant(db, conference_id, tenant_id)
+    await get_conference_for_tenant(db, conference_id, tenant_id)
 
     result = await db.execute(
         select(MessageThread)

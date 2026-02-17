@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import Modal from "../../../../components/Modal";
-import { formatDate } from "../../../../utils/formatDate";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import Modal from '../../../../components/Modal';
+import { formatDate } from '../../../../utils/formatDate';
+import { useSaveStatus } from '../../../../hooks/useSaveStatus';
 import type {
   Module,
   TenantModule,
@@ -10,7 +11,7 @@ import type {
   TenantModuleUpdate,
   PaginatedResponse,
   PlatformCurrency,
-} from "../../../../types";
+} from '../../../../types';
 
 export default function ModulesTab({
   tenantId,
@@ -23,11 +24,9 @@ export default function ModulesTab({
   const [editingModule, setEditingModule] = useState<TenantModule | null>(null);
 
   const { data: modules, isLoading } = useQuery({
-    queryKey: ["tenant-modules", tenantId],
+    queryKey: ['tenant-modules', tenantId],
     queryFn: async () => {
-      const response = await api.get<TenantModule[]>(
-        `/admin/tenants/${tenantId}/modules`,
-      );
+      const response = await api.get<TenantModule[]>(`/admin/tenants/${tenantId}/modules`);
       return response.data;
     },
   });
@@ -37,7 +36,7 @@ export default function ModulesTab({
       await api.delete(`/admin/tenants/${tenantId}/modules/${moduleId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tenant-modules", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['tenant-modules', tenantId] });
     },
   });
 
@@ -68,57 +67,51 @@ export default function ModulesTab({
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h5 className="font-medium text-gray-900">
-                      {tm.module_name}
-                    </h5>
+                    <h5 className="font-medium text-gray-900">{tm.module_name}</h5>
                     <span
                       className={`px-2 text-xs font-semibold rounded-full ${
                         tm.is_active_subscription
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
                       }`}
                     >
-                      {tm.is_active_subscription ? "Active" : "Inactive"}
+                      {tm.is_active_subscription ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                   <p className="text-sm text-gray-500">{tm.module_code}</p>
 
                   <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">Start:</span>{" "}
-                      {tm.start_date
-                        ? formatDate(tm.start_date)
-                        : "Not set"}
+                      <span className="text-gray-500">Start:</span>{' '}
+                      {tm.start_date ? formatDate(tm.start_date) : 'Not set'}
                     </div>
                     <div>
-                      <span className="text-gray-500">End:</span>{" "}
-                      {tm.end_date
-                        ? formatDate(tm.end_date)
-                        : "No expiry"}
+                      <span className="text-gray-500">End:</span>{' '}
+                      {tm.end_date ? formatDate(tm.end_date) : 'No expiry'}
                     </div>
                     <div>
-                      <span className="text-gray-500">Price:</span>{" "}
-                      {tm.price ? `${tm.price} ${tm.currency}` : "Free"}
+                      <span className="text-gray-500">Price:</span>{' '}
+                      {tm.price ? `${tm.price} ${tm.currency}` : 'Free'}
                     </div>
                   </div>
 
                   {/* Show the relevant resource limit based on module code */}
                   {(() => {
                     const code = tm.module_code?.toLowerCase();
-                    let limitLabel = "";
+                    let limitLabel = '';
                     let limitValue: number | null = null;
 
-                    if (code === "cfp" && tm.max_papers) {
-                      limitLabel = "Max Papers";
+                    if (code === 'cfp' && tm.max_papers) {
+                      limitLabel = 'Max Papers';
                       limitValue = tm.max_papers;
-                    } else if (code === "speakers" && tm.max_speakers) {
-                      limitLabel = "Max Speakers";
+                    } else if (code === 'speakers' && tm.max_speakers) {
+                      limitLabel = 'Max Speakers';
                       limitValue = tm.max_speakers;
-                    } else if (code === "attendees" && tm.max_attendees) {
-                      limitLabel = "Max Attendees";
+                    } else if (code === 'attendees' && tm.max_attendees) {
+                      limitLabel = 'Max Attendees';
                       limitValue = tm.max_attendees;
-                    } else if (code === "volunteers" && tm.max_volunteers) {
-                      limitLabel = "Max Volunteers";
+                    } else if (code === 'volunteers' && tm.max_volunteers) {
+                      limitLabel = 'Max Volunteers';
                       limitValue = tm.max_volunteers;
                     }
 
@@ -138,12 +131,7 @@ export default function ModulesTab({
                     className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
                     title="Edit"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -158,12 +146,7 @@ export default function ModulesTab({
                     className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
                     title="Revoke"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -178,9 +161,7 @@ export default function ModulesTab({
           ))}
         </div>
       ) : (
-        <p className="text-gray-500 text-center py-8">
-          No modules assigned yet.
-        </p>
+        <p className="text-gray-500 text-center py-8">No modules assigned yet.</p>
       )}
 
       {/* Edit Module Modal */}
@@ -191,7 +172,7 @@ export default function ModulesTab({
           onClose={() => {
             setEditingModule(null);
             queryClient.invalidateQueries({
-              queryKey: ["tenant-modules", tenantId],
+              queryKey: ['tenant-modules', tenantId],
             });
           }}
         />
@@ -200,20 +181,14 @@ export default function ModulesTab({
   );
 }
 
-function AssignModuleModal({
-  tenantId,
-  onClose,
-}: {
-  tenantId: string;
-  onClose: () => void;
-}) {
+function AssignModuleModal({ tenantId, onClose }: { tenantId: string; onClose: () => void }) {
   const [formData, setFormData] = useState<TenantModuleAssign>({
-    module_id: "",
+    module_id: '',
     config: {},
-    start_date: "",
-    end_date: "",
+    start_date: '',
+    end_date: '',
     price: undefined,
-    currency: "EUR",
+    currency: 'EUR',
     max_papers: undefined,
     max_speakers: undefined,
     max_attendees: undefined,
@@ -221,31 +196,28 @@ function AssignModuleModal({
   });
 
   const { data: availableModules } = useQuery({
-    queryKey: ["modules"],
+    queryKey: ['modules'],
     queryFn: async () => {
-      const response =
-        await api.get<PaginatedResponse<Module>>("/admin/modules");
+      const response = await api.get<PaginatedResponse<Module>>('/admin/modules');
       return response.data;
     },
   });
 
   const { data: platformCurrencies } = useQuery({
-    queryKey: ["platform-currencies"],
+    queryKey: ['platform-currencies'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
-        "/admin/settings/currencies",
-        { params: { page_size: 100, is_active: true } },
+        '/admin/settings/currencies',
+        { params: { page_size: 100, is_active: true } }
       );
       return response.data;
     },
   });
 
   const { data: assignedModules } = useQuery({
-    queryKey: ["tenant-modules", tenantId],
+    queryKey: ['tenant-modules', tenantId],
     queryFn: async () => {
-      const response = await api.get<TenantModule[]>(
-        `/admin/tenants/${tenantId}/modules`,
-      );
+      const response = await api.get<TenantModule[]>(`/admin/tenants/${tenantId}/modules`);
       return response.data;
     },
   });
@@ -256,12 +228,10 @@ function AssignModuleModal({
       const payload = {
         module_id: data.module_id,
         config: data.config || {},
-        start_date: data.start_date
-          ? new Date(data.start_date).toISOString()
-          : null,
+        start_date: data.start_date ? new Date(data.start_date).toISOString() : null,
         end_date: data.end_date ? new Date(data.end_date).toISOString() : null,
         price: data.price ?? null,
-        currency: data.currency || "USD",
+        currency: data.currency || 'USD',
         max_papers: data.max_papers ?? null,
         max_speakers: data.max_speakers ?? null,
         max_attendees: data.max_attendees ?? null,
@@ -273,37 +243,34 @@ function AssignModuleModal({
       onClose();
     },
     onError: (error: Error) => {
-      console.error("Failed to assign module:", error);
-      alert("Failed to assign module. Please try again.");
+      console.error('Failed to assign module:', error);
+      alert('Failed to assign module. Please try again.');
     },
   });
 
   const assignedModuleIds = assignedModules?.map((m) => m.module_id) || [];
   const unassignedModules =
-    availableModules?.items.filter((m) => !assignedModuleIds.includes(m.id)) ||
-    [];
+    availableModules?.items.filter((m) => !assignedModuleIds.includes(m.id)) || [];
 
   // Get the selected module's code
-  const selectedModule = unassignedModules.find(
-    (m) => m.id === formData.module_id,
-  );
+  const selectedModule = unassignedModules.find((m) => m.id === formData.module_id);
   const selectedModuleCode = selectedModule?.code?.toLowerCase();
 
   // Determine which resource limit to show based on module code
-  const showMaxPapers = selectedModuleCode === "cfp";
-  const showMaxSpeakers = selectedModuleCode === "speakers";
-  const showMaxAttendees = selectedModuleCode === "attendees";
-  const showMaxVolunteers = selectedModuleCode === "volunteers";
+  const showMaxPapers = selectedModuleCode === 'cfp';
+  const showMaxSpeakers = selectedModuleCode === 'speakers';
+  const showMaxAttendees = selectedModuleCode === 'attendees';
+  const showMaxVolunteers = selectedModuleCode === 'volunteers';
   const showResourceLimits =
     showMaxPapers || showMaxSpeakers || showMaxAttendees || showMaxVolunteers;
 
   // Get the appropriate label for the resource limit
   const getResourceLimitLabel = () => {
-    if (showMaxPapers) return "Max Papers";
-    if (showMaxSpeakers) return "Max Speakers";
-    if (showMaxAttendees) return "Max Attendees";
-    if (showMaxVolunteers) return "Max Volunteers";
-    return "";
+    if (showMaxPapers) return 'Max Papers';
+    if (showMaxSpeakers) return 'Max Speakers';
+    if (showMaxAttendees) return 'Max Attendees';
+    if (showMaxVolunteers) return 'Max Volunteers';
+    return '';
   };
 
   const getResourceLimitValue = () => {
@@ -317,10 +284,8 @@ function AssignModuleModal({
   const setResourceLimitValue = (value: number | undefined) => {
     if (showMaxPapers) setFormData({ ...formData, max_papers: value });
     else if (showMaxSpeakers) setFormData({ ...formData, max_speakers: value });
-    else if (showMaxAttendees)
-      setFormData({ ...formData, max_attendees: value });
-    else if (showMaxVolunteers)
-      setFormData({ ...formData, max_volunteers: value });
+    else if (showMaxAttendees) setFormData({ ...formData, max_attendees: value });
+    else if (showMaxVolunteers) setFormData({ ...formData, max_volunteers: value });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -342,19 +307,11 @@ function AssignModuleModal({
   };
 
   return (
-    <Modal
-      open={true}
-      onClose={onClose}
-      title="Assign Module"
-      size="max-w-lg"
-      zIndex="z-[60]"
-    >
+    <Modal open={true} onClose={onClose} title="Assign Module" size="max-w-lg" zIndex="z-[60]">
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Module
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Module</label>
             <select
               required
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
@@ -372,64 +329,48 @@ function AssignModuleModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Start Date
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Start Date</label>
               <input
                 type="date"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.start_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, start_date: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                End Date
-              </label>
+              <label className="block text-sm font-medium text-gray-700">End Date</label>
               <input
                 type="date"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.end_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, end_date: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Price
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Price</label>
               <input
                 type="number"
                 min="0"
                 step="0.01"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.price || ""}
+                value={formData.price || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    price: e.target.value
-                      ? parseFloat(e.target.value)
-                      : undefined,
+                    price: e.target.value ? parseFloat(e.target.value) : undefined,
                   })
                 }
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Currency
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Currency</label>
               <select
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.currency}
-                onChange={(e) =>
-                  setFormData({ ...formData, currency: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
               >
                 {platformCurrencies?.items.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -442,9 +383,7 @@ function AssignModuleModal({
 
           {showResourceLimits && (
             <div className="border-t border-gray-200 pt-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">
-                Resource Limit
-              </h4>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Resource Limit</h4>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   {getResourceLimitLabel()}
@@ -453,17 +392,13 @@ function AssignModuleModal({
                   type="number"
                   min="0"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                  value={getResourceLimitValue() || ""}
+                  value={getResourceLimitValue() || ''}
                   onChange={(e) =>
-                    setResourceLimitValue(
-                      e.target.value ? parseInt(e.target.value) : undefined,
-                    )
+                    setResourceLimitValue(e.target.value ? parseInt(e.target.value) : undefined)
                   }
-                  placeholder={`Enter maximum number of ${getResourceLimitLabel().toLowerCase().replace("max ", "")}`}
+                  placeholder={`Enter maximum number of ${getResourceLimitLabel().toLowerCase().replace('max ', '')}`}
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Leave empty for unlimited
-                </p>
+                <p className="mt-1 text-xs text-gray-500">Leave empty for unlimited</p>
               </div>
             </div>
           )}
@@ -482,7 +417,7 @@ function AssignModuleModal({
             disabled={assignMutation.isPending || !formData.module_id}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
           >
-            {assignMutation.isPending ? "Assigning..." : "Assign"}
+            {assignMutation.isPending ? 'Assigning...' : 'Assign'}
           </button>
         </div>
       </form>
@@ -501,9 +436,9 @@ function EditModuleModal({
 }) {
   // Helper to format date for input
   const formatDateForInput = (dateStr: string | null) => {
-    if (!dateStr) return "";
+    if (!dateStr) return '';
     const date = new Date(dateStr);
-    return date.toISOString().split("T")[0];
+    return date.toISOString().split('T')[0];
   };
 
   const [formData, setFormData] = useState<TenantModuleUpdate>({
@@ -511,7 +446,7 @@ function EditModuleModal({
     start_date: formatDateForInput(module.start_date),
     end_date: formatDateForInput(module.end_date),
     price: module.price ?? undefined,
-    currency: module.currency || "EUR",
+    currency: module.currency || 'EUR',
     max_papers: module.max_papers ?? undefined,
     max_speakers: module.max_speakers ?? undefined,
     max_attendees: module.max_attendees ?? undefined,
@@ -519,30 +454,26 @@ function EditModuleModal({
   });
 
   const { data: platformCurrencies } = useQuery({
-    queryKey: ["platform-currencies"],
+    queryKey: ['platform-currencies'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
-        "/admin/settings/currencies",
-        { params: { page_size: 100, is_active: true } },
+        '/admin/settings/currencies',
+        { params: { page_size: 100, is_active: true } }
       );
       return response.data;
     },
   });
 
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
-  const [saveTimeout, setSaveTimeout] = useState<ReturnType<
-    typeof setTimeout
-  > | null>(null);
+  const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
+  const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const updateMutation = useMutation({
     mutationFn: async (data: TenantModuleUpdate) => {
       const payload = {
         ...data,
-        start_date: data.start_date
-          ? new Date(data.start_date).toISOString()
-          : null,
+        start_date: data.start_date ? new Date(data.start_date).toISOString() : null,
         end_date: data.end_date ? new Date(data.end_date).toISOString() : null,
         price: data.price ?? null,
         max_papers: data.max_papers ?? null,
@@ -550,58 +481,53 @@ function EditModuleModal({
         max_attendees: data.max_attendees ?? null,
         max_volunteers: data.max_volunteers ?? null,
       };
-      await api.put(
-        `/admin/tenants/${tenantId}/modules/${module.module_id}`,
-        payload,
-      );
+      await api.put(`/admin/tenants/${tenantId}/modules/${module.module_id}`, payload);
     },
     onMutate: () => {
-      setSaveStatus("saving");
+      setSaving();
     },
     onSuccess: () => {
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2000);
+      setSaved();
     },
     onError: () => {
-      setSaveStatus("error");
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      setError();
     },
   });
 
   const handleFieldChange = <K extends keyof TenantModuleUpdate>(
     field: K,
-    value: TenantModuleUpdate[K],
+    value: TenantModuleUpdate[K]
   ) => {
     const newFormData = { ...formData, [field]: value };
     setFormData(newFormData);
 
     // Clear existing timeout
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
     }
 
     // Set new timeout for auto-save (500ms debounce)
     const timeout = setTimeout(() => {
       updateMutation.mutate(newFormData);
     }, 500);
-    setSaveTimeout(timeout);
+    setDebounceTimeout(timeout);
   };
 
   // Determine which resource limit to show based on module code
   const moduleCode = module.module_code?.toLowerCase();
-  const showMaxPapers = moduleCode === "cfp";
-  const showMaxSpeakers = moduleCode === "speakers";
-  const showMaxAttendees = moduleCode === "attendees";
-  const showMaxVolunteers = moduleCode === "volunteers";
+  const showMaxPapers = moduleCode === 'cfp';
+  const showMaxSpeakers = moduleCode === 'speakers';
+  const showMaxAttendees = moduleCode === 'attendees';
+  const showMaxVolunteers = moduleCode === 'volunteers';
   const showResourceLimits =
     showMaxPapers || showMaxSpeakers || showMaxAttendees || showMaxVolunteers;
 
   const getResourceLimitLabel = () => {
-    if (showMaxPapers) return "Max Papers";
-    if (showMaxSpeakers) return "Max Speakers";
-    if (showMaxAttendees) return "Max Attendees";
-    if (showMaxVolunteers) return "Max Volunteers";
-    return "";
+    if (showMaxPapers) return 'Max Papers';
+    if (showMaxSpeakers) return 'Max Speakers';
+    if (showMaxAttendees) return 'Max Attendees';
+    if (showMaxVolunteers) return 'Max Volunteers';
+    return '';
   };
 
   const getResourceLimitValue = () => {
@@ -613,10 +539,10 @@ function EditModuleModal({
   };
 
   const setResourceLimitValue = (value: number | undefined) => {
-    if (showMaxPapers) handleFieldChange("max_papers", value);
-    else if (showMaxSpeakers) handleFieldChange("max_speakers", value);
-    else if (showMaxAttendees) handleFieldChange("max_attendees", value);
-    else if (showMaxVolunteers) handleFieldChange("max_volunteers", value);
+    if (showMaxPapers) handleFieldChange('max_papers', value);
+    else if (showMaxSpeakers) handleFieldChange('max_speakers', value);
+    else if (showMaxAttendees) handleFieldChange('max_attendees', value);
+    else if (showMaxVolunteers) handleFieldChange('max_volunteers', value);
   };
 
   return (
@@ -630,13 +556,9 @@ function EditModuleModal({
       <div className="px-6 pb-2 -mt-2 flex justify-between items-center">
         <p className="text-sm text-gray-500">{module.module_code}</p>
         <div className="flex items-center gap-2">
-          {saveStatus === "saving" && (
+          {saveStatus === 'saving' && (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
-              <svg
-                className="animate-spin h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -654,14 +576,9 @@ function EditModuleModal({
               Saving...
             </span>
           )}
-          {saveStatus === "saved" && (
+          {saveStatus === 'saved' && (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -672,10 +589,15 @@ function EditModuleModal({
               Saved
             </span>
           )}
-          {saveStatus === "error" && (
+          {saveStatus === 'error' && (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
               Save failed
             </span>
@@ -686,21 +608,17 @@ function EditModuleModal({
       <div className="px-6 py-4 space-y-4">
         {/* Enabled Toggle */}
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700">
-            Module Enabled
-          </label>
+          <label className="text-sm font-medium text-gray-700">Module Enabled</label>
           <button
             type="button"
-            onClick={() =>
-              handleFieldChange("is_enabled", !formData.is_enabled)
-            }
+            onClick={() => handleFieldChange('is_enabled', !formData.is_enabled)}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-              formData.is_enabled ? "bg-primary-600" : "bg-gray-200"
+              formData.is_enabled ? 'bg-primary-600' : 'bg-gray-200'
             }`}
           >
             <span
               className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                formData.is_enabled ? "translate-x-5" : "translate-x-0"
+                formData.is_enabled ? 'translate-x-5' : 'translate-x-0'
               }`}
             />
           </button>
@@ -709,29 +627,21 @@ function EditModuleModal({
         {/* Dates */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Start Date
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Start Date</label>
             <input
               type="date"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.start_date || ""}
-              onChange={(e) =>
-                handleFieldChange("start_date", e.target.value || undefined)
-              }
+              value={formData.start_date || ''}
+              onChange={(e) => handleFieldChange('start_date', e.target.value || undefined)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              End Date
-            </label>
+            <label className="block text-sm font-medium text-gray-700">End Date</label>
             <input
               type="date"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.end_date || ""}
-              onChange={(e) =>
-                handleFieldChange("end_date", e.target.value || undefined)
-              }
+              value={formData.end_date || ''}
+              onChange={(e) => handleFieldChange('end_date', e.target.value || undefined)}
             />
           </div>
         </div>
@@ -739,31 +649,24 @@ function EditModuleModal({
         {/* Pricing */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Price
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Price</label>
             <input
               type="number"
               min="0"
               step="0.01"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.price ?? ""}
+              value={formData.price ?? ''}
               onChange={(e) =>
-                handleFieldChange(
-                  "price",
-                  e.target.value ? parseFloat(e.target.value) : undefined,
-                )
+                handleFieldChange('price', e.target.value ? parseFloat(e.target.value) : undefined)
               }
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Currency
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Currency</label>
             <select
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.currency || "EUR"}
-              onChange={(e) => handleFieldChange("currency", e.target.value)}
+              value={formData.currency || 'EUR'}
+              onChange={(e) => handleFieldChange('currency', e.target.value)}
             >
               {platformCurrencies?.items.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -777,9 +680,7 @@ function EditModuleModal({
         {/* Resource Limits */}
         {showResourceLimits && (
           <div className="border-t border-gray-200 pt-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">
-              Resource Limit
-            </h4>
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Resource Limit</h4>
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 {getResourceLimitLabel()}
@@ -788,17 +689,13 @@ function EditModuleModal({
                 type="number"
                 min="0"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={getResourceLimitValue() ?? ""}
+                value={getResourceLimitValue() ?? ''}
                 onChange={(e) =>
-                  setResourceLimitValue(
-                    e.target.value ? parseInt(e.target.value) : undefined,
-                  )
+                  setResourceLimitValue(e.target.value ? parseInt(e.target.value) : undefined)
                 }
-                placeholder={`Enter maximum number of ${getResourceLimitLabel().toLowerCase().replace("max ", "")}`}
+                placeholder={`Enter maximum number of ${getResourceLimitLabel().toLowerCase().replace('max ', '')}`}
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Leave empty for unlimited
-              </p>
+              <p className="mt-1 text-xs text-gray-500">Leave empty for unlimited</p>
             </div>
           </div>
         )}

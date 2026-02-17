@@ -1,11 +1,8 @@
-import { useState, useRef } from "react";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-import api from "../../../config/api";
-import { validatePhone } from "../../../utils/validators";
+import { useState } from 'react';
+import { useSaveStatus } from '../../../hooks/useSaveStatus';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../config/api';
+import { validatePhone } from '../../../utils/validators';
 import type {
   Conference,
   Volunteer,
@@ -14,14 +11,14 @@ import type {
   VolunteerRole,
   VolunteerStatus,
   PaginatedResponse,
-} from "../../../types";
-import { parseApiError } from "../../../utils/apiError";
-import Modal from "../../../components/Modal";
-import ConfirmDialog from "../../../components/ConfirmDialog";
-import RichTextEditor from "../../../components/common/RichTextEditor";
-import AttachmentList from "../../../components/AttachmentList";
-import { ErrorBanner } from "../../../components/common/ErrorBanner";
-import { EditIcon, DeleteIcon } from "../icons";
+} from '../../../types';
+import { parseApiError } from '../../../utils/apiError';
+import Modal from '../../../components/Modal';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import RichTextEditor from '../../../components/common/RichTextEditor';
+import AttachmentList from '../../../components/AttachmentList';
+import { ErrorBanner } from '../../../components/common/ErrorBanner';
+import { EditIcon, DeleteIcon } from '../icons';
 
 function ConferenceVolunteersTab({
   conference,
@@ -36,30 +33,26 @@ function ConferenceVolunteersTab({
   const [createPhoneError, setCreatePhoneError] = useState<string | null>(null);
   const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
   const [editEmergencyPhoneError, setEditEmergencyPhoneError] = useState<string | null>(null);
-  const [editingVolunteer, setEditingVolunteer] = useState<Volunteer | null>(
-    null,
-  );
-  const [deleteVolunteerTarget, setDeleteVolunteerTarget] =
-    useState<Volunteer | null>(null);
+  const [editingVolunteer, setEditingVolunteer] = useState<Volunteer | null>(null);
+  const [deleteVolunteerTarget, setDeleteVolunteerTarget] = useState<Volunteer | null>(null);
   const [editForm, setEditForm] = useState<VolunteerUpdate>({});
   const [createForm, setCreateForm] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    role: "",
-    tshirt_size: "",
-    notes: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    role: '',
+    tshirt_size: '',
+    notes: '',
   });
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
 
   // Fetch linked volunteers
   const { data, isLoading } = useQuery({
-    queryKey: ["conference-volunteers", conference.id],
+    queryKey: ['conference-volunteers', conference.id],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<Volunteer>>(
-        `/conferences/${conference.id}/volunteers`,
+        `/conferences/${conference.id}/volunteers`
       );
       return response.data;
     },
@@ -67,20 +60,18 @@ function ConferenceVolunteersTab({
 
   // Fetch all tenant volunteers for linking
   const { data: allVolunteers } = useQuery({
-    queryKey: ["all-volunteers"],
+    queryKey: ['all-volunteers'],
     queryFn: async () => {
-      const response = await api.get<PaginatedResponse<Volunteer>>(
-        `/volunteers?page_size=100`,
-      );
+      const response = await api.get<PaginatedResponse<Volunteer>>(`/volunteers?page_size=100`);
       return response.data;
     },
   });
 
   const { data: rolesData } = useQuery({
-    queryKey: ["volunteer-roles", conference.id],
+    queryKey: ['volunteer-roles', conference.id],
     queryFn: async () => {
       const response = await api.get<{ items: VolunteerRole[]; total: number }>(
-        `/conferences/${conference.id}/settings/volunteer-roles`,
+        `/conferences/${conference.id}/settings/volunteer-roles`
       );
       return response.data;
     },
@@ -95,39 +86,39 @@ function ConferenceVolunteersTab({
     onSuccess: () => {
       setLinkError(null);
       queryClient.invalidateQueries({
-        queryKey: ["conference-volunteers", conference.id],
+        queryKey: ['conference-volunteers', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-volunteers"] });
+      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, "Failed to link volunteer"));
+      setLinkError(parseApiError(error, 'Failed to link volunteer'));
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: VolunteerCreate) => {
-      await api.post("/volunteers", data);
+      await api.post('/volunteers', data);
     },
     onSuccess: () => {
       setLinkError(null);
       setShowCreateForm(false);
       setCreatePhoneError(null);
       setCreateForm({
-        first_name: "",
-        last_name: "",
-        email: "",
-        phone: "",
-        role: "",
-        tshirt_size: "",
-        notes: "",
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        role: '',
+        tshirt_size: '',
+        notes: '',
       });
       queryClient.invalidateQueries({
-        queryKey: ["conference-volunteers", conference.id],
+        queryKey: ['conference-volunteers', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-volunteers"] });
+      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, "Failed to create volunteer"));
+      setLinkError(parseApiError(error, 'Failed to create volunteer'));
     },
   });
 
@@ -136,23 +127,17 @@ function ConferenceVolunteersTab({
       await api.put(`/volunteers/${id}`, data);
     },
     onSuccess: () => {
-      setSaveStatus("saved");
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        setSaveStatus("idle");
-        setEditingVolunteer(null);
-      }, 2000);
+      setSaved();
+      setEditingVolunteer(null);
       setLinkError(null);
       queryClient.invalidateQueries({
-        queryKey: ["conference-volunteers", conference.id],
+        queryKey: ['conference-volunteers', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-volunteers"] });
+      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
     },
     onError: (error: unknown) => {
-      setSaveStatus("error");
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
-      setLinkError(parseApiError(error, "Failed to update volunteer"));
+      setSaveError();
+      setLinkError(parseApiError(error, 'Failed to update volunteer'));
     },
   });
 
@@ -163,12 +148,12 @@ function ConferenceVolunteersTab({
     onSuccess: () => {
       setLinkError(null);
       queryClient.invalidateQueries({
-        queryKey: ["conference-volunteers", conference.id],
+        queryKey: ['conference-volunteers', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-volunteers"] });
+      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, "Failed to remove volunteer"));
+      setLinkError(parseApiError(error, 'Failed to remove volunteer'));
     },
   });
 
@@ -180,13 +165,13 @@ function ConferenceVolunteersTab({
       first_name: volunteer.first_name,
       last_name: volunteer.last_name,
       email: volunteer.email,
-      phone: volunteer.phone || "",
+      phone: volunteer.phone || '',
       status: volunteer.status,
-      role: volunteer.role || "",
-      tshirt_size: volunteer.tshirt_size || "",
-      notes: volunteer.notes || "",
-      emergency_contact_name: volunteer.emergency_contact_name || "",
-      emergency_contact_phone: volunteer.emergency_contact_phone || "",
+      role: volunteer.role || '',
+      tshirt_size: volunteer.tshirt_size || '',
+      notes: volunteer.notes || '',
+      emergency_contact_name: volunteer.emergency_contact_name || '',
+      emergency_contact_phone: volunteer.emergency_contact_phone || '',
     });
   };
 
@@ -194,7 +179,7 @@ function ConferenceVolunteersTab({
     e.preventDefault();
     if (!editingVolunteer) return;
     if (editPhoneError || editEmergencyPhoneError) return;
-    setSaveStatus("saving");
+    setSaving();
     volunteerUpdateMutation.mutate({ id: editingVolunteer.id, data: editForm });
   };
 
@@ -208,8 +193,7 @@ function ConferenceVolunteersTab({
   };
 
   const linkedIds = new Set(data?.items?.map((v) => v.id) || []);
-  const unlinkableVolunteers =
-    allVolunteers?.items?.filter((v) => !linkedIds.has(v.id)) || [];
+  const unlinkableVolunteers = allVolunteers?.items?.filter((v) => !linkedIds.has(v.id)) || [];
 
   return (
     <div>
@@ -226,7 +210,7 @@ function ConferenceVolunteersTab({
                 onChange={(e) => {
                   if (e.target.value) {
                     linkMutation.mutate(e.target.value);
-                    e.target.value = "";
+                    e.target.value = '';
                   }
                 }}
               >
@@ -242,7 +226,7 @@ function ConferenceVolunteersTab({
               onClick={() => setShowCreateForm(!showCreateForm)}
               className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
             >
-              {showCreateForm ? "Cancel" : "Create New"}
+              {showCreateForm ? 'Cancel' : 'Create New'}
             </button>
           </div>
         )}
@@ -257,53 +241,39 @@ function ConferenceVolunteersTab({
         >
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                First Name *
-              </label>
+              <label className="block text-xs font-medium text-gray-700">First Name *</label>
               <input
                 type="text"
                 required
                 value={createForm.first_name}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, first_name: e.target.value })
-                }
+                onChange={(e) => setCreateForm({ ...createForm, first_name: e.target.value })}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Last Name *
-              </label>
+              <label className="block text-xs font-medium text-gray-700">Last Name *</label>
               <input
                 type="text"
                 required
                 value={createForm.last_name}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, last_name: e.target.value })
-                }
+                onChange={(e) => setCreateForm({ ...createForm, last_name: e.target.value })}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Email *
-              </label>
+              <label className="block text-xs font-medium text-gray-700">Email *</label>
               <input
                 type="email"
                 required
                 value={createForm.email}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, email: e.target.value })
-                }
+                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Phone
-              </label>
+              <label className="block text-xs font-medium text-gray-700">Phone</label>
               <input
                 type="tel"
                 value={createForm.phone}
@@ -312,7 +282,7 @@ function ConferenceVolunteersTab({
                   setCreateForm({ ...createForm, phone: value });
                   setCreatePhoneError(validatePhone(value));
                 }}
-                className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createPhoneError ? "border-red-300" : "border-gray-300"}`}
+                className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createPhoneError ? 'border-red-300' : 'border-gray-300'}`}
                 placeholder="+491234545 or 00491234566"
               />
               {createPhoneError && <p className="mt-1 text-xs text-red-600">{createPhoneError}</p>}
@@ -320,14 +290,10 @@ function ConferenceVolunteersTab({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Role
-              </label>
+              <label className="block text-xs font-medium text-gray-700">Role</label>
               <select
                 value={createForm.role}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, role: e.target.value })
-                }
+                onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">Select a role...</option>
@@ -341,18 +307,14 @@ function ConferenceVolunteersTab({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                T-Shirt Size
-              </label>
+              <label className="block text-xs font-medium text-gray-700">T-Shirt Size</label>
               <select
                 value={createForm.tshirt_size}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, tshirt_size: e.target.value })
-                }
+                onChange={(e) => setCreateForm({ ...createForm, tshirt_size: e.target.value })}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">Select size</option>
-                {["XS", "S", "M", "L", "XL", "XXL"].map((s) => (
+                {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
@@ -361,14 +323,10 @@ function ConferenceVolunteersTab({
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700">
-              Comments
-            </label>
+            <label className="block text-xs font-medium text-gray-700">Comments</label>
             <RichTextEditor
               value={createForm.notes}
-              onChange={(html) =>
-                setCreateForm({ ...createForm, notes: html })
-              }
+              onChange={(html) => setCreateForm({ ...createForm, notes: html })}
               placeholder="Any notes or comments about this volunteer..."
               rows={2}
             />
@@ -379,7 +337,7 @@ function ConferenceVolunteersTab({
               disabled={createMutation.isPending || !!createPhoneError}
               className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
             >
-              {createMutation.isPending ? "Creating..." : "Create Volunteer"}
+              {createMutation.isPending ? 'Creating...' : 'Create Volunteer'}
             </button>
           </div>
         </form>
@@ -419,27 +377,23 @@ function ConferenceVolunteersTab({
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
                     {volunteer.full_name}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {volunteer.email}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{volunteer.email}</td>
                   <td className="px-4 py-3 text-sm">
                     <span
                       className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                        volunteer.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : volunteer.status === "approved"
-                            ? "bg-blue-100 text-blue-700"
-                            : volunteer.status === "pending"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-gray-100 text-gray-700"
+                        volunteer.status === 'active'
+                          ? 'bg-green-100 text-green-700'
+                          : volunteer.status === 'approved'
+                            ? 'bg-blue-100 text-blue-700'
+                            : volunteer.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-gray-100 text-gray-700'
                       }`}
                     >
                       {volunteer.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {volunteer.role || "-"}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{volunteer.role || '-'}</td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
@@ -483,62 +437,48 @@ function ConferenceVolunteersTab({
             <div className="px-6 py-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    First Name
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">First Name</label>
                   <input
                     type="text"
                     required
-                    value={editForm.first_name || ""}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, first_name: e.target.value })
-                    }
+                    value={editForm.first_name || ''}
+                    onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Last Name
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">Last Name</label>
                   <input
                     type="text"
                     required
-                    value={editForm.last_name || ""}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, last_name: e.target.value })
-                    }
+                    value={editForm.last_name || ''}
+                    onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Email
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">Email</label>
                   <input
                     type="email"
                     required
-                    value={editForm.email || ""}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, email: e.target.value })
-                    }
+                    value={editForm.email || ''}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Phone
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">Phone</label>
                   <input
                     type="tel"
-                    value={editForm.phone || ""}
+                    value={editForm.phone || ''}
                     onChange={(e) => {
                       const value = e.target.value;
                       setEditForm({ ...editForm, phone: value });
                       setEditPhoneError(validatePhone(value));
                     }}
-                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editPhoneError ? "border-red-300" : "border-gray-300"}`}
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editPhoneError ? 'border-red-300' : 'border-gray-300'}`}
                     placeholder="+491234545 or 00491234566"
                   />
                   {editPhoneError && <p className="mt-1 text-xs text-red-600">{editPhoneError}</p>}
@@ -546,11 +486,9 @@ function ConferenceVolunteersTab({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Status
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">Status</label>
                   <select
-                    value={editForm.status || "pending"}
+                    value={editForm.status || 'pending'}
                     onChange={(e) =>
                       setEditForm({
                         ...editForm,
@@ -559,30 +497,20 @@ function ConferenceVolunteersTab({
                     }
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
-                    {(
-                      [
-                        "pending",
-                        "approved",
-                        "active",
-                        "inactive",
-                        "rejected",
-                      ] as const
-                    ).map((s) => (
-                      <option key={s} value={s}>
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
-                      </option>
-                    ))}
+                    {(['pending', 'approved', 'active', 'inactive', 'rejected'] as const).map(
+                      (s) => (
+                        <option key={s} value={s}>
+                          {s.charAt(0).toUpperCase() + s.slice(1)}
+                        </option>
+                      )
+                    )}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Role
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">Role</label>
                   <select
-                    value={editForm.role || ""}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, role: e.target.value })
-                    }
+                    value={editForm.role || ''}
+                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="">Select a role...</option>
@@ -598,11 +526,9 @@ function ConferenceVolunteersTab({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    T-Shirt Size
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700">T-Shirt Size</label>
                   <select
-                    value={editForm.tshirt_size || ""}
+                    value={editForm.tshirt_size || ''}
                     onChange={(e) =>
                       setEditForm({
                         ...editForm,
@@ -612,7 +538,7 @@ function ConferenceVolunteersTab({
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="">Select size</option>
-                    {["XS", "S", "M", "L", "XL", "XXL"].map((s) => (
+                    {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((s) => (
                       <option key={s} value={s}>
                         {s}
                       </option>
@@ -622,14 +548,10 @@ function ConferenceVolunteersTab({
                 <div></div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Notes
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Notes</label>
                 <RichTextEditor
-                  value={editForm.notes || ""}
-                  onChange={(html) =>
-                    setEditForm({ ...editForm, notes: html })
-                  }
+                  value={editForm.notes || ''}
+                  onChange={(html) => setEditForm({ ...editForm, notes: html })}
                   rows={2}
                 />
               </div>
@@ -640,7 +562,7 @@ function ConferenceVolunteersTab({
                   </label>
                   <input
                     type="text"
-                    value={editForm.emergency_contact_name || ""}
+                    value={editForm.emergency_contact_name || ''}
                     onChange={(e) =>
                       setEditForm({
                         ...editForm,
@@ -656,7 +578,7 @@ function ConferenceVolunteersTab({
                   </label>
                   <input
                     type="tel"
-                    value={editForm.emergency_contact_phone || ""}
+                    value={editForm.emergency_contact_phone || ''}
                     onChange={(e) => {
                       const value = e.target.value;
                       setEditForm({
@@ -665,17 +587,16 @@ function ConferenceVolunteersTab({
                       });
                       setEditEmergencyPhoneError(validatePhone(value));
                     }}
-                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editEmergencyPhoneError ? "border-red-300" : "border-gray-300"}`}
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editEmergencyPhoneError ? 'border-red-300' : 'border-gray-300'}`}
                     placeholder="+491234545 or 00491234566"
                   />
-                  {editEmergencyPhoneError && <p className="mt-1 text-xs text-red-600">{editEmergencyPhoneError}</p>}
+                  {editEmergencyPhoneError && (
+                    <p className="mt-1 text-xs text-red-600">{editEmergencyPhoneError}</p>
+                  )}
                 </div>
               </div>
 
-              <AttachmentList
-                entityType="volunteer"
-                entityId={editingVolunteer.id}
-              />
+              <AttachmentList entityType="volunteer" entityId={editingVolunteer.id} />
             </div>
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
               <button
@@ -687,34 +608,63 @@ function ConferenceVolunteersTab({
               </button>
               <button
                 type="submit"
-                disabled={volunteerUpdateMutation.isPending || !!editPhoneError || !!editEmergencyPhoneError}
+                disabled={
+                  volunteerUpdateMutation.isPending || !!editPhoneError || !!editEmergencyPhoneError
+                }
                 className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 transition-colors duration-200 ${
-                  saveStatus === "saved"
-                    ? "bg-green-600"
-                    : saveStatus === "error"
-                      ? "bg-red-600"
-                      : "bg-primary-600 hover:bg-primary-700"
+                  saveStatus === 'saved'
+                    ? 'bg-green-600'
+                    : saveStatus === 'error'
+                      ? 'bg-red-600'
+                      : 'bg-primary-600 hover:bg-primary-700'
                 }`}
               >
-                {saveStatus === "saving" ? (
+                {saveStatus === 'saving' ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Saving...
                   </>
-                ) : saveStatus === "saved" ? (
+                ) : saveStatus === 'saved' ? (
                   <>
-                    <svg className="-ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="-ml-1 mr-2 h-4 w-4 text-white inline"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                     Saved!
                   </>
-                ) : saveStatus === "error" ? (
-                  "Error"
+                ) : saveStatus === 'error' ? (
+                  'Error'
                 ) : (
-                  "Save Changes"
+                  'Save Changes'
                 )}
               </button>
             </div>
@@ -728,8 +678,7 @@ function ConferenceVolunteersTab({
         message={`Are you sure you want to remove "${deleteVolunteerTarget?.full_name}" from this conference? If they are linked to other conferences, they will only be unlinked from this one.`}
         confirmLabel="Remove"
         onConfirm={() => {
-          if (deleteVolunteerTarget)
-            volunteerDeleteMutation.mutate(deleteVolunteerTarget.id);
+          if (deleteVolunteerTarget) volunteerDeleteMutation.mutate(deleteVolunteerTarget.id);
           setDeleteVolunteerTarget(null);
         }}
         onCancel={() => setDeleteVolunteerTarget(null)}

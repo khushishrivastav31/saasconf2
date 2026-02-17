@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams } from 'react-router';
 
 /**
  * Returns the base path for portal routes: `/${companySlug}/portal`.
@@ -7,9 +7,7 @@ import { useParams } from "react-router-dom";
 export function usePortalBasePath(): string {
   const { companySlug } = useParams<{ companySlug: string }>();
   if (!companySlug) {
-    throw new Error(
-      "usePortalBasePath must be used inside a route with :companySlug",
-    );
+    throw new Error('usePortalBasePath must be used inside a route with :companySlug');
   }
   return `/${companySlug}/portal`;
 }

@@ -1,17 +1,12 @@
-import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "../../hooks/useAuth";
-import { useConferenceAdmin } from "../../hooks/useConferenceAdmin";
-import api from "../../config/api";
-import type { Conference } from "../../types";
-import { parseApiError } from "../../utils/apiError";
-import {
-  SectionId,
-  SectionDef,
-  coreSections,
-  moduleSections,
-} from "./conferenceSections";
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../hooks/useAuth';
+import { useConferenceAdmin } from '../../hooks/useConferenceAdmin';
+import api from '../../config/api';
+import type { Conference } from '../../types';
+import { parseApiError } from '../../utils/apiError';
+import { SectionId, SectionDef, coreSections, moduleSections } from './conferenceSections';
 
 // ---------------------------------------------------------------------------
 // Delete Preview
@@ -74,17 +69,13 @@ export interface UseConferenceDetailReturn {
   selectedLocationId: string | null;
   setSelectedLocationId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedServiceProviderId: string | null;
-  setSelectedServiceProviderId: React.Dispatch<
-    React.SetStateAction<string | null>
-  >;
+  setSelectedServiceProviderId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedSponsorId: string | null;
   setSelectedSponsorId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedInvoiceId: string | null;
   setSelectedInvoiceId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedCommitteeMemberId: string | null;
-  setSelectedCommitteeMemberId: React.Dispatch<
-    React.SetStateAction<string | null>
-  >;
+  setSelectedCommitteeMemberId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedApplicantId: string | null;
   setSelectedApplicantId: React.Dispatch<React.SetStateAction<string | null>>;
 
@@ -108,34 +99,29 @@ export interface UseConferenceDetailReturn {
 // Custom hook
 // ---------------------------------------------------------------------------
 
-export function useConferenceDetail(
-  conferenceId: string | undefined,
-): UseConferenceDetailReturn {
+export function useConferenceDetail(conferenceId: string | undefined): UseConferenceDetailReturn {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useConferenceAdmin(conferenceId);
 
   // Only super admins and tenant super users can delete conferences
-  const canDelete = user?.role === "super_admin" || user?.is_tenant_super_user;
+  const canDelete = user?.role === 'super_admin' || user?.is_tenant_super_user;
 
   // -------------------------------------------------------------------------
   // Sidebar navigation
   // -------------------------------------------------------------------------
 
-  const [activeSection, setActiveSection] = useState<SectionId>("details");
+  const [activeSection, setActiveSection] = useState<SectionId>('details');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(),
-  );
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   // Auto-expand parent sections when a child is active
   useEffect(() => {
     for (const section of moduleSections) {
       if (
         section.children &&
-        (activeSection === section.id ||
-          section.children.some((c) => c.id === activeSection))
+        (activeSection === section.id || section.children.some((c) => c.id === activeSection))
       ) {
         setExpandedSections((prev) => {
           if (prev.has(section.id)) return prev;
@@ -150,10 +136,9 @@ export function useConferenceDetail(
   // Build sections: core sections are always visible, module sections depend on user's assigned modules
   const sections = useMemo(() => {
     const userModules = user?.modules ?? [];
-    const isSuperAdmin = user?.role === "super_admin";
+    const isSuperAdmin = user?.role === 'super_admin';
     const available = moduleSections.filter(
-      (s) =>
-        !s.moduleCode || isSuperAdmin || userModules.includes(s.moduleCode),
+      (s) => !s.moduleCode || isSuperAdmin || userModules.includes(s.moduleCode)
     );
     return [...coreSections, ...available];
   }, [user?.modules, user?.role]);
@@ -163,9 +148,7 @@ export function useConferenceDetail(
   // -------------------------------------------------------------------------
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deletePreview, setDeletePreview] = useState<DeletePreview | null>(
-    null,
-  );
+  const [deletePreview, setDeletePreview] = useState<DeletePreview | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -173,24 +156,12 @@ export function useConferenceDetail(
   // Selection states (lifted for sidebar rendering)
   // -------------------------------------------------------------------------
 
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    null,
-  );
-  const [selectedServiceProviderId, setSelectedServiceProviderId] = useState<
-    string | null
-  >(null);
-  const [selectedSponsorId, setSelectedSponsorId] = useState<string | null>(
-    null,
-  );
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
-    null,
-  );
-  const [selectedCommitteeMemberId, setSelectedCommitteeMemberId] = useState<
-    string | null
-  >(null);
-  const [selectedApplicantId, setSelectedApplicantId] = useState<
-    string | null
-  >(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [selectedServiceProviderId, setSelectedServiceProviderId] = useState<string | null>(null);
+  const [selectedSponsorId, setSelectedSponsorId] = useState<string | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [selectedCommitteeMemberId, setSelectedCommitteeMemberId] = useState<string | null>(null);
+  const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null);
 
   // -------------------------------------------------------------------------
   // Conference data
@@ -201,11 +172,9 @@ export function useConferenceDetail(
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["conference", conferenceId],
+    queryKey: ['conference', conferenceId],
     queryFn: async () => {
-      const response = await api.get<Conference>(
-        `/conferences/${conferenceId}`,
-      );
+      const response = await api.get<Conference>(`/conferences/${conferenceId}`);
       return response.data;
     },
     enabled: !!conferenceId,
@@ -215,13 +184,11 @@ export function useConferenceDetail(
     try {
       setDeleteLoading(true);
       setDeleteError(null);
-      const response = await api.get<DeletePreview>(
-        `/conferences/${conferenceId}/delete-preview`,
-      );
+      const response = await api.get<DeletePreview>(`/conferences/${conferenceId}/delete-preview`);
       setDeletePreview(response.data);
       setShowDeleteConfirm(true);
     } catch {
-      setDeleteError("Failed to load deletion preview");
+      setDeleteError('Failed to load deletion preview');
     } finally {
       setDeleteLoading(false);
     }
@@ -232,20 +199,20 @@ export function useConferenceDetail(
       setDeleteLoading(true);
       setDeleteError(null);
       await api.delete(`/conferences/${conferenceId}`);
-      queryClient.invalidateQueries({ queryKey: ["conferences"] });
-      queryClient.invalidateQueries({ queryKey: ["conference-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["all-volunteers"] });
-      queryClient.invalidateQueries({ queryKey: ["all-locations"] });
-      queryClient.invalidateQueries({ queryKey: ["all-cfps"] });
-      navigate("/modules/conferences");
+      queryClient.invalidateQueries({ queryKey: ['conferences'] });
+      queryClient.invalidateQueries({ queryKey: ['conference-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
+      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
+      queryClient.invalidateQueries({ queryKey: ['all-cfps'] });
+      navigate('/modules/conferences');
     } catch (error: unknown) {
-      setDeleteError(parseApiError(error, "Failed to delete conference"));
+      setDeleteError(parseApiError(error, 'Failed to delete conference'));
       setDeleteLoading(false);
     }
   };
 
   const handleUpdate = () => {
-    queryClient.invalidateQueries({ queryKey: ["conference", conferenceId] });
+    queryClient.invalidateQueries({ queryKey: ['conference', conferenceId] });
   };
 
   return {

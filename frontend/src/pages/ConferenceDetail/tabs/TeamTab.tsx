@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../config/api";
-import type { Conference, TeamMember } from "../../../types";
-import { validatePhone } from "../../../utils/validators";
-import { parseApiError } from "../../../utils/apiError";
-import { ErrorBanner } from "../../../components/common/ErrorBanner";
-import ConfirmDialog from "../../../components/ConfirmDialog";
-import { EditIcon, DeleteIcon } from "../icons";
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../config/api';
+import { useSaveStatus } from '../../../hooks/useSaveStatus';
+import type { Conference, TeamMember } from '../../../types';
+import { validatePhone } from '../../../utils/validators';
+import { parseApiError } from '../../../utils/apiError';
+import { ErrorBanner } from '../../../components/common/ErrorBanner';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import { EditIcon, DeleteIcon } from '../icons';
 
 function ConferenceTeamTab({
   conference,
@@ -18,33 +19,31 @@ function ConferenceTeamTab({
   isAdmin: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(
-    conference.team_members || [],
-  );
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(conference.team_members || []);
   const [newMember, setNewMember] = useState<TeamMember>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    role: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    role: '',
     is_manager: false,
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<TeamMember>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    role: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    role: '',
     is_manager: false,
   });
   const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
   const [newPhoneError, setNewPhoneError] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
   const [userError, setUserError] = useState<string | null>(null);
-  const [removeTarget, setRemoveTarget] = useState<{ index: number; member: TeamMember } | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{ index: number; member: TeamMember } | null>(
+    null
+  );
 
   // Sync local state when conference data changes (e.g., after refetch)
   useEffect(() => {
@@ -58,18 +57,16 @@ function ConferenceTeamTab({
       });
       return response.data;
     },
-    onMutate: () => setSaveStatus("saving"),
+    onMutate: () => setSaving(),
     onSuccess: (updatedConference) => {
-      setSaveStatus("saved");
+      setSaved();
       setTeamMembers(updatedConference.team_members || []);
-      queryClient.setQueryData(["conference", conference.id], updatedConference);
+      queryClient.setQueryData(['conference', conference.id], updatedConference);
       onUpdate();
-      setTimeout(() => setSaveStatus("idle"), 2000);
     },
     onError: (error) => {
-      setSaveStatus("error");
+      setSaveError();
       setUserError(parseApiError(error));
-      setTimeout(() => setSaveStatus("idle"), 3000);
     },
   });
 
@@ -80,20 +77,20 @@ function ConferenceTeamTab({
     const memberToAdd: TeamMember = {
       first_name: newMember.first_name.trim(),
       last_name: newMember.last_name.trim(),
-      email: newMember.email?.trim() || "",
-      phone: newMember.phone?.trim() || "",
-      role: newMember.role?.trim() || "",
+      email: newMember.email?.trim() || '',
+      phone: newMember.phone?.trim() || '',
+      role: newMember.role?.trim() || '',
       is_manager: newMember.is_manager,
     };
 
     const newMembers = [...teamMembers, memberToAdd];
     setTeamMembers(newMembers);
     setNewMember({
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone: "",
-      role: "",
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      role: '',
       is_manager: false,
     });
     setNewPhoneError(null);
@@ -128,9 +125,9 @@ function ConferenceTeamTab({
     const updatedMember: TeamMember = {
       first_name: editForm.first_name.trim(),
       last_name: editForm.last_name.trim(),
-      email: editForm.email?.trim() || "",
-      phone: editForm.phone?.trim() || "",
-      role: editForm.role?.trim() || "",
+      email: editForm.email?.trim() || '',
+      phone: editForm.phone?.trim() || '',
+      role: editForm.role?.trim() || '',
       is_manager: editForm.is_manager,
     };
 
@@ -145,21 +142,15 @@ function ConferenceTeamTab({
     <div>
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h4 className="text-sm font-medium text-gray-900">
-            Conference Team
-          </h4>
+          <h4 className="text-sm font-medium text-gray-900">Conference Team</h4>
           <p className="mt-0.5 text-xs text-gray-500">
             Team members for this conference. For login access, add users in the Team page.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {saveStatus === "saving" && (
+          {saveStatus === 'saving' && (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
-              <svg
-                className="animate-spin h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -177,14 +168,9 @@ function ConferenceTeamTab({
               Saving...
             </span>
           )}
-          {saveStatus === "saved" && (
+          {saveStatus === 'saved' && (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -195,10 +181,15 @@ function ConferenceTeamTab({
               Saved
             </span>
           )}
-          {saveStatus === "error" && (
+          {saveStatus === 'error' && (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
               Save failed
             </span>
@@ -211,13 +202,8 @@ function ConferenceTeamTab({
         <div className="mb-4 space-y-2">
           {teamMembers.map((member, index) =>
             editingIndex === index ? (
-              <div
-                key={index}
-                className="bg-blue-50 border border-blue-200 rounded-lg p-4"
-              >
-                <h5 className="text-sm font-medium text-blue-900 mb-3">
-                  Edit Team Member
-                </h5>
+              <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h5 className="text-sm font-medium text-blue-900 mb-3">Edit Team Member</h5>
 
                 <ErrorBanner message={userError} />
 
@@ -230,9 +216,7 @@ function ConferenceTeamTab({
                       type="text"
                       className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       value={editForm.first_name}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, first_name: e.target.value })
-                      }
+                      onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
                     />
                   </div>
                   <div>
@@ -243,51 +227,39 @@ function ConferenceTeamTab({
                       type="text"
                       className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       value={editForm.last_name}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, last_name: e.target.value })
-                      }
+                      onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Role
-                    </label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
                     <input
                       type="text"
                       placeholder="e.g., Conference Chair"
                       className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      value={editForm.role || ""}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, role: e.target.value })
-                      }
+                      value={editForm.role || ''}
+                      onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Email
-                    </label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
                     <input
                       type="email"
                       className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      value={editForm.email || ""}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, email: e.target.value })
-                      }
+                      value={editForm.email || ''}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Phone
-                    </label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
                     <input
                       type="tel"
                       placeholder="+491234545 or 00491234566"
-                      className={`w-full border ${editPhoneError ? "border-red-300" : "border-gray-300"} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
-                      value={editForm.phone || ""}
+                      className={`w-full border ${editPhoneError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                      value={editForm.phone || ''}
                       onChange={(e) => {
                         const value = e.target.value;
                         setEditForm({ ...editForm, phone: value });
@@ -295,9 +267,7 @@ function ConferenceTeamTab({
                       }}
                     />
                     {editPhoneError && (
-                      <p className="mt-1 text-xs text-red-600">
-                        {editPhoneError}
-                      </p>
+                      <p className="mt-1 text-xs text-red-600">{editPhoneError}</p>
                     )}
                   </div>
                 </div>
@@ -334,7 +304,11 @@ function ConferenceTeamTab({
                     <button
                       type="button"
                       onClick={saveEdit}
-                      disabled={!editForm.first_name.trim() || !editForm.last_name.trim() || !!editPhoneError}
+                      disabled={
+                        !editForm.first_name.trim() ||
+                        !editForm.last_name.trim() ||
+                        !!editPhoneError
+                      }
                       className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
                     >
                       Save Changes
@@ -343,15 +317,12 @@ function ConferenceTeamTab({
                 </div>
               </div>
             ) : (
-              <div
-                key={index}
-                className="bg-gray-50 border border-gray-200 rounded-lg p-3"
-              >
+              <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-900">
-                        {[member.first_name, member.last_name].filter(Boolean).join(" ")}
+                        {[member.first_name, member.last_name].filter(Boolean).join(' ')}
                       </span>
                       {member.role && (
                         <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
@@ -391,7 +362,7 @@ function ConferenceTeamTab({
                   )}
                 </div>
               </div>
-            ),
+            )
           )}
         </div>
       )}
@@ -399,78 +370,58 @@ function ConferenceTeamTab({
       {/* Add Team Member */}
       {isAdmin && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h5 className="text-sm font-medium text-blue-900 mb-3">
-            Add Team Member
-          </h5>
+          <h5 className="text-sm font-medium text-blue-900 mb-3">Add Team Member</h5>
 
           {editingIndex === null && <ErrorBanner message={userError} />}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                First Name *
-              </label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">First Name *</label>
               <input
                 type="text"
                 className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={newMember.first_name}
-                onChange={(e) =>
-                  setNewMember({ ...newMember, first_name: e.target.value })
-                }
+                onChange={(e) => setNewMember({ ...newMember, first_name: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Last Name *
-              </label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Last Name *</label>
               <input
                 type="text"
                 className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={newMember.last_name}
-                onChange={(e) =>
-                  setNewMember({ ...newMember, last_name: e.target.value })
-                }
+                onChange={(e) => setNewMember({ ...newMember, last_name: e.target.value })}
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Role
-              </label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
               <input
                 type="text"
                 placeholder="e.g., Conference Chair"
                 className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={newMember.role}
-                onChange={(e) =>
-                  setNewMember({ ...newMember, role: e.target.value })
-                }
+                onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Email
-              </label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
               <input
                 type="email"
                 className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={newMember.email}
-                onChange={(e) =>
-                  setNewMember({ ...newMember, email: e.target.value })
-                }
+                onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Phone
-              </label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
               <input
                 type="tel"
                 placeholder="+491234545 or 00491234566"
-                className={`w-full border ${newPhoneError ? "border-red-300" : "border-gray-300"} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                className={`w-full border ${newPhoneError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 value={newMember.phone}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -478,9 +429,7 @@ function ConferenceTeamTab({
                   setNewPhoneError(validatePhone(value));
                 }}
               />
-              {newPhoneError && (
-                <p className="mt-1 text-xs text-red-600">{newPhoneError}</p>
-              )}
+              {newPhoneError && <p className="mt-1 text-xs text-red-600">{newPhoneError}</p>}
             </div>
           </div>
 
@@ -491,29 +440,21 @@ function ConferenceTeamTab({
                 id="new_member_manager"
                 className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 checked={newMember.is_manager}
-                onChange={(e) =>
-                  setNewMember({ ...newMember, is_manager: e.target.checked })
-                }
+                onChange={(e) => setNewMember({ ...newMember, is_manager: e.target.checked })}
               />
-              <label
-                htmlFor="new_member_manager"
-                className="ml-2 block text-sm text-gray-700"
-              >
+              <label htmlFor="new_member_manager" className="ml-2 block text-sm text-gray-700">
                 Conference Manager
               </label>
             </div>
             <button
               type="button"
               onClick={addMember}
-              disabled={!newMember.first_name.trim() || !newMember.last_name.trim() || !!newPhoneError}
+              disabled={
+                !newMember.first_name.trim() || !newMember.last_name.trim() || !!newPhoneError
+              }
               className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
             >
-              <svg
-                className="w-4 h-4 mr-1.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -532,8 +473,8 @@ function ConferenceTeamTab({
         title="Remove Team Member"
         message={
           removeTarget
-            ? `Are you sure you want to remove "${[removeTarget.member.first_name, removeTarget.member.last_name].filter(Boolean).join(" ")}" from this conference's team?`
-            : ""
+            ? `Are you sure you want to remove "${[removeTarget.member.first_name, removeTarget.member.last_name].filter(Boolean).join(' ')}" from this conference's team?`
+            : ''
         }
         confirmLabel="Remove"
         onConfirm={confirmRemoveMember}

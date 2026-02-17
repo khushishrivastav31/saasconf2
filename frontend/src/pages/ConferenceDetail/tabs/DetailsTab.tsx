@@ -1,18 +1,18 @@
-import { useState, useRef } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import api from "../../../config/api";
-import type { Conference, ConferenceUpdate, PlatformCurrency, PaginatedResponse } from "../../../types";
-import RichTextEditor from "../../../components/common/RichTextEditor";
-import ConferenceLogo from "../../../components/ConferenceLogo";
-import { parseApiError } from "../../../utils/apiError";
+import { useState, useRef } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '../../../config/api';
+import { useSaveStatus } from '../../../hooks/useSaveStatus';
+import type {
+  Conference,
+  ConferenceUpdate,
+  PlatformCurrency,
+  PaginatedResponse,
+} from '../../../types';
+import RichTextEditor from '../../../components/common/RichTextEditor';
+import ConferenceLogo from '../../../components/ConferenceLogo';
+import { parseApiError } from '../../../utils/apiError';
 
-function PortalUrlField({
-  tenantSlug,
-  path,
-}: {
-  tenantSlug: string;
-  path: string;
-}) {
+function PortalUrlField({ tenantSlug, path }: { tenantSlug: string; path: string }) {
   const [copied, setCopied] = useState(false);
 
   // Build the full portal URL
@@ -26,11 +26,11 @@ function PortalUrlField({
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for older browsers
-      const textArea = document.createElement("textarea");
+      const textArea = document.createElement('textarea');
       textArea.value = portalUrl;
       document.body.appendChild(textArea);
       textArea.select();
-      document.execCommand("copy");
+      document.execCommand('copy');
       document.body.removeChild(textArea);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -50,22 +50,30 @@ function PortalUrlField({
         type="button"
         onClick={handleCopy}
         className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-          copied
-            ? "bg-green-100 text-green-700"
-            : "bg-primary-600 text-white hover:bg-primary-700"
+          copied ? 'bg-green-100 text-green-700' : 'bg-primary-600 text-white hover:bg-primary-700'
         }`}
       >
         {copied ? (
           <>
             <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
             </svg>
             Copied
           </>
         ) : (
           <>
             <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
             </svg>
             Copy
           </>
@@ -79,7 +87,12 @@ function PortalUrlField({
         title="Open in new tab"
       >
         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+          />
         </svg>
       </a>
     </div>
@@ -97,42 +110,40 @@ function ConferenceDetailsTab({
 }) {
   const [formData, setFormData] = useState<ConferenceUpdate>({
     name: conference.name,
-    abbreviation: conference.abbreviation || "",
-    description: conference.description || "",
-    website: conference.website || "",
-    support_email: conference.support_email || "",
-    contact_email: conference.contact_email || "",
-    start_date: conference.start_date || "",
-    end_date: conference.end_date || "",
-    venue_name: conference.venue_name || "",
-    venue_address: conference.venue_address || "",
-    city: conference.city || "",
-    country: conference.country || "",
-    timezone: conference.timezone || "",
+    abbreviation: conference.abbreviation || '',
+    description: conference.description || '',
+    website: conference.website || '',
+    support_email: conference.support_email || '',
+    contact_email: conference.contact_email || '',
+    start_date: conference.start_date || '',
+    end_date: conference.end_date || '',
+    venue_name: conference.venue_name || '',
+    venue_address: conference.venue_address || '',
+    city: conference.city || '',
+    country: conference.country || '',
+    timezone: conference.timezone || '',
     venue_type: conference.venue_type,
-    virtual_platform_url: conference.virtual_platform_url || "",
-    currency: conference.currency || "",
-    invoice_currency: conference.invoice_currency || "",
+    virtual_platform_url: conference.virtual_platform_url || '',
+    currency: conference.currency || '',
+    invoice_currency: conference.invoice_currency || '',
   });
 
   // Fetch platform currencies for currency selector
   const { data: currencyOptions } = useQuery({
-    queryKey: ["platform-currencies"],
+    queryKey: ['platform-currencies'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
-        "/admin/settings/currencies",
-        { params: { page_size: 100, is_active: true } },
+        '/admin/settings/currencies',
+        { params: { page_size: 100, is_active: true } }
       );
       return response.data.items;
     },
   });
 
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
-  const [saveTimeout, setSaveTimeout] = useState<ReturnType<
-    typeof setTimeout
-  > | null>(null);
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
+  const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const updateMutation = useMutation({
     mutationFn: async (data: ConferenceUpdate) => {
@@ -142,48 +153,45 @@ function ConferenceDetailsTab({
         currency: data.currency || null,
         invoice_currency: data.invoice_currency || null,
       };
-      console.log("Saving conference with payload:", { currency: payload.currency, invoice_currency: payload.invoice_currency });
       await api.put(`/conferences/${conference.id}`, payload);
     },
-    onMutate: () => setSaveStatus("saving"),
+    onMutate: () => setSaving(),
     onSuccess: () => {
-      setSaveStatus("saved");
+      setSaved();
       onUpdate();
-      setTimeout(() => setSaveStatus("idle"), 2000);
     },
     onError: (err) => {
-      console.error("Conference update failed:", err);
-      setSaveStatus("error");
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      console.error('Conference update failed:', err);
+      setSaveError();
     },
   });
 
   // Logo upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [logoStatus, setLogoStatus] = useState<"idle" | "uploading" | "deleting" | "error">("idle");
+  const [logoStatus, setLogoStatus] = useState<'idle' | 'uploading' | 'deleting' | 'error'>('idle');
   const [logoError, setLogoError] = useState<string | null>(null);
 
   const uploadLogoMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append('file', file);
       const res = await api.post(`/conferences/${conference.id}/logo`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       return res.data;
     },
     onMutate: () => {
-      setLogoStatus("uploading");
+      setLogoStatus('uploading');
       setLogoError(null);
     },
     onSuccess: () => {
-      setLogoStatus("idle");
+      setLogoStatus('idle');
       onUpdate();
     },
     onError: (err) => {
-      setLogoStatus("error");
+      setLogoStatus('error');
       setLogoError(parseApiError(err));
-      setTimeout(() => setLogoStatus("idle"), 3000);
+      setTimeout(() => setLogoStatus('idle'), 3000);
     },
   });
 
@@ -192,17 +200,17 @@ function ConferenceDetailsTab({
       await api.delete(`/conferences/${conference.id}/logo`);
     },
     onMutate: () => {
-      setLogoStatus("deleting");
+      setLogoStatus('deleting');
       setLogoError(null);
     },
     onSuccess: () => {
-      setLogoStatus("idle");
+      setLogoStatus('idle');
       onUpdate();
     },
     onError: (err) => {
-      setLogoStatus("error");
+      setLogoStatus('error');
       setLogoError(parseApiError(err));
-      setTimeout(() => setLogoStatus("idle"), 3000);
+      setTimeout(() => setLogoStatus('idle'), 3000);
     },
   });
 
@@ -213,83 +221,79 @@ function ConferenceDetailsTab({
     }
     // Reset input so the same file can be selected again
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = '';
     }
   };
 
   const handleFieldChange = (
     field: keyof ConferenceUpdate,
-    value: string | boolean | number | undefined,
+    value: string | boolean | number | undefined
   ) => {
     const newFormData = { ...formData, [field]: value };
     setFormData(newFormData);
 
-    if (saveTimeout) clearTimeout(saveTimeout);
+    if (debounceTimeout) clearTimeout(debounceTimeout);
 
     const timeout = setTimeout(() => {
       updateMutation.mutate(newFormData);
     }, 500);
-    setSaveTimeout(timeout);
+    setDebounceTimeout(timeout);
   };
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900">
-          Conference Details
-        </h4>
-        {isAdmin && <div className="flex items-center gap-2">
-          {saveStatus === "saving" && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
-              <svg
-                className="animate-spin h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Saving...
-            </span>
-          )}
-          {saveStatus === "saved" && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Saved
-            </span>
-          )}
-          {saveStatus === "error" && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Save failed
-            </span>
-          )}
-        </div>}
+        <h4 className="text-sm font-medium text-gray-900">Conference Details</h4>
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            {saveStatus === 'saving' && (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Saving...
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                Saved
+              </span>
+            )}
+            {saveStatus === 'error' && (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                Save failed
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -316,25 +320,46 @@ function ConferenceDetailsTab({
                 <label
                   htmlFor="logo-upload"
                   className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer ${
-                    logoStatus === "uploading"
-                      ? "bg-gray-100 text-gray-400 cursor-wait"
-                      : "bg-primary-600 text-white hover:bg-primary-700"
+                    logoStatus === 'uploading'
+                      ? 'bg-gray-100 text-gray-400 cursor-wait'
+                      : 'bg-primary-600 text-white hover:bg-primary-700'
                   }`}
                 >
-                  {logoStatus === "uploading" ? (
+                  {logoStatus === 'uploading' ? (
                     <>
                       <svg className="animate-spin h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
                       </svg>
                       Uploading...
                     </>
                   ) : (
                     <>
-                      <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <svg
+                        className="h-4 w-4 mr-1.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
                       </svg>
-                      {conference.logo_url ? "Replace Logo" : "Upload Logo"}
+                      {conference.logo_url ? 'Replace Logo' : 'Upload Logo'}
                     </>
                   )}
                 </label>
@@ -343,25 +368,50 @@ function ConferenceDetailsTab({
                   <button
                     type="button"
                     onClick={() => deleteLogoMutation.mutate()}
-                    disabled={logoStatus === "deleting"}
+                    disabled={logoStatus === 'deleting'}
                     className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
-                      logoStatus === "deleting"
-                        ? "bg-gray-100 text-gray-400 cursor-wait"
-                        : "bg-white text-red-600 border border-red-300 hover:bg-red-50"
+                      logoStatus === 'deleting'
+                        ? 'bg-gray-100 text-gray-400 cursor-wait'
+                        : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
                     }`}
                   >
-                    {logoStatus === "deleting" ? (
+                    {logoStatus === 'deleting' ? (
                       <>
-                        <svg className="animate-spin h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        <svg
+                          className="animate-spin h-4 w-4 mr-1.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
                         </svg>
                         Deleting...
                       </>
                     ) : (
                       <>
-                        <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="h-4 w-4 mr-1.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                         Delete Logo
                       </>
@@ -369,13 +419,9 @@ function ConferenceDetailsTab({
                   </button>
                 )}
 
-                {logoError && (
-                  <p className="text-sm text-red-600">{logoError}</p>
-                )}
+                {logoError && <p className="text-sm text-red-600">{logoError}</p>}
 
-                <p className="text-xs text-gray-500">
-                  JPEG, PNG, WebP, or GIF. Max 10MB.
-                </p>
+                <p className="text-xs text-gray-500">JPEG, PNG, WebP, or GIF. Max 10MB.</p>
               </div>
             )}
           </div>
@@ -384,28 +430,22 @@ function ConferenceDetailsTab({
         {/* Basic Info */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Conference Name
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Conference Name</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.name}
-              onChange={(e) => handleFieldChange("name", e.target.value)}
+              onChange={(e) => handleFieldChange('name', e.target.value)}
               disabled={!isAdmin}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Abbreviation
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Abbreviation</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.abbreviation}
-              onChange={(e) =>
-                handleFieldChange("abbreviation", e.target.value)
-              }
+              onChange={(e) => handleFieldChange('abbreviation', e.target.value)}
               disabled={!isAdmin}
             />
           </div>
@@ -414,9 +454,7 @@ function ConferenceDetailsTab({
         {/* Dates */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Start Date
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Start Date</label>
             <input
               type="date"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
@@ -430,51 +468,45 @@ function ConferenceDetailsTab({
                   ...(adjustEnd ? { end_date: newStart } : {}),
                 };
                 setFormData(newFormData);
-                if (saveTimeout) clearTimeout(saveTimeout);
+                if (debounceTimeout) clearTimeout(debounceTimeout);
                 const timeout = setTimeout(() => {
                   updateMutation.mutate(newFormData);
                 }, 500);
-                setSaveTimeout(timeout);
+                setDebounceTimeout(timeout);
               }}
               disabled={!isAdmin}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              End Date
-            </label>
+            <label className="block text-sm font-medium text-gray-700">End Date</label>
             <input
               type="date"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.end_date}
               min={formData.start_date}
-              onChange={(e) => handleFieldChange("end_date", e.target.value)}
+              onChange={(e) => handleFieldChange('end_date', e.target.value)}
               disabled={!isAdmin}
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Description
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Description</label>
           <RichTextEditor
-            value={formData.description || ""}
-            onChange={(html) => handleFieldChange("description", html)}
+            value={formData.description || ''}
+            onChange={(html) => handleFieldChange('description', html)}
             rows={3}
             disabled={!isAdmin}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Website
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Website</label>
           <input
             type="text"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.website}
-            onChange={(e) => handleFieldChange("website", e.target.value)}
+            onChange={(e) => handleFieldChange('website', e.target.value)}
             disabled={!isAdmin}
           />
         </div>
@@ -485,13 +517,11 @@ function ConferenceDetailsTab({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Primary Currency
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Primary Currency</label>
                 <select
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.currency}
-                  onChange={(e) => handleFieldChange("currency", e.target.value)}
+                  onChange={(e) => handleFieldChange('currency', e.target.value)}
                   disabled={!isAdmin}
                 >
                   <option value="">Select currency...</option>
@@ -513,7 +543,7 @@ function ConferenceDetailsTab({
                 <select
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.invoice_currency}
-                  onChange={(e) => handleFieldChange("invoice_currency", e.target.value)}
+                  onChange={(e) => handleFieldChange('invoice_currency', e.target.value)}
                   disabled={!isAdmin}
                 >
                   <option value="">Same as primary</option>
@@ -523,9 +553,7 @@ function ConferenceDetailsTab({
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  Alternative currency for invoices.
-                </p>
+                <p className="mt-1 text-xs text-gray-500">Alternative currency for invoices.</p>
               </div>
             </div>
           </div>
@@ -544,10 +572,7 @@ function ConferenceDetailsTab({
                 <p className="text-xs text-gray-500 mb-2">
                   Share this URL for users to login/register to the portal.
                 </p>
-                <PortalUrlField
-                  tenantSlug={conference.tenant_slug}
-                  path="user/login"
-                />
+                <PortalUrlField tenantSlug={conference.tenant_slug} path="user/login" />
               </div>
 
               {/* Conference-specific Landing Page */}
@@ -557,7 +582,8 @@ function ConferenceDetailsTab({
                     Conference Landing Page
                   </label>
                   <p className="text-xs text-gray-500 mb-2">
-                    Share this URL for applicants to access the CFP portal for this conference directly.
+                    Share this URL for applicants to access the CFP portal for this conference
+                    directly.
                   </p>
                   <PortalUrlField
                     tenantSlug={conference.tenant_slug}
@@ -577,28 +603,24 @@ function ConferenceDetailsTab({
           </p>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Support Email
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Support Email</label>
               <input
                 type="email"
                 placeholder="support@example.com"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.support_email}
-                onChange={(e) => handleFieldChange("support_email", e.target.value)}
+                onChange={(e) => handleFieldChange('support_email', e.target.value)}
                 disabled={!isAdmin}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Contact Email
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Contact Email</label>
               <input
                 type="email"
                 placeholder="contact@example.com"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.contact_email}
-                onChange={(e) => handleFieldChange("contact_email", e.target.value)}
+                onChange={(e) => handleFieldChange('contact_email', e.target.value)}
                 disabled={!isAdmin}
               />
             </div>
@@ -610,84 +632,64 @@ function ConferenceDetailsTab({
           <h5 className="text-sm font-medium text-gray-700 mb-3">Location</h5>
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Venue Name
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Venue Name</label>
               <input
                 type="text"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.venue_name}
-                onChange={(e) =>
-                  handleFieldChange("venue_name", e.target.value)
-                }
+                onChange={(e) => handleFieldChange('venue_name', e.target.value)}
                 disabled={!isAdmin}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Address
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Address</label>
               <input
                 type="text"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.venue_address}
-                onChange={(e) =>
-                  handleFieldChange("venue_address", e.target.value)
-                }
+                onChange={(e) => handleFieldChange('venue_address', e.target.value)}
                 disabled={!isAdmin}
               />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  City
-                </label>
+                <label className="block text-sm font-medium text-gray-700">City</label>
                 <input
                   type="text"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.city}
-                  onChange={(e) => handleFieldChange("city", e.target.value)}
+                  onChange={(e) => handleFieldChange('city', e.target.value)}
                   disabled={!isAdmin}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Country
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Country</label>
                 <input
                   type="text"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.country}
-                  onChange={(e) => handleFieldChange("country", e.target.value)}
+                  onChange={(e) => handleFieldChange('country', e.target.value)}
                   disabled={!isAdmin}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Timezone
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Timezone</label>
                 <input
                   type="text"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="e.g., Europe/Berlin"
                   value={formData.timezone}
-                  onChange={(e) =>
-                    handleFieldChange("timezone", e.target.value)
-                  }
+                  onChange={(e) => handleFieldChange('timezone', e.target.value)}
                   disabled={!isAdmin}
                 />
               </div>
             </div>
             <div className="mt-3">
-              <label className="block text-sm font-medium text-gray-700">
-                Venue Type
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Venue Type</label>
               <select
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.venue_type}
-                onChange={(e) =>
-                  handleFieldChange("venue_type", e.target.value)
-                }
+                onChange={(e) => handleFieldChange('venue_type', e.target.value)}
                 disabled={!isAdmin}
               >
                 <option value="onsite">Onsite</option>
@@ -695,7 +697,7 @@ function ConferenceDetailsTab({
                 <option value="hybrid">Hybrid</option>
               </select>
             </div>
-            {(formData.venue_type === "virtual" || formData.venue_type === "hybrid") && (
+            {(formData.venue_type === 'virtual' || formData.venue_type === 'hybrid') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Virtual Platform URL
@@ -704,9 +706,7 @@ function ConferenceDetailsTab({
                   type="text"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.virtual_platform_url}
-                  onChange={(e) =>
-                    handleFieldChange("virtual_platform_url", e.target.value)
-                  }
+                  onChange={(e) => handleFieldChange('virtual_platform_url', e.target.value)}
                   disabled={!isAdmin}
                 />
               </div>

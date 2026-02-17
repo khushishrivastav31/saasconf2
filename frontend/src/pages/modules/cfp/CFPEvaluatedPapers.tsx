@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../config/api";
-import type { Paper, PaperStatus } from "../../../types";
-import PaperStatusLifeline from "../../../components/PaperStatusLifeline";
-import RichTextDisplay from "../../../components/common/RichTextDisplay";
-import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
-import ConfirmDialog from "../../../components/ConfirmDialog";
-import { parseApiError } from "../../../utils/apiError";
-import { PAPER_STATUS_COLORS, LEVEL_LABELS } from "../../../config/statusColors";
-import ReviewsPanel from "./ReviewsPanel";
+import { useState } from 'react';
+import { useParams } from 'react-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../config/api';
+import type { Paper, PaperStatus } from '../../../types';
+import PaperStatusLifeline from '../../../components/PaperStatusLifeline';
+import RichTextDisplay from '../../../components/common/RichTextDisplay';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import { parseApiError } from '../../../utils/apiError';
+import { PAPER_STATUS_COLORS, LEVEL_LABELS } from '../../../config/statusColors';
+import ReviewsPanel from './ReviewsPanel';
 
 interface PaperListResponse {
   items: Paper[];
@@ -40,10 +40,10 @@ function EvaluatedPaperCard({
             <div className="flex items-center gap-2 mt-1">
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                  PAPER_STATUS_COLORS[paper.status] || "bg-gray-100 text-gray-700"
+                  PAPER_STATUS_COLORS[paper.status] || 'bg-gray-100 text-gray-700'
                 }`}
               >
-                {paper.status === "final_consideration" ? "Final Consideration" : paper.status}
+                {paper.status === 'final_consideration' ? 'Final Consideration' : paper.status}
               </span>
               {paper.session_type_name && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600">
@@ -60,7 +60,12 @@ function EvaluatedPaperCard({
               )}
             </div>
             <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
-              <span>Speaker: {paper.main_speaker ? `${paper.main_speaker.first_name} ${paper.main_speaker.last_name}` : "Unknown"}</span>
+              <span>
+                Speaker:{' '}
+                {paper.main_speaker
+                  ? `${paper.main_speaker.first_name} ${paper.main_speaker.last_name}`
+                  : 'Unknown'}
+              </span>
               {paper.cfp_title && <span>CFP: {paper.cfp_title}</span>}
             </div>
             {paper.topics.length > 0 && (
@@ -75,40 +80,45 @@ function EvaluatedPaperCard({
                 ))}
               </div>
             )}
-            {paper.review_summaries && paper.review_summaries.length > 0 && (() => {
-              const scored = paper.review_summaries.filter((r) => r.total_score != null);
-              const avgScore = scored.length > 0
-                ? scored.reduce((sum, r) => sum + r.total_score!, 0) / scored.length
-                : null;
-              const maxScore = paper.max_review_score;
-              const maxSuffix = maxScore != null ? ` / ${maxScore.toFixed(1)}` : "";
-              return (
-                <div className="mt-2 space-y-1">
-                  {paper.review_summaries.map((rev, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs">
-                      <span className="font-medium text-gray-700 min-w-[100px]">
-                        {rev.reviewer_first_name
-                          ? `${rev.reviewer_first_name} ${rev.reviewer_last_name || ""}`.trim()
-                          : "Anonymous"}
-                      </span>
-                      {rev.total_score != null && (
-                        <span className="font-semibold text-primary-700 bg-primary-50 px-1.5 py-0.5 rounded">
-                          {rev.total_score.toFixed(1)}{maxSuffix}
+            {paper.review_summaries &&
+              paper.review_summaries.length > 0 &&
+              (() => {
+                const scored = paper.review_summaries.filter((r) => r.total_score != null);
+                const avgScore =
+                  scored.length > 0
+                    ? scored.reduce((sum, r) => sum + r.total_score!, 0) / scored.length
+                    : null;
+                const maxScore = paper.max_review_score;
+                const maxSuffix = maxScore != null ? ` / ${maxScore.toFixed(1)}` : '';
+                return (
+                  <div className="mt-2 space-y-1">
+                    {paper.review_summaries.map((rev, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs">
+                        <span className="font-medium text-gray-700 min-w-[100px]">
+                          {rev.reviewer_first_name
+                            ? `${rev.reviewer_first_name} ${rev.reviewer_last_name || ''}`.trim()
+                            : 'Anonymous'}
                         </span>
-                      )}
-                    </div>
-                  ))}
-                  {avgScore != null && (
-                    <div className="flex items-center gap-2 text-xs pt-1 border-t border-gray-100">
-                      <span className="font-medium text-gray-700 min-w-[100px]">Avg. Score</span>
-                      <span className="font-bold text-primary-800 bg-primary-100 px-1.5 py-0.5 rounded">
-                        {avgScore.toFixed(1)}{maxSuffix}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+                        {rev.total_score != null && (
+                          <span className="font-semibold text-primary-700 bg-primary-50 px-1.5 py-0.5 rounded">
+                            {rev.total_score.toFixed(1)}
+                            {maxSuffix}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                    {avgScore != null && (
+                      <div className="flex items-center gap-2 text-xs pt-1 border-t border-gray-100">
+                        <span className="font-medium text-gray-700 min-w-[100px]">Avg. Score</span>
+                        <span className="font-bold text-primary-800 bg-primary-100 px-1.5 py-0.5 rounded">
+                          {avgScore.toFixed(1)}
+                          {maxSuffix}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
           </div>
           <div className="flex-shrink-0 w-48">
             <PaperStatusLifeline status={displayStatus} compact />
@@ -117,7 +127,10 @@ function EvaluatedPaperCard({
             {/* Accept (thumbs up) */}
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onAccept(paper); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onAccept(paper);
+              }}
               className="p-1.5 rounded-md text-green-600 hover:bg-green-50 transition-colors"
               title="Accept paper"
             >
@@ -133,7 +146,10 @@ function EvaluatedPaperCard({
             {/* Reject (thumbs down) */}
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onReject(paper); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onReject(paper);
+              }}
               className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors"
               title="Reject paper"
             >
@@ -148,7 +164,7 @@ function EvaluatedPaperCard({
             </button>
           </div>
           <svg
-            className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${expanded ? "rotate-180" : ""}`}
+            className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -162,21 +178,27 @@ function EvaluatedPaperCard({
         <div className="px-5 py-4 border-t border-gray-200 space-y-4 bg-gray-50">
           {paper.level && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">Level</h4>
+              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+                Level
+              </h4>
               <p className="text-sm text-gray-900">{LEVEL_LABELS[paper.level] || paper.level}</p>
             </div>
           )}
 
           {paper.abstract_short && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">Short Abstract</h4>
+              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+                Short Abstract
+              </h4>
               <RichTextDisplay content={paper.abstract_short} className="text-sm text-gray-700" />
             </div>
           )}
 
           {paper.abstract_long && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">Detailed Abstract</h4>
+              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+                Detailed Abstract
+              </h4>
               <RichTextDisplay content={paper.abstract_long} className="text-sm text-gray-700" />
             </div>
           )}
@@ -184,7 +206,9 @@ function EvaluatedPaperCard({
           {/* Internal comments from reviewers */}
           {paper.review_summaries.some((r) => r.internal_comment) && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">Internal Comments</h4>
+              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">
+                Internal Comments
+              </h4>
               <div className="space-y-2">
                 {paper.review_summaries
                   .filter((r) => r.internal_comment)
@@ -192,10 +216,13 @@ function EvaluatedPaperCard({
                     <div key={idx} className="bg-white rounded border border-gray-200 px-3 py-2">
                       <span className="text-xs font-medium text-gray-700">
                         {rev.reviewer_first_name
-                          ? `${rev.reviewer_first_name} ${rev.reviewer_last_name || ""}`.trim()
-                          : "Anonymous"}
+                          ? `${rev.reviewer_first_name} ${rev.reviewer_last_name || ''}`.trim()
+                          : 'Anonymous'}
                       </span>
-                      <RichTextDisplay content={rev.internal_comment} className="text-sm text-gray-600 mt-0.5" />
+                      <RichTextDisplay
+                        content={rev.internal_comment}
+                        className="text-sm text-gray-600 mt-0.5"
+                      />
                     </div>
                   ))}
               </div>
@@ -204,7 +231,9 @@ function EvaluatedPaperCard({
 
           {paper.cospeakers.length > 0 && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">Co-speakers</h4>
+              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+                Co-speakers
+              </h4>
               <ul className="text-sm text-gray-700 space-y-1">
                 {paper.cospeakers.map((cs) => (
                   <li key={cs.applicant.id}>
@@ -216,9 +245,7 @@ function EvaluatedPaperCard({
           )}
 
           <div className="border-t border-gray-300 my-4" />
-          <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">
-            Reviews
-          </h4>
+          <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">Reviews</h4>
           <ReviewsPanel paperId={paper.id} maxReviewScore={paper.max_review_score} />
         </div>
       )}
@@ -229,19 +256,19 @@ function EvaluatedPaperCard({
 export default function CFPEvaluatedPapers() {
   const { conferenceId } = useParams<{ conferenceId: string }>();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [confirmAction, setConfirmAction] = useState<{
     paper: Paper;
-    action: "accepted" | "rejected";
+    action: 'accepted' | 'rejected';
   } | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["cfp-evaluated-papers", conferenceId],
+    queryKey: ['cfp-evaluated-papers', conferenceId],
     queryFn: async () => {
       const params = new URLSearchParams();
-      params.append("status", "final_consideration");
-      if (conferenceId) params.append("conference_id", conferenceId);
+      params.append('status', 'final_consideration');
+      if (conferenceId) params.append('conference_id', conferenceId);
       const response = await api.get<PaperListResponse>(`/cfp/papers?${params.toString()}`);
       return response.data;
     },
@@ -256,15 +283,15 @@ export default function CFPEvaluatedPapers() {
     onSuccess: () => {
       setMutationError(null);
       setConfirmAction(null);
-      queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["paper-reviews"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-evaluated-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-selected-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['paper-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['paper-reviews'] });
     },
     onError: (err: unknown) => {
-      setMutationError(parseApiError(err, "Failed to update paper status"));
+      setMutationError(parseApiError(err, 'Failed to update paper status'));
       setConfirmAction(null);
     },
   });
@@ -276,12 +303,13 @@ export default function CFPEvaluatedPapers() {
     const q = searchQuery.toLowerCase();
     return (
       p.title.toLowerCase().includes(q) ||
-      (p.main_speaker?.first_name || "").toLowerCase().includes(q) ||
-      (p.main_speaker?.last_name || "").toLowerCase().includes(q) ||
-      (p.session_type_name || "").toLowerCase().includes(q) ||
-      p.cospeakers.some((c) =>
-        c.applicant.first_name.toLowerCase().includes(q) ||
-        c.applicant.last_name.toLowerCase().includes(q)
+      (p.main_speaker?.first_name || '').toLowerCase().includes(q) ||
+      (p.main_speaker?.last_name || '').toLowerCase().includes(q) ||
+      (p.session_type_name || '').toLowerCase().includes(q) ||
+      p.cospeakers.some(
+        (c) =>
+          c.applicant.first_name.toLowerCase().includes(q) ||
+          c.applicant.last_name.toLowerCase().includes(q)
       )
     );
   });
@@ -318,7 +346,7 @@ export default function CFPEvaluatedPapers() {
         <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <h3 className="text-sm font-medium text-red-800">Failed to load evaluated papers</h3>
           <p className="mt-1 text-sm text-red-600">
-            {error instanceof Error ? error.message : "An unknown error occurred"}
+            {error instanceof Error ? error.message : 'An unknown error occurred'}
           </p>
         </div>
       ) : papers.length === 0 ? (
@@ -359,14 +387,12 @@ export default function CFPEvaluatedPapers() {
               <EvaluatedPaperCard
                 key={paper.id}
                 paper={paper}
-                onAccept={(p) => setConfirmAction({ paper: p, action: "accepted" })}
-                onReject={(p) => setConfirmAction({ paper: p, action: "rejected" })}
+                onAccept={(p) => setConfirmAction({ paper: p, action: 'accepted' })}
+                onReject={(p) => setConfirmAction({ paper: p, action: 'rejected' })}
               />
             ))}
             {filteredPapers.length === 0 && searchQuery && (
-              <p className="text-sm text-gray-500 text-center py-8">
-                No papers match your search.
-              </p>
+              <p className="text-sm text-gray-500 text-center py-8">No papers match your search.</p>
             )}
           </div>
         </>
@@ -374,10 +400,10 @@ export default function CFPEvaluatedPapers() {
 
       <ConfirmDialog
         open={!!confirmAction}
-        title={confirmAction?.action === "accepted" ? "Accept Paper" : "Reject Paper"}
-        message={`Are you sure you want to ${confirmAction?.action === "accepted" ? "accept" : "reject"} "${confirmAction?.paper.title ?? ""}"?`}
-        confirmLabel={confirmAction?.action === "accepted" ? "Accept" : "Reject"}
-        variant={confirmAction?.action === "accepted" ? "warning" : "danger"}
+        title={confirmAction?.action === 'accepted' ? 'Accept Paper' : 'Reject Paper'}
+        message={`Are you sure you want to ${confirmAction?.action === 'accepted' ? 'accept' : 'reject'} "${confirmAction?.paper.title ?? ''}"?`}
+        confirmLabel={confirmAction?.action === 'accepted' ? 'Accept' : 'Reject'}
+        variant={confirmAction?.action === 'accepted' ? 'warning' : 'danger'}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmAction(null)}
       />

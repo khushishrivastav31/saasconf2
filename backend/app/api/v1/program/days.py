@@ -19,7 +19,9 @@ from app.schemas.program import (
     ProgramDayUpdate,
 )
 
-from ._shared import MODULE_CODE, _build_day_response, _check_admin_access, _get_conference_for_tenant
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
+
+from ._shared import MODULE_CODE, _build_day_response
 
 router = APIRouter()
 
@@ -35,7 +37,7 @@ async def list_days(
     db: DbSessionDep,
 ) -> ProgramDayListResponse:
     """List all program days for a conference."""
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ProgramDay)
@@ -67,8 +69,8 @@ async def create_day(
     request: Request,
 ) -> ProgramDayResponse:
     """Create a new program day."""
-    await _check_admin_access(db, current_user, conference_id)
-    conference = await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     # Check for duplicate date
     existing = await db.execute(
@@ -123,8 +125,8 @@ async def generate_days(
     request: Request,
 ) -> ProgramDaysGenerateResponse:
     """Auto-generate program days from conference start/end dates."""
-    await _check_admin_access(db, current_user, conference_id)
-    conference = await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     if not conference.start_date or not conference.end_date:
         raise ValidationError("Conference must have start_date and end_date set")
@@ -204,8 +206,8 @@ async def update_day(
     request: Request,
 ) -> ProgramDayResponse:
     """Update a program day."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ProgramDay).where(
@@ -267,8 +269,8 @@ async def delete_day(
     request: Request,
 ) -> None:
     """Delete a program day and all its time slots and sessions."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ProgramDay).where(

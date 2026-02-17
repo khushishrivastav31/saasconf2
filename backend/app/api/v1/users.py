@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
-from app.core.pagination import paginate
+from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.security import hash_password
 from app.models.audit import AuditAction, AuditLog
@@ -91,7 +91,7 @@ async def list_tenant_users(
         total=result.total,
         page=page,
         page_size=page_size,
-        pages=(result.total + page_size - 1) // page_size,
+        pages=calculate_pages(result.total, page_size),
     )
 
 

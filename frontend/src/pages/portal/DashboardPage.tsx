@@ -1,11 +1,11 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import portalApi from "../../config/portalApi";
-import { usePortalBasePath } from "../../hooks/usePortalBasePath";
-import { formatDate } from "../../utils/formatDate";
-import type { PortalPaperListResponse, PortalPaper } from "../../types/portal";
-import PaperStatusLifeline from "../../components/PaperStatusLifeline";
+import { useState, useMemo } from 'react';
+import { Link } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import portalApi from '../../config/portalApi';
+import { usePortalBasePath } from '../../hooks/usePortalBasePath';
+import { formatDate } from '../../utils/formatDate';
+import type { PortalPaperListResponse, PortalPaper } from '../../types/portal';
+import PaperStatusLifeline from '../../components/PaperStatusLifeline';
 
 interface ConferenceGroup {
   conferenceId: string | null;
@@ -15,13 +15,12 @@ interface ConferenceGroup {
 
 function DashboardPage() {
   const basePath = usePortalBasePath();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ["portal-papers"],
+    queryKey: ['portal-papers'],
     queryFn: async () => {
-      const res =
-        await portalApi.get<PortalPaperListResponse>("/portal/papers");
+      const res = await portalApi.get<PortalPaperListResponse>('/portal/papers');
       return res.data;
     },
     refetchInterval: 30000,
@@ -38,7 +37,7 @@ function DashboardPage() {
         p.title.toLowerCase().includes(q) ||
         (p.conference_name && p.conference_name.toLowerCase().includes(q)) ||
         (p.cfp_title && p.cfp_title.toLowerCase().includes(q)) ||
-        (p.session_type_name && p.session_type_name.toLowerCase().includes(q)),
+        (p.session_type_name && p.session_type_name.toLowerCase().includes(q))
     );
   }, [papers, searchQuery]);
 
@@ -46,11 +45,11 @@ function DashboardPage() {
     const groups = new Map<string, ConferenceGroup>();
 
     for (const paper of filteredPapers) {
-      const key = paper.conference_id || "__none__";
+      const key = paper.conference_id || '__none__';
       if (!groups.has(key)) {
         groups.set(key, {
           conferenceId: paper.conference_id,
-          conferenceName: paper.conference_name || "Other",
+          conferenceName: paper.conference_name || 'Other',
           papers: [],
         });
       }
@@ -68,7 +67,7 @@ function DashboardPage() {
 
     // Sort groups by conference name
     return Array.from(groups.values()).sort((a, b) =>
-      a.conferenceName.localeCompare(b.conferenceName),
+      a.conferenceName.localeCompare(b.conferenceName)
     );
   }, [filteredPapers]);
 
@@ -84,9 +83,7 @@ function DashboardPage() {
               </span>
             )}
           </h2>
-          <p className="text-sm text-gray-500">
-            View and manage your paper submissions.
-          </p>
+          <p className="text-sm text-gray-500">View and manage your paper submissions.</p>
         </div>
         <Link
           to={`${basePath}/papers/new`}
@@ -128,11 +125,16 @@ function DashboardPage() {
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               )}
@@ -143,7 +145,7 @@ function DashboardPage() {
           {groupedByConference.length > 0 ? (
             <div className="space-y-5">
               {groupedByConference.map((group) => (
-                <div key={group.conferenceId || "__none__"}>
+                <div key={group.conferenceId || '__none__'}>
                   <h3 className="text-sm font-semibold text-gray-700 mb-2">
                     {group.conferenceName}
                     <span className="ml-1.5 text-xs font-normal text-gray-400">
@@ -169,31 +171,31 @@ function DashboardPage() {
                             )}
                           </div>
                           <p className="text-xs text-gray-500 truncate">
-                            {paper.cfp_title && (
-                              <span>{paper.cfp_title}</span>
-                            )}
+                            {paper.cfp_title && <span>{paper.cfp_title}</span>}
                             {paper.cospeakers.length > 0 && (
                               <span className="text-gray-400">
-                                {paper.cfp_title ? " · " : ""}
+                                {paper.cfp_title ? ' · ' : ''}
                                 {paper.cospeakers.length} co-speaker
-                                {paper.cospeakers.length > 1 ? "s" : ""}
+                                {paper.cospeakers.length > 1 ? 's' : ''}
                                 {paper.cospeakers.some(
-                                  (c) => c.invitation_status === "pending",
+                                  (c) => c.invitation_status === 'pending'
                                 ) && <span className="text-amber-500"> (pending)</span>}
                               </span>
                             )}
                             {paper.submitted_at && (
                               <span className="text-gray-400">
-                                {paper.cfp_title || paper.cospeakers.length > 0 ? " · " : ""}
+                                {paper.cfp_title || paper.cospeakers.length > 0 ? ' · ' : ''}
                                 Submitted {formatDate(paper.submitted_at)}
                               </span>
                             )}
                           </p>
-                          {!paper.is_main_speaker && (paper.main_speaker_first_name || paper.main_speaker_last_name) && (
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              Main speaker: {`${paper.main_speaker_first_name || ""} ${paper.main_speaker_last_name || ""}`.trim()}
-                            </p>
-                          )}
+                          {!paper.is_main_speaker &&
+                            (paper.main_speaker_first_name || paper.main_speaker_last_name) && (
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                Main speaker:{' '}
+                                {`${paper.main_speaker_first_name || ''} ${paper.main_speaker_last_name || ''}`.trim()}
+                              </p>
+                            )}
                           {paper.session_type_name && (
                             <span className="inline-flex items-center mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600">
                               {paper.session_type_name}

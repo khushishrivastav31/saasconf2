@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import { useAuthMedia } from "../../../../hooks/useAuthMedia";
-import { formatDate } from "../../../../utils/formatDate";
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSaveStatus } from '../../../../hooks/useSaveStatus';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import { useAuthMedia } from '../../../../hooks/useAuthMedia';
+import { formatDate } from '../../../../utils/formatDate';
 import type {
   Paper,
   PaperLevel,
@@ -10,15 +11,15 @@ import type {
   CallForPapers,
   CFPTopic,
   SessionType,
-} from "../../../../types";
-import type { PaperAssignmentListResponse } from "../../../../types/review";
-import { ACCEPTED_VIDEO_FORMATS, validateVideo } from "../../../../utils/mediaValidation";
-import { DeleteIcon } from "../../../ConferenceDetail/icons";
-import { ErrorBanner } from "../../../../components/common/ErrorBanner";
-import RichTextEditor from "../../../../components/common/RichTextEditor";
-import MediaPreviewModal from "../../../../components/MediaPreviewModal";
-import PaperStatusLifeline from "../../../../components/PaperStatusLifeline";
-import { MainSpeakerSearch, CospeakerSearch } from "./SpeakerSearch";
+} from '../../../../types';
+import type { PaperAssignmentListResponse } from '../../../../types/review';
+import { ACCEPTED_VIDEO_FORMATS, validateVideo } from '../../../../utils/mediaValidation';
+import { DeleteIcon } from '../../../ConferenceDetail/icons';
+import { ErrorBanner } from '../../../../components/common/ErrorBanner';
+import RichTextEditor from '../../../../components/common/RichTextEditor';
+import MediaPreviewModal from '../../../../components/MediaPreviewModal';
+import PaperStatusLifeline from '../../../../components/PaperStatusLifeline';
+import { MainSpeakerSearch, CospeakerSearch } from './SpeakerSearch';
 
 interface ApplicantListResponse {
   items: Applicant[];
@@ -49,30 +50,30 @@ export interface PaperFormData {
   title: string;
   abstract_short: string;
   abstract_long: string;
-  level: PaperLevel | "";
+  level: PaperLevel | '';
   learning_objectives: string;
   importance: string;
 }
 
 const emptyForm: PaperFormData = {
-  cfp_id: "",
-  main_speaker_id: "",
+  cfp_id: '',
+  main_speaker_id: '',
   co_speaker_ids: [],
-  session_type_id: "",
+  session_type_id: '',
   topic_ids: [],
-  title: "",
-  abstract_short: "",
-  abstract_long: "",
-  level: "",
-  learning_objectives: "",
-  importance: "",
+  title: '',
+  abstract_short: '',
+  abstract_long: '',
+  level: '',
+  learning_objectives: '',
+  importance: '',
 };
 
 const LEVEL_OPTIONS: { value: PaperLevel; label: string }[] = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-  { value: "all_levels", label: "All Levels" },
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+  { value: 'all_levels', label: 'All Levels' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -115,38 +116,26 @@ export function PaperForm({
   error: string | null;
 }) {
   const isEditing = !!paper;
-  const canEdit = !paper || paper.status === "draft";
+  const canEdit = !paper || paper.status === 'draft';
 
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
   const wasSavingRef = useRef(false);
 
   // Track save status transitions based on isSaving and error props
   useEffect(() => {
     if (isSaving) {
-      setSaveStatus("saving");
+      setSaving();
       wasSavingRef.current = true;
     } else if (wasSavingRef.current) {
       // Just finished saving
       wasSavingRef.current = false;
       if (error) {
-        setSaveStatus("error");
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+        setSaveError();
       } else {
-        setSaveStatus("saved");
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+        setSaved();
       }
     }
-  }, [isSaving, error]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    };
-  }, []);
+  }, [isSaving, error, setSaving, setSaved, setSaveError]);
 
   const [formData, setFormData] = useState<PaperFormData>(
     paper
@@ -154,14 +143,14 @@ export function PaperForm({
           cfp_id: paper.cfp_id,
           main_speaker_id: paper.main_speaker_id,
           co_speaker_ids: paper.cospeakers.map((c) => c.applicant.id),
-          session_type_id: paper.session_type_id || "",
+          session_type_id: paper.session_type_id || '',
           topic_ids: paper.topics.map((t) => t.id),
           title: paper.title,
-          abstract_short: paper.abstract_short || "",
-          abstract_long: paper.abstract_long || "",
-          level: paper.level || "",
-          learning_objectives: paper.learning_objectives || "",
-          importance: paper.importance || "",
+          abstract_short: paper.abstract_short || '',
+          abstract_long: paper.abstract_long || '',
+          level: paper.level || '',
+          learning_objectives: paper.learning_objectives || '',
+          importance: paper.importance || '',
         }
       : emptyForm
   );
@@ -181,14 +170,14 @@ export function PaperForm({
 
   // Fetch the conference's CFP (one per conference) to auto-assign
   const { data: cfpsData } = useQuery({
-    queryKey: ["cfp-list", conferenceId],
+    queryKey: ['cfp-list', conferenceId],
     queryFn: async () => {
       const response = await api.get<CFPListResponse>(`/conferences/${conferenceId}/cfps`);
       return response.data;
     },
   });
 
-  const conferenceCfpId = cfpsData?.items?.[0]?.id || "";
+  const conferenceCfpId = cfpsData?.items?.[0]?.id || '';
 
   // Auto-assign CFP when data loads (for new papers)
   useEffect(() => {
@@ -199,25 +188,25 @@ export function PaperForm({
 
   // Fetch applicants
   const { data: applicantsData } = useQuery({
-    queryKey: ["cfp-applicants"],
+    queryKey: ['cfp-applicants'],
     queryFn: async () => {
-      const response = await api.get<ApplicantListResponse>("/cfp/applicants");
+      const response = await api.get<ApplicantListResponse>('/cfp/applicants');
       return response.data;
     },
   });
 
   // Fetch topics
   const { data: topicsData } = useQuery({
-    queryKey: ["cfp-topics"],
+    queryKey: ['cfp-topics'],
     queryFn: async () => {
-      const response = await api.get<TopicListResponse>("/cfp/topics");
+      const response = await api.get<TopicListResponse>('/cfp/topics');
       return response.data;
     },
   });
 
   // Fetch session types (only CFP-eligible) scoped to this conference
   const { data: sessionTypesData } = useQuery({
-    queryKey: ["session-types", conferenceId],
+    queryKey: ['session-types', conferenceId],
     queryFn: async () => {
       const response = await api.get<SessionTypeListResponse>(
         `/conferences/${conferenceId}/settings/session-types`
@@ -228,7 +217,7 @@ export function PaperForm({
 
   // Fetch assignments for this paper
   const { data: assignmentsData } = useQuery({
-    queryKey: ["paper-assignments", paper?.id],
+    queryKey: ['paper-assignments', paper?.id],
     queryFn: async () => {
       const response = await api.get<PaperAssignmentListResponse>(
         `/cfp/papers/${paper!.id}/assignments`
@@ -258,14 +247,14 @@ export function PaperForm({
             cfp_id: paper.cfp_id,
             main_speaker_id: paper.main_speaker_id,
             co_speaker_ids: paper.cospeakers.map((c) => c.applicant.id),
-            session_type_id: paper.session_type_id || "",
+            session_type_id: paper.session_type_id || '',
             topic_ids: paper.topics.map((t) => t.id),
             title: paper.title,
-            abstract_short: paper.abstract_short || "",
-            abstract_long: paper.abstract_long || "",
-            level: paper.level || "",
-            learning_objectives: paper.learning_objectives || "",
-            importance: paper.importance || "",
+            abstract_short: paper.abstract_short || '',
+            abstract_long: paper.abstract_long || '',
+            level: paper.level || '',
+            learning_objectives: paper.learning_objectives || '',
+            importance: paper.importance || '',
           }
         : emptyForm
     );
@@ -301,7 +290,7 @@ export function PaperForm({
     if (validationError) {
       setVideoError(validationError);
       setVideoFile(null);
-      e.target.value = "";
+      e.target.value = '';
       return;
     }
 
@@ -364,7 +353,7 @@ export function PaperForm({
             co_speaker_ids: d.co_speaker_ids.filter((cid) => cid !== id),
           }));
         }}
-        onClear={() => setFormData((d) => ({ ...d, main_speaker_id: "" }))}
+        onClear={() => setFormData((d) => ({ ...d, main_speaker_id: '' }))}
         disabled={!canEdit}
       />
 
@@ -395,9 +384,7 @@ export function PaperForm({
 
       {/* Session Type */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Session Type
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Session Type</label>
         <select
           value={formData.session_type_id}
           onChange={(e) => setFormData((d) => ({ ...d, session_type_id: e.target.value }))}
@@ -415,9 +402,7 @@ export function PaperForm({
 
       {/* Topics */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Topics
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Topics</label>
         {topics.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {topics.map((topic) => {
@@ -430,9 +415,9 @@ export function PaperForm({
                   disabled={!canEdit}
                   className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     isSelected
-                      ? "bg-primary-100 text-primary-700 border-2 border-primary-500"
-                      : "bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200"
-                  } ${!canEdit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      ? 'bg-primary-100 text-primary-700 border-2 border-primary-500'
+                      : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
+                  } ${!canEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
                   {topic.name}
                   {isSelected && (
@@ -455,12 +440,10 @@ export function PaperForm({
 
       {/* Level */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Level
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Level</label>
         <select
           value={formData.level}
-          onChange={(e) => setFormData((d) => ({ ...d, level: e.target.value as PaperLevel | "" }))}
+          onChange={(e) => setFormData((d) => ({ ...d, level: e.target.value as PaperLevel | '' }))}
           disabled={!canEdit}
           className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
         >
@@ -475,9 +458,7 @@ export function PaperForm({
 
       {/* Short Abstract */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Short Abstract
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Short Abstract</label>
         <RichTextEditor
           value={formData.abstract_short}
           onChange={(html) => setFormData((d) => ({ ...d, abstract_short: html }))}
@@ -490,9 +471,7 @@ export function PaperForm({
 
       {/* Long Abstract */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Long Abstract
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Long Abstract</label>
         <RichTextEditor
           value={formData.abstract_long}
           onChange={(html) => setFormData((d) => ({ ...d, abstract_long: html }))}
@@ -505,9 +484,7 @@ export function PaperForm({
 
       {/* Learning Objectives */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Learning Objectives
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Learning Objectives</label>
         <RichTextEditor
           value={formData.learning_objectives}
           onChange={(html) => setFormData((d) => ({ ...d, learning_objectives: html }))}
@@ -535,9 +512,7 @@ export function PaperForm({
 
       {/* Video */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Video
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Video</label>
         <div className="flex items-start gap-4">
           <button
             type="button"
@@ -548,9 +523,11 @@ export function PaperForm({
             }}
             disabled={!videoPreviewSrc}
             className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex-shrink-0 bg-gray-50 relative ${
-              videoPreviewSrc ? "cursor-pointer hover:border-primary-400 hover:shadow-md transition-all" : ""
+              videoPreviewSrc
+                ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
+                : ''
             }`}
-            title={videoPreviewSrc ? "Click to play video" : undefined}
+            title={videoPreviewSrc ? 'Click to play video' : undefined}
           >
             {videoPreviewSrc ? (
               <>
@@ -562,7 +539,11 @@ export function PaperForm({
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                   <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-gray-700 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="w-4 h-4 text-gray-700 ml-0.5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </div>
@@ -590,9 +571,7 @@ export function PaperForm({
                   onChange={handleVideoChange}
                   className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
                 />
-                <p className="mt-1 text-xs text-gray-400">
-                  MP4, MOV, WebM, AVI, or MKV. Max 50MB.
-                </p>
+                <p className="mt-1 text-xs text-gray-400">MP4, MOV, WebM, AVI, or MKV. Max 50MB.</p>
               </>
             )}
             {videoError && <p className="mt-1 text-xs text-red-600">{videoError}</p>}
@@ -603,24 +582,21 @@ export function PaperForm({
       {/* Comments (read-only) */}
       {paper && paper.comments.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Committee Comments
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Committee Comments</label>
           <div className="space-y-3 bg-gray-50 rounded-lg p-4 border border-gray-200">
             {paper.comments.map((comment) => (
               <div key={comment.id} className="bg-white rounded-md p-3 border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-900">
-                    {`${comment.committee_member_first_name} ${comment.committee_member_last_name}`.trim() || "Committee Member"}
+                    {`${comment.committee_member_first_name} ${comment.committee_member_last_name}`.trim() ||
+                      'Committee Member'}
                     {comment.committee_member_role && (
                       <span className="text-xs text-gray-400 font-normal ml-1.5 capitalize">
-                        ({comment.committee_member_role.replace("_", " ")})
+                        ({comment.committee_member_role.replace('_', ' ')})
                       </span>
                     )}
                   </span>
-                  <span className="text-xs text-gray-400">
-                    {formatDate(comment.created_at)}
-                  </span>
+                  <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
                 </div>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>
               </div>
@@ -635,9 +611,7 @@ export function PaperForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Assigned Reviewers
             {assignments.length > 0 && (
-              <span className="text-gray-400 font-normal ml-1">
-                ({assignments.length})
-              </span>
+              <span className="text-gray-400 font-normal ml-1">({assignments.length})</span>
             )}
           </label>
           {assignments.length > 0 ? (
@@ -649,7 +623,9 @@ export function PaperForm({
                 >
                   {`${a.committee_member_first_name} ${a.committee_member_last_name}`.trim()}
                   {a.is_anonymous && (
-                    <span className="px-1 rounded text-[9px] bg-yellow-100 text-yellow-700">anon</span>
+                    <span className="px-1 rounded text-[9px] bg-yellow-100 text-yellow-700">
+                      anon
+                    </span>
                   )}
                 </span>
               ))}
@@ -671,7 +647,7 @@ export function PaperForm({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
             >
               <DeleteIcon />
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </button>
           )}
         </div>
@@ -683,44 +659,44 @@ export function PaperForm({
           >
             Cancel
           </button>
-          {isEditing && paper?.status !== "draft" && onUnsubmit && (
+          {isEditing && paper?.status !== 'draft' && onUnsubmit && (
             <button
               type="button"
               onClick={onUnsubmit}
               disabled={isUnsubmitting}
               className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors disabled:opacity-50"
             >
-              {isUnsubmitting ? "Reverting..." : "Revert to Draft"}
+              {isUnsubmitting ? 'Reverting...' : 'Revert to Draft'}
             </button>
           )}
-          {isEditing && paper?.status !== "rejected" && onReject && (
+          {isEditing && paper?.status !== 'rejected' && onReject && (
             <button
               type="button"
               onClick={onReject}
               disabled={isRejecting}
               className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
             >
-              {isRejecting ? "Rejecting..." : "Reject"}
+              {isRejecting ? 'Rejecting...' : 'Reject'}
             </button>
           )}
-          {isEditing && paper?.status !== "accepted" && onAccept && (
+          {isEditing && paper?.status !== 'accepted' && onAccept && (
             <button
               type="button"
               onClick={onAccept}
               disabled={isAccepting}
               className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 transition-colors"
             >
-              {isAccepting ? "Accepting..." : "Accept"}
+              {isAccepting ? 'Accepting...' : 'Accept'}
             </button>
           )}
-          {isEditing && paper?.status === "draft" && onSubmit && (
+          {isEditing && paper?.status === 'draft' && onSubmit && (
             <button
               type="button"
               onClick={onSubmit}
               disabled={isSubmitting || isSaving}
               className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 transition-colors"
             >
-              {isSubmitting ? "Submitting..." : "Submit Paper"}
+              {isSubmitting ? 'Submitting...' : 'Submit Paper'}
             </button>
           )}
           {canEdit && (
@@ -728,38 +704,64 @@ export function PaperForm({
               type="submit"
               disabled={isSaving || !!videoError}
               className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-md disabled:opacity-50 transition-all duration-300 ${
-                saveStatus === "saved"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : saveStatus === "error"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-primary-600 hover:bg-primary-700"
+                saveStatus === 'saved'
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : saveStatus === 'error'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-primary-600 hover:bg-primary-700'
               }`}
             >
-              {saveStatus === "saving" && (
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              {saveStatus === 'saving' && (
+                <svg
+                  className="animate-spin h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
               )}
-              {saveStatus === "saved" && (
+              {saveStatus === 'saved' && (
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               )}
-              {saveStatus === "error" && (
+              {saveStatus === 'error' && (
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               )}
-              {saveStatus === "saving"
-                ? "Saving..."
-                : saveStatus === "saved"
-                ? "Saved!"
-                : saveStatus === "error"
-                ? "Error"
-                : isEditing
-                ? "Save Changes"
-                : "Create Paper"}
+              {saveStatus === 'saving'
+                ? 'Saving...'
+                : saveStatus === 'saved'
+                  ? 'Saved!'
+                  : saveStatus === 'error'
+                    ? 'Error'
+                    : isEditing
+                      ? 'Save Changes'
+                      : 'Create Paper'}
             </button>
           )}
         </div>

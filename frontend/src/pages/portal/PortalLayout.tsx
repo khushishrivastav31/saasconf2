@@ -1,14 +1,14 @@
-import { useState } from "react";
-import { Navigate, Outlet, Link, useLocation, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { useApplicantAuth } from "../../hooks/useApplicantAuth";
-import portalApi from "../../config/portalApi";
-import ConferenceLogo from "../../components/ConferenceLogo";
+import { useState } from 'react';
+import { Navigate, Outlet, Link, useLocation, useParams } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { useApplicantAuth } from '../../hooks/useApplicantAuth';
+import portalApi from '../../config/portalApi';
+import ConferenceLogo from '../../components/ConferenceLogo';
 import type {
   PortalConferenceSummary,
   PortalTenant,
   PortalCommitteeMembershipListResponse,
-} from "../../types/portal";
+} from '../../types/portal';
 
 function DocumentIcon() {
   return (
@@ -26,12 +26,7 @@ function DocumentIcon() {
 function PlusIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 4v16m8-8H4"
-      />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
     </svg>
   );
 }
@@ -135,22 +130,18 @@ function PortalLayout() {
   const basePath = `/${companySlug}/portal`;
 
   const { data: conferences } = useQuery({
-    queryKey: ["portal-conferences"],
+    queryKey: ['portal-conferences'],
     queryFn: async () => {
-      const res = await portalApi.get<PortalConferenceSummary[]>(
-        "/portal/conferences",
-      );
+      const res = await portalApi.get<PortalConferenceSummary[]>('/portal/conferences');
       return res.data;
     },
     enabled: !!applicant,
   });
 
   const { data: tenant } = useQuery({
-    queryKey: ["portal-tenant", companySlug],
+    queryKey: ['portal-tenant', companySlug],
     queryFn: async () => {
-      const res = await portalApi.get<PortalTenant>(
-        `/portal/tenant/${companySlug}`,
-      );
+      const res = await portalApi.get<PortalTenant>(`/portal/tenant/${companySlug}`);
       return res.data;
     },
     enabled: !!companySlug,
@@ -158,9 +149,9 @@ function PortalLayout() {
 
   // Unread message count
   const { data: unreadData } = useQuery({
-    queryKey: ["portal-unread-count"],
+    queryKey: ['portal-unread-count'],
     queryFn: async () => {
-      const res = await portalApi.get("/portal/messages/unread-count");
+      const res = await portalApi.get('/portal/messages/unread-count');
       return res.data as { unread_count: number };
     },
     enabled: !!applicant,
@@ -170,9 +161,9 @@ function PortalLayout() {
 
   // Pending assignment count (for committee badge)
   const { data: pendingData } = useQuery({
-    queryKey: ["portal-pending-assignments"],
+    queryKey: ['portal-pending-assignments'],
     queryFn: async () => {
-      const res = await portalApi.get("/portal/assigned-papers/pending-count");
+      const res = await portalApi.get('/portal/assigned-papers/pending-count');
       return res.data as { pending_count: number };
     },
     enabled: !!applicant,
@@ -182,10 +173,10 @@ function PortalLayout() {
 
   // Committee membership check
   const { data: committeeMemberships } = useQuery({
-    queryKey: ["portal-committee-memberships"],
+    queryKey: ['portal-committee-memberships'],
     queryFn: async () => {
       const res = await portalApi.get<PortalCommitteeMembershipListResponse>(
-        "/portal/me/committee-memberships",
+        '/portal/me/committee-memberships'
       );
       return res.data;
     },
@@ -215,35 +206,42 @@ function PortalLayout() {
 
   const navSections: NavSection[] = [
     {
-      label: "Papers",
+      label: 'Papers',
       items: [
-        { name: "My Papers", href: `${basePath}/dashboard`, icon: DocumentIcon },
-        { name: "Submit Paper", href: `${basePath}/papers/new`, icon: PlusIcon },
-        { name: "Co-Speaker Invitations", href: `${basePath}/invitations`, icon: MailIcon },
+        { name: 'My Papers', href: `${basePath}/dashboard`, icon: DocumentIcon },
+        { name: 'Submit Paper', href: `${basePath}/papers/new`, icon: PlusIcon },
+        { name: 'Co-Speaker Invitations', href: `${basePath}/invitations`, icon: MailIcon },
       ],
     },
     ...(isCommitteeMember
       ? [
           {
-            label: "Program Committee",
+            label: 'Program Committee',
             items: [
-              { name: "Assigned Papers", href: `${basePath}/assigned-papers`, icon: ClipboardListIcon, badge: pendingAssignments },
-              { name: "Evaluated Papers", href: `${basePath}/evaluated-papers`, icon: ClipboardCheckIcon },
+              {
+                name: 'Assigned Papers',
+                href: `${basePath}/assigned-papers`,
+                icon: ClipboardListIcon,
+                badge: pendingAssignments,
+              },
+              {
+                name: 'Evaluated Papers',
+                href: `${basePath}/evaluated-papers`,
+                icon: ClipboardCheckIcon,
+              },
             ],
           },
         ]
       : []),
     {
-      label: "Account",
-      items: [
-        { name: "My Profile", href: `${basePath}/profile`, icon: UserIcon },
-      ],
+      label: 'Account',
+      items: [{ name: 'My Profile', href: `${basePath}/profile`, icon: UserIcon }],
     },
   ];
 
   // Messages as standalone item (with badge)
   const messagesItem: NavItem = {
-    name: "Messages",
+    name: 'Messages',
     href: `${basePath}/messages`,
     icon: ChatBubbleIcon,
     badge: unreadCount,
@@ -251,36 +249,36 @@ function PortalLayout() {
 
   // News as standalone item
   const newsItem: NavItem = {
-    name: "News",
+    name: 'News',
     href: `${basePath}/news`,
     icon: NewspaperIcon,
   };
 
   const isActive = (href: string) =>
-    location.pathname === href || location.pathname.startsWith(href + "/");
+    location.pathname === href || location.pathname.startsWith(href + '/');
 
   // Conferences with at least one CFP
-  const conferencesWithCfps = (conferences ?? []).filter(
-    (c) => c.cfps.length > 0,
-  );
+  const conferencesWithCfps = (conferences ?? []).filter((c) => c.cfps.length > 0);
 
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 bg-gray-900 flex flex-col transform transition-all duration-200 ease-in-out lg:translate-x-0 ${
-          sidebarCollapsed ? "w-16" : "w-64"
+          sidebarCollapsed ? 'w-16' : 'w-64'
         }`}
       >
-        <div className={`flex flex-col items-center bg-gray-900 px-3 flex-shrink-0 ${
-          !sidebarCollapsed && tenant?.logo_url ? "pt-5 pb-4" : "h-16 justify-center"
-        }`}>
+        <div
+          className={`flex flex-col items-center bg-gray-900 px-3 flex-shrink-0 ${
+            !sidebarCollapsed && tenant?.logo_url ? 'pt-5 pb-4' : 'h-16 justify-center'
+          }`}
+        >
           {!sidebarCollapsed && (
             <div className="flex items-center justify-between w-full">
               <Link
                 to={`${basePath}/dashboard`}
                 className={`flex flex-col items-center hover:opacity-90 ${
-                  tenant?.logo_url ? "flex-1" : "flex-1 ml-1"
+                  tenant?.logo_url ? 'flex-1' : 'flex-1 ml-1'
                 }`}
               >
                 {tenant?.logo_url ? (
@@ -346,7 +344,7 @@ function PortalLayout() {
           )}
         </div>
         <div className="flex-1 overflow-y-auto">
-          <nav className={`mt-4 ${sidebarCollapsed ? "px-2" : "px-3"}`}>
+          <nav className={`mt-4 ${sidebarCollapsed ? 'px-2' : 'px-3'}`}>
             {/* Communication (News & Messages) — first section */}
             <div>
               {!sidebarCollapsed && (
@@ -359,27 +357,25 @@ function PortalLayout() {
                   to={newsItem.href}
                   title={sidebarCollapsed ? newsItem.name : undefined}
                   className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
-                    sidebarCollapsed ? "justify-center px-2" : "px-3"
+                    sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                   } ${
                     isActive(newsItem.href)
-                      ? "bg-gray-800 text-white"
-                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      ? 'bg-gray-800 text-white'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                   }`}
                 >
                   <newsItem.icon />
-                  {!sidebarCollapsed && (
-                    <span className="ml-3">{newsItem.name}</span>
-                  )}
+                  {!sidebarCollapsed && <span className="ml-3">{newsItem.name}</span>}
                 </Link>
                 <Link
                   to={messagesItem.href}
                   title={sidebarCollapsed ? messagesItem.name : undefined}
                   className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
-                    sidebarCollapsed ? "justify-center px-2" : "px-3"
+                    sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                   } ${
                     isActive(messagesItem.href)
-                      ? "bg-gray-800 text-white"
-                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      ? 'bg-gray-800 text-white'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                   }`}
                 >
                   <messagesItem.icon />
@@ -402,7 +398,10 @@ function PortalLayout() {
 
             {/* Grouped sections */}
             {navSections.map((section) => (
-              <div key={section.label} className={`mt-4 ${sidebarCollapsed ? "" : "pt-3 border-t border-gray-700"}`}>
+              <div
+                key={section.label}
+                className={`mt-4 ${sidebarCollapsed ? '' : 'pt-3 border-t border-gray-700'}`}
+              >
                 {!sidebarCollapsed && (
                   <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
                     {section.label}
@@ -415,11 +414,11 @@ function PortalLayout() {
                       to={item.href}
                       title={sidebarCollapsed ? item.name : undefined}
                       className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
-                        sidebarCollapsed ? "justify-center px-2" : "px-3"
+                        sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                       } ${
                         isActive(item.href)
-                          ? "bg-gray-800 text-white"
-                          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                          ? 'bg-gray-800 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                       }`}
                     >
                       <item.icon />
@@ -444,7 +443,7 @@ function PortalLayout() {
 
             {/* Conference sections */}
             {conferencesWithCfps.length > 0 && (
-              <div className={`mt-4 ${sidebarCollapsed ? "" : "pt-3 border-t border-gray-700"}`}>
+              <div className={`mt-4 ${sidebarCollapsed ? '' : 'pt-3 border-t border-gray-700'}`}>
                 {!sidebarCollapsed && (
                   <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
                     Conferences
@@ -457,7 +456,10 @@ function PortalLayout() {
                     return (
                       <div key={conf.id}>
                         {!sidebarCollapsed && (
-                          <p className="px-3 text-xs font-medium text-gray-400 truncate mb-1" title={conf.name}>
+                          <p
+                            className="px-3 text-xs font-medium text-gray-400 truncate mb-1"
+                            title={conf.name}
+                          >
                             {conf.name}
                           </p>
                         )}
@@ -465,11 +467,11 @@ function PortalLayout() {
                           to={infoHref}
                           title={sidebarCollapsed ? `${conf.name} — Info` : undefined}
                           className={`flex items-center py-1.5 text-sm font-medium rounded-md ${
-                            sidebarCollapsed ? "justify-center px-2" : "px-3 pl-6"
+                            sidebarCollapsed ? 'justify-center px-2' : 'px-3 pl-6'
                           } ${
                             infoActive
-                              ? "bg-gray-800 text-white"
-                              : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                              ? 'bg-gray-800 text-white'
+                              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                           }`}
                         >
                           <InformationCircleIcon />
@@ -486,11 +488,7 @@ function PortalLayout() {
       </div>
 
       {/* Main content */}
-      <div
-        className={`transition-all duration-200 ${
-          sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"
-        }`}
-      >
+      <div className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
         {/* Header */}
         <header className="sticky top-0 z-40 bg-white shadow">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -499,25 +497,29 @@ function PortalLayout() {
               <Link
                 to={`${basePath}/messages`}
                 className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                title={unreadCount > 0 ? `${unreadCount} unread message(s)` : "Messages"}
+                title={unreadCount > 0 ? `${unreadCount} unread message(s)` : 'Messages'}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  />
                 </svg>
                 {unreadCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
-                    {unreadCount > 99 ? "99+" : unreadCount}
+                    {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
               </Link>
               <div className="text-sm">
-                <p className="font-medium text-gray-900">{`${applicant.first_name} ${applicant.last_name}`.trim()}</p>
+                <p className="font-medium text-gray-900">
+                  {`${applicant.first_name} ${applicant.last_name}`.trim()}
+                </p>
                 <p className="text-gray-500 text-xs">{applicant.email}</p>
               </div>
-              <button
-                onClick={logout}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
+              <button onClick={logout} className="text-sm text-gray-500 hover:text-gray-700">
                 Logout
               </button>
             </div>

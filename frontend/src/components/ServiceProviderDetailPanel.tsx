@@ -1,15 +1,11 @@
-import { useState, useEffect, useRef } from "react";
-import AttachmentList from "./AttachmentList";
-import ContactPersonList from "./ContactPersonList";
-import DetailPanelWrapper from "./DetailPanelWrapper";
-import RichTextEditor from "./common/RichTextEditor";
-import { validatePhone } from "../utils/validators";
-import type { SaveStatus } from "./DetailPanelWrapper";
-import type {
-  ServiceProvider,
-  ServiceProviderUpdate,
-  LocationContactPerson,
-} from "../types";
+import { useState, useEffect } from 'react';
+import AttachmentList from './AttachmentList';
+import ContactPersonList from './ContactPersonList';
+import DetailPanelWrapper from './DetailPanelWrapper';
+import RichTextEditor from './common/RichTextEditor';
+import { validatePhone } from '../utils/validators';
+import { useSaveStatus } from '../hooks/useSaveStatus';
+import type { ServiceProvider, ServiceProviderUpdate, LocationContactPerson } from '../types';
 
 interface ServiceProviderDetailPanelProps {
   provider: ServiceProvider;
@@ -28,96 +24,85 @@ export default function ServiceProviderDetailPanel({
   saveError,
   saveSuccess,
 }: ServiceProviderDetailPanelProps) {
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
   const [formData, setFormData] = useState<ServiceProviderUpdate>({
     company_name: provider.company_name,
-    service_description: provider.service_description || "",
-    phone: provider.phone || "",
-    email: provider.email || "",
-    website: provider.website || "",
-    address_line1: provider.address_line1 || "",
-    address_line2: provider.address_line2 || "",
-    city: provider.city || "",
-    state: provider.state || "",
-    postal_code: provider.postal_code || "",
-    country: provider.country || "",
-    vat_number: provider.vat_number || "",
+    service_description: provider.service_description || '',
+    phone: provider.phone || '',
+    email: provider.email || '',
+    website: provider.website || '',
+    address_line1: provider.address_line1 || '',
+    address_line2: provider.address_line2 || '',
+    city: provider.city || '',
+    state: provider.state || '',
+    postal_code: provider.postal_code || '',
+    country: provider.country || '',
+    vat_number: provider.vat_number || '',
     contact_persons: provider.contact_persons || [],
   });
   const [newContact, setNewContact] = useState<LocationContactPerson>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    comment: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
   });
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
   // Handle save status based on props
   useEffect(() => {
     if (isSaving) {
-      setSaveStatus("saving");
+      setSaving();
     } else if (saveSuccess) {
-      setSaveStatus("saved");
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+      setSaved();
     } else if (saveError) {
-      setSaveStatus("error");
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+      setError();
     }
-  }, [isSaving, saveSuccess, saveError]);
+  }, [isSaving, saveSuccess, saveError, setSaving, setSaved, setError]);
 
   // Reset form when provider changes
   useEffect(() => {
     setFormData({
       company_name: provider.company_name,
-      service_description: provider.service_description || "",
-      phone: provider.phone || "",
-      email: provider.email || "",
-      website: provider.website || "",
-      address_line1: provider.address_line1 || "",
-      address_line2: provider.address_line2 || "",
-      city: provider.city || "",
-      state: provider.state || "",
-      postal_code: provider.postal_code || "",
-      country: provider.country || "",
-      vat_number: provider.vat_number || "",
+      service_description: provider.service_description || '',
+      phone: provider.phone || '',
+      email: provider.email || '',
+      website: provider.website || '',
+      address_line1: provider.address_line1 || '',
+      address_line2: provider.address_line2 || '',
+      city: provider.city || '',
+      state: provider.state || '',
+      postal_code: provider.postal_code || '',
+      country: provider.country || '',
+      vat_number: provider.vat_number || '',
       contact_persons: provider.contact_persons || [],
     });
-    setNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+    setNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     setPhoneError(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider.id]);
 
   const addContact = () => {
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
       setFormData({
         ...formData,
-        contact_persons: [
-          ...(formData.contact_persons || []),
-          { ...newContact },
-        ],
+        contact_persons: [...(formData.contact_persons || []), { ...newContact }],
       });
-      setNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     }
   };
 
   const removeContact = (index: number) => {
     setFormData({
       ...formData,
-      contact_persons:
-        formData.contact_persons?.filter((_, i) => i !== index) || [],
+      contact_persons: formData.contact_persons?.filter((_, i) => i !== index) || [],
     });
   };
 
   const updateContact = (index: number, contact: LocationContactPerson) => {
     setFormData({
       ...formData,
-      contact_persons:
-        formData.contact_persons?.map((c, i) => (i === index ? contact : c)) ||
-        [],
+      contact_persons: formData.contact_persons?.map((c, i) => (i === index ? contact : c)) || [],
     });
   };
 
@@ -126,10 +111,7 @@ export default function ServiceProviderDetailPanel({
     if (phoneError) return;
     const finalData = { ...formData };
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
-      finalData.contact_persons = [
-        ...(finalData.contact_persons || []),
-        { ...newContact },
-      ];
+      finalData.contact_persons = [...(finalData.contact_persons || []), { ...newContact }];
     }
     onSave(finalData);
   };
@@ -138,25 +120,19 @@ export default function ServiceProviderDetailPanel({
     <form id="sp-detail-form" onSubmit={handleSubmit}>
       <div className="px-6 py-5 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Company Name *
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Company Name *</label>
           <input
             type="text"
             required
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.company_name}
-            onChange={(e) =>
-              setFormData({ ...formData, company_name: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Service Description
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Service Description</label>
           <RichTextEditor
-            value={formData.service_description || ""}
+            value={formData.service_description || ''}
             onChange={(html) =>
               setFormData({
                 ...formData,
@@ -169,13 +145,11 @@ export default function ServiceProviderDetailPanel({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Phone
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Phone</label>
             <input
               type="tel"
-              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${phoneError ? "border-red-300" : "border-gray-300"}`}
-              value={formData.phone || ""}
+              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${phoneError ? 'border-red-300' : 'border-gray-300'}`}
+              value={formData.phone || ''}
               onChange={(e) => {
                 const value = e.target.value;
                 setFormData({ ...formData, phone: value });
@@ -186,44 +160,34 @@ export default function ServiceProviderDetailPanel({
             {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
             <input
               type="email"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.email || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
+              value={formData.email || ''}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Website
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Website</label>
           <input
             type="url"
             placeholder="https://"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            value={formData.website || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, website: e.target.value })
-            }
+            value={formData.website || ''}
+            onChange={(e) => setFormData({ ...formData, website: e.target.value })}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Address Line 1
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Address Line 1</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.address_line1 || ""}
+              value={formData.address_line1 || ''}
               onChange={(e) =>
                 setFormData({
                   ...formData,
@@ -233,13 +197,11 @@ export default function ServiceProviderDetailPanel({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Address Line 2
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Address Line 2</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.address_line2 || ""}
+              value={formData.address_line2 || ''}
               onChange={(e) =>
                 setFormData({
                   ...formData,
@@ -252,39 +214,29 @@ export default function ServiceProviderDetailPanel({
 
         <div className="grid grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              City
-            </label>
+            <label className="block text-sm font-medium text-gray-700">City</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.city || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, city: e.target.value })
-              }
+              value={formData.city || ''}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              State
-            </label>
+            <label className="block text-sm font-medium text-gray-700">State</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.state || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, state: e.target.value })
-              }
+              value={formData.state || ''}
+              onChange={(e) => setFormData({ ...formData, state: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Postal Code
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Postal Code</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.postal_code || ""}
+              value={formData.postal_code || ''}
               onChange={(e) =>
                 setFormData({
                   ...formData,
@@ -294,32 +246,24 @@ export default function ServiceProviderDetailPanel({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Country
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Country</label>
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.country || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, country: e.target.value })
-              }
+              value={formData.country || ''}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            VAT Number
-          </label>
+          <label className="block text-sm font-medium text-gray-700">VAT Number</label>
           <input
             type="text"
             placeholder="e.g., DE123456789"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            value={formData.vat_number || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, vat_number: e.target.value })
-            }
+            value={formData.vat_number || ''}
+            onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
           />
         </div>
       </div>
@@ -348,13 +292,13 @@ export default function ServiceProviderDetailPanel({
   );
 
   const tabs = [
-    { id: "details", label: "Details", content: detailsContent },
+    { id: 'details', label: 'Details', content: detailsContent },
     {
-      id: "contacts",
-      label: `Contacts${(formData.contact_persons?.length || 0) > 0 ? ` (${formData.contact_persons?.length})` : ""}`,
+      id: 'contacts',
+      label: `Contacts${(formData.contact_persons?.length || 0) > 0 ? ` (${formData.contact_persons?.length})` : ''}`,
       content: contactsContent,
     },
-    { id: "documents", label: "Documents", content: documentsContent },
+    { id: 'documents', label: 'Documents', content: documentsContent },
   ];
 
   return (

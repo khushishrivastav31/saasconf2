@@ -26,10 +26,11 @@ from app.schemas.messaging import (
     UnreadCountResponse,
 )
 
+from app.core.conference_helpers import get_conference_for_tenant
+
 from ._shared import (
     MODULE_CODE,
     _check_messaging_access,
-    _get_conference_for_tenant,
     substitute_template_variables,
 )
 
@@ -51,7 +52,7 @@ async def bulk_send(
 ) -> BulkSendResponse:
     """Bulk-send messages to multiple applicants."""
     tenant_id = current_user.tenant_id
-    await _get_conference_for_tenant(db, conference_id, tenant_id)
+    await get_conference_for_tenant(db, conference_id, tenant_id)
     await _check_messaging_access(db, current_user, conference_id)
 
     # Resolve recipients
@@ -122,7 +123,7 @@ async def bulk_send(
     valid_ids = set(applicants.keys())
 
     # Fetch conference name
-    conference = await _get_conference_for_tenant(db, conference_id, tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
     conf_name = conference.name or ""
 
     # Fetch latest paper title per applicant (for [Paper Title] variable)
@@ -231,7 +232,7 @@ async def list_bulk_threads(
 ) -> list[BulkThreadSummary]:
     """List bulk send campaigns for this conference."""
     tenant_id = current_user.tenant_id
-    await _get_conference_for_tenant(db, conference_id, tenant_id)
+    await get_conference_for_tenant(db, conference_id, tenant_id)
 
     result = await db.execute(
         select(

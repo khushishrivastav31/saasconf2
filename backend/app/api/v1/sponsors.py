@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 
+from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, check_conference_admin_access, get_client_ip, require_module
 from app.core.exceptions import AuthorizationError, NotFoundError
-from app.core.pagination import paginate
+from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
@@ -25,22 +26,6 @@ from app.schemas.sponsor import (
 router = APIRouter()
 
 MODULE_CODE = "sponsors"
-
-
-async def _get_conference_for_tenant(
-    db, conference_id: UUID, tenant_id: UUID
-) -> Conference:
-    """Fetch conference and raise 404 if not found or not owned by tenant."""
-    result = await db.execute(
-        select(Conference).where(
-            Conference.id == conference_id,
-            Conference.tenant_id == tenant_id,
-        )
-    )
-    conference = result.scalar_one_or_none()
-    if not conference:
-        raise NotFoundError(f"Conference with ID '{conference_id}' not found")
-    return conference
 
 
 def build_sponsor_response(
@@ -101,7 +86,7 @@ async def list_sponsors(
     is_active: bool | None = None,
 ) -> SponsorListResponse:
     """List sponsors for a conference with pagination and filtering."""
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     query = select(Sponsor).where(
         Sponsor.conference_id == conference_id,
@@ -137,7 +122,7 @@ async def list_sponsors(
         total=result.total,
         page=page,
         page_size=page_size,
-        pages=(result.total + page_size - 1) // page_size,
+        pages=calculate_pages(result.total, page_size),
     )
 
 
@@ -161,7 +146,7 @@ async def create_sponsor(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    conference = await _get_conference_for_tenant(
+    conference = await get_conference_for_tenant(
         db, conference_id, current_user.tenant_id
     )
 

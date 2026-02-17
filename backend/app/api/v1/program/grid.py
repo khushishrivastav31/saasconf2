@@ -16,13 +16,14 @@ from app.schemas.program import (
     ProgramGridResponse,
 )
 
+from app.core.conference_helpers import get_conference_for_tenant
+
 from ._shared import (
     MODULE_CODE,
     _build_day_response,
     _build_session_response,
     _build_slot_response,
     _build_track_response,
-    _get_conference_for_tenant,
 )
 
 router = APIRouter()
@@ -39,7 +40,7 @@ async def get_full_grid(
     db: DbSessionDep,
 ) -> ProgramFullGridResponse:
     """Get complete program grid for all days."""
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     # Get all days
     days_result = await db.execute(
@@ -154,7 +155,7 @@ async def get_day_grid(
     db: DbSessionDep,
 ) -> ProgramGridResponse:
     """Get program grid for a specific day."""
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     # Get day with slots
     day_result = await db.execute(

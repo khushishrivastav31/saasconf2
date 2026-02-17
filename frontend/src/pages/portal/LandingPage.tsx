@@ -1,10 +1,10 @@
-import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import DOMPurify from "dompurify";
-import portalApi from "../../config/portalApi";
-import ConferenceLogo from "../../components/ConferenceLogo";
-import { formatDate } from "../../utils/formatDate";
-import type { PortalLandingData } from "../../types/portal";
+import { useParams, Link } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import DOMPurify from 'dompurify';
+import portalApi from '../../config/portalApi';
+import ConferenceLogo from '../../components/ConferenceLogo';
+import { formatDate } from '../../utils/formatDate';
+import type { PortalLandingData } from '../../types/portal';
 
 function LandingPage() {
   const { tenantSlug, abbreviation } = useParams<{
@@ -13,11 +13,9 @@ function LandingPage() {
   }>();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["portal-landing", tenantSlug, abbreviation],
+    queryKey: ['portal-landing', tenantSlug, abbreviation],
     queryFn: async () => {
-      const res = await portalApi.get<PortalLandingData>(
-        `/portal/${tenantSlug}/${abbreviation}`,
-      );
+      const res = await portalApi.get<PortalLandingData>(`/portal/${tenantSlug}/${abbreviation}`);
       return res.data;
     },
     enabled: !!tenantSlug && !!abbreviation,
@@ -35,12 +33,9 @@ function LandingPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Conference Not Found
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Conference Not Found</h1>
           <p className="text-gray-500">
-            The conference you are looking for does not exist or is no longer
-            active.
+            The conference you are looking for does not exist or is no longer active.
           </p>
         </div>
       </div>
@@ -66,13 +61,9 @@ function LandingPage() {
             </div>
           )}
           <p className="text-sm text-gray-500 mb-2">{tenant_name}</p>
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            {conference.name}
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">{conference.name}</h1>
           {conference.abbreviation && (
-            <p className="text-lg text-primary-600 font-medium mb-4">
-              {conference.abbreviation}
-            </p>
+            <p className="text-lg text-primary-600 font-medium mb-4">{conference.abbreviation}</p>
           )}
 
           {/* Date & Location */}
@@ -86,15 +77,11 @@ function LandingPage() {
               </span>
             )}
             {(conference.city || conference.country) && (
-              <span>
-                {[conference.city, conference.country]
-                  .filter(Boolean)
-                  .join(", ")}
-              </span>
+              <span>{[conference.city, conference.country].filter(Boolean).join(', ')}</span>
             )}
-            {conference.venue_type !== "onsite" && (
+            {conference.venue_type !== 'onsite' && (
               <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">
-                {conference.venue_type === "hybrid" ? "Hybrid" : "Virtual"}
+                {conference.venue_type === 'hybrid' ? 'Hybrid' : 'Virtual'}
               </span>
             )}
           </div>
@@ -102,7 +89,7 @@ function LandingPage() {
           {conference.description && (
             <div
               className="text-gray-600 max-w-2xl mx-auto mb-8 prose prose-sm"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(conference.description ?? "") }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(conference.description ?? '') }}
             />
           )}
 
@@ -134,16 +121,14 @@ function LandingPage() {
                 className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {cfp.title}
-                  </h2>
+                  <h2 className="text-lg font-semibold text-gray-900">{cfp.title}</h2>
                   <span
                     className={`px-2 py-0.5 rounded text-xs font-medium ${
-                      cfp.status === "open"
-                        ? "bg-green-100 text-green-700"
-                        : cfp.status === "closed"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-gray-100 text-gray-700"
+                      cfp.status === 'open'
+                        ? 'bg-green-100 text-green-700'
+                        : cfp.status === 'closed'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-gray-100 text-gray-700'
                     }`}
                   >
                     {cfp.status}
@@ -153,40 +138,44 @@ function LandingPage() {
                 {cfp.description && (
                   <div
                     className="text-sm text-gray-600 mb-4 prose prose-sm"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cfp.description ?? "") }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cfp.description ?? '') }}
                   />
                 )}
 
                 <div className="flex gap-6 text-sm text-gray-500">
-                  {cfp.open_date && (
-                    <span>
-                      Opens:{" "}
-                      {formatDate(cfp.open_date)}
-                    </span>
-                  )}
-                  {cfp.close_date && (
-                    <span>
-                      Closes:{" "}
-                      {formatDate(cfp.close_date)}
-                    </span>
-                  )}
+                  {cfp.open_date && <span>Opens: {formatDate(cfp.open_date)}</span>}
+                  {cfp.close_date && <span>Closes: {formatDate(cfp.close_date)}</span>}
                 </div>
 
                 {/* Rich text sections */}
-                {(cfp.guidelines_for_submissions || cfp.tips_for_submission || cfp.code_of_conduct || cfp.incentives_conditions || cfp.faqs) && (
+                {(cfp.guidelines_for_submissions ||
+                  cfp.tips_for_submission ||
+                  cfp.code_of_conduct ||
+                  cfp.incentives_conditions ||
+                  cfp.faqs) && (
                   <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
                     {cfp.guidelines_for_submissions && (
                       <details className="group">
                         <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-2">
-                          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          <svg
+                            className="w-4 h-4 transition-transform group-open:rotate-90"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
                           </svg>
                           Submission Guidelines
                         </summary>
                         <div
                           className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(cfp.guidelines_for_submissions ?? ""),
+                            __html: DOMPurify.sanitize(cfp.guidelines_for_submissions ?? ''),
                           }}
                         />
                       </details>
@@ -194,15 +183,25 @@ function LandingPage() {
                     {cfp.tips_for_submission && (
                       <details className="group">
                         <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-2">
-                          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          <svg
+                            className="w-4 h-4 transition-transform group-open:rotate-90"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
                           </svg>
                           Tips for a Strong Submission
                         </summary>
                         <div
                           className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(cfp.tips_for_submission ?? ""),
+                            __html: DOMPurify.sanitize(cfp.tips_for_submission ?? ''),
                           }}
                         />
                       </details>
@@ -210,15 +209,25 @@ function LandingPage() {
                     {cfp.code_of_conduct && (
                       <details className="group">
                         <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-2">
-                          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          <svg
+                            className="w-4 h-4 transition-transform group-open:rotate-90"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
                           </svg>
                           Code of Conduct
                         </summary>
                         <div
                           className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(cfp.code_of_conduct ?? ""),
+                            __html: DOMPurify.sanitize(cfp.code_of_conduct ?? ''),
                           }}
                         />
                       </details>
@@ -226,15 +235,25 @@ function LandingPage() {
                     {cfp.incentives_conditions && (
                       <details className="group">
                         <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-2">
-                          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          <svg
+                            className="w-4 h-4 transition-transform group-open:rotate-90"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
                           </svg>
                           Incentives & Conditions
                         </summary>
                         <div
                           className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(cfp.incentives_conditions ?? ""),
+                            __html: DOMPurify.sanitize(cfp.incentives_conditions ?? ''),
                           }}
                         />
                       </details>
@@ -242,15 +261,25 @@ function LandingPage() {
                     {cfp.faqs && (
                       <details className="group">
                         <summary className="text-sm font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-2">
-                          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          <svg
+                            className="w-4 h-4 transition-transform group-open:rotate-90"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
                           </svg>
                           FAQs
                         </summary>
                         <div
                           className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(cfp.faqs ?? ""),
+                            __html: DOMPurify.sanitize(cfp.faqs ?? ''),
                           }}
                         />
                       </details>

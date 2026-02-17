@@ -15,6 +15,13 @@ class PaginatedResult:
     total: int
 
 
+def calculate_pages(total: int, page_size: int) -> int:
+    """Calculate the number of pages for pagination."""
+    if page_size <= 0:
+        return 0
+    return (total + page_size - 1) // page_size
+
+
 async def paginate(
     db: AsyncSession,
     query: Select,

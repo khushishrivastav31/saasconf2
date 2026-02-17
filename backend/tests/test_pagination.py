@@ -18,7 +18,7 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.pagination import PaginatedResult, paginate
+from app.core.pagination import PaginatedResult, calculate_pages, paginate
 from app.models.tenant import Tenant
 
 
@@ -49,6 +49,55 @@ class TestPaginatedResult:
         result = PaginatedResult(items=[obj1, obj2], total=100)
         assert len(result.items) == 2
         assert result.items[0]["name"] == "Item 1"
+
+
+# ---------------------------------------------------------------------------
+# calculate_pages helper tests
+# ---------------------------------------------------------------------------
+
+
+class TestCalculatePages:
+    """Tests for the calculate_pages helper function."""
+
+    def test_exact_division(self):
+        """Pages divide evenly."""
+        assert calculate_pages(10, 5) == 2
+
+    def test_remainder(self):
+        """Extra items get an additional page."""
+        assert calculate_pages(11, 5) == 3
+
+    def test_single_item(self):
+        """Single item needs one page."""
+        assert calculate_pages(1, 10) == 1
+
+    def test_zero_total(self):
+        """Zero items means zero pages."""
+        assert calculate_pages(0, 10) == 0
+
+    def test_page_size_one(self):
+        """Page size of 1 means total equals pages."""
+        assert calculate_pages(7, 1) == 7
+
+    def test_page_size_zero(self):
+        """Page size of 0 returns 0 (guarded)."""
+        assert calculate_pages(10, 0) == 0
+
+    def test_negative_page_size(self):
+        """Negative page size returns 0 (guarded)."""
+        assert calculate_pages(10, -1) == 0
+
+    def test_large_numbers(self):
+        """Works with large totals."""
+        assert calculate_pages(1_000_000, 50) == 20_000
+
+    def test_total_equals_page_size(self):
+        """Total equal to page size gives one page."""
+        assert calculate_pages(50, 50) == 1
+
+    def test_total_less_than_page_size(self):
+        """Total less than page size gives one page."""
+        assert calculate_pages(3, 50) == 1
 
 
 # ---------------------------------------------------------------------------

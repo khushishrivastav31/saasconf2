@@ -1,12 +1,9 @@
 """Conference CRUD and lifecycle endpoints."""
 
-import csv
-import io
 from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import StreamingResponse
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
@@ -21,17 +18,13 @@ from app.core.dependencies import (
 )
 from app.core.default_settings import seed_default_settings
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
-from app.core.file_validation import safe_content_disposition
-from app.core.pagination import paginate
+from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
-from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
 from app.models.attachment import Attachment
 from app.models.audit import AuditAction, AuditLog
-from app.models.cfp import CallForPapers, CFPApplicant, CFPPaper
+from app.models.cfp import CallForPapers, CFPApplicant
 from app.models.conference import Conference
-from app.models.invoice import Invoice
 from app.models.location import Location
-from app.models.sponsor import Sponsor
 from app.models.tenant import Tenant
 from app.models.volunteer import Volunteer
 from app.schemas.conference import (
@@ -43,6 +36,7 @@ from app.schemas.conference import (
     ConferenceUpdate,
 )
 
+from ._delete_helpers import compute_conference_delete_data
 from ._shared import (
     MODULE_CODE,
     _build_conference_response,
@@ -112,7 +106,7 @@ async def list_conferences(
 
     items = [_build_conference_response(conf, conf.tenant.slug if conf.tenant else None) for conf in result.items]
 
-    pages = (result.total + page_size - 1) // page_size if page_size > 0 else 0
+    pages = calculate_pages(result.total, page_size)
 
     return ConferenceListResponse(
         items=items,
@@ -445,53 +439,8 @@ async def delete_conference(
 
     conference_name = conference.name
 
-    # --- Collect IDs for attachment cleanup before CASCADE deletes ---
-
-    # Get sponsor IDs for this conference
-    sponsor_ids_result = await db.execute(
-        select(Sponsor.id).where(Sponsor.conference_id == conference_id)
-    )
-    sponsor_ids = [str(sid) for sid in sponsor_ids_result.scalars().all()]
-
-    # Get invoice IDs for this conference
-    invoice_ids_result = await db.execute(
-        select(Invoice.id).where(Invoice.conference_id == conference_id)
-    )
-    invoice_ids = [str(iid) for iid in invoice_ids_result.scalars().all()]
-
-    # Get CFP IDs linked to this conference
-    cfp_ids_result = await db.execute(
-        select(ConferenceCFP.cfp_id).where(ConferenceCFP.conference_id == conference_id)
-    )
-    cfp_ids = list(cfp_ids_result.scalars().all())
-
-    # Get paper IDs for those CFPs
-    paper_ids_result = await db.execute(
-        select(CFPPaper.id).where(CFPPaper.cfp_id.in_(cfp_ids))
-    ) if cfp_ids else None
-    paper_ids = [str(pid) for pid in paper_ids_result.scalars().all()] if paper_ids_result else []
-
-    # Get applicant IDs who have papers in these CFPs
-    applicant_ids_in_conf_result = await db.execute(
-        select(CFPPaper.main_speaker_id).where(CFPPaper.cfp_id.in_(cfp_ids)).distinct()
-    ) if cfp_ids else None
-    applicant_ids_in_conf = list(applicant_ids_in_conf_result.scalars().all()) if applicant_ids_in_conf_result else []
-
-    # Find applicants who have NO papers in other CFPs (orphaned applicants)
-    orphaned_applicant_ids = []
-    if applicant_ids_in_conf:
-        # Find applicants who have papers in OTHER CFPs
-        applicants_with_other_papers = await db.execute(
-            select(CFPPaper.main_speaker_id)
-            .where(CFPPaper.main_speaker_id.in_(applicant_ids_in_conf))
-            .where(~CFPPaper.cfp_id.in_(cfp_ids))
-            .distinct()
-        )
-        applicants_with_other_papers_ids = set(applicants_with_other_papers.scalars().all())
-        orphaned_applicant_ids = [
-            aid for aid in applicant_ids_in_conf
-            if aid not in applicants_with_other_papers_ids
-        ]
+    # --- Compute shared delete data (IDs, counts, orphans, exclusives) ---
+    dd = await compute_conference_delete_data(db, conference_id)
 
     # --- Delete orphaned attachments (before CASCADE deletes parent entities) ---
     deleted_attachments = 0
@@ -507,40 +456,40 @@ async def delete_conference(
     deleted_attachments += len(result_att.fetchall())
 
     # Delete sponsor attachments
-    if sponsor_ids:
+    if dd.sponsor_ids:
         result_att = await db.execute(
             delete(Attachment)
             .where(Attachment.tenant_id == current_user.tenant_id)
             .where(Attachment.entity_type == "sponsor")
-            .where(Attachment.entity_id.in_(sponsor_ids))
+            .where(Attachment.entity_id.in_(dd.sponsor_ids))
             .returning(Attachment.id)
         )
         deleted_attachments += len(result_att.fetchall())
 
     # Delete invoice attachments
-    if invoice_ids:
+    if dd.invoice_ids:
         result_att = await db.execute(
             delete(Attachment)
             .where(Attachment.tenant_id == current_user.tenant_id)
             .where(Attachment.entity_type == "invoice")
-            .where(Attachment.entity_id.in_(invoice_ids))
+            .where(Attachment.entity_id.in_(dd.invoice_ids))
             .returning(Attachment.id)
         )
         deleted_attachments += len(result_att.fetchall())
 
     # Delete paper video attachments
-    if paper_ids:
+    if dd.paper_ids:
         result_att = await db.execute(
             delete(Attachment)
             .where(Attachment.tenant_id == current_user.tenant_id)
             .where(Attachment.entity_type == "paper_video")
-            .where(Attachment.entity_id.in_(paper_ids))
+            .where(Attachment.entity_id.in_(dd.paper_ids))
             .returning(Attachment.id)
         )
         deleted_attachments += len(result_att.fetchall())
 
     # Delete applicant attachments for orphaned applicants
-    orphaned_applicant_str_ids = [str(aid) for aid in orphaned_applicant_ids]
+    orphaned_applicant_str_ids = [str(aid) for aid in dd.orphaned_applicant_ids]
     if orphaned_applicant_str_ids:
         result_att = await db.execute(
             delete(Attachment)
@@ -551,71 +500,30 @@ async def delete_conference(
         )
         deleted_attachments += len(result_att.fetchall())
 
-    # --- Find entities exclusively linked to this conference ---
-
-    # Volunteers only in this conference
-    exclusive_vol_ids_q = (
-        select(ConferenceVolunteer.volunteer_id)
-        .where(ConferenceVolunteer.conference_id == conference_id)
-        .where(
-            ~ConferenceVolunteer.volunteer_id.in_(
-                select(ConferenceVolunteer.volunteer_id)
-                .where(ConferenceVolunteer.conference_id != conference_id)
-            )
-        )
-    )
-    exclusive_vols = (await db.execute(exclusive_vol_ids_q)).scalars().all()
-
-    # Locations only in this conference
-    exclusive_loc_ids_q = (
-        select(ConferenceLocation.location_id)
-        .where(ConferenceLocation.conference_id == conference_id)
-        .where(
-            ~ConferenceLocation.location_id.in_(
-                select(ConferenceLocation.location_id)
-                .where(ConferenceLocation.conference_id != conference_id)
-            )
-        )
-    )
-    exclusive_locs = (await db.execute(exclusive_loc_ids_q)).scalars().all()
-
-    # CFPs only in this conference
-    exclusive_cfp_ids_q = (
-        select(ConferenceCFP.cfp_id)
-        .where(ConferenceCFP.conference_id == conference_id)
-        .where(
-            ~ConferenceCFP.cfp_id.in_(
-                select(ConferenceCFP.cfp_id)
-                .where(ConferenceCFP.conference_id != conference_id)
-            )
-        )
-    )
-    exclusive_cfps = (await db.execute(exclusive_cfp_ids_q)).scalars().all()
-
     # --- Delete exclusive entities ---
     deleted_volunteers = 0
     deleted_locations = 0
     deleted_cfps = 0
 
-    if exclusive_vols:
+    if dd.exclusive_vol_ids:
         vols_result = await db.execute(
-            select(Volunteer).where(Volunteer.id.in_(exclusive_vols))
+            select(Volunteer).where(Volunteer.id.in_(dd.exclusive_vol_ids))
         )
         for vol in vols_result.scalars().all():
             await db.delete(vol)
             deleted_volunteers += 1
 
-    if exclusive_locs:
+    if dd.exclusive_loc_ids:
         locs_result = await db.execute(
-            select(Location).where(Location.id.in_(exclusive_locs))
+            select(Location).where(Location.id.in_(dd.exclusive_loc_ids))
         )
         for loc in locs_result.scalars().all():
             await db.delete(loc)
             deleted_locations += 1
 
-    if exclusive_cfps:
+    if dd.exclusive_cfp_ids:
         cfps_result = await db.execute(
-            select(CallForPapers).where(CallForPapers.id.in_(exclusive_cfps))
+            select(CallForPapers).where(CallForPapers.id.in_(dd.exclusive_cfp_ids))
         )
         for cfp in cfps_result.scalars().all():
             await db.delete(cfp)
@@ -623,8 +531,8 @@ async def delete_conference(
 
     # --- Delete orphaned applicants (after CFPs/papers are deleted) ---
     deleted_applicants = 0
-    if orphaned_applicant_ids:
-        for aid in orphaned_applicant_ids:
+    if dd.orphaned_applicant_ids:
+        for aid in dd.orphaned_applicant_ids:
             applicant_result = await db.execute(
                 select(CFPApplicant).where(CFPApplicant.id == aid)
             )
@@ -702,103 +610,8 @@ async def delete_conference_preview(
         tenant_super_user_id = tenant_result.scalar_one_or_none()
         can_delete = tenant_super_user_id == current_user.user_id
 
-    # Total linked counts
-    total_vols = (await db.execute(
-        select(func.count()).where(ConferenceVolunteer.conference_id == conference_id)
-    )).scalar() or 0
-    total_locs = (await db.execute(
-        select(func.count()).where(ConferenceLocation.conference_id == conference_id)
-    )).scalar() or 0
-    total_cfps = (await db.execute(
-        select(func.count()).where(ConferenceCFP.conference_id == conference_id)
-    )).scalar() or 0
-
-    # Invoice count
-    invoice_count = (await db.execute(
-        select(func.count()).where(Invoice.conference_id == conference_id)
-    )).scalar() or 0
-
-    # Get CFP IDs for this conference
-    cfp_ids_result = await db.execute(
-        select(ConferenceCFP.cfp_id).where(ConferenceCFP.conference_id == conference_id)
-    )
-    cfp_ids = list(cfp_ids_result.scalars().all())
-
-    # Paper count
-    paper_count = 0
-    if cfp_ids:
-        paper_count = (await db.execute(
-            select(func.count()).where(CFPPaper.cfp_id.in_(cfp_ids))
-        )).scalar() or 0
-
-    # Sponsor count
-    sponsor_count = (await db.execute(
-        select(func.count()).where(Sponsor.conference_id == conference_id)
-    )).scalar() or 0
-
-    # Count orphaned applicants (applicants with papers only in this conference's CFPs)
-    orphaned_applicant_count = 0
-    if cfp_ids:
-        applicant_ids_in_conf_result = await db.execute(
-            select(CFPPaper.main_speaker_id).where(CFPPaper.cfp_id.in_(cfp_ids)).distinct()
-        )
-        applicant_ids_in_conf = list(applicant_ids_in_conf_result.scalars().all())
-
-        if applicant_ids_in_conf:
-            applicants_with_other_papers = await db.execute(
-                select(CFPPaper.main_speaker_id)
-                .where(CFPPaper.main_speaker_id.in_(applicant_ids_in_conf))
-                .where(~CFPPaper.cfp_id.in_(cfp_ids))
-                .distinct()
-            )
-            applicants_with_other_papers_ids = set(applicants_with_other_papers.scalars().all())
-            orphaned_applicant_count = len([
-                aid for aid in applicant_ids_in_conf
-                if aid not in applicants_with_other_papers_ids
-            ])
-
-    # Exclusively-linked counts (will be deleted)
-    exclusive_vols = (await db.execute(
-        select(func.count()).select_from(
-            select(ConferenceVolunteer.volunteer_id)
-            .where(ConferenceVolunteer.conference_id == conference_id)
-            .where(
-                ~ConferenceVolunteer.volunteer_id.in_(
-                    select(ConferenceVolunteer.volunteer_id)
-                    .where(ConferenceVolunteer.conference_id != conference_id)
-                )
-            )
-            .subquery()
-        )
-    )).scalar() or 0
-
-    exclusive_locs = (await db.execute(
-        select(func.count()).select_from(
-            select(ConferenceLocation.location_id)
-            .where(ConferenceLocation.conference_id == conference_id)
-            .where(
-                ~ConferenceLocation.location_id.in_(
-                    select(ConferenceLocation.location_id)
-                    .where(ConferenceLocation.conference_id != conference_id)
-                )
-            )
-            .subquery()
-        )
-    )).scalar() or 0
-
-    exclusive_cfps = (await db.execute(
-        select(func.count()).select_from(
-            select(ConferenceCFP.cfp_id)
-            .where(ConferenceCFP.conference_id == conference_id)
-            .where(
-                ~ConferenceCFP.cfp_id.in_(
-                    select(ConferenceCFP.cfp_id)
-                    .where(ConferenceCFP.conference_id != conference_id)
-                )
-            )
-            .subquery()
-        )
-    )).scalar() or 0
+    # --- Compute shared delete data (counts, orphans, exclusives) ---
+    dd = await compute_conference_delete_data(db, conference_id)
 
     return {
         "conference_name": conference.name,
@@ -806,226 +619,38 @@ async def delete_conference_preview(
         "can_delete": can_delete,
         "must_deactivate_first": conference.is_active,
         "volunteers": {
-            "total_linked": total_vols,
-            "will_delete": exclusive_vols,
-            "will_unlink": total_vols - exclusive_vols,
+            "total_linked": dd.total_vols,
+            "will_delete": len(dd.exclusive_vol_ids),
+            "will_unlink": dd.total_vols - len(dd.exclusive_vol_ids),
         },
         "locations": {
-            "total_linked": total_locs,
-            "will_delete": exclusive_locs,
-            "will_unlink": total_locs - exclusive_locs,
+            "total_linked": dd.total_locs,
+            "will_delete": len(dd.exclusive_loc_ids),
+            "will_unlink": dd.total_locs - len(dd.exclusive_loc_ids),
         },
         "cfps": {
-            "total_linked": total_cfps,
-            "will_delete": exclusive_cfps,
-            "will_unlink": total_cfps - exclusive_cfps,
+            "total_linked": dd.total_cfps,
+            "will_delete": len(dd.exclusive_cfp_ids),
+            "will_unlink": dd.total_cfps - len(dd.exclusive_cfp_ids),
         },
         "invoices": {
-            "count": invoice_count,
-            "export_available": invoice_count > 0,
-            "export_url": f"/api/v1/conferences/{conference_id}/export/invoices" if invoice_count > 0 else None,
+            "count": dd.invoice_count,
+            "export_available": dd.invoice_count > 0,
+            "export_url": f"/api/v1/conferences/{conference_id}/export/invoices" if dd.invoice_count > 0 else None,
         },
         "papers": {
-            "count": paper_count,
-            "export_available": paper_count > 0,
-            "export_url": f"/api/v1/conferences/{conference_id}/export/papers" if paper_count > 0 else None,
+            "count": dd.paper_count,
+            "export_available": dd.paper_count > 0,
+            "export_url": f"/api/v1/conferences/{conference_id}/export/papers" if dd.paper_count > 0 else None,
         },
         "sponsors": {
-            "count": sponsor_count,
+            "count": dd.sponsor_count,
         },
         "applicants": {
-            "orphaned_count": orphaned_applicant_count,
+            "orphaned_count": dd.orphaned_applicant_count,
             "note": "Applicants with papers only in this conference will be deleted",
         },
     }
-
-
-@router.get("/{conference_id}/export/invoices", dependencies=[Depends(require_module(MODULE_CODE))])
-async def export_conference_invoices(
-    conference_id: UUID,
-    current_user: CurrentUserDep,
-    db: DbSessionDep,
-) -> StreamingResponse:
-    """
-    Export all invoices for a conference as CSV.
-
-    This endpoint should be used before deleting a conference to preserve invoice data.
-    Requires admin access to the conference.
-    """
-    # Check access
-    if not current_user.is_super_admin and not current_user.is_tenant_admin:
-        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-        if not has_access:
-            raise AuthorizationError("Admin access to this conference required")
-
-    # Verify conference exists
-    result = await db.execute(
-        select(Conference)
-        .where(Conference.id == conference_id)
-        .where(_tenant_filter(current_user))
-    )
-    conference = result.scalar_one_or_none()
-    if not conference:
-        raise NotFoundError("Conference not found")
-
-    # Get all invoices for this conference
-    invoices_result = await db.execute(
-        select(Invoice)
-        .where(Invoice.conference_id == conference_id)
-        .order_by(Invoice.invoice_number)
-    )
-    invoices = invoices_result.scalars().all()
-
-    # Create CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # Header row
-    writer.writerow([
-        "Invoice Number", "Status", "Issue Date", "Due Date",
-        "Recipient Name", "Recipient Email", "Recipient Address Line 1",
-        "Recipient Address Line 2", "Recipient City", "Recipient State",
-        "Recipient Postal Code", "Recipient Country", "Recipient VAT Number",
-        "Subtotal", "Tax Rate (%)", "Tax Amount", "Total", "Currency",
-        "Notes", "Created At",
-    ])
-
-    # Data rows
-    for inv in invoices:
-        writer.writerow([
-            inv.invoice_number,
-            inv.status,
-            inv.issue_date.isoformat() if inv.issue_date else "",
-            inv.due_date.isoformat() if inv.due_date else "",
-            inv.recipient_name,
-            inv.recipient_email or "",
-            inv.recipient_address_line1 or "",
-            inv.recipient_address_line2 or "",
-            inv.recipient_city or "",
-            inv.recipient_state or "",
-            inv.recipient_postal_code or "",
-            inv.recipient_country or "",
-            inv.recipient_vat_number or "",
-            str(inv.subtotal) if inv.subtotal else "",
-            str(inv.tax_rate) if inv.tax_rate else "",
-            str(inv.tax_amount) if inv.tax_amount else "",
-            str(inv.total) if inv.total else "",
-            inv.currency or "",
-            inv.notes or "",
-            inv.created_at.isoformat() if inv.created_at else "",
-        ])
-
-    output.seek(0)
-    filename = f"{conference.abbreviation or conference.name}_invoices.csv".replace(" ", "_")
-    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
-
-    return StreamingResponse(
-        iter([csv_bytes]),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": safe_content_disposition(filename)},
-    )
-
-
-@router.get("/{conference_id}/export/papers", dependencies=[Depends(require_module(MODULE_CODE))])
-async def export_conference_papers(
-    conference_id: UUID,
-    current_user: CurrentUserDep,
-    db: DbSessionDep,
-) -> StreamingResponse:
-    """
-    Export all paper submissions for a conference as CSV.
-
-    This endpoint should be used before deleting a conference to preserve submission data.
-    Requires admin access to the conference.
-    """
-    # Check access
-    if not current_user.is_super_admin and not current_user.is_tenant_admin:
-        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-        if not has_access:
-            raise AuthorizationError("Admin access to this conference required")
-
-    # Verify conference exists
-    result = await db.execute(
-        select(Conference)
-        .where(Conference.id == conference_id)
-        .where(_tenant_filter(current_user))
-    )
-    conference = result.scalar_one_or_none()
-    if not conference:
-        raise NotFoundError("Conference not found")
-
-    # Get CFP IDs for this conference
-    cfp_ids_result = await db.execute(
-        select(ConferenceCFP.cfp_id).where(ConferenceCFP.conference_id == conference_id)
-    )
-    cfp_ids = list(cfp_ids_result.scalars().all())
-
-    if not cfp_ids:
-        # No CFPs, return empty CSV
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["No papers found for this conference"])
-        output.seek(0)
-        filename = f"{conference.abbreviation or conference.name}_papers.csv".replace(" ", "_")
-        csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={"Content-Disposition": safe_content_disposition(filename)},
-        )
-
-    # Get all papers with speaker info
-    papers_result = await db.execute(
-        select(CFPPaper)
-        .options(selectinload(CFPPaper.main_speaker))
-        .options(selectinload(CFPPaper.cfp))
-        .where(CFPPaper.cfp_id.in_(cfp_ids))
-        .order_by(CFPPaper.created_at)
-    )
-    papers = papers_result.scalars().all()
-
-    # Create CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # Header row
-    writer.writerow([
-        "Paper ID", "Title", "Status", "CFP Title",
-        "Speaker First Name", "Speaker Last Name", "Speaker Email",
-        "Speaker Company", "Speaker Title",
-        "Abstract (Short)", "Level", "Learning Objectives",
-        "Submitted At", "Created At",
-    ])
-
-    # Data rows
-    for paper in papers:
-        speaker = paper.main_speaker
-        writer.writerow([
-            str(paper.id),
-            paper.title,
-            paper.status,
-            paper.cfp.title if paper.cfp else "",
-            speaker.first_name if speaker else "",
-            speaker.last_name if speaker else "",
-            speaker.email if speaker else "",
-            speaker.company or "" if speaker else "",
-            speaker.title or "" if speaker else "",
-            paper.abstract_short or "",
-            paper.level or "",
-            paper.learning_objectives or "",
-            paper.submitted_at.isoformat() if paper.submitted_at else "",
-            paper.created_at.isoformat() if paper.created_at else "",
-        ])
-
-    output.seek(0)
-    filename = f"{conference.abbreviation or conference.name}_papers.csv".replace(" ", "_")
-    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
-
-    return StreamingResponse(
-        iter([csv_bytes]),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": safe_content_disposition(filename)},
-    )
 
 
 @router.post("/{conference_id}/publish", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])

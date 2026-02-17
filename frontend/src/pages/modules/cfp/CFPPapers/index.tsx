@@ -1,22 +1,16 @@
-import { useState, useCallback, useMemo } from "react";
-import { useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import { useIsAdmin } from "../../../../hooks/useIsAdmin";
-import type {
-  Paper,
-  PaperCreate,
-  PaperUpdate,
-  PaperLevel,
-  PaperStatus,
-} from "../../../../types";
-import { parseApiError } from "../../../../utils/apiError";
-import { CloseIcon } from "../../../ConferenceDetail/icons";
-import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
-import ConfirmDialog from "../../../../components/ConfirmDialog";
-import PaperStatusLifeline from "../../../../components/PaperStatusLifeline";
-import { PaperForm } from "./PaperForm";
-import type { PaperFormData } from "./PaperForm";
+import { useState, useCallback, useMemo } from 'react';
+import { useParams } from 'react-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import { useIsAdmin } from '../../../../hooks/useIsAdmin';
+import type { Paper, PaperCreate, PaperUpdate, PaperLevel, PaperStatus } from '../../../../types';
+import { parseApiError } from '../../../../utils/apiError';
+import { CloseIcon } from '../../../ConferenceDetail/icons';
+import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
+import ConfirmDialog from '../../../../components/ConfirmDialog';
+import PaperStatusLifeline from '../../../../components/PaperStatusLifeline';
+import { PaperForm } from './PaperForm';
+import type { PaperFormData } from './PaperForm';
 
 interface PaperListResponse {
   items: Paper[];
@@ -27,13 +21,7 @@ interface PaperListResponse {
 // Row in the papers list view
 // ---------------------------------------------------------------------------
 
-function PaperListRow({
-  paper,
-  onClick,
-}: {
-  paper: Paper;
-  onClick: () => void;
-}) {
+function PaperListRow({ paper, onClick }: { paper: Paper; onClick: () => void }) {
   const displayStatus = paper.display_status || paper.status;
 
   return (
@@ -43,15 +31,16 @@ function PaperListRow({
       className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
     >
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">
-          {paper.title}
-        </p>
+        <p className="text-sm font-medium text-gray-900 truncate">{paper.title}</p>
         <p className="text-xs text-gray-500 truncate">
-          {paper.main_speaker ? `${paper.main_speaker.first_name} ${paper.main_speaker.last_name}` : "No speaker assigned"}
+          {paper.main_speaker
+            ? `${paper.main_speaker.first_name} ${paper.main_speaker.last_name}`
+            : 'No speaker assigned'}
           {paper.cospeakers.length > 0 && (
             <span className="text-gray-400">
-              {" "}+ {paper.cospeakers.length} co-speaker{paper.cospeakers.length > 1 ? "s" : ""}
-              {paper.cospeakers.some((c) => c.invitation_status === "pending") && (
+              {' '}
+              + {paper.cospeakers.length} co-speaker{paper.cospeakers.length > 1 ? 's' : ''}
+              {paper.cospeakers.some((c) => c.invitation_status === 'pending') && (
                 <span className="text-amber-500"> (pending)</span>
               )}
             </span>
@@ -72,12 +61,7 @@ function PaperListRow({
         stroke="currentColor"
         viewBox="0 0 24 24"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 5l7 7-7 7"
-        />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
       </svg>
     </button>
   );
@@ -100,17 +84,17 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
   const [error, setError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Paper | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [confirmAction, setConfirmAction] = useState<{
     paper: Paper;
-    action: "accepted" | "rejected" | "draft";
+    action: 'accepted' | 'rejected' | 'draft';
   } | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["cfp-papers", conferenceId],
+    queryKey: ['cfp-papers', conferenceId],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (conferenceId) params.append("conference_id", conferenceId);
+      if (conferenceId) params.append('conference_id', conferenceId);
       const response = await api.get<PaperListResponse>(`/cfp/papers?${params.toString()}`);
       return response.data;
     },
@@ -120,15 +104,15 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
   const uploadVideo = useCallback(
     async (paperId: string, file: File) => {
       const form = new FormData();
-      form.append("file", file);
-      form.append("entity_type", "paper_video");
-      form.append("entity_id", paperId);
-      form.append("description", "Paper video");
-      await api.post("/attachments", form, {
-        headers: { "Content-Type": "multipart/form-data" },
+      form.append('file', file);
+      form.append('entity_type', 'paper_video');
+      form.append('entity_id', paperId);
+      form.append('description', 'Paper video');
+      await api.post('/attachments', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
     },
     [queryClient]
   );
@@ -149,11 +133,11 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       if (data.learning_objectives.trim()) payload.learning_objectives = data.learning_objectives;
       if (data.importance.trim()) payload.importance = data.importance;
 
-      const response = await api.post<Paper>("/cfp/papers", payload);
+      const response = await api.post<Paper>('/cfp/papers', payload);
       return response.data;
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to create paper"));
+      setError(parseApiError(err, 'Failed to create paper'));
     },
   });
 
@@ -176,7 +160,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       return response.data;
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to update paper"));
+      setError(parseApiError(err, 'Failed to update paper'));
     },
   });
 
@@ -188,16 +172,16 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       setError(null);
       setDeleteTarget(null);
       setSelectedPaperId(null);
-      queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["paper-reviews"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-evaluated-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-selected-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['paper-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['paper-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to delete paper"));
+      setError(parseApiError(err, 'Failed to delete paper'));
       setDeleteTarget(null);
     },
   });
@@ -209,13 +193,13 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
     },
     onSuccess: () => {
       setError(null);
-      queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-evaluated-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-selected-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to submit paper"));
+      setError(parseApiError(err, 'Failed to submit paper'));
     },
   });
 
@@ -227,15 +211,15 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
     onSuccess: () => {
       setError(null);
       setConfirmAction(null);
-      queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["paper-reviews"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-selected-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-evaluated-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['paper-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['paper-reviews'] });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to update paper status"));
+      setError(parseApiError(err, 'Failed to update paper status'));
       setConfirmAction(null);
     },
   });
@@ -261,11 +245,11 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       }
       setError(null);
       setIsAdding(false);
-      queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-evaluated-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-selected-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
       setSelectedPaperId(paper.id);
     } catch {
       // error is handled by onError
@@ -284,11 +268,11 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
         }
       }
       setError(null);
-      queryClient.invalidateQueries({ queryKey: ["cfp-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-evaluated-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-selected-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
-      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-evaluated-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-selected-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
     } catch {
       // error is handled by onError
     }
@@ -316,9 +300,10 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
         p.title.toLowerCase().includes(q) ||
         p.main_speaker?.first_name.toLowerCase().includes(q) ||
         p.main_speaker?.last_name.toLowerCase().includes(q) ||
-        p.cospeakers.some((c) =>
-          c.applicant.first_name.toLowerCase().includes(q) ||
-          c.applicant.last_name.toLowerCase().includes(q)
+        p.cospeakers.some(
+          (c) =>
+            c.applicant.first_name.toLowerCase().includes(q) ||
+            c.applicant.last_name.toLowerCase().includes(q)
         ) ||
         (p.session_type_name && p.session_type_name.toLowerCase().includes(q))
     );
@@ -329,11 +314,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">
-            {isAdding
-              ? "New Paper"
-              : selectedPaper
-                ? selectedPaper.title
-                : "Papers"}
+            {isAdding ? 'New Paper' : selectedPaper ? selectedPaper.title : 'Papers'}
             {!isAdding && !selectedPaper && paperCount > 0 && (
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                 {paperCount}
@@ -342,10 +323,10 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
           </h2>
           <p className="text-sm text-gray-500">
             {isAdding
-              ? "Fill in the details to create a new paper submission."
+              ? 'Fill in the details to create a new paper submission.'
               : selectedPaper
-                ? "View and edit the paper details below."
-                : "Manage paper submissions for your CFPs."}
+                ? 'View and edit the paper details below.'
+                : 'Manage paper submissions for your CFPs.'}
           </p>
         </div>
         {isAdmin && !isAdding && !selectedPaper && (
@@ -369,7 +350,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       ) : isAdding && isAdmin ? (
         <PaperForm
           paper={null}
-          conferenceId={conferenceId || ""}
+          conferenceId={conferenceId || ''}
           onSave={handleCreate}
           onCancel={() => {
             setIsAdding(false);
@@ -381,23 +362,35 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       ) : selectedPaper ? (
         <PaperForm
           paper={selectedPaper}
-          conferenceId={conferenceId || ""}
+          conferenceId={conferenceId || ''}
           onSave={isAdmin ? handleUpdate : () => {}}
           onCancel={() => {
             setSelectedPaperId(null);
             setError(null);
           }}
           onDelete={isAdmin ? () => setDeleteTarget(selectedPaper) : undefined}
-          onSubmit={isAdmin && selectedPaper.status === "draft" ? handleSubmitPaper : undefined}
-          onUnsubmit={isAdmin && selectedPaper.status !== "draft" ? () => setConfirmAction({ paper: selectedPaper, action: "draft" }) : undefined}
-          onAccept={isAdmin && selectedPaper.status !== "accepted" ? () => setConfirmAction({ paper: selectedPaper, action: "accepted" }) : undefined}
-          onReject={isAdmin && selectedPaper.status !== "rejected" ? () => setConfirmAction({ paper: selectedPaper, action: "rejected" }) : undefined}
+          onSubmit={isAdmin && selectedPaper.status === 'draft' ? handleSubmitPaper : undefined}
+          onUnsubmit={
+            isAdmin && selectedPaper.status !== 'draft'
+              ? () => setConfirmAction({ paper: selectedPaper, action: 'draft' })
+              : undefined
+          }
+          onAccept={
+            isAdmin && selectedPaper.status !== 'accepted'
+              ? () => setConfirmAction({ paper: selectedPaper, action: 'accepted' })
+              : undefined
+          }
+          onReject={
+            isAdmin && selectedPaper.status !== 'rejected'
+              ? () => setConfirmAction({ paper: selectedPaper, action: 'rejected' })
+              : undefined
+          }
           isSaving={updateMutation.isPending}
           isDeleting={deleteMutation.isPending}
           isSubmitting={submitMutation.isPending}
-          isUnsubmitting={statusMutation.isPending && confirmAction?.action === "draft"}
-          isAccepting={statusMutation.isPending && confirmAction?.action === "accepted"}
-          isRejecting={statusMutation.isPending && confirmAction?.action === "rejected"}
+          isUnsubmitting={statusMutation.isPending && confirmAction?.action === 'draft'}
+          isAccepting={statusMutation.isPending && confirmAction?.action === 'accepted'}
+          isRejecting={statusMutation.isPending && confirmAction?.action === 'rejected'}
           error={error}
         />
       ) : (
@@ -427,7 +420,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => setSearchQuery("")}
+                onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <CloseIcon />
@@ -439,11 +432,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
           {filteredPapers.length > 0 ? (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               {filteredPapers.map((p) => (
-                <PaperListRow
-                  key={p.id}
-                  paper={p}
-                  onClick={() => setSelectedPaperId(p.id)}
-                />
+                <PaperListRow key={p.id} paper={p} onClick={() => setSelectedPaperId(p.id)} />
               ))}
             </div>
           ) : papers.length > 0 ? (
@@ -472,21 +461,25 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       <ConfirmDialog
         open={!!confirmAction}
         title={
-          confirmAction?.action === "accepted" ? "Accept Paper"
-            : confirmAction?.action === "rejected" ? "Reject Paper"
-            : "Revert to Draft"
+          confirmAction?.action === 'accepted'
+            ? 'Accept Paper'
+            : confirmAction?.action === 'rejected'
+              ? 'Reject Paper'
+              : 'Revert to Draft'
         }
         message={
-          confirmAction?.action === "draft"
-            ? `Are you sure you want to revert "${confirmAction?.paper.title ?? ""}" to draft? All reviewer assignments and reviews for this paper will be permanently deleted.`
-            : `Are you sure you want to ${confirmAction?.action === "accepted" ? "accept" : "reject"} "${confirmAction?.paper.title ?? ""}"?`
+          confirmAction?.action === 'draft'
+            ? `Are you sure you want to revert "${confirmAction?.paper.title ?? ''}" to draft? All reviewer assignments and reviews for this paper will be permanently deleted.`
+            : `Are you sure you want to ${confirmAction?.action === 'accepted' ? 'accept' : 'reject'} "${confirmAction?.paper.title ?? ''}"?`
         }
         confirmLabel={
-          confirmAction?.action === "accepted" ? "Accept"
-            : confirmAction?.action === "rejected" ? "Reject"
-            : "Revert"
+          confirmAction?.action === 'accepted'
+            ? 'Accept'
+            : confirmAction?.action === 'rejected'
+              ? 'Reject'
+              : 'Revert'
         }
-        variant={confirmAction?.action === "rejected" ? "danger" : "warning"}
+        variant={confirmAction?.action === 'rejected' ? 'danger' : 'warning'}
         onConfirm={handleStatusConfirm}
         onCancel={() => setConfirmAction(null)}
       />

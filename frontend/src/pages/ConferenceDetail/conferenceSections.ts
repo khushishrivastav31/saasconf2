@@ -1,3 +1,4 @@
+import type React from 'react';
 import {
   InfoIcon,
   UsersIcon,
@@ -27,165 +28,165 @@ import {
   CfpThumbUpIcon,
   CfpThumbDownIcon,
   CfpAssignmentsIcon,
-} from "./icons";
+} from './icons';
 
 // ---------------------------------------------------------------------------
 // Section navigation types
 // ---------------------------------------------------------------------------
 
 export type SectionId =
-  | "details"
-  | "team"
-  | "social"
-  | "booking"
-  | "messaging"
-  | "news"
-  | "volunteers"
-  | "locations"
-  | "cfp"
-  | "cfp-topics"
-  | "cfp-program-committee"
-  | "cfp-applicants"
-  | "cfp-papers"
-  | "cfp-assignments"
-  | "cfp-evaluated-papers"
-  | "cfp-accepted-papers"
-  | "cfp-rejected-papers"
-  | "sessions"
-  | "speakers"
-  | "attendees"
-  | "sponsors"
-  | "analytics"
-  | "service_providers"
-  | "program"
-  | "program-design"
-  | "program-build"
-  | "invoices"
-  | "settings";
+  | 'details'
+  | 'team'
+  | 'social'
+  | 'booking'
+  | 'messaging'
+  | 'news'
+  | 'volunteers'
+  | 'locations'
+  | 'cfp'
+  | 'cfp-topics'
+  | 'cfp-program-committee'
+  | 'cfp-applicants'
+  | 'cfp-papers'
+  | 'cfp-assignments'
+  | 'cfp-evaluated-papers'
+  | 'cfp-accepted-papers'
+  | 'cfp-rejected-papers'
+  | 'sessions'
+  | 'speakers'
+  | 'attendees'
+  | 'sponsors'
+  | 'analytics'
+  | 'service_providers'
+  | 'program'
+  | 'program-design'
+  | 'program-build'
+  | 'invoices'
+  | 'settings';
 
 export interface SectionChild {
   id: SectionId;
   name: string;
-  icon: () => JSX.Element;
+  icon: () => React.JSX.Element;
 }
 
 export interface SectionDef {
   id: SectionId;
   name: string;
-  icon: () => JSX.Element;
+  icon: () => React.JSX.Element;
   moduleCode?: string; // If set, only show when user has this module assigned
   children?: SectionChild[];
 }
 
 export const coreSections: SectionDef[] = [
-  { id: "details", name: "Details", icon: InfoIcon },
-  { id: "team", name: "Team", icon: UsersIcon },
-  { id: "social", name: "Social Media", icon: ShareIcon },
-  { id: "booking", name: "Booking Options", icon: BookingIcon },
-  { id: "messaging", name: "Messages", icon: MessagingIcon },
-  { id: "news", name: "News", icon: NewsIcon },
-  { id: "settings", name: "Settings", icon: SettingsGearIcon },
+  { id: 'details', name: 'Details', icon: InfoIcon },
+  { id: 'team', name: 'Team', icon: UsersIcon },
+  { id: 'social', name: 'Social Media', icon: ShareIcon },
+  { id: 'booking', name: 'Booking Options', icon: BookingIcon },
+  { id: 'messaging', name: 'Messages', icon: MessagingIcon },
+  { id: 'news', name: 'News', icon: NewsIcon },
+  { id: 'settings', name: 'Settings', icon: SettingsGearIcon },
 ];
 
 export const moduleSections: SectionDef[] = [
   {
-    id: "cfp",
-    name: "Call for Papers",
+    id: 'cfp',
+    name: 'Call for Papers',
     icon: PaperIcon,
-    moduleCode: "cfp",
+    moduleCode: 'cfp',
     children: [
-      { id: "cfp-topics", name: "Topics", icon: CfpTagIcon },
+      { id: 'cfp-topics', name: 'Topics', icon: CfpTagIcon },
       {
-        id: "cfp-program-committee",
-        name: "Program Committee",
+        id: 'cfp-program-committee',
+        name: 'Program Committee',
         icon: CfpUsersGroupIcon,
       },
-      { id: "cfp-applicants", name: "Users", icon: CfpInboxIcon },
-      { id: "cfp-papers", name: "Papers", icon: CfpDocumentTextIcon },
+      { id: 'cfp-applicants', name: 'Users', icon: CfpInboxIcon },
+      { id: 'cfp-papers', name: 'Papers', icon: CfpDocumentTextIcon },
       {
-        id: "cfp-assignments",
-        name: "Assignments",
+        id: 'cfp-assignments',
+        name: 'Assignments',
         icon: CfpAssignmentsIcon,
       },
       {
-        id: "cfp-evaluated-papers",
-        name: "Evaluated Papers",
+        id: 'cfp-evaluated-papers',
+        name: 'Evaluated Papers',
         icon: CfpEvaluatedIcon,
       },
       {
-        id: "cfp-accepted-papers",
-        name: "Accepted Papers",
+        id: 'cfp-accepted-papers',
+        name: 'Accepted Papers',
         icon: CfpThumbUpIcon,
       },
       {
-        id: "cfp-rejected-papers",
-        name: "Rejected Papers",
+        id: 'cfp-rejected-papers',
+        name: 'Rejected Papers',
         icon: CfpThumbDownIcon,
       },
     ],
   },
   {
-    id: "sessions",
-    name: "Sessions",
+    id: 'sessions',
+    name: 'Sessions',
     icon: SessionsIcon,
-    moduleCode: "sessions",
+    moduleCode: 'sessions',
   },
   {
-    id: "program",
-    name: "Program",
+    id: 'program',
+    name: 'Program',
     icon: ProgramIcon,
-    moduleCode: "program",
+    moduleCode: 'program',
     children: [
-      { id: "program-design", name: "Design", icon: ProgramDesignIcon },
-      { id: "program-build", name: "Build", icon: ProgramBuildIcon },
+      { id: 'program-design', name: 'Design', icon: ProgramDesignIcon },
+      { id: 'program-build', name: 'Build', icon: ProgramBuildIcon },
     ],
   },
   {
-    id: "speakers",
-    name: "Speakers",
+    id: 'speakers',
+    name: 'Speakers',
     icon: SpeakerIcon,
-    moduleCode: "speakers",
+    moduleCode: 'speakers',
   },
   {
-    id: "attendees",
-    name: "Attendees",
+    id: 'attendees',
+    name: 'Attendees',
     icon: AttendeesIcon,
-    moduleCode: "attendees",
+    moduleCode: 'attendees',
   },
   {
-    id: "volunteers",
-    name: "Volunteers",
+    id: 'volunteers',
+    name: 'Volunteers',
     icon: PeopleIcon,
-    moduleCode: "volunteers",
+    moduleCode: 'volunteers',
   },
   {
-    id: "sponsors",
-    name: "Sponsors",
+    id: 'sponsors',
+    name: 'Sponsors',
     icon: SponsorsIcon,
-    moduleCode: "sponsors",
+    moduleCode: 'sponsors',
   },
   {
-    id: "locations",
-    name: "Locations",
+    id: 'locations',
+    name: 'Locations',
     icon: MapIcon,
-    moduleCode: "locations",
+    moduleCode: 'locations',
   },
   {
-    id: "service_providers",
-    name: "Service Providers",
+    id: 'service_providers',
+    name: 'Service Providers',
     icon: ServiceProvidersIcon,
-    moduleCode: "service_providers",
+    moduleCode: 'service_providers',
   },
   {
-    id: "invoices",
-    name: "Invoices",
+    id: 'invoices',
+    name: 'Invoices',
     icon: InvoicesIcon,
-    moduleCode: "invoices",
+    moduleCode: 'invoices',
   },
   {
-    id: "analytics",
-    name: "Analytics",
+    id: 'analytics',
+    name: 'Analytics',
     icon: AnalyticsIcon,
-    moduleCode: "analytics",
+    moduleCode: 'analytics',
   },
 ];

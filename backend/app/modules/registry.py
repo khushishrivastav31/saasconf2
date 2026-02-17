@@ -1,11 +1,13 @@
 """Module registry for managing pluggable modules."""
 
-
+import logging
 from typing import ClassVar
 
 from fastapi import FastAPI
 
 from app.modules.base import BaseModule
+
+logger = logging.getLogger(__name__)
 
 
 class ModuleRegistry:
@@ -32,7 +34,7 @@ class ModuleRegistry:
             raise ValueError(f"Module with code '{module.code}' is already registered")
 
         cls._modules[module.code] = module
-        print(f"Registered module: {module.code} ({module.name})")
+        logger.info("Registered module: %s (%s)", module.code, module.name)
 
     @classmethod
     def get_module(cls, code: str) -> BaseModule | None:
@@ -71,7 +73,7 @@ class ModuleRegistry:
                 prefix=f"{prefix}/{code}",
                 tags=[f"Module: {module.name}"],
             )
-            print(f"Included router for module: {code}")
+            logger.info("Included router for module: %s", code)
 
         cls._initialized = True
 

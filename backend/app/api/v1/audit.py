@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import DbSessionDep, SuperAdminDep
 from app.core.file_validation import safe_content_disposition
-from app.core.pagination import paginate
+from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.utils import utcnow
 from app.models.audit import AuditLog
@@ -197,7 +197,7 @@ async def list_audit_logs(
         total=result.total,
         page=page,
         page_size=page_size,
-        pages=(result.total + page_size - 1) // page_size,
+        pages=calculate_pages(result.total, page_size),
     )
 
 

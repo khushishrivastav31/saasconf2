@@ -13,7 +13,7 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import NotFoundError, ValidationError
-from app.core.pagination import paginate
+from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.models.associations import ConferenceLocation
 from app.models.audit import AuditLog
@@ -137,21 +137,26 @@ async def list_locations(
         for row in assoc_result:
             conf_ids_map[row.location_id].append(row.conference_id)
 
+    # Batch-query children counts (single query instead of N+1)
+    children_counts: dict[UUID, int] = {}
+    if loc_ids:
+        children_result = await db.execute(
+            select(Location.parent_id, func.count(Location.id))
+            .where(Location.parent_id.in_(loc_ids))
+            .group_by(Location.parent_id)
+        )
+        children_counts = dict(children_result.all())
+
     items = []
     for loc in locations:
-        children_count = (
-            await db.execute(
-                select(func.count()).where(Location.parent_id == loc.id)
-            )
-        ).scalar() or 0
-        items.append(build_location_response(loc, children_count, conf_ids_map.get(loc.id, [])))
+        items.append(build_location_response(loc, children_counts.get(loc.id, 0), conf_ids_map.get(loc.id, [])))
 
     return LocationListResponse(
         items=items,
         total=result.total,
         page=page,
         page_size=page_size,
-        pages=(result.total + page_size - 1) // page_size,
+        pages=calculate_pages(result.total, page_size),
     )
 
 

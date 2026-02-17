@@ -58,3 +58,17 @@ class ModuleNotAssignedError(AuthorizationError):
     """Raised when a tenant tries to access an unassigned module."""
 
     pass
+
+
+class ConflictError(SaaSConfException):
+    """Raised when a resource conflict occurs (e.g. duplicate assignment)."""
+
+    pass
+
+
+class SubmissionValidationError(SaaSConfException):
+    """Raised when paper submission validation fails with structured details."""
+
+    def __init__(self, message: str, missing_fields: list[str] | None = None):
+        self.missing_fields = missing_fields or []
+        super().__init__(message, details={"missing_fields": self.missing_fields})

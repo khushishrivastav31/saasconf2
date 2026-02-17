@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 
 from app.core.dependencies import DbSessionDep, SuperAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
-from app.core.pagination import paginate
+from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.models.audit import AuditAction, AuditLog
 from app.models.module import Module, TenantModule
@@ -76,7 +76,7 @@ async def list_modules(
         total=result.total,
         page=page,
         page_size=page_size,
-        pages=(result.total + page_size - 1) // page_size,
+        pages=calculate_pages(result.total, page_size),
     )
 
 

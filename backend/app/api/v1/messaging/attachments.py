@@ -14,7 +14,9 @@ from app.core.file_validation import validate_upload, sanitize_filename, safe_co
 from app.models.attachment import Attachment
 from app.schemas.attachment import AttachmentResponse
 
-from ._shared import MODULE_CODE, _get_conference_for_tenant
+from app.core.conference_helpers import get_conference_for_tenant
+
+from ._shared import MODULE_CODE
 
 router = APIRouter()
 
@@ -33,7 +35,7 @@ async def upload_message_attachment(
 ) -> AttachmentResponse:
     """Upload a file for a message (pre-upload before sending)."""
     tenant_id = current_user.tenant_id
-    await _get_conference_for_tenant(db, conference_id, tenant_id)
+    await get_conference_for_tenant(db, conference_id, tenant_id)
 
     file_data = await file.read()
     file_size = len(file_data)

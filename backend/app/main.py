@@ -13,11 +13,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.v1.router import api_router
 from app.config import get_settings
+from app.core.logging import setup_logging
 from app.core.exceptions import (
     AuthenticationError,
     AuthorizationError,
+    ConflictError,
     NotFoundError,
     SaaSConfException,
+    SubmissionValidationError,
 )
 
 settings = get_settings()
@@ -71,15 +74,20 @@ def _check_production_safety() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler."""
-    from app.core.token_blacklist import init_redis, close_redis
+    import logging
+
+    from app.core.token_blacklist import close_redis, init_redis
+
     # Startup
-    print(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    setup_logging(debug=settings.DEBUG, level=settings.LOG_LEVEL)
+    logger = logging.getLogger("saasconf")
+    logger.info("Starting %s v%s", settings.APP_NAME, settings.APP_VERSION)
     _check_production_safety()
     await init_redis()
     yield
     # Shutdown
     await close_redis()
-    print("Shutting down...")
+    logger.info("Shutting down")
 
 
 # Create FastAPI app
@@ -160,6 +168,33 @@ async def not_found_error_handler(
     """Handle not found errors."""
     return _cors_response(
         request, 404, {"detail": exc.message, "type": "not_found_error"}
+    )
+
+
+@app.exception_handler(ConflictError)
+async def conflict_error_handler(
+    request: Request, exc: ConflictError
+) -> JSONResponse:
+    """Handle resource conflict errors."""
+    return _cors_response(
+        request, 409, {"detail": exc.message, "type": "conflict_error"}
+    )
+
+
+@app.exception_handler(SubmissionValidationError)
+async def submission_validation_error_handler(
+    request: Request, exc: SubmissionValidationError
+) -> JSONResponse:
+    """Handle paper submission validation errors with structured details."""
+    return _cors_response(
+        request,
+        422,
+        {
+            "detail": {
+                "message": exc.message,
+                "missing_fields": exc.missing_fields,
+            },
+        },
     )
 
 

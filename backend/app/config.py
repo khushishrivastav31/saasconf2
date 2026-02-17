@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
 
+    # Logging
+    LOG_LEVEL: str = "INFO"
+
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://localhost:5432/saasconf"  # No credentials in default
 

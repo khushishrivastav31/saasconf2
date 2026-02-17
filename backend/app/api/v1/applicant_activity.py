@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.file_validation import safe_content_disposition
-from app.core.pagination import paginate
+from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.utils import utcnow
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
@@ -153,7 +153,7 @@ async def list_applicant_activities(
         total=result.total,
         page=page,
         page_size=page_size,
-        pages=(result.total + page_size - 1) // page_size,
+        pages=calculate_pages(result.total, page_size),
     )
 
 
@@ -269,7 +269,7 @@ async def list_applicant_activities_grouped(
         total=total,
         page=page,
         page_size=page_size,
-        pages=(total + page_size - 1) // page_size if total > 0 else 1,
+        pages=calculate_pages(total, page_size) or 1,
     )
 
 

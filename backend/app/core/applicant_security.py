@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import PyJWTError
 
 from app.config import get_settings
 from app.core.exceptions import AuthenticationError
@@ -72,7 +73,7 @@ def decode_applicant_token(token: str, token_type: str = "applicant_access") -> 
 
         return payload
 
-    except JWTError as e:
+    except PyJWTError as e:
         raise AuthenticationError(f"Invalid or expired token: {e!s}") from e
 
 

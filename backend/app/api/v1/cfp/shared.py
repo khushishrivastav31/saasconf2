@@ -235,14 +235,22 @@ async def _build_paper_response(
             PaperReview.status == ReviewStatus.SUBMITTED.value,
         ).order_by(PaperReview.submitted_at)
     )
-    review_summaries = []
-    for rev in reviews_result.scalars().all():
-        member_result = await db.execute(
+    reviews = list(reviews_result.scalars().all())
+
+    # Batch-load all committee members to avoid N+1
+    rev_member_ids = list({rev.committee_member_id for rev in reviews})
+    rev_members_map: dict = {}
+    if rev_member_ids:
+        rev_member_result = await db.execute(
             select(CFPCommitteeMember)
             .options(selectinload(CFPCommitteeMember.applicant))
-            .where(CFPCommitteeMember.id == rev.committee_member_id)
+            .where(CFPCommitteeMember.id.in_(rev_member_ids))
         )
-        member = member_result.scalar_one_or_none()
+        rev_members_map = {m.id: m for m in rev_member_result.scalars().all()}
+
+    review_summaries = []
+    for rev in reviews:
+        member = rev_members_map.get(rev.committee_member_id)
         review_summaries.append(PaperReviewSummary(
             reviewer_first_name=member.applicant.first_name if member and member.applicant else None,
             reviewer_last_name=member.applicant.last_name if member and member.applicant else None,

@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../config/api";
-import ConfirmDialog from "../components/ConfirmDialog";
-import Modal from "../components/Modal";
-import { parseApiError } from "../utils/apiError";
-import { formatDate } from "../utils/formatDate";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../config/api';
+import ConfirmDialog from '../components/ConfirmDialog';
+import Modal from '../components/Modal';
+import { parseApiError } from '../utils/apiError';
+import { formatDate } from '../utils/formatDate';
+import { useSaveStatus } from '../hooks/useSaveStatus';
 import type {
   TenantUser,
   TenantUserCreate,
@@ -12,11 +13,11 @@ import type {
   PaginatedResponse,
   Conference,
   UserConferenceAccessWithDetails,
-} from "../types";
+} from '../types';
 
 export default function Team() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<TenantUser | null>(null);
@@ -25,11 +26,9 @@ export default function Team() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["team-users"],
+    queryKey: ['team-users'],
     queryFn: async () => {
-      const res = await api.get<PaginatedResponse<TenantUser>>(
-        "/users?page_size=100",
-      );
+      const res = await api.get<PaginatedResponse<TenantUser>>('/users?page_size=100');
       return res.data;
     },
   });
@@ -39,7 +38,7 @@ export default function Team() {
       await api.put(`/users/${userId}`, { is_active: false });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["team-users"] });
+      queryClient.invalidateQueries({ queryKey: ['team-users'] });
       setDeactivateTarget(null);
       setError(null);
     },
@@ -51,7 +50,7 @@ export default function Team() {
       await api.delete(`/users/${userId}?permanent=true`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["team-users"] });
+      queryClient.invalidateQueries({ queryKey: ['team-users'] });
       setDeleteTarget(null);
       setError(null);
     },
@@ -66,45 +65,30 @@ export default function Team() {
         (u) =>
           u.email.toLowerCase().includes(search.toLowerCase()) ||
           u.first_name?.toLowerCase().includes(search.toLowerCase()) ||
-          u.last_name?.toLowerCase().includes(search.toLowerCase()),
+          u.last_name?.toLowerCase().includes(search.toLowerCase())
       )
     : users;
 
-  const roleLabel = (role: string) =>
-    role === "tenant_admin" ? "Admin" : "Read-only";
+  const roleLabel = (role: string) => (role === 'tenant_admin' ? 'Admin' : 'Read-only');
   const roleBadge = (role: string) =>
-    role === "tenant_admin"
-      ? "bg-purple-100 text-purple-700"
-      : "bg-gray-100 text-gray-700";
+    role === 'tenant_admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700';
 
   return (
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Team</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage team members.
-          </p>
+          <p className="mt-1 text-sm text-gray-500">Manage team members.</p>
         </div>
         <button
-            onClick={() => setShowAddModal(true)}
-            className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
-          >
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Add Member
-          </button>
+          onClick={() => setShowAddModal(true)}
+          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Member
+        </button>
       </div>
 
       {error && (
@@ -150,8 +134,8 @@ export default function Team() {
       ) : filteredUsers.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center text-gray-500 text-sm">
           {users.length === 0
-            ? "No team members yet. Add your first member."
-            : "No members match your search."}
+            ? 'No team members yet. Add your first member.'
+            : 'No members match your search.'}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -181,9 +165,11 @@ export default function Team() {
                   <td className="px-6 py-4">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
-                        {[user.first_name, user.last_name].filter(Boolean).join(" ") || "-"}
+                        {[user.first_name, user.last_name].filter(Boolean).join(' ') || '-'}
                         {user.pronouns && (
-                          <span className="ml-1.5 text-xs text-gray-400 font-normal">({user.pronouns})</span>
+                          <span className="ml-1.5 text-xs text-gray-400 font-normal">
+                            ({user.pronouns})
+                          </span>
                         )}
                       </div>
                       <div className="text-sm text-gray-500">{user.email}</div>
@@ -199,18 +185,14 @@ export default function Team() {
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.is_active
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
+                        user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                       }`}
                     >
-                      {user.is_active ? "Active" : "Inactive"}
+                      {user.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {user.last_login
-                      ? formatDate(user.last_login)
-                      : "Never"}
+                    {user.last_login ? formatDate(user.last_login) : 'Never'}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -293,7 +275,7 @@ export default function Team() {
               setTimeout(() => setSuccessMessage(null), 5000);
             }
             // Force refetch to ensure new data is loaded
-            queryClient.refetchQueries({ queryKey: ["team-users"] });
+            queryClient.refetchQueries({ queryKey: ['team-users'] });
           }}
         />
       )}
@@ -306,7 +288,7 @@ export default function Team() {
           onClose={() => {
             setEditingUserId(null);
             // Force refetch to ensure updated data is loaded
-            queryClient.refetchQueries({ queryKey: ["team-users"] });
+            queryClient.refetchQueries({ queryKey: ['team-users'] });
           }}
         />
       )}
@@ -339,31 +321,35 @@ export default function Team() {
   );
 }
 
-function AddMemberModal({ onClose }: { onClose: (created?: boolean, memberName?: string) => void }) {
+function AddMemberModal({
+  onClose,
+}: {
+  onClose: (created?: boolean, memberName?: string) => void;
+}) {
   const [formData, setFormData] = useState<TenantUserCreate>({
-    email: "",
-    password: "",
-    first_name: "",
-    last_name: "",
-    role: "user",
+    email: '',
+    password: '',
+    first_name: '',
+    last_name: '',
+    role: 'user',
   });
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState('');
 
   const { data: pronounData } = useQuery({
-    queryKey: ["user-pronoun-options"],
+    queryKey: ['user-pronoun-options'],
     queryFn: async () => {
-      const res = await api.get<{ id: string; name: string }[]>("/users/pronoun-options");
+      const res = await api.get<{ id: string; name: string }[]>('/users/pronoun-options');
       return res.data;
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: TenantUserCreate) => {
-      await api.post("/users", data);
+      await api.post('/users', data);
       return data;
     },
     onSuccess: (data) => {
-      const memberName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.email;
+      const memberName = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.email;
       onClose(true, memberName);
     },
     onError: (err) => setErrorMessage(parseApiError(err)),
@@ -371,7 +357,7 @@ function AddMemberModal({ onClose }: { onClose: (created?: boolean, memberName?:
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage("");
+    setErrorMessage('');
     createMutation.mutate(formData);
   };
 
@@ -386,76 +372,58 @@ function AddMemberModal({ onClose }: { onClose: (created?: boolean, memberName?:
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Email *
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Email *</label>
             <input
               type="email"
               required
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Password *
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Password *</label>
             <input
               type="password"
               required
               minLength={8}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
             <p className="mt-1 text-xs text-gray-500">Minimum 8 characters.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                First Name *
-              </label>
+              <label className="block text-sm font-medium text-gray-700">First Name *</label>
               <input
                 type="text"
                 required
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.first_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, first_name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Last Name *
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Last Name *</label>
               <input
                 type="text"
                 required
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.last_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, last_name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
               />
             </div>
           </div>
 
           {pronounData && pronounData.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Pronouns
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Pronouns</label>
               <select
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.pronouns || ""}
+                value={formData.pronouns || ''}
                 onChange={(e) =>
                   setFormData({ ...formData, pronouns: e.target.value || undefined })
                 }
@@ -471,16 +439,14 @@ function AddMemberModal({ onClose }: { onClose: (created?: boolean, memberName?:
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Access Level
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Access Level</label>
             <select
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.role}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  role: e.target.value as "tenant_admin" | "user",
+                  role: e.target.value as 'tenant_admin' | 'user',
                 })
               }
             >
@@ -506,7 +472,7 @@ function AddMemberModal({ onClose }: { onClose: (created?: boolean, memberName?:
             disabled={createMutation.isPending}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
           >
-            {createMutation.isPending ? "Creating..." : "Create Member"}
+            {createMutation.isPending ? 'Creating...' : 'Create Member'}
           </button>
         </div>
       </form>
@@ -514,24 +480,18 @@ function AddMemberModal({ onClose }: { onClose: (created?: boolean, memberName?:
   );
 }
 
-function EditMemberModal({
-  user,
-  onClose,
-}: {
-  user: TenantUser;
-  onClose: () => void;
-}) {
+function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<TenantUserUpdate>({
     email: user.email,
-    first_name: user.first_name || "",
-    last_name: user.last_name || "",
-    pronouns: user.pronouns || "",
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
+    pronouns: user.pronouns || '',
     role: user.role,
     is_active: user.is_active,
     has_all_conference_access: user.has_all_conference_access,
   });
-  const [newPassword, setNewPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
 
   // Sync formData when user prop changes (e.g., after query refetch)
   useEffect(() => {
@@ -542,25 +502,25 @@ function EditMemberModal({
   }, [user.has_all_conference_access]);
 
   const { data: pronounData } = useQuery({
-    queryKey: ["user-pronoun-options"],
+    queryKey: ['user-pronoun-options'],
     queryFn: async () => {
-      const res = await api.get<{ id: string; name: string }[]>("/users/pronoun-options");
+      const res = await api.get<{ id: string; name: string }[]>('/users/pronoun-options');
       return res.data;
     },
   });
 
   // Fetch conferences for assignment
   const { data: conferencesData } = useQuery({
-    queryKey: ["conferences-for-access"],
+    queryKey: ['conferences-for-access'],
     queryFn: async () => {
-      const res = await api.get<PaginatedResponse<Conference>>("/conferences?page_size=100");
+      const res = await api.get<PaginatedResponse<Conference>>('/conferences?page_size=100');
       return res.data;
     },
   });
 
   // Fetch user's current conference access
   const { data: userAccessData, refetch: refetchUserAccess } = useQuery({
-    queryKey: ["user-conference-access", user.id],
+    queryKey: ['user-conference-access', user.id],
     queryFn: async () => {
       const res = await api.get<{ items: UserConferenceAccessWithDetails[]; total: number }>(
         `/user-conference-access/user/${user.id}`
@@ -569,67 +529,54 @@ function EditMemberModal({
     },
   });
 
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
-  const [errorMessage, setErrorMessage] = useState("");
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
+  const [errorMessage, setErrorMessage] = useState('');
 
   const updateMutation = useMutation({
     mutationFn: async (data: TenantUserUpdate) => {
       await api.put(`/users/${user.id}`, data);
     },
     onSuccess: () => {
-      setSaveStatus("saved");
-      setNewPassword("");
-      queryClient.invalidateQueries({ queryKey: ["team-users"] });
-      // Clear any existing timeout before setting a new one
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+      setSaved();
+      setNewPassword('');
+      queryClient.invalidateQueries({ queryKey: ['team-users'] });
     },
     onError: (err) => {
-      setSaveStatus("error");
+      setSaveError();
       setErrorMessage(parseApiError(err));
-      // Clear any existing timeout before setting a new one
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
     },
   });
 
-  // Helper to show save feedback
-  const showSaved = () => {
-    setSaveStatus("saved");
-    // Clear any existing timeout before setting a new one to prevent race conditions
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
-  };
-
   // Grant conference access mutation
   const grantAccessMutation = useMutation({
-    mutationFn: async ({ conferenceId, accessLevel }: { conferenceId: string; accessLevel: "admin" | "read_only" }) => {
+    mutationFn: async ({
+      conferenceId,
+      accessLevel,
+    }: {
+      conferenceId: string;
+      accessLevel: 'admin' | 'read_only';
+    }) => {
       // If user currently has all conference access, turn it off first
       if (user.has_all_conference_access) {
         await api.put(`/users/${user.id}`, { has_all_conference_access: false });
       }
-      await api.post("/user-conference-access", {
+      await api.post('/user-conference-access', {
         user_id: user.id,
         conference_id: conferenceId,
         access_level: accessLevel,
       });
     },
     onMutate: () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      setSaveStatus("saving");
+      setSaving();
     },
     onSuccess: () => {
       refetchUserAccess();
-      queryClient.invalidateQueries({ queryKey: ["team-users"] });
-      showSaved();
+      queryClient.invalidateQueries({ queryKey: ['team-users'] });
+      setSaved();
     },
     onError: (err) => {
-      setSaveStatus("error");
+      setSaveError();
       setErrorMessage(parseApiError(err));
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
     },
   });
 
@@ -639,48 +586,47 @@ function EditMemberModal({
       await api.delete(`/user-conference-access/${accessId}`);
     },
     onMutate: () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      setSaveStatus("saving");
+      setSaving();
     },
     onSuccess: () => {
       refetchUserAccess();
-      showSaved();
+      setSaved();
     },
     onError: (err) => {
-      setSaveStatus("error");
+      setSaveError();
       setErrorMessage(parseApiError(err));
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
     },
   });
 
   // Update access level mutation
   const updateAccessMutation = useMutation({
-    mutationFn: async ({ accessId, accessLevel }: { accessId: string; accessLevel: "admin" | "read_only" }) => {
+    mutationFn: async ({
+      accessId,
+      accessLevel,
+    }: {
+      accessId: string;
+      accessLevel: 'admin' | 'read_only';
+    }) => {
       await api.put(`/user-conference-access/${accessId}`, {
         access_level: accessLevel,
       });
     },
     onMutate: () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      setSaveStatus("saving");
+      setSaving();
     },
     onSuccess: () => {
       refetchUserAccess();
-      showSaved();
+      setSaved();
     },
     onError: (err) => {
-      setSaveStatus("error");
+      setSaveError();
       setErrorMessage(parseApiError(err));
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
     },
   });
 
   const handleSave = () => {
-    // Clear any pending timeout to prevent race conditions
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    // Immediately show saving state for instant feedback
-    setSaveStatus("saving");
-    setErrorMessage("");
+    setSaving();
+    setErrorMessage('');
 
     const data: TenantUserUpdate = { ...formData };
     if (newPassword.trim()) {
@@ -741,12 +687,16 @@ function EditMemberModal({
                   <label className="block text-sm font-medium text-gray-700">Pronouns</label>
                   <select
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    value={formData.pronouns || ""}
-                    onChange={(e) => setFormData({ ...formData, pronouns: e.target.value || undefined })}
+                    value={formData.pronouns || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, pronouns: e.target.value || undefined })
+                    }
                   >
                     <option value="">Select...</option>
                     {pronounData.map((opt) => (
-                      <option key={opt.id} value={opt.name}>{opt.name}</option>
+                      <option key={opt.id} value={opt.name}>
+                        {opt.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -756,7 +706,9 @@ function EditMemberModal({
                 <select
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as "tenant_admin" | "user" })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value as 'tenant_admin' | 'user' })
+                  }
                 >
                   <option value="user">Read-only</option>
                   <option value="tenant_admin">Admin</option>
@@ -770,10 +722,12 @@ function EditMemberModal({
                 type="button"
                 onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
                 className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                  formData.is_active ? "bg-primary-600" : "bg-gray-200"
+                  formData.is_active ? 'bg-primary-600' : 'bg-gray-200'
                 }`}
               >
-                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.is_active ? "translate-x-4" : "translate-x-0"}`} />
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.is_active ? 'translate-x-4' : 'translate-x-0'}`}
+                />
               </button>
             </div>
 
@@ -801,18 +755,15 @@ function EditMemberModal({
                 onChange={async (e) => {
                   const newValue = e.target.checked;
                   setFormData({ ...formData, has_all_conference_access: newValue });
-                  // Clear any pending timeout before making changes
-                  if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                  setSaveStatus("saving");
+                  setSaving();
                   try {
                     await api.put(`/users/${user.id}`, { has_all_conference_access: newValue });
-                    queryClient.invalidateQueries({ queryKey: ["team-users"] });
-                    showSaved();
+                    queryClient.invalidateQueries({ queryKey: ['team-users'] });
+                    setSaved();
                   } catch (err) {
-                    setSaveStatus("error");
+                    setSaveError();
                     setErrorMessage(parseApiError(err));
                     setFormData({ ...formData, has_all_conference_access: !newValue });
-                    saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
                   }
                 }}
                 className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
@@ -825,12 +776,22 @@ function EditMemberModal({
                 {userAccessData && userAccessData.items.length > 0 ? (
                   <div className="space-y-1.5 mb-2">
                     {userAccessData.items.map((access) => (
-                      <div key={access.id} className="flex items-center justify-between bg-white border border-gray-200 rounded px-2 py-1.5">
-                        <span className="text-sm text-gray-900 truncate">{access.conference_name}</span>
+                      <div
+                        key={access.id}
+                        className="flex items-center justify-between bg-white border border-gray-200 rounded px-2 py-1.5"
+                      >
+                        <span className="text-sm text-gray-900 truncate">
+                          {access.conference_name}
+                        </span>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           <select
                             value={access.access_level}
-                            onChange={(e) => updateAccessMutation.mutate({ accessId: access.id, accessLevel: e.target.value as "admin" | "read_only" })}
+                            onChange={(e) =>
+                              updateAccessMutation.mutate({
+                                accessId: access.id,
+                                accessLevel: e.target.value as 'admin' | 'read_only',
+                              })
+                            }
                             className="text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
                           >
                             <option value="read_only">Read-only</option>
@@ -842,8 +803,18 @@ function EditMemberModal({
                             disabled={revokeAccessMutation.isPending}
                             className="text-red-500 hover:text-red-700 p-0.5"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
                             </svg>
                           </button>
                         </div>
@@ -854,40 +825,54 @@ function EditMemberModal({
                   <p className="text-xs text-gray-500 mb-2">No access granted yet.</p>
                 )}
 
-                {conferencesData && (() => {
-                  const assignedIds = new Set(userAccessData?.items.map((a) => a.conference_id) || []);
-                  const availableConferences = conferencesData.items.filter((c) => !assignedIds.has(c.id));
-                  if (availableConferences.length === 0) return null;
+                {conferencesData &&
+                  (() => {
+                    const assignedIds = new Set(
+                      userAccessData?.items.map((a) => a.conference_id) || []
+                    );
+                    const availableConferences = conferencesData.items.filter(
+                      (c) => !assignedIds.has(c.id)
+                    );
+                    if (availableConferences.length === 0) return null;
 
-                  return (
-                    <div className="flex items-center gap-1.5">
-                      <select
-                        id="add-conference-select"
-                        className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        defaultValue=""
-                      >
-                        <option value="" disabled>Add conference...</option>
-                        {availableConferences.map((conf) => (
-                          <option key={conf.id} value={conf.id}>{conf.name}</option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const select = document.getElementById("add-conference-select") as HTMLSelectElement;
-                          if (select.value) {
-                            grantAccessMutation.mutate({ conferenceId: select.value, accessLevel: "read_only" });
-                            select.value = "";
-                          }
-                        }}
-                        disabled={grantAccessMutation.isPending}
-                        className="px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700 disabled:opacity-50"
-                      >
-                        Add
-                      </button>
-                    </div>
-                  );
-                })()}
+                    return (
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          id="add-conference-select"
+                          className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>
+                            Add conference...
+                          </option>
+                          {availableConferences.map((conf) => (
+                            <option key={conf.id} value={conf.id}>
+                              {conf.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const select = document.getElementById(
+                              'add-conference-select'
+                            ) as HTMLSelectElement;
+                            if (select.value) {
+                              grantAccessMutation.mutate({
+                                conferenceId: select.value,
+                                accessLevel: 'read_only',
+                              });
+                              select.value = '';
+                            }
+                          }}
+                          disabled={grantAccessMutation.isPending}
+                          className="px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700 disabled:opacity-50"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    );
+                  })()}
               </div>
             )}
           </div>
@@ -907,32 +892,48 @@ function EditMemberModal({
           onClick={handleSave}
           disabled={updateMutation.isPending || (newPassword.length > 0 && newPassword.length < 8)}
           className={`px-4 py-1.5 text-sm font-medium text-white border border-transparent rounded-md transition-colors duration-200 disabled:opacity-50 ${
-            saveStatus === "saved"
-              ? "bg-green-600"
-              : saveStatus === "error"
-                ? "bg-red-600"
-                : "bg-primary-600 hover:bg-primary-700"
+            saveStatus === 'saved'
+              ? 'bg-green-600'
+              : saveStatus === 'error'
+                ? 'bg-red-600'
+                : 'bg-primary-600 hover:bg-primary-700'
           }`}
         >
-          {saveStatus === "saving" ? (
+          {saveStatus === 'saving' ? (
             <span className="inline-flex items-center gap-1.5">
               <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
               </svg>
               Saving...
             </span>
-          ) : saveStatus === "saved" ? (
+          ) : saveStatus === 'saved' ? (
             <span className="inline-flex items-center gap-1.5">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
               Saved
             </span>
-          ) : saveStatus === "error" ? (
-            "Save failed"
+          ) : saveStatus === 'error' ? (
+            'Save failed'
           ) : (
-            "Save Changes"
+            'Save Changes'
           )}
         </button>
       </div>

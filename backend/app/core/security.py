@@ -8,7 +8,8 @@ from uuid import UUID
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import PyJWTError
 
 from app.config import get_settings
 from app.core.exceptions import AuthenticationError
@@ -150,7 +151,7 @@ def decode_token(token: str, token_type: str = "access") -> dict[str, Any]:
 
         return payload
 
-    except JWTError as e:
+    except PyJWTError as e:
         raise AuthenticationError(f"Invalid or expired token: {e!s}") from e
 
 

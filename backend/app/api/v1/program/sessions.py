@@ -25,7 +25,9 @@ from app.schemas.program import (
     ProgramSessionUpdate,
 )
 
-from ._shared import MODULE_CODE, _build_session_response, _check_admin_access, _get_conference_for_tenant
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
+
+from ._shared import MODULE_CODE, _build_session_response
 
 router = APIRouter()
 
@@ -43,7 +45,7 @@ async def list_sessions(
     is_general_event: bool | None = None,
 ) -> ProgramSessionListResponse:
     """List all sessions for a conference, optionally filtered by day."""
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     query = select(ProgramSession).where(
         ProgramSession.conference_id == conference_id,
@@ -110,7 +112,7 @@ async def list_sessions_enriched(
 ) -> EnrichedSessionsResponse:
     """List sessions with full paper, speaker, and custom field data."""
     tenant_id = current_user.tenant_id
-    await _get_conference_for_tenant(db, conference_id, tenant_id)
+    await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Fetch all sessions
     result = await db.execute(
@@ -317,8 +319,8 @@ async def create_session(
     request: Request,
 ) -> ProgramSessionResponse:
     """Create a new session."""
-    await _check_admin_access(db, current_user, conference_id)
-    conference = await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     # Validate slot exists and belongs to this conference
     slot_result = await db.execute(
@@ -424,8 +426,8 @@ async def update_session(
     request: Request,
 ) -> ProgramSessionResponse:
     """Update a session."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ProgramSession).where(
@@ -563,8 +565,8 @@ async def move_session(
     request: Request,
 ) -> ProgramSessionResponse:
     """Move a session to a different slot/track."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ProgramSession).where(
@@ -657,8 +659,8 @@ async def delete_session(
     request: Request,
 ) -> None:
     """Delete a session."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ProgramSession).where(

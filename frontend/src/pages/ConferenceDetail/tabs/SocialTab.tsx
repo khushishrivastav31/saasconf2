@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import api from "../../../config/api";
-import type { Conference, SocialLinks } from "../../../types";
-import { CONFERENCE_SOCIAL_PLATFORMS } from "../../../config/socialPlatforms";
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import api from '../../../config/api';
+import type { Conference, SocialLinks } from '../../../types';
+import { CONFERENCE_SOCIAL_PLATFORMS } from '../../../config/socialPlatforms';
+import { useSaveStatus } from '../../../hooks/useSaveStatus';
 
 function ConferenceSocialTab({
   conference,
@@ -13,41 +14,35 @@ function ConferenceSocialTab({
   onUpdate: () => void;
   isAdmin: boolean;
 }) {
-  const [socialLinks, setSocialLinks] = useState<SocialLinks>(
-    conference.social_links || {},
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>(conference.social_links || {});
+  const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
+  const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
+    null
   );
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
-  const [saveTimeout, setSaveTimeout] = useState<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-  const [addPlatform, setAddPlatform] = useState("");
-  const [customPlatformName, setCustomPlatformName] = useState("");
+  const [addPlatform, setAddPlatform] = useState('');
+  const [customPlatformName, setCustomPlatformName] = useState('');
 
   const updateMutation = useMutation({
     mutationFn: async (links: SocialLinks) => {
       await api.put(`/conferences/${conference.id}`, { social_links: links });
     },
-    onMutate: () => setSaveStatus("saving"),
+    onMutate: () => setSaving(),
     onSuccess: () => {
-      setSaveStatus("saved");
+      setSaved();
       onUpdate();
-      setTimeout(() => setSaveStatus("idle"), 2000);
     },
     onError: () => {
-      setSaveStatus("error");
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      setError();
     },
   });
 
   const saveLinks = (newLinks: SocialLinks) => {
     setSocialLinks(newLinks);
-    if (saveTimeout) clearTimeout(saveTimeout);
+    if (debounceTimeout) clearTimeout(debounceTimeout);
     const timeout = setTimeout(() => {
       updateMutation.mutate(newLinks);
     }, 500);
-    setSaveTimeout(timeout);
+    setDebounceTimeout(timeout);
   };
 
   const handleLinkChange = (platform: string, value: string) => {
@@ -63,14 +58,14 @@ function ConferenceSocialTab({
 
   const handleAdd = () => {
     const key =
-      addPlatform === "__custom__"
-        ? customPlatformName.trim().toLowerCase().replace(/\s+/g, "_")
+      addPlatform === '__custom__'
+        ? customPlatformName.trim().toLowerCase().replace(/\s+/g, '_')
         : addPlatform;
     if (!key || socialLinks[key] !== undefined) return;
-    const newLinks = { ...socialLinks, [key]: "" };
+    const newLinks = { ...socialLinks, [key]: '' };
     setSocialLinks(newLinks);
-    setAddPlatform("");
-    setCustomPlatformName("");
+    setAddPlatform('');
+    setCustomPlatformName('');
   };
 
   // Build the list of active entries: known platforms + any custom keys
@@ -88,75 +83,71 @@ function ConferenceSocialTab({
     if (!knownKeys.has(key)) {
       allEntries.push({
         key,
-        label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
-        placeholder: "Enter URL...",
+        label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
+        placeholder: 'Enter URL...',
       });
     }
   }
 
   // Known platforms available to add (not yet in socialLinks)
   const availablePlatforms = CONFERENCE_SOCIAL_PLATFORMS.filter(
-    (p) => socialLinks[p.key] === undefined,
+    (p) => socialLinks[p.key] === undefined
   );
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900">
-          Social Media Links
-        </h4>
-        {isAdmin && <div className="flex items-center gap-2">
-          {saveStatus === "saving" && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
-              <svg
-                className="animate-spin h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Saving...
-            </span>
-          )}
-          {saveStatus === "saved" && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Saved
-            </span>
-          )}
-          {saveStatus === "error" && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Save failed
-            </span>
-          )}
-        </div>}
+        <h4 className="text-sm font-medium text-gray-900">Social Media Links</h4>
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            {saveStatus === 'saving' && (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Saving...
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                Saved
+              </span>
+            )}
+            {saveStatus === 'error' && (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                Save failed
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Existing social links */}
@@ -171,7 +162,7 @@ function ConferenceSocialTab({
                 type="text"
                 placeholder={platform.placeholder}
                 className="flex-1 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={socialLinks[platform.key] || ""}
+                value={socialLinks[platform.key] || ''}
                 onChange={(e) => handleLinkChange(platform.key, e.target.value)}
                 disabled={!isAdmin}
               />
@@ -182,12 +173,7 @@ function ConferenceSocialTab({
                   className="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                   title={`Remove ${platform.label}`}
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -213,7 +199,7 @@ function ConferenceSocialTab({
             value={addPlatform}
             onChange={(e) => {
               setAddPlatform(e.target.value);
-              if (e.target.value !== "__custom__") setCustomPlatformName("");
+              if (e.target.value !== '__custom__') setCustomPlatformName('');
             }}
             className="border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           >
@@ -225,7 +211,7 @@ function ConferenceSocialTab({
             ))}
             <option value="__custom__">Custom...</option>
           </select>
-          {addPlatform === "__custom__" && (
+          {addPlatform === '__custom__' && (
             <input
               type="text"
               placeholder="Platform name"
@@ -237,18 +223,10 @@ function ConferenceSocialTab({
           <button
             type="button"
             onClick={handleAdd}
-            disabled={
-              !addPlatform ||
-              (addPlatform === "__custom__" && !customPlatformName.trim())
-            }
+            disabled={!addPlatform || (addPlatform === '__custom__' && !customPlatformName.trim())}
             className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
           >
-            <svg
-              className="w-4 h-4 mr-1.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

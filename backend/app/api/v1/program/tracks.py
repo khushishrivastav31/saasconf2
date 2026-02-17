@@ -18,7 +18,9 @@ from app.schemas.program import (
     ProgramTrackUpdate,
 )
 
-from ._shared import MODULE_CODE, _build_track_response, _check_admin_access, _get_conference_for_tenant
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
+
+from ._shared import MODULE_CODE, _build_track_response
 
 router = APIRouter()
 
@@ -36,7 +38,7 @@ async def list_tracks(
     is_active: bool | None = None,
 ) -> ProgramTrackListResponse:
     """List all tracks for a conference, optionally filtered by day."""
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     query = select(ProgramTrack).where(
         ProgramTrack.conference_id == conference_id,
@@ -82,8 +84,8 @@ async def create_track(
     request: Request,
 ) -> ProgramTrackResponse:
     """Create a new track."""
-    await _check_admin_access(db, current_user, conference_id)
-    conference = await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     # Validate day exists
     day_result = await db.execute(
@@ -153,8 +155,8 @@ async def reorder_tracks(
     request: Request,
 ) -> ProgramTrackListResponse:
     """Reorder tracks."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     # Fetch all tracks
     result = await db.execute(
@@ -206,8 +208,8 @@ async def update_track(
     request: Request,
 ) -> ProgramTrackResponse:
     """Update a track."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ProgramTrack).where(
@@ -278,8 +280,8 @@ async def delete_track(
     request: Request,
 ) -> None:
     """Delete a track. Sessions using this track will have start_track_id set to NULL."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ProgramTrack).where(

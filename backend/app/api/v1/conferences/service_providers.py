@@ -24,7 +24,7 @@ from app.schemas.service_provider import (
     ServiceProviderUpdate,
 )
 
-from ._shared import _get_conference_for_tenant
+from app.core.conference_helpers import get_conference_for_tenant
 
 router = APIRouter()
 
@@ -38,7 +38,7 @@ async def list_conference_service_providers(
     db: DbSessionDep,
 ) -> ServiceProviderListResponse:
     """List service providers directly linked to a conference."""
-    conference = await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ServiceProvider)
@@ -68,7 +68,7 @@ async def create_conference_service_provider(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    conference = await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     sp = ServiceProvider(
         tenant_id=current_user.tenant_id,
@@ -123,7 +123,7 @@ async def update_conference_service_provider(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    conference = await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ServiceProvider)
@@ -177,7 +177,7 @@ async def delete_conference_service_provider(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    conference = await _get_conference_for_tenant(conference_id, current_user.tenant_id, db)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ServiceProvider)

@@ -1,17 +1,17 @@
-import { createContext, useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { createContext, useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import portalApi, {
   clearApplicantTokens,
   getApplicantAccessToken,
   setApplicantTokens,
-} from "../config/portalApi";
+} from '../config/portalApi';
 import type {
   ApplicantProfile,
   ApplicantLoginRequest,
   ApplicantRegisterRequest,
   ApplicantTokenResponse,
-} from "../types/portal";
+} from '../types/portal';
 
 interface ApplicantAuthContextType {
   applicant: ApplicantProfile | null;
@@ -24,24 +24,19 @@ interface ApplicantAuthContextType {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const ApplicantAuthContext =
-  createContext<ApplicantAuthContextType | null>(null);
+export const ApplicantAuthContext = createContext<ApplicantAuthContextType | null>(null);
 
-export function ApplicantAuthProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function ApplicantAuthProvider({ children }: { children: React.ReactNode }) {
   const [applicant, setApplicant] = useState<ApplicantProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
 
   const { companySlug } = useParams<{ companySlug: string }>();
-  const slug = companySlug || "";
+  const slug = companySlug || '';
 
   const fetchApplicant = useCallback(async () => {
     try {
-      const response = await portalApi.get<ApplicantProfile>("/portal/me");
+      const response = await portalApi.get<ApplicantProfile>('/portal/me');
       setApplicant(response.data);
     } catch {
       setApplicant(null);
@@ -68,7 +63,7 @@ export function ApplicantAuthProvider({
   const login = async (credentials: ApplicantLoginRequest) => {
     const response = await portalApi.post<ApplicantTokenResponse>(
       `/portal/${slug}/login`,
-      credentials,
+      credentials
     );
     const { access_token, refresh_token } = response.data;
     setApplicantTokens(access_token, refresh_token);
@@ -77,10 +72,7 @@ export function ApplicantAuthProvider({
   };
 
   const register = async (data: ApplicantRegisterRequest): Promise<string> => {
-    const response = await portalApi.post<{ message: string }>(
-      `/portal/${slug}/register`,
-      data,
-    );
+    const response = await portalApi.post<{ message: string }>(`/portal/${slug}/register`, data);
     return response.data.message;
   };
 

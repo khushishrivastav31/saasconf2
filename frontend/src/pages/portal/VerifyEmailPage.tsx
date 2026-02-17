@@ -1,22 +1,20 @@
-import { useEffect, useState } from "react";
-import { useSearchParams, useParams, Link } from "react-router-dom";
-import portalApi from "../../config/portalApi";
-import { parseApiError } from "../../utils/apiError";
+import { useEffect, useState } from 'react';
+import { useSearchParams, useParams, Link } from 'react-router';
+import portalApi from '../../config/portalApi';
+import { parseApiError } from '../../utils/apiError';
 
 function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const { companySlug } = useParams<{ companySlug: string }>();
-  const token = searchParams.get("token");
+  const token = searchParams.get('token');
 
-  const [status, setStatus] = useState<"verifying" | "success" | "error">(
-    "verifying",
-  );
-  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (!token) {
-      setStatus("error");
-      setMessage("Invalid verification link.");
+      setStatus('error');
+      setMessage('Invalid verification link.');
       return;
     }
 
@@ -24,15 +22,13 @@ function VerifyEmailPage() {
       try {
         const res = await portalApi.post<{ message: string }>(
           `/portal/${companySlug}/verify-email`,
-          { token },
+          { token }
         );
-        setStatus("success");
+        setStatus('success');
         setMessage(res.data.message);
       } catch (err: unknown) {
-        setStatus("error");
-        setMessage(
-          parseApiError(err, "Verification failed. The link may have expired."),
-        );
+        setStatus('error');
+        setMessage(parseApiError(err, 'Verification failed. The link may have expired.'));
       }
     };
 
@@ -43,14 +39,14 @@ function VerifyEmailPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-sm w-full text-center">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-          {status === "verifying" && (
+          {status === 'verifying' && (
             <>
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-4"></div>
               <p className="text-gray-600">Verifying your email...</p>
             </>
           )}
 
-          {status === "success" && (
+          {status === 'success' && (
             <>
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
                 <svg
@@ -67,9 +63,7 @@ function VerifyEmailPage() {
                   />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                Email Verified
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Email Verified</h2>
               <p className="text-sm text-gray-600 mb-6">{message}</p>
               <Link
                 to={`/${companySlug}/portal/user/login`}
@@ -80,7 +74,7 @@ function VerifyEmailPage() {
             </>
           )}
 
-          {status === "error" && (
+          {status === 'error' && (
             <>
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
                 <svg
@@ -97,9 +91,7 @@ function VerifyEmailPage() {
                   />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                Verification Failed
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Verification Failed</h2>
               <p className="text-sm text-gray-600">{message}</p>
             </>
           )}

@@ -18,7 +18,9 @@ from app.schemas.program import (
     ProgramTimeSlotUpdate,
 )
 
-from ._shared import MODULE_CODE, _build_slot_response, _check_admin_access, _get_conference_for_tenant
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
+
+from ._shared import MODULE_CODE, _build_slot_response
 
 router = APIRouter()
 
@@ -35,7 +37,7 @@ async def list_slots(
     db: DbSessionDep,
 ) -> ProgramTimeSlotListResponse:
     """List all time slots for a day."""
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     # Verify day exists
     day_result = await db.execute(
@@ -75,8 +77,8 @@ async def create_slot(
     request: Request,
 ) -> ProgramTimeSlotResponse:
     """Create a new time slot."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     # Verify day exists
     day_result = await db.execute(
@@ -147,8 +149,8 @@ async def create_slots_batch(
     request: Request,
 ) -> ProgramTimeSlotListResponse:
     """Create multiple time slots at regular intervals."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     # Verify day exists
     day_result = await db.execute(
@@ -239,8 +241,8 @@ async def update_slot(
     request: Request,
 ) -> ProgramTimeSlotResponse:
     """Update a time slot."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ProgramTimeSlot)
@@ -299,8 +301,8 @@ async def delete_slot(
     request: Request,
 ) -> None:
     """Delete a time slot. Fails if sessions reference it."""
-    await _check_admin_access(db, current_user, conference_id)
-    await _get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
         select(ProgramTimeSlot)

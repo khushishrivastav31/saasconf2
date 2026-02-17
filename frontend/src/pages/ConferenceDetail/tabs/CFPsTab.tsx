@@ -1,50 +1,46 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../config/api";
-import type {
-  Conference,
-  CallForPapers,
-  CFPCreate,
-  PaginatedResponse,
-} from "../../../types";
-import { parseApiError } from "../../../utils/apiError";
-import RichTextEditor from "../../../components/common/RichTextEditor";
-import ConfirmDialog from "../../../components/ConfirmDialog";
-import { ErrorBanner } from "../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../config/api';
+import { useSaveStatus } from '../../../hooks/useSaveStatus';
+import type { Conference, CallForPapers, CFPCreate, PaginatedResponse } from '../../../types';
+import { parseApiError } from '../../../utils/apiError';
+import RichTextEditor from '../../../components/common/RichTextEditor';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import { ErrorBanner } from '../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 
 type RichTextTab =
-  | "code_of_conduct"
-  | "incentives_conditions"
-  | "tips_for_submission"
-  | "guidelines_for_submissions"
-  | "faqs";
+  | 'code_of_conduct'
+  | 'incentives_conditions'
+  | 'tips_for_submission'
+  | 'guidelines_for_submissions'
+  | 'faqs';
 
 const RICH_TEXT_TABS: { key: RichTextTab; label: string }[] = [
-  { key: "code_of_conduct", label: "Code of Conduct" },
-  { key: "incentives_conditions", label: "Incentives & Conditions" },
-  { key: "tips_for_submission", label: "Tips for a Strong Submission" },
-  { key: "guidelines_for_submissions", label: "Guidelines for Submissions" },
-  { key: "faqs", label: "FAQs" },
+  { key: 'code_of_conduct', label: 'Code of Conduct' },
+  { key: 'incentives_conditions', label: 'Incentives & Conditions' },
+  { key: 'tips_for_submission', label: 'Tips for a Strong Submission' },
+  { key: 'guidelines_for_submissions', label: 'Guidelines for Submissions' },
+  { key: 'faqs', label: 'FAQs' },
 ];
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft" },
-  { value: "open", label: "Open" },
-  { value: "closed", label: "Closed" },
-  { value: "review", label: "Review" },
-  { value: "completed", label: "Completed" },
+  { value: 'draft', label: 'Draft' },
+  { value: 'open', label: 'Open' },
+  { value: 'closed', label: 'Closed' },
+  { value: 'review', label: 'Review' },
+  { value: 'completed', label: 'Completed' },
 ];
 
 function toLocalDatetime(isoStr: string | null): string {
-  if (!isoStr) return "";
+  if (!isoStr) return '';
   try {
     const d = new Date(isoStr);
     const offset = d.getTimezoneOffset();
     const local = new Date(d.getTime() - offset * 60000);
     return local.toISOString().slice(0, 16);
   } catch {
-    return "";
+    return '';
   }
 }
 
@@ -70,45 +66,43 @@ interface CFPFormState {
 function cfpToForm(cfp: CallForPapers): CFPFormState {
   return {
     title: cfp.title,
-    description: cfp.description || "",
+    description: cfp.description || '',
     status: cfp.status,
     open_date: toLocalDatetime(cfp.open_date),
     close_date: toLocalDatetime(cfp.close_date),
     notification_date: toLocalDatetime(cfp.notification_date),
     program_announcement_date: toLocalDatetime(cfp.program_announcement_date),
     max_submissions_per_speaker:
-      cfp.max_submissions_per_speaker != null
-        ? String(cfp.max_submissions_per_speaker)
-        : "",
+      cfp.max_submissions_per_speaker != null ? String(cfp.max_submissions_per_speaker) : '',
     required_speaker_fields: cfp.required_speaker_fields || [],
     is_anonymous_review: cfp.is_anonymous_review,
-    reviewers_per_paper: cfp.reviewers_per_paper != null ? String(cfp.reviewers_per_paper) : "3",
-    code_of_conduct: cfp.code_of_conduct || "",
-    incentives_conditions: cfp.incentives_conditions || "",
-    tips_for_submission: cfp.tips_for_submission || "",
-    guidelines_for_submissions: cfp.guidelines_for_submissions || "",
-    faqs: cfp.faqs || "",
+    reviewers_per_paper: cfp.reviewers_per_paper != null ? String(cfp.reviewers_per_paper) : '3',
+    code_of_conduct: cfp.code_of_conduct || '',
+    incentives_conditions: cfp.incentives_conditions || '',
+    tips_for_submission: cfp.tips_for_submission || '',
+    guidelines_for_submissions: cfp.guidelines_for_submissions || '',
+    faqs: cfp.faqs || '',
   };
 }
 
 function emptyForm(): CFPFormState {
   return {
-    title: "",
-    description: "",
-    status: "draft",
-    open_date: "",
-    close_date: "",
-    notification_date: "",
-    program_announcement_date: "",
-    max_submissions_per_speaker: "",
+    title: '',
+    description: '',
+    status: 'draft',
+    open_date: '',
+    close_date: '',
+    notification_date: '',
+    program_announcement_date: '',
+    max_submissions_per_speaker: '',
     required_speaker_fields: [],
     is_anonymous_review: false,
-    reviewers_per_paper: "3",
-    code_of_conduct: "",
-    incentives_conditions: "",
-    tips_for_submission: "",
-    guidelines_for_submissions: "",
-    faqs: "",
+    reviewers_per_paper: '3',
+    code_of_conduct: '',
+    incentives_conditions: '',
+    tips_for_submission: '',
+    guidelines_for_submissions: '',
+    faqs: '',
   };
 }
 
@@ -121,16 +115,14 @@ export default function ConferenceCFPsTab({
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<CFPFormState>(emptyForm());
-  const [activeRichTab, setActiveRichTab] =
-    useState<RichTextTab>("code_of_conduct");
+  const [activeRichTab, setActiveRichTab] = useState<RichTextTab>('code_of_conduct');
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["conference-cfps", conference.id],
+    queryKey: ['conference-cfps', conference.id],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<CallForPapers>>(
         `/conferences/${conference.id}/cfps`
@@ -146,22 +138,22 @@ export default function ConferenceCFPsTab({
     if (cfp) {
       setForm(cfpToForm(cfp));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cfp?.id, cfp?.updated_at]);
 
   const createMutation = useMutation({
     mutationFn: async (payload: CFPCreate) => {
-      await api.post("/cfp", payload);
+      await api.post('/cfp', payload);
     },
     onSuccess: () => {
       setError(null);
       queryClient.invalidateQueries({
-        queryKey: ["conference-cfps", conference.id],
+        queryKey: ['conference-cfps', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-cfps"] });
+      queryClient.invalidateQueries({ queryKey: ['all-cfps'] });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to create CFP"));
+      setError(parseApiError(err, 'Failed to create CFP'));
     },
   });
 
@@ -173,19 +165,15 @@ export default function ConferenceCFPsTab({
       setError(null);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
-      setSaveStatus("saved");
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+      setSaved();
       queryClient.invalidateQueries({
-        queryKey: ["conference-cfps", conference.id],
+        queryKey: ['conference-cfps', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-cfps"] });
+      queryClient.invalidateQueries({ queryKey: ['all-cfps'] });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to save CFP"));
-      setSaveStatus("error");
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+      setError(parseApiError(err, 'Failed to save CFP'));
+      setSaveError();
     },
   });
 
@@ -199,26 +187,26 @@ export default function ConferenceCFPsTab({
       setShowDeleteConfirm(false);
       setForm(emptyForm());
       queryClient.invalidateQueries({
-        queryKey: ["conference-cfps", conference.id],
+        queryKey: ['conference-cfps', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-cfps"] });
+      queryClient.invalidateQueries({ queryKey: ['all-cfps'] });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to delete CFP"));
+      setError(parseApiError(err, 'Failed to delete CFP'));
       setShowDeleteConfirm(false);
     },
   });
 
   const handleCreate = () => {
     createMutation.mutate({
-      title: "Call for Papers",
+      title: 'Call for Papers',
       conference_id: conference.id,
     });
   };
 
   const handleSave = () => {
     if (!cfp) return;
-    setSaveStatus("saving");
+    setSaving();
     const payload: Record<string, unknown> = {
       title: form.title,
       description: form.description || null,
@@ -242,10 +230,7 @@ export default function ConferenceCFPsTab({
     updateMutation.mutate(payload);
   };
 
-  const updateField = <K extends keyof CFPFormState>(
-    key: K,
-    value: CFPFormState[K]
-  ) => {
+  const updateField = <K extends keyof CFPFormState>(key: K, value: CFPFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -273,9 +258,7 @@ export default function ConferenceCFPsTab({
               d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
             />
           </svg>
-          <h3 className="mt-3 text-sm font-medium text-gray-900">
-            No Call for Papers
-          </h3>
+          <h3 className="mt-3 text-sm font-medium text-gray-900">No Call for Papers</h3>
           <p className="mt-1 text-sm text-gray-500">
             Create a Call for Papers to start collecting session proposals.
           </p>
@@ -286,9 +269,7 @@ export default function ConferenceCFPsTab({
                 disabled={createMutation.isPending}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
               >
-                {createMutation.isPending
-                  ? "Creating..."
-                  : "Create Call for Papers"}
+                {createMutation.isPending ? 'Creating...' : 'Create Call for Papers'}
               </button>
             </div>
           )}
@@ -305,23 +286,19 @@ export default function ConferenceCFPsTab({
       {/* Title + Status row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="md:col-span-3">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Title
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
           <input
             type="text"
             value={form.title}
-            onChange={(e) => updateField("title", e.target.value)}
+            onChange={(e) => updateField('title', e.target.value)}
             className="block w-full h-10 border border-gray-300 rounded-md shadow-sm px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Status
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
           <select
             value={form.status}
-            onChange={(e) => updateField("status", e.target.value)}
+            onChange={(e) => updateField('status', e.target.value)}
             className="block w-full h-10 border border-gray-300 rounded-md shadow-sm px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           >
             {STATUS_OPTIONS.map((opt) => (
@@ -336,9 +313,7 @@ export default function ConferenceCFPsTab({
       {/* Public CFP Link */}
       {conference.tenant_slug && conference.abbreviation && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Public CFP Link
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Public CFP Link</label>
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -357,7 +332,12 @@ export default function ConferenceCFPsTab({
               title="Copy to clipboard"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
               </svg>
             </button>
             <a
@@ -368,7 +348,12 @@ export default function ConferenceCFPsTab({
               title="Open in new tab"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
               </svg>
             </a>
           </div>
@@ -377,12 +362,10 @@ export default function ConferenceCFPsTab({
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Description
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
         <RichTextEditor
           value={form.description}
-          onChange={(html) => updateField("description", html)}
+          onChange={(html) => updateField('description', html)}
           rows={3}
         />
       </div>
@@ -392,31 +375,27 @@ export default function ConferenceCFPsTab({
         <h3 className="text-sm font-medium text-gray-900 mb-3">Dates</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Open Date
-            </label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Open Date</label>
             <input
               type="datetime-local"
               value={form.open_date}
               onChange={(e) => {
                 const newOpen = e.target.value;
-                updateField("open_date", newOpen);
+                updateField('open_date', newOpen);
                 if (form.close_date && newOpen && form.close_date < newOpen) {
-                  updateField("close_date", newOpen);
+                  updateField('close_date', newOpen);
                 }
               }}
               className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Close Date
-            </label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Close Date</label>
             <input
               type="datetime-local"
               value={form.close_date}
               min={form.open_date}
-              onChange={(e) => updateField("close_date", e.target.value)}
+              onChange={(e) => updateField('close_date', e.target.value)}
               className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
@@ -427,9 +406,7 @@ export default function ConferenceCFPsTab({
             <input
               type="datetime-local"
               value={form.notification_date}
-              onChange={(e) =>
-                updateField("notification_date", e.target.value)
-              }
+              onChange={(e) => updateField('notification_date', e.target.value)}
               className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
@@ -440,9 +417,7 @@ export default function ConferenceCFPsTab({
             <input
               type="datetime-local"
               value={form.program_announcement_date}
-              onChange={(e) =>
-                updateField("program_announcement_date", e.target.value)
-              }
+              onChange={(e) => updateField('program_announcement_date', e.target.value)}
               className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
@@ -460,9 +435,7 @@ export default function ConferenceCFPsTab({
             min="1"
             placeholder="Unlimited"
             value={form.max_submissions_per_speaker}
-            onChange={(e) =>
-              updateField("max_submissions_per_speaker", e.target.value)
-            }
+            onChange={(e) => updateField('max_submissions_per_speaker', e.target.value)}
             className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
@@ -473,12 +446,12 @@ export default function ConferenceCFPsTab({
         <h3 className="text-sm font-medium text-gray-900 mb-3">Required Speaker Profile Fields</h3>
         <div className="flex flex-wrap gap-4">
           {[
-            { key: "bio", label: "Short Bio" },
-            { key: "picture", label: "Picture" },
-            { key: "video", label: "Video" },
-            { key: "phone", label: "Phone" },
-            { key: "title", label: "Title / Position" },
-            { key: "company", label: "Company / Organization" },
+            { key: 'bio', label: 'Short Bio' },
+            { key: 'picture', label: 'Picture' },
+            { key: 'video', label: 'Video' },
+            { key: 'phone', label: 'Phone' },
+            { key: 'title', label: 'Title / Position' },
+            { key: 'company', label: 'Company / Organization' },
           ].map(({ key, label }) => (
             <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
               <input
@@ -488,7 +461,7 @@ export default function ConferenceCFPsTab({
                   const fields = e.target.checked
                     ? [...form.required_speaker_fields, key]
                     : form.required_speaker_fields.filter((f) => f !== key);
-                  updateField("required_speaker_fields", fields);
+                  updateField('required_speaker_fields', fields);
                 }}
                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
@@ -511,7 +484,7 @@ export default function ConferenceCFPsTab({
               min="1"
               max="10"
               value={form.reviewers_per_paper}
-              onChange={(e) => updateField("reviewers_per_paper", e.target.value)}
+              onChange={(e) => updateField('reviewers_per_paper', e.target.value)}
               className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
@@ -520,7 +493,7 @@ export default function ConferenceCFPsTab({
               <input
                 type="checkbox"
                 checked={form.is_anonymous_review}
-                onChange={(e) => updateField("is_anonymous_review", e.target.checked)}
+                onChange={(e) => updateField('is_anonymous_review', e.target.checked)}
                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
               Anonymous Review
@@ -539,8 +512,8 @@ export default function ConferenceCFPsTab({
                 onClick={() => setActiveRichTab(tab.key)}
                 className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeRichTab === tab.key
-                    ? "border-primary-500 text-primary-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 {tab.label}
@@ -568,21 +541,19 @@ export default function ConferenceCFPsTab({
             Delete CFP
           </button>
           <div className="flex items-center gap-3">
-            {saveSuccess && (
-              <span className="text-sm text-green-600">Saved successfully</span>
-            )}
+            {saveSuccess && <span className="text-sm text-green-600">Saved successfully</span>}
             <button
               onClick={handleSave}
               disabled={updateMutation.isPending}
               className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white transition-colors duration-200 disabled:opacity-50 ${
-                saveStatus === "saved"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : saveStatus === "error"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-primary-600 hover:bg-primary-700"
+                saveStatus === 'saved'
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : saveStatus === 'error'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-primary-600 hover:bg-primary-700'
               }`}
             >
-              {saveStatus === "saving" ? (
+              {saveStatus === 'saving' ? (
                 <>
                   <svg
                     className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
@@ -606,7 +577,7 @@ export default function ConferenceCFPsTab({
                   </svg>
                   Saving...
                 </>
-              ) : saveStatus === "saved" ? (
+              ) : saveStatus === 'saved' ? (
                 <>
                   <svg
                     className="-ml-1 mr-2 h-4 w-4 text-white"
@@ -616,16 +587,12 @@ export default function ConferenceCFPsTab({
                     stroke="currentColor"
                     strokeWidth="2"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                   Saved
                 </>
               ) : (
-                "Save Changes"
+                'Save Changes'
               )}
             </button>
           </div>

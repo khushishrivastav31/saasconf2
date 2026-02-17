@@ -19,7 +19,7 @@ from uuid import uuid4
 from app.core.utils import utcnow
 
 import pytest
-from jose import jwt
+import jwt
 
 from app.config import get_settings
 from app.core.applicant_security import (

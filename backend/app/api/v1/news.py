@@ -6,10 +6,10 @@ from uuid import UUID
 from fastapi import APIRouter
 from sqlalchemy import select
 
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    check_conference_admin_access,
     get_client_ip,
 )
 from app.core.email import send_direct_message_email
@@ -30,32 +30,6 @@ from app.schemas.news import (
 )
 
 router = APIRouter()
-
-
-async def _get_conference_for_tenant(
-    db, conference_id: UUID, tenant_id: UUID
-) -> Conference:
-    """Fetch conference and raise 404 if not found or not owned by tenant."""
-    result = await db.execute(
-        select(Conference).where(
-            Conference.id == conference_id,
-            Conference.tenant_id == tenant_id,
-        )
-    )
-    conference = result.scalar_one_or_none()
-    if not conference:
-        raise NotFoundError(f"Conference with ID '{conference_id}' not found")
-    return conference
-
-
-async def _check_admin_access(db, current_user, conference_id: UUID) -> None:
-    """Check that the current user has admin access to the conference."""
-    if not current_user.is_super_admin and not current_user.is_tenant_admin:
-        has_access = await check_conference_admin_access(
-            db, current_user.user_id, conference_id
-        )
-        if not has_access:
-            raise AuthorizationError("Admin access to this conference required")
 
 
 def _build_response(
@@ -100,7 +74,7 @@ async def list_articles(
 ) -> NewsArticleListResponse:
     """List all news articles for a conference. Admin sees drafts and published."""
     tenant_id = current_user.tenant_id
-    await _get_conference_for_tenant(db, conference_id, tenant_id)
+    await get_conference_for_tenant(db, conference_id, tenant_id)
 
     result = await db.execute(
         select(NewsArticle)
@@ -145,8 +119,8 @@ async def create_article(
 ) -> NewsArticleResponse:
     """Create a new news article (draft by default)."""
     tenant_id = current_user.tenant_id
-    await _get_conference_for_tenant(db, conference_id, tenant_id)
-    await _check_admin_access(db, current_user, conference_id)
+    await get_conference_for_tenant(db, conference_id, tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
 
     article = NewsArticle(
         tenant_id=tenant_id,
@@ -199,7 +173,7 @@ async def update_article(
 ) -> NewsArticleResponse:
     """Update a news article."""
     tenant_id = current_user.tenant_id
-    await _check_admin_access(db, current_user, conference_id)
+    await check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(NewsArticle).where(
@@ -240,7 +214,7 @@ async def delete_article(
 ) -> dict:
     """Delete a news article."""
     tenant_id = current_user.tenant_id
-    await _check_admin_access(db, current_user, conference_id)
+    await check_conference_admin(conference_id, current_user, db)
 
     result = await db.execute(
         select(NewsArticle).where(
@@ -270,9 +244,9 @@ async def send_article(
 ) -> NewsArticleSendResponse:
     """Send a published news article as email to selected recipients."""
     tenant_id = current_user.tenant_id
-    await _check_admin_access(db, current_user, conference_id)
+    await check_conference_admin(conference_id, current_user, db)
 
-    conference = await _get_conference_for_tenant(db, conference_id, tenant_id)
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
 
     # Fetch the article
     result = await db.execute(

@@ -25,12 +25,9 @@ from app.models.cfp import (
     CFPPaper,
     CFPPaperAssignment,
     CFPPaperCospeaker,
-    CFPTopic,
     PaperStatus,
-    cfp_paper_topics,
 )
 from app.models.review import PaperReview, ReviewStatus
-from app.models.settings import SessionType
 from app.schemas.cfp import (
     AutoAssignRequest,
     AutoAssignResponse,
@@ -46,6 +43,14 @@ from app.schemas.cfp import (
     PaperUpdate,
 )
 
+from ._paper_helpers import (
+    sync_paper_co_speakers,
+    sync_paper_topics,
+    validate_co_speakers,
+    validate_main_speaker,
+    validate_session_type,
+    validate_topics,
+)
 from .committee import _check_committee_conflict
 from .shared import (
     MODULE_CODE,
@@ -128,23 +133,35 @@ async def list_paper_assignments(
     result = await db.execute(query)
     assignments = list(result.scalars().all())
 
-    items = []
-    for a in assignments:
-        paper_result = await db.execute(select(CFPPaper).where(CFPPaper.id == a.paper_id))
-        paper = paper_result.scalar_one()
+    # Batch-load all papers and committee members to avoid N+1
+    paper_ids = list({a.paper_id for a in assignments})
+    member_ids = list({a.committee_member_id for a in assignments})
+
+    papers_map: dict = {}
+    if paper_ids:
+        paper_result = await db.execute(select(CFPPaper).where(CFPPaper.id.in_(paper_ids)))
+        papers_map = {p.id: p for p in paper_result.scalars().all()}
+
+    members_map: dict = {}
+    if member_ids:
         member_result = await db.execute(
             select(CFPCommitteeMember)
             .options(selectinload(CFPCommitteeMember.applicant))
-            .where(CFPCommitteeMember.id == a.committee_member_id)
+            .where(CFPCommitteeMember.id.in_(member_ids))
         )
-        member = member_result.scalar_one()
+        members_map = {m.id: m for m in member_result.scalars().all()}
+
+    items = []
+    for a in assignments:
+        paper = papers_map.get(a.paper_id)
+        member = members_map.get(a.committee_member_id)
         items.append(PaperAssignmentResponse(
             id=a.id,
             paper_id=a.paper_id,
-            paper_title=paper.title,
+            paper_title=paper.title if paper else "",
             committee_member_id=a.committee_member_id,
-            committee_member_first_name=member.applicant.first_name,
-            committee_member_last_name=member.applicant.last_name,
+            committee_member_first_name=member.applicant.first_name if member and member.applicant else None,
+            committee_member_last_name=member.applicant.last_name if member and member.applicant else None,
             is_anonymous=a.is_anonymous,
             assigned_at=a.assigned_at,
         ))
@@ -495,57 +512,14 @@ async def create_paper(
     if not cfp:
         raise NotFoundError(f"CFP with ID '{paper_data.cfp_id}' not found")
 
-    # Validate main speaker
-    main_speaker_result = await db.execute(
-        select(CFPApplicant).where(
-            CFPApplicant.id == paper_data.main_speaker_id,
-            CFPApplicant.tenant_id == current_user.tenant_id,
-        )
-    )
-    if not main_speaker_result.scalar_one_or_none():
-        raise NotFoundError(f"Applicant with ID '{paper_data.main_speaker_id}' not found")
-
-    # Validate co-speakers
+    # Validate related entities
+    await validate_main_speaker(db, paper_data.main_speaker_id, current_user.tenant_id)
     if paper_data.co_speaker_ids:
-        if paper_data.main_speaker_id in paper_data.co_speaker_ids:
-            from app.core.exceptions import ValidationError
-            raise ValidationError("Main speaker cannot be a co-speaker")
-
-        for co_speaker_id in paper_data.co_speaker_ids:
-            cs_result = await db.execute(
-                select(CFPApplicant).where(
-                    CFPApplicant.id == co_speaker_id,
-                    CFPApplicant.tenant_id == current_user.tenant_id,
-                )
-            )
-            if not cs_result.scalar_one_or_none():
-                raise NotFoundError(f"Co-speaker with ID '{co_speaker_id}' not found")
-
-    # Validate session type if provided
+        await validate_co_speakers(db, paper_data.co_speaker_ids, paper_data.main_speaker_id, current_user.tenant_id)
     if paper_data.session_type_id:
-        st_result = await db.execute(
-            select(SessionType).where(
-                SessionType.id == paper_data.session_type_id,
-                SessionType.tenant_id == current_user.tenant_id,
-                SessionType.is_active == True,
-                SessionType.cfp_eligible == True,
-            )
-        )
-        if not st_result.scalar_one_or_none():
-            from app.core.exceptions import ValidationError
-            raise ValidationError("Invalid or ineligible session type")
-
-    # Validate topics
+        await validate_session_type(db, paper_data.session_type_id, current_user.tenant_id)
     if paper_data.topic_ids:
-        for topic_id in paper_data.topic_ids:
-            topic_result = await db.execute(
-                select(CFPTopic).where(
-                    CFPTopic.id == topic_id,
-                    CFPTopic.tenant_id == current_user.tenant_id,
-                )
-            )
-            if not topic_result.scalar_one_or_none():
-                raise NotFoundError(f"Topic with ID '{topic_id}' not found")
+        await validate_topics(db, paper_data.topic_ids, current_user.tenant_id)
 
     # Create paper
     paper = CFPPaper(
@@ -564,26 +538,11 @@ async def create_paper(
     db.add(paper)
     await db.flush()
 
-    # Add co-speakers
+    # Sync co-speakers and topics (delete is a no-op for new papers)
     if paper_data.co_speaker_ids:
-        for idx, co_speaker_id in enumerate(paper_data.co_speaker_ids):
-            cospeaker = CFPPaperCospeaker(
-                paper_id=paper.id,
-                applicant_id=co_speaker_id,
-                sort_order=idx,
-                invitation_status="pending",
-            )
-            db.add(cospeaker)
-
-    # Add topics
+        await sync_paper_co_speakers(db, paper.id, paper_data.co_speaker_ids)
     if paper_data.topic_ids:
-        for topic_id in paper_data.topic_ids:
-            await db.execute(
-                cfp_paper_topics.insert().values(
-                    paper_id=paper.id,
-                    topic_id=topic_id,
-                )
-            )
+        await sync_paper_topics(db, paper.id, paper_data.topic_ids)
 
     # Audit log
     audit_log = AuditLog(
@@ -653,94 +612,26 @@ async def update_paper(
 
     # Validate main speaker if changing
     if "main_speaker_id" in update_data:
-        main_speaker_result = await db.execute(
-            select(CFPApplicant).where(
-                CFPApplicant.id == update_data["main_speaker_id"],
-                CFPApplicant.tenant_id == current_user.tenant_id,
-            )
-        )
-        if not main_speaker_result.scalar_one_or_none():
-            raise NotFoundError(f"Applicant with ID '{update_data['main_speaker_id']}' not found")
+        await validate_main_speaker(db, update_data["main_speaker_id"], current_user.tenant_id)
 
-    # Validate and update co-speakers if changing
+    # Validate and sync co-speakers if changing
     if "co_speaker_ids" in update_data:
         co_speaker_ids = update_data.pop("co_speaker_ids")
         main_speaker_id = update_data.get("main_speaker_id", paper.main_speaker_id)
-
         if co_speaker_ids:
-            if main_speaker_id in co_speaker_ids:
-                from app.core.exceptions import ValidationError
-                raise ValidationError("Main speaker cannot be a co-speaker")
-
-            for co_speaker_id in co_speaker_ids:
-                cs_result = await db.execute(
-                    select(CFPApplicant).where(
-                        CFPApplicant.id == co_speaker_id,
-                        CFPApplicant.tenant_id == current_user.tenant_id,
-                    )
-                )
-                if not cs_result.scalar_one_or_none():
-                    raise NotFoundError(f"Co-speaker with ID '{co_speaker_id}' not found")
-
-        # Delete existing co-speakers
-        await db.execute(
-            delete(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper_id)
-        )
-
-        # Add new co-speakers
-        if co_speaker_ids:
-            for idx, co_speaker_id in enumerate(co_speaker_ids):
-                cospeaker = CFPPaperCospeaker(
-                    paper_id=paper_id,
-                    applicant_id=co_speaker_id,
-                    sort_order=idx,
-                    invitation_status="pending",
-                )
-                db.add(cospeaker)
+            await validate_co_speakers(db, co_speaker_ids, main_speaker_id, current_user.tenant_id)
+        await sync_paper_co_speakers(db, paper_id, co_speaker_ids or [])
 
     # Validate session type if changing
     if update_data.get("session_type_id"):
-        st_result = await db.execute(
-            select(SessionType).where(
-                SessionType.id == update_data["session_type_id"],
-                SessionType.tenant_id == current_user.tenant_id,
-                SessionType.is_active == True,
-                SessionType.cfp_eligible == True,
-            )
-        )
-        if not st_result.scalar_one_or_none():
-            from app.core.exceptions import ValidationError
-            raise ValidationError("Invalid or ineligible session type")
+        await validate_session_type(db, update_data["session_type_id"], current_user.tenant_id)
 
-    # Validate and update topics if changing
+    # Validate and sync topics if changing
     if "topic_ids" in update_data:
         topic_ids = update_data.pop("topic_ids")
-
         if topic_ids:
-            for topic_id in topic_ids:
-                topic_result = await db.execute(
-                    select(CFPTopic).where(
-                        CFPTopic.id == topic_id,
-                        CFPTopic.tenant_id == current_user.tenant_id,
-                    )
-                )
-                if not topic_result.scalar_one_or_none():
-                    raise NotFoundError(f"Topic with ID '{topic_id}' not found")
-
-        # Delete existing topics
-        await db.execute(
-            cfp_paper_topics.delete().where(cfp_paper_topics.c.paper_id == paper_id)
-        )
-
-        # Add new topics
-        if topic_ids:
-            for topic_id in topic_ids:
-                await db.execute(
-                    cfp_paper_topics.insert().values(
-                        paper_id=paper_id,
-                        topic_id=topic_id,
-                    )
-                )
+            await validate_topics(db, topic_ids, current_user.tenant_id)
+        await sync_paper_topics(db, paper_id, topic_ids or [])
 
     # Handle level enum
     if update_data.get("level"):
@@ -980,21 +871,27 @@ async def get_paper_assignments(
     )
     assignments = list(result.scalars().all())
 
-    items = []
-    for a in assignments:
+    # Batch-load all committee members to avoid N+1
+    member_ids = list({a.committee_member_id for a in assignments})
+    members_map: dict = {}
+    if member_ids:
         member_result = await db.execute(
             select(CFPCommitteeMember)
             .options(selectinload(CFPCommitteeMember.applicant))
-            .where(CFPCommitteeMember.id == a.committee_member_id)
+            .where(CFPCommitteeMember.id.in_(member_ids))
         )
-        member = member_result.scalar_one()
+        members_map = {m.id: m for m in member_result.scalars().all()}
+
+    items = []
+    for a in assignments:
+        member = members_map.get(a.committee_member_id)
         items.append(PaperAssignmentResponse(
             id=a.id,
             paper_id=a.paper_id,
             paper_title=paper.title,
             committee_member_id=a.committee_member_id,
-            committee_member_first_name=member.applicant.first_name,
-            committee_member_last_name=member.applicant.last_name,
+            committee_member_first_name=member.applicant.first_name if member and member.applicant else None,
+            committee_member_last_name=member.applicant.last_name if member and member.applicant else None,
             is_anonymous=a.is_anonymous,
             assigned_at=a.assigned_at,
         ))
@@ -1029,15 +926,20 @@ async def get_paper_reviews(
     )
     reviews = list(reviews_result.scalars().all())
 
-    items = []
-    for review in reviews:
-        # Get reviewer name
+    # Batch-load all committee members to avoid N+1
+    member_ids = list({r.committee_member_id for r in reviews})
+    members_map: dict = {}
+    if member_ids:
         member_result = await db.execute(
             select(CFPCommitteeMember)
             .options(selectinload(CFPCommitteeMember.applicant))
-            .where(CFPCommitteeMember.id == review.committee_member_id)
+            .where(CFPCommitteeMember.id.in_(member_ids))
         )
-        member = member_result.scalar_one_or_none()
+        members_map = {m.id: m for m in member_result.scalars().all()}
+
+    items = []
+    for review in reviews:
+        member = members_map.get(review.committee_member_id)
         reviewer_first_name = member.applicant.first_name if member and member.applicant else None
         reviewer_last_name = member.applicant.last_name if member and member.applicant else None
 

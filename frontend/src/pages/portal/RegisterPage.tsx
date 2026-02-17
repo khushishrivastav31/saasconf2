@@ -1,36 +1,34 @@
-import { useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { useApplicantAuth } from "../../hooks/useApplicantAuth";
-import { usePortalBasePath } from "../../hooks/usePortalBasePath";
-import { parseApiError } from "../../utils/apiError";
-import portalApi from "../../config/portalApi";
-import ConferenceLogo from "../../components/ConferenceLogo";
-import type { PortalLandingData, PortalTenant } from "../../types/portal";
+import { useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { useApplicantAuth } from '../../hooks/useApplicantAuth';
+import { usePortalBasePath } from '../../hooks/usePortalBasePath';
+import { parseApiError } from '../../utils/apiError';
+import portalApi from '../../config/portalApi';
+import ConferenceLogo from '../../components/ConferenceLogo';
+import type { PortalLandingData, PortalTenant } from '../../types/portal';
 
 function RegisterPage() {
   const { register } = useApplicantAuth();
   const basePath = usePortalBasePath();
   const { companySlug } = useParams<{ companySlug: string }>();
   const [searchParams] = useSearchParams();
-  const cfpAbbreviation = searchParams.get("cfp");
+  const cfpAbbreviation = searchParams.get('cfp');
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch tenant info (for logo display)
   const { data: tenantData } = useQuery({
-    queryKey: ["portal-tenant", companySlug],
+    queryKey: ['portal-tenant', companySlug],
     queryFn: async () => {
-      const res = await portalApi.get<PortalTenant>(
-        `/portal/tenant/${companySlug}`,
-      );
+      const res = await portalApi.get<PortalTenant>(`/portal/tenant/${companySlug}`);
       return res.data;
     },
     enabled: !!companySlug,
@@ -38,10 +36,10 @@ function RegisterPage() {
 
   // Fetch conference data if coming from a specific CFP landing page
   const { data: conferenceData } = useQuery({
-    queryKey: ["portal-landing", companySlug, cfpAbbreviation],
+    queryKey: ['portal-landing', companySlug, cfpAbbreviation],
     queryFn: async () => {
       const res = await portalApi.get<PortalLandingData>(
-        `/portal/${companySlug}/${cfpAbbreviation}`,
+        `/portal/${companySlug}/${cfpAbbreviation}`
       );
       return res.data;
     },
@@ -50,25 +48,30 @@ function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError('Passwords do not match');
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError('Password must be at least 8 characters');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const message = await register({ email, password, first_name: firstName, last_name: lastName });
+      const message = await register({
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+      });
       setSuccessMessage(message);
     } catch (err: unknown) {
-      const msg = parseApiError(err, "Registration failed. Please try again.");
+      const msg = parseApiError(err, 'Registration failed. Please try again.');
       setError(msg);
     } finally {
       setIsSubmitting(false);
@@ -80,7 +83,7 @@ function RegisterPage() {
 
   // Use conference logo if available, otherwise fall back to tenant logo
   const logoUrl = conference?.logo_url || tenant?.logo_url;
-  const logoAlt = conference?.name || tenant?.name || companySlug || "Portal";
+  const logoAlt = conference?.name || tenant?.name || companySlug || 'Portal';
 
   if (successMessage) {
     return (
@@ -102,12 +105,10 @@ function RegisterPage() {
                 />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              Check Your Email
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Check Your Email</h2>
             <p className="text-sm text-gray-600 mb-6">{successMessage}</p>
             <Link
-              to={`${basePath}/user/login${cfpAbbreviation ? `?cfp=${cfpAbbreviation}` : ""}`}
+              to={`${basePath}/user/login${cfpAbbreviation ? `?cfp=${cfpAbbreviation}` : ''}`}
               className="text-sm text-primary-600 hover:text-primary-700 font-medium"
             >
               Go to Login
@@ -136,9 +137,7 @@ function RegisterPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             {conference?.name || tenant?.name || `${companySlug} User Portal`}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Create your account
-          </p>
+          <p className="text-sm text-gray-500 mt-1">Create your account</p>
         </div>
 
         <form
@@ -153,9 +152,7 @@ function RegisterPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Name
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
               <input
                 type="text"
                 required
@@ -165,9 +162,7 @@ function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
               <input
                 type="text"
                 required
@@ -179,9 +174,7 @@ function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               type="email"
               required
@@ -193,9 +186,7 @@ function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
               type="password"
               required
@@ -208,9 +199,7 @@ function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Confirm Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
             <input
               type="password"
               required
@@ -225,14 +214,14 @@ function RegisterPage() {
             disabled={isSubmitting}
             className="w-full bg-primary-600 text-white py-2 rounded-md hover:bg-primary-700 disabled:opacity-50 text-sm font-medium"
           >
-            {isSubmitting ? "Creating account..." : "Create Account"}
+            {isSubmitting ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-4">
-          Already have an account?{" "}
+          Already have an account?{' '}
           <Link
-            to={`${basePath}/user/login${cfpAbbreviation ? `?cfp=${cfpAbbreviation}` : ""}`}
+            to={`${basePath}/user/login${cfpAbbreviation ? `?cfp=${cfpAbbreviation}` : ''}`}
             className="text-primary-600 hover:text-primary-700 font-medium"
           >
             Sign In

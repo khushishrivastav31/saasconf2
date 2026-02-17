@@ -11,7 +11,7 @@
 export interface NumberFormatOptions {
   decimalSeparator: string; // "." or ","
   thousandsSeparator: string; // ",", ".", " ", "'", or ""
-  currencyPosition: "before" | "after";
+  currencyPosition: 'before' | 'after';
   decimalPlaces: number; // 0-4
 }
 
@@ -19,9 +19,9 @@ export interface NumberFormatOptions {
  * Default formatting options (US/UK style).
  */
 export const defaultNumberFormat: NumberFormatOptions = {
-  decimalSeparator: ".",
-  thousandsSeparator: ",",
-  currencyPosition: "before",
+  decimalSeparator: '.',
+  thousandsSeparator: ',',
+  currencyPosition: 'before',
   decimalPlaces: 2,
 };
 
@@ -31,64 +31,294 @@ export const defaultNumberFormat: NumberFormatOptions = {
  */
 export const CURRENCY_FORMATS: Record<string, NumberFormatOptions> = {
   // European - comma decimal, period/space thousands, symbol after
-  EUR: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "after", decimalPlaces: 2 },
-  CHF: { decimalSeparator: ",", thousandsSeparator: "'", currencyPosition: "before", decimalPlaces: 2 },
-  SEK: { decimalSeparator: ",", thousandsSeparator: " ", currencyPosition: "after", decimalPlaces: 2 },
-  NOK: { decimalSeparator: ",", thousandsSeparator: " ", currencyPosition: "after", decimalPlaces: 2 },
-  DKK: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "after", decimalPlaces: 2 },
-  PLN: { decimalSeparator: ",", thousandsSeparator: " ", currencyPosition: "after", decimalPlaces: 2 },
-  CZK: { decimalSeparator: ",", thousandsSeparator: " ", currencyPosition: "after", decimalPlaces: 2 },
-  HUF: { decimalSeparator: ",", thousandsSeparator: " ", currencyPosition: "after", decimalPlaces: 0 },
-  RON: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "after", decimalPlaces: 2 },
-  BGN: { decimalSeparator: ",", thousandsSeparator: " ", currencyPosition: "after", decimalPlaces: 2 },
-  HRK: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "after", decimalPlaces: 2 },
-  RSD: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "after", decimalPlaces: 2 },
+  EUR: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  CHF: {
+    decimalSeparator: ',',
+    thousandsSeparator: "'",
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  SEK: {
+    decimalSeparator: ',',
+    thousandsSeparator: ' ',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  NOK: {
+    decimalSeparator: ',',
+    thousandsSeparator: ' ',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  DKK: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  PLN: {
+    decimalSeparator: ',',
+    thousandsSeparator: ' ',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  CZK: {
+    decimalSeparator: ',',
+    thousandsSeparator: ' ',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  HUF: {
+    decimalSeparator: ',',
+    thousandsSeparator: ' ',
+    currencyPosition: 'after',
+    decimalPlaces: 0,
+  },
+  RON: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  BGN: {
+    decimalSeparator: ',',
+    thousandsSeparator: ' ',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  HRK: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  RSD: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
 
   // Anglo-Saxon - period decimal, comma thousands, symbol before
-  USD: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  GBP: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  CAD: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  AUD: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  NZD: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  SGD: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  HKD: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  ZAR: { decimalSeparator: ".", thousandsSeparator: " ", currencyPosition: "before", decimalPlaces: 2 },
+  USD: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  GBP: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  CAD: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  AUD: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  NZD: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  SGD: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  HKD: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  ZAR: {
+    decimalSeparator: '.',
+    thousandsSeparator: ' ',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
 
   // Asian
-  JPY: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 0 },
-  CNY: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  KRW: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 0 },
-  INR: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  THB: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  MYR: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  IDR: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "before", decimalPlaces: 0 },
-  PHP: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  VND: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "after", decimalPlaces: 0 },
+  JPY: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 0,
+  },
+  CNY: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  KRW: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 0,
+  },
+  INR: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  THB: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  MYR: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  IDR: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'before',
+    decimalPlaces: 0,
+  },
+  PHP: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  VND: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'after',
+    decimalPlaces: 0,
+  },
 
   // Latin America
-  BRL: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "before", decimalPlaces: 2 },
-  MXN: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  ARS: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "before", decimalPlaces: 2 },
-  CLP: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "before", decimalPlaces: 0 },
-  COP: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "before", decimalPlaces: 0 },
-  PEN: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
+  BRL: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  MXN: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  ARS: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  CLP: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'before',
+    decimalPlaces: 0,
+  },
+  COP: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'before',
+    decimalPlaces: 0,
+  },
+  PEN: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
 
   // Middle East / Africa
-  AED: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  SAR: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  ILS: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  TRY: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "after", decimalPlaces: 2 },
-  EGP: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  NGN: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  KES: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
+  AED: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  SAR: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  ILS: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  TRY: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  EGP: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  NGN: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  KES: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
 
   // Eastern Europe / Russia
-  RUB: { decimalSeparator: ",", thousandsSeparator: " ", currencyPosition: "after", decimalPlaces: 2 },
-  UAH: { decimalSeparator: ",", thousandsSeparator: " ", currencyPosition: "after", decimalPlaces: 2 },
+  RUB: {
+    decimalSeparator: ',',
+    thousandsSeparator: ' ',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
+  UAH: {
+    decimalSeparator: ',',
+    thousandsSeparator: ' ',
+    currencyPosition: 'after',
+    decimalPlaces: 2,
+  },
 
   // Other
-  TWD: { decimalSeparator: ".", thousandsSeparator: ",", currencyPosition: "before", decimalPlaces: 2 },
-  ISK: { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "after", decimalPlaces: 0 },
+  TWD: {
+    decimalSeparator: '.',
+    thousandsSeparator: ',',
+    currencyPosition: 'before',
+    decimalPlaces: 2,
+  },
+  ISK: {
+    decimalSeparator: ',',
+    thousandsSeparator: '.',
+    currencyPosition: 'after',
+    decimalPlaces: 0,
+  },
 };
 
 /**
@@ -101,9 +331,7 @@ export const CURRENCY_FORMATS: Record<string, NumberFormatOptions> = {
  * getCurrencyFormat("EUR")
  * // Returns { decimalSeparator: ",", thousandsSeparator: ".", currencyPosition: "after", decimalPlaces: 2 }
  */
-export function getCurrencyFormat(
-  currencyCode: string | null | undefined
-): NumberFormatOptions {
+export function getCurrencyFormat(currencyCode: string | null | undefined): NumberFormatOptions {
   if (!currencyCode) return defaultNumberFormat;
   return CURRENCY_FORMATS[currencyCode.toUpperCase()] || defaultNumberFormat;
 }
@@ -123,10 +351,10 @@ export function formatNumber(
   value: number | string | null | undefined,
   options: Partial<NumberFormatOptions> = {}
 ): string {
-  if (value == null || value === "") return "";
+  if (value == null || value === '') return '';
 
-  const numValue = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(numValue)) return "";
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue)) return '';
 
   const {
     decimalSeparator = defaultNumberFormat.decimalSeparator,
@@ -136,13 +364,10 @@ export function formatNumber(
 
   // Format with fixed decimal places
   const fixed = numValue.toFixed(decimalPlaces);
-  const [intPart, decPart] = fixed.split(".");
+  const [intPart, decPart] = fixed.split('.');
 
   // Add thousands separators
-  const formattedInt = intPart.replace(
-    /\B(?=(\d{3})+(?!\d))/g,
-    thousandsSeparator
-  );
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSeparator);
 
   // Combine with decimal separator
   if (decimalPlaces > 0 && decPart) {
@@ -180,15 +405,15 @@ export function formatCurrency(
   const format = getCurrencyFormat(currency);
 
   const formattedNumber = formatNumber(value, format);
-  if (!formattedNumber) return "";
+  if (!formattedNumber) return '';
 
-  const currencyCode = currency || "";
+  const currencyCode = currency || '';
 
   if (!currencyCode) {
     return formattedNumber;
   }
 
-  if (format.currencyPosition === "before") {
+  if (format.currencyPosition === 'before') {
     return `${currencyCode} ${formattedNumber}`;
   } else {
     return `${formattedNumber} ${currencyCode}`;
@@ -228,7 +453,7 @@ export function parseFormattedNumber(
   value: string,
   options: Partial<NumberFormatOptions> = {}
 ): number {
-  if (!value || typeof value !== "string") return NaN;
+  if (!value || typeof value !== 'string') return NaN;
 
   const {
     decimalSeparator = defaultNumberFormat.decimalSeparator,
@@ -238,12 +463,12 @@ export function parseFormattedNumber(
   // Remove thousands separators
   let cleaned = value;
   if (thousandsSeparator) {
-    cleaned = cleaned.split(thousandsSeparator).join("");
+    cleaned = cleaned.split(thousandsSeparator).join('');
   }
 
   // Replace decimal separator with standard "."
-  if (decimalSeparator !== ".") {
-    cleaned = cleaned.replace(decimalSeparator, ".");
+  if (decimalSeparator !== '.') {
+    cleaned = cleaned.replace(decimalSeparator, '.');
   }
 
   return parseFloat(cleaned);
@@ -260,15 +485,12 @@ export function parseFormattedNumber(
  * parseFormattedCurrency("1.234,56 EUR", "EUR")
  * // Returns 1234.56
  */
-export function parseFormattedCurrency(
-  value: string,
-  currency: string | null | undefined
-): number {
-  if (!value || typeof value !== "string") return NaN;
+export function parseFormattedCurrency(value: string, currency: string | null | undefined): number {
+  if (!value || typeof value !== 'string') return NaN;
 
   // Remove currency code
-  const currencyCode = currency?.toUpperCase() || "";
-  let cleaned = value.replace(currencyCode, "").trim();
+  const currencyCode = currency?.toUpperCase() || '';
+  const cleaned = value.replace(currencyCode, '').trim();
 
   return parseFormattedNumber(cleaned, getCurrencyFormat(currency));
 }

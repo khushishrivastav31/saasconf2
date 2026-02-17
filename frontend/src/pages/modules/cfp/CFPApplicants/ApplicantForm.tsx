@@ -1,15 +1,21 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import { useAuthMedia } from "../../../../hooks/useAuthMedia";
-import { validatePhone } from "../../../../utils/validators";
-import { ACCEPTED_IMAGE_FORMATS, ACCEPTED_VIDEO_FORMATS, validateImage, validateVideo } from "../../../../utils/mediaValidation";
-import RichTextEditor from "../../../../components/common/RichTextEditor";
-import MediaPreviewModal from "../../../../components/MediaPreviewModal";
-import { ErrorBanner } from "../../../../components/common/ErrorBanner";
-import { DeleteIcon } from "../../../ConferenceDetail/icons";
-import type { Applicant, PronounOption } from "../../../../types";
-import { SPEAKER_SOCIAL_PLATFORMS } from "../../../../config/socialPlatforms";
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import { useSaveStatus } from '../../../../hooks/useSaveStatus';
+import { useAuthMedia } from '../../../../hooks/useAuthMedia';
+import { validatePhone } from '../../../../utils/validators';
+import {
+  ACCEPTED_IMAGE_FORMATS,
+  ACCEPTED_VIDEO_FORMATS,
+  validateImage,
+  validateVideo,
+} from '../../../../utils/mediaValidation';
+import RichTextEditor from '../../../../components/common/RichTextEditor';
+import MediaPreviewModal from '../../../../components/MediaPreviewModal';
+import { ErrorBanner } from '../../../../components/common/ErrorBanner';
+import { DeleteIcon } from '../../../ConferenceDetail/icons';
+import type { Applicant, PronounOption } from '../../../../types';
+import { SPEAKER_SOCIAL_PLATFORMS } from '../../../../config/socialPlatforms';
 
 export interface ApplicantFormData {
   first_name: string;
@@ -29,19 +35,19 @@ export interface ApplicantFormData {
 }
 
 const emptyForm: ApplicantFormData = {
-  first_name: "",
-  last_name: "",
-  pronouns: "",
-  email: "",
-  phone: "",
-  title: "",
-  company: "",
-  bio: "",
-  password: "",
+  first_name: '',
+  last_name: '',
+  pronouns: '',
+  email: '',
+  phone: '',
+  title: '',
+  company: '',
+  bio: '',
+  password: '',
   allow_out_of_timeframe: false,
   social_links: {},
   needs_accessibility: false,
-  accessibility_details: "",
+  accessibility_details: '',
   agrees_to_recording: false,
 };
 
@@ -50,7 +56,7 @@ function convertSocialLinks(links: object | null | undefined): Record<string, st
   if (!links) return {};
   const result: Record<string, string> = {};
   for (const [key, value] of Object.entries(links)) {
-    if (value && typeof value === "string" && value.trim()) {
+    if (value && typeof value === 'string' && value.trim()) {
       result[key] = value;
     }
   }
@@ -81,14 +87,13 @@ export function ApplicantForm({
   conferenceId?: string;
 }) {
   const isEditing = !!applicant;
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
 
   const { data: pronounOptions } = useQuery({
-    queryKey: ["pronoun-options", conferenceId],
+    queryKey: ['pronoun-options', conferenceId],
     queryFn: async () => {
       const response = await api.get<{ items: PronounOption[] }>(
-        `/conferences/${conferenceId}/settings/pronouns`,
+        `/conferences/${conferenceId}/settings/pronouns`
       );
       return response.data.items.filter((p) => p.is_active);
     },
@@ -100,23 +105,23 @@ export function ApplicantForm({
       ? {
           first_name: applicant.first_name,
           last_name: applicant.last_name,
-          pronouns: applicant.pronouns || "",
+          pronouns: applicant.pronouns || '',
           email: applicant.email,
-          phone: applicant.phone || "",
-          title: applicant.title || "",
-          company: applicant.company || "",
-          bio: applicant.bio || "",
-          password: "",
+          phone: applicant.phone || '',
+          title: applicant.title || '',
+          company: applicant.company || '',
+          bio: applicant.bio || '',
+          password: '',
           allow_out_of_timeframe: applicant.allow_out_of_timeframe,
           social_links: convertSocialLinks(applicant.social_links),
           needs_accessibility: applicant.needs_accessibility,
-          accessibility_details: applicant.accessibility_details || "",
+          accessibility_details: applicant.accessibility_details || '',
           agrees_to_recording: applicant.agrees_to_recording,
         }
-      : emptyForm,
+      : emptyForm
   );
-  const [addPlatform, setAddPlatform] = useState("");
-  const [customPlatformName, setCustomPlatformName] = useState("");
+  const [addPlatform, setAddPlatform] = useState('');
+  const [customPlatformName, setCustomPlatformName] = useState('');
   const [pictureFile, setPictureFile] = useState<File | null>(null);
   const [picturePreview, setPicturePreview] = useState<string | null>(null);
   const [pictureError, setPictureError] = useState<string | null>(null);
@@ -130,8 +135,8 @@ export function ApplicantForm({
   const [mediaPreview, setMediaPreview] = useState<{
     open: boolean;
     src: string | null;
-    type: "image" | "video";
-  }>({ open: false, src: null, type: "image" });
+    type: 'image' | 'video';
+  }>({ open: false, src: null, type: 'image' });
 
   const existingPictureSrc = useAuthMedia(applicant?.picture_url ?? null);
   const existingVideoSrc = useAuthMedia(applicant?.video_url ?? null);
@@ -145,20 +150,20 @@ export function ApplicantForm({
         ? {
             first_name: applicant.first_name,
             last_name: applicant.last_name,
-            pronouns: applicant.pronouns || "",
+            pronouns: applicant.pronouns || '',
             email: applicant.email,
-            phone: applicant.phone || "",
-            title: applicant.title || "",
-            company: applicant.company || "",
-            bio: applicant.bio || "",
-            password: "",
+            phone: applicant.phone || '',
+            title: applicant.title || '',
+            company: applicant.company || '',
+            bio: applicant.bio || '',
+            password: '',
             allow_out_of_timeframe: applicant.allow_out_of_timeframe,
             social_links: convertSocialLinks(applicant.social_links),
             needs_accessibility: applicant.needs_accessibility,
-            accessibility_details: applicant.accessibility_details || "",
+            accessibility_details: applicant.accessibility_details || '',
             agrees_to_recording: applicant.agrees_to_recording,
           }
-        : emptyForm,
+        : emptyForm
     );
     setPictureFile(null);
     if (picturePreview) URL.revokeObjectURL(picturePreview);
@@ -169,8 +174,8 @@ export function ApplicantForm({
     setVideoPreview(null);
     setVideoError(null);
     setPhoneError(null);
-    setAddPlatform("");
-    setCustomPlatformName("");
+    setAddPlatform('');
+    setCustomPlatformName('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicant?.id]);
 
@@ -200,7 +205,7 @@ export function ApplicantForm({
     if (validationError) {
       setPictureError(validationError);
       setPictureFile(null);
-      e.target.value = "";
+      e.target.value = '';
       return;
     }
 
@@ -226,7 +231,7 @@ export function ApplicantForm({
     if (validationError) {
       setVideoError(validationError);
       setVideoFile(null);
-      e.target.value = "";
+      e.target.value = '';
       return;
     }
 
@@ -240,31 +245,20 @@ export function ApplicantForm({
     if (!isEditing && !formData.password.trim()) return;
     if (pictureError || videoError || phoneError) return;
 
-    setSaveStatus("saving");
+    setSaving();
     onSave(formData, pictureFile, videoFile);
   };
 
   // Track save completion based on isSaving prop changes and error
   useEffect(() => {
-    if (saveStatus === "saving" && !isSaving) {
+    if (saveStatus === 'saving' && !isSaving) {
       if (error) {
-        setSaveStatus("error");
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+        setSaveError();
       } else {
-        setSaveStatus("saved");
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+        setSaved();
       }
     }
-  }, [isSaving, error, saveStatus]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    };
-  }, []);
+  }, [isSaving, error, saveStatus, setSaveError, setSaved]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -272,22 +266,22 @@ export function ApplicantForm({
 
       {/* Picture */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Picture
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Picture</label>
         <div className="flex items-start gap-4">
           <button
             type="button"
             onClick={() => {
               if (picturePreviewSrc) {
-                setMediaPreview({ open: true, src: picturePreviewSrc, type: "image" });
+                setMediaPreview({ open: true, src: picturePreviewSrc, type: 'image' });
               }
             }}
             disabled={!picturePreviewSrc}
             className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex-shrink-0 bg-gray-50 ${
-              picturePreviewSrc ? "cursor-pointer hover:border-primary-400 hover:shadow-md transition-all" : ""
+              picturePreviewSrc
+                ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
+                : ''
             }`}
-            title={picturePreviewSrc ? "Click to view full size" : undefined}
+            title={picturePreviewSrc ? 'Click to view full size' : undefined}
           >
             {picturePreviewSrc ? (
               <img src={picturePreviewSrc} alt="Preview" className="w-full h-full object-cover" />
@@ -321,22 +315,22 @@ export function ApplicantForm({
 
       {/* Video */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Video
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Video</label>
         <div className="flex items-start gap-4">
           <button
             type="button"
             onClick={() => {
               if (videoPreviewSrc) {
-                setMediaPreview({ open: true, src: videoPreviewSrc, type: "video" });
+                setMediaPreview({ open: true, src: videoPreviewSrc, type: 'video' });
               }
             }}
             disabled={!videoPreviewSrc}
             className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex-shrink-0 bg-gray-50 relative ${
-              videoPreviewSrc ? "cursor-pointer hover:border-primary-400 hover:shadow-md transition-all" : ""
+              videoPreviewSrc
+                ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
+                : ''
             }`}
-            title={videoPreviewSrc ? "Click to play video" : undefined}
+            title={videoPreviewSrc ? 'Click to play video' : undefined}
           >
             {videoPreviewSrc ? (
               <>
@@ -349,7 +343,11 @@ export function ApplicantForm({
                 {/* Play icon overlay */}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                   <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-gray-700 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="w-4 h-4 text-gray-700 ml-0.5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </div>
@@ -375,9 +373,7 @@ export function ApplicantForm({
               onChange={handleVideoChange}
               className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
             />
-            <p className="mt-1 text-xs text-gray-400">
-              MP4, MOV, WebM, AVI, or MKV. Max 5MB.
-            </p>
+            <p className="mt-1 text-xs text-gray-400">MP4, MOV, WebM, AVI, or MKV. Max 5MB.</p>
             {videoError && <p className="mt-1 text-xs text-red-600">{videoError}</p>}
           </div>
         </div>
@@ -412,9 +408,7 @@ export function ApplicantForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Pronouns
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Pronouns</label>
           <select
             value={formData.pronouns}
             onChange={(e) => setFormData((d) => ({ ...d, pronouns: e.target.value }))}
@@ -443,9 +437,7 @@ export function ApplicantForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Phone
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
           <input
             type="tel"
             value={formData.phone}
@@ -455,7 +447,7 @@ export function ApplicantForm({
               setPhoneError(validatePhone(value));
             }}
             className={`w-full border rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
-              phoneError ? "border-red-300" : "border-gray-300"
+              phoneError ? 'border-red-300' : 'border-gray-300'
             }`}
             placeholder="+491234545 or 00491234566"
           />
@@ -463,9 +455,7 @@ export function ApplicantForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Title
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
           <input
             type="text"
             value={formData.title}
@@ -476,9 +466,7 @@ export function ApplicantForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Company
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
           <input
             type="text"
             value={formData.company}
@@ -489,7 +477,7 @@ export function ApplicantForm({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Password{" "}
+            Password{' '}
             {isEditing ? (
               <span className="text-gray-400 font-normal">(leave blank to keep current)</span>
             ) : (
@@ -509,9 +497,7 @@ export function ApplicantForm({
 
       {/* Bio */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Short Bio
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Short Bio</label>
         <RichTextEditor
           value={formData.bio}
           onChange={(html) => setFormData((d) => ({ ...d, bio: html }))}
@@ -542,28 +528,28 @@ export function ApplicantForm({
             if (!knownKeys.has(key)) {
               allEntries.push({
                 key,
-                label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
-                placeholder: "Enter URL...",
+                label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
+                placeholder: 'Enter URL...',
               });
             }
           }
 
           const availablePlatforms = SPEAKER_SOCIAL_PLATFORMS.filter(
-            (p) => formData.social_links[p.key] === undefined,
+            (p) => formData.social_links[p.key] === undefined
           );
 
           const handleAddPlatform = () => {
             const key =
-              addPlatform === "__custom__"
-                ? customPlatformName.trim().toLowerCase().replace(/\s+/g, "_")
+              addPlatform === '__custom__'
+                ? customPlatformName.trim().toLowerCase().replace(/\s+/g, '_')
                 : addPlatform;
             if (!key || formData.social_links[key] !== undefined) return;
             setFormData((d) => ({
               ...d,
-              social_links: { ...d.social_links, [key]: "" },
+              social_links: { ...d.social_links, [key]: '' },
             }));
-            setAddPlatform("");
-            setCustomPlatformName("");
+            setAddPlatform('');
+            setCustomPlatformName('');
           };
 
           const handleDeletePlatform = (key: string) => {
@@ -587,7 +573,7 @@ export function ApplicantForm({
                         type="url"
                         placeholder={platform.placeholder}
                         className="flex-1 border border-gray-300 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        value={formData.social_links[platform.key] || ""}
+                        value={formData.social_links[platform.key] || ''}
                         onChange={(e) =>
                           setFormData((d) => ({
                             ...d,
@@ -621,7 +607,7 @@ export function ApplicantForm({
                   value={addPlatform}
                   onChange={(e) => {
                     setAddPlatform(e.target.value);
-                    if (e.target.value !== "__custom__") setCustomPlatformName("");
+                    if (e.target.value !== '__custom__') setCustomPlatformName('');
                   }}
                   className="border border-gray-300 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
@@ -633,7 +619,7 @@ export function ApplicantForm({
                   ))}
                   <option value="__custom__">Custom...</option>
                 </select>
-                {addPlatform === "__custom__" && (
+                {addPlatform === '__custom__' && (
                   <input
                     type="text"
                     placeholder="Platform name"
@@ -646,8 +632,7 @@ export function ApplicantForm({
                   type="button"
                   onClick={handleAddPlatform}
                   disabled={
-                    !addPlatform ||
-                    (addPlatform === "__custom__" && !customPlatformName.trim())
+                    !addPlatform || (addPlatform === '__custom__' && !customPlatformName.trim())
                   }
                   className="inline-flex items-center px-2.5 py-1.5 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
                 >
@@ -684,7 +669,7 @@ export function ApplicantForm({
               setFormData((d) => ({
                 ...d,
                 needs_accessibility: checked,
-                accessibility_details: checked ? d.accessibility_details : "",
+                accessibility_details: checked ? d.accessibility_details : '',
               }));
             }}
             className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
@@ -767,7 +752,7 @@ export function ApplicantForm({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
             >
               <DeleteIcon />
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </button>
           )}
         </div>
@@ -783,38 +768,64 @@ export function ApplicantForm({
             type="submit"
             disabled={isSaving || !!pictureError || !!videoError || !!phoneError}
             className={`px-4 py-2 text-sm font-medium text-white rounded-md disabled:opacity-50 transition-all duration-300 inline-flex items-center gap-2 ${
-              saveStatus === "saved"
-                ? "bg-green-600 hover:bg-green-700"
-                : saveStatus === "error"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-primary-600 hover:bg-primary-700"
+              saveStatus === 'saved'
+                ? 'bg-green-600 hover:bg-green-700'
+                : saveStatus === 'error'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-primary-600 hover:bg-primary-700'
             }`}
           >
-            {saveStatus === "saving" && (
-              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            {saveStatus === 'saving' && (
+              <svg
+                className="animate-spin h-4 w-4"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
             )}
-            {saveStatus === "saved" && (
+            {saveStatus === 'saved' && (
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             )}
-            {saveStatus === "error" && (
+            {saveStatus === 'error' && (
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             )}
-            {saveStatus === "saving"
-              ? "Saving..."
-              : saveStatus === "saved"
-                ? "Saved!"
-                : saveStatus === "error"
-                  ? "Error"
+            {saveStatus === 'saving'
+              ? 'Saving...'
+              : saveStatus === 'saved'
+                ? 'Saved!'
+                : saveStatus === 'error'
+                  ? 'Error'
                   : isEditing
-                    ? "Save Changes"
-                    : "Create User"}
+                    ? 'Save Changes'
+                    : 'Create User'}
           </button>
         </div>
       </div>
@@ -822,7 +833,7 @@ export function ApplicantForm({
       {/* Media Preview Modal */}
       <MediaPreviewModal
         open={mediaPreview.open}
-        onClose={() => setMediaPreview({ open: false, src: null, type: "image" })}
+        onClose={() => setMediaPreview({ open: false, src: null, type: 'image' })}
         src={mediaPreview.src}
         type={mediaPreview.type}
         alt="Applicant media"
