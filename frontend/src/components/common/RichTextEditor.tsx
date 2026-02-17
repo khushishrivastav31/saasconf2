@@ -239,34 +239,49 @@ export default function RichTextEditor({
 
   // Initialize char count after mount (avoids state update before mount warning)
   useEffect(() => {
-    if (editor) {
+    if (!editor) return;
+    try {
       setCharCount(editor.getText().length);
+    } catch {
+      // Editor view not yet mounted
     }
   }, [editor]);
 
   // Sync external value changes (only when editor is not focused)
   useEffect(() => {
     if (!editor) return;
-    if (editor.isFocused) return;
-    const current = editor.getHTML();
-    const normalized = value || '';
-    if (current !== normalized && !(current === EMPTY_BODY && normalized === '')) {
-      editor.commands.setContent(normalized, { emitUpdate: false });
+    try {
+      if (editor.isFocused) return;
+      const current = editor.getHTML();
+      const normalized = value || '';
+      if (current !== normalized && !(current === EMPTY_BODY && normalized === '')) {
+        editor.commands.setContent(normalized, { emitUpdate: false });
+      }
+    } catch {
+      // Editor view not yet mounted
     }
   }, [value, editor]);
 
   // Sync editable state
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(!disabled);
+    try {
+      editor.setEditable(!disabled);
+    } catch {
+      // Editor view not yet mounted
+    }
   }, [disabled, editor]);
 
-  // Set placeholder via extension isn't included — we use CSS placeholder via data attr
+  // Set placeholder via CSS data attribute
   useEffect(() => {
     if (!editor) return;
-    const el = editor.view.dom.querySelector('p.is-editor-empty');
-    if (el) {
-      el.setAttribute('data-placeholder', placeholder);
+    try {
+      const el = editor.view.dom.querySelector('p.is-editor-empty');
+      if (el) {
+        el.setAttribute('data-placeholder', placeholder);
+      }
+    } catch {
+      // Editor view not yet mounted
     }
   }, [editor, placeholder]);
 
