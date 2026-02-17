@@ -36,6 +36,8 @@ test.describe('Conferences', () => {
     await conferencesPage.goto();
     await conferencesPage.expectVisible();
 
+    // Wait for page content to fully load before checking
+    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
     // Create button is only visible to tenant_admin+ users
     const hasCreateBtn = await conferencesPage.createButton.isVisible({ timeout: 5000 }).catch(() => false);
     const hasConferences = await page.locator('[class*="cursor-pointer"]').first().isVisible({ timeout: 5000 }).catch(() => false);
@@ -50,7 +52,7 @@ test.describe('Conferences', () => {
 
     await conferencesPage.clickFirstConference();
     await expect(page).toHaveURL(/conferences\/[a-f0-9-]+/i, { timeout: 10000 });
-    // Should show conference name heading
-    await expect(page.locator('h1')).toBeVisible({ timeout: 10000 });
+    // Should show conference name heading (use .nth(1) to skip the app logo h1)
+    await expect(page.locator('h1').nth(1)).toBeVisible({ timeout: 10000 });
   });
 });
