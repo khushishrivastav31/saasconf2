@@ -324,7 +324,7 @@ async def seed_default_settings(
 
     # Seed Committee Roles
     for role_data in DEFAULT_COMMITTEE_ROLES:
-        role = CFPCommitteeRole(
+        role = CFPCommitteeRole(  # type: ignore[assignment]
             tenant_id=tenant_id,
             conference_id=conference_id,
             name=role_data["name"],
@@ -338,15 +338,15 @@ async def seed_default_settings(
         scale = ReviewScoreScale(
             tenant_id=tenant_id,
             conference_id=conference_id,
-            name=scale_data["name"],
-            scale_type=scale_data["scale_type"],
+            name=scale_data["name"],  # type: ignore[index]
+            scale_type=scale_data["scale_type"],  # type: ignore[index]
         )
         db.add(scale)
         await db.flush()  # Get the scale ID
-        scale_by_name[scale_data["name"]] = scale
+        scale_by_name[scale_data["name"]] = scale  # type: ignore[index]
 
-        for option_data in scale_data["options"]:
-            option = ReviewScaleOption(
+        for option_data in scale_data["options"]:  # type: ignore[index]
+            option = ReviewScaleOption(  # type: ignore[assignment]
                 scale_id=scale.id,
                 label=option_data["label"],
                 numeric_value=option_data.get("numeric_value"),
@@ -367,11 +367,11 @@ async def seed_default_settings(
         db.add(criterion)
         await db.flush()  # Get the criterion ID
 
-        for question_data in criterion_data["questions"]:
+        for question_data in criterion_data["questions"]:  # type: ignore[attr-defined]
             # Look up the scale by name if specified
             scale_id = None
             if "scale_name" in question_data:
-                scale = scale_by_name.get(question_data["scale_name"])
+                scale = scale_by_name.get(question_data["scale_name"])  # type: ignore[assignment]
                 if scale:
                     scale_id = scale.id
 

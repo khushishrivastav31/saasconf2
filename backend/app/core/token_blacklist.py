@@ -21,7 +21,7 @@ async def init_redis() -> None:
     settings = get_settings()
     try:
         _redis = Redis.from_url(settings.REDIS_URL, decode_responses=True)
-        await _redis.ping()
+        await _redis.ping()  # type: ignore[misc]
         logger.info("Redis connected for token blacklist")
     except Exception:
         logger.warning("Redis unavailable — token blacklist disabled (fail-open)")

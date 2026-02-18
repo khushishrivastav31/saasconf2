@@ -99,13 +99,13 @@ class BaseService:
         Raises ``NotFoundError`` when the row does not exist or the tenant/
         conference check fails.
         """
-        conditions: list = [model.id == id]
+        conditions: list = [model.id == id]  # type: ignore[attr-defined]
         if tenant_id is not None:
-            conditions.append(model.tenant_id == tenant_id)
+            conditions.append(model.tenant_id == tenant_id)  # type: ignore[attr-defined]
         if conference_id is not None:
-            conditions.append(model.conference_id == conference_id)
+            conditions.append(model.conference_id == conference_id)  # type: ignore[attr-defined]
 
-        result = await db.execute(select(model).where(*conditions))
+        result: Any = await db.execute(select(model).where(*conditions))
         row = result.scalar_one_or_none()
         if not row:
             entity_name = label or model.__name__

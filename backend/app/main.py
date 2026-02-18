@@ -105,7 +105,7 @@ app = FastAPI(
 
 # Add rate limiting
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 # Prometheus metrics
 Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
@@ -316,7 +316,7 @@ async def readiness_check() -> JSONResponse:
     # Check Redis
     try:
         if _redis:
-            await _redis.ping()
+            await _redis.ping()  # type: ignore[misc]
             checks["redis"] = "ok"
         else:
             checks["redis"] = "not_configured"

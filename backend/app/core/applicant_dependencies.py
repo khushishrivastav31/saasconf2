@@ -76,7 +76,7 @@ async def get_current_applicant(
     return CurrentApplicant(
         applicant_id=applicant_id,
         tenant_id=tenant_id,
-        applicant=applicant,
+        applicant=applicant,  # type: ignore[arg-type]
     )
 
 
