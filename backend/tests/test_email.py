@@ -356,6 +356,76 @@ class TestSendVerificationEmail:
         assert args[1] == "Verify your email for TestConf"
 
 
+# ---------------------------------------------------------------------------
+# XSS tests for replace_placeholders (is_html=True)
+# ---------------------------------------------------------------------------
+
+
+class TestReplacePlaceholdersXSS:
+    """Tests for XSS prevention in placeholder replacement."""
+
+    def test_script_tag_escaped_when_is_html_true(self):
+        """Script tags are HTML-escaped when is_html=True."""
+        text = "Hello [First Name], welcome!"
+        result = replace_placeholders(
+            text,
+            {"First Name": '<script>alert("xss")</script>'},
+            is_html=True,
+        )
+        assert "<script>" not in result
+        assert "&lt;script&gt;" in result
+
+    def test_img_onerror_escaped_when_is_html_true(self):
+        """img onerror payloads are escaped when is_html=True."""
+        text = "Speaker: [Name]"
+        result = replace_placeholders(
+            text,
+            {"Name": '<img src=x onerror=alert(1)>'},
+            is_html=True,
+        )
+        assert "<img" not in result
+        assert "&lt;img" in result
+
+    def test_html_entities_escaped_when_is_html_true(self):
+        """Ampersand, quotes, angle brackets are all escaped."""
+        text = "Title: [Paper Title]"
+        result = replace_placeholders(
+            text,
+            {"Paper Title": 'A & B <C> "D"'},
+            is_html=True,
+        )
+        assert "&amp;" in result
+        assert "&lt;C&gt;" in result
+        assert "&quot;D&quot;" in result
+
+    def test_values_not_escaped_when_is_html_false(self):
+        """Values are NOT escaped when is_html=False (plain text)."""
+        text = "Title: [Paper Title]"
+        result = replace_placeholders(
+            text,
+            {"Paper Title": '<script>alert(1)</script>'},
+            is_html=False,
+        )
+        assert "<script>alert(1)</script>" in result
+
+    def test_multiple_placeholders_all_escaped(self):
+        """All placeholders are escaped when is_html=True."""
+        text = "[First Name] [Last Name] presents [Paper Title]"
+        result = replace_placeholders(
+            text,
+            {
+                "First Name": "<b>Bold</b>",
+                "Last Name": "O'Malley",
+                "Paper Title": 'XSS" onclick="alert(1)',
+            },
+            is_html=True,
+        )
+        assert "<b>" not in result
+        assert "&lt;b&gt;" in result
+        assert "&#x27;" in result or "'" in result  # html.escape with quote=False
+        assert 'onclick="alert(1)' not in result
+
+
 class TestSendCospeakerInvitationEmail:
     """Tests for send_cospeaker_invitation_email with template rendering."""
 
@@ -421,3 +491,312 @@ class TestSendPasswordResetEmail:
 
         assert result is True
         mock_send.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# send_direct_message_email tests
+# ---------------------------------------------------------------------------
+
+
+class TestSendDirectMessageEmail:
+    """Tests for send_direct_message_email."""
+
+    @pytest.mark.asyncio
+    async def test_basic_send(self):
+        """Sends a direct message email with correct structure."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            result = await send_direct_message_email(
+                email="recipient@example.com",
+                first_name="Alice",
+                subject="Call for Papers Update",
+                body_html="<p>Your paper was accepted.</p>",
+                conference_name="PyCon",
+                sender_name="Bob Reviewer",
+            )
+
+        assert result is True
+        mock_send.assert_called_once()
+        args = mock_send.call_args
+        assert args[0][0] == "recipient@example.com"
+        assert args[0][1] == "[PyCon] Call for Papers Update"
+        assert "Alice" in args[0][2]  # HTML body
+        assert "PyCon" in args[0][2]
+        assert "Bob Reviewer" in args[0][2]
+        assert "Your paper was accepted." in args[0][2]
+
+    @pytest.mark.asyncio
+    async def test_empty_first_name_fallback(self):
+        """Uses 'there' when first_name is empty."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            await send_direct_message_email(
+                email="r@example.com",
+                first_name="",
+                subject="Test",
+                body_html="<p>msg</p>",
+                conference_name="Conf",
+                sender_name="Admin",
+            )
+
+        html_body = mock_send.call_args[0][2]
+        assert "Hi there," in html_body
+
+    @pytest.mark.asyncio
+    async def test_subject_without_conference_name(self):
+        """Subject has no prefix when conference_name is empty."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            await send_direct_message_email(
+                email="r@example.com",
+                subject="Important Update",
+                body_html="<p>msg</p>",
+                conference_name="",
+                sender_name="Admin",
+            )
+
+        subject = mock_send.call_args[0][1]
+        assert subject == "Important Update"
+
+    @pytest.mark.asyncio
+    async def test_reply_to_passed_through(self):
+        """Reply-to address is forwarded to send_email."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            await send_direct_message_email(
+                email="r@example.com",
+                subject="Test",
+                body_html="<p>msg</p>",
+                conference_name="Conf",
+                sender_name="Admin",
+                reply_to="contact@conf.org",
+            )
+
+        assert mock_send.call_args[1]["reply_to"] == "contact@conf.org"
+
+    @pytest.mark.asyncio
+    async def test_generates_plain_text_from_html(self):
+        """Generates a plain-text body by stripping HTML tags."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            await send_direct_message_email(
+                email="r@example.com",
+                first_name="Alice",
+                subject="Test",
+                body_html="<p>Hello <strong>world</strong></p>",
+                conference_name="Conf",
+                sender_name="Admin",
+            )
+
+        text_body = mock_send.call_args[0][3]
+        assert "Hello world" in text_body
+        assert "<p>" not in text_body
+        assert "<strong>" not in text_body
+
+
+class TestSendDirectMessageEmailXSS:
+    """XSS prevention tests for send_direct_message_email."""
+
+    @pytest.mark.asyncio
+    async def test_xss_in_first_name(self):
+        """Script tags in first_name are HTML-escaped."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            await send_direct_message_email(
+                email="r@example.com",
+                first_name='<script>alert("xss")</script>',
+                subject="Test",
+                body_html="<p>safe body</p>",
+                conference_name="Conf",
+                sender_name="Admin",
+            )
+
+        html_body = mock_send.call_args[0][2]
+        assert "<script>" not in html_body
+        assert "&lt;script&gt;" in html_body
+
+    @pytest.mark.asyncio
+    async def test_xss_in_conference_name(self):
+        """Script tags in conference_name are HTML-escaped."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            await send_direct_message_email(
+                email="r@example.com",
+                first_name="Alice",
+                subject="Test",
+                body_html="<p>safe body</p>",
+                conference_name='<img src=x onerror=alert(1)>',
+                sender_name="Admin",
+            )
+
+        html_body = mock_send.call_args[0][2]
+        assert "<img" not in html_body
+        assert "&lt;img" in html_body
+
+    @pytest.mark.asyncio
+    async def test_xss_in_sender_name(self):
+        """Script tags in sender_name are HTML-escaped."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            await send_direct_message_email(
+                email="r@example.com",
+                first_name="Alice",
+                subject="Test",
+                body_html="<p>safe body</p>",
+                conference_name="Conf",
+                sender_name='<svg onload=alert(document.cookie)>',
+            )
+
+        html_body = mock_send.call_args[0][2]
+        assert "<svg" not in html_body
+        assert "&lt;svg" in html_body
+
+    @pytest.mark.asyncio
+    async def test_html_entities_in_all_fields(self):
+        """Ampersands, quotes, angle brackets escaped in all user fields."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            await send_direct_message_email(
+                email="r@example.com",
+                first_name='A & B "C"',
+                subject="Test",
+                body_html="<p>safe</p>",
+                conference_name="<Conf>",
+                sender_name="O'Brien & Co",
+            )
+
+        html_body = mock_send.call_args[0][2]
+        assert "A &amp; B &quot;C&quot;" in html_body
+        assert "&lt;Conf&gt;" in html_body
+        assert "O&#x27;Brien &amp; Co" in html_body
+
+    @pytest.mark.asyncio
+    async def test_body_html_not_double_escaped(self):
+        """The body_html (already sanitized) is NOT re-escaped."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            await send_direct_message_email(
+                email="r@example.com",
+                first_name="Alice",
+                subject="Test",
+                body_html="<p>Formatted <strong>text</strong></p>",
+                conference_name="Conf",
+                sender_name="Admin",
+            )
+
+        html_body = mock_send.call_args[0][2]
+        assert "<p>Formatted <strong>text</strong></p>" in html_body
+        assert "&lt;p&gt;" not in html_body
+
+    @pytest.mark.asyncio
+    async def test_plain_text_not_escaped(self):
+        """Plain-text version uses raw values (no HTML escaping needed)."""
+        from app.core.email import send_direct_message_email
+
+        with patch("app.core.email.send_email", return_value=True) as mock_send:
+            await send_direct_message_email(
+                email="r@example.com",
+                first_name="Alice <script>",
+                subject="Test",
+                body_html="<p>safe</p>",
+                conference_name="Conf",
+                sender_name="Admin",
+            )
+
+        text_body = mock_send.call_args[0][3]
+        # Plain text should contain raw first_name — no HTML rendering
+        assert "Alice <script>" in text_body
+
+
+# ---------------------------------------------------------------------------
+# send_new_message_notification tests
+# ---------------------------------------------------------------------------
+
+
+class TestSendNewMessageNotification:
+    """Tests for send_new_message_notification."""
+
+    @pytest.mark.asyncio
+    async def test_sends_notification_with_template(self):
+        """Sends notification using rendered template."""
+        from app.core.email import send_new_message_notification
+
+        mock_db = AsyncMock()
+        mock_rendered = RenderedEmail(
+            subject="New message: Paper Review",
+            body_html="<p>You have a new message</p>",
+            body_text="You have a new message",
+        )
+
+        with patch("app.core.email._is_email_enabled_for_conference", return_value=True):
+            with patch("app.core.email.render_email", return_value=mock_rendered):
+                with patch("app.core.email.send_email", return_value=True) as mock_send:
+                    result = await send_new_message_notification(
+                        mock_db,
+                        email="applicant@example.com",
+                        first_name="Alice",
+                        conference_id=uuid4(),
+                        conference_name="PyCon",
+                        message_subject="Paper Review",
+                        messages_link="https://portal.example.com/messages/123",
+                    )
+
+        assert result is True
+        mock_send.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_skips_when_email_disabled(self):
+        """Returns False when email sending is disabled for the conference."""
+        from app.core.email import send_new_message_notification
+
+        mock_db = AsyncMock()
+
+        with patch("app.core.email._is_email_enabled_for_conference", return_value=False):
+            result = await send_new_message_notification(
+                mock_db,
+                email="applicant@example.com",
+                first_name="Alice",
+                conference_id=uuid4(),
+                conference_name="PyCon",
+                message_subject="Test",
+                messages_link="https://example.com",
+            )
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_passes_correct_context(self):
+        """Passes the right context keys to render_email."""
+        from app.core.email import send_new_message_notification
+
+        mock_db = AsyncMock()
+        conf_id = uuid4()
+
+        with patch("app.core.email._is_email_enabled_for_conference", return_value=True):
+            with patch("app.core.email.render_email", return_value=RenderedEmail("s", "<p>h</p>", "t")) as mock_render:
+                with patch("app.core.email.send_email", return_value=True):
+                    await send_new_message_notification(
+                        mock_db,
+                        email="a@example.com",
+                        first_name="Bob",
+                        conference_id=conf_id,
+                        conference_name="TestConf",
+                        message_subject="Review Update",
+                        messages_link="https://example.com/msg",
+                    )
+
+        context = mock_render.call_args[0][2]
+        assert context["First Name"] == "Bob"
+        assert context["Conference Name"] == "TestConf"
+        assert context["Message Subject"] == "Review Update"
+        assert context["Messages Link"] == "https://example.com/msg"
