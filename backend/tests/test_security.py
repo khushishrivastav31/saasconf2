@@ -16,7 +16,7 @@ import hashlib
 import os
 import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 # Env vars must be set before importing app code
@@ -24,9 +24,7 @@ os.environ.setdefault(
     "DATABASE_URL",
     "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test",
 )
-os.environ.setdefault(
-    "JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars"
-)
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
@@ -49,7 +47,6 @@ from app.core.security import (
 from app.core.utils import utcnow
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
-
 from tests.conftest import auth_headers
 
 settings = get_settings()
@@ -85,9 +82,7 @@ def _build_access_token_payload(
 
 def _encode_payload(payload: dict) -> str:
     """Encode a payload dict into a JWT signed with the test secret."""
-    return pyjwt.encode(
-        payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
-    )
+    return pyjwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -176,9 +171,7 @@ class TestAccessToken:
 
     def test_create_access_token_modules_none_becomes_empty_list(self):
         user_id = uuid4()
-        token = create_access_token(
-            user_id, tenant_id=uuid4(), role="editor", modules=None
-        )
+        token = create_access_token(user_id, tenant_id=uuid4(), role="editor", modules=None)
         payload = decode_token(token, token_type="access")
         assert payload["modules"] == []
 
@@ -189,7 +182,7 @@ class TestAccessToken:
 
         assert "exp" in payload
         assert "iat" in payload
-        exp_dt = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+        exp_dt = datetime.fromtimestamp(payload["exp"], tz=UTC)
         expected = before + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         assert abs((exp_dt - expected).total_seconds()) < 5
 
@@ -301,9 +294,7 @@ class TestExpiredToken:
             "iat": utcnow() - timedelta(minutes=20),
             "type": "access",
         }
-        token = pyjwt.encode(
-            payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
-        )
+        token = pyjwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
         with pytest.raises(AuthenticationError, match="Invalid or expired token"):
             decode_token(token, token_type="access")
 
@@ -315,9 +306,7 @@ class TestExpiredToken:
             "type": "refresh",
             "jti": "expired-jti",
         }
-        token = pyjwt.encode(
-            payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
-        )
+        token = pyjwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
         with pytest.raises(AuthenticationError, match="Invalid or expired token"):
             decode_token(token, token_type="refresh")
 
@@ -433,12 +422,9 @@ class TestGenerateSecurePassword:
         for _ in range(20):
             password = generate_secure_password()
             for ch in password:
-                assert ch in (
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    "abcdefghijklmnopqrstuvwxyz"
-                    "0123456789"
-                    "-_"
-                ), f"Unexpected character {ch!r} in generated password"
+                assert ch in ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"), (
+                    f"Unexpected character {ch!r} in generated password"
+                )
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -446,9 +432,7 @@ class TestGenerateSecurePassword:
 # ══════════════════════════════════════════════════════════════════════
 
 
-async def test_expired_access_token_rejected(
-    client: AsyncClient, tenant_admin_user: User
-) -> None:
+async def test_expired_access_token_rejected(client: AsyncClient, tenant_admin_user: User) -> None:
     """Expired access tokens must be rejected with 401."""
     payload = _build_access_token_payload(
         user_id=tenant_admin_user.id,
@@ -458,9 +442,7 @@ async def test_expired_access_token_rejected(
     )
     expired_token = _encode_payload(payload)
 
-    response = await client.get(
-        "/api/v1/auth/me", headers=auth_headers(expired_token)
-    )
+    response = await client.get("/api/v1/auth/me", headers=auth_headers(expired_token))
     assert response.status_code == 401
 
 
@@ -497,20 +479,14 @@ async def test_wrong_auth_scheme_rejected(client: AsyncClient) -> None:
     assert response.status_code == 401
 
 
-async def test_wrong_token_type_rejected(
-    client: AsyncClient, tenant_admin_user: User
-) -> None:
+async def test_wrong_token_type_rejected(client: AsyncClient, tenant_admin_user: User) -> None:
     """A refresh token must not work as an access token."""
     refresh_token, _, _ = create_refresh_token(user_id=tenant_admin_user.id)
-    response = await client.get(
-        "/api/v1/auth/me", headers=auth_headers(refresh_token)
-    )
+    response = await client.get("/api/v1/auth/me", headers=auth_headers(refresh_token))
     assert response.status_code == 401
 
 
-async def test_token_for_nonexistent_user_rejected(
-    client: AsyncClient, tenant: Tenant
-) -> None:
+async def test_token_for_nonexistent_user_rejected(client: AsyncClient, tenant: Tenant) -> None:
     """A token minted for a non-existent user must be rejected."""
     fake_token = create_access_token(
         user_id=uuid.uuid4(),
@@ -518,15 +494,11 @@ async def test_token_for_nonexistent_user_rejected(
         role="user",
         modules=[],
     )
-    response = await client.get(
-        "/api/v1/auth/me", headers=auth_headers(fake_token)
-    )
+    response = await client.get("/api/v1/auth/me", headers=auth_headers(fake_token))
     assert response.status_code == 401
 
 
-async def test_token_signed_with_wrong_key_rejected(
-    client: AsyncClient, tenant_admin_user: User
-) -> None:
+async def test_token_signed_with_wrong_key_rejected(client: AsyncClient, tenant_admin_user: User) -> None:
     """A token signed with a different secret must be rejected."""
     payload = _build_access_token_payload(
         user_id=tenant_admin_user.id,
@@ -534,15 +506,11 @@ async def test_token_signed_with_wrong_key_rejected(
         role=tenant_admin_user.role,
     )
     bad_token = pyjwt.encode(payload, "completely-wrong-secret-key", algorithm="HS256")
-    response = await client.get(
-        "/api/v1/auth/me", headers=auth_headers(bad_token)
-    )
+    response = await client.get("/api/v1/auth/me", headers=auth_headers(bad_token))
     assert response.status_code == 401
 
 
-async def test_token_with_tampered_claims_rejected(
-    client: AsyncClient, tenant_admin_user: User
-) -> None:
+async def test_token_with_tampered_claims_rejected(client: AsyncClient, tenant_admin_user: User) -> None:
     """A valid-looking token with a modified signature must be rejected."""
     valid_token = create_access_token(
         user_id=tenant_admin_user.id,
@@ -550,11 +518,14 @@ async def test_token_with_tampered_claims_rejected(
         role=tenant_admin_user.role,
         modules=[],
     )
+    # Flip a character in the middle of the signature (not the last char,
+    # which may only differ in base64 padding bits and still decode identically).
     parts = valid_token.rsplit(".", 1)
-    tampered = parts[0] + "." + parts[1][:-1] + ("A" if parts[1][-1] != "A" else "B")
-    response = await client.get(
-        "/api/v1/auth/me", headers=auth_headers(tampered)
-    )
+    sig = list(parts[1])
+    mid = len(sig) // 2
+    sig[mid] = "A" if sig[mid] != "A" else "B"
+    tampered = parts[0] + "." + "".join(sig)
+    response = await client.get("/api/v1/auth/me", headers=auth_headers(tampered))
     assert response.status_code == 401
 
 
@@ -575,9 +546,7 @@ async def test_blacklisted_token_rejected_after_logout(
     )
     assert response.status_code == 200
 
-    response = await client.get(
-        "/api/v1/auth/me", headers=auth_headers(tenant_admin_token)
-    )
+    response = await client.get("/api/v1/auth/me", headers=auth_headers(tenant_admin_token))
     assert response.status_code == 401
 
 
@@ -586,9 +555,7 @@ async def test_blacklisted_token_rejected_after_logout(
 # ══════════════════════════════════════════════════════════════════════
 
 
-async def test_revoked_refresh_token_rejected(
-    client: AsyncClient, tenant_admin_user: User
-) -> None:
+async def test_revoked_refresh_token_rejected(client: AsyncClient, tenant_admin_user: User) -> None:
     """A used (revoked) refresh token must not issue new tokens (replay prevention)."""
     login_resp = await client.post(
         "/api/v1/auth/login",
@@ -612,9 +579,7 @@ async def test_revoked_refresh_token_rejected(
     assert reuse_resp.status_code == 401
 
 
-async def test_refresh_token_rotation(
-    client: AsyncClient, tenant_admin_user: User
-) -> None:
+async def test_refresh_token_rotation(client: AsyncClient, tenant_admin_user: User) -> None:
     """Each refresh must return a different refresh token (rotation)."""
     login_resp = await client.post(
         "/api/v1/auth/login",
@@ -691,9 +656,7 @@ async def test_super_admin_can_access_admin_endpoints(
     assert response.status_code == 200
 
 
-async def test_deactivated_user_cannot_login(
-    client: AsyncClient, db_session: AsyncSession, tenant: Tenant
-) -> None:
+async def test_deactivated_user_cannot_login(client: AsyncClient, db_session: AsyncSession, tenant: Tenant) -> None:
     """A deactivated user must not be able to log in."""
     user = User(
         id=uuid.uuid4(),
@@ -715,9 +678,7 @@ async def test_deactivated_user_cannot_login(
     assert response.status_code == 401
 
 
-async def test_deactivated_user_token_rejected(
-    client: AsyncClient, db_session: AsyncSession, tenant: Tenant
-) -> None:
+async def test_deactivated_user_token_rejected(client: AsyncClient, db_session: AsyncSession, tenant: Tenant) -> None:
     """A token minted while active should be rejected after the user is deactivated.
 
     After deactivation, at minimum, re-login must be blocked.
@@ -759,9 +720,7 @@ async def test_deactivated_user_token_rejected(
     assert login_resp2.status_code == 401
 
 
-async def test_deactivated_tenant_blocks_login(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_deactivated_tenant_blocks_login(client: AsyncClient, db_session: AsyncSession) -> None:
     """Users in a deactivated tenant must not be able to log in."""
     t = Tenant(
         id=uuid.uuid4(),
@@ -796,9 +755,7 @@ async def test_deactivated_tenant_blocks_login(
     assert response.status_code == 401
 
 
-async def test_deactivated_tenant_blocks_token_use(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_deactivated_tenant_blocks_token_use(client: AsyncClient, db_session: AsyncSession) -> None:
     """A valid token for a user whose tenant is deactivated must be rejected."""
     t = Tenant(
         id=uuid.uuid4(),
@@ -844,9 +801,7 @@ async def test_deactivated_tenant_blocks_token_use(
 # ══════════════════════════════════════════════════════════════════════
 
 
-async def test_user_cannot_access_other_tenant_data(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_user_cannot_access_other_tenant_data(client: AsyncClient, db_session: AsyncSession) -> None:
     """Users from one tenant must not see data from another tenant."""
     tenant_a = Tenant(
         id=uuid.uuid4(),
@@ -883,19 +838,13 @@ async def test_user_cannot_access_other_tenant_data(
     assert login_resp.status_code == 200
     token_a = login_resp.json()["access_token"]
 
-    conf_resp = await client.get(
-        "/api/v1/conferences", headers=auth_headers(token_a)
-    )
+    conf_resp = await client.get("/api/v1/conferences", headers=auth_headers(token_a))
     assert conf_resp.status_code == 200
     for conf in conf_resp.json().get("items", []):
-        assert conf.get("tenant_id") is None or str(conf["tenant_id"]) == str(
-            tenant_a.id
-        )
+        assert conf.get("tenant_id") is None or str(conf["tenant_id"]) == str(tenant_a.id)
 
 
-async def test_token_with_wrong_tenant_id_cannot_access_api(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_token_with_wrong_tenant_id_cannot_access_api(client: AsyncClient, db_session: AsyncSession) -> None:
     """A hand-crafted token claiming a non-existent tenant must be rejected."""
     t = Tenant(
         id=uuid.uuid4(),
@@ -929,9 +878,7 @@ async def test_token_with_wrong_tenant_id_cannot_access_api(
     forged_token = _encode_payload(payload)
 
     # The dependency checks that the tenant exists and is active
-    response = await client.get(
-        "/api/v1/auth/me", headers=auth_headers(forged_token)
-    )
+    response = await client.get("/api/v1/auth/me", headers=auth_headers(forged_token))
     assert response.status_code == 401
 
 
@@ -1019,9 +966,7 @@ async def test_login_with_missing_fields_rejected(
     assert response.status_code == 422
 
 
-async def test_login_with_extra_fields_ignored(
-    client: AsyncClient, tenant_admin_user: User
-) -> None:
+async def test_login_with_extra_fields_ignored(client: AsyncClient, tenant_admin_user: User) -> None:
     """Extra unexpected fields in the login body must be ignored (not crash)."""
     response = await client.post(
         "/api/v1/auth/login",
@@ -1082,9 +1027,7 @@ async def test_security_headers_on_error_responses(client: AsyncClient) -> None:
 async def test_correlation_id_propagated(client: AsyncClient) -> None:
     """A supplied X-Correlation-ID header must be echoed back."""
     custom_id = "test-correlation-12345"
-    response = await client.get(
-        "/health", headers={"X-Correlation-ID": custom_id}
-    )
+    response = await client.get("/health", headers={"X-Correlation-ID": custom_id})
     assert response.status_code == 200
     assert response.headers.get("X-Correlation-ID") == custom_id
 

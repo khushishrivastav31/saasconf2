@@ -18,20 +18,23 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 # ── Override settings BEFORE importing any app code ──────────────────────
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test"
+)
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
+os.environ["RATELIMIT_ENABLED"] = "false"  # Disable rate limiting in tests
 
-from app.core.security import create_access_token, hash_password  # noqa: E402
-from app.db.base import Base  # noqa: E402
-from app.db.session import get_db  # noqa: E402
-from app.main import app  # noqa: E402
-from app.models.conference import Conference  # noqa: E402
-from app.models.module import Module, TenantModule  # noqa: E402
-from app.models.tenant import Tenant  # noqa: E402
-from app.models.user import User, UserRole  # noqa: E402
+from app.core.security import create_access_token, hash_password
+from app.db.base import Base
+from app.db.session import get_db
+from app.main import app
+from app.models.conference import Conference
+from app.models.module import Module, TenantModule
+from app.models.tenant import Tenant
+from app.models.user import User, UserRole
 
 # ── Test database engine ─────────────────────────────────────────────────
 # NullPool prevents connection reuse across event loops, avoiding
@@ -102,13 +105,9 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
         # Truncate every table after the test for full isolation
         async with test_engine.begin() as conn:
             await conn.execute(RLS_BYPASS)
-            table_names = ", ".join(
-                f'"{t.name}"' for t in Base.metadata.sorted_tables
-            )
+            table_names = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
             if table_names:
-                await conn.execute(
-                    text(f"TRUNCATE TABLE {table_names} CASCADE")
-                )
+                await conn.execute(text(f"TRUNCATE TABLE {table_names} CASCADE"))
 
 
 # ── FastAPI client fixture ───────────────────────────────────────────────
@@ -129,10 +128,16 @@ async def client(setup_database) -> AsyncGenerator[AsyncClient, None]:
 
     app.dependency_overrides[get_db] = _override_get_db
 
+    # Initialize Redis for token blacklisting (ASGITransport doesn't trigger lifespan)
+    from app.core.token_blacklist import close_redis, init_redis
+
+    await init_redis()
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
+    await close_redis()
     app.dependency_overrides.clear()
 
 
@@ -184,9 +189,7 @@ async def conferences_module(db_session: AsyncSession) -> Module:
 
 
 @pytest_asyncio.fixture()
-async def tenant_with_modules(
-    db_session: AsyncSession, tenant: Tenant, conferences_module: Module
-) -> Tenant:
+async def tenant_with_modules(db_session: AsyncSession, tenant: Tenant, conferences_module: Module) -> Tenant:
     """Associate the conferences module with the test tenant."""
     tm = TenantModule(
         id=uuid.uuid4(),
