@@ -180,15 +180,8 @@ async def seed_conference_defaults(session: AsyncSession) -> None:
     from app.core.default_settings import seed_default_settings
 
     # Find conferences that have no pronoun options (= never seeded)
-    subq = (
-        select(PronounOption.conference_id)
-        .group_by(PronounOption.conference_id)
-        .having(func.count() > 0)
-        .subquery()
-    )
-    result = await session.execute(
-        select(Conference).where(Conference.id.notin_(select(subq.c.conference_id)))
-    )
+    subq = select(PronounOption.conference_id).group_by(PronounOption.conference_id).having(func.count() > 0).subquery()
+    result = await session.execute(select(Conference).where(Conference.id.notin_(select(subq.c.conference_id))))
     conferences = result.scalars().all()
 
     if not conferences:
