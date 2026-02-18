@@ -275,20 +275,26 @@ jobs:
             done
           EOF
 
-      - name: Upgrade PostgreSQL 15 to 16 (one-time)
+      - name: Reset database for PG16 (one-time fix)
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
             cd ${{ env.STAGING_PATH }}/deploy/staging
 
-            # Detect PG version from the running container image (not exec, which may fail)
-            DB_IMAGE=$(docker inspect --format='{{.Config.Image}}' saasconf_db_staging 2>/dev/null || echo "none")
-            echo "Current db container image: $DB_IMAGE"
+            # Check if db is healthy — if not, reset the volume for a clean PG16 start
+            if ! docker exec saasconf_db_staging pg_isready -U saasconf 2>/dev/null; then
+              echo "Database unhealthy — resetting volume for clean PG16 start..."
+              docker compose down db 2>/dev/null || true
+              docker rm -f saasconf_db_staging 2>/dev/null || true
 
-            if echo "$DB_IMAGE" | grep -q "postgres:15"; then
-              echo "PG15 detected — running upgrade to PG16..."
-              bash upgrade-pg16.sh
+              # Remove the postgres volume (try all possible prefix names)
+              for vol in $(docker volume ls --format '{{.Name}}' | grep postgres_data); do
+                echo "Removing volume: $vol"
+                docker volume rm "$vol" 2>/dev/null || true
+              done
+
+              echo "Volume reset complete. PG16 will start fresh."
             else
-              echo "Not PG15 (image: $DB_IMAGE) — skipping upgrade"
+              echo "Database is healthy — no reset needed."
             fi
           EOF
 
