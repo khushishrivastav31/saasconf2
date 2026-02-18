@@ -132,7 +132,7 @@ services:
       - frontend
     networks:
       - saasconf_network
-    command: '/bin/sh -c ''envsubst < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
+    command: '/bin/sh -c ''envsubst "\$$DOMAIN \$$API_DOMAIN" < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
 
   # Nightly data retention cleanup (expired tokens, old audit logs)
   cleanup-cron:
