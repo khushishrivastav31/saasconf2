@@ -88,8 +88,11 @@ The result is persisted on the `billing_profiles.vat_validated` column (`true`/`
 - **Staging DB is PostgreSQL 15** (`postgres:15-alpine`) — do NOT change major version without `pg_upgrade` or dump/restore
 
 ### Nginx (staging)
+- Config is a template (`nginx.conf.template`) processed by `envsubst` at container start
+- **envsubst escaping**: `"\$$DOMAIN \$$API_DOMAIN"` in docker-compose.yml — `$$` → `$` (Compose), `\$` → literal `$` (shell), so envsubst receives `$DOMAIN $API_DOMAIN` as variable names. Using `"$$DOMAIN"` alone causes the shell to expand variables before envsubst sees them.
 - Full CSP header: `default-src`, `script-src`, `style-src`, `img-src`, `font-src`, `connect-src`, `frame-ancestors`
 - Security headers: HSTS, X-Frame-Options, X-Content-Type-Options, Permissions-Policy
+- Deploy includes a "Verify containers" step that logs container status, backend/nginx logs, and local health check for diagnostics
 
 ### Email Sending (`app/core/email.py`)
 - Uses `resend` library via `asyncio.to_thread()` to avoid blocking the event loop
@@ -176,3 +179,6 @@ The result is persisted on the `billing_profiles.vat_validated` column (`true`/`
 - [x] Fixed cross-tenant isolation test: enabled conferences module for tenant so JWT includes module claim
 - [x] CI fully green: Secrets Scan, Backend Tests (ruff + mypy + 745 tests), Frontend Tests, Security Audit
 - [x] Fixed staging deploy: reverted Postgres 16→15 (major version mismatch with existing data), added `--no-deps` + `--wait` to deploy step
+- [x] Fixed nginx crash-loop: `envsubst` SHELL-FORMAT was shell-expanded before reaching envsubst (`"$$DOMAIN"` → `"$DOMAIN"` → expanded value). Fixed with `"\$$DOMAIN"` escaping.
+- [x] Added deploy diagnostics: container status, backend/nginx logs, local health check, verbose HTTP codes
+- [x] Full pipeline green: all 6 jobs pass (Backend Tests, Frontend Tests, Security Audit, Secrets Scan, Deploy, E2E Tests)
