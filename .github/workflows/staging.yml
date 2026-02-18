@@ -280,11 +280,14 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
             cd ${{ env.STAGING_PATH }}/deploy/staging
 
-            # Rebuild containers
+            # Ensure infrastructure services are running and healthy
+            docker compose up -d --wait db redis
+
+            # Rebuild application containers
             docker compose build --no-cache backend frontend
 
-            # Restart services with new images
-            docker compose up -d --force-recreate backend frontend nginx
+            # Restart app services only (--no-deps prevents recreating db/redis)
+            docker compose up -d --force-recreate --no-deps backend frontend nginx
 
             # Wait for backend to be healthy before running migrations
             echo "Waiting for backend to be healthy..."
