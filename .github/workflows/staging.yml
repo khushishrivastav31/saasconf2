@@ -301,6 +301,31 @@ jobs:
             docker compose ps
           EOF
 
+      - name: Verify containers are running
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            echo "=== Container Status ==="
+            docker compose ps
+
+            echo ""
+            echo "=== Backend Logs (last 30 lines) ==="
+            docker compose logs --tail=30 backend
+
+            echo ""
+            echo "=== Nginx Logs (last 15 lines) ==="
+            docker compose logs --tail=15 nginx
+
+            echo ""
+            echo "=== Local Backend Health Check ==="
+            curl -sv http://localhost:8000/health 2>&1 || true
+
+            echo ""
+            echo "=== Local Backend via Docker Network ==="
+            docker compose exec -T backend curl -sf http://localhost:8000/health || echo "Backend health endpoint unreachable inside container"
+          EOF
+
       - name: Health check
         run: |
           echo "Waiting for services to stabilize..."
@@ -309,24 +334,30 @@ jobs:
           # Retry health checks up to 5 times with 10s intervals
           for i in 1 2 3 4 5; do
             echo "Health check attempt $i/5..."
-            if curl -sf https://api.staging.sonrisa.ventures/health > /dev/null 2>&1; then
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://api.staging.sonrisa.ventures/health 2>&1) || true
+            echo "  HTTP status: $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ]; then
               echo "Backend is healthy"
               break
             fi
             if [ "$i" -eq 5 ]; then
               echo "Backend health check failed after 5 attempts"
+              echo "=== Full curl output ==="
+              curl -sv --max-time 10 https://api.staging.sonrisa.ventures/health 2>&1 || true
               exit 1
             fi
             sleep 10
           done
 
           for i in 1 2 3 4 5; do
-            if curl -sf https://staging.sonrisa.ventures > /dev/null 2>&1; then
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://staging.sonrisa.ventures 2>&1) || true
+            if [ "$HTTP_CODE" = "200" ]; then
               echo "Frontend is healthy"
               break
             fi
             if [ "$i" -eq 5 ]; then
-              echo "Frontend health check failed after 5 attempts"
+              echo "Frontend health check failed after 5 attempts (last status: $HTTP_CODE)"
+              curl -sv --max-time 10 https://staging.sonrisa.ventures 2>&1 || true
               exit 1
             fi
             sleep 10
