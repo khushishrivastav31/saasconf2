@@ -1,52 +1,49 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../config/api";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../config/api';
 import type {
   Conference,
   ServiceProvider,
   ServiceProviderCreate,
   ServiceProviderUpdate,
   LocationContactPerson,
-} from "../../../types";
-import { parseApiError } from "../../../utils/apiError";
-import ServiceProviderDetailPanel from "../../../components/ServiceProviderDetailPanel";
-import ContactPersonList from "../../../components/ContactPersonList";
-import RichTextEditor from "../../../components/common/RichTextEditor";
-import { ErrorBanner } from "../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
+} from '../../../types';
+import { parseApiError } from '../../../utils/apiError';
+import ServiceProviderDetailPanel from '../../../components/ServiceProviderDetailPanel';
+import ContactPersonList from '../../../components/ContactPersonList';
+import RichTextEditor from '../../../components/common/RichTextEditor';
+import { ErrorBanner } from '../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { useSelection } from '../SelectionContext';
 
 export default function ConferenceServiceProvidersTab({
   conference,
-  selectedServiceProviderId,
-  setSelectedServiceProviderId,
   isAdmin,
 }: {
   conference: Conference;
-  selectedServiceProviderId: string | null;
-  setSelectedServiceProviderId: (id: string | null) => void;
   isAdmin: boolean;
 }) {
+  const { selectedServiceProviderId, setSelectedServiceProviderId } = useSelection();
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state for create
   const [createForm, setCreateForm] = useState<ServiceProviderCreate>({
-    company_name: "",
-    service_description: "",
+    company_name: '',
+    service_description: '',
     contact_persons: [],
   });
-  const [createNewContact, setCreateNewContact] =
-    useState<LocationContactPerson>({
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone: "",
-      comment: "",
-    });
+  const [createNewContact, setCreateNewContact] = useState<LocationContactPerson>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
+  });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["conference-service-providers", conference.id],
+    queryKey: ['conference-service-providers', conference.id],
     queryFn: async () => {
       const response = await api.get<{
         items: ServiceProvider[];
@@ -56,59 +53,51 @@ export default function ConferenceServiceProvidersTab({
     },
   });
 
-  const selectedProvider = data?.items?.find(
-    (sp) => sp.id === selectedServiceProviderId,
-  );
+  const selectedProvider = data?.items?.find((sp) => sp.id === selectedServiceProviderId);
 
   const createMutation = useMutation({
     mutationFn: async (spData: ServiceProviderCreate) => {
       const response = await api.post<ServiceProvider>(
         `/conferences/${conference.id}/service-providers`,
-        spData,
+        spData
       );
       return response.data;
     },
     onSuccess: (newProvider) => {
       queryClient.invalidateQueries({
-        queryKey: ["conference-service-providers", conference.id],
+        queryKey: ['conference-service-providers', conference.id],
       });
       setIsAdding(false);
       setCreateForm({
-        company_name: "",
-        service_description: "",
+        company_name: '',
+        service_description: '',
         contact_persons: [],
       });
-      setCreateNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
       setError(null);
       setSelectedServiceProviderId(newProvider.id);
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to create service provider"));
+      setError(parseApiError(err, 'Failed to create service provider'));
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data: spData,
-    }: {
-      id: string;
-      data: ServiceProviderUpdate;
-    }) => {
+    mutationFn: async ({ id, data: spData }: { id: string; data: ServiceProviderUpdate }) => {
       const response = await api.put<ServiceProvider>(
         `/conferences/${conference.id}/service-providers/${id}`,
-        spData,
+        spData
       );
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["conference-service-providers", conference.id],
+        queryKey: ['conference-service-providers', conference.id],
       });
       setError(null);
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to update service provider"));
+      setError(parseApiError(err, 'Failed to update service provider'));
     },
   });
 
@@ -118,7 +107,7 @@ export default function ConferenceServiceProvidersTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["conference-service-providers", conference.id],
+        queryKey: ['conference-service-providers', conference.id],
       });
       setSelectedServiceProviderId(null);
     },
@@ -128,10 +117,7 @@ export default function ConferenceServiceProvidersTab({
     e.preventDefault();
     const finalData = { ...createForm };
     if (createNewContact.first_name.trim() && createNewContact.last_name.trim()) {
-      finalData.contact_persons = [
-        ...(finalData.contact_persons || []),
-        { ...createNewContact },
-      ];
+      finalData.contact_persons = [...(finalData.contact_persons || []), { ...createNewContact }];
     }
     createMutation.mutate(finalData);
   };
@@ -140,33 +126,23 @@ export default function ConferenceServiceProvidersTab({
     if (createNewContact.first_name.trim() && createNewContact.last_name.trim()) {
       setCreateForm({
         ...createForm,
-        contact_persons: [
-          ...(createForm.contact_persons || []),
-          { ...createNewContact },
-        ],
+        contact_persons: [...(createForm.contact_persons || []), { ...createNewContact }],
       });
-      setCreateNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     }
   };
 
   const removeCreateContact = (index: number) => {
     setCreateForm({
       ...createForm,
-      contact_persons:
-        createForm.contact_persons?.filter((_, i) => i !== index) || [],
+      contact_persons: createForm.contact_persons?.filter((_, i) => i !== index) || [],
     });
   };
 
-  const updateCreateContact = (
-    index: number,
-    contact: LocationContactPerson,
-  ) => {
+  const updateCreateContact = (index: number, contact: LocationContactPerson) => {
     setCreateForm({
       ...createForm,
-      contact_persons:
-        createForm.contact_persons?.map((c, i) =>
-          i === index ? contact : c,
-        ) || [],
+      contact_persons: createForm.contact_persons?.map((c, i) => (i === index ? contact : c)) || [],
     });
   };
 
@@ -184,9 +160,7 @@ export default function ConferenceServiceProvidersTab({
               </span>
             )}
           </h2>
-          <p className="text-sm text-gray-500">
-            Manage service providers for this conference.
-          </p>
+          <p className="text-sm text-gray-500">Manage service providers for this conference.</p>
         </div>
         {isAdmin && !isAdding && (
           <button
@@ -210,14 +184,10 @@ export default function ConferenceServiceProvidersTab({
           onSubmit={handleCreateSubmit}
           className="mb-4 bg-gray-50 border border-gray-200 rounded-lg p-5 space-y-4"
         >
-          <h5 className="text-sm font-medium text-gray-900">
-            New Service Provider
-          </h5>
+          <h5 className="text-sm font-medium text-gray-900">New Service Provider</h5>
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Company Name *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
               <input
                 type="text"
                 required
@@ -236,7 +206,7 @@ export default function ConferenceServiceProvidersTab({
                 Service Description
               </label>
               <RichTextEditor
-                value={createForm.service_description || ""}
+                value={createForm.service_description || ''}
                 onChange={(html) =>
                   setCreateForm({
                     ...createForm,
@@ -261,7 +231,7 @@ export default function ConferenceServiceProvidersTab({
               disabled={createMutation.isPending}
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
             >
-              {createMutation.isPending ? "Creating..." : "Create"}
+              {createMutation.isPending ? 'Creating...' : 'Create'}
             </button>
             <button
               type="button"
@@ -269,16 +239,16 @@ export default function ConferenceServiceProvidersTab({
                 setIsAdding(false);
                 setError(null);
                 setCreateForm({
-                  company_name: "",
-                  service_description: "",
+                  company_name: '',
+                  service_description: '',
                   contact_persons: [],
                 });
                 setCreateNewContact({
-                  first_name: "",
-                  last_name: "",
-                  email: "",
-                  phone: "",
-                  comment: "",
+                  first_name: '',
+                  last_name: '',
+                  email: '',
+                  phone: '',
+                  comment: '',
                 });
               }}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
@@ -309,8 +279,8 @@ export default function ConferenceServiceProvidersTab({
                       onClick={() => setSelectedServiceProviderId(sp.id)}
                       className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left transition-colors ${
                         sp.id === selectedServiceProviderId
-                          ? "bg-primary-50 text-primary-700 font-medium"
-                          : "text-gray-700 hover:bg-gray-100"
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-100'
                       }`}
                     >
                       <span className="flex-shrink-0 w-2 h-2 rounded-full bg-primary-400" />

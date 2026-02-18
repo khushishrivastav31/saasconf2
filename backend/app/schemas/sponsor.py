@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.validators import validate_phone
 from app.schemas.location import LocationContactPerson, validate_vat
@@ -75,6 +75,8 @@ class SponsorUpdate(BaseModel):
 class SponsorResponse(BaseModel):
     """Sponsor response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -97,9 +99,6 @@ class SponsorResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class SponsorListResponse(BaseModel):

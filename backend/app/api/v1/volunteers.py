@@ -5,6 +5,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 
+from sqlalchemy.orm import selectinload
+
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -49,7 +51,11 @@ async def list_volunteers(
 
     Requires the 'volunteers' module.
     """
-    query = select(Volunteer).where(Volunteer.tenant_id == current_user.tenant_id)
+    query = (
+        select(Volunteer)
+        .where(Volunteer.tenant_id == current_user.tenant_id)
+        .options(selectinload(Volunteer.conferences))
+    )
 
     if conference_id:
         query = query.join(
@@ -78,17 +84,6 @@ async def list_volunteers(
     volunteers = result.items
     total = result.total
 
-    # Batch-query conference_ids for all volunteers in the page
-    vol_ids = [v.id for v in volunteers]
-    conf_ids_map: dict[UUID, list[UUID]] = {vid: [] for vid in vol_ids}
-    if vol_ids:
-        assoc_result = await db.execute(
-            select(ConferenceVolunteer.volunteer_id, ConferenceVolunteer.conference_id)
-            .where(ConferenceVolunteer.volunteer_id.in_(vol_ids))
-        )
-        for row in assoc_result:
-            conf_ids_map[row.volunteer_id].append(row.conference_id)
-
     items = [
         VolunteerResponse(
             id=v.id,
@@ -111,7 +106,7 @@ async def list_volunteers(
             total_hours=v.total_hours,
             created_at=v.created_at,
             updated_at=v.updated_at,
-            conference_ids=conf_ids_map.get(v.id, []),
+            conference_ids=[c.id for c in v.conferences],
         )
         for v in volunteers
     ]
@@ -273,22 +268,17 @@ async def get_volunteer(
     """Get volunteer by ID."""
 
     result = await db.execute(
-        select(Volunteer).where(
+        select(Volunteer)
+        .where(
             Volunteer.id == volunteer_id,
             Volunteer.tenant_id == current_user.tenant_id,
         )
+        .options(selectinload(Volunteer.conferences))
     )
     volunteer = result.scalar_one_or_none()
 
     if not volunteer:
         raise NotFoundError(f"Volunteer with ID '{volunteer_id}' not found")
-
-    # Get conference_ids
-    assoc_result = await db.execute(
-        select(ConferenceVolunteer.conference_id)
-        .where(ConferenceVolunteer.volunteer_id == volunteer.id)
-    )
-    conf_ids = [row[0] for row in assoc_result]
 
     return VolunteerResponse(
         id=volunteer.id,
@@ -311,7 +301,7 @@ async def get_volunteer(
         total_hours=volunteer.total_hours,
         created_at=volunteer.created_at,
         updated_at=volunteer.updated_at,
-        conference_ids=conf_ids,
+        conference_ids=[c.id for c in volunteer.conferences],
     )
 
 
@@ -363,14 +353,14 @@ async def update_volunteer(
     db.add(audit_log)
 
     await db.commit()
-    await db.refresh(volunteer)
 
-    # Get conference_ids
-    assoc_result = await db.execute(
-        select(ConferenceVolunteer.conference_id)
-        .where(ConferenceVolunteer.volunteer_id == volunteer.id)
+    # Re-fetch with eager-loaded conferences
+    refreshed_result = await db.execute(
+        select(Volunteer)
+        .where(Volunteer.id == volunteer_id)
+        .options(selectinload(Volunteer.conferences))
     )
-    conf_ids = [row[0] for row in assoc_result]
+    volunteer = refreshed_result.scalar_one()
 
     return VolunteerResponse(
         id=volunteer.id,
@@ -393,7 +383,7 @@ async def update_volunteer(
         total_hours=volunteer.total_hours,
         created_at=volunteer.created_at,
         updated_at=volunteer.updated_at,
-        conference_ids=conf_ids,
+        conference_ids=[c.id for c in volunteer.conferences],
     )
 
 
@@ -540,14 +530,14 @@ async def approve_volunteer(
     db.add(audit_log)
 
     await db.commit()
-    await db.refresh(volunteer)
 
-    # Get conference_ids
-    assoc_result = await db.execute(
-        select(ConferenceVolunteer.conference_id)
-        .where(ConferenceVolunteer.volunteer_id == volunteer.id)
+    # Re-fetch with eager-loaded conferences
+    refreshed_result = await db.execute(
+        select(Volunteer)
+        .where(Volunteer.id == volunteer_id)
+        .options(selectinload(Volunteer.conferences))
     )
-    conf_ids = [row[0] for row in assoc_result]
+    volunteer = refreshed_result.scalar_one()
 
     return VolunteerResponse(
         id=volunteer.id,
@@ -570,5 +560,5 @@ async def approve_volunteer(
         total_hours=volunteer.total_hours,
         created_at=volunteer.created_at,
         updated_at=volunteer.updated_at,
-        conference_ids=conf_ids,
+        conference_ids=[c.id for c in volunteer.conferences],
     )

@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../config/api";
-import { validatePhone } from "../../../utils/validators";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../config/api';
+import { validatePhone } from '../../../utils/validators';
 import type {
   Conference,
   Sponsor,
@@ -11,47 +11,45 @@ import type {
   PlatformCurrency,
   LocationContactPerson,
   PaginatedResponse,
-} from "../../../types";
-import { parseApiError } from "../../../utils/apiError";
-import SponsorDetailPanel from "../../../components/SponsorDetailPanel";
-import ConfirmDialog from "../../../components/ConfirmDialog";
-import RichTextEditor from "../../../components/common/RichTextEditor";
-import ContactPersonList from "../../../components/ContactPersonList";
-import { ErrorBanner } from "../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
-import { ChevronLeftIcon, EditIcon, DeleteIcon } from "../icons";
+} from '../../../types';
+import { parseApiError } from '../../../utils/apiError';
+import SponsorDetailPanel from '../../../components/SponsorDetailPanel';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import RichTextEditor from '../../../components/common/RichTextEditor';
+import ContactPersonList from '../../../components/ContactPersonList';
+import { ErrorBanner } from '../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { ChevronLeftIcon, EditIcon, DeleteIcon } from '../icons';
+import { useSelection } from '../SelectionContext';
 
 function ConferenceSponsorsTab({
   conference,
-  selectedSponsorId,
-  setSelectedSponsorId,
   isAdmin,
 }: {
   conference: Conference;
-  selectedSponsorId: string | null;
-  setSelectedSponsorId: (id: string | null) => void;
   isAdmin: boolean;
 }) {
+  const { selectedSponsorId, setSelectedSponsorId } = useSelection();
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Sponsor | null>(null);
 
   const emptyCreateForm: SponsorCreate = {
-    company_name: "",
+    company_name: '',
     sponsor_package_id: undefined,
     price: undefined,
-    currency: conference.currency || "",
-    phone: "",
-    website: "",
-    address_line1: "",
-    address_line2: "",
-    city: "",
-    state: "",
-    postal_code: "",
-    country: "",
-    vat_number: "",
-    comments: "",
+    currency: conference.currency || '',
+    phone: '',
+    website: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: '',
+    vat_number: '',
+    comments: '',
     contact_persons: [],
     is_active: true,
   };
@@ -59,17 +57,16 @@ function ConferenceSponsorsTab({
   // Form state for create
   const [createForm, setCreateForm] = useState<SponsorCreate>(emptyCreateForm);
   const [createPhoneError, setCreatePhoneError] = useState<string | null>(null);
-  const [createNewContact, setCreateNewContact] =
-    useState<LocationContactPerson>({
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone: "",
-      comment: "",
-    });
+  const [createNewContact, setCreateNewContact] = useState<LocationContactPerson>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
+  });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["conference-sponsors", conference.id],
+    queryKey: ['conference-sponsors', conference.id],
     queryFn: async () => {
       const response = await api.get<{
         items: Sponsor[];
@@ -81,7 +78,7 @@ function ConferenceSponsorsTab({
 
   // Sponsor packages for dropdowns
   const { data: sponsorPackagesData } = useQuery({
-    queryKey: ["sponsor-packages", conference.id],
+    queryKey: ['sponsor-packages', conference.id],
     queryFn: async () => {
       const response = await api.get<{
         items: SponsorPackage[];
@@ -93,66 +90,58 @@ function ConferenceSponsorsTab({
 
   // Platform currencies for dropdowns
   const { data: currenciesData } = useQuery({
-    queryKey: ["platform-currencies"],
+    queryKey: ['platform-currencies'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
-        "/admin/settings/currencies",
-        { params: { page_size: 100, is_active: true } },
+        '/admin/settings/currencies',
+        { params: { page_size: 100, is_active: true } }
       );
       return response.data.items;
     },
   });
 
-  const selectedSponsor = data?.items?.find(
-    (s) => s.id === selectedSponsorId,
-  );
+  const selectedSponsor = data?.items?.find((s) => s.id === selectedSponsorId);
 
   const createMutation = useMutation({
     mutationFn: async (sponsorData: SponsorCreate) => {
       const response = await api.post<Sponsor>(
         `/conferences/${conference.id}/sponsors`,
-        sponsorData,
+        sponsorData
       );
       return response.data;
     },
     onSuccess: (newSponsor) => {
       queryClient.invalidateQueries({
-        queryKey: ["conference-sponsors", conference.id],
+        queryKey: ['conference-sponsors', conference.id],
       });
       setIsAdding(false);
       setCreateForm(emptyCreateForm);
       setCreatePhoneError(null);
-      setCreateNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
       setError(null);
       setSelectedSponsorId(newSponsor.id);
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to create sponsor"));
+      setError(parseApiError(err, 'Failed to create sponsor'));
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data: sponsorData,
-    }: {
-      id: string;
-      data: SponsorUpdate;
-    }) => {
+    mutationFn: async ({ id, data: sponsorData }: { id: string; data: SponsorUpdate }) => {
       const response = await api.put<Sponsor>(
         `/conferences/${conference.id}/sponsors/${id}`,
-        sponsorData,
+        sponsorData
       );
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["conference-sponsors", conference.id],
+        queryKey: ['conference-sponsors', conference.id],
       });
       setError(null);
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to update sponsor"));
+      setError(parseApiError(err, 'Failed to update sponsor'));
     },
   });
 
@@ -162,7 +151,7 @@ function ConferenceSponsorsTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["conference-sponsors", conference.id],
+        queryKey: ['conference-sponsors', conference.id],
       });
       setSelectedSponsorId(null);
       setDeleteTarget(null);
@@ -172,17 +161,19 @@ function ConferenceSponsorsTab({
   const handleCreatePackageChange = (packageId: string) => {
     if (!packageId) {
       // No package - use conference default currency
-      setCreateForm({ ...createForm, sponsor_package_id: undefined, currency: conference.currency || "" });
+      setCreateForm({
+        ...createForm,
+        sponsor_package_id: undefined,
+        currency: conference.currency || '',
+      });
       return;
     }
-    const pkg = (sponsorPackagesData?.items || []).find(
-      (p) => p.id === packageId,
-    );
+    const pkg = (sponsorPackagesData?.items || []).find((p) => p.id === packageId);
     if (pkg) {
       const updates: Partial<SponsorCreate> = {
         sponsor_package_id: pkg.id,
         // Always use package currency (or fall back to conference default)
-        currency: pkg.currency || conference.currency || "",
+        currency: pkg.currency || conference.currency || '',
       };
       if (!createForm.price && pkg.price != null) {
         updates.price = pkg.price;
@@ -196,14 +187,13 @@ function ConferenceSponsorsTab({
     if (createPhoneError) return;
     const finalData = { ...createForm };
     if (createNewContact.first_name.trim() && createNewContact.last_name.trim()) {
-      finalData.contact_persons = [
-        ...(finalData.contact_persons || []),
-        { ...createNewContact },
-      ];
+      finalData.contact_persons = [...(finalData.contact_persons || []), { ...createNewContact }];
     }
     // Derive currency from package (or use conference default)
-    const pkg = (sponsorPackagesData?.items || []).find(p => p.id === finalData.sponsor_package_id);
-    finalData.currency = pkg?.currency || conference.currency || "";
+    const pkg = (sponsorPackagesData?.items || []).find(
+      (p) => p.id === finalData.sponsor_package_id
+    );
+    finalData.currency = pkg?.currency || conference.currency || '';
     createMutation.mutate(finalData);
   };
 
@@ -211,33 +201,23 @@ function ConferenceSponsorsTab({
     if (createNewContact.first_name.trim() && createNewContact.last_name.trim()) {
       setCreateForm({
         ...createForm,
-        contact_persons: [
-          ...(createForm.contact_persons || []),
-          { ...createNewContact },
-        ],
+        contact_persons: [...(createForm.contact_persons || []), { ...createNewContact }],
       });
-      setCreateNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     }
   };
 
   const removeCreateContact = (index: number) => {
     setCreateForm({
       ...createForm,
-      contact_persons:
-        createForm.contact_persons?.filter((_, i) => i !== index) || [],
+      contact_persons: createForm.contact_persons?.filter((_, i) => i !== index) || [],
     });
   };
 
-  const updateCreateContact = (
-    index: number,
-    contact: LocationContactPerson,
-  ) => {
+  const updateCreateContact = (index: number, contact: LocationContactPerson) => {
     setCreateForm({
       ...createForm,
-      contact_persons:
-        createForm.contact_persons?.map((c, i) =>
-          i === index ? contact : c,
-        ) || [],
+      contact_persons: createForm.contact_persons?.map((c, i) => (i === index ? contact : c)) || [],
     });
   };
 
@@ -288,9 +268,7 @@ function ConferenceSponsorsTab({
                   </span>
                 )}
               </h2>
-              <p className="text-sm text-gray-500">
-                Manage sponsors for this conference.
-              </p>
+              <p className="text-sm text-gray-500">Manage sponsors for this conference.</p>
             </div>
             {isAdmin && !isAdding && (
               <button
@@ -314,9 +292,7 @@ function ConferenceSponsorsTab({
               onSubmit={handleCreateSubmit}
               className="mb-4 bg-gray-50 border border-gray-200 rounded-lg p-5 space-y-4"
             >
-              <h5 className="text-sm font-medium text-gray-900">
-                New Sponsor
-              </h5>
+              <h5 className="text-sm font-medium text-gray-900">New Sponsor</h5>
 
               {/* Company Name */}
               <div>
@@ -345,7 +321,7 @@ function ConferenceSponsorsTab({
                   </label>
                   <select
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.sponsor_package_id || ""}
+                    value={createForm.sponsor_package_id || ''}
                     onChange={(e) => handleCreatePackageChange(e.target.value)}
                   >
                     <option value="">-- No Package --</option>
@@ -380,35 +356,31 @@ function ConferenceSponsorsTab({
               {/* Price + Currency */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.price ?? ""}
+                    value={createForm.price ?? ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
-                        price: e.target.value
-                          ? parseFloat(e.target.value)
-                          : undefined,
+                        price: e.target.value ? parseFloat(e.target.value) : undefined,
                       })
                     }
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Currency
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
                   <div className="block w-full border border-gray-200 bg-gray-50 rounded-md py-2 px-3 text-sm text-gray-700">
                     {(() => {
-                      const pkg = (sponsorPackagesData?.items || []).find(p => p.id === createForm.sponsor_package_id);
+                      const pkg = (sponsorPackagesData?.items || []).find(
+                        (p) => p.id === createForm.sponsor_package_id
+                      );
                       const currencyCode = pkg?.currency || conference.currency;
-                      if (!currencyCode) return "—";
-                      const currency = (currenciesData || []).find(c => c.code === currencyCode);
+                      if (!currencyCode) return '—';
+                      const currency = (currenciesData || []).find((c) => c.code === currencyCode);
                       return currency ? `${currency.code} - ${currency.name}` : currencyCode;
                     })()}
                   </div>
@@ -418,13 +390,11 @@ function ConferenceSponsorsTab({
               {/* Phone + Website */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                   <input
                     type="tel"
-                    className={`block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createPhoneError ? "border-red-300" : "border-gray-300"}`}
-                    value={createForm.phone || ""}
+                    className={`block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createPhoneError ? 'border-red-300' : 'border-gray-300'}`}
+                    value={createForm.phone || ''}
                     onChange={(e) => {
                       const value = e.target.value;
                       setCreateForm({
@@ -435,17 +405,17 @@ function ConferenceSponsorsTab({
                     }}
                     placeholder="+491234545 or 00491234566"
                   />
-                  {createPhoneError && <p className="mt-1 text-xs text-red-600">{createPhoneError}</p>}
+                  {createPhoneError && (
+                    <p className="mt-1 text-xs text-red-600">{createPhoneError}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Website
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
                   <input
                     type="url"
                     placeholder="https://"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.website || ""}
+                    value={createForm.website || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -465,7 +435,7 @@ function ConferenceSponsorsTab({
                   <input
                     type="text"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.address_line1 || ""}
+                    value={createForm.address_line1 || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -481,7 +451,7 @@ function ConferenceSponsorsTab({
                   <input
                     type="text"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.address_line2 || ""}
+                    value={createForm.address_line2 || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -495,13 +465,11 @@ function ConferenceSponsorsTab({
               {/* City, State, Postal Code, Country */}
               <div className="grid grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    City
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
                   <input
                     type="text"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.city || ""}
+                    value={createForm.city || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -511,13 +479,11 @@ function ConferenceSponsorsTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    State
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
                   <input
                     type="text"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.state || ""}
+                    value={createForm.state || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -533,7 +499,7 @@ function ConferenceSponsorsTab({
                   <input
                     type="text"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.postal_code || ""}
+                    value={createForm.postal_code || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -543,13 +509,11 @@ function ConferenceSponsorsTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Country
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
                   <input
                     type="text"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.country || ""}
+                    value={createForm.country || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -562,14 +526,12 @@ function ConferenceSponsorsTab({
 
               {/* VAT Number */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  VAT Number
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">VAT Number</label>
                 <input
                   type="text"
                   placeholder="e.g., DE123456789"
                   className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={createForm.vat_number || ""}
+                  value={createForm.vat_number || ''}
                   onChange={(e) =>
                     setCreateForm({
                       ...createForm,
@@ -581,11 +543,9 @@ function ConferenceSponsorsTab({
 
               {/* Comments */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Comments
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Comments</label>
                 <RichTextEditor
-                  value={createForm.comments || ""}
+                  value={createForm.comments || ''}
                   onChange={(html) =>
                     setCreateForm({
                       ...createForm,
@@ -612,7 +572,7 @@ function ConferenceSponsorsTab({
                   disabled={createMutation.isPending || !!createPhoneError}
                   className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {createMutation.isPending ? "Creating..." : "Create"}
+                  {createMutation.isPending ? 'Creating...' : 'Create'}
                 </button>
                 <button
                   type="button"
@@ -622,11 +582,11 @@ function ConferenceSponsorsTab({
                     setCreateForm(emptyCreateForm);
                     setCreatePhoneError(null);
                     setCreateNewContact({
-                      first_name: "",
-                      last_name: "",
-                      email: "",
-                      phone: "",
-                      comment: "",
+                      first_name: '',
+                      last_name: '',
+                      email: '',
+                      phone: '',
+                      comment: '',
                     });
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
@@ -674,25 +634,23 @@ function ConferenceSponsorsTab({
                         {sponsor.company_name}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        {sponsor.sponsor_package_name || "-"}
+                        {sponsor.sponsor_package_name || '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
                         {sponsor.price != null
-                          ? `${sponsor.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${sponsor.currency ? ` ${sponsor.currency}` : ""}`
-                          : "-"}
+                          ? `${sponsor.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${sponsor.currency ? ` ${sponsor.currency}` : ''}`
+                          : '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {sponsor.city || "-"}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{sponsor.city || '-'}</td>
                       <td className="px-4 py-3 text-sm">
                         <span
                           className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                             sponsor.is_active
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-700"
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
                           }`}
                         >
-                          {sponsor.is_active ? "Yes" : "No"}
+                          {sponsor.is_active ? 'Yes' : 'No'}
                         </span>
                       </td>
                       {isAdmin && (

@@ -1,0 +1,16 @@
+# Default owners for everything
+* @josediaz
+
+# Backend
+/backend/ @josediaz
+
+# Frontend
+/frontend/ @josediaz
+
+# Infrastructure
+/deploy/ @josediaz
+/.github/ @josediaz
+/docker-compose.yml @josediaz
+
+# Documentation
+/docs/ @josediaz

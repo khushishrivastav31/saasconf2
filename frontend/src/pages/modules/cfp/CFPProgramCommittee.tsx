@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useIsAdmin } from '../../../hooks/useIsAdmin';
@@ -59,7 +59,13 @@ function getInitials(firstName: string, lastName: string): string {
 // Row in the all-members list view
 // ---------------------------------------------------------------------------
 
-function MemberListRow({ member, onClick }: { member: CommitteeMember; onClick: () => void }) {
+const MemberListRow = memo(function MemberListRow({
+  member,
+  onClick,
+}: {
+  member: CommitteeMember;
+  onClick: () => void;
+}) {
   const imgSrc = useAuthMedia(member.picture_url);
 
   return (
@@ -123,7 +129,7 @@ function MemberListRow({ member, onClick }: { member: CommitteeMember; onClick: 
       </svg>
     </button>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Read-only user info card (shown when editing a member)

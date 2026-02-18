@@ -88,7 +88,7 @@ export default function ProgramDesignTab({ conference, isAdmin }: ProgramDesignT
           queryClient.invalidateQueries({ queryKey: ['program-days', conference.id] });
         }
       })
-      .catch(() => {}); // silent — user can still add days manually
+      .catch((err) => console.error('Failed to auto-generate program days:', err));
   }, [daysData, conference, queryClient]);
 
   // Auto-select first day when days load

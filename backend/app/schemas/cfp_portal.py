@@ -4,7 +4,7 @@ import re
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 # --- Auth Schemas ---
 
@@ -76,6 +76,8 @@ class ResetPasswordRequest(BaseModel):
 class ApplicantProfileResponse(BaseModel):
     """Applicant profile response."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     email: str
     first_name: str
@@ -93,9 +95,6 @@ class ApplicantProfileResponse(BaseModel):
     picture_url: str | None = None
     video_url: str | None = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ApplicantProfileUpdate(BaseModel):
@@ -120,6 +119,8 @@ class ApplicantProfileUpdate(BaseModel):
 class PortalCFPResponse(BaseModel):
     """CFP info for the portal."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     title: str
     description: str | None = None
@@ -134,19 +135,15 @@ class PortalCFPResponse(BaseModel):
     incentives_conditions: str | None = None
     faqs: str | None = None
 
-    class Config:
-        from_attributes = True
-
 
 class PortalSessionTypeResponse(BaseModel):
     """Session type info for the portal."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
     duration_minutes: int
-
-    class Config:
-        from_attributes = True
 
 
 class PortalConferenceSummary(BaseModel):

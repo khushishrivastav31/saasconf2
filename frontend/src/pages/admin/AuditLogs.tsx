@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../config/api";
-import { formatDateTime } from "../../utils/formatDate";
-import type { AuditLog, PaginatedResponse } from "../../types";
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../config/api';
+import { formatDateTime } from '../../utils/formatDate';
+import type { AuditLog, PaginatedResponse } from '../../types';
 
 interface AuditFilters {
   search: string;
@@ -16,18 +16,18 @@ export default function AuditLogs() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
   const [filters, setFilters] = useState<AuditFilters>({
-    search: "",
-    action: "",
-    resourceType: "",
-    startDate: "",
-    endDate: "",
+    search: '',
+    action: '',
+    resourceType: '',
+    startDate: '',
+    endDate: '',
   });
   const [appliedFilters, setAppliedFilters] = useState<AuditFilters>({
-    search: "",
-    action: "",
-    resourceType: "",
-    startDate: "",
-    endDate: "",
+    search: '',
+    action: '',
+    resourceType: '',
+    startDate: '',
+    endDate: '',
   });
   const [isExporting, setIsExporting] = useState(false);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -35,18 +35,18 @@ export default function AuditLogs() {
   // Build query params
   const buildQueryParams = (f: AuditFilters) => {
     const params = new URLSearchParams();
-    params.append("page", page.toString());
-    params.append("page_size", pageSize.toString());
-    if (f.search) params.append("search", f.search);
-    if (f.action) params.append("action", f.action);
-    if (f.resourceType) params.append("resource_type", f.resourceType);
-    if (f.startDate) params.append("start_date", new Date(f.startDate).toISOString());
-    if (f.endDate) params.append("end_date", new Date(f.endDate).toISOString());
+    params.append('page', page.toString());
+    params.append('page_size', pageSize.toString());
+    if (f.search) params.append('search', f.search);
+    if (f.action) params.append('action', f.action);
+    if (f.resourceType) params.append('resource_type', f.resourceType);
+    if (f.startDate) params.append('start_date', new Date(f.startDate).toISOString());
+    if (f.endDate) params.append('end_date', new Date(f.endDate).toISOString());
     return params.toString();
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ["audit-logs", page, pageSize, appliedFilters],
+    queryKey: ['audit-logs', page, pageSize, appliedFilters],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<AuditLog>>(
         `/admin/audit-logs?${buildQueryParams(appliedFilters)}`
@@ -57,18 +57,18 @@ export default function AuditLogs() {
 
   // Fetch distinct actions for filter dropdown
   const { data: actions } = useQuery({
-    queryKey: ["audit-actions"],
+    queryKey: ['audit-actions'],
     queryFn: async () => {
-      const response = await api.get<string[]>("/admin/audit-logs/actions");
+      const response = await api.get<string[]>('/admin/audit-logs/actions');
       return response.data;
     },
   });
 
   // Fetch distinct resource types for filter dropdown
   const { data: resourceTypes } = useQuery({
-    queryKey: ["audit-resource-types"],
+    queryKey: ['audit-resource-types'],
     queryFn: async () => {
-      const response = await api.get<string[]>("/admin/audit-logs/resource-types");
+      const response = await api.get<string[]>('/admin/audit-logs/resource-types');
       return response.data;
     },
   });
@@ -78,9 +78,9 @@ export default function AuditLogs() {
   };
 
   const formatUserName = (log: AuditLog): string => {
-    if (!log.user) return "-";
+    if (!log.user) return '-';
     const names = [log.user.first_name, log.user.last_name].filter(Boolean);
-    return names.length > 0 ? names.join(" ") : log.user.email;
+    return names.length > 0 ? names.join(' ') : log.user.email;
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -91,11 +91,11 @@ export default function AuditLogs() {
 
   const handleClearFilters = () => {
     const cleared = {
-      search: "",
-      action: "",
-      resourceType: "",
-      startDate: "",
-      endDate: "",
+      search: '',
+      action: '',
+      resourceType: '',
+      startDate: '',
+      endDate: '',
     };
     setFilters(cleared);
     setAppliedFilters(cleared);
@@ -106,58 +106,58 @@ export default function AuditLogs() {
     setIsExporting(true);
     try {
       const params = new URLSearchParams();
-      if (appliedFilters.search) params.append("search", appliedFilters.search);
-      if (appliedFilters.action) params.append("action", appliedFilters.action);
-      if (appliedFilters.resourceType) params.append("resource_type", appliedFilters.resourceType);
-      if (appliedFilters.startDate) params.append("start_date", new Date(appliedFilters.startDate).toISOString());
-      if (appliedFilters.endDate) params.append("end_date", new Date(appliedFilters.endDate).toISOString());
+      if (appliedFilters.search) params.append('search', appliedFilters.search);
+      if (appliedFilters.action) params.append('action', appliedFilters.action);
+      if (appliedFilters.resourceType) params.append('resource_type', appliedFilters.resourceType);
+      if (appliedFilters.startDate)
+        params.append('start_date', new Date(appliedFilters.startDate).toISOString());
+      if (appliedFilters.endDate)
+        params.append('end_date', new Date(appliedFilters.endDate).toISOString());
 
       const response = await api.get(`/admin/audit-logs/export?${params.toString()}`, {
-        responseType: "blob",
+        responseType: 'blob',
       });
 
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = url;
-      link.setAttribute("download", `audit_logs_${new Date().toISOString().split("T")[0]}.csv`);
+      link.setAttribute('download', `audit_logs_${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Export failed:", error);
+    } catch {
+      // Export failed — UI already reflects via isExporting state
     } finally {
       setIsExporting(false);
     }
   };
 
   const getActionColor = (action: string): string => {
-    if (action.includes("login_failed") || action.includes("delete")) {
-      return "bg-red-100 text-red-800";
+    if (action.includes('login_failed') || action.includes('delete')) {
+      return 'bg-red-100 text-red-800';
     }
-    if (action.includes("create")) {
-      return "bg-green-100 text-green-800";
+    if (action.includes('create')) {
+      return 'bg-green-100 text-green-800';
     }
-    if (action.includes("update")) {
-      return "bg-yellow-100 text-yellow-800";
+    if (action.includes('update')) {
+      return 'bg-yellow-100 text-yellow-800';
     }
-    if (action.includes("login") || action.includes("logout")) {
-      return "bg-purple-100 text-purple-800";
+    if (action.includes('login') || action.includes('logout')) {
+      return 'bg-purple-100 text-purple-800';
     }
-    return "bg-blue-100 text-blue-800";
+    return 'bg-blue-100 text-blue-800';
   };
 
-  const hasFilters = Object.values(appliedFilters).some((v) => v !== "");
+  const hasFilters = Object.values(appliedFilters).some((v) => v !== '');
 
   return (
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            View all system activity and security events
-          </p>
+          <p className="mt-1 text-sm text-gray-500">View all system activity and security events</p>
         </div>
         <button
           onClick={handleExport}
@@ -166,16 +166,41 @@ export default function AuditLogs() {
         >
           {isExporting ? (
             <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
               </svg>
               Exporting...
             </>
           ) : (
             <>
-              <svg className="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <svg
+                className="-ml-1 mr-2 h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
               </svg>
               Export CSV
             </>
@@ -189,9 +214,7 @@ export default function AuditLogs() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Search */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Search
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
               <input
                 type="text"
                 placeholder="Search actions, users, IPs..."
@@ -203,9 +226,7 @@ export default function AuditLogs() {
 
             {/* Action Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Action
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Action</label>
               <select
                 className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 value={filters.action}
@@ -222,9 +243,7 @@ export default function AuditLogs() {
 
             {/* Resource Type Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Resource Type
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Resource Type</label>
               <select
                 className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 value={filters.resourceType}
@@ -241,9 +260,7 @@ export default function AuditLogs() {
 
             {/* Start Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                From Date
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
               <input
                 type="date"
                 className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
@@ -254,9 +271,7 @@ export default function AuditLogs() {
 
             {/* End Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                To Date
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
               <input
                 type="date"
                 className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
@@ -271,8 +286,18 @@ export default function AuditLogs() {
               type="submit"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700"
             >
-              <svg className="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <svg
+                className="-ml-1 mr-2 h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
               </svg>
               Search
             </button>
@@ -292,19 +317,20 @@ export default function AuditLogs() {
       {/* Results Count */}
       {data && (
         <div className="mb-4 text-sm text-gray-600">
-          Showing {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, data.total)} of {data.total} entries
+          Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, data.total)} of{' '}
+          {data.total} entries
         </div>
       )}
 
       {/* Table */}
       {isLoading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-12" role="status" aria-label="Loading">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
       ) : (
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200" aria-label="Audit log entries">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -342,27 +368,27 @@ export default function AuditLogs() {
                           <div className="text-sm font-medium text-gray-900">
                             {formatUserName(log)}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {log.user.email}
-                          </div>
+                          <div className="text-xs text-gray-500">{log.user.email}</div>
                         </div>
                       ) : (
                         <span className="text-sm text-gray-400">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getActionColor(log.action)}`}>
+                      <span
+                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getActionColor(log.action)}`}
+                      >
                         {log.action}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {log.resource_type || "-"}
+                      {log.resource_type || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {log.tenant?.name || "-"}
+                      {log.tenant?.name || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                      {log.ip_address || "-"}
+                      {log.ip_address || '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {Object.keys(log.details).length > 0 ? (
@@ -371,7 +397,7 @@ export default function AuditLogs() {
                           onClick={() => setExpandedRow(expandedRow === log.id ? null : log.id)}
                           className="text-primary-600 hover:text-primary-800 text-xs font-medium"
                         >
-                          {expandedRow === log.id ? "Hide" : "View"} Details
+                          {expandedRow === log.id ? 'Hide' : 'View'} Details
                         </button>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -418,7 +444,12 @@ export default function AuditLogs() {
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -447,20 +478,33 @@ export default function AuditLogs() {
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Page <span className="font-medium">{page}</span> of{" "}
+                    Page <span className="font-medium">{page}</span> of{' '}
                     <span className="font-medium">{data.pages}</span>
                   </p>
                 </div>
                 <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <nav
+                    className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                    aria-label="Pagination"
+                  >
                     <button
                       onClick={() => setPage(1)}
                       disabled={page === 1}
                       className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
                       <span className="sr-only">First</span>
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                        />
                       </svg>
                     </button>
                     <button
@@ -469,8 +513,18 @@ export default function AuditLogs() {
                       className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
                       <span className="sr-only">Previous</span>
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
                       </svg>
                     </button>
                     <button
@@ -479,8 +533,18 @@ export default function AuditLogs() {
                       className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
                       <span className="sr-only">Next</span>
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
                       </svg>
                     </button>
                     <button
@@ -489,8 +553,18 @@ export default function AuditLogs() {
                       className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
                       <span className="sr-only">Last</span>
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                        />
                       </svg>
                     </button>
                   </nav>

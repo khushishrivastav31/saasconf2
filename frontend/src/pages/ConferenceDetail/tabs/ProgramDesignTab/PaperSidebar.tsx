@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useDraggable } from "@dnd-kit/core";
-import api from "../../../../config/api";
-import type { Paper, ProgramSession, ProgramTimeSlot } from "../../../../types";
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useDraggable } from '@dnd-kit/core';
+import api from '../../../../config/api';
+import type { Paper, ProgramSession, ProgramTimeSlot } from '../../../../types';
 
 interface PaperListResponse {
   items: Paper[];
@@ -19,25 +19,20 @@ interface PaperSidebarProps {
   isAdmin: boolean;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function computeSessionDurationMinutes(
   session: ProgramSession,
   slots: ProgramTimeSlot[]
 ): number {
-  const sortedSlots = [...slots].sort((a, b) =>
-    a.start_time.localeCompare(b.start_time)
-  );
+  const sortedSlots = [...slots].sort((a, b) => a.start_time.localeCompare(b.start_time));
   const startIdx = sortedSlots.findIndex((s) => s.id === session.start_slot_id);
   if (startIdx === -1) return 0;
 
   let totalMinutes = 0;
-  for (
-    let i = startIdx;
-    i < startIdx + session.slot_span && i < sortedSlots.length;
-    i++
-  ) {
+  for (let i = startIdx; i < startIdx + session.slot_span && i < sortedSlots.length; i++) {
     const slot = sortedSlots[i];
-    const [sh, sm] = slot.start_time.split(":").map(Number);
-    const [eh, em] = slot.end_time.split(":").map(Number);
+    const [sh, sm] = slot.start_time.split(':').map(Number);
+    const [eh, em] = slot.end_time.split(':').map(Number);
     totalMinutes += eh * 60 + em - (sh * 60 + sm);
   }
   return totalMinutes;
@@ -61,19 +56,18 @@ function DraggablePaperCard({
 }) {
   const canDrag = isAdmin;
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: `paper-${paper.id}`,
-      data: { type: "paper", paper },
-      disabled: !canDrag,
-    });
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `paper-${paper.id}`,
+    data: { type: 'paper', paper },
+    disabled: !canDrag,
+  });
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
 
   const speakerName = paper.main_speaker
-    ? `${paper.main_speaker.first_name || ""} ${paper.main_speaker.last_name || ""}`.trim()
+    ? `${paper.main_speaker.first_name || ''} ${paper.main_speaker.last_name || ''}`.trim()
     : null;
 
   const durationWarning =
@@ -88,22 +82,20 @@ function DraggablePaperCard({
       {...(canDrag ? { ...attributes, ...listeners } : {})}
       className={`
         p-2 hover:bg-gray-50
-        ${canDrag ? "cursor-grab active:cursor-grabbing" : ""}
-        ${isDragging ? "opacity-50 z-50" : ""}
+        ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}
+        ${isDragging ? 'opacity-50 z-50' : ''}
       `}
     >
       <h4 className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
         {paper.title}
       </h4>
 
-      {speakerName && (
-        <p className="text-xs text-gray-500 mt-0.5 truncate">{speakerName}</p>
-      )}
+      {speakerName && <p className="text-xs text-gray-500 mt-0.5 truncate">{speakerName}</p>}
 
       {durationWarning && (
         <div className="mt-1 px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
-          Duration ({paper.session_type_duration} min) exceeds session (
-          {selectedSessionDuration} min)
+          Duration ({paper.session_type_duration} min) exceeds session ({selectedSessionDuration}{' '}
+          min)
         </div>
       )}
 
@@ -117,9 +109,7 @@ function DraggablePaperCard({
               Assign
             </button>
           ) : (
-            <span className="text-xs text-gray-400 italic">
-              Drag to a session
-            </span>
+            <span className="text-xs text-gray-400 italic">Drag to a session</span>
           )}
         </div>
       )}
@@ -138,7 +128,7 @@ function AssignedPaperCard({
   onUnassignPaper: (sessionId: string) => void;
 }) {
   const speakerName = paper.main_speaker
-    ? `${paper.main_speaker.first_name || ""} ${paper.main_speaker.last_name || ""}`.trim()
+    ? `${paper.main_speaker.first_name || ''} ${paper.main_speaker.last_name || ''}`.trim()
     : null;
 
   return (
@@ -146,9 +136,7 @@ function AssignedPaperCard({
       <h4 className="text-sm font-medium text-gray-900 line-clamp-1 leading-tight">
         {paper.title}
       </h4>
-      {speakerName && (
-        <p className="text-xs text-gray-500 mt-0.5 truncate">{speakerName}</p>
-      )}
+      {speakerName && <p className="text-xs text-gray-500 mt-0.5 truncate">{speakerName}</p>}
       <p className="text-xs text-green-700 mt-0.5 truncate">
         {session.session_type_name || session.title}
       </p>
@@ -165,17 +153,13 @@ function AssignedPaperCard({
 // Drag overlay for paper being dragged
 export function PaperCardOverlay({ paper }: { paper: Paper }) {
   const speakerName = paper.main_speaker
-    ? `${paper.main_speaker.first_name || ""} ${paper.main_speaker.last_name || ""}`.trim()
+    ? `${paper.main_speaker.first_name || ''} ${paper.main_speaker.last_name || ''}`.trim()
     : null;
 
   return (
     <div className="p-2 bg-white border border-primary-300 rounded-md shadow-2xl opacity-90 max-w-[250px]">
-      <h4 className="text-sm font-medium text-gray-900 line-clamp-1">
-        {paper.title}
-      </h4>
-      {speakerName && (
-        <p className="text-xs text-gray-500 truncate">{speakerName}</p>
-      )}
+      <h4 className="text-sm font-medium text-gray-900 line-clamp-1">{paper.title}</h4>
+      {speakerName && <p className="text-xs text-gray-500 truncate">{speakerName}</p>}
       {paper.session_type_name && (
         <span className="inline-block mt-1 px-1.5 py-0.5 text-xs bg-primary-100 text-primary-700 rounded">
           {paper.session_type_name}
@@ -195,24 +179,22 @@ export default function PaperSidebar({
   isAdmin,
 }: PaperSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState<string>("all");
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
   const [showAssigned, setShowAssigned] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["papers", conferenceId, "all"],
+    queryKey: ['papers', conferenceId, 'all'],
     queryFn: async () => {
       const params = new URLSearchParams();
-      params.append("conference_id", conferenceId);
-      params.append("page_size", "500");
-      const response = await api.get<PaperListResponse>(
-        `/cfp/papers?${params.toString()}`
-      );
+      params.append('conference_id', conferenceId);
+      params.append('page_size', '500');
+      const response = await api.get<PaperListResponse>(`/cfp/papers?${params.toString()}`);
       return response.data;
     },
   });
 
-  const papers = data?.items || [];
+  const papers = useMemo(() => data?.items ?? [], [data?.items]);
 
   const paperSessionMap = useMemo(() => {
     const map = new Map<string, ProgramSession>();
@@ -225,18 +207,12 @@ export default function PaperSidebar({
   }, [sessions]);
 
   const selectedSession = useMemo(
-    () =>
-      selectedSessionId
-        ? sessions.find((s) => s.id === selectedSessionId) || null
-        : null,
+    () => (selectedSessionId ? sessions.find((s) => s.id === selectedSessionId) || null : null),
     [sessions, selectedSessionId]
   );
 
   const selectedSessionDuration = useMemo(
-    () =>
-      selectedSession
-        ? computeSessionDurationMinutes(selectedSession, slots)
-        : 0,
+    () => (selectedSession ? computeSessionDurationMinutes(selectedSession, slots) : 0),
     [selectedSession, slots]
   );
 
@@ -279,15 +255,15 @@ export default function PaperSidebar({
         const q = search.toLowerCase();
         const title = paper.title.toLowerCase();
         const speaker = paper.main_speaker
-          ? `${paper.main_speaker.first_name || ""} ${paper.main_speaker.last_name || ""}`.toLowerCase()
-          : "";
+          ? `${paper.main_speaker.first_name || ''} ${paper.main_speaker.last_name || ''}`.toLowerCase()
+          : '';
         if (!title.includes(q) && !speaker.includes(q)) continue;
       }
 
       // Apply session type filter
-      if (filterType !== "all") {
-        if (filterType === "none" && paper.session_type_id) continue;
-        if (filterType !== "none" && paper.session_type_id !== filterType) continue;
+      if (filterType !== 'all') {
+        if (filterType === 'none' && paper.session_type_id) continue;
+        if (filterType !== 'none' && paper.session_type_id !== filterType) continue;
       }
 
       if (paper.session_type_id && paper.session_type_name) {
@@ -305,11 +281,9 @@ export default function PaperSidebar({
       }
     }
 
-    const result = Array.from(groups.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    const result = Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name));
     if (noType.length > 0) {
-      result.push({ name: "No Session Type", papers: noType });
+      result.push({ name: 'No Session Type', papers: noType });
     }
     return result;
   }, [unassignedPapers, search, filterType]);
@@ -321,16 +295,13 @@ export default function PaperSidebar({
     return assignedPapers.filter((a) => {
       const title = a.paper.title.toLowerCase();
       const speaker = a.paper.main_speaker
-        ? `${a.paper.main_speaker.first_name || ""} ${a.paper.main_speaker.last_name || ""}`.toLowerCase()
-        : "";
+        ? `${a.paper.main_speaker.first_name || ''} ${a.paper.main_speaker.last_name || ''}`.toLowerCase()
+        : '';
       return title.includes(q) || speaker.includes(q);
     });
   }, [assignedPapers, search]);
 
-  const totalUnassignedShown = groupedUnassigned.reduce(
-    (sum, g) => sum + g.papers.length,
-    0
-  );
+  const totalUnassignedShown = groupedUnassigned.reduce((sum, g) => sum + g.papers.length, 0);
 
   if (collapsed) {
     return (
@@ -373,12 +344,7 @@ export default function PaperSidebar({
           className="p-1 text-gray-400 hover:text-gray-600 rounded"
           title="Collapse sidebar"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -417,11 +383,8 @@ export default function PaperSidebar({
       {selectedSession && (
         <div className="px-2 py-1.5 bg-primary-50 border-b border-primary-100">
           <p className="text-xs text-primary-700">
-            <span className="font-medium">Target:</span>{" "}
-            {selectedSession.title}
-            <span className="text-primary-500 ml-1">
-              ({selectedSessionDuration} min)
-            </span>
+            <span className="font-medium">Target:</span> {selectedSession.title}
+            <span className="text-primary-500 ml-1">({selectedSessionDuration} min)</span>
           </p>
         </div>
       )}
@@ -436,9 +399,7 @@ export default function PaperSidebar({
           <>
             {/* Unassigned papers grouped by session type */}
             {totalUnassignedShown === 0 && !search.trim() && (
-              <div className="py-6 text-center text-sm text-gray-500">
-                All papers assigned
-              </div>
+              <div className="py-6 text-center text-sm text-gray-500">All papers assigned</div>
             )}
             {totalUnassignedShown === 0 && search.trim() && (
               <div className="py-6 text-center text-sm text-gray-500">
@@ -451,9 +412,7 @@ export default function PaperSidebar({
                   <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
                     {group.name}
                   </span>
-                  <span className="ml-1 text-xs text-gray-400">
-                    ({group.papers.length})
-                  </span>
+                  <span className="ml-1 text-xs text-gray-400">({group.papers.length})</span>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {group.papers.map((paper) => (
@@ -482,12 +441,17 @@ export default function PaperSidebar({
                     Assigned ({assignedPapers.length})
                   </span>
                   <svg
-                    className={`w-4 h-4 text-green-600 transition-transform ${showAssigned ? "rotate-180" : ""}`}
+                    className={`w-4 h-4 text-green-600 transition-transform ${showAssigned ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
                 {showAssigned && (

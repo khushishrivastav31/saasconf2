@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.html_sanitize import sanitize_html
 
@@ -42,7 +42,7 @@ class NewsArticleResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class NewsArticleListResponse(BaseModel):
@@ -72,7 +72,7 @@ class PortalNewsArticle(BaseModel):
     body_html: str
     published_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PortalNewsListResponse(BaseModel):

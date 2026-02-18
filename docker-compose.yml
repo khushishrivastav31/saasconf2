@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # PostgreSQL Database
   db:
-    image: postgres:15-alpine
+    image: postgres:16.6-alpine
     container_name: saasconf_db
     environment:
       POSTGRES_USER: saasconf
@@ -21,7 +21,7 @@ services:
 
   # Redis for caching and rate limiting
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     container_name: saasconf_redis
     ports:
       - "6379:6379"

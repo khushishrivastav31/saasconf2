@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.core.validators import validate_phone
 
@@ -120,6 +120,8 @@ class TenantUpdate(BaseModel):
 class TenantResponse(BaseModel):
     """Tenant response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
     slug: str
@@ -150,9 +152,6 @@ class TenantResponse(BaseModel):
     updated_at: datetime
     user_count: int = 0
     module_count: int = 0
-
-    class Config:
-        from_attributes = True
 
 
 class TenantListResponse(BaseModel):

@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.validators import validate_phone
 
@@ -181,6 +181,8 @@ class LocationUpdate(BaseModel):
 class LocationResponse(BaseModel):
     """Location response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     parent_id: UUID | None
@@ -238,9 +240,6 @@ class LocationResponse(BaseModel):
     # Nested children count
     children_count: int = 0
     conference_ids: list[UUID] = []
-
-    class Config:
-        from_attributes = True
 
 
 class LocationTreeResponse(LocationResponse):

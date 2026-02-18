@@ -242,8 +242,7 @@ function AssignModuleModal({ tenantId, onClose }: { tenantId: string; onClose: (
     onSuccess: () => {
       onClose();
     },
-    onError: (error: Error) => {
-      console.error('Failed to assign module:', error);
+    onError: () => {
       alert('Failed to assign module. Please try again.');
     },
   });

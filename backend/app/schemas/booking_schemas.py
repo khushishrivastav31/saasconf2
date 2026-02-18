@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # --- Booking Period Schemas ---
 
@@ -43,6 +43,8 @@ class BookingPeriodUpdate(BaseModel):
 class BookingPeriodResponse(BaseModel):
     """Booking period response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -55,9 +57,6 @@ class BookingPeriodResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class BookingPeriodListResponse(BaseModel):
@@ -93,6 +92,8 @@ class BookingOptionUpdate(BaseModel):
 class BookingOptionResponse(BaseModel):
     """Booking option response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -103,9 +104,6 @@ class BookingOptionResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class BookingOptionListResponse(BaseModel):
@@ -143,6 +141,8 @@ class BookingPackageUpdate(BaseModel):
 class BookingPackageResponse(BaseModel):
     """Booking package response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -153,9 +153,6 @@ class BookingPackageResponse(BaseModel):
     option_ids: list[UUID]
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class BookingPackageListResponse(BaseModel):
@@ -225,6 +222,8 @@ class DiscountCodeUpdate(BaseModel):
 class DiscountCodeResponse(BaseModel):
     """Discount code response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -241,9 +240,6 @@ class DiscountCodeResponse(BaseModel):
     applicable_option_ids: list[UUID] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class DiscountCodeListResponse(BaseModel):

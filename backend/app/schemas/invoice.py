@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.location import LocationContactPerson, validate_vat
 
@@ -101,6 +101,8 @@ class InvoiceUpdate(BaseModel):
 class InvoiceResponse(BaseModel):
     """Invoice response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -128,9 +130,6 @@ class InvoiceResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class InvoiceListResponse(BaseModel):

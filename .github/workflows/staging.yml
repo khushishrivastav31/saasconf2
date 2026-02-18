@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   STAGING_HOST: 46.225.88.254
   STAGING_USER: deploy
@@ -21,7 +25,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16.6-alpine
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -62,6 +66,19 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio pytest-cov
 
+      - name: Lint with Ruff
+        working-directory: backend
+        run: |
+          pip install ruff
+          ruff check app/
+          ruff format --check app/
+
+      - name: Type check with mypy
+        working-directory: backend
+        run: |
+          pip install mypy
+          mypy app/ --config-file=pyproject.toml
+
       - name: Run tests
         working-directory: backend
         env:
@@ -70,15 +87,23 @@ jobs:
           JWT_SECRET_KEY: test-secret-key-for-ci-pipeline-minimum-32-chars
           SUPER_ADMIN_PASSWORD: TestPassword123!
         run: |
-          pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
+          pytest tests/ -v --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=50
 
-      - name: Upload coverage
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         if: github.event_name == 'push'
         with:
           files: backend/coverage.xml
           flags: backend
         continue-on-error: true
+
+      - name: Upload backend coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage-report
+          path: backend/htmlcov/
+          retention-days: 14
 
   # ─────────────────────────────────────────────────────────────
   # Frontend Tests
@@ -102,6 +127,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Lint
+        working-directory: frontend
+        run: npx eslint src/ --max-warnings 0
+
       - name: Type check
         working-directory: frontend
         run: npx tsc --noEmit
@@ -110,13 +139,13 @@ jobs:
         working-directory: frontend
         run: npm run test:coverage -- --run --reporter=verbose
 
-      - name: Check coverage thresholds
-        working-directory: frontend
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            echo "Coverage Summary:"
-            cat coverage/coverage-summary.json | jq '.total'
-          fi
+      - name: Upload frontend coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/
+          retention-days: 14
 
       - name: Build
         working-directory: frontend
@@ -157,13 +186,40 @@ jobs:
         working-directory: frontend
         run: npm audit --audit-level=high
 
+      - name: Scan for vulnerabilities in Dockerfiles
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+  # ─────────────────────────────────────────────────────────────
+  # Secrets Scanning
+  # ─────────────────────────────────────────────────────────────
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
   # ─────────────────────────────────────────────────────────────
   # Deploy to Staging
   # ─────────────────────────────────────────────────────────────
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests, security-audit]
+    needs: [backend-tests, frontend-tests, security-audit, secrets-scan]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -204,6 +260,21 @@ jobs:
             -e "ssh -i ~/.ssh/id_ed25519" \
             deploy/staging/ ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }}:${{ env.STAGING_PATH }}/deploy/staging/
 
+      - name: Tag previous images for rollback
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+
+            # Tag current images as :previous for rollback
+            for svc in backend frontend; do
+              img=$(docker compose images $svc --format json 2>/dev/null | head -1 | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Repository',''))" 2>/dev/null || true)
+              if [ -n "$img" ]; then
+                docker tag "$img:latest" "$img:previous" 2>/dev/null || true
+                echo "Tagged $img:latest → $img:previous"
+              fi
+            done
+          EOF
+
       - name: Rebuild and restart containers
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
@@ -219,11 +290,9 @@ jobs:
             echo "Waiting for backend to be healthy..."
             sleep 15
 
-            # Run database migrations on new container
-            docker compose exec -T backend alembic upgrade head || true
-
-            # Clean up old images
-            docker image prune -f
+            # Run database migrations — fail the deploy if migrations fail
+            echo "Running database migrations..."
+            docker compose exec -T backend alembic upgrade head
 
             # Show status
             docker compose ps
@@ -231,16 +300,34 @@ jobs:
 
       - name: Health check
         run: |
-          echo "Waiting for services to start..."
-          sleep 30
+          echo "Waiting for services to stabilize..."
+          sleep 10
 
-          # Check backend health
-          curl -f https://api.staging.sonrisa.ventures/health || exit 1
-          echo "Backend is healthy"
+          # Retry health checks up to 5 times with 10s intervals
+          for i in 1 2 3 4 5; do
+            echo "Health check attempt $i/5..."
+            if curl -sf https://api.staging.sonrisa.ventures/health > /dev/null 2>&1; then
+              echo "Backend is healthy"
+              break
+            fi
+            if [ "$i" -eq 5 ]; then
+              echo "Backend health check failed after 5 attempts"
+              exit 1
+            fi
+            sleep 10
+          done
 
-          # Check frontend
-          curl -f https://staging.sonrisa.ventures || exit 1
-          echo "Frontend is healthy"
+          for i in 1 2 3 4 5; do
+            if curl -sf https://staging.sonrisa.ventures > /dev/null 2>&1; then
+              echo "Frontend is healthy"
+              break
+            fi
+            if [ "$i" -eq 5 ]; then
+              echo "Frontend health check failed after 5 attempts"
+              exit 1
+            fi
+            sleep 10
+          done
 
       - name: Notify success
         if: success()

@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.cfp_applicants import ApplicantResponse
 
@@ -29,15 +29,14 @@ class TopicUpdate(BaseModel):
 class TopicResponse(BaseModel):
     """Topic response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     name: str
     description: str | None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class TopicListResponse(BaseModel):
@@ -116,6 +115,8 @@ class CospeakerInvitationListResponse(BaseModel):
 class PaperCommentResponse(BaseModel):
     """Paper comment response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     committee_member_id: UUID | None
     committee_member_first_name: str | None = None
@@ -123,9 +124,6 @@ class PaperCommentResponse(BaseModel):
     committee_member_role: str | None = None
     content: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # --- Paper Schemas ---
@@ -192,6 +190,8 @@ class PaperReviewSummary(BaseModel):
 class PaperResponse(BaseModel):
     """Paper response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     cfp_id: UUID
@@ -222,9 +222,6 @@ class PaperResponse(BaseModel):
     submitted_at: datetime | None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class PaperListResponse(BaseModel):
@@ -260,6 +257,8 @@ class PaperAssignmentCreate(BaseModel):
 class PaperAssignmentResponse(BaseModel):
     """Paper assignment response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     paper_id: UUID
     paper_title: str
@@ -268,9 +267,6 @@ class PaperAssignmentResponse(BaseModel):
     committee_member_last_name: str
     is_anonymous: bool
     assigned_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class PaperAssignmentListResponse(BaseModel):

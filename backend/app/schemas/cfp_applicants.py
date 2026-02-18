@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.core.validators import validate_phone
 
@@ -74,6 +74,8 @@ class ApplicantUpdate(BaseModel):
 class ApplicantResponse(BaseModel):
     """Applicant response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     first_name: str
@@ -93,9 +95,6 @@ class ApplicantResponse(BaseModel):
     video_url: str | None = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ApplicantListResponse(BaseModel):

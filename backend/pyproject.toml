@@ -1,3 +1,51 @@
+[tool.poetry]
+name = "saasconf-backend"
+version = "0.1.0"
+description = "SaaSConf - Multi-tenant SaaS platform for conference management"
+authors = ["SaaSConf Team"]
+readme = "README.md"
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "0.129.0"
+uvicorn = {version = "0.34.2", extras = ["standard"]}
+starlette = "0.52.1"
+python-multipart = "0.0.22"
+sqlalchemy = "2.0.41"
+asyncpg = "0.31.0"
+psycopg2-binary = "2.9.10"
+alembic = "1.15.2"
+redis = "5.2.1"
+PyJWT = {version = "2.10.1", extras = ["crypto"]}
+argon2-cffi = "23.1.0"
+pydantic = "2.11.1"
+pydantic-settings = "2.9.1"
+email-validator = "2.2.0"
+phonenumbers = "9.0.2"
+python-stdnum = "2.2"
+slowapi = "0.1.9"
+sentry-sdk = {version = "2.22.0", extras = ["fastapi"]}
+python-json-logger = "3.3.0"
+python-dotenv = "1.1.0"
+httpx = "0.28.1"
+filetype = "1.2.0"
+Pillow = "12.1.1"
+nh3 = "0.2.21"
+resend = "2.7.0"
+prometheus-fastapi-instrumentator = "7.0.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-asyncio = "^0.24"
+pytest-cov = "^5.0"
+ruff = "^0.8"
+mypy = "^1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.ruff]
 target-version = "py312"
 line-length = 120
@@ -31,8 +79,31 @@ known-first-party = ["app"]
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
+warn_unused_ignores = true
+ignore_missing_imports = false
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+warn_redundant_casts = true
+
+# Third-party packages without type stubs
+[[tool.mypy.overrides]]
+module = [
+    "nh3",
+    "phonenumbers",
+    "phonenumbers.*",
+    "prometheus_fastapi_instrumentator",
+    "slowapi",
+    "slowapi.*",
+    "pythonjsonlogger",
+    "pythonjsonlogger.*",
+    "filetype",
+    "resend",
+    "resend.*",
+]
 ignore_missing_imports = true
-check_untyped_defs = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

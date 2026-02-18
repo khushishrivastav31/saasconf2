@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.core.html_sanitize import sanitize_html
 from app.core.validators import validate_phone
@@ -152,6 +152,8 @@ class CFPUpdate(BaseModel):
 class CFPResponse(BaseModel):
     """CFP response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     title: str
@@ -179,9 +181,6 @@ class CFPResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     conference_ids: list[UUID] = []
-
-    class Config:
-        from_attributes = True
 
 
 class CFPListResponse(BaseModel):
@@ -261,6 +260,8 @@ class SubmissionUpdate(BaseModel):
 class SubmissionResponse(BaseModel):
     """Submission response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     cfp_id: UUID
@@ -287,9 +288,6 @@ class SubmissionResponse(BaseModel):
     reviewed_at: datetime | None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class SubmissionListResponse(BaseModel):
@@ -368,6 +366,8 @@ class CommitteeMemberUpdate(BaseModel):
 class CommitteeMemberResponse(BaseModel):
     """Committee member response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -386,9 +386,6 @@ class CommitteeMemberResponse(BaseModel):
     topics: list[TopicResponse] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class CommitteeMemberListResponse(BaseModel):

@@ -1,12 +1,17 @@
-import { Node, mergeAttributes } from "@tiptap/core";
-import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Node, mergeAttributes } from '@tiptap/core';
+import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Extend Tiptap's Commands interface so `setImage` is recognized globally
-declare module "@tiptap/core" {
+declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     image: {
-      setImage: (options: { src: string; alt?: string; title?: string; width?: number }) => ReturnType;
+      setImage: (options: {
+        src: string;
+        alt?: string;
+        title?: string;
+        width?: number;
+      }) => ReturnType;
     };
   }
 }
@@ -21,18 +26,15 @@ function ResizableImageView({ node, updateAttributes, selected }: ReactNodeViewP
   const startX = useRef(0);
   const startWidth = useRef(0);
 
-  const onMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const img = imgRef.current;
-      if (!img) return;
-      startX.current = e.clientX;
-      startWidth.current = img.offsetWidth;
-      setResizing(true);
-    },
-    [],
-  );
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const img = imgRef.current;
+    if (!img) return;
+    startX.current = e.clientX;
+    startWidth.current = img.offsetWidth;
+    setResizing(true);
+  }, []);
 
   useEffect(() => {
     if (!resizing) return;
@@ -52,11 +54,11 @@ function ResizableImageView({ node, updateAttributes, selected }: ReactNodeViewP
       updateAttributes({ width: newWidth });
     };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
     return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
   }, [resizing, updateAttributes]);
 
@@ -64,11 +66,13 @@ function ResizableImageView({ node, updateAttributes, selected }: ReactNodeViewP
 
   return (
     <NodeViewWrapper className="relative inline-block" data-drag-handle>
-      <div className={`relative inline-block group ${selected ? "ring-2 ring-primary-500 rounded" : ""}`}>
+      <div
+        className={`relative inline-block group ${selected ? 'ring-2 ring-primary-500 rounded' : ''}`}
+      >
         <img
           ref={imgRef}
           src={src as string}
-          alt={(alt as string) ?? ""}
+          alt={(alt as string) ?? 'Embedded image'}
           title={(title as string) ?? undefined}
           className="max-w-full h-auto rounded block"
           style={{ width: width ? `${width}px` : undefined }}
@@ -78,9 +82,7 @@ function ResizableImageView({ node, updateAttributes, selected }: ReactNodeViewP
         <div
           onMouseDown={onMouseDown}
           className={`absolute top-0 right-0 w-2 h-full cursor-col-resize ${
-            selected || resizing
-              ? "bg-primary-500/30"
-              : "bg-transparent group-hover:bg-gray-400/30"
+            selected || resizing ? 'bg-primary-500/30' : 'bg-transparent group-hover:bg-gray-400/30'
           }`}
           title="Drag to resize"
         />
@@ -88,9 +90,7 @@ function ResizableImageView({ node, updateAttributes, selected }: ReactNodeViewP
         <div
           onMouseDown={onMouseDown}
           className={`absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize rounded-tl ${
-            selected || resizing
-              ? "bg-primary-500"
-              : "bg-transparent group-hover:bg-gray-400"
+            selected || resizing ? 'bg-primary-500' : 'bg-transparent group-hover:bg-gray-400'
           }`}
         />
       </div>
@@ -103,7 +103,7 @@ function ResizableImageView({ node, updateAttributes, selected }: ReactNodeViewP
 // ---------------------------------------------------------------------------
 
 export const ResizableImage = Node.create({
-  name: "image",
+  name: 'image',
 
   addOptions() {
     return {
@@ -118,7 +118,7 @@ export const ResizableImage = Node.create({
   },
 
   group() {
-    return this.options.inline ? "inline" : "block";
+    return this.options.inline ? 'inline' : 'block';
   },
 
   draggable: true,
@@ -131,7 +131,7 @@ export const ResizableImage = Node.create({
       width: {
         default: null,
         parseHTML: (element: HTMLElement) => {
-          const width = element.getAttribute("width") || element.style.width;
+          const width = element.getAttribute('width') || element.style.width;
           return width ? parseInt(String(width), 10) || null : null;
         },
         renderHTML: (attributes: Record<string, unknown>) => {
@@ -143,11 +143,11 @@ export const ResizableImage = Node.create({
   },
 
   parseHTML() {
-    return [{ tag: "img[src]" }];
+    return [{ tag: 'img[src]' }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["img", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)];
+    return ['img', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)];
   },
 
   addNodeView() {

@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class UserConferenceAccessBase(BaseModel):
@@ -33,7 +33,7 @@ class UserConferenceAccessResponse(UserConferenceAccessBase):
     granted_by: UUID | None
     granted_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserConferenceAccessWithDetails(UserConferenceAccessResponse):

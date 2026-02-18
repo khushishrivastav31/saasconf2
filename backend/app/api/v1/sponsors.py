@@ -3,17 +3,12 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
-from app.core.conference_helpers import get_conference_for_tenant
-from app.core.dependencies import CurrentUserDep, DbSessionDep, check_conference_admin_access, get_client_ip, require_module
-from app.core.exceptions import AuthorizationError, NotFoundError
-from app.core.pagination import calculate_pages, paginate
+from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
+from app.core.exceptions import NotFoundError
 from app.core.search import unaccent_ilike
-from app.models.attachment import Attachment
-from app.models.audit import AuditLog
-from app.models.conference import Conference
 from app.models.settings import SponsorPackage
 from app.models.sponsor import Sponsor
 from app.schemas.sponsor import (
@@ -22,10 +17,13 @@ from app.schemas.sponsor import (
     SponsorResponse,
     SponsorUpdate,
 )
+from app.services.conference import ConferenceService
 
 router = APIRouter()
 
 MODULE_CODE = "sponsors"
+
+svc = ConferenceService
 
 
 def build_sponsor_response(
@@ -58,18 +56,6 @@ def build_sponsor_response(
     )
 
 
-async def _get_package_name_map(
-    db, conference_id: UUID
-) -> dict[UUID, str]:
-    """Batch-fetch sponsor package names for a conference."""
-    result = await db.execute(
-        select(SponsorPackage.id, SponsorPackage.name).where(
-            SponsorPackage.conference_id == conference_id
-        )
-    )
-    return {row.id: row.name for row in result.all()}
-
-
 @router.get(
     "",
     response_model=SponsorListResponse,
@@ -86,11 +72,15 @@ async def list_sponsors(
     is_active: bool | None = None,
 ) -> SponsorListResponse:
     """List sponsors for a conference with pagination and filtering."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await svc.resolve_conference(db, conference_id, current_user.tenant_id)
 
-    query = select(Sponsor).where(
-        Sponsor.conference_id == conference_id,
-        Sponsor.tenant_id == current_user.tenant_id,
+    query = (
+        select(Sponsor)
+        .where(
+            Sponsor.conference_id == conference_id,
+            Sponsor.tenant_id == current_user.tenant_id,
+        )
+        .options(joinedload(Sponsor.sponsor_package))
     )
 
     if search:
@@ -99,21 +89,20 @@ async def list_sponsors(
             | unaccent_ilike(Sponsor.city, search)
         )
 
-    if sponsor_package_id is not None:
-        query = query.where(Sponsor.sponsor_package_id == sponsor_package_id)
-
-    if is_active is not None:
-        query = query.where(Sponsor.is_active == is_active)
+    query = svc.apply_filters(query, [
+        (Sponsor.sponsor_package_id == sponsor_package_id, sponsor_package_id),
+        (Sponsor.is_active == is_active, is_active),
+    ])
 
     query = query.order_by(Sponsor.company_name)
 
-    result = await paginate(db, query, page, page_size)
-
-    # Batch-fetch package names
-    pkg_map = await _get_package_name_map(db, conference_id)
+    result = await svc.list_resources(db, query, page, page_size)
 
     items = [
-        build_sponsor_response(s, pkg_map.get(s.sponsor_package_id))
+        build_sponsor_response(
+            s,
+            s.sponsor_package.name if s.sponsor_package else None,
+        )
         for s in result.items
     ]
 
@@ -122,7 +111,7 @@ async def list_sponsors(
         total=result.total,
         page=page,
         page_size=page_size,
-        pages=calculate_pages(result.total, page_size),
+        pages=svc.calculate_pages(result.total, page_size),
     )
 
 
@@ -140,13 +129,9 @@ async def create_sponsor(
     request: Request,
 ) -> SponsorResponse:
     """Create a new sponsor for a conference."""
-    # Check admin access: tenant admin OR conference-specific admin
-    if not current_user.is_super_admin and not current_user.is_tenant_admin:
-        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-        if not has_access:
-            raise AuthorizationError("Admin access to this conference required")
+    await svc.require_admin(db, current_user, conference_id)
 
-    conference = await get_conference_for_tenant(
+    conference = await svc.resolve_conference(
         db, conference_id, current_user.tenant_id
     )
 
@@ -193,9 +178,8 @@ async def create_sponsor(
         ),
         is_active=sponsor_data.is_active,
     )
-    db.add(sponsor)
 
-    audit_log = AuditLog(
+    audit_log = svc.create_audit_log(
         tenant_id=current_user.tenant_id,
         user_id=current_user.user_id,
         action="sponsor.create",
@@ -208,10 +192,8 @@ async def create_sponsor(
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
-    db.add(audit_log)
 
-    await db.commit()
-    await db.refresh(sponsor)
+    await svc.create_resource(db, sponsor, audit_log=audit_log)
 
     return build_sponsor_response(sponsor, package_name)
 
@@ -229,29 +211,22 @@ async def get_sponsor(
 ) -> SponsorResponse:
     """Get a single sponsor."""
     result = await db.execute(
-        select(Sponsor).where(
+        select(Sponsor)
+        .where(
             Sponsor.id == sponsor_id,
             Sponsor.conference_id == conference_id,
             Sponsor.tenant_id == current_user.tenant_id,
         )
+        .options(joinedload(Sponsor.sponsor_package))
     )
     sponsor = result.scalar_one_or_none()
     if not sponsor:
         raise NotFoundError(f"Sponsor with ID '{sponsor_id}' not found")
 
-    # Fetch package name
-    package_name: str | None = None
-    if sponsor.sponsor_package_id:
-        pkg_result = await db.execute(
-            select(SponsorPackage.name).where(
-                SponsorPackage.id == sponsor.sponsor_package_id
-            )
-        )
-        row = pkg_result.scalar_one_or_none()
-        if row:
-            package_name = row
-
-    return build_sponsor_response(sponsor, package_name)
+    return build_sponsor_response(
+        sponsor,
+        sponsor.sponsor_package.name if sponsor.sponsor_package else None,
+    )
 
 
 @router.put(
@@ -268,22 +243,14 @@ async def update_sponsor(
     request: Request,
 ) -> SponsorResponse:
     """Update a sponsor."""
-    # Check admin access: tenant admin OR conference-specific admin
-    if not current_user.is_super_admin and not current_user.is_tenant_admin:
-        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-        if not has_access:
-            raise AuthorizationError("Admin access to this conference required")
+    await svc.require_admin(db, current_user, conference_id)
 
-    result = await db.execute(
-        select(Sponsor).where(
-            Sponsor.id == sponsor_id,
-            Sponsor.conference_id == conference_id,
-            Sponsor.tenant_id == current_user.tenant_id,
-        )
+    sponsor = await svc.get_resource(
+        db, Sponsor, sponsor_id,
+        conference_id=conference_id,
+        tenant_id=current_user.tenant_id,
+        label="Sponsor",
     )
-    sponsor = result.scalar_one_or_none()
-    if not sponsor:
-        raise NotFoundError(f"Sponsor with ID '{sponsor_id}' not found")
 
     update_data = sponsor_data.model_dump(exclude_unset=True)
 
@@ -305,10 +272,7 @@ async def update_sponsor(
             for cp in update_data["contact_persons"]
         ]
 
-    for field, value in update_data.items():
-        setattr(sponsor, field, value)
-
-    audit_log = AuditLog(
+    audit_log = svc.create_audit_log(
         tenant_id=current_user.tenant_id,
         user_id=current_user.user_id,
         action="sponsor.update",
@@ -318,24 +282,21 @@ async def update_sponsor(
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
-    db.add(audit_log)
 
-    await db.commit()
-    await db.refresh(sponsor)
+    await svc.update_resource(db, sponsor, update_data, audit_log=audit_log)
 
-    # Fetch package name
-    package_name: str | None = None
-    if sponsor.sponsor_package_id:
-        pkg_result = await db.execute(
-            select(SponsorPackage.name).where(
-                SponsorPackage.id == sponsor.sponsor_package_id
-            )
-        )
-        row = pkg_result.scalar_one_or_none()
-        if row:
-            package_name = row
+    # Re-fetch with eager-loaded package
+    refreshed_result = await db.execute(
+        select(Sponsor)
+        .where(Sponsor.id == sponsor_id)
+        .options(joinedload(Sponsor.sponsor_package))
+    )
+    sponsor = refreshed_result.scalar_one()
 
-    return build_sponsor_response(sponsor, package_name)
+    return build_sponsor_response(
+        sponsor,
+        sponsor.sponsor_package.name if sponsor.sponsor_package else None,
+    )
 
 
 @router.delete(
@@ -350,35 +311,23 @@ async def delete_sponsor(
     request: Request,
 ) -> dict:
     """Delete a sponsor and its attachments."""
-    # Check admin access: tenant admin OR conference-specific admin
-    if not current_user.is_super_admin and not current_user.is_tenant_admin:
-        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-        if not has_access:
-            raise AuthorizationError("Admin access to this conference required")
+    await svc.require_admin(db, current_user, conference_id)
 
-    result = await db.execute(
-        select(Sponsor).where(
-            Sponsor.id == sponsor_id,
-            Sponsor.conference_id == conference_id,
-            Sponsor.tenant_id == current_user.tenant_id,
-        )
+    sponsor = await svc.get_resource(
+        db, Sponsor, sponsor_id,
+        conference_id=conference_id,
+        tenant_id=current_user.tenant_id,
+        label="Sponsor",
     )
-    sponsor = result.scalar_one_or_none()
-    if not sponsor:
-        raise NotFoundError(f"Sponsor with ID '{sponsor_id}' not found")
 
     company_name = sponsor.company_name
 
     # Delete associated attachments
-    await db.execute(
-        sa_delete(Attachment).where(
-            Attachment.entity_type == "sponsor",
-            Attachment.entity_id == sponsor_id,
-            Attachment.tenant_id == current_user.tenant_id,
-        )
+    await svc.delete_related_attachments(
+        db, "sponsor", sponsor_id, current_user.tenant_id
     )
 
-    audit_log = AuditLog(
+    audit_log = svc.create_audit_log(
         tenant_id=current_user.tenant_id,
         user_id=current_user.user_id,
         action="sponsor.delete",
@@ -391,9 +340,7 @@ async def delete_sponsor(
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
-    db.add(audit_log)
 
-    await db.delete(sponsor)
-    await db.commit()
+    await svc.delete_resource(db, sponsor, audit_log=audit_log)
 
     return {"message": f"Sponsor '{company_name}' deleted successfully"}

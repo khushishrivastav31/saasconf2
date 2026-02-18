@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
@@ -33,8 +33,7 @@ class ApplicantActivityLogResponse(BaseModel):
     activity_type: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ApplicantGroupedResponse(BaseModel):
@@ -307,39 +306,46 @@ async def export_applicant_activities(
     )
 
     query = query.order_by(ApplicantActivityLog.created_at.desc()).limit(max_rows)
-    result = await db.execute(query)
-    logs = result.scalars().all()
 
-    # Create CSV in memory
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # Write header
-    writer.writerow([
-        "Timestamp",
-        "Email",
-        "First Name",
-        "Last Name",
-        "Activity Type",
-    ])
-
-    # Write data rows
-    for log in logs:
-        writer.writerow([
-            log.created_at.isoformat(),
-            log.applicant_email,
-            log.applicant_first_name,
-            log.applicant_last_name,
-            log.activity_type,
-        ])
-
-    # Prepare the response
-    output.seek(0)
     filename = f"applicant_activity_{utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
-    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
+
+    async def _generate():
+        # BOM + header
+        header_buf = io.StringIO()
+        writer = csv.writer(header_buf)
+        writer.writerow([
+            "Timestamp", "Email", "First Name", "Last Name", "Activity Type",
+        ])
+        yield b"\xef\xbb\xbf" + header_buf.getvalue().encode("utf-8")
+
+        # Stream rows in batches
+        batch_size = 1000
+        offset = 0
+        while True:
+            batch_query = query.offset(offset).limit(batch_size)
+            result = await db.execute(batch_query)
+            logs = result.scalars().all()
+            if not logs:
+                break
+
+            chunk = io.StringIO()
+            w = csv.writer(chunk)
+            for log in logs:
+                w.writerow([
+                    log.created_at.isoformat(),
+                    log.applicant_email,
+                    log.applicant_first_name,
+                    log.applicant_last_name,
+                    log.activity_type,
+                ])
+            yield chunk.getvalue().encode("utf-8")
+
+            if len(logs) < batch_size:
+                break
+            offset += batch_size
 
     return StreamingResponse(
-        iter([csv_bytes]),
+        _generate(),
         media_type="text/csv; charset=utf-8",
         headers={
             "Content-Disposition": safe_content_disposition(filename),

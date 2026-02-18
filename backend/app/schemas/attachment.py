@@ -3,11 +3,13 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class AttachmentResponse(BaseModel):
     """Attachment response schema (excludes file_data binary)."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     tenant_id: UUID
@@ -20,9 +22,6 @@ class AttachmentResponse(BaseModel):
     uploaded_by: UUID | None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class AttachmentListResponse(BaseModel):

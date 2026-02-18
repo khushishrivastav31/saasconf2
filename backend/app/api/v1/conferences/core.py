@@ -158,8 +158,8 @@ async def create_conference(
     db.add(conference)
     await db.flush()  # Get the conference ID before seeding default settings
 
-    # Seed default settings for the new conference
-    await seed_default_settings(db, current_user.tenant_id, conference.id)
+    # Seed default settings for the new conference (locale-aware when provided)
+    await seed_default_settings(db, current_user.tenant_id, conference.id, locale=conference.locale)
 
     # Log action
     audit_log = AuditLog(

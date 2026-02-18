@@ -4,7 +4,9 @@ import math
 from collections import OrderedDict
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
@@ -43,6 +45,7 @@ from app.schemas.registration import (
 MODULE_CODE = "registration"
 
 router = APIRouter(dependencies=[Depends(require_module(MODULE_CODE))])
+limiter = Limiter(key_func=get_remote_address)
 
 
 # ---------------------------------------------------------------------------
@@ -471,7 +474,9 @@ async def get_registration(
 
 
 @router.post("/individual", response_model=RegistrationResponse, status_code=201)
+@limiter.limit("10/minute")
 async def create_individual_registration(
+    request: Request,
     conference_id: UUID,
     data: IndividualRegistrationCreate,
     current_user: CurrentUserDep,
@@ -533,7 +538,9 @@ async def create_individual_registration(
 
 
 @router.post("/company", response_model=RegistrationResponse, status_code=201)
+@limiter.limit("10/minute")
 async def create_company_registration(
+    request: Request,
     conference_id: UUID,
     data: CompanySingleRegistrationCreate,
     current_user: CurrentUserDep,
@@ -592,7 +599,9 @@ async def create_company_registration(
 
 
 @router.post("/bulk", response_model=BulkRegistrationResponse, status_code=201)
+@limiter.limit("5/minute")
 async def create_bulk_registration(
+    request: Request,
     conference_id: UUID,
     data: BulkRegistrationCreate,
     current_user: CurrentUserDep,
@@ -1019,7 +1028,9 @@ async def _validate_vies(vat: str) -> bool | None:
 
 
 @router.post("/validate-vat")
+@limiter.limit("5/minute")
 async def validate_vat(
+    request: Request,
     conference_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,

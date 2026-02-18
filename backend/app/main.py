@@ -1,11 +1,13 @@
 """FastAPI application entry point."""
 
+import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -96,22 +98,59 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="Multi-tenant SaaS platform for conference management",
     lifespan=lifespan,
-    docs_url="/docs" if settings.DEBUG else None,
-    redoc_url="/redoc" if settings.DEBUG else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # Add rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allow_headers=["*"],
-)
+# Prometheus metrics
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
+# ---------------------------------------------------------------------------
+# Middleware classes
+# ---------------------------------------------------------------------------
+
+class OriginValidationMiddleware(BaseHTTPMiddleware):
+    """Reject state-changing requests with mismatched Origin header (CSRF defense-in-depth)."""
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            origin = request.headers.get("origin")
+            if origin and origin not in settings.CORS_ORIGINS:
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Origin not allowed"},
+                )
+        return await call_next(request)
+
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject requests with bodies exceeding the configured maximum size."""
+
+    MAX_BODY_SIZE = 10 * 1024 * 1024  # 10MB
+
+    async def dispatch(self, request: Request, call_next):
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > self.MAX_BODY_SIZE:
+            return JSONResponse(
+                status_code=413,
+                content={"detail": "Request body too large"},
+            )
+        return await call_next(request)
+
+
+class CorrelationIDMiddleware(BaseHTTPMiddleware):
+    """Attach a unique correlation ID to every request/response for tracing."""
+
+    async def dispatch(self, request: Request, call_next):
+        correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
+        request.state.correlation_id = correlation_id
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = correlation_id
+        return response
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -133,10 +172,35 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "frame-ancestors 'none'"
         )
         if not settings.DEBUG:
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         return response
 
 
+# ---------------------------------------------------------------------------
+# Middleware registration
+# Order matters: middleware is applied in REVERSE order of registration.
+# Register innermost first, outermost last.
+# ---------------------------------------------------------------------------
+
+# CORS middleware (innermost - must be first registered)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["*"],
+)
+
+# Origin validation (CSRF defense)
+app.add_middleware(OriginValidationMiddleware)
+
+# Request size limits
+app.add_middleware(RequestSizeLimitMiddleware)
+
+# Correlation ID for request tracing
+app.add_middleware(CorrelationIDMiddleware)
+
+# Security headers (outermost - must be last registered)
 app.add_middleware(SecurityHeadersMiddleware)
 
 
@@ -237,15 +301,95 @@ async def unhandled_error_handler(
     )
 
 
-# Health check endpoint
+# Health check endpoints
 @app.get("/health")
 async def health_check() -> dict:
-    """Health check endpoint."""
+    """Liveness probe — confirms the process is running."""
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
     }
+
+
+@app.get("/health/ready")
+async def readiness_check() -> JSONResponse:
+    """Readiness probe — checks DB and Redis connectivity."""
+    import logging
+
+    from sqlalchemy import text
+
+    from app.core.token_blacklist import _redis
+    from app.db.session import engine
+
+    logger = logging.getLogger("saasconf.health")
+    checks: dict[str, str] = {}
+
+    # Check database
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as e:
+        logger.error("Readiness check: database unavailable — %s", e)
+        checks["database"] = "unavailable"
+
+    # Check Redis
+    try:
+        if _redis:
+            await _redis.ping()
+            checks["redis"] = "ok"
+        else:
+            checks["redis"] = "not_configured"
+    except Exception as e:
+        logger.error("Readiness check: Redis unavailable — %s", e)
+        checks["redis"] = "unavailable"
+
+    all_ok = all(v in ("ok", "not_configured") for v in checks.values())
+    return JSONResponse(
+        status_code=200 if all_ok else 503,
+        content={
+            "status": "ready" if all_ok else "not_ready",
+            "checks": checks,
+        },
+    )
+
+
+# ─── Ops endpoints (super-admin only) ─────────────────────
+@app.post("/ops/data-retention-cleanup")
+async def data_retention_cleanup(
+    request: Request,
+    authorization: str | None = None,
+) -> JSONResponse:
+    """Run data retention cleanup (expired tokens, old audit logs).
+
+    Secured via a shared secret in the Authorization header,
+    so it can be called from cron jobs without a full JWT session.
+    """
+    import logging
+
+    from sqlalchemy import text
+
+    from app.db.session import async_session_maker
+
+    logger = logging.getLogger("saasconf.ops")
+
+    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD
+    auth_header = request.headers.get("Authorization", "")
+    expected = f"Bearer {settings.SUPER_ADMIN_PASSWORD}"
+    if auth_header != expected:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    try:
+        async with async_session_maker() as session:
+            result = await session.execute(text("SELECT * FROM run_data_retention_cleanup()"))
+            rows = [{"task": row[0], "deleted_rows": row[1]} for row in result.fetchall()]
+            await session.commit()
+            logger.info("Data retention cleanup completed: %s", rows)
+            return JSONResponse(content={"status": "completed", "results": rows})
+    except Exception as e:
+        logger.error("Data retention cleanup failed: %s", e)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
 
 
 # Include API router

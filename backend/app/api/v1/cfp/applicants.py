@@ -31,6 +31,7 @@ from app.schemas.cfp import (
 
 from .shared import (
     MODULE_CODE,
+    _batch_get_attachment_urls,
     _get_applicant_picture_url,
     _get_applicant_video_url,
 )
@@ -86,32 +87,38 @@ async def list_applicants(
     result = await db.execute(query)
     applicants = list(result.scalars().all())
 
-    items = []
-    for a in applicants:
-        picture_url = await _get_applicant_picture_url(db, a.id, current_user.tenant_id)
-        video_url = await _get_applicant_video_url(db, a.id, current_user.tenant_id)
-        items.append(
-            ApplicantResponse(
-                id=a.id,
-                tenant_id=a.tenant_id,
-                first_name=a.first_name,
-                last_name=a.last_name,
-                email=a.email,
-                phone=a.phone,
-                title=a.title,
-                company=a.company,
-                bio=a.bio,
-                allow_out_of_timeframe=a.allow_out_of_timeframe,
-                social_links=a.social_links or {},
-                needs_accessibility=a.needs_accessibility,
-                accessibility_details=a.accessibility_details,
-                agrees_to_recording=a.agrees_to_recording,
-                picture_url=picture_url,
-                video_url=video_url,
-                created_at=a.created_at,
-                updated_at=a.updated_at,
-            )
+    # Batch-fetch picture and video URLs to avoid N+1
+    applicant_ids = [a.id for a in applicants]
+    picture_urls = await _batch_get_attachment_urls(
+        db, applicant_ids, "applicant_picture", current_user.tenant_id
+    )
+    video_urls = await _batch_get_attachment_urls(
+        db, applicant_ids, "applicant_video", current_user.tenant_id
+    )
+
+    items = [
+        ApplicantResponse(
+            id=a.id,
+            tenant_id=a.tenant_id,
+            first_name=a.first_name,
+            last_name=a.last_name,
+            email=a.email,
+            phone=a.phone,
+            title=a.title,
+            company=a.company,
+            bio=a.bio,
+            allow_out_of_timeframe=a.allow_out_of_timeframe,
+            social_links=a.social_links or {},
+            needs_accessibility=a.needs_accessibility,
+            accessibility_details=a.accessibility_details,
+            agrees_to_recording=a.agrees_to_recording,
+            picture_url=picture_urls.get(a.id),
+            video_url=video_urls.get(a.id),
+            created_at=a.created_at,
+            updated_at=a.updated_at,
         )
+        for a in applicants
+    ]
 
     return ApplicantListResponse(items=items, total=len(items))
 

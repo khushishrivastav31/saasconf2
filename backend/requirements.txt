@@ -1,3 +1,7 @@
+# NOTE: This project uses Poetry for dependency management.
+# This file is maintained for backwards compatibility.
+# Prefer: poetry install
+
 # FastAPI and server
 fastapi==0.129.0
 uvicorn[standard]==0.34.2
@@ -29,6 +33,7 @@ slowapi==0.1.9
 
 # Monitoring
 sentry-sdk[fastapi]==2.22.0
+prometheus-fastapi-instrumentator==7.0.2
 
 # Utilities
 python-json-logger==3.3.0

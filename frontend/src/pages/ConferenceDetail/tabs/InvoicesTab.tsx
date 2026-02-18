@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../config/api";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../config/api';
 import type {
   Conference,
   Invoice,
@@ -10,35 +10,33 @@ import type {
   PlatformCurrency,
   PaginatedResponse,
   LocationContactPerson,
-} from "../../../types";
-import { parseApiError } from "../../../utils/apiError";
-import InvoiceDetailPanel from "../../../components/InvoiceDetailPanel";
-import ConfirmDialog from "../../../components/ConfirmDialog";
-import ContactPersonList from "../../../components/ContactPersonList";
-import RichTextEditor from "../../../components/common/RichTextEditor";
-import { ErrorBanner } from "../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
-import { ChevronLeftIcon, EditIcon, DeleteIcon } from "../icons";
+} from '../../../types';
+import { parseApiError } from '../../../utils/apiError';
+import InvoiceDetailPanel from '../../../components/InvoiceDetailPanel';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import ContactPersonList from '../../../components/ContactPersonList';
+import RichTextEditor from '../../../components/common/RichTextEditor';
+import { ErrorBanner } from '../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { ChevronLeftIcon, EditIcon, DeleteIcon } from '../icons';
+import { useSelection } from '../SelectionContext';
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  sent: "bg-blue-100 text-blue-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
-  cancelled: "bg-yellow-100 text-yellow-700",
+  draft: 'bg-gray-100 text-gray-700',
+  sent: 'bg-blue-100 text-blue-700',
+  paid: 'bg-green-100 text-green-700',
+  overdue: 'bg-red-100 text-red-700',
+  cancelled: 'bg-yellow-100 text-yellow-700',
 };
 
 export default function ConferenceInvoicesTab({
   conference,
-  selectedInvoiceId,
-  setSelectedInvoiceId,
   isAdmin,
 }: {
   conference: Conference;
-  selectedInvoiceId: string | null;
-  setSelectedInvoiceId: (id: string | null) => void;
   isAdmin: boolean;
 }) {
+  const { selectedInvoiceId, setSelectedInvoiceId } = useSelection();
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,43 +46,41 @@ export default function ConferenceInvoicesTab({
   const isCurrencyLocked = !!conference.currency;
 
   const emptyCreateForm: InvoiceCreate = {
-    invoice_number: "",
-    status: "draft",
-    issue_date: "",
-    due_date: "",
-    recipient_name: "",
-    recipient_email: "",
-    recipient_address_line1: "",
-    recipient_address_line2: "",
-    recipient_city: "",
-    recipient_state: "",
-    recipient_postal_code: "",
-    recipient_country: "",
-    recipient_vat_number: "",
+    invoice_number: '',
+    status: 'draft',
+    issue_date: '',
+    due_date: '',
+    recipient_name: '',
+    recipient_email: '',
+    recipient_address_line1: '',
+    recipient_address_line2: '',
+    recipient_city: '',
+    recipient_state: '',
+    recipient_postal_code: '',
+    recipient_country: '',
+    recipient_vat_number: '',
     line_items: [],
     subtotal: undefined,
     tax_rate: undefined,
     tax_amount: undefined,
     total: undefined,
-    currency: conference.currency || "",
-    notes: "",
+    currency: conference.currency || '',
+    notes: '',
     contact_persons: [],
     is_active: true,
   };
 
-  const [createForm, setCreateForm] =
-    useState<InvoiceCreate>(emptyCreateForm);
-  const [createNewContact, setCreateNewContact] =
-    useState<LocationContactPerson>({
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone: "",
-      comment: "",
-    });
+  const [createForm, setCreateForm] = useState<InvoiceCreate>(emptyCreateForm);
+  const [createNewContact, setCreateNewContact] = useState<LocationContactPerson>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
+  });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["conference-invoices", conference.id],
+    queryKey: ['conference-invoices', conference.id],
     queryFn: async () => {
       const response = await api.get<{
         items: Invoice[];
@@ -96,65 +92,57 @@ export default function ConferenceInvoicesTab({
 
   // Platform currencies for dropdowns
   const { data: currenciesData } = useQuery({
-    queryKey: ["platform-currencies"],
+    queryKey: ['platform-currencies'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
-        "/admin/settings/currencies",
-        { params: { page_size: 100, is_active: true } },
+        '/admin/settings/currencies',
+        { params: { page_size: 100, is_active: true } }
       );
       return response.data.items;
     },
   });
 
-  const selectedInvoice = data?.items?.find(
-    (inv) => inv.id === selectedInvoiceId,
-  );
+  const selectedInvoice = data?.items?.find((inv) => inv.id === selectedInvoiceId);
 
   const createMutation = useMutation({
     mutationFn: async (invoiceData: InvoiceCreate) => {
       const response = await api.post<Invoice>(
         `/conferences/${conference.id}/invoices`,
-        invoiceData,
+        invoiceData
       );
       return response.data;
     },
     onSuccess: (newInvoice) => {
       queryClient.invalidateQueries({
-        queryKey: ["conference-invoices", conference.id],
+        queryKey: ['conference-invoices', conference.id],
       });
       setIsAdding(false);
       setCreateForm(emptyCreateForm);
-      setCreateNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
       setError(null);
       setSelectedInvoiceId(newInvoice.id);
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to create invoice"));
+      setError(parseApiError(err, 'Failed to create invoice'));
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data: invoiceData,
-    }: {
-      id: string;
-      data: InvoiceUpdate;
-    }) => {
+    mutationFn: async ({ id, data: invoiceData }: { id: string; data: InvoiceUpdate }) => {
       const response = await api.put<Invoice>(
         `/conferences/${conference.id}/invoices/${id}`,
-        invoiceData,
+        invoiceData
       );
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["conference-invoices", conference.id],
+        queryKey: ['conference-invoices', conference.id],
       });
       setError(null);
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to update invoice"));
+      setError(parseApiError(err, 'Failed to update invoice'));
     },
   });
 
@@ -164,7 +152,7 @@ export default function ConferenceInvoicesTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["conference-invoices", conference.id],
+        queryKey: ['conference-invoices', conference.id],
       });
       setSelectedInvoiceId(null);
       setDeleteTarget(null);
@@ -175,10 +163,7 @@ export default function ConferenceInvoicesTab({
     e.preventDefault();
     const finalData = { ...createForm };
     if (createNewContact.first_name.trim() && createNewContact.last_name.trim()) {
-      finalData.contact_persons = [
-        ...(finalData.contact_persons || []),
-        { ...createNewContact },
-      ];
+      finalData.contact_persons = [...(finalData.contact_persons || []), { ...createNewContact }];
     }
     createMutation.mutate(finalData);
   };
@@ -187,33 +172,23 @@ export default function ConferenceInvoicesTab({
     if (createNewContact.first_name.trim() && createNewContact.last_name.trim()) {
       setCreateForm({
         ...createForm,
-        contact_persons: [
-          ...(createForm.contact_persons || []),
-          { ...createNewContact },
-        ],
+        contact_persons: [...(createForm.contact_persons || []), { ...createNewContact }],
       });
-      setCreateNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     }
   };
 
   const removeCreateContact = (index: number) => {
     setCreateForm({
       ...createForm,
-      contact_persons:
-        createForm.contact_persons?.filter((_, i) => i !== index) || [],
+      contact_persons: createForm.contact_persons?.filter((_, i) => i !== index) || [],
     });
   };
 
-  const updateCreateContact = (
-    index: number,
-    contact: LocationContactPerson,
-  ) => {
+  const updateCreateContact = (index: number, contact: LocationContactPerson) => {
     setCreateForm({
       ...createForm,
-      contact_persons:
-        createForm.contact_persons?.map((c, i) =>
-          i === index ? contact : c,
-        ) || [],
+      contact_persons: createForm.contact_persons?.map((c, i) => (i === index ? contact : c)) || [],
     });
   };
 
@@ -263,9 +238,7 @@ export default function ConferenceInvoicesTab({
                   </span>
                 )}
               </h2>
-              <p className="text-sm text-gray-500">
-                Manage invoices for this conference.
-              </p>
+              <p className="text-sm text-gray-500">Manage invoices for this conference.</p>
             </div>
             {isAdmin && !isAdding && (
               <button
@@ -289,9 +262,7 @@ export default function ConferenceInvoicesTab({
               onSubmit={handleCreateSubmit}
               className="mb-4 bg-gray-50 border border-gray-200 rounded-lg p-5 space-y-4"
             >
-              <h5 className="text-sm font-medium text-gray-900">
-                New Invoice
-              </h5>
+              <h5 className="text-sm font-medium text-gray-900">New Invoice</h5>
 
               {/* Invoice Number + Status */}
               <div className="grid grid-cols-2 gap-4">
@@ -313,12 +284,10 @@ export default function ConferenceInvoicesTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                   <select
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.status || "draft"}
+                    value={createForm.status || 'draft'}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -338,13 +307,11 @@ export default function ConferenceInvoicesTab({
               {/* Dates */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Issue Date
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Issue Date</label>
                   <input
                     type="date"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.issue_date || ""}
+                    value={createForm.issue_date || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -354,13 +321,11 @@ export default function ConferenceInvoicesTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Due Date
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
                   <input
                     type="date"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.due_date || ""}
+                    value={createForm.due_date || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -397,7 +362,7 @@ export default function ConferenceInvoicesTab({
                   <input
                     type="email"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    value={createForm.recipient_email || ""}
+                    value={createForm.recipient_email || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
@@ -411,13 +376,11 @@ export default function ConferenceInvoicesTab({
               {/* Currency + Active */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Currency
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
                   {isCurrencyLocked ? (
                     <input
                       type="text"
-                      value={conference.currency || ""}
+                      value={conference.currency || ''}
                       disabled
                       title="Set by conference"
                       className="block w-full border border-gray-300 rounded-md bg-gray-100 shadow-sm py-2 px-3 text-sm text-gray-600"
@@ -425,7 +388,7 @@ export default function ConferenceInvoicesTab({
                   ) : (
                     <select
                       className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      value={createForm.currency || ""}
+                      value={createForm.currency || ''}
                       onChange={(e) =>
                         setCreateForm({
                           ...createForm,
@@ -455,20 +418,16 @@ export default function ConferenceInvoicesTab({
                       }
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">
-                      Active
-                    </span>
+                    <span className="text-sm font-medium text-gray-700">Active</span>
                   </label>
                 </div>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <RichTextEditor
-                  value={createForm.notes || ""}
+                  value={createForm.notes || ''}
                   onChange={(html) =>
                     setCreateForm({
                       ...createForm,
@@ -495,7 +454,7 @@ export default function ConferenceInvoicesTab({
                   disabled={createMutation.isPending}
                   className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {createMutation.isPending ? "Creating..." : "Create"}
+                  {createMutation.isPending ? 'Creating...' : 'Create'}
                 </button>
                 <button
                   type="button"
@@ -504,11 +463,11 @@ export default function ConferenceInvoicesTab({
                     setError(null);
                     setCreateForm(emptyCreateForm);
                     setCreateNewContact({
-                      first_name: "",
-                      last_name: "",
-                      email: "",
-                      phone: "",
-                      comment: "",
+                      first_name: '',
+                      last_name: '',
+                      email: '',
+                      phone: '',
+                      comment: '',
                     });
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
@@ -558,29 +517,24 @@ export default function ConferenceInvoicesTab({
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
                         {invoice.invoice_number}
                       </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{invoice.recipient_name}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        {invoice.recipient_name}
+                        {invoice.issue_date || '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {invoice.issue_date || "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {invoice.due_date || "-"}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{invoice.due_date || '-'}</td>
                       <td className="px-4 py-3 text-sm">
                         <span
                           className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                            STATUS_COLORS[invoice.status] || "bg-gray-100 text-gray-700"
+                            STATUS_COLORS[invoice.status] || 'bg-gray-100 text-gray-700'
                           }`}
                         >
-                          {invoice.status.charAt(0).toUpperCase() +
-                            invoice.status.slice(1)}
+                          {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-gray-500">
                         {invoice.total != null
-                          ? `${invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${invoice.currency ? ` ${invoice.currency}` : ""}`
-                          : "-"}
+                          ? `${invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${invoice.currency ? ` ${invoice.currency}` : ''}`
+                          : '-'}
                       </td>
                       {isAdmin && (
                         <td className="px-4 py-3 text-right">

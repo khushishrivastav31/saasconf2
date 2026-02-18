@@ -1,8 +1,8 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from "react";
-import { useDroppable } from "@dnd-kit/core";
-import type { ProgramTimeSlot, ProgramTrack, ProgramSession } from "../../../../types";
-import ConfirmDialog from "../../../../components/ConfirmDialog";
-import SessionCard from "./SessionCard";
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { useDroppable } from '@dnd-kit/core';
+import type { ProgramTimeSlot, ProgramTrack, ProgramSession } from '../../../../types';
+import ConfirmDialog from '../../../../components/ConfirmDialog';
+import SessionCard from './SessionCard';
 
 interface ProgramGridProps {
   slots: ProgramTimeSlot[];
@@ -12,11 +12,25 @@ interface ProgramGridProps {
   onDeleteSession: (sessionId: string) => void;
   onUnassignPaper?: (sessionId: string) => void;
   onResizeSession?: (sessionId: string, slotSpan: number, trackSpan: number) => void;
-  onUpdateSlot?: (slotId: string, data: { start_time?: string; end_time?: string; is_session_free?: boolean }) => void;
+  onUpdateSlot?: (
+    slotId: string,
+    data: { start_time?: string; end_time?: string; is_session_free?: boolean }
+  ) => void;
   onDeleteSlot?: (slotId: string) => void;
-  onUpdateTrack?: (trackId: string, data: { name?: string; color?: string; location_id?: string; is_active?: boolean }) => void;
+  onUpdateTrack?: (
+    trackId: string,
+    data: { name?: string; color?: string; location_id?: string; is_active?: boolean }
+  ) => void;
   onDeleteTrack?: (trackId: string) => void;
-  onMergeCells?: (data: { start_slot_id: string; start_track_id: string; slot_span: number; track_span: number; sessionId?: string; spansBreakSlot?: boolean; visibleCells?: Array<{ slot_id: string; track_id: string }> }) => void;
+  onMergeCells?: (data: {
+    start_slot_id: string;
+    start_track_id: string;
+    slot_span: number;
+    track_span: number;
+    sessionId?: string;
+    spansBreakSlot?: boolean;
+    visibleCells?: Array<{ slot_id: string; track_id: string }>;
+  }) => void;
   onAddTrack?: () => void;
   onAddSlot?: () => void;
   isAdmin: boolean;
@@ -53,7 +67,7 @@ function getCellFromPosition(
 }
 
 function formatTime(timeStr: string): string {
-  const [hours, minutes] = timeStr.split(":");
+  const [hours, minutes] = timeStr.split(':');
   return `${hours}:${minutes}`;
 }
 
@@ -73,7 +87,10 @@ interface TimeSlotCellProps {
   slot: ProgramTimeSlot;
   slotIndex: number;
   isAdmin: boolean;
-  onUpdate?: (slotId: string, data: { start_time?: string; end_time?: string; is_session_free?: boolean }) => void;
+  onUpdate?: (
+    slotId: string,
+    data: { start_time?: string; end_time?: string; is_session_free?: boolean }
+  ) => void;
   onDelete?: (slotId: string) => void;
 }
 
@@ -104,12 +121,13 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isEditing, showDeleteConfirm, slot.start_time, slot.end_time, slot.is_session_free]);
 
   const handleSave = () => {
-    const hasTimeChange = startTime !== formatTime(slot.start_time) || endTime !== formatTime(slot.end_time);
+    const hasTimeChange =
+      startTime !== formatTime(slot.start_time) || endTime !== formatTime(slot.end_time);
     const hasSessionFreeChange = isSessionFree !== slot.is_session_free;
     if (onUpdate && (hasTimeChange || hasSessionFreeChange)) {
       onUpdate(slot.id, {
@@ -126,9 +144,9 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       handleSave();
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       setIsEditing(false);
       setStartTime(formatTime(slot.start_time));
       setEndTime(formatTime(slot.end_time));
@@ -183,7 +201,12 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
                 title="Delete slot"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </div>
@@ -209,24 +232,38 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
     <div
       data-time-slot
       className={`sticky left-0 z-10 border-b border-r border-gray-200 flex flex-col items-center justify-center px-2 ${
-        slot.is_session_free ? "bg-amber-50" : "bg-gray-50"
-      } ${isAdmin ? "cursor-pointer hover:bg-gray-100 group" : ""}`}
+        slot.is_session_free ? 'bg-amber-50' : 'bg-gray-50'
+      } ${isAdmin ? 'cursor-pointer hover:bg-gray-100 group' : ''}`}
       style={{ gridRow: slotIndex + 2, gridColumn: 1 }}
       onClick={() => isAdmin && setIsEditing(true)}
-      title={isAdmin ? "Click to edit time slot" : slot.is_session_free ? "Break/Lunch slot" : undefined}
+      title={
+        isAdmin ? 'Click to edit time slot' : slot.is_session_free ? 'Break/Lunch slot' : undefined
+      }
     >
-      <span className={`text-xs font-medium ${slot.is_session_free ? "text-amber-700" : "text-gray-700"}`}>
+      <span
+        className={`text-xs font-medium ${slot.is_session_free ? 'text-amber-700' : 'text-gray-700'}`}
+      >
         {formatTime(slot.start_time)}
       </span>
-      <span className={`text-xs ${slot.is_session_free ? "text-amber-500" : "text-gray-400"}`}>
+      <span className={`text-xs ${slot.is_session_free ? 'text-amber-500' : 'text-gray-400'}`}>
         {formatTime(slot.end_time)}
       </span>
       {slot.is_session_free && (
         <span className="text-[9px] text-amber-600 font-medium mt-0.5">BREAK</span>
       )}
       {isAdmin && !slot.is_session_free && (
-        <svg className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        <svg
+          className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+          />
         </svg>
       )}
     </div>
@@ -260,8 +297,8 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
         setName(track.name);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isEditing, showDeleteConfirm, track.name]);
 
   const handleSave = () => {
@@ -276,8 +313,8 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSave();
-    else if (e.key === "Escape") {
+    if (e.key === 'Enter') handleSave();
+    else if (e.key === 'Escape') {
       setIsEditing(false);
       setName(track.name);
     }
@@ -313,7 +350,12 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
                 title="Delete track"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </div>
@@ -339,30 +381,47 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
     <div
       data-track-header
       className={`sticky top-0 z-10 bg-gray-100 border-b border-r border-gray-300 flex items-center justify-center px-2 relative ${
-        isAdmin ? "cursor-pointer hover:bg-gray-200 group" : ""
+        isAdmin ? 'cursor-pointer hover:bg-gray-200 group' : ''
       }`}
       onClick={() => isAdmin && setIsEditing(true)}
-      title={isAdmin ? "Click to edit track" : undefined}
+      title={isAdmin ? 'Click to edit track' : undefined}
     >
       <div className="flex items-center gap-2">
         <div
           className="w-3 h-3 rounded-full flex-shrink-0"
-          style={{ backgroundColor: track.color || "#9CA3AF" }}
+          style={{ backgroundColor: track.color || '#9CA3AF' }}
         />
-        <span className="text-sm font-medium text-gray-900 truncate">
-          {track.name}
-        </span>
+        <span className="text-sm font-medium text-gray-900 truncate">{track.name}</span>
       </div>
       {isAdmin && (
-        <svg className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        <svg
+          className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1 flex-shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+          />
         </svg>
       )}
     </div>
   );
 }
 
-function GridCell({ slotId, trackId, trackIndex, slotIndex, isAdmin, isDroppable: droppable, isSessionFree, isMarked }: GridCellProps) {
+function GridCell({
+  slotId,
+  trackId,
+  trackIndex,
+  slotIndex,
+  isAdmin,
+  isDroppable: droppable,
+  isSessionFree,
+  isMarked,
+}: GridCellProps) {
   const cellId = trackId ? `${slotId}-${trackId}` : `${slotId}-general`;
   const { setNodeRef, isOver } = useDroppable({
     id: cellId,
@@ -371,19 +430,22 @@ function GridCell({ slotId, trackId, trackIndex, slotIndex, isAdmin, isDroppable
   });
 
   // Session-free cells have a striped/hatched background pattern
-  const sessionFreeStyle = isSessionFree ? {
-    backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(251, 191, 36, 0.15) 5px, rgba(251, 191, 36, 0.15) 10px)",
-  } : {};
+  const sessionFreeStyle = isSessionFree
+    ? {
+        backgroundImage:
+          'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(251, 191, 36, 0.15) 5px, rgba(251, 191, 36, 0.15) 10px)',
+      }
+    : {};
 
   let bgClass: string;
   if (isMarked) {
-    bgClass = "bg-primary-100 border-primary-300";
+    bgClass = 'bg-primary-100 border-primary-300';
   } else if (isOver) {
-    bgClass = "bg-primary-100";
+    bgClass = 'bg-primary-100';
   } else if (isSessionFree) {
-    bgClass = "bg-amber-50/50";
+    bgClass = 'bg-amber-50/50';
   } else {
-    bgClass = "bg-white hover:bg-gray-50";
+    bgClass = 'bg-white hover:bg-gray-50';
   }
 
   return (
@@ -393,9 +455,11 @@ function GridCell({ slotId, trackId, trackIndex, slotIndex, isAdmin, isDroppable
       className={`
         min-h-[80px] border-b border-r border-gray-200 transition-colors
         ${bgClass}
-        ${isAdmin ? "cursor-pointer" : ""}
+        ${isAdmin ? 'cursor-pointer' : ''}
       `}
-      title={isSessionFree ? "Break/Lunch slot - sessions with override can be placed here" : undefined}
+      title={
+        isSessionFree ? 'Break/Lunch slot - sessions with override can be placed here' : undefined
+      }
     />
   );
 }
@@ -450,28 +514,39 @@ export default function ProgramGrid({
 
   // Calculate session positions
   const sessionPositions = useMemo(() => {
-    return sessions.map((session) => {
-      const slotIndex = slotIndexMap.get(session.start_slot_id);
-      const trackIndex = session.start_track_id
-        ? trackIndexMap.get(session.start_track_id)
-        : null;
+    return sessions
+      .map((session) => {
+        const slotIndex = slotIndexMap.get(session.start_slot_id);
+        const trackIndex = session.start_track_id
+          ? trackIndexMap.get(session.start_track_id)
+          : null;
 
-      if (slotIndex === undefined) {
-        return null;
-      }
+        if (slotIndex === undefined) {
+          return null;
+        }
 
-      // For general events (spanning all tracks)
-      const isGeneral = session.is_general_event || session.track_span === 0 || !session.start_track_id;
+        // For general events (spanning all tracks)
+        const isGeneral =
+          session.is_general_event || session.track_span === 0 || !session.start_track_id;
 
-      return {
-        session,
-        gridRowStart: slotIndex + 2, // +2 for header row (1-indexed)
-        gridRowEnd: slotIndex + 2 + session.slot_span,
-        gridColumnStart: isGeneral ? 2 : (trackIndex !== undefined && trackIndex !== null ? trackIndex + 2 : 2),
-        gridColumnEnd: isGeneral ? sortedTracks.length + 2 : (trackIndex !== undefined && trackIndex !== null ? trackIndex + 2 + session.track_span : 3),
-        isGeneral,
-      };
-    }).filter(Boolean);
+        return {
+          session,
+          gridRowStart: slotIndex + 2, // +2 for header row (1-indexed)
+          gridRowEnd: slotIndex + 2 + session.slot_span,
+          gridColumnStart: isGeneral
+            ? 2
+            : trackIndex !== undefined && trackIndex !== null
+              ? trackIndex + 2
+              : 2,
+          gridColumnEnd: isGeneral
+            ? sortedTracks.length + 2
+            : trackIndex !== undefined && trackIndex !== null
+              ? trackIndex + 2 + session.track_span
+              : 3,
+          isGeneral,
+        };
+      })
+      .filter(Boolean);
   }, [sessions, slotIndexMap, trackIndexMap, sortedTracks.length]);
 
   // Build occupancy map: "slotIndex-trackIndex" -> sessionId
@@ -481,9 +556,12 @@ export default function ProgramGrid({
     const occupied = new Map<string, string>();
 
     // Helper: get the set of cells a session actually claims
-    const getSessionCells = (pos: NonNullable<(typeof sessionPositions)[number]>): Array<[number, number]> => {
+    const getSessionCells = (
+      pos: NonNullable<(typeof sessionPositions)[number]>
+    ): Array<[number, number]> => {
       const visibleCells = pos.session.settings?.visible_cells as
-        Array<{ slot_id: string; track_id: string }> | undefined;
+        | Array<{ slot_id: string; track_id: string }>
+        | undefined;
       if (visibleCells && visibleCells.length > 0) {
         // Only the explicitly listed cells
         const cells: Array<[number, number]> = [];
@@ -553,7 +631,8 @@ export default function ProgramGrid({
 
       // Check if session has explicit visible_cells in settings
       const visibleCells = pos.session.settings?.visible_cells as
-        Array<{ slot_id: string; track_id: string }> | undefined;
+        | Array<{ slot_id: string; track_id: string }>
+        | undefined;
 
       if (visibleCells && visibleCells.length > 0) {
         // Build map: slotIndex -> sorted track indices with visible cells
@@ -593,7 +672,12 @@ export default function ProgramGrid({
               if (mergeable) {
                 mergeable.endSlot = si + 1;
               } else {
-                rects.push({ startSlot: si, endSlot: si + 1, startTrack: rangeStart, endTrack: prev + 1 });
+                rects.push({
+                  startSlot: si,
+                  endSlot: si + 1,
+                  startTrack: rangeStart,
+                  endTrack: prev + 1,
+                });
               }
               if (i < tracks.length) {
                 rangeStart = tracks[i];
@@ -604,7 +688,12 @@ export default function ProgramGrid({
         }
 
         if (rects.length === 0) {
-          segments.push({ ...pos, isFirstSegment: true, isLastSegment: true, segmentKey: pos.session.id });
+          segments.push({
+            ...pos,
+            isFirstSegment: true,
+            isLastSegment: true,
+            segmentKey: pos.session.id,
+          });
         } else {
           rects.forEach((rect, idx) => {
             segments.push({
@@ -647,7 +736,12 @@ export default function ProgramGrid({
         }
 
         if (segmentRanges.length === 0) {
-          segments.push({ ...pos, isFirstSegment: true, isLastSegment: true, segmentKey: pos.session.id });
+          segments.push({
+            ...pos,
+            isFirstSegment: true,
+            isLastSegment: true,
+            segmentKey: pos.session.id,
+          });
         } else {
           segmentRanges.forEach((range, idx) => {
             segments.push({
@@ -664,11 +758,16 @@ export default function ProgramGrid({
           });
         }
       } else {
-        segments.push({ ...pos, isFirstSegment: true, isLastSegment: true, segmentKey: pos.session.id });
+        segments.push({
+          ...pos,
+          isFirstSegment: true,
+          isLastSegment: true,
+          segmentKey: pos.session.id,
+        });
       }
     }
     return segments;
-  }, [sessionPositions, occupiedCells, slotIndexMap]);
+  }, [sessionPositions, occupiedCells, slotIndexMap, trackIndexMap]);
 
   // --- Cell marking & merge ---
   const gridRef = useRef<HTMLDivElement>(null);
@@ -678,10 +777,12 @@ export default function ProgramGrid({
   // Compute bounding rectangle from marked cells
   const selectedRect = useMemo(() => {
     if (markedCells.size === 0) return null;
-    let minSlotIndex = Infinity, maxSlotIndex = -Infinity;
-    let minTrackIndex = Infinity, maxTrackIndex = -Infinity;
+    let minSlotIndex = Infinity,
+      maxSlotIndex = -Infinity;
+    let minTrackIndex = Infinity,
+      maxTrackIndex = -Infinity;
     for (const key of markedCells) {
-      const [s, t] = key.split("-").map(Number);
+      const [s, t] = key.split('-').map(Number);
       if (s < minSlotIndex) minSlotIndex = s;
       if (s > maxSlotIndex) maxSlotIndex = s;
       if (t < minTrackIndex) minTrackIndex = t;
@@ -692,9 +793,9 @@ export default function ProgramGrid({
 
   // Analyze selection: empty (new session) or extendable (one session fully inside)
   const selectionAnalysis = useMemo<
-    { type: "none" } | { type: "valid_empty" } | { type: "valid_extend"; session: ProgramSession }
+    { type: 'none' } | { type: 'valid_empty' } | { type: 'valid_extend'; session: ProgramSession }
   >(() => {
-    if (!selectedRect) return { type: "none" };
+    if (!selectedRect) return { type: 'none' };
 
     // Collect unique session IDs overlapping the bounding rectangle
     const overlappingIds = new Set<string>();
@@ -705,7 +806,7 @@ export default function ProgramGrid({
       }
     }
 
-    if (overlappingIds.size === 0) return { type: "valid_empty" };
+    if (overlappingIds.size === 0) return { type: 'valid_empty' };
 
     // Exactly one session overlaps — check if it is fully contained (extend case)
     if (overlappingIds.size === 1) {
@@ -723,11 +824,11 @@ export default function ProgramGrid({
           sessionMinTrack >= selectedRect.minTrackIndex &&
           sessionMaxTrack <= selectedRect.maxTrackIndex;
 
-        if (fullyContained) return { type: "valid_extend", session: pos.session };
+        if (fullyContained) return { type: 'valid_extend', session: pos.session };
       }
     }
 
-    return { type: "valid_empty" };
+    return { type: 'valid_empty' };
   }, [selectedRect, occupiedCells, sessionPositions]);
 
   const isMultiCellSelection = markedCells.size > 1;
@@ -735,7 +836,8 @@ export default function ProgramGrid({
   // Check if other sessions exist within the bounding rectangle (auto-set allow_in_session_free)
   const selectionHasObstacles = useMemo(() => {
     if (!selectedRect) return false;
-    const extendingId = selectionAnalysis.type === "valid_extend" ? selectionAnalysis.session.id : null;
+    const extendingId =
+      selectionAnalysis.type === 'valid_extend' ? selectionAnalysis.session.id : null;
     for (let s = selectedRect.minSlotIndex; s <= selectedRect.maxSlotIndex; s++) {
       for (let t = selectedRect.minTrackIndex; t <= selectedRect.maxTrackIndex; t++) {
         const occupant = occupiedCells.get(`${s}-${t}`);
@@ -751,11 +853,23 @@ export default function ProgramGrid({
       if (!isAdmin || !gridRef.current) return;
       // Don't handle if clicking on a session card, button, or input
       const target = e.target as HTMLElement;
-      if (target.closest("[data-session-card]") || target.closest("button") || target.closest("input") || target.closest("select")) return;
+      if (
+        target.closest('[data-session-card]') ||
+        target.closest('button') ||
+        target.closest('input') ||
+        target.closest('select')
+      )
+        return;
       // Don't handle clicks on the time slot column or track headers (they are sticky and coordinate checks break when scrolled)
-      if (target.closest("[data-time-slot]") || target.closest("[data-track-header]")) return;
+      if (target.closest('[data-time-slot]') || target.closest('[data-track-header]')) return;
 
-      const cell = getCellFromPosition(e.clientX, e.clientY, gridRef.current, sortedSlots.length, sortedTracks.length);
+      const cell = getCellFromPosition(
+        e.clientX,
+        e.clientY,
+        gridRef.current,
+        sortedSlots.length,
+        sortedTracks.length
+      );
       if (!cell) return;
 
       e.preventDefault();
@@ -777,15 +891,15 @@ export default function ProgramGrid({
   // Clear marked cells on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMarkedCells(new Set());
+      if (e.key === 'Escape') setMarkedCells(new Set());
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Handle merge (create new or extend existing)
   const handleMerge = useCallback(() => {
-    if (!selectedRect || !onMergeCells || selectionAnalysis.type === "none") return;
+    if (!selectedRect || !onMergeCells || selectionAnalysis.type === 'none') return;
     const startSlot = sortedSlots[selectedRect.minSlotIndex];
     const startTrack = sortedTracks[selectedRect.minTrackIndex];
     if (!startSlot || !startTrack) return;
@@ -799,7 +913,7 @@ export default function ProgramGrid({
     if (markedCells.size > 1 && markedCells.size < totalCellsInRect) {
       visibleCells = [];
       for (const key of markedCells) {
-        const [s, t] = key.split("-").map(Number);
+        const [s, t] = key.split('-').map(Number);
         const slot = sortedSlots[s];
         const track = sortedTracks[t];
         if (slot && track) {
@@ -813,20 +927,39 @@ export default function ProgramGrid({
       start_track_id: startTrack.id,
       slot_span: slotSpan,
       track_span: trackSpan,
-      sessionId: selectionAnalysis.type === "valid_extend" ? selectionAnalysis.session.id : undefined,
+      sessionId:
+        selectionAnalysis.type === 'valid_extend' ? selectionAnalysis.session.id : undefined,
       spansBreakSlot: selectionHasObstacles,
       visibleCells,
     });
     setMarkedCells(new Set());
-  }, [selectedRect, onMergeCells, selectionAnalysis, sortedSlots, sortedTracks, selectionHasObstacles, markedCells]);
+  }, [
+    selectedRect,
+    onMergeCells,
+    selectionAnalysis,
+    sortedSlots,
+    sortedTracks,
+    selectionHasObstacles,
+    markedCells,
+  ]);
 
   // Show empty state only when both are missing and no add buttons are available
   if (sortedSlots.length === 0 && sortedTracks.length === 0 && (!onAddTrack || !onAddSlot)) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-8">
         <div className="text-center">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+          <svg
+            className="mx-auto h-12 w-12 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+            />
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">No grid setup yet</h3>
           <p className="mt-1 text-sm text-gray-500">
@@ -843,8 +976,8 @@ export default function ProgramGrid({
         ref={gridRef}
         className="grid min-w-max relative select-none"
         style={{
-          gridTemplateColumns: `80px repeat(${sortedTracks.length}, 150px)${isAdmin && onAddTrack ? " 48px" : ""}`,
-          gridTemplateRows: `48px repeat(${sortedSlots.length}, 80px)${isAdmin && onAddSlot ? " 48px" : ""}`,
+          gridTemplateColumns: `80px repeat(${sortedTracks.length}, 150px)${isAdmin && onAddTrack ? ' 48px' : ''}`,
+          gridTemplateRows: `48px repeat(${sortedSlots.length}, 80px)${isAdmin && onAddSlot ? ' 48px' : ''}`,
         }}
         onMouseDown={handleGridMouseDown}
       >
@@ -876,7 +1009,12 @@ export default function ProgramGrid({
               title="Add track"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
             </button>
           </div>
@@ -923,7 +1061,12 @@ export default function ProgramGrid({
               title="Add time slot"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
             </button>
           </div>
@@ -939,7 +1082,7 @@ export default function ProgramGrid({
               gridColumnStart: seg.gridColumnStart,
               gridColumnEnd: seg.gridColumnEnd,
               zIndex: activeSessionId === seg.session.id ? 30 : 5,
-              overflow: "hidden",
+              overflow: 'hidden',
               minWidth: 0,
             }}
           >
@@ -975,7 +1118,11 @@ export default function ProgramGrid({
                 onClick={handleMerge}
                 className="px-3 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
               >
-                {selectionAnalysis.type === "valid_extend" ? "Extend Merge" : isMultiCellSelection ? "Merge Cells" : "Add Session"}
+                {selectionAnalysis.type === 'valid_extend'
+                  ? 'Extend Merge'
+                  : isMultiCellSelection
+                    ? 'Merge Cells'
+                    : 'Add Session'}
               </button>
               <button
                 onClick={() => setMarkedCells(new Set())}
@@ -984,7 +1131,9 @@ export default function ProgramGrid({
                 Cancel
               </button>
               {selectionHasObstacles && (
-                <span className="text-xs text-amber-600 flex items-center">Spans other sessions</span>
+                <span className="text-xs text-amber-600 flex items-center">
+                  Spans other sessions
+                </span>
               )}
             </div>
           </div>

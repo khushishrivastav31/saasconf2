@@ -96,7 +96,7 @@ function ProfilePage() {
     portalApi
       .get<{ id: string; name: string }[]>('/portal/pronoun-options')
       .then((res) => setPronounOptions(res.data))
-      .catch(() => {});
+      .catch((err) => console.error('Failed to load pronoun options:', err));
   }, []);
 
   useEffect(() => {

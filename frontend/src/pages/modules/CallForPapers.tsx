@@ -64,7 +64,7 @@ export default function CallForPapersPage() {
       const response = await api.get<CFPStats>('/cfp/stats');
       setStats(response.data);
     } catch {
-      console.error('Failed to load stats');
+      // Non-critical: stats won't populate
     }
   };
 
@@ -188,7 +188,7 @@ export default function CallForPapersPage() {
 
   if (loading && cfps.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64" role="status" aria-label="Loading">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
@@ -277,14 +277,18 @@ export default function CallForPapersPage() {
 
       {/* Error message */}
       {error && (
-        <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"
+        >
           {error}
         </div>
       )}
 
       {/* CFP List */}
       <div className="mt-6 bg-white shadow rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200" aria-label="Call for Papers list">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">

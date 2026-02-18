@@ -65,20 +65,6 @@ export interface UseConferenceDetailReturn {
   setExpandedSections: React.Dispatch<React.SetStateAction<Set<string>>>;
   sections: SectionDef[];
 
-  // Selection states
-  selectedLocationId: string | null;
-  setSelectedLocationId: React.Dispatch<React.SetStateAction<string | null>>;
-  selectedServiceProviderId: string | null;
-  setSelectedServiceProviderId: React.Dispatch<React.SetStateAction<string | null>>;
-  selectedSponsorId: string | null;
-  setSelectedSponsorId: React.Dispatch<React.SetStateAction<string | null>>;
-  selectedInvoiceId: string | null;
-  setSelectedInvoiceId: React.Dispatch<React.SetStateAction<string | null>>;
-  selectedCommitteeMemberId: string | null;
-  setSelectedCommitteeMemberId: React.Dispatch<React.SetStateAction<string | null>>;
-  selectedApplicantId: string | null;
-  setSelectedApplicantId: React.Dispatch<React.SetStateAction<string | null>>;
-
   // Delete logic
   showDeleteConfirm: boolean;
   setShowDeleteConfirm: React.Dispatch<React.SetStateAction<boolean>>;
@@ -153,17 +139,6 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // -------------------------------------------------------------------------
-  // Selection states (lifted for sidebar rendering)
-  // -------------------------------------------------------------------------
-
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
-  const [selectedServiceProviderId, setSelectedServiceProviderId] = useState<string | null>(null);
-  const [selectedSponsorId, setSelectedSponsorId] = useState<string | null>(null);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
-  const [selectedCommitteeMemberId, setSelectedCommitteeMemberId] = useState<string | null>(null);
-  const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null);
-
-  // -------------------------------------------------------------------------
   // Conference data
   // -------------------------------------------------------------------------
 
@@ -232,20 +207,6 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
     expandedSections,
     setExpandedSections,
     sections,
-
-    // Selection states
-    selectedLocationId,
-    setSelectedLocationId,
-    selectedServiceProviderId,
-    setSelectedServiceProviderId,
-    selectedSponsorId,
-    setSelectedSponsorId,
-    selectedInvoiceId,
-    setSelectedInvoiceId,
-    selectedCommitteeMemberId,
-    setSelectedCommitteeMemberId,
-    selectedApplicantId,
-    setSelectedApplicantId,
 
     // Delete logic
     showDeleteConfirm,

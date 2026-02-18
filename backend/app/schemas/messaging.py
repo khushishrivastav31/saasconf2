@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # --- Shared ---
@@ -11,14 +11,13 @@ from pydantic import BaseModel, Field
 class SenderInfo(BaseModel):
     """Resolved participant info."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     type: str  # "user" or "applicant"
     first_name: str
     last_name: str
     email: str
-
-    class Config:
-        from_attributes = True
 
 
 class MessageAttachmentInfo(BaseModel):
@@ -33,6 +32,8 @@ class MessageAttachmentInfo(BaseModel):
 class MessageResponse(BaseModel):
     """Single message within a thread."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     thread_id: UUID
     sender: SenderInfo
@@ -40,9 +41,6 @@ class MessageResponse(BaseModel):
     is_internal_note: bool = False
     attachments: list[MessageAttachmentInfo] = []
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ParticipantInfo(BaseModel):
@@ -61,6 +59,8 @@ class ParticipantInfo(BaseModel):
 class ThreadListItem(BaseModel):
     """Inbox row."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     subject: str
     last_message_at: datetime
@@ -74,9 +74,6 @@ class ThreadListItem(BaseModel):
     created_at: datetime
     bulk_id: UUID | None = None
     archived_at: datetime | None = None
-
-    class Config:
-        from_attributes = True
 
 
 class ThreadListResponse(BaseModel):
@@ -93,6 +90,8 @@ class ThreadListResponse(BaseModel):
 class ThreadDetailResponse(BaseModel):
     """Full thread with participants and messages."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     subject: str
     bulk_id: UUID | None = None
@@ -101,9 +100,6 @@ class ThreadDetailResponse(BaseModel):
     messages: list[MessageResponse]
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # --- Admin create / reply ---
@@ -211,15 +207,14 @@ class MessageTemplateUpdate(BaseModel):
 class MessageTemplateResponse(BaseModel):
     """Message template response."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
     subject: str
     body_html: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class MessageTemplateListResponse(BaseModel):
@@ -259,6 +254,8 @@ class RecipientListMemberInfo(BaseModel):
 class RecipientListResponse(BaseModel):
     """Recipient list summary response."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
     description: str | None = None
@@ -266,12 +263,11 @@ class RecipientListResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class RecipientListDetailResponse(BaseModel):
     """Recipient list with members."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     name: str
@@ -279,9 +275,6 @@ class RecipientListDetailResponse(BaseModel):
     members: list[RecipientListMemberInfo]
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class RecipientListListResponse(BaseModel):

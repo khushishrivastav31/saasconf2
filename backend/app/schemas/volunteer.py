@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.core.validators import validate_phone
 
@@ -72,6 +72,8 @@ class VolunteerUpdate(BaseModel):
 class VolunteerResponse(BaseModel):
     """Volunteer response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     email: str
@@ -93,9 +95,6 @@ class VolunteerResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     conference_ids: list[UUID] = []
-
-    class Config:
-        from_attributes = True
 
 
 class VolunteerListResponse(BaseModel):

@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # --- Volunteer Role Schemas ---
 
@@ -28,6 +28,8 @@ class VolunteerRoleUpdate(BaseModel):
 class VolunteerRoleResponse(BaseModel):
     """Volunteer role response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -36,9 +38,6 @@ class VolunteerRoleResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class VolunteerRoleListResponse(BaseModel):
@@ -72,6 +71,8 @@ class LocationTypeUpdate(BaseModel):
 class LocationTypeResponse(BaseModel):
     """Location type response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -82,9 +83,6 @@ class LocationTypeResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     usage_count: int = 0
-
-    class Config:
-        from_attributes = True
 
 
 class LocationTypeListResponse(BaseModel):
@@ -118,6 +116,8 @@ class CurrencyUpdate(BaseModel):
 class CurrencyResponse(BaseModel):
     """Currency response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -127,9 +127,6 @@ class CurrencyResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class CurrencyListResponse(BaseModel):
@@ -165,6 +162,8 @@ class SponsorPackageUpdate(BaseModel):
 class SponsorPackageResponse(BaseModel):
     """Sponsor package response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -175,9 +174,6 @@ class SponsorPackageResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class SponsorPackageListResponse(BaseModel):
@@ -215,6 +211,8 @@ class SessionTypeUpdate(BaseModel):
 class SessionTypeResponse(BaseModel):
     """Session type response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -226,9 +224,6 @@ class SessionTypeResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class SessionTypeListResponse(BaseModel):
@@ -260,6 +255,8 @@ class CFPCommitteeRoleUpdate(BaseModel):
 class CFPCommitteeRoleResponse(BaseModel):
     """CFP committee role response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -268,9 +265,6 @@ class CFPCommitteeRoleResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class CFPCommitteeRoleListResponse(BaseModel):
@@ -300,6 +294,8 @@ class PronounOptionUpdate(BaseModel):
 class PronounOptionResponse(BaseModel):
     """Pronoun option response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -307,9 +303,6 @@ class PronounOptionResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class PronounOptionListResponse(BaseModel):

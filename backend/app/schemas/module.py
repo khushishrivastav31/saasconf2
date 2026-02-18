@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ModuleBase(BaseModel):
@@ -46,6 +46,8 @@ class ModuleUpdate(BaseModel):
 class ModuleResponse(BaseModel):
     """Module response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     code: str
     name: str
@@ -54,9 +56,6 @@ class ModuleResponse(BaseModel):
     config_schema: dict = Field(default_factory=dict)
     created_at: datetime
     tenant_count: int = 0  # Number of tenants using this module
-
-    class Config:
-        from_attributes = True
 
 
 class TenantModuleAssign(BaseModel):
@@ -105,6 +104,8 @@ class TenantModuleUpdate(BaseModel):
 class TenantModuleResponse(BaseModel):
     """Tenant module assignment response."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     module_id: UUID
@@ -131,9 +132,6 @@ class TenantModuleResponse(BaseModel):
 
     # Computed field
     is_active_subscription: bool
-
-    class Config:
-        from_attributes = True
 
 
 class ModuleListResponse(BaseModel):

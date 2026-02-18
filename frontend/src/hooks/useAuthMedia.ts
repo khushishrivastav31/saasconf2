@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import api from "../config/api";
+import { useState, useEffect } from 'react';
+import api from '../config/api';
 
 export function useAuthMedia(mediaUrl: string | null): string | null {
   const [src, setSrc] = useState<string | null>(null);
@@ -14,13 +14,14 @@ export function useAuthMedia(mediaUrl: string | null): string | null {
     let cancelled = false;
 
     api
-      .get(mediaUrl, { responseType: "blob" })
+      .get(mediaUrl, { responseType: 'blob' })
       .then((res) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(res.data);
         setSrc(objectUrl);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('Failed to load media:', err);
         if (!cancelled) setSrc(null);
       });
 

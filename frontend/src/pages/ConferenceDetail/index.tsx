@@ -3,6 +3,7 @@ import { useParams } from 'react-router';
 import Modal from '../../components/Modal';
 import { BackIcon } from './icons';
 import { useConferenceDetail } from './useConferenceDetail';
+import { SelectionProvider, useSelection } from './SelectionContext';
 
 // Lazy-loaded tab components
 const ConferenceDetailsTab = lazy(() => import('./tabs/DetailsTab'));
@@ -74,8 +75,17 @@ function ComingSoonContent({ name }: { name: string }) {
 // ---------------------------------------------------------------------------
 
 export default function ConferenceDetail() {
+  return (
+    <SelectionProvider>
+      <ConferenceDetailContent />
+    </SelectionProvider>
+  );
+}
+
+function ConferenceDetailContent() {
   const { conferenceId } = useParams<{ conferenceId: string }>();
   const [papersKey, setPapersKey] = useState(0);
+  const { setSelectedCommitteeMemberId, setSelectedApplicantId } = useSelection();
 
   const {
     // Conference data
@@ -94,20 +104,6 @@ export default function ConferenceDetail() {
     expandedSections,
     setExpandedSections,
     sections,
-
-    // Selection states
-    selectedLocationId,
-    setSelectedLocationId,
-    selectedServiceProviderId,
-    setSelectedServiceProviderId,
-    selectedSponsorId,
-    setSelectedSponsorId,
-    selectedInvoiceId,
-    setSelectedInvoiceId,
-    selectedCommitteeMemberId,
-    setSelectedCommitteeMemberId,
-    selectedApplicantId,
-    setSelectedApplicantId,
 
     // Delete logic
     showDeleteConfirm,
@@ -362,32 +358,17 @@ export default function ConferenceDetail() {
                 <ConferenceVolunteersTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'locations' && (
-                <ConferenceLocationsTab
-                  conference={conference}
-                  selectedLocationId={selectedLocationId}
-                  setSelectedLocationId={setSelectedLocationId}
-                  isAdmin={isAdmin}
-                />
+                <ConferenceLocationsTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'cfp' && (
                 <ConferenceCFPsTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'cfp-topics' && <CFPTopics isAdmin={isAdmin} />}
               {activeSection === 'cfp-program-committee' && (
-                <CFPProgramCommittee
-                  selectedMemberId={selectedCommitteeMemberId}
-                  setSelectedMemberId={setSelectedCommitteeMemberId}
-                  conferenceId={conferenceId}
-                  isAdmin={isAdmin}
-                />
+                <CFPProgramCommittee conferenceId={conferenceId} isAdmin={isAdmin} />
               )}
               {activeSection === 'cfp-applicants' && (
-                <CFPApplicants
-                  selectedApplicantId={selectedApplicantId}
-                  setSelectedApplicantId={setSelectedApplicantId}
-                  conferenceId={conferenceId}
-                  isAdmin={isAdmin}
-                />
+                <CFPApplicants conferenceId={conferenceId} isAdmin={isAdmin} />
               )}
               {activeSection === 'cfp-papers' && <CFPPapers key={papersKey} isAdmin={isAdmin} />}
               {activeSection === 'cfp-assignments' && (
@@ -404,29 +385,14 @@ export default function ConferenceDetail() {
               )}
               {activeSection === 'attendees' && <ComingSoonContent name="Attendees" />}
               {activeSection === 'sponsors' && (
-                <ConferenceSponsorsTab
-                  conference={conference}
-                  selectedSponsorId={selectedSponsorId}
-                  setSelectedSponsorId={setSelectedSponsorId}
-                  isAdmin={isAdmin}
-                />
+                <ConferenceSponsorsTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'analytics' && <ComingSoonContent name="Analytics" />}
               {activeSection === 'service_providers' && (
-                <ConferenceServiceProvidersTab
-                  conference={conference}
-                  selectedServiceProviderId={selectedServiceProviderId}
-                  setSelectedServiceProviderId={setSelectedServiceProviderId}
-                  isAdmin={isAdmin}
-                />
+                <ConferenceServiceProvidersTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'invoices' && (
-                <ConferenceInvoicesTab
-                  conference={conference}
-                  selectedInvoiceId={selectedInvoiceId}
-                  setSelectedInvoiceId={setSelectedInvoiceId}
-                  isAdmin={isAdmin}
-                />
+                <ConferenceInvoicesTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'program' && (
                 <ProgramDesignTab conference={conference} isAdmin={isAdmin} />

@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import String, func, or_, select
 from sqlalchemy.orm import selectinload
 
@@ -27,24 +27,22 @@ router = APIRouter()
 class AuditLogUserResponse(BaseModel):
     """User details in audit log response."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     email: str
     first_name: str | None
     last_name: str | None
 
-    class Config:
-        from_attributes = True
-
 
 class AuditLogTenantResponse(BaseModel):
     """Tenant details in audit log response."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
     slug: str
-
-    class Config:
-        from_attributes = True
 
 
 class AuditLogResponse(BaseModel):
@@ -64,8 +62,7 @@ class AuditLogResponse(BaseModel):
     user: AuditLogUserResponse | None = None
     tenant: AuditLogTenantResponse | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AuditLogListResponse(BaseModel):
@@ -255,57 +252,59 @@ async def export_audit_logs(
 
     # Apply ordering and limit
     query = query.order_by(AuditLog.created_at.desc()).limit(max_rows)
-    result = await db.execute(query)
-    logs = result.scalars().all()
 
-    # Create CSV in memory
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # Write header
-    writer.writerow([
-        "Timestamp",
-        "Action",
-        "Resource Type",
-        "Resource ID",
-        "User Email",
-        "User Name",
-        "Tenant",
-        "IP Address",
-        "User Agent",
-        "Details",
-    ])
-
-    # Write data rows
-    for log in logs:
-        user_email = log.user.email if log.user else ""
-        user_name = ""
-        if log.user:
-            names = [log.user.first_name, log.user.last_name]
-            user_name = " ".join(n for n in names if n)
-
-        tenant_name = log.tenant.name if log.tenant else ""
-
-        writer.writerow([
-            log.created_at.isoformat(),
-            log.action,
-            log.resource_type or "",
-            str(log.resource_id) if log.resource_id else "",
-            user_email,
-            user_name,
-            tenant_name,
-            str(log.ip_address) if log.ip_address else "",
-            log.user_agent or "",
-            json.dumps(log.details) if log.details else "",
-        ])
-
-    # Prepare the response
-    output.seek(0)
     filename = f"audit_logs_{utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
-    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
+
+    async def _generate():
+        # BOM + header
+        header_buf = io.StringIO()
+        writer = csv.writer(header_buf)
+        writer.writerow([
+            "Timestamp", "Action", "Resource Type", "Resource ID",
+            "User Email", "User Name", "Tenant", "IP Address",
+            "User Agent", "Details",
+        ])
+        yield b"\xef\xbb\xbf" + header_buf.getvalue().encode("utf-8")
+
+        # Stream rows in batches
+        batch_size = 1000
+        offset = 0
+        while True:
+            batch_query = query.offset(offset).limit(batch_size)
+            result = await db.execute(batch_query)
+            logs = result.scalars().all()
+            if not logs:
+                break
+
+            chunk = io.StringIO()
+            w = csv.writer(chunk)
+            for log in logs:
+                user_email = log.user.email if log.user else ""
+                user_name = ""
+                if log.user:
+                    names = [log.user.first_name, log.user.last_name]
+                    user_name = " ".join(n for n in names if n)
+                tenant_name = log.tenant.name if log.tenant else ""
+                w.writerow([
+                    log.created_at.isoformat(),
+                    log.action,
+                    log.resource_type or "",
+                    str(log.resource_id) if log.resource_id else "",
+                    user_email,
+                    user_name,
+                    tenant_name,
+                    str(log.ip_address) if log.ip_address else "",
+                    log.user_agent or "",
+                    json.dumps(log.details) if log.details else "",
+                ])
+            yield chunk.getvalue().encode("utf-8")
+
+            if len(logs) < batch_size:
+                break
+            offset += batch_size
 
     return StreamingResponse(
-        iter([csv_bytes]),
+        _generate(),
         media_type="text/csv; charset=utf-8",
         headers={
             "Content-Disposition": safe_content_disposition(filename),

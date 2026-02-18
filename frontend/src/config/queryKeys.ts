@@ -1,0 +1,218 @@
+/**
+ * Centralized React Query key factory.
+ *
+ * Use these functions to construct query keys consistently across the app.
+ * This prevents typos, makes cache invalidation reliable, and provides
+ * a single place to see all the data dependencies.
+ *
+ * Usage:
+ *   queryKey: queryKeys.conferences.list(statusFilter)
+ *   queryClient.invalidateQueries({ queryKey: queryKeys.conferences.all })
+ */
+
+export const queryKeys = {
+  // ── Conferences ──────────────────────────────────────────────────
+  conferences: {
+    all: ['conferences'] as const,
+    list: (statusFilter?: string) => ['conferences', statusFilter] as const,
+    detail: (id: string | undefined) => ['conference', id] as const,
+    stats: ['conference-stats'] as const,
+    forSelect: ['conferences-for-select'] as const,
+    forAccess: ['conferences-for-access'] as const,
+  },
+
+  // ── Volunteers ──────────────────────────────────────────────────
+  volunteers: {
+    all: ['volunteers'] as const,
+    allList: ['all-volunteers'] as const,
+    list: (statusFilter?: string) => ['volunteers', statusFilter] as const,
+    stats: ['volunteer-stats'] as const,
+    byConference: (conferenceId: string) => ['conference-volunteers', conferenceId] as const,
+    roles: (conferenceId: string) => ['volunteer-roles', conferenceId] as const,
+  },
+
+  // ── Locations ───────────────────────────────────────────────────
+  locations: {
+    all: ['locations'] as const,
+    allList: ['all-locations'] as const,
+    list: (typeFilter?: string) => ['locations', typeFilter] as const,
+    stats: ['location-stats'] as const,
+    byConference: (conferenceId: string) => ['conference-locations', conferenceId] as const,
+    types: (conferenceId: string) => ['location-types', conferenceId] as const,
+  },
+
+  // ── Sponsors ────────────────────────────────────────────────────
+  sponsors: {
+    byConference: (conferenceId: string) => ['conference-sponsors', conferenceId] as const,
+    packages: (conferenceId: string) => ['sponsor-packages', conferenceId] as const,
+  },
+
+  // ── Invoices ────────────────────────────────────────────────────
+  invoices: {
+    byConference: (conferenceId: string) => ['conference-invoices', conferenceId] as const,
+  },
+
+  // ── Service Providers ───────────────────────────────────────────
+  serviceProviders: {
+    byConference: (conferenceId: string) => ['conference-service-providers', conferenceId] as const,
+    byLocation: (locationId: string) => ['service-providers', locationId] as const,
+  },
+
+  // ── Booking ─────────────────────────────────────────────────────
+  booking: {
+    matrix: (conferenceId: string) => ['booking-matrix', conferenceId] as const,
+    options: (conferenceId: string) => ['booking-options', conferenceId] as const,
+    periods: (conferenceId: string) => ['booking-periods', conferenceId] as const,
+    discountCodes: (conferenceId: string) => ['discount-codes', conferenceId] as const,
+  },
+
+  // ── Registration ────────────────────────────────────────────────
+  registrations: {
+    byConference: (conferenceId: string, ...rest: unknown[]) =>
+      ['conference-registrations', conferenceId, ...rest] as const,
+    bookableSessions: (conferenceId: string, optionId: string) =>
+      ['bookable-sessions', conferenceId, optionId] as const,
+  },
+
+  // ── News ────────────────────────────────────────────────────────
+  news: {
+    byConference: (conferenceId: string) => ['conference-news', conferenceId] as const,
+  },
+
+  // ── Program ─────────────────────────────────────────────────────
+  program: {
+    days: (conferenceId: string) => ['program-days', conferenceId] as const,
+    grid: (conferenceId: string, dayId?: string) => ['program-grid', conferenceId, dayId] as const,
+    fullGrid: (conferenceId: string) => ['program-full-grid', conferenceId] as const,
+    timeSlots: (conferenceId: string) => ['program-time-slots', conferenceId] as const,
+    tracks: (conferenceId: string) => ['program-tracks', conferenceId] as const,
+    sessions: (conferenceId: string) => ['program-sessions', conferenceId] as const,
+    sessionTypes: (conferenceId: string) => ['program-session-types', conferenceId] as const,
+    publishPreview: (conferenceId: string) => ['program-publish-preview', conferenceId] as const,
+  },
+
+  // ── Sessions ────────────────────────────────────────────────────
+  sessions: {
+    enriched: (conferenceId: string) => ['sessions-enriched', conferenceId] as const,
+    types: (conferenceId: string) => ['session-types', conferenceId] as const,
+  },
+
+  // ── CFP ─────────────────────────────────────────────────────────
+  cfp: {
+    all: ['all-cfps'] as const,
+    byConference: (conferenceId: string) => ['conference-cfps', conferenceId] as const,
+    list: (conferenceId?: string) => ['cfp-list', conferenceId] as const,
+    papers: (conferenceId?: string) => ['cfp-papers', conferenceId] as const,
+    evaluatedPapers: (conferenceId?: string) => ['cfp-evaluated-papers', conferenceId] as const,
+    selectedPapers: (filter: string, conferenceId?: string) =>
+      ['cfp-selected-papers', filter, conferenceId] as const,
+    applicants: (conferenceId?: string) => ['cfp-applicants', conferenceId ?? 'all'] as const,
+    applicantsForMessaging: (conferenceId: string) =>
+      ['cfp-applicants-for-messaging', conferenceId] as const,
+    applicantPapers: (applicantId: string) => ['cfp-applicant-papers', applicantId] as const,
+    topics: ['cfp-topics'] as const,
+    committeeMembers: (conferenceId?: string) =>
+      ['cfp-committee-members', conferenceId ?? 'all'] as const,
+    applicantsForCommittee: ['cfp-applicants-for-committee'] as const,
+  },
+
+  // ── Assignments & Reviews ───────────────────────────────────────
+  assignments: {
+    conferences: ['conferences-for-assignments'] as const,
+    conferenceCfp: (conferenceId: string) => ['conference-cfp', conferenceId] as const,
+    papers: (conferenceId?: string) => ['assignment-papers', conferenceId] as const,
+    byConference: (conferenceId: string) => ['conference-assignments', conferenceId] as const,
+    committeeMembers: (conferenceId: string) =>
+      ['assignment-committee-members', conferenceId] as const,
+    paperAssignments: (paperId?: string) => ['paper-assignments', paperId] as const,
+  },
+
+  reviews: {
+    byPaper: (paperId: string) => ['paper-reviews', paperId] as const,
+  },
+
+  // ── Messaging ───────────────────────────────────────────────────
+  messaging: {
+    threads: (conferenceId: string, ...filters: unknown[]) =>
+      ['messaging-threads', conferenceId, ...filters] as const,
+    thread: (conferenceId: string, threadId?: string | null) =>
+      ['messaging-thread', conferenceId, threadId] as const,
+    templates: (conferenceId: string) => ['message-templates', conferenceId] as const,
+    recipientLists: (conferenceId: string) => ['recipient-lists', conferenceId] as const,
+    recipientListDetail: (conferenceId: string, listId?: string | null) =>
+      ['recipient-list-detail', conferenceId, listId] as const,
+    committeeRoles: (conferenceId: string) => ['committee-roles', conferenceId] as const,
+  },
+
+  // ── Attachments ─────────────────────────────────────────────────
+  attachments: {
+    list: (entityType: string, entityId: string) => ['attachments', entityType, entityId] as const,
+  },
+
+  // ── Settings ────────────────────────────────────────────────────
+  settings: {
+    platformCurrencies: ['platform-currencies'] as const,
+    pronounOptions: (conferenceId: string) => ['pronoun-options', conferenceId] as const,
+    paperFormSchema: (conferenceId: string) => ['paper-form-schema', conferenceId] as const,
+    paperFormHasSubmissions: (conferenceId: string) =>
+      ['paper-form-schema-has-submissions', conferenceId] as const,
+    reviewCriteria: (conferenceId: string) => ['review-criteria', conferenceId] as const,
+    scoreScales: (conferenceId: string) => ['score-scales', conferenceId] as const,
+    reviewFormSettings: (conferenceId: string) => ['review-form-settings', conferenceId] as const,
+    emailTemplates: (conferenceId: string) => ['email-templates', conferenceId] as const,
+  },
+
+  // ── Team & Users ────────────────────────────────────────────────
+  team: {
+    users: ['team-users'] as const,
+    pronounOptions: ['user-pronoun-options'] as const,
+    conferenceAccess: (userId: string) => ['user-conference-access', userId] as const,
+  },
+
+  // ── Admin ───────────────────────────────────────────────────────
+  admin: {
+    modules: ['modules'] as const,
+    tenants: ['tenants'] as const,
+    tenantModules: (tenantId: string) => ['tenant-modules', tenantId] as const,
+    tenantUsers: (tenantId: string) => ['tenant-users', tenantId] as const,
+    globalUnread: ['admin-global-unread'] as const,
+    auditLogs: (...filters: unknown[]) => ['audit-logs', ...filters] as const,
+    auditActions: ['audit-actions'] as const,
+    auditResourceTypes: ['audit-resource-types'] as const,
+    conferenceAccess: (conferenceId?: string, userId?: string) =>
+      ['conference-access', conferenceId, userId] as const,
+  },
+
+  // ── Portal ──────────────────────────────────────────────────────
+  portal: {
+    conferences: ['portal-conferences'] as const,
+    tenant: (slug?: string) => ['portal-tenant', slug] as const,
+    landing: (slug?: string, abbreviation?: string) =>
+      ['portal-landing', slug, abbreviation] as const,
+    papers: ['portal-papers'] as const,
+    paper: (paperId: string) => ['portal-paper', paperId] as const,
+    paperFeedback: (paperId: string) => ['portal-paper-feedback', paperId] as const,
+    conferenceDetail: (conferenceId?: string) =>
+      ['portal-conference-detail', conferenceId] as const,
+    assignedPapers: ['portal-assigned-papers'] as const,
+    pendingAssignments: ['portal-pending-assignments'] as const,
+    committeeMemberships: ['portal-committee-memberships'] as const,
+    topics: ['portal-topics'] as const,
+    reviewConfig: (assignmentId: string) => ['portal-review-config', assignmentId] as const,
+    messages: (showArchived?: boolean) => ['portal-messages', showArchived] as const,
+    messageThread: (threadId?: string | null) => ['portal-message-thread', threadId] as const,
+    unreadCount: ['portal-unread-count'] as const,
+    news: ['portal-news'] as const,
+    invitations: ['portal-invitations'] as const,
+    cfpFormSchema: (cfpId?: string) => ['portal-cfp-form-schema', cfpId] as const,
+  },
+
+  // ── My Company ──────────────────────────────────────────────────
+  myCompany: ['my-company'] as const,
+
+  // ── Applicant Activity ──────────────────────────────────────────
+  applicantActivity: {
+    grouped: (...params: unknown[]) => ['applicant-activity-grouped', ...params] as const,
+    types: ['applicant-activity-types'] as const,
+  },
+} as const;

@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../config/api";
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../config/api';
 import type {
   Conference,
   PaginatedResponse,
@@ -8,51 +8,48 @@ import type {
   LocationCreate,
   LocationContactPerson,
   TenantLocationType,
-} from "../../../types";
-import { parseApiError } from "../../../utils/apiError";
-import LocationDetailPanel from "../../../components/LocationDetailPanel";
-import type { LocationUpdateData } from "../../../components/LocationDetailPanel";
-import ConfirmDialog from "../../../components/ConfirmDialog";
-import ContactPersonList from "../../../components/ContactPersonList";
-import RichTextEditor from "../../../components/common/RichTextEditor";
-import { ErrorBanner } from "../../../components/common/ErrorBanner";
+} from '../../../types';
+import { parseApiError } from '../../../utils/apiError';
+import LocationDetailPanel from '../../../components/LocationDetailPanel';
+import type { LocationUpdateData } from '../../../components/LocationDetailPanel';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import ContactPersonList from '../../../components/ContactPersonList';
+import RichTextEditor from '../../../components/common/RichTextEditor';
+import { ErrorBanner } from '../../../components/common/ErrorBanner';
+import { useSelection } from '../SelectionContext';
 
 export default function ConferenceLocationsTab({
   conference,
-  selectedLocationId,
-  setSelectedLocationId,
   isAdmin,
 }: {
   conference: Conference;
-  selectedLocationId: string | null;
-  setSelectedLocationId: (id: string | null) => void;
   isAdmin: boolean;
 }) {
+  const { selectedLocationId, setSelectedLocationId } = useSelection();
   const queryClient = useQueryClient();
   const [linkError, setLinkError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showDeleteLocationConfirm, setShowDeleteLocationConfirm] =
-    useState(false);
+  const [showDeleteLocationConfirm, setShowDeleteLocationConfirm] = useState(false);
   const [createForm, setCreateForm] = useState({
-    name: "",
-    code: "",
-    location_type: "room" as LocationCreate["location_type"],
-    description: "",
-    capacity: "" as string | number,
-    parent_id: "" as string,
-    building: "",
-    floor: "",
-    city: "",
-    virtual_url: "",
-    virtual_platform: "",
+    name: '',
+    code: '',
+    location_type: 'room' as LocationCreate['location_type'],
+    description: '',
+    capacity: '' as string | number,
+    parent_id: '' as string,
+    building: '',
+    floor: '',
+    city: '',
+    virtual_url: '',
+    virtual_platform: '',
     contact_persons: [] as LocationContactPerson[],
   });
   const [newContact, setNewContact] = useState<LocationContactPerson>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    comment: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
   });
 
   const addContactToCreate = () => {
@@ -61,7 +58,7 @@ export default function ConferenceLocationsTab({
         ...createForm,
         contact_persons: [...createForm.contact_persons, { ...newContact }],
       });
-      setNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     }
   };
 
@@ -72,40 +69,33 @@ export default function ConferenceLocationsTab({
     });
   };
 
-  const updateContactInCreate = (
-    index: number,
-    contact: LocationContactPerson,
-  ) => {
+  const updateContactInCreate = (index: number, contact: LocationContactPerson) => {
     setCreateForm({
       ...createForm,
-      contact_persons: createForm.contact_persons.map((c, i) =>
-        i === index ? contact : c,
-      ),
+      contact_persons: createForm.contact_persons.map((c, i) => (i === index ? contact : c)),
     });
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ["conference-locations", conference.id],
+    queryKey: ['conference-locations', conference.id],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<Location>>(
-        `/conferences/${conference.id}/locations`,
+        `/conferences/${conference.id}/locations`
       );
       return response.data;
     },
   });
 
   const { data: allLocations } = useQuery({
-    queryKey: ["all-locations"],
+    queryKey: ['all-locations'],
     queryFn: async () => {
-      const response = await api.get<PaginatedResponse<Location>>(
-        `/locations?page_size=100`,
-      );
+      const response = await api.get<PaginatedResponse<Location>>(`/locations?page_size=100`);
       return response.data;
     },
   });
 
   const { data: locationTypesData } = useQuery({
-    queryKey: ["location-types", conference.id],
+    queryKey: ['location-types', conference.id],
     queryFn: async () => {
       const response = await api.get<{
         items: TenantLocationType[];
@@ -117,7 +107,7 @@ export default function ConferenceLocationsTab({
 
   const selectedLocation = useMemo(
     () => data?.items?.find((loc) => loc.id === selectedLocationId) || null,
-    [data, selectedLocationId],
+    [data, selectedLocationId]
   );
 
   const linkMutation = useMutation({
@@ -129,67 +119,61 @@ export default function ConferenceLocationsTab({
     onSuccess: () => {
       setLinkError(null);
       queryClient.invalidateQueries({
-        queryKey: ["conference-locations", conference.id],
+        queryKey: ['conference-locations', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-locations"] });
+      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, "Failed to link location"));
+      setLinkError(parseApiError(error, 'Failed to link location'));
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: LocationCreate) => {
-      const response = await api.post<Location>("/locations", data);
+      const response = await api.post<Location>('/locations', data);
       return response.data;
     },
     onSuccess: (newLocation) => {
       setLinkError(null);
       setShowCreateForm(false);
       setCreateForm({
-        name: "",
-        code: "",
-        location_type: "room",
-        description: "",
-        capacity: "",
-        parent_id: "",
-        building: "",
-        floor: "",
-        city: "",
-        virtual_url: "",
-        virtual_platform: "",
+        name: '',
+        code: '',
+        location_type: 'room',
+        description: '',
+        capacity: '',
+        parent_id: '',
+        building: '',
+        floor: '',
+        city: '',
+        virtual_url: '',
+        virtual_platform: '',
         contact_persons: [],
       });
       queryClient.invalidateQueries({
-        queryKey: ["conference-locations", conference.id],
+        queryKey: ['conference-locations', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-locations"] });
+      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
       setSelectedLocationId(newLocation.id);
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, "Failed to create location"));
+      setLinkError(parseApiError(error, 'Failed to create location'));
     },
   });
 
   const locationUpdateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: LocationUpdateData;
-    }) => {
+    mutationFn: async ({ id, data }: { id: string; data: LocationUpdateData }) => {
       await api.put(`/locations/${id}`, data);
     },
     onSuccess: () => {
       setLinkError(null);
       queryClient.invalidateQueries({
-        queryKey: ["conference-locations", conference.id],
+        queryKey: ['conference-locations', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-locations"] });
+      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, "Failed to update location"));
+      setLinkError(parseApiError(error, 'Failed to update location'));
     },
   });
 
@@ -201,12 +185,12 @@ export default function ConferenceLocationsTab({
       setLinkError(null);
       setSelectedLocationId(null);
       queryClient.invalidateQueries({
-        queryKey: ["conference-locations", conference.id],
+        queryKey: ['conference-locations', conference.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["all-locations"] });
+      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
     },
     onError: (error: unknown) => {
-      setLinkError(parseApiError(error, "Failed to remove location"));
+      setLinkError(parseApiError(error, 'Failed to remove location'));
     },
   });
 
@@ -223,24 +207,21 @@ export default function ConferenceLocationsTab({
     };
     if (createForm.code) payload.code = createForm.code;
     if (createForm.description) payload.description = createForm.description;
-    if (createForm.capacity !== "")
-      payload.capacity = Number(createForm.capacity);
+    if (createForm.capacity !== '') payload.capacity = Number(createForm.capacity);
     if (createForm.parent_id) payload.parent_id = createForm.parent_id;
     if (createForm.building) payload.building = createForm.building;
     if (createForm.floor) payload.floor = createForm.floor;
     if (createForm.city) payload.city = createForm.city;
     if (createForm.virtual_url) payload.virtual_url = createForm.virtual_url;
-    if (createForm.virtual_platform)
-      payload.virtual_platform = createForm.virtual_platform;
+    if (createForm.virtual_platform) payload.virtual_platform = createForm.virtual_platform;
     if (contacts.length > 0) payload.contact_persons = contacts;
     createMutation.mutate(payload);
   };
 
-  const isVirtual = createForm.location_type === "virtual";
+  const isVirtual = createForm.location_type === 'virtual';
 
   const linkedIds = new Set(data?.items?.map((l) => l.id) || []);
-  const unlinkableLocations =
-    allLocations?.items?.filter((l) => !linkedIds.has(l.id)) || [];
+  const unlinkableLocations = allLocations?.items?.filter((l) => !linkedIds.has(l.id)) || [];
 
   // Organize locations into hierarchy: venues (no parent) and their children
   const locationTree = useMemo(() => {
@@ -280,9 +261,7 @@ export default function ConferenceLocationsTab({
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900">
-          Linked Locations ({data?.total || 0})
-        </h4>
+        <h4 className="text-sm font-medium text-gray-900">Linked Locations ({data?.total || 0})</h4>
         {isAdmin && (
           <div className="flex items-center gap-2">
             {unlinkableLocations.length > 0 && (
@@ -292,7 +271,7 @@ export default function ConferenceLocationsTab({
                 onChange={(e) => {
                   if (e.target.value) {
                     linkMutation.mutate(e.target.value);
-                    e.target.value = "";
+                    e.target.value = '';
                   }
                 }}
               >
@@ -308,7 +287,7 @@ export default function ConferenceLocationsTab({
               onClick={() => setShowCreateForm(!showCreateForm)}
               className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
             >
-              {showCreateForm ? "Cancel" : "Create New"}
+              {showCreateForm ? 'Cancel' : 'Create New'}
             </button>
           </div>
         )}
@@ -322,45 +301,34 @@ export default function ConferenceLocationsTab({
           className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3"
         >
           <div>
-            <label className="block text-xs font-medium text-gray-700">
-              Name *
-            </label>
+            <label className="block text-xs font-medium text-gray-700">Name *</label>
             <input
               type="text"
               required
               value={createForm.name}
-              onChange={(e) =>
-                setCreateForm({ ...createForm, name: e.target.value })
-              }
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Code
-              </label>
+              <label className="block text-xs font-medium text-gray-700">Code</label>
               <input
                 type="text"
                 value={createForm.code}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, code: e.target.value })
-                }
+                onChange={(e) => setCreateForm({ ...createForm, code: e.target.value })}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Type *
-              </label>
+              <label className="block text-xs font-medium text-gray-700">Type *</label>
               <select
                 required
                 value={createForm.location_type}
                 onChange={(e) =>
                   setCreateForm({
                     ...createForm,
-                    location_type: e.target
-                      .value as LocationCreate["location_type"],
+                    location_type: e.target.value as LocationCreate['location_type'],
                   })
                 }
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
@@ -377,14 +345,10 @@ export default function ConferenceLocationsTab({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Parent Location
-              </label>
+              <label className="block text-xs font-medium text-gray-700">Parent Location</label>
               <select
                 value={createForm.parent_id}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, parent_id: e.target.value })
-                }
+                onChange={(e) => setCreateForm({ ...createForm, parent_id: e.target.value })}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">None (top-level venue)</option>
@@ -401,29 +365,21 @@ export default function ConferenceLocationsTab({
               </p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Capacity
-              </label>
+              <label className="block text-xs font-medium text-gray-700">Capacity</label>
               <input
                 type="number"
                 min="0"
                 value={createForm.capacity}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, capacity: e.target.value })
-                }
+                onChange={(e) => setCreateForm({ ...createForm, capacity: e.target.value })}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               />
-              <p className="mt-0.5 text-xs text-gray-400">
-                Max attendees
-              </p>
+              <p className="mt-0.5 text-xs text-gray-400">Max attendees</p>
             </div>
           </div>
           {isVirtual ? (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700">
-                  Platform
-                </label>
+                <label className="block text-xs font-medium text-gray-700">Platform</label>
                 <select
                   value={createForm.virtual_platform}
                   onChange={(e) =>
@@ -435,7 +391,7 @@ export default function ConferenceLocationsTab({
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="">Select platform</option>
-                  {["zoom", "teams", "meet", "webex", "other"].map((p) => (
+                  {['zoom', 'teams', 'meet', 'webex', 'other'].map((p) => (
                     <option key={p} value={p}>
                       {p.charAt(0).toUpperCase() + p.slice(1)}
                     </option>
@@ -443,9 +399,7 @@ export default function ConferenceLocationsTab({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">
-                  URL
-                </label>
+                <label className="block text-xs font-medium text-gray-700">URL</label>
                 <input
                   type="url"
                   value={createForm.virtual_url}
@@ -462,63 +416,45 @@ export default function ConferenceLocationsTab({
           ) : (
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700">
-                  Building
-                </label>
+                <label className="block text-xs font-medium text-gray-700">Building</label>
                 <input
                   type="text"
                   value={createForm.building}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, building: e.target.value })
-                  }
+                  onChange={(e) => setCreateForm({ ...createForm, building: e.target.value })}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">
-                  Floor
-                </label>
+                <label className="block text-xs font-medium text-gray-700">Floor</label>
                 <input
                   type="text"
                   value={createForm.floor}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, floor: e.target.value })
-                  }
+                  onChange={(e) => setCreateForm({ ...createForm, floor: e.target.value })}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">
-                  City
-                </label>
+                <label className="block text-xs font-medium text-gray-700">City</label>
                 <input
                   type="text"
                   value={createForm.city}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, city: e.target.value })
-                  }
+                  onChange={(e) => setCreateForm({ ...createForm, city: e.target.value })}
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
             </div>
           )}
           <div>
-            <label className="block text-xs font-medium text-gray-700">
-              Description
-            </label>
+            <label className="block text-xs font-medium text-gray-700">Description</label>
             <RichTextEditor
               value={createForm.description}
-              onChange={(html) =>
-                setCreateForm({ ...createForm, description: html })
-              }
+              onChange={(html) => setCreateForm({ ...createForm, description: html })}
               rows={2}
             />
           </div>
           {/* Contact Persons */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Contact Persons
-            </label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Contact Persons</label>
             <ContactPersonList
               contacts={createForm.contact_persons}
               newContact={newContact}
@@ -534,7 +470,7 @@ export default function ConferenceLocationsTab({
               disabled={createMutation.isPending}
               className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
             >
-              {createMutation.isPending ? "Creating..." : "Create Location"}
+              {createMutation.isPending ? 'Creating...' : 'Create Location'}
             </button>
           </div>
         </form>
@@ -562,23 +498,43 @@ export default function ConferenceLocationsTab({
                       onClick={() => setSelectedLocationId(loc.id)}
                       className={`w-full flex items-center gap-2 py-2.5 text-sm text-left transition-colors ${
                         loc.id === selectedLocationId
-                          ? "bg-primary-50 text-primary-700 font-medium"
-                          : "text-gray-700 hover:bg-gray-100"
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-100'
                       }`}
-                      style={{ paddingLeft: level === 0 ? "0.75rem" : "1.75rem" }}
+                      style={{ paddingLeft: level === 0 ? '0.75rem' : '1.75rem' }}
                     >
                       {level === 0 && hasChildren ? (
-                        <svg className="flex-shrink-0 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        <svg
+                          className="flex-shrink-0 w-4 h-4 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                          />
                         </svg>
                       ) : level === 1 ? (
-                        <svg className="flex-shrink-0 w-3 h-3 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        <svg
+                          className="flex-shrink-0 w-3 h-3 text-gray-300"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
                         </svg>
                       ) : (
                         <span
                           className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                            loc.is_active ? "bg-green-400" : "bg-red-400"
+                            loc.is_active ? 'bg-green-400' : 'bg-red-400'
                           }`}
                         />
                       )}

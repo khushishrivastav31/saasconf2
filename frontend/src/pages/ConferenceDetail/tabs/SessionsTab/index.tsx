@@ -1,17 +1,13 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import type {
-  Conference,
-  EnrichedSession,
-  EnrichedSessionsResponse,
-} from "../../../../types";
-import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
-import { useToast } from "../../../../components/Toast";
-import { parseApiError } from "../../../../utils/apiError";
-import { buildColumns } from "./columnDefs";
-import { useColumnPreferences } from "./useColumnPreferences";
-import ColumnPicker from "./ColumnPicker";
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import type { Conference, EnrichedSession, EnrichedSessionsResponse } from '../../../../types';
+import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
+import { useToast } from '../../../../components/Toast';
+import { parseApiError } from '../../../../utils/apiError';
+import { buildColumns } from './columnDefs';
+import { useColumnPreferences } from './useColumnPreferences';
+import ColumnPicker from './ColumnPicker';
 
 interface SessionsTabProps {
   conference: Conference;
@@ -19,13 +15,13 @@ interface SessionsTabProps {
 }
 
 export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
-  const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "paper" | "general">("all");
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'paper' | 'general'>('all');
   const [exporting, setExporting] = useState(false);
   const { showToast } = useToast();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["sessions-enriched", conference.id],
+    queryKey: ['sessions-enriched', conference.id],
     queryFn: async () => {
       const response = await api.get<EnrichedSessionsResponse>(
         `/conferences/${conference.id}/program/sessions/enriched`
@@ -34,17 +30,16 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
     },
   });
 
-  const sessions = data?.items || [];
-  const customFields = data?.custom_fields || [];
+  const sessions = useMemo(() => data?.items ?? [], [data?.items]);
+  const customFields = useMemo(() => data?.custom_fields ?? [], [data?.custom_fields]);
 
   // Build all available columns (builtin + custom form fields)
-  const allColumns = useMemo(
-    () => buildColumns(customFields),
-    [customFields]
-  );
+  const allColumns = useMemo(() => buildColumns(customFields), [customFields]);
 
-  const { visibleKeys, toggleColumn, resetToDefaults } =
-    useColumnPreferences(conference.id, allColumns);
+  const { visibleKeys, toggleColumn, resetToDefaults } = useColumnPreferences(
+    conference.id,
+    allColumns
+  );
 
   // Visible columns in order
   const visibleColumns = useMemo(
@@ -56,9 +51,9 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
   const filteredSessions = useMemo(() => {
     let result = sessions;
 
-    if (filterType === "paper") {
+    if (filterType === 'paper') {
       result = result.filter((s) => s.paper_id !== null);
-    } else if (filterType === "general") {
+    } else if (filterType === 'general') {
       result = result.filter((s) => s.is_general_event);
     }
 
@@ -68,7 +63,7 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
         // Search across all visible column values
         for (const col of visibleColumns) {
           const val = col.getValue(s);
-          if (val && val !== "-" && val.toLowerCase().includes(q)) return true;
+          if (val && val !== '-' && val.toLowerCase().includes(q)) return true;
         }
         // Always search title and paper_title even if not visible
         if (s.title.toLowerCase().includes(q)) return true;
@@ -83,22 +78,21 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
   const handleExportCsv = async () => {
     setExporting(true);
     try {
-      const response = await api.get(
-        `/conferences/${conference.id}/program/sessions/export`,
-        { responseType: "blob" }
-      );
-      const blob = new Blob([response.data], { type: "text/csv" });
+      const response = await api.get(`/conferences/${conference.id}/program/sessions/export`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
+      const anchor = document.createElement('a');
       anchor.href = url;
       anchor.download = `sessions-${conference.abbreviation || conference.name}.csv`;
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
       window.URL.revokeObjectURL(url);
-      showToast("CSV exported successfully", "success");
+      showToast('CSV exported successfully', 'success');
     } catch (error) {
-      showToast(parseApiError(error, "Failed to export sessions"), "error");
+      showToast(parseApiError(error, 'Failed to export sessions'), 'error');
     } finally {
       setExporting(false);
     }
@@ -122,10 +116,10 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Sessions</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            {totalSessions} total session{totalSessions !== 1 ? "s" : ""}
+            {totalSessions} total session{totalSessions !== 1 ? 's' : ''}
             {paperSessions > 0 && (
               <span className="ml-1">
-                ({paperSessions} with paper{paperSessions !== 1 ? "s" : ""} assigned)
+                ({paperSessions} with paper{paperSessions !== 1 ? 's' : ''} assigned)
               </span>
             )}
           </p>
@@ -140,18 +134,33 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
               <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
             ) : (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
               </svg>
             )}
-            {exporting ? "Exporting..." : "Export CSV"}
+            {exporting ? 'Exporting...' : 'Export CSV'}
           </button>
         )}
       </div>
 
       {totalSessions === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-          <svg className="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <svg
+            className="w-12 h-12 text-gray-400 mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
           </svg>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Sessions Yet</h3>
           <p className="text-sm text-gray-500 text-center max-w-md">
@@ -231,7 +240,7 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
  */
 function renderCell(key: string, session: EnrichedSession, value: string) {
   // Session title gets color dot + paper subtitle
-  if (key === "title") {
+  if (key === 'title') {
     return (
       <div className="flex items-center gap-2 max-w-xs">
         {session.color && (
@@ -243,9 +252,7 @@ function renderCell(key: string, session: EnrichedSession, value: string) {
         <div className="min-w-0">
           <p className="font-medium text-gray-900 truncate">{session.title}</p>
           {session.paper_title && session.paper_title !== session.title && (
-            <p className="text-xs text-gray-500 truncate mt-0.5">
-              Paper: {session.paper_title}
-            </p>
+            <p className="text-xs text-gray-500 truncate mt-0.5">Paper: {session.paper_title}</p>
           )}
         </div>
       </div>
@@ -253,7 +260,7 @@ function renderCell(key: string, session: EnrichedSession, value: string) {
   }
 
   // Track column with badge for general events
-  if (key === "track" && session.is_general_event) {
+  if (key === 'track' && session.is_general_event) {
     return (
       <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded whitespace-nowrap">
         All Tracks
@@ -262,14 +269,27 @@ function renderCell(key: string, session: EnrichedSession, value: string) {
   }
 
   // Day and time columns should not wrap
-  if (key === "day" || key === "time" || key === "type" || key === "speaker" || key === "level" || key === "paper_status") {
+  if (
+    key === 'day' ||
+    key === 'time' ||
+    key === 'type' ||
+    key === 'speaker' ||
+    key === 'level' ||
+    key === 'paper_status'
+  ) {
     return <span className="whitespace-nowrap">{value}</span>;
   }
 
   // Long text columns get truncation
-  if (key === "abstract" || key === "learning_objectives" || key === "importance" || key === "description" || key === "notes") {
+  if (
+    key === 'abstract' ||
+    key === 'learning_objectives' ||
+    key === 'importance' ||
+    key === 'description' ||
+    key === 'notes'
+  ) {
     return (
-      <div className="max-w-xs truncate" title={value !== "-" ? value : undefined}>
+      <div className="max-w-xs truncate" title={value !== '-' ? value : undefined}>
         {value}
       </div>
     );

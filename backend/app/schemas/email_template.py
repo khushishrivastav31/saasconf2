@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class EmailTemplateBase(BaseModel):
@@ -40,7 +40,7 @@ class EmailTemplateResponse(EmailTemplateBase):
     created_at: datetime | None = None  # None for unsaved default templates
     updated_at: datetime | None = None  # None for unsaved default templates
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmailTemplateListResponse(BaseModel):

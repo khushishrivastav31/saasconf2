@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class RegistrationStatus(str, Enum):
@@ -78,15 +78,14 @@ class BillingProfileUpdate(BaseModel):
 class BillingProfileResponse(BillingProfileBase):
     """Billing profile response."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
     vat_validated: bool | None = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ---------------------------------------------------------------------------
@@ -106,6 +105,8 @@ class RegistrationItemCreate(BaseModel):
 class RegistrationItemResponse(BaseModel):
     """Response for a single registration add-on item."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     item_type: str
     booking_option_id: UUID | None
@@ -114,9 +115,6 @@ class RegistrationItemResponse(BaseModel):
     pending: bool
     notes: str | None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ---------------------------------------------------------------------------
@@ -234,6 +232,8 @@ class RegistrationUpdate(BaseModel):
 class RegistrationResponse(BaseModel):
     """Single registration response."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -266,9 +266,6 @@ class RegistrationResponse(BaseModel):
     # Inline billing summary
     billing_company_name: str | None = None
     billing_contact_email: str | None = None
-
-    class Config:
-        from_attributes = True
 
 
 class RegistrationListResponse(BaseModel):

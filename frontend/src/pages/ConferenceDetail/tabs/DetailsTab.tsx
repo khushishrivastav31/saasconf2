@@ -160,8 +160,7 @@ function ConferenceDetailsTab({
       setSaved();
       onUpdate();
     },
-    onError: (err) => {
-      console.error('Conference update failed:', err);
+    onError: () => {
       setSaveError();
     },
   });

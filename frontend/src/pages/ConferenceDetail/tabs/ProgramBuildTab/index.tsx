@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
   DragOverlay,
@@ -9,26 +9,21 @@ import {
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
-} from "@dnd-kit/core";
-import api from "../../../../config/api";
-import type {
-  Conference,
-  SessionType,
-  Paper,
-  ProgramSession,
-} from "../../../../types";
-import { parseApiError } from "../../../../utils/apiError";
-import { formatDate } from "../../../../utils/formatDate";
-import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
-import { useToast } from "../../../../components/Toast";
+} from '@dnd-kit/core';
+import api from '../../../../config/api';
+import type { Conference, SessionType, Paper, ProgramSession } from '../../../../types';
+import { parseApiError } from '../../../../utils/apiError';
+import { formatDate } from '../../../../utils/formatDate';
+import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
+import { useToast } from '../../../../components/Toast';
 
-import { useProgramDays, useProgramGrid } from "../ProgramDesignTab/hooks/useProgramGrid";
-import { useProgramMutations } from "../ProgramDesignTab/hooks/useProgramMutations";
-import DayTabs from "../ProgramDesignTab/DayTabs";
-import ProgramGrid from "../ProgramDesignTab/ProgramGrid";
-import SessionModal from "../ProgramDesignTab/SessionModal";
-import PaperSidebar, { PaperCardOverlay } from "../ProgramDesignTab/PaperSidebar";
-import PublishConfirmModal from "./PublishConfirmModal";
+import { useProgramDays, useProgramGrid } from '../ProgramDesignTab/hooks/useProgramGrid';
+import { useProgramMutations } from '../ProgramDesignTab/hooks/useProgramMutations';
+import DayTabs from '../ProgramDesignTab/DayTabs';
+import ProgramGrid from '../ProgramDesignTab/ProgramGrid';
+import SessionModal from '../ProgramDesignTab/SessionModal';
+import PaperSidebar, { PaperCardOverlay } from '../ProgramDesignTab/PaperSidebar';
+import PublishConfirmModal from './PublishConfirmModal';
 
 interface ProgramBuildTabProps {
   conference: Conference;
@@ -70,7 +65,7 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
 
   // Fetch session types for session modal
   const { data: sessionTypesData } = useQuery({
-    queryKey: ["session-types", conference.id],
+    queryKey: ['session-types', conference.id],
     queryFn: async () => {
       const response = await api.get<{ items: SessionType[]; total: number }>(
         `/conferences/${conference.id}/settings/session-types`
@@ -98,10 +93,10 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
           data: { paper_id: paperId },
         });
       } catch (error) {
-        showToast(parseApiError(error, "Failed to assign paper"));
+        showToast(parseApiError(error, 'Failed to assign paper'));
       }
     },
-    [mutations.updateSession]
+    [mutations.updateSession, showToast]
   );
 
   const handleUnassignPaper = useCallback(
@@ -112,10 +107,10 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
           data: { paper_id: null },
         });
       } catch (error) {
-        showToast(parseApiError(error, "Failed to unassign paper"));
+        showToast(parseApiError(error, 'Failed to unassign paper'));
       }
     },
-    [mutations.updateSession]
+    [mutations.updateSession, showToast]
   );
 
   // Drag and drop handlers (paper only)
@@ -138,7 +133,7 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
 
     try {
       // Only handle paper drops
-      if (dragData.type === "paper") {
+      if (dragData.type === 'paper') {
         const paper = dragData.paper as Paper;
         const currentSessions = gridData?.sessions || [];
         const currentSlots = gridData?.slots || [];
@@ -179,18 +174,18 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
         if (targetSession) {
           await handleAssignPaper(paper.id, targetSession.id);
         } else {
-          showToast("Drop the paper on an existing session to assign it", "warning");
+          showToast('Drop the paper on an existing session to assign it', 'warning');
         }
       }
     } catch (error) {
-      showToast(parseApiError(error, "Failed to assign paper"));
+      showToast(parseApiError(error, 'Failed to assign paper'));
     }
   };
 
   const handlePublished = () => {
-    queryClient.invalidateQueries({ queryKey: ["conference"] });
-    queryClient.invalidateQueries({ queryKey: ["program-grid"] });
-    queryClient.invalidateQueries({ queryKey: ["program-publish-preview"] });
+    queryClient.invalidateQueries({ queryKey: ['conference'] });
+    queryClient.invalidateQueries({ queryKey: ['program-grid'] });
+    queryClient.invalidateQueries({ queryKey: ['program-publish-preview'] });
   };
 
   // Loading state
@@ -217,8 +212,7 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
           {isPublished && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-              Published{" "}
-              {formatDate(conference.program_published_at!)}
+              Published {formatDate(conference.program_published_at!)}
             </span>
           )}
         </div>
@@ -229,16 +223,11 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
             onClick={() => setShowPublishModal(true)}
             className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md shadow-sm ${
               isPublished
-                ? "text-amber-700 bg-amber-50 border border-amber-300 hover:bg-amber-100"
-                : "text-white bg-primary-600 border border-transparent hover:bg-primary-700"
+                ? 'text-amber-700 bg-amber-50 border border-amber-300 hover:bg-amber-100'
+                : 'text-white bg-primary-600 border border-transparent hover:bg-primary-700'
             }`}
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -246,7 +235,7 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            {isPublished ? "Update Program" : "Publish Program"}
+            {isPublished ? 'Update Program' : 'Publish Program'}
           </button>
         )}
       </div>
@@ -277,7 +266,10 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
             >
               <div className="flex gap-4">
                 {/* Grid area (droppable for paper assignment) */}
-                <div className="flex-1 min-w-0 overflow-x-auto" style={{ height: Math.max(400, 48 + slots.length * 60) }}>
+                <div
+                  className="flex-1 min-w-0 overflow-x-auto"
+                  style={{ height: Math.max(400, 48 + slots.length * 60) }}
+                >
                   <ProgramGrid
                     slots={slots}
                     tracks={tracks}
@@ -309,15 +301,15 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
 
               {/* Drag overlay */}
               <DragOverlay>
-                {activeDragId && activeDragData ? (
-                  (() => {
-                    const data = activeDragData as Record<string, unknown>;
-                    if (data.type === "paper") {
-                      return <PaperCardOverlay paper={data.paper as Paper} />;
-                    }
-                    return null;
-                  })()
-                ) : null}
+                {activeDragId && activeDragData
+                  ? (() => {
+                      const data = activeDragData as Record<string, unknown>;
+                      if (data.type === 'paper') {
+                        return <PaperCardOverlay paper={data.paper as Paper} />;
+                      }
+                      return null;
+                    })()
+                  : null}
               </DragOverlay>
             </DndContext>
           )}
@@ -327,8 +319,18 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
       {/* No day selected state */}
       {!selectedDayId && days.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-          <svg className="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <svg
+            className="w-12 h-12 text-gray-400 mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
           </svg>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Program Days</h3>
           <p className="text-sm text-gray-500 mb-4 text-center max-w-md">
@@ -348,7 +350,7 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
         maxTrackSpan={Math.max(tracks.length, 1)}
         onUpdate={(sessionId, data) => {
           // Only allow paper-related updates in Build mode
-          if ("paper_id" in data) {
+          if ('paper_id' in data) {
             mutations.updateSession.mutateAsync({ sessionId, data: { paper_id: data.paper_id } });
           }
         }}

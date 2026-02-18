@@ -55,11 +55,12 @@ async def export_conference_invoices(
     if not conference:
         raise NotFoundError("Conference not found")
 
-    # Get all invoices for this conference
+    # Get all invoices for this conference (capped at 50k for memory safety)
     invoices_result = await db.execute(
         select(Invoice)
         .where(Invoice.conference_id == conference_id)
         .order_by(Invoice.invoice_number)
+        .limit(50000)
     )
     invoices = invoices_result.scalars().all()
 
@@ -161,13 +162,14 @@ async def export_conference_papers(
             headers={"Content-Disposition": safe_content_disposition(filename)},
         )
 
-    # Get all papers with speaker info
+    # Get all papers with speaker info (capped at 50k for memory safety)
     papers_result = await db.execute(
         select(CFPPaper)
         .options(selectinload(CFPPaper.main_speaker))
         .options(selectinload(CFPPaper.cfp))
         .where(CFPPaper.cfp_id.in_(cfp_ids))
         .order_by(CFPPaper.created_at)
+        .limit(50000)
     )
     papers = papers_result.scalars().all()
 

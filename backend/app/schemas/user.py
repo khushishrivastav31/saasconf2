@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.user import UserRole
 
@@ -70,6 +70,8 @@ class UserUpdate(BaseModel):
 class UserInDB(UserBase):
     """User schema with database fields."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID | None
     is_active: bool
@@ -77,9 +79,6 @@ class UserInDB(UserBase):
     last_login: datetime | None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class UserListResponse(BaseModel):
@@ -124,6 +123,8 @@ class TenantUserCreate(BaseModel):
 class TenantUserResponse(BaseModel):
     """User response for tenant context."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     email: str
     first_name: str | None
@@ -135,6 +136,3 @@ class TenantUserResponse(BaseModel):
     last_login: datetime | None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True

@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.validators import validate_phone
 
@@ -146,6 +146,8 @@ class ConferenceUpdate(BaseModel):
 class ConferenceResponse(BaseModel):
     """Conference response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     tenant_slug: str | None = None
@@ -202,9 +204,6 @@ class ConferenceResponse(BaseModel):
     managers_count: int = 0
     team_count: int = 0
     status: str = "draft"  # "draft", "upcoming", "ongoing", "past"
-
-    class Config:
-        from_attributes = True
 
 
 class ConferenceListResponse(BaseModel):

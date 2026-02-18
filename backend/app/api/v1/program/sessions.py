@@ -32,6 +32,37 @@ from ._shared import MODULE_CODE, _build_session_response
 router = APIRouter()
 
 
+async def _resolve_session_display_data(
+    db, session: ProgramSession
+) -> tuple[str | None, str | None, str | None]:
+    """Resolve session type name, paper title, and speaker name in a single query.
+
+    Returns (session_type_name, paper_title, speaker_name).
+    """
+    result = await db.execute(
+        select(
+            SessionType.name.label("session_type_name"),
+            CFPPaper.title.label("paper_title"),
+            CFPApplicant.first_name.label("speaker_first"),
+            CFPApplicant.last_name.label("speaker_last"),
+        )
+        .select_from(ProgramSession)
+        .outerjoin(SessionType, SessionType.id == ProgramSession.session_type_id)
+        .outerjoin(CFPPaper, CFPPaper.id == ProgramSession.paper_id)
+        .outerjoin(CFPApplicant, CFPApplicant.id == CFPPaper.main_speaker_id)
+        .where(ProgramSession.id == session.id)
+    )
+    row = result.one_or_none()
+    if not row:
+        return None, None, None
+    session_type_name = row.session_type_name
+    paper_title = row.paper_title
+    speaker_name = (
+        f"{row.speaker_first} {row.speaker_last}" if row.speaker_first else None
+    )
+    return session_type_name, paper_title, speaker_name
+
+
 @router.get(
     "/sessions",
     response_model=ProgramSessionListResponse,
@@ -47,9 +78,22 @@ async def list_sessions(
     """List all sessions for a conference, optionally filtered by day."""
     await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
-    query = select(ProgramSession).where(
-        ProgramSession.conference_id == conference_id,
-        ProgramSession.tenant_id == current_user.tenant_id,
+    # Single query with LEFT JOINs to resolve session type, paper, and speaker
+    query = (
+        select(
+            ProgramSession,
+            SessionType.name.label("session_type_name"),
+            CFPPaper.title.label("paper_title"),
+            CFPApplicant.first_name.label("speaker_first"),
+            CFPApplicant.last_name.label("speaker_last"),
+        )
+        .outerjoin(SessionType, SessionType.id == ProgramSession.session_type_id)
+        .outerjoin(CFPPaper, CFPPaper.id == ProgramSession.paper_id)
+        .outerjoin(CFPApplicant, CFPApplicant.id == CFPPaper.main_speaker_id)
+        .where(
+            ProgramSession.conference_id == conference_id,
+            ProgramSession.tenant_id == current_user.tenant_id,
+        )
     )
 
     if day_id is not None:
@@ -61,42 +105,19 @@ async def list_sessions(
         query = query.where(ProgramSession.is_general_event == is_general_event)
 
     result = await db.execute(query)
-    sessions = result.scalars().all()
-
-    # Get session type names
-    type_ids = [s.session_type_id for s in sessions if s.session_type_id]
-    type_map: dict[UUID, str] = {}
-    if type_ids:
-        type_result = await db.execute(
-            select(SessionType.id, SessionType.name).where(SessionType.id.in_(type_ids))
-        )
-        type_map = {row.id: row.name for row in type_result.all()}
-
-    # Get paper titles and speaker names
-    paper_ids = [s.paper_id for s in sessions if s.paper_id]
-    paper_map: dict[UUID, str] = {}
-    speaker_map: dict[UUID, str] = {}
-    if paper_ids:
-        paper_result = await db.execute(
-            select(CFPPaper.id, CFPPaper.title, CFPApplicant.first_name, CFPApplicant.last_name)
-            .join(CFPApplicant, CFPPaper.main_speaker_id == CFPApplicant.id)
-            .where(CFPPaper.id.in_(paper_ids))
-        )
-        for row in paper_result.all():
-            paper_map[row.id] = row.title
-            speaker_map[row.id] = f"{row.first_name} {row.last_name}"
+    rows = result.all()
 
     return ProgramSessionListResponse(
         items=[
             _build_session_response(
-                s,
-                type_map.get(s.session_type_id) if s.session_type_id else None,
-                paper_map.get(s.paper_id) if s.paper_id else None,
-                speaker_map.get(s.paper_id) if s.paper_id else None,
+                session,
+                session_type_name,
+                paper_title,
+                f"{speaker_first} {speaker_last}" if speaker_first else None,
             )
-            for s in sessions
+            for session, session_type_name, paper_title, speaker_first, speaker_last in rows
         ],
-        total=len(sessions),
+        total=len(rows),
     )
 
 
@@ -398,21 +419,12 @@ async def create_session(
     await db.commit()
     await db.refresh(session)
 
-    # Resolve paper title and speaker name
-    paper_title: str | None = None
-    speaker_name: str | None = None
-    if session.paper_id:
-        paper_result = await db.execute(
-            select(CFPPaper.title, CFPApplicant.first_name, CFPApplicant.last_name)
-            .join(CFPApplicant, CFPPaper.main_speaker_id == CFPApplicant.id)
-            .where(CFPPaper.id == session.paper_id)
-        )
-        row = paper_result.one_or_none()
-        if row:
-            paper_title = row.title
-            speaker_name = f"{row.first_name} {row.last_name}"
+    # Resolve session type, paper, and speaker in one query
+    resolved_type_name, paper_title, speaker_name = await _resolve_session_display_data(db, session)
+    # Prefer the already-known session_type_name from creation validation
+    final_type_name = session_type_name if session_type_name is not None else resolved_type_name
 
-    return _build_session_response(session, session_type_name, paper_title, speaker_name)
+    return _build_session_response(session, final_type_name, paper_title, speaker_name)
 
 
 @router.put(
@@ -550,27 +562,8 @@ async def update_session(
     await db.commit()
     await db.refresh(session)
 
-    # Get session type name
-    session_type_name: str | None = None
-    if session.session_type_id:
-        type_result = await db.execute(
-            select(SessionType.name).where(SessionType.id == session.session_type_id)
-        )
-        session_type_name = type_result.scalar_one_or_none()
-
-    # Resolve paper title and speaker name
-    paper_title: str | None = None
-    speaker_name: str | None = None
-    if session.paper_id:
-        paper_result = await db.execute(
-            select(CFPPaper.title, CFPApplicant.first_name, CFPApplicant.last_name)
-            .join(CFPApplicant, CFPPaper.main_speaker_id == CFPApplicant.id)
-            .where(CFPPaper.id == session.paper_id)
-        )
-        row = paper_result.one_or_none()
-        if row:
-            paper_title = row.title
-            speaker_name = f"{row.first_name} {row.last_name}"
+    # Resolve all display data in one query
+    session_type_name, paper_title, speaker_name = await _resolve_session_display_data(db, session)
 
     return _build_session_response(session, session_type_name, paper_title, speaker_name)
 
@@ -645,27 +638,8 @@ async def move_session(
     await db.commit()
     await db.refresh(session)
 
-    # Get session type name
-    session_type_name: str | None = None
-    if session.session_type_id:
-        type_result = await db.execute(
-            select(SessionType.name).where(SessionType.id == session.session_type_id)
-        )
-        session_type_name = type_result.scalar_one_or_none()
-
-    # Resolve paper title and speaker name
-    paper_title: str | None = None
-    speaker_name: str | None = None
-    if session.paper_id:
-        paper_result = await db.execute(
-            select(CFPPaper.title, CFPApplicant.first_name, CFPApplicant.last_name)
-            .join(CFPApplicant, CFPPaper.main_speaker_id == CFPApplicant.id)
-            .where(CFPPaper.id == session.paper_id)
-        )
-        row = paper_result.one_or_none()
-        if row:
-            paper_title = row.title
-            speaker_name = f"{row.first_name} {row.last_name}"
+    # Resolve all display data in one query
+    session_type_name, paper_title, speaker_name = await _resolve_session_display_data(db, session)
 
     return _build_session_response(session, session_type_name, paper_title, speaker_name)
 

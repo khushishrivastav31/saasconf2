@@ -192,7 +192,9 @@ async def register_applicant(
 
 
 @router.post("/portal/{tenant_slug}/verify-email")
+@limiter.limit("10/minute")
 async def verify_email(
+    request: Request,
     tenant_slug: str,
     data: VerifyEmailRequest,
     db: DbSessionDep,

@@ -40,3 +40,113 @@ The result is persisted on the `billing_profiles.vat_validated` column (`true`/`
 **Endpoint**: `POST /conferences/{id}/registrations/validate-vat?vat_number=...&country=...`
 
 **Dependencies**: `python-stdnum` (added to `requirements.txt`)
+
+## Dev Environment & Tooling
+
+### Code Quality
+- **Linting**: Ruff (backend), ESLint (frontend) — enforced in CI + pre-commit
+- **Type checking**: mypy (backend, strict mode), TypeScript `--noEmit` (frontend)
+- **Formatting**: Ruff format (backend), Prettier (frontend)
+- **Pre-commit hooks**: ruff, ruff-format, mypy, eslint, prettier, trailing-whitespace, end-of-file-fixer, hadolint (Dockerfiles), conventional-pre-commit (commit messages), detect-secrets
+
+### Mypy Config (`pyproject.toml`)
+- `ignore_missing_imports = false` with per-module overrides for stub-less packages (nh3, phonenumbers, slowapi, etc.)
+- Strict settings: `disallow_untyped_defs`, `no_implicit_optional`, `strict_equality`
+
+### Pydantic
+- All schemas use Pydantic v2 `model_config = ConfigDict(from_attributes=True)` — no legacy `class Config:` patterns
+
+### Docker
+- Base images pinned to specific SHAs in all Dockerfiles (backend, frontend)
+- CI uses concurrency controls to cancel redundant runs
+
+### Dev Files
+- `.nvmrc` (Node 20), `.python-version` (3.12), `.editorconfig`, `.env.example` (backend + frontend)
+- `.vscode/settings.json` + `extensions.json` for consistent editor setup
+- `Makefile` with targets: `init`, `dev`, `test`, `quality`, `dev-clean`, `db-reset`
+
+### Domain Constants (`app/constants.py`)
+- `ModuleCode` — all module identifiers (cfp, registration, program, etc.)
+- `ResourceType` — audit log resource types (conference, paper, volunteer, etc.)
+- `EntityType` — polymorphic attachment types (conference_logo, sponsor, message, etc.)
+- `InvoiceStatus` — invoice lifecycle states (draft, sent, paid, overdue, cancelled)
+
+### Health Probes & Ops
+- `GET /health` — liveness probe (process running)
+- `GET /health/ready` — readiness probe (checks DB + Redis connectivity, returns 503 if unhealthy)
+- `POST /ops/data-retention-cleanup` — runs DB cleanup functions (expired tokens, old audit logs); auth via `Authorization: Bearer <SUPER_ADMIN_PASSWORD>`
+- Staging: `cleanup-cron` container calls cleanup endpoint nightly
+
+### Deployment
+- CI tags images as `:previous` before rebuilding for rollback capability
+- Migrations run without `|| true` — deploy fails properly on migration errors
+- Health checks retry 5 times with 10s intervals
+
+### Nginx (staging)
+- Full CSP header: `default-src`, `script-src`, `style-src`, `img-src`, `font-src`, `connect-src`, `frame-ancestors`
+- Security headers: HSTS, X-Frame-Options, X-Content-Type-Options, Permissions-Policy
+
+### Email Sending (`app/core/email.py`)
+- Uses `resend` library via `asyncio.to_thread()` to avoid blocking the event loop
+- Falls back to console logging when `RESEND_API_KEY` is not set
+- Per-conference email toggle via `conference.settings.email_sending_enabled`
+
+### Rate Limiting
+- `slowapi` with `get_remote_address` key function
+- Auth endpoints: `5/minute` (login, register, reset-password), `3/minute` (forgot-password), `10/minute` (refresh, verify-email)
+- Registration endpoints: `10/minute` (individual, company), `5/minute` (bulk, VAT validation)
+
+### CSV Exports
+- Audit + applicant activity exports stream in **1000-row batches** (async generator → `StreamingResponse`)
+- Conference-scoped exports (invoices, papers) capped at **50k rows**
+- All CSVs include UTF-8 BOM for Excel compatibility
+
+### Attachment URL Lookups (`app/api/v1/cfp/shared.py`)
+- Single: `_get_applicant_picture_url()`, `_get_applicant_video_url()`, `_get_paper_video_url()`
+- Batch: `_batch_get_attachment_urls(db, entity_ids, entity_type, tenant_id)` — single query using `ROW_NUMBER() OVER (PARTITION BY entity_id)` to get latest attachment per entity
+- Use batch version in list endpoints to avoid N+1 queries
+
+### Pagination
+- Committee members: `GET /cfp/committee-members?skip=0&limit=100&conference_id=...` (max 500)
+- Response includes `total` count for client-side pagination controls
+
+### CI Coverage
+- Backend + frontend HTML coverage reports uploaded as artifacts (14-day retention)
+
+## Improvement Progress
+
+### Completed
+- [x] HIGH #1: Linting + mypy in CI pipeline
+- [x] HIGH #2: Coverage thresholds enforced in CI (backend 50%, frontend 55%)
+- [x] HIGH #3: Pinned Docker base image versions (SHA digests)
+- [x] HIGH #4: CI concurrency controls
+- [x] HIGH #5: Dev environment files (.nvmrc, .python-version, .editorconfig, .env.example)
+- [x] MED #6: Pydantic v2 migration complete (all schemas use ConfigDict)
+- [x] MED #7: Strengthened mypy config (strict mode, per-module overrides)
+- [x] MED #8: VS Code workspace settings + extensions.json
+- [x] MED #9: Makefile improved (init, quality, dev-clean, db-reset)
+- [x] MED #10: Nginx CSP header strengthened
+
+- [x] LOW #11: Pre-commit hooks (commitlint, hadolint, detect-secrets)
+- [x] LOW #12: Centralized domain constants (`app/constants.py`)
+- [x] LOW #13: Readiness/liveness probes (`/health` + `/health/ready`)
+- [x] LOW #14: Coverage artifacts in CI (HTML reports, 14-day retention)
+
+- [x] CRIT #15: Fixed migration failure masking (removed `|| true` from deploy)
+- [x] CRIT #16: Deployment rollback (tag `:previous` images before rebuild)
+- [x] CRIT #17: Data retention cleanup scheduled (`POST /ops/data-retention-cleanup` + cron container)
+- [x] HIGH #22: CI health check retries (5 attempts, 10s intervals)
+- [x] MED #27: Error logging in readiness probe
+
+- [x] HIGH #18: Fixed silent `.catch()` handlers (5 files: ProfilePage, ProgramDesignTab, MessagingTab, useAuthMedia, usePortalAuthMedia)
+- [x] HIGH #19: Fixed blocking `resend.Emails.send()` → `asyncio.to_thread()` in `app/core/email.py`
+- [x] HIGH #20: Added rate limiting to registration endpoints (10/min individual/company, 5/min bulk/VAT) + verify-email (10/min)
+- [x] HIGH #21: Streamed large exports in batches of 1000 rows (audit, applicant activity); added 50k safety limits (invoices, papers)
+- [x] HIGH #23: ErrorBoundary already existed wrapping AdminLayout + PortalLayout in App.tsx
+
+- [x] MED #24: Fixed N+1 queries in committee member + applicant list endpoints (`_batch_get_attachment_urls` in shared.py)
+- [x] MED #25: Added pagination to committee members endpoint (`skip`/`limit` params, default 100, max 500)
+- [x] MED #26: Fixed alt text fallback in ResizableImage (rich text editor images now default to "Embedded image")
+- [x] MED #28: Added React.memo to list-rendered components (SessionCard, MemberListRow, ApplicantListRow, LocationItem)
+
+### Round 2 — Complete

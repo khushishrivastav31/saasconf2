@@ -3,14 +3,143 @@
 This module provides functions to create standard default settings
 when a new conference is created, ensuring consistent baseline data
 across all conferences.
+
+Locale-aware formatting defaults
+---------------------------------
+``DEFAULT_SETTINGS`` contains baseline format values (US/English conventions).
+``LOCALE_OVERRIDES`` maps BCP 47 locale tags to the subset of keys that
+differ from the baseline.  ``get_default_settings(locale)`` merges them.
+
+Supported locales: en-US, de-DE, fr-FR, es-ES, pt-BR, nl-NL, it-IT, ja-JP.
+A bare language code (e.g. "de") is resolved to the most common regional
+variant (e.g. "de-DE") automatically.
 """
+
+from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.models.review import ReviewCriterion, ReviewQuestion, ReviewScaleOption, ReviewScoreScale
 from app.models.settings import CFPCommitteeRole, PronounOption, VolunteerRole
+
+
+# ---------------------------------------------------------------------------
+# Locale-aware formatting defaults
+# ---------------------------------------------------------------------------
+
+# Baseline defaults (US/English conventions).  Importable for callers that
+# do not have a locale context.
+DEFAULT_SETTINGS: dict[str, str | int] = {
+    "date_format": "MM/DD/YYYY",
+    "time_format": "12h",
+    "decimal_separator": ".",
+    "thousands_separator": ",",
+    "currency_position": "before",
+}
+
+# Per-locale overrides -- only keys that differ from DEFAULT_SETTINGS.
+LOCALE_OVERRIDES: dict[str, dict[str, str | int]] = {
+    "en-US": {},  # identical to base defaults
+    "de-DE": {
+        "date_format": "DD.MM.YYYY",
+        "time_format": "24h",
+        "decimal_separator": ",",
+        "thousands_separator": ".",
+        "currency_position": "after",
+    },
+    "fr-FR": {
+        "date_format": "DD/MM/YYYY",
+        "time_format": "24h",
+        "decimal_separator": ",",
+        "thousands_separator": " ",
+        "currency_position": "after",
+    },
+    "es-ES": {
+        "date_format": "DD/MM/YYYY",
+        "time_format": "24h",
+        "decimal_separator": ",",
+        "thousands_separator": ".",
+        "currency_position": "after",
+    },
+    "pt-BR": {
+        "date_format": "DD/MM/YYYY",
+        "time_format": "24h",
+        "decimal_separator": ",",
+        "thousands_separator": ".",
+        "currency_position": "before",
+    },
+    "nl-NL": {
+        "date_format": "DD-MM-YYYY",
+        "time_format": "24h",
+        "decimal_separator": ",",
+        "thousands_separator": ".",
+        "currency_position": "after",
+    },
+    "it-IT": {
+        "date_format": "DD/MM/YYYY",
+        "time_format": "24h",
+        "decimal_separator": ",",
+        "thousands_separator": ".",
+        "currency_position": "after",
+    },
+    "ja-JP": {
+        "date_format": "YYYY/MM/DD",
+        "time_format": "24h",
+        "decimal_separator": ".",
+        "thousands_separator": ",",
+        "currency_position": "before",
+    },
+}
+
+# Map bare language codes to their most common regional variant so that
+# callers can pass either "de" or "de-DE".
+_LANGUAGE_TO_LOCALE: dict[str, str] = {
+    "en": "en-US",
+    "de": "de-DE",
+    "fr": "fr-FR",
+    "es": "es-ES",
+    "pt": "pt-BR",
+    "nl": "nl-NL",
+    "it": "it-IT",
+    "ja": "ja-JP",
+}
+
+
+def get_default_settings(locale: str | None = None) -> dict[str, str | int]:
+    """Return format defaults, optionally tailored to a locale.
+
+    Args:
+        locale: BCP 47 locale tag (e.g. ``"de-DE"``) or bare language code
+                (e.g. ``"de"``).  ``None`` returns the base US/English defaults.
+
+    Returns:
+        A new dict with format settings.  The caller receives a copy so
+        mutations do not affect the module-level constants.
+    """
+    if locale is None:
+        return dict(DEFAULT_SETTINGS)
+
+    # Normalise the locale tag: "de" -> "de-DE", "de-de" -> "de-DE"
+    normalised = locale.strip()
+    if "-" in normalised or "_" in normalised:
+        # e.g. "de-de" / "de_DE" -> "de-DE"
+        parts = normalised.replace("_", "-").split("-")
+        normalised = f"{parts[0].lower()}-{parts[1].upper()}"
+    else:
+        normalised = _LANGUAGE_TO_LOCALE.get(normalised.lower(), normalised)
+
+    overrides = LOCALE_OVERRIDES.get(normalised)
+    if overrides is None:
+        # Unknown locale -- fall back to base defaults
+        return dict(DEFAULT_SETTINGS)
+
+    merged = dict(DEFAULT_SETTINGS)
+    merged.update(overrides)
+    return merged
 
 
 # Default Pronoun Options
@@ -144,6 +273,7 @@ async def seed_default_settings(
     db: AsyncSession,
     tenant_id: UUID,
     conference_id: UUID,
+    locale: str | None = None,
 ) -> None:
     """
     Create default settings for a newly created conference.
@@ -151,11 +281,31 @@ async def seed_default_settings(
     This function is called after a conference is created to populate
     standard settings that most conferences need.
 
+    When *locale* is provided, locale-aware formatting defaults (date format,
+    number separators, currency position, etc.) are merged into the
+    conference's ``settings`` JSONB column.
+
     Args:
         db: Database session
         tenant_id: The tenant ID
         conference_id: The newly created conference ID
+        locale: Optional BCP 47 locale tag (e.g. ``"de-DE"``).
     """
+    # Merge locale-aware format defaults into the conference settings JSONB
+    if locale is not None:
+        from app.models.conference import Conference  # local import to avoid circular deps
+
+        format_defaults = get_default_settings(locale)
+        result = await db.execute(
+            select(Conference).where(Conference.id == conference_id)
+        )
+        conference = result.scalar_one()
+        existing = conference.settings or {}
+        # Only set keys that are not already explicitly provided
+        merged = {**format_defaults, **existing}
+        conference.settings = merged
+        flag_modified(conference, "settings")
+
     # Seed Pronoun Options
     for name in DEFAULT_PRONOUNS:
         option = PronounOption(

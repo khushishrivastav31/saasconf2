@@ -1,17 +1,17 @@
-import { useState, useCallback, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import { useIsAdmin } from "../../../../hooks/useIsAdmin";
-import { useAuthMedia } from "../../../../hooks/useAuthMedia";
-import type { Applicant, Conference, PaginatedResponse } from "../../../../types";
-import { parseApiError } from "../../../../utils/apiError";
-import AlertDialog from "../../../../components/AlertDialog";
-import ConfirmDialog from "../../../../components/ConfirmDialog";
-import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
-import { CloseIcon } from "../../../ConferenceDetail/icons";
-import { ApplicantForm } from "./ApplicantForm";
-import { ApplicantPapers } from "./ApplicantPapers";
-import type { ApplicantFormData } from "./ApplicantForm";
+import { memo, useState, useCallback, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import { useIsAdmin } from '../../../../hooks/useIsAdmin';
+import { useAuthMedia } from '../../../../hooks/useAuthMedia';
+import type { Applicant, Conference, PaginatedResponse } from '../../../../types';
+import { parseApiError } from '../../../../utils/apiError';
+import AlertDialog from '../../../../components/AlertDialog';
+import ConfirmDialog from '../../../../components/ConfirmDialog';
+import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
+import { CloseIcon } from '../../../ConferenceDetail/icons';
+import { ApplicantForm } from './ApplicantForm';
+import { ApplicantPapers } from './ApplicantPapers';
+import type { ApplicantFormData } from './ApplicantForm';
 
 interface ApplicantListResponse {
   items: Applicant[];
@@ -19,16 +19,16 @@ interface ApplicantListResponse {
 }
 
 function getInitials(firstName: string, lastName: string): string {
-  const first = firstName?.[0] || "";
-  const last = lastName?.[0] || "";
-  return (first + last).toUpperCase() || "?";
+  const first = firstName?.[0] || '';
+  const last = lastName?.[0] || '';
+  return (first + last).toUpperCase() || '?';
 }
 
 // ---------------------------------------------------------------------------
 // Row in the all-applicants list view
 // ---------------------------------------------------------------------------
 
-function ApplicantListRow({
+const ApplicantListRow = memo(function ApplicantListRow({
   applicant,
   onClick,
 }: {
@@ -80,16 +80,11 @@ function ApplicantListRow({
         stroke="currentColor"
         viewBox="0 0 24 24"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 5l7 7-7 7"
-        />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
       </svg>
     </button>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -117,16 +112,16 @@ export default function CFPApplicants({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Applicant | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Conference filter — only used when no conferenceId prop is passed (standalone view)
   const isStandalone = !conferenceId;
-  const [filterConferenceId, setFilterConferenceId] = useState<string>("");
+  const [filterConferenceId, setFilterConferenceId] = useState<string>('');
 
   const { data: conferencesData } = useQuery({
-    queryKey: ["conferences"],
+    queryKey: ['conferences'],
     queryFn: async () => {
-      const response = await api.get<PaginatedResponse<Conference>>("/conferences");
+      const response = await api.get<PaginatedResponse<Conference>>('/conferences');
       return response.data;
     },
     enabled: isStandalone,
@@ -135,10 +130,10 @@ export default function CFPApplicants({
   const effectiveConferenceId = conferenceId || filterConferenceId || undefined;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["cfp-applicants", effectiveConferenceId ?? "all"],
+    queryKey: ['cfp-applicants', effectiveConferenceId ?? 'all'],
     queryFn: async () => {
       const params = effectiveConferenceId ? { conference_id: effectiveConferenceId } : {};
-      const response = await api.get<ApplicantListResponse>("/cfp/applicants", { params });
+      const response = await api.get<ApplicantListResponse>('/cfp/applicants', { params });
       return response.data;
     },
   });
@@ -146,31 +141,31 @@ export default function CFPApplicants({
   const uploadPicture = useCallback(
     async (applicantId: string, file: File) => {
       const form = new FormData();
-      form.append("file", file);
-      form.append("entity_type", "applicant_picture");
-      form.append("entity_id", applicantId);
-      form.append("description", "Profile picture");
-      await api.post("/attachments", form, {
-        headers: { "Content-Type": "multipart/form-data" },
+      form.append('file', file);
+      form.append('entity_type', 'applicant_picture');
+      form.append('entity_id', applicantId);
+      form.append('description', 'Profile picture');
+      await api.post('/attachments', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
     },
-    [queryClient],
+    [queryClient]
   );
 
   const uploadVideo = useCallback(
     async (applicantId: string, file: File) => {
       const form = new FormData();
-      form.append("file", file);
-      form.append("entity_type", "applicant_video");
-      form.append("entity_id", applicantId);
-      form.append("description", "Introduction video");
-      await api.post("/attachments", form, {
-        headers: { "Content-Type": "multipart/form-data" },
+      form.append('file', file);
+      form.append('entity_type', 'applicant_video');
+      form.append('entity_id', applicantId);
+      form.append('description', 'Introduction video');
+      await api.post('/attachments', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
     },
-    [queryClient],
+    [queryClient]
   );
 
   const createMutation = useMutation({
@@ -202,11 +197,11 @@ export default function CFPApplicants({
       if (Object.keys(socialLinks).length > 0) {
         payload.social_links = socialLinks;
       }
-      const response = await api.post<Applicant>("/cfp/applicants", payload);
+      const response = await api.post<Applicant>('/cfp/applicants', payload);
       return response.data;
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to create applicant"));
+      setError(parseApiError(err, 'Failed to create applicant'));
     },
   });
 
@@ -221,11 +216,13 @@ export default function CFPApplicants({
         agrees_to_recording: data.agrees_to_recording,
       };
       payload.pronouns = data.pronouns.trim() || null;
-      payload.phone = data.phone.trim() || "";
-      payload.title = data.title.trim() || "";
-      payload.company = data.company.trim() || "";
-      payload.bio = data.bio.trim() || "";
-      payload.accessibility_details = data.needs_accessibility ? data.accessibility_details.trim() : "";
+      payload.phone = data.phone.trim() || '';
+      payload.title = data.title.trim() || '';
+      payload.company = data.company.trim() || '';
+      payload.bio = data.bio.trim() || '';
+      payload.accessibility_details = data.needs_accessibility
+        ? data.accessibility_details.trim()
+        : '';
       if (data.password.trim()) payload.password = data.password.trim();
       // Filter out empty social links
       const socialLinks: Record<string, string> = {};
@@ -239,7 +236,7 @@ export default function CFPApplicants({
       return response.data;
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to update applicant"));
+      setError(parseApiError(err, 'Failed to update applicant'));
     },
   });
 
@@ -251,15 +248,19 @@ export default function CFPApplicants({
       setError(null);
       setDeleteTarget(null);
       setSelectedApplicantId(null);
-      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
     },
     onError: (err: unknown) => {
-      setDeleteError(parseApiError(err, "Failed to delete applicant"));
+      setDeleteError(parseApiError(err, 'Failed to delete applicant'));
       setDeleteTarget(null);
     },
   });
 
-  const handleCreate = async (formData: ApplicantFormData, pictureFile: File | null, videoFile: File | null) => {
+  const handleCreate = async (
+    formData: ApplicantFormData,
+    pictureFile: File | null,
+    videoFile: File | null
+  ) => {
     try {
       const applicant = await createMutation.mutateAsync(formData);
       if (pictureFile) {
@@ -278,17 +279,24 @@ export default function CFPApplicants({
       }
       setError(null);
       setIsAdding(false);
-      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
       setSelectedApplicantId(applicant.id);
     } catch {
       // error is handled by onError
     }
   };
 
-  const handleUpdate = async (formData: ApplicantFormData, pictureFile: File | null, videoFile: File | null) => {
+  const handleUpdate = async (
+    formData: ApplicantFormData,
+    pictureFile: File | null,
+    videoFile: File | null
+  ) => {
     if (!selectedApplicantId) return;
     try {
-      const applicant = await updateMutation.mutateAsync({ id: selectedApplicantId, data: formData });
+      const applicant = await updateMutation.mutateAsync({
+        id: selectedApplicantId,
+        data: formData,
+      });
       if (pictureFile) {
         try {
           await uploadPicture(applicant.id, pictureFile);
@@ -304,7 +312,7 @@ export default function CFPApplicants({
         }
       }
       setError(null);
-      queryClient.invalidateQueries({ queryKey: ["cfp-applicants"] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
     } catch {
       // error is handled by onError
     }
@@ -324,7 +332,7 @@ export default function CFPApplicants({
         a.last_name.toLowerCase().includes(q) ||
         a.email.toLowerCase().includes(q) ||
         (a.company && a.company.toLowerCase().includes(q)) ||
-        (a.title && a.title.toLowerCase().includes(q)),
+        (a.title && a.title.toLowerCase().includes(q))
     );
   }, [applicants, searchQuery]);
 
@@ -334,10 +342,10 @@ export default function CFPApplicants({
         <div>
           <h2 className="text-lg font-semibold text-gray-900">
             {isAdding
-              ? "New User"
+              ? 'New User'
               : selectedApplicant
                 ? `${selectedApplicant.first_name} ${selectedApplicant.last_name}`
-                : "Users"}
+                : 'Users'}
             {!isAdding && !selectedApplicant && applicantCount > 0 && (
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                 {applicantCount}
@@ -346,10 +354,10 @@ export default function CFPApplicants({
           </h2>
           <p className="text-sm text-gray-500">
             {isAdding
-              ? "Fill in the details to add a new user."
+              ? 'Fill in the details to add a new user.'
               : selectedApplicant
-                ? "Edit the user details below."
-                : "Manage paper submission users."}
+                ? 'Edit the user details below.'
+                : 'Manage paper submission users.'}
           </p>
         </div>
         {isAdmin && !isAdding && !selectedApplicant && (
@@ -443,7 +451,7 @@ export default function CFPApplicants({
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <CloseIcon />
@@ -487,8 +495,8 @@ export default function CFPApplicants({
           )}
           <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
             {filterConferenceId
-              ? "No users for this conference."
-              : "No users yet. Click \"+ Add User\" to get started."}
+              ? 'No users for this conference.'
+              : 'No users yet. Click "+ Add User" to get started.'}
           </div>
         </div>
       )}
@@ -497,7 +505,7 @@ export default function CFPApplicants({
       <ConfirmDialog
         open={!!deleteTarget}
         title="Delete User"
-        message={`Are you sure you want to delete "${deleteTarget ? `${deleteTarget.first_name} ${deleteTarget.last_name}` : ""}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete "${deleteTarget ? `${deleteTarget.first_name} ${deleteTarget.last_name}` : ''}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         onCancel={() => setDeleteTarget(null)}
@@ -507,7 +515,7 @@ export default function CFPApplicants({
       <AlertDialog
         open={!!deleteError}
         title="Cannot Delete User"
-        message={deleteError || ""}
+        message={deleteError || ''}
         onClose={() => setDeleteError(null)}
       />
     </div>

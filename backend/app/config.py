@@ -1,13 +1,37 @@
 """Application configuration with Pydantic Settings."""
 
+import json
+import os
 from functools import lru_cache
 
 from pydantic import model_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _parse_cors_origins() -> list[str]:
+    """Parse CORS origins from environment or return sensible defaults."""
+    raw = os.getenv("CORS_ORIGINS", "")
+    if raw:
+        # Support both JSON array and comma-separated string
+        raw = raw.strip()
+        if raw.startswith("["):
+            return json.loads(raw)
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
+    # Development defaults
+    return [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        "http://localhost:3006",
+        "http://127.0.0.1:3006",
+    ]
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
+
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
     # Application
     APP_NAME: str = "SaaSConf"
@@ -19,6 +43,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://localhost:5432/saasconf"  # No credentials in default
+    DATABASE_SSL_REQUIRED: bool = False  # Set to True in production
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
@@ -29,8 +54,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3002", "http://127.0.0.1:3002", "http://localhost:3006", "http://127.0.0.1:3006"]
+    # CORS — set CORS_ORIGINS env var for production (comma-separated or JSON array)
+    CORS_ORIGINS: list[str] = _parse_cors_origins()
 
     # File Upload
     MAX_UPLOAD_SIZE_MB: int = 10
@@ -61,10 +86,6 @@ class Settings(BaseSettings):
         if len(self.SUPER_ADMIN_PASSWORD) < 10:
             raise ValueError("SUPER_ADMIN_PASSWORD must be at least 10 characters")
         return self
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
 
 
 @lru_cache

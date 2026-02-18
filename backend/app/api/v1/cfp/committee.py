@@ -30,7 +30,7 @@ from app.schemas.cfp import (
     TopicResponse,
 )
 
-from .shared import MODULE_CODE, _get_applicant_picture_url
+from .shared import MODULE_CODE, _batch_get_attachment_urls, _get_applicant_picture_url
 
 router = APIRouter()
 
@@ -96,25 +96,45 @@ async def list_committee_members(
     current_user: CurrentUserDep,
     db: DbSessionDep,
     conference_id: UUID | None = Query(None, description="Filter by conference"),
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=500, description="Max records to return"),
 ) -> CommitteeMemberListResponse:
     """List committee members for the current tenant, optionally filtered by conference."""
+    base_filter = CFPCommitteeMember.tenant_id == current_user.tenant_id
+    filters = [base_filter]
+    if conference_id:
+        filters.append(CFPCommitteeMember.conference_id == conference_id)
+
+    # Total count
+    count_result = await db.execute(
+        select(func.count()).select_from(CFPCommitteeMember).where(*filters)
+    )
+    total = count_result.scalar() or 0
+
+    # Paginated data
     query = (
         select(CFPCommitteeMember)
         .options(selectinload(CFPCommitteeMember.applicant))
-        .where(CFPCommitteeMember.tenant_id == current_user.tenant_id)
+        .where(*filters)
         .order_by(CFPCommitteeMember.created_at.desc())
+        .offset(skip)
+        .limit(limit)
     )
-    if conference_id:
-        query = query.where(CFPCommitteeMember.conference_id == conference_id)
     result = await db.execute(query)
     members = list(result.scalars().all())
 
-    items = []
-    for m in members:
-        picture_url = await _get_applicant_picture_url(db, m.applicant_id, current_user.tenant_id)
-        items.append(_build_committee_member_response(m, picture_url))
+    # Batch-fetch picture URLs to avoid N+1
+    applicant_ids = [m.applicant_id for m in members]
+    picture_urls = await _batch_get_attachment_urls(
+        db, applicant_ids, "applicant_picture", current_user.tenant_id
+    )
 
-    return CommitteeMemberListResponse(items=items, total=len(items))
+    items = [
+        _build_committee_member_response(m, picture_urls.get(m.applicant_id))
+        for m in members
+    ]
+
+    return CommitteeMemberListResponse(items=items, total=total)
 
 
 @router.post("/committee-members", response_model=CommitteeMemberResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])

@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PlatformCurrencyCreate(BaseModel):
@@ -27,6 +27,8 @@ class PlatformCurrencyUpdate(BaseModel):
 class PlatformCurrencyResponse(BaseModel):
     """Platform currency response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     code: str
     name: str
@@ -34,9 +36,6 @@ class PlatformCurrencyResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class PlatformCurrencyListResponse(BaseModel):

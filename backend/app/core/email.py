@@ -4,6 +4,7 @@ Uses Resend API when RESEND_API_KEY is configured,
 otherwise falls back to console logging for development.
 """
 
+import asyncio
 import logging
 from uuid import UUID
 
@@ -85,7 +86,7 @@ async def send_email(
         }
         if reply_to:
             payload["reply_to"] = reply_to
-        resend.Emails.send(payload)
+        await asyncio.to_thread(resend.Emails.send, payload)
         logger.info(f"Email sent to {to}: {subject}")
         return True
     except Exception as e:

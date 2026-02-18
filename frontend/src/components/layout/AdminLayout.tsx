@@ -228,6 +228,8 @@ export default function AdminLayout() {
               sidebarCollapsed ? 'mx-auto' : ''
             }`}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!sidebarCollapsed}
+            aria-label="Toggle sidebar navigation"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {sidebarCollapsed ? (
@@ -250,25 +252,34 @@ export default function AdminLayout() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <nav className={`mt-6 ${sidebarCollapsed ? 'px-2' : 'px-3'}`}>
+          <nav
+            className={`mt-6 ${sidebarCollapsed ? 'px-2' : 'px-3'}`}
+            role="navigation"
+            aria-label="Main navigation"
+          >
             <div className="space-y-1">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  title={sidebarCollapsed ? item.name : undefined}
-                  className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                    sidebarCollapsed ? 'justify-center px-2' : 'px-3'
-                  } ${
-                    location.pathname === item.href || location.pathname.startsWith(item.href + '/')
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`}
-                >
-                  <item.icon />
-                  {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
-                </Link>
-              ))}
+              {navigation.map((item) => {
+                const isActive =
+                  location.pathname === item.href || location.pathname.startsWith(item.href + '/');
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    title={sidebarCollapsed ? item.name : undefined}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex items-center py-2 text-sm font-medium rounded-md ${
+                      sidebarCollapsed ? 'justify-center px-2' : 'px-3'
+                    } ${
+                      isActive
+                        ? 'bg-gray-800 text-white'
+                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                    }`}
+                  >
+                    <item.icon />
+                    {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
+                  </Link>
+                );
+              })}
             </div>
 
             {/* Module Navigation */}
@@ -286,24 +297,29 @@ export default function AdminLayout() {
                   )}
                   {sidebarCollapsed && <div className="border-t border-gray-700 mx-1 mb-2" />}
                   <div className={`${sidebarCollapsed ? '' : 'mt-2'} space-y-1`}>
-                    {availableModules.map((item) => (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        title={sidebarCollapsed ? item.name : undefined}
-                        className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                          sidebarCollapsed ? 'justify-center px-2' : 'px-3'
-                        } ${
-                          location.pathname === item.href ||
-                          location.pathname.startsWith(item.href + '/')
-                            ? 'bg-gray-800 text-white'
-                            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                        }`}
-                      >
-                        <item.icon />
-                        {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
-                      </Link>
-                    ))}
+                    {availableModules.map((item) => {
+                      const isActive =
+                        location.pathname === item.href ||
+                        location.pathname.startsWith(item.href + '/');
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          title={sidebarCollapsed ? item.name : undefined}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={`flex items-center py-2 text-sm font-medium rounded-md ${
+                            sidebarCollapsed ? 'justify-center px-2' : 'px-3'
+                          } ${
+                            isActive
+                              ? 'bg-gray-800 text-white'
+                              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                          }`}
+                        >
+                          <item.icon />
+                          {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
+                        </Link>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -324,6 +340,7 @@ export default function AdminLayout() {
                     <Link
                       to="/my-company"
                       title={sidebarCollapsed ? 'My Company' : undefined}
+                      aria-current={location.pathname === '/my-company' ? 'page' : undefined}
                       className={`flex items-center py-2 text-sm font-medium rounded-md ${
                         sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                       } ${
@@ -339,6 +356,7 @@ export default function AdminLayout() {
                   <Link
                     to="/team"
                     title={sidebarCollapsed ? 'Team' : undefined}
+                    aria-current={location.pathname === '/team' ? 'page' : undefined}
                     className={`flex items-center py-2 text-sm font-medium rounded-md ${
                       sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                     } ${
@@ -355,6 +373,9 @@ export default function AdminLayout() {
                     <Link
                       to="/applicant-activity"
                       title={sidebarCollapsed ? 'Activity Log' : undefined}
+                      aria-current={
+                        location.pathname === '/applicant-activity' ? 'page' : undefined
+                      }
                       className={`flex items-center py-2 text-sm font-medium rounded-md ${
                         sidebarCollapsed ? 'justify-center px-2' : 'px-3'
                       } ${
@@ -380,24 +401,29 @@ export default function AdminLayout() {
                 )}
                 {sidebarCollapsed && <div className="border-t border-gray-700 mx-1 mb-2" />}
                 <div className={`${sidebarCollapsed ? '' : 'mt-2'} space-y-1`}>
-                  {adminNavigation.map((item) => (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      title={sidebarCollapsed ? item.name : undefined}
-                      className={`flex items-center py-2 text-sm font-medium rounded-md ${
-                        sidebarCollapsed ? 'justify-center px-2' : 'px-3'
-                      } ${
-                        location.pathname === item.href ||
-                        location.pathname.startsWith(item.href + '/')
-                          ? 'bg-gray-800 text-white'
-                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                      }`}
-                    >
-                      <item.icon />
-                      {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
-                    </Link>
-                  ))}
+                  {adminNavigation.map((item) => {
+                    const isActive =
+                      location.pathname === item.href ||
+                      location.pathname.startsWith(item.href + '/');
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        title={sidebarCollapsed ? item.name : undefined}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`flex items-center py-2 text-sm font-medium rounded-md ${
+                          sidebarCollapsed ? 'justify-center px-2' : 'px-3'
+                        } ${
+                          isActive
+                            ? 'bg-gray-800 text-white'
+                            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                        }`}
+                      >
+                        <item.icon />
+                        {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             )}

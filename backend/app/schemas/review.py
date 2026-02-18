@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # --- Score Scale Option ---
 
@@ -14,6 +14,8 @@ class ReviewScaleOptionCreate(BaseModel):
 
 
 class ReviewScaleOptionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     scale_id: UUID | None = None
     label: str
@@ -22,9 +24,6 @@ class ReviewScaleOptionResponse(BaseModel):
     display_order: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
-
-    class Config:
-        from_attributes = True
 
 
 # --- Score Scale ---
@@ -44,6 +43,8 @@ class ReviewScoreScaleUpdate(BaseModel):
 
 
 class ReviewScoreScaleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -53,9 +54,6 @@ class ReviewScoreScaleResponse(BaseModel):
     options: list[ReviewScaleOptionResponse]
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ReviewScoreScaleListResponse(BaseModel):
@@ -94,6 +92,8 @@ class ReviewQuestionUpdate(BaseModel):
 
 
 class ReviewQuestionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     criterion_id: UUID
     tenant_id: UUID | None = None
@@ -112,9 +112,6 @@ class ReviewQuestionResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ReviewQuestionListResponse(BaseModel):
@@ -139,6 +136,8 @@ class ReviewCriterionUpdate(BaseModel):
 
 
 class ReviewCriterionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -149,9 +148,6 @@ class ReviewCriterionResponse(BaseModel):
     questions: list[ReviewQuestionResponse] = []
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ReviewCriterionListResponse(BaseModel):
@@ -168,6 +164,8 @@ class ReviewAnswerSubmit(BaseModel):
 
 
 class ReviewAnswerResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     question_id: UUID
     selected_option_id: UUID | None
@@ -177,9 +175,6 @@ class ReviewAnswerResponse(BaseModel):
     snapshot_weight: float | None
     snapshot_question_text: str | None
     snapshot_option_label: str | None
-
-    class Config:
-        from_attributes = True
 
 
 # --- Paper Review ---
@@ -192,6 +187,8 @@ class PaperReviewSubmit(BaseModel):
 
 
 class PaperReviewResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     assignment_id: UUID
     paper_id: UUID
@@ -205,9 +202,6 @@ class PaperReviewResponse(BaseModel):
     submitted_at: datetime | None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class AdminPaperReviewResponse(PaperReviewResponse):
@@ -223,6 +217,8 @@ class PaperReviewListResponse(BaseModel):
 # --- Review Form Settings ---
 
 class ReviewFormSettingsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     conference_id: UUID
     enable_speaker_feedback: bool
@@ -230,9 +226,6 @@ class ReviewFormSettingsResponse(BaseModel):
     enable_must_have: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ReviewFormSettingsUpdate(BaseModel):

@@ -62,6 +62,43 @@ async def _get_applicant_video_url(db: DbSessionDep, applicant_id: UUID, tenant_
     return None
 
 
+async def _batch_get_attachment_urls(
+    db: DbSessionDep,
+    entity_ids: list[UUID],
+    entity_type: str,
+    tenant_id: UUID,
+) -> dict[UUID, str]:
+    """Batch-fetch the most recent attachment URL per entity in a single query.
+
+    Returns a mapping of entity_id -> download URL.
+    """
+    if not entity_ids:
+        return {}
+
+    ranked = (
+        select(
+            Attachment.entity_id,
+            Attachment.id.label("attachment_id"),
+            func.row_number()
+            .over(partition_by=Attachment.entity_id, order_by=Attachment.created_at.desc())
+            .label("rn"),
+        )
+        .where(
+            Attachment.tenant_id == tenant_id,
+            Attachment.entity_type == entity_type,
+            Attachment.entity_id.in_(entity_ids),
+        )
+        .subquery()
+    )
+    result = await db.execute(
+        select(ranked.c.entity_id, ranked.c.attachment_id).where(ranked.c.rn == 1)
+    )
+    return {
+        row.entity_id: f"/attachments/{row.attachment_id}/download"
+        for row in result.all()
+    }
+
+
 async def _get_paper_video_url(db: DbSessionDep, paper_id: UUID, tenant_id: UUID) -> str | None:
     """Get the video download URL for a paper."""
     result = await db.execute(

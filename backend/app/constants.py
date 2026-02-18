@@ -1,0 +1,78 @@
+"""Centralized domain constants for the SaaSConf platform."""
+
+
+class ModuleCode:
+    """Module codes used for access control and feature gating."""
+
+    ANALYTICS = "analytics"
+    ATTENDEES = "attendees"
+    CFP = "cfp"
+    CONFERENCES = "conferences"
+    INVOICES = "invoices"
+    LOCATIONS = "locations"
+    NEWS = "news"
+    PROGRAM = "program"
+    REGISTRATION = "registration"
+    SERVICE_PROVIDERS = "service_providers"
+    SESSIONS = "sessions"
+    SPEAKERS = "speakers"
+    SPONSORS = "sponsors"
+    VOLUNTEERS = "volunteers"
+
+
+class ResourceType:
+    """Resource types used in audit logging."""
+
+    ATTACHMENT = "attachment"
+    BOOKING_PACKAGE = "booking_package"
+    CFP = "cfp"
+    CONFERENCE = "conference"
+    DISCOUNT_CODE = "discount_code"
+    EMAIL_TEMPLATE = "email_template"
+    INVOICE = "invoice"
+    LOCATION = "location"
+    MESSAGE_THREAD = "message_thread"
+    MODULE = "module"
+    PAPER = "paper"
+    PLATFORM_CURRENCY = "platform_currency"
+    PROGRAM_DAY = "program_day"
+    PROGRAM_SESSION = "program_session"
+    PROGRAM_TIME_SLOT = "program_time_slot"
+    PROGRAM_TRACK = "program_track"
+    REVIEW_QUESTION = "review_question"
+    SCORE_SCALE = "score_scale"
+    SERVICE_PROVIDER = "service_provider"
+    SPONSOR = "sponsor"
+    SUBMISSION = "submission"
+    TENANT = "tenant"
+    TENANT_MODULE = "tenant_module"
+    USER = "user"
+    USER_CONFERENCE_ACCESS = "user_conference_access"
+    VOLUNTEER = "volunteer"
+
+
+class EntityType:
+    """Entity types used for the polymorphic attachment system."""
+
+    APPLICANT_PICTURE = "applicant_picture"
+    APPLICANT_VIDEO = "applicant_video"
+    COMMITTEE_MEMBER = "committee_member"
+    CONFERENCE_LOGO = "conference_logo"
+    INVOICE = "invoice"
+    MESSAGE = "message"
+    PAPER_VIDEO = "paper_video"
+    SERVICE_PROVIDER = "service_provider"
+    SPONSOR = "sponsor"
+    TENANT_LOGO = "tenant_logo"
+
+
+class InvoiceStatus:
+    """Invoice lifecycle statuses."""
+
+    DRAFT = "draft"
+    SENT = "sent"
+    PAID = "paid"
+    OVERDUE = "overdue"
+    CANCELLED = "cancelled"
+
+    ALL = {DRAFT, SENT, PAID, OVERDUE, CANCELLED}

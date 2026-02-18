@@ -6,7 +6,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 
-from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -14,10 +13,9 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.email import send_direct_message_email
-from app.core.exceptions import AuthorizationError, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.models.associations import ConferenceCFP
 from app.models.cfp import CFPApplicant, CFPCommitteeMember, CFPPaper
-from app.models.conference import Conference
 from app.models.messaging import RecipientListMember
 from app.models.news import NewsArticle
 from app.models.user import User
@@ -29,10 +27,13 @@ from app.schemas.news import (
     NewsArticleSendResponse,
     NewsArticleUpdate,
 )
+from app.services.conference import ConferenceService
 
 MODULE_CODE = "news"
 
 router = APIRouter(dependencies=[Depends(require_module(MODULE_CODE))])
+
+svc = ConferenceService
 
 
 def _build_response(
@@ -77,37 +78,31 @@ async def list_articles(
 ) -> NewsArticleListResponse:
     """List all news articles for a conference. Admin sees drafts and published."""
     tenant_id = current_user.tenant_id
-    await get_conference_for_tenant(db, conference_id, tenant_id)
+    await svc.resolve_conference(db, conference_id, tenant_id)
 
+    # Single query with LEFT JOIN to resolve author names
     result = await db.execute(
-        select(NewsArticle)
+        select(
+            NewsArticle,
+            User.first_name.label("author_first_name"),
+            User.last_name.label("author_last_name"),
+        )
+        .outerjoin(User, User.id == NewsArticle.created_by)
         .where(
             NewsArticle.tenant_id == tenant_id,
             NewsArticle.conference_id == conference_id,
         )
         .order_by(NewsArticle.created_at.desc())
     )
-    articles = result.scalars().all()
-
-    # Batch-resolve author names
-    author_ids = {a.created_by for a in articles if a.created_by}
-    author_map: dict[UUID, tuple[str | None, str | None]] = {}
-    if author_ids:
-        user_result = await db.execute(
-            select(User.id, User.first_name, User.last_name).where(
-                User.id.in_(list(author_ids))
-            )
-        )
-        for row in user_result.all():
-            author_map[row.id] = (row.first_name, row.last_name)
+    rows = result.all()
 
     items = [
         _build_response(
             article,
-            author_first_name=author_map.get(article.created_by, (None, None))[0],
-            author_last_name=author_map.get(article.created_by, (None, None))[1],
+            author_first_name=author_first_name,
+            author_last_name=author_last_name,
         )
-        for article in articles
+        for article, author_first_name, author_last_name in rows
     ]
 
     return NewsArticleListResponse(items=items, total=len(items))
@@ -122,8 +117,8 @@ async def create_article(
 ) -> NewsArticleResponse:
     """Create a new news article (draft by default)."""
     tenant_id = current_user.tenant_id
-    await get_conference_for_tenant(db, conference_id, tenant_id)
-    await check_conference_admin(conference_id, current_user, db)
+    await svc.resolve_conference(db, conference_id, tenant_id)
+    await svc.require_admin(db, current_user, conference_id)
 
     article = NewsArticle(
         tenant_id=tenant_id,
@@ -133,9 +128,8 @@ async def create_article(
         is_published=False,
         created_by=current_user.user_id,
     )
-    db.add(article)
-    await db.commit()
-    await db.refresh(article)
+
+    await svc.create_resource(db, article)
 
     first_name, last_name = await _resolve_author(db, article.created_by)
     return _build_response(article, author_first_name=first_name, author_last_name=last_name)
@@ -151,16 +145,12 @@ async def get_article(
     """Get a single news article."""
     tenant_id = current_user.tenant_id
 
-    result = await db.execute(
-        select(NewsArticle).where(
-            NewsArticle.id == article_id,
-            NewsArticle.conference_id == conference_id,
-            NewsArticle.tenant_id == tenant_id,
-        )
+    article = await svc.get_resource(
+        db, NewsArticle, article_id,
+        conference_id=conference_id,
+        tenant_id=tenant_id,
+        label="News article",
     )
-    article = result.scalar_one_or_none()
-    if not article:
-        raise NotFoundError(f"News article with ID '{article_id}' not found")
 
     first_name, last_name = await _resolve_author(db, article.created_by)
     return _build_response(article, author_first_name=first_name, author_last_name=last_name)
@@ -176,18 +166,14 @@ async def update_article(
 ) -> NewsArticleResponse:
     """Update a news article."""
     tenant_id = current_user.tenant_id
-    await check_conference_admin(conference_id, current_user, db)
+    await svc.require_admin(db, current_user, conference_id)
 
-    result = await db.execute(
-        select(NewsArticle).where(
-            NewsArticle.id == article_id,
-            NewsArticle.conference_id == conference_id,
-            NewsArticle.tenant_id == tenant_id,
-        )
+    article = await svc.get_resource(
+        db, NewsArticle, article_id,
+        conference_id=conference_id,
+        tenant_id=tenant_id,
+        label="News article",
     )
-    article = result.scalar_one_or_none()
-    if not article:
-        raise NotFoundError(f"News article with ID '{article_id}' not found")
 
     update_data = data.model_dump(exclude_unset=True)
 
@@ -198,11 +184,7 @@ async def update_article(
         elif not update_data["is_published"] and article.is_published:
             update_data["published_at"] = None
 
-    for field, value in update_data.items():
-        setattr(article, field, value)
-
-    await db.commit()
-    await db.refresh(article)
+    await svc.update_resource(db, article, update_data)
 
     first_name, last_name = await _resolve_author(db, article.created_by)
     return _build_response(article, author_first_name=first_name, author_last_name=last_name)
@@ -217,22 +199,17 @@ async def delete_article(
 ) -> dict:
     """Delete a news article."""
     tenant_id = current_user.tenant_id
-    await check_conference_admin(conference_id, current_user, db)
+    await svc.require_admin(db, current_user, conference_id)
 
-    result = await db.execute(
-        select(NewsArticle).where(
-            NewsArticle.id == article_id,
-            NewsArticle.conference_id == conference_id,
-            NewsArticle.tenant_id == tenant_id,
-        )
+    article = await svc.get_resource(
+        db, NewsArticle, article_id,
+        conference_id=conference_id,
+        tenant_id=tenant_id,
+        label="News article",
     )
-    article = result.scalar_one_or_none()
-    if not article:
-        raise NotFoundError(f"News article with ID '{article_id}' not found")
 
     title = article.title
-    await db.delete(article)
-    await db.commit()
+    await svc.delete_resource(db, article)
 
     return {"message": f"News article '{title}' deleted successfully"}
 
@@ -247,21 +224,17 @@ async def send_article(
 ) -> NewsArticleSendResponse:
     """Send a published news article as email to selected recipients."""
     tenant_id = current_user.tenant_id
-    await check_conference_admin(conference_id, current_user, db)
+    await svc.require_admin(db, current_user, conference_id)
 
-    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+    conference = await svc.resolve_conference(db, conference_id, tenant_id)
 
     # Fetch the article
-    result = await db.execute(
-        select(NewsArticle).where(
-            NewsArticle.id == article_id,
-            NewsArticle.conference_id == conference_id,
-            NewsArticle.tenant_id == tenant_id,
-        )
+    article = await svc.get_resource(
+        db, NewsArticle, article_id,
+        conference_id=conference_id,
+        tenant_id=tenant_id,
+        label="News article",
     )
-    article = result.scalar_one_or_none()
-    if not article:
-        raise NotFoundError(f"News article with ID '{article_id}' not found")
 
     if not article.is_published:
         raise NotFoundError("Only published articles can be sent")

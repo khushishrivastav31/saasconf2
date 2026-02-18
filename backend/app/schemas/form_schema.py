@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # --- Enums ---
@@ -91,6 +91,8 @@ class PaperFormFieldUpdate(BaseModel):
 class PaperFormFieldResponse(BaseModel):
     """Paper form field response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     schema_id: UUID
@@ -107,9 +109,6 @@ class PaperFormFieldResponse(BaseModel):
     options: list[FieldOption] | None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # --- Paper Form Schema Schemas ---
@@ -133,6 +132,8 @@ class PaperFormSchemaUpdate(BaseModel):
 class PaperFormSchemaResponse(BaseModel):
     """Paper form schema response with all fields."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -141,9 +142,6 @@ class PaperFormSchemaResponse(BaseModel):
     fields: list[PaperFormFieldResponse]
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # --- Field Reorder Schema ---

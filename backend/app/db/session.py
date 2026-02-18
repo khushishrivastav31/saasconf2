@@ -10,6 +10,11 @@ from app.config import get_settings
 
 settings = get_settings()
 
+# SSL configuration for production database connections
+connect_args = {}
+if settings.DATABASE_SSL_REQUIRED:
+    connect_args["ssl"] = True
+
 # Create async engine
 engine = create_async_engine(
     settings.DATABASE_URL,
@@ -17,6 +22,7 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
+    connect_args=connect_args,
 )
 
 # Create async session factory

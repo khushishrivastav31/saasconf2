@@ -5,7 +5,7 @@ from datetime import datetime, time as time_type
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ============================================================================
@@ -32,6 +32,8 @@ class ProgramDayUpdate(BaseModel):
 class ProgramDayResponse(BaseModel):
     """Program day response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -40,9 +42,6 @@ class ProgramDayResponse(BaseModel):
     sort_order: int
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ProgramDayListResponse(BaseModel):
@@ -86,6 +85,8 @@ class ProgramTimeSlotUpdate(BaseModel):
 class ProgramTimeSlotResponse(BaseModel):
     """Time slot response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     program_day_id: UUID
@@ -95,9 +96,6 @@ class ProgramTimeSlotResponse(BaseModel):
     is_session_free: bool = False
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ProgramTimeSlotListResponse(BaseModel):
@@ -142,6 +140,8 @@ class ProgramTrackReorder(BaseModel):
 class ProgramTrackResponse(BaseModel):
     """Track response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -154,9 +154,6 @@ class ProgramTrackResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ProgramTrackListResponse(BaseModel):
@@ -217,6 +214,8 @@ class ProgramSessionMove(BaseModel):
 class ProgramSessionResponse(BaseModel):
     """Session response schema."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     conference_id: UUID
@@ -239,9 +238,6 @@ class ProgramSessionResponse(BaseModel):
     settings: dict = {}
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ProgramSessionListResponse(BaseModel):

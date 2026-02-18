@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from 'react';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -6,7 +6,7 @@ interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: "danger" | "warning";
+  variant?: 'danger' | 'warning';
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -15,9 +15,9 @@ export default function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = "Delete",
-  cancelLabel = "Cancel",
-  variant = "danger",
+  confirmLabel = 'Delete',
+  cancelLabel = 'Cancel',
+  variant = 'danger',
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -32,18 +32,23 @@ export default function ConfirmDialog({
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
+      if (e.key === 'Escape') onCancel();
     };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
   }, [open, onCancel]);
 
   if (!open) return null;
 
-  const isDanger = variant === "danger";
+  const isDanger = variant === 'danger';
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+    >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
       {/* Dialog */}
@@ -51,11 +56,11 @@ export default function ConfirmDialog({
         <div className="flex items-start gap-4">
           <div
             className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-              isDanger ? "bg-red-100" : "bg-yellow-100"
+              isDanger ? 'bg-red-100' : 'bg-yellow-100'
             }`}
           >
             <svg
-              className={`w-5 h-5 ${isDanger ? "text-red-600" : "text-yellow-600"}`}
+              className={`w-5 h-5 ${isDanger ? 'text-red-600' : 'text-yellow-600'}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -69,7 +74,9 @@ export default function ConfirmDialog({
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+            <h3 id="confirm-dialog-title" className="text-lg font-medium text-gray-900">
+              {title}
+            </h3>
             <p className="mt-1 text-sm text-gray-500">{message}</p>
           </div>
         </div>
@@ -86,9 +93,7 @@ export default function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${
-              isDanger
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-yellow-600 hover:bg-yellow-700"
+              isDanger ? 'bg-red-600 hover:bg-red-700' : 'bg-yellow-600 hover:bg-yellow-700'
             }`}
           >
             {confirmLabel}
