@@ -280,15 +280,15 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
             cd ${{ env.STAGING_PATH }}/deploy/staging
 
-            # Check current PG major version
-            PG_VERSION=$(docker compose exec -T db psql -V 2>/dev/null | grep -oE '[0-9]+' | head -1 || echo "unknown")
-            echo "Current PostgreSQL version: $PG_VERSION"
+            # Detect PG version from the running container image (not exec, which may fail)
+            DB_IMAGE=$(docker inspect --format='{{.Config.Image}}' saasconf_db_staging 2>/dev/null || echo "none")
+            echo "Current db container image: $DB_IMAGE"
 
-            if [ "$PG_VERSION" = "15" ]; then
+            if echo "$DB_IMAGE" | grep -q "postgres:15"; then
               echo "PG15 detected — running upgrade to PG16..."
               bash upgrade-pg16.sh
             else
-              echo "Already on PG$PG_VERSION — skipping upgrade"
+              echo "Not PG15 (image: $DB_IMAGE) — skipping upgrade"
             fi
           EOF
 
