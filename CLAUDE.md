@@ -85,7 +85,7 @@ The result is persisted on the `billing_profiles.vat_validated` column (`true`/`
 - Health checks retry 5 times with 10s intervals
 - Deploy ensures infra services (db, redis) are healthy before rebuilding app containers (`docker compose up -d --wait db redis`)
 - App services restart with `--no-deps` to prevent cascading recreates of db/redis
-- **Staging DB is PostgreSQL 15** (`postgres:15-alpine`) — do NOT change major version without `pg_upgrade` or dump/restore
+- **Staging DB is PostgreSQL 16** (`postgres:16.6-alpine`) — matches local dev and CI. Upgraded from PG15 via `deploy/staging/upgrade-pg16.sh` (dump/restore)
 
 ### Nginx (staging)
 - Config is a template (`nginx.conf.template`) processed by `envsubst` at container start
@@ -178,7 +178,8 @@ The result is persisted on the `billing_profiles.vat_validated` column (`true`/`
 - [x] Fixed 5 test failures: rate limiting disabled in tests, JWT tampering test (flip middle char), Redis init in client fixture
 - [x] Fixed cross-tenant isolation test: enabled conferences module for tenant so JWT includes module claim
 - [x] CI fully green: Secrets Scan, Backend Tests (ruff + mypy + 745 tests), Frontend Tests, Security Audit
-- [x] Fixed staging deploy: reverted Postgres 16→15 (major version mismatch with existing data), added `--no-deps` + `--wait` to deploy step
+- [x] Fixed staging deploy: added `--no-deps` + `--wait` to deploy step
+- [x] Upgraded staging PostgreSQL 15→16 via automated dump/restore (`upgrade-pg16.sh`)
 - [x] Fixed nginx crash-loop: `envsubst` SHELL-FORMAT was shell-expanded before reaching envsubst (`"$$DOMAIN"` → `"$DOMAIN"` → expanded value). Fixed with `"\$$DOMAIN"` escaping.
 - [x] Added deploy diagnostics: container status, backend/nginx logs, local health check, verbose HTTP codes
 - [x] Full pipeline green: all 6 jobs pass (Backend Tests, Frontend Tests, Security Audit, Secrets Scan, Deploy, E2E Tests)
