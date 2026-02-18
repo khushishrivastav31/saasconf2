@@ -328,14 +328,19 @@ async def send_direct_message_email(
     The reply_to address is typically the conference's contact email.
     """
     import re
+    from html import escape as html_escape
 
     body_text = re.sub(r"<[^>]+>", "", body_html)
     body_text = re.sub(r"\s+", " ", body_text).strip()
 
+    safe_first = html_escape(first_name) if first_name else "there"
+    safe_conf = html_escape(conference_name)
+    safe_sender = html_escape(sender_name)
+
     full_html = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <p>Hi {first_name or "there"},</p>
-        <p>You have received a message regarding <strong>{conference_name}</strong> from {sender_name}:</p>
+        <p>Hi {safe_first},</p>
+        <p>You have received a message regarding <strong>{safe_conf}</strong> from {safe_sender}:</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
         <div style="padding: 16px; background-color: #f9fafb; border-radius: 8px;">
             {body_html}

@@ -239,14 +239,20 @@ def substitute_template_variables(
     Supported placeholders:
       [First Name], [Last Name], [Email],
       [Conference Name], [Paper Title], [Paper List]
+
+    All values are HTML-escaped before substitution to prevent XSS,
+    since this function runs after sanitize_html() has already cleaned
+    the template body.
     """
+    from html import escape as html_escape
+
     replacements = {
-        "[First Name]": first_name,
-        "[Last Name]": last_name,
-        "[Email]": email,
-        "[Conference Name]": conference_name,
-        "[Paper Title]": paper_title,
-        "[Paper List]": paper_list,
+        "[First Name]": html_escape(first_name),
+        "[Last Name]": html_escape(last_name),
+        "[Email]": html_escape(email),
+        "[Conference Name]": html_escape(conference_name),
+        "[Paper Title]": html_escape(paper_title),
+        "[Paper List]": html_escape(paper_list),
     }
     for placeholder, value in replacements.items():
         text = text.replace(placeholder, value)
