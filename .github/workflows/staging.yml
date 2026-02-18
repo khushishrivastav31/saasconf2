@@ -319,12 +319,15 @@ jobs:
             # Run database migrations — fail the deploy if migrations fail
             echo "Running database migrations..."
             docker compose exec -T backend alembic upgrade head
+          EOF
 
-            # Seed platform data (idempotent: super admin, modules, currencies, conference settings)
+      - name: Seed platform data
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+            cd ${{ env.STAGING_PATH }}/deploy/staging
             echo "Seeding platform data..."
-            docker compose exec -T -e PYTHONUNBUFFERED=1 backend python -m app.db.seed || echo "WARNING: Seed failed with exit code $?"
-
-            # Show status
+            docker compose exec -T backend python -u -m app.db.seed 2>&1
+            echo "Seed exit code: $?"
             echo "Container status:"
             docker compose ps
           EOF
