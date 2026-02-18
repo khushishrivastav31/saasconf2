@@ -151,7 +151,7 @@ async def create_invoice(
         recipient_country=invoice_data.recipient_country,
         recipient_vat_number=invoice_data.recipient_vat_number,
         line_items=(
-            [li.model_dump() for li in invoice_data.line_items]
+            [li.model_dump(mode="json") for li in invoice_data.line_items]
             if invoice_data.line_items
             else []
         ),
@@ -162,7 +162,7 @@ async def create_invoice(
         currency=invoice_data.currency,
         notes=invoice_data.notes,
         contact_persons=(
-            [cp.model_dump() for cp in invoice_data.contact_persons]
+            [cp.model_dump(mode="json") for cp in invoice_data.contact_persons]
             if invoice_data.contact_persons
             else []
         ),
@@ -250,17 +250,17 @@ async def update_invoice(
 
     update_data = invoice_data.model_dump(exclude_unset=True)
 
-    # Serialize line items if present
+    # Serialize line items if present (mode="json" ensures Decimals become strings)
     if "line_items" in update_data and update_data["line_items"] is not None:
         update_data["line_items"] = [
-            li.model_dump() if hasattr(li, "model_dump") else li
+            li.model_dump(mode="json") if hasattr(li, "model_dump") else li
             for li in update_data["line_items"]
         ]
 
     # Serialize contact persons if present
     if "contact_persons" in update_data and update_data["contact_persons"] is not None:
         update_data["contact_persons"] = [
-            cp.model_dump() if hasattr(cp, "model_dump") else cp
+            cp.model_dump(mode="json") if hasattr(cp, "model_dump") else cp
             for cp in update_data["contact_persons"]
         ]
 
