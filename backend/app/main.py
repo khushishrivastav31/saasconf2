@@ -99,8 +99,8 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="Multi-tenant SaaS platform for conference management",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
 )
 
 # Add rate limiting
