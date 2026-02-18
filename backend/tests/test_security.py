@@ -45,6 +45,7 @@ from app.core.security import (
     verify_password,
 )
 from app.core.utils import utcnow
+from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from tests.conftest import auth_headers
@@ -816,6 +817,19 @@ async def test_user_cannot_access_other_tenant_data(client: AsyncClient, db_sess
         is_active=True,
     )
     db_session.add_all([tenant_a, tenant_b])
+    await db_session.flush()
+
+    # Enable conferences module for tenant_a so login token includes it
+    conf_module = Module(
+        id=uuid.uuid4(),
+        name="Conferences",
+        code="conferences",
+        description="Conference management",
+        is_active=True,
+    )
+    db_session.add(conf_module)
+    await db_session.flush()
+    db_session.add(TenantModule(id=uuid.uuid4(), tenant_id=tenant_a.id, module_id=conf_module.id, is_enabled=True))
     await db_session.flush()
 
     user_a = User(
