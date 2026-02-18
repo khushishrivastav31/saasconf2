@@ -320,6 +320,10 @@ jobs:
             echo "Running database migrations..."
             docker compose exec -T backend alembic upgrade head
 
+            # Seed platform data (idempotent: super admin, modules, currencies)
+            echo "Seeding platform data..."
+            docker compose exec -T backend python -m app.db.seed
+
             # Show status
             docker compose ps
           EOF
