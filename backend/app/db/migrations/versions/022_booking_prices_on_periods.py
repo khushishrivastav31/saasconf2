@@ -4,6 +4,7 @@ Revision ID: 022_booking_prices_on_periods
 Revises: 021_booking_options
 Create Date: 2026-01-27
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB

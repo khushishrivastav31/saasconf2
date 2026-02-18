@@ -3,7 +3,8 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import func, select, update as sa_update
+from sqlalchemy import func, select
+from sqlalchemy import update as sa_update
 
 from app.core.dependencies import (
     CurrentUserDep,
@@ -52,6 +53,7 @@ router = APIRouter()
 
 # ============ CFP Endpoints ============
 
+
 @router.get("/", response_model=CFPListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_cfps(
     current_user: CurrentUserDep,
@@ -66,9 +68,9 @@ async def list_cfps(
     query = select(CallForPapers).where(CallForPapers.tenant_id == current_user.tenant_id)
 
     if conference_id:
-        query = query.join(
-            ConferenceCFP, ConferenceCFP.cfp_id == CallForPapers.id
-        ).where(ConferenceCFP.conference_id == conference_id)
+        query = query.join(ConferenceCFP, ConferenceCFP.cfp_id == CallForPapers.id).where(
+            ConferenceCFP.conference_id == conference_id
+        )
 
     if status:
         query = query.where(CallForPapers.status == status)
@@ -87,8 +89,7 @@ async def list_cfps(
     conf_ids_map: dict[UUID, list[UUID]] = {cid: [] for cid in cfp_ids}
     if cfp_ids:
         assoc_result = await db.execute(
-            select(ConferenceCFP.cfp_id, ConferenceCFP.conference_id)
-            .where(ConferenceCFP.cfp_id.in_(cfp_ids))
+            select(ConferenceCFP.cfp_id, ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id.in_(cfp_ids))
         )
         for row in assoc_result:
             conf_ids_map[row.cfp_id].append(row.conference_id)
@@ -96,11 +97,7 @@ async def list_cfps(
     items = []
     for cfp in cfps:
         # Get submission count
-        sub_count = (
-            await db.execute(
-                select(func.count()).where(Submission.cfp_id == cfp.id)
-            )
-        ).scalar() or 0
+        sub_count = (await db.execute(select(func.count()).where(Submission.cfp_id == cfp.id))).scalar() or 0
 
         items.append(
             CFPResponse(
@@ -170,11 +167,7 @@ async def get_cfp_stats(
 
     # Total submissions
     total_submissions = (
-        await db.execute(
-            select(func.count()).where(
-                Submission.tenant_id == current_user.tenant_id
-            )
-        )
+        await db.execute(select(func.count()).where(Submission.tenant_id == current_user.tenant_id))
     ).scalar() or 0
 
     return CFPStats(
@@ -190,17 +183,14 @@ async def get_cfp_stats(
 
 # ============ Topic Endpoints ============
 
+
 @router.get("/topics", response_model=TopicListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_topics(
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> TopicListResponse:
     """List all topics for the current tenant."""
-    query = (
-        select(CFPTopic)
-        .where(CFPTopic.tenant_id == current_user.tenant_id)
-        .order_by(CFPTopic.name)
-    )
+    query = select(CFPTopic).where(CFPTopic.tenant_id == current_user.tenant_id).order_by(CFPTopic.name)
     result = await db.execute(query)
     topics = list(result.scalars().all())
 
@@ -219,7 +209,9 @@ async def list_topics(
     return TopicListResponse(items=items, total=len(items))
 
 
-@router.post("/topics", response_model=TopicResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/topics", response_model=TopicResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def create_topic(
     topic_data: TopicCreate,
     current_user: TenantAdminDep,
@@ -307,6 +299,7 @@ async def delete_topic(
 
 # ============ CFP Create / Get / Update / Delete Endpoints ============
 
+
 @router.post("/", response_model=CFPResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
 async def create_cfp(
     cfp_data: CFPCreate,
@@ -351,10 +344,12 @@ async def create_cfp(
     await db.flush()
 
     # Create conference association
-    db.add(ConferenceCFP(
-        conference_id=cfp_data.conference_id,
-        cfp_id=cfp.id,
-    ))
+    db.add(
+        ConferenceCFP(
+            conference_id=cfp_data.conference_id,
+            cfp_id=cfp.id,
+        )
+    )
 
     # Audit log
     audit_log = AuditLog(
@@ -423,17 +418,10 @@ async def get_cfp(
         raise NotFoundError(f"Call for Papers with ID '{cfp_id}' not found")
 
     # Get submission count
-    sub_count = (
-        await db.execute(
-            select(func.count()).where(Submission.cfp_id == cfp.id)
-        )
-    ).scalar() or 0
+    sub_count = (await db.execute(select(func.count()).where(Submission.cfp_id == cfp.id))).scalar() or 0
 
     # Get conference_ids
-    assoc_result = await db.execute(
-        select(ConferenceCFP.conference_id)
-        .where(ConferenceCFP.cfp_id == cfp.id)
-    )
+    assoc_result = await db.execute(select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == cfp.id))
     conf_ids = [row[0] for row in assoc_result]
 
     return CFPResponse(
@@ -519,17 +507,10 @@ async def update_cfp(
     await db.refresh(cfp)
 
     # Get submission count
-    sub_count = (
-        await db.execute(
-            select(func.count()).where(Submission.cfp_id == cfp.id)
-        )
-    ).scalar() or 0
+    sub_count = (await db.execute(select(func.count()).where(Submission.cfp_id == cfp.id))).scalar() or 0
 
     # Get conference_ids
-    assoc_result = await db.execute(
-        select(ConferenceCFP.conference_id)
-        .where(ConferenceCFP.cfp_id == cfp.id)
-    )
+    assoc_result = await db.execute(select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == cfp.id))
     conf_ids = [row[0] for row in assoc_result]
 
     return CFPResponse(
@@ -606,7 +587,10 @@ async def delete_cfp(
 
 # ============ Submission Endpoints ============
 
-@router.get("/{cfp_id}/submissions", response_model=SubmissionListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+
+@router.get(
+    "/{cfp_id}/submissions", response_model=SubmissionListResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def list_submissions(
     cfp_id: UUID,
     current_user: CurrentUserDep,
@@ -691,7 +675,9 @@ async def list_submissions(
     )
 
 
-@router.get("/{cfp_id}/submissions/stats", response_model=SubmissionStats, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.get(
+    "/{cfp_id}/submissions/stats", response_model=SubmissionStats, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def get_submission_stats(
     cfp_id: UUID,
     current_user: CurrentUserDep,
@@ -738,7 +724,12 @@ async def get_submission_stats(
     )
 
 
-@router.post("/{cfp_id}/submissions", response_model=SubmissionResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/{cfp_id}/submissions",
+    response_model=SubmissionResponse,
+    status_code=201,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def create_submission(
     cfp_id: UUID,
     submission_data: SubmissionCreate,
@@ -790,7 +781,10 @@ async def create_submission(
         action="submission.create",
         resource_type="submission",
         resource_id=submission.id,
-        details={"title": submission.title, "speaker": f"{submission.speaker_first_name} {submission.speaker_last_name}"},
+        details={
+            "title": submission.title,
+            "speaker": f"{submission.speaker_first_name} {submission.speaker_last_name}",
+        },
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
@@ -829,7 +823,11 @@ async def create_submission(
     )
 
 
-@router.get("/{cfp_id}/submissions/{submission_id}", response_model=SubmissionResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.get(
+    "/{cfp_id}/submissions/{submission_id}",
+    response_model=SubmissionResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def get_submission(
     cfp_id: UUID,
     submission_id: UUID,
@@ -880,7 +878,11 @@ async def get_submission(
     )
 
 
-@router.put("/{cfp_id}/submissions/{submission_id}", response_model=SubmissionResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.put(
+    "/{cfp_id}/submissions/{submission_id}",
+    response_model=SubmissionResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def update_submission(
     cfp_id: UUID,
     submission_id: UUID,
@@ -989,7 +991,10 @@ async def delete_submission(
         action="submission.delete",
         resource_type="submission",
         resource_id=submission_id,
-        details={"title": submission_title, "speaker": f"{submission.speaker_first_name} {submission.speaker_last_name}"},
+        details={
+            "title": submission_title,
+            "speaker": f"{submission.speaker_first_name} {submission.speaker_last_name}",
+        },
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )

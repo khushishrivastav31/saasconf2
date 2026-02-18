@@ -17,9 +17,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     conn = op.get_bind()
-    exists = conn.execute(
-        sa.text("SELECT 1 FROM modules WHERE code = 'registration'")
-    ).fetchone()
+    exists = conn.execute(sa.text("SELECT 1 FROM modules WHERE code = 'registration'")).fetchone()
     if not exists:
         conn.execute(
             sa.text(

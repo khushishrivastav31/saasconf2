@@ -20,24 +20,18 @@ class PlatformCurrency(Base):
 
     __tablename__ = "platform_currencies"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     code: Mapped[str] = mapped_column(String(3), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     symbol: Mapped[str] = mapped_column(String(5), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    __table_args__ = (
-        Index("idx_platform_currencies_code", "code", unique=True),
-    )
+    __table_args__ = (Index("idx_platform_currencies_code", "code", unique=True),)
 
     def __repr__(self) -> str:
         return f"<PlatformCurrency {self.code} ({self.symbol})>"

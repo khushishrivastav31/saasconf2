@@ -1,7 +1,7 @@
 """Conference management endpoints (package)."""
 
-from .core import router  # core has root-level routes (GET /, POST /)
 from .associations import router as associations_router
+from .core import router  # core has root-level routes (GET /, POST /)
 from .exports import router as exports_router
 from .logo import router as logo_router
 from .service_providers import router as service_providers_router

@@ -4,6 +4,7 @@ Revision ID: 020_invoices
 Revises: 019_sponsors
 Create Date: 2026-01-27
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -18,12 +19,11 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "invoices",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True,
-                  server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", UUID(as_uuid=True),
-                  sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("conference_id", UUID(as_uuid=True),
-                  sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "conference_id", UUID(as_uuid=True), sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
+        ),
         # Invoice identification
         sa.Column("invoice_number", sa.String(50), nullable=False),
         sa.Column("status", sa.String(20), nullable=False, server_default="draft"),
@@ -54,10 +54,8 @@ def upgrade() -> None:
         # Status
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="true"),
         # Timestamps
-        sa.Column("created_at", sa.DateTime(timezone=True),
-                  server_default=sa.text("NOW()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True),
-                  server_default=sa.text("NOW()"), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()"), nullable=False),
         # Unique constraint
         sa.UniqueConstraint("tenant_id", "invoice_number", name="uq_invoices_tenant_number"),
     )

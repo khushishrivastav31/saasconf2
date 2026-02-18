@@ -44,8 +44,7 @@ async def list_platform_currencies(
 
     if search:
         query = query.where(
-            unaccent_ilike(PlatformCurrency.name, search)
-            | unaccent_ilike(PlatformCurrency.code, search)
+            unaccent_ilike(PlatformCurrency.name, search) | unaccent_ilike(PlatformCurrency.code, search)
         )
 
     if is_active is not None:
@@ -58,9 +57,7 @@ async def list_platform_currencies(
     )
     result = await paginate(db, query, page, page_size)
 
-    items = [
-        PlatformCurrencyResponse.model_validate(c) for c in result.items
-    ]
+    items = [PlatformCurrencyResponse.model_validate(c) for c in result.items]
 
     return PlatformCurrencyListResponse(
         items=items,
@@ -80,9 +77,7 @@ async def create_platform_currency(
 ) -> PlatformCurrencyResponse:
     """Create a new platform currency."""
     # Check code uniqueness
-    existing = await db.execute(
-        select(PlatformCurrency).where(PlatformCurrency.code == currency_data.code)
-    )
+    existing = await db.execute(select(PlatformCurrency).where(PlatformCurrency.code == currency_data.code))
     if existing.scalar_one_or_none():
         raise ValidationError(f"Currency with code '{currency_data.code}' already exists")
 
@@ -122,9 +117,7 @@ async def update_platform_currency(
     request: Request,
 ) -> PlatformCurrencyResponse:
     """Update a platform currency."""
-    result = await db.execute(
-        select(PlatformCurrency).where(PlatformCurrency.id == currency_id)
-    )
+    result = await db.execute(select(PlatformCurrency).where(PlatformCurrency.id == currency_id))
     currency = result.scalar_one_or_none()
     if not currency:
         raise NotFoundError(f"Platform currency with ID '{currency_id}' not found")
@@ -133,9 +126,7 @@ async def update_platform_currency(
 
     # If code is changing, check uniqueness
     if "code" in update_data and update_data["code"] != currency.code:
-        existing = await db.execute(
-            select(PlatformCurrency).where(PlatformCurrency.code == update_data["code"])
-        )
+        existing = await db.execute(select(PlatformCurrency).where(PlatformCurrency.code == update_data["code"]))
         if existing.scalar_one_or_none():
             raise ValidationError(f"Currency with code '{update_data['code']}' already exists")
 
@@ -169,9 +160,7 @@ async def delete_platform_currency(
     request: Request,
 ) -> None:
     """Delete a platform currency."""
-    result = await db.execute(
-        select(PlatformCurrency).where(PlatformCurrency.id == currency_id)
-    )
+    result = await db.execute(select(PlatformCurrency).where(PlatformCurrency.id == currency_id))
     currency = result.scalar_one_or_none()
     if not currency:
         raise NotFoundError(f"Platform currency with ID '{currency_id}' not found")
@@ -249,10 +238,14 @@ async def list_system_email_templates(
     page_size: int = Query(50, ge=1, le=100),
 ) -> EmailTemplateListResponse:
     """List all system-level email templates (super admin only)."""
-    query = select(EmailTemplate).where(
-        EmailTemplate.tenant_id.is_(None),
-        EmailTemplate.conference_id.is_(None),
-    ).order_by(EmailTemplate.template_type)
+    query = (
+        select(EmailTemplate)
+        .where(
+            EmailTemplate.tenant_id.is_(None),
+            EmailTemplate.conference_id.is_(None),
+        )
+        .order_by(EmailTemplate.template_type)
+    )
 
     result = await paginate(db, query, page, page_size)
 

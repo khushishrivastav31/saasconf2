@@ -1,13 +1,12 @@
 """CFP paper, topic, cospeaker, and assignment schemas."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.cfp_applicants import ApplicantResponse
-
 
 # --- Topic Schemas ---
 
@@ -49,7 +48,7 @@ class TopicListResponse(BaseModel):
 # --- Paper Enums ---
 
 
-class PaperStatus(str, Enum):
+class PaperStatus(StrEnum):
     """Paper submission status enum."""
 
     DRAFT = "draft"
@@ -61,7 +60,7 @@ class PaperStatus(str, Enum):
     ACCEPTED = "accepted"
 
 
-class PaperLevel(str, Enum):
+class PaperLevel(StrEnum):
     """Paper difficulty level enum."""
 
     BEGINNER = "beginner"
@@ -70,7 +69,7 @@ class PaperLevel(str, Enum):
     ALL_LEVELS = "all_levels"
 
 
-class CospeakerInvitationStatus(str, Enum):
+class CospeakerInvitationStatus(StrEnum):
     """Co-speaker invitation status enum."""
 
     PENDING = "pending"

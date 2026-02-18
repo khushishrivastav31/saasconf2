@@ -4,6 +4,7 @@ Revision ID: 030_applicant_out_of_timeframe
 Revises: 029_cfp_applicants
 Create Date: 2026-01-28
 """
+
 import sqlalchemy as sa
 from alembic import op
 

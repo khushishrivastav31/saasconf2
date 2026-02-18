@@ -1,5 +1,7 @@
 """Centralized domain constants for the SaaSConf platform."""
 
+from typing import ClassVar
+
 
 class ModuleCode:
     """Module codes used for access control and feature gating."""
@@ -75,4 +77,4 @@ class InvoiceStatus:
     OVERDUE = "overdue"
     CANCELLED = "cancelled"
 
-    ALL = {DRAFT, SENT, PAID, OVERDUE, CANCELLED}
+    ALL: ClassVar[set[str]] = {DRAFT, SENT, PAID, OVERDUE, CANCELLED}

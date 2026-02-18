@@ -4,6 +4,7 @@ Revision ID: 017_currencies
 Revises: 016_sponsor_packages
 Create Date: 2026-01-27
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
@@ -21,7 +22,9 @@ def upgrade() -> None:
         "conference_currencies",
         sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("conference_id", UUID(as_uuid=True), sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "conference_id", UUID(as_uuid=True), sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("code", sa.String(3), nullable=False),
         sa.Column("name", sa.String(50), nullable=False),
         sa.Column("symbol", sa.String(5), nullable=False),
@@ -32,7 +35,9 @@ def upgrade() -> None:
 
     op.create_index("idx_conference_currencies_tenant", "conference_currencies", ["tenant_id"])
     op.create_index("idx_conference_currencies_conference", "conference_currencies", ["conference_id"])
-    op.create_index("idx_conference_currencies_code", "conference_currencies", ["tenant_id", "conference_id", "code"], unique=True)
+    op.create_index(
+        "idx_conference_currencies_code", "conference_currencies", ["tenant_id", "conference_id", "code"], unique=True
+    )
 
     # Add currency column to sponsor_packages
     op.add_column(

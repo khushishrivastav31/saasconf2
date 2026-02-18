@@ -16,9 +16,7 @@ from app.schemas.news import PortalNewsArticle, PortalNewsListResponse
 router = APIRouter()
 
 
-async def _get_accessible_conference_ids(
-    applicant_id: UUID, db, tenant_id: UUID
-) -> list[UUID]:
+async def _get_accessible_conference_ids(applicant_id: UUID, db, tenant_id: UUID) -> list[UUID]:
     """Resolve the set of conference IDs the applicant can access.
 
     An applicant has access to a conference if they:
@@ -33,10 +31,7 @@ async def _get_accessible_conference_ids(
     )
 
     # (b) Conferences via committee membership
-    committee_conf_q = (
-        select(CFPCommitteeMember.conference_id)
-        .where(CFPCommitteeMember.applicant_id == applicant_id)
-    )
+    committee_conf_q = select(CFPCommitteeMember.conference_id).where(CFPCommitteeMember.applicant_id == applicant_id)
 
     # Union both sets
     combined = union_all(paper_conf_q, committee_conf_q).subquery()

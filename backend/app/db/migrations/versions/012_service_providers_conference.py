@@ -4,6 +4,7 @@ Revision ID: 012_service_providers_conference
 Revises: 011_service_providers
 Create Date: 2026-01-27
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID

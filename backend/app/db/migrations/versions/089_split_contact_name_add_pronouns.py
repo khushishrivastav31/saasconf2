@@ -27,9 +27,7 @@ def upgrade() -> None:
     )
 
     # Migrate existing data: put full name in first_name, empty string in last_name
-    op.execute(
-        "UPDATE billing_profiles SET contact_first_name = contact_person_name, contact_last_name = ''"
-    )
+    op.execute("UPDATE billing_profiles SET contact_first_name = contact_person_name, contact_last_name = ''")
 
     # Now make them non-nullable
     op.alter_column("billing_profiles", "contact_first_name", nullable=False)
@@ -54,9 +52,7 @@ def downgrade() -> None:
         "billing_profiles",
         sa.Column("contact_person_name", sa.String(255), nullable=True),
     )
-    op.execute(
-        "UPDATE billing_profiles SET contact_person_name = TRIM(contact_first_name || ' ' || contact_last_name)"
-    )
+    op.execute("UPDATE billing_profiles SET contact_person_name = TRIM(contact_first_name || ' ' || contact_last_name)")
     op.alter_column("billing_profiles", "contact_person_name", nullable=False)
 
     op.drop_column("billing_profiles", "contact_last_name")

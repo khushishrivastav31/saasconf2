@@ -8,8 +8,8 @@ Revises: 069_session_free_slots
 Create Date: 2026-02-13
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
 
 revision = "070_tracks_per_day"

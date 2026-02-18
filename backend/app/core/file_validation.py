@@ -19,33 +19,60 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
 
 # Default allowed types for general attachments
 DEFAULT_ALLOWED_MIME_TYPES = {
-    "image/jpeg", "image/png", "image/webp", "image/gif",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "text/plain", "text/csv",
-    "video/mp4", "video/quicktime", "video/webm",
+    "text/plain",
+    "text/csv",
+    "video/mp4",
+    "video/quicktime",
+    "video/webm",
 }
 
 # MIME types that filetype library cannot detect from magic bytes
 # These require falling back to the claimed Content-Type
 _FALLBACK_MIME_TYPES = {
-    "text/plain", "text/csv",
+    "text/plain",
+    "text/csv",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 }
 
 # Extensions commonly associated with executable/script types — stripped from filenames
 _DANGEROUS_EXTENSIONS = {
-    ".php", ".phtml", ".php3", ".php4", ".php5",
-    ".exe", ".bat", ".cmd", ".com", ".msi",
-    ".sh", ".bash", ".csh",
-    ".py", ".rb", ".pl", ".cgi",
-    ".jsp", ".asp", ".aspx",
-    ".js", ".vbs", ".ps1",
-    ".svg", ".html", ".htm", ".xhtml",
+    ".php",
+    ".phtml",
+    ".php3",
+    ".php4",
+    ".php5",
+    ".exe",
+    ".bat",
+    ".cmd",
+    ".com",
+    ".msi",
+    ".sh",
+    ".bash",
+    ".csh",
+    ".py",
+    ".rb",
+    ".pl",
+    ".cgi",
+    ".jsp",
+    ".asp",
+    ".aspx",
+    ".js",
+    ".vbs",
+    ".ps1",
+    ".svg",
+    ".html",
+    ".htm",
+    ".xhtml",
 }
 
 
@@ -93,10 +120,7 @@ def safe_content_disposition(filename: str, disposition: str = "attachment") -> 
         ascii_fallback = filename.encode("ascii", errors="replace").decode("ascii")
         ascii_fallback = ascii_fallback.replace("\\", "\\\\").replace('"', '\\"')
         utf8_encoded = quote(filename, safe="")
-        return (
-            f'{disposition}; filename="{ascii_fallback}"; '
-            f"filename*=UTF-8''{utf8_encoded}"
-        )
+        return f"{disposition}; filename=\"{ascii_fallback}\"; filename*=UTF-8''{utf8_encoded}"
 
 
 def strip_image_metadata(file_data: bytes, content_type: str) -> bytes:

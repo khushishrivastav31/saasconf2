@@ -4,6 +4,7 @@ Revision ID: 013_location_sp_contact_fields
 Revises: 012_service_providers_conference
 Create Date: 2026-01-27
 """
+
 import sqlalchemy as sa
 from alembic import op
 

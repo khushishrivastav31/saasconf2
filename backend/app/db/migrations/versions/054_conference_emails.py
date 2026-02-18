@@ -5,8 +5,8 @@ Revises: 053_email_templates
 Create Date: 2026-02-10
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "054_conference_emails"
 down_revision = "053_email_templates"

@@ -1,7 +1,6 @@
 """Tenant company management endpoints (tenant admin only)."""
 
 import time
-from uuid import UUID
 
 from fastapi import APIRouter, Request, UploadFile
 from sqlalchemy import select
@@ -13,7 +12,7 @@ from app.core.file_validation import sanitize_filename, strip_image_metadata, va
 from app.models.attachment import Attachment
 from app.models.audit import AuditAction, AuditLog
 from app.models.tenant import Tenant
-from app.schemas.tenant import TenantResponse, TenantUpdate, ContactPersonResponse
+from app.schemas.tenant import ContactPersonResponse, TenantResponse, TenantUpdate
 
 router = APIRouter()
 

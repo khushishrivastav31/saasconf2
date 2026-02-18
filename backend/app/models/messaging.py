@@ -15,18 +15,14 @@ class MessageTemplate(Base):
 
     __tablename__ = "message_templates"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
     body_html: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -42,17 +38,13 @@ class RecipientList(Base):
 
     __tablename__ = "recipient_lists"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -72,17 +64,13 @@ class RecipientListMember(Base):
 
     __tablename__ = "recipient_list_members"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     list_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("recipient_lists.id", ondelete="CASCADE"), nullable=False
     )
     applicant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
 
-    recipient_list: Mapped["RecipientList"] = relationship(
-        "RecipientList", back_populates="members"
-    )
+    recipient_list: Mapped["RecipientList"] = relationship("RecipientList", back_populates="members")
 
     __table_args__ = (
         UniqueConstraint("list_id", "applicant_id", name="uq_recipient_list_members_list_applicant"),
@@ -95,9 +83,7 @@ class MessageThread(Base):
 
     __tablename__ = "message_threads"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -105,16 +91,10 @@ class MessageThread(Base):
         UUID(as_uuid=True), ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
     )
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
-    bulk_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
+    bulk_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     has_attachments: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    archived_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -123,9 +103,7 @@ class MessageThread(Base):
     participants: Mapped[list["MessageParticipant"]] = relationship(
         "MessageParticipant", back_populates="thread", cascade="all, delete-orphan"
     )
-    messages: Mapped[list["Message"]] = relationship(
-        "Message", back_populates="thread", cascade="all, delete-orphan"
-    )
+    messages: Mapped[list["Message"]] = relationship("Message", back_populates="thread", cascade="all, delete-orphan")
     flags: Mapped[list["ThreadFlag"]] = relationship(
         "ThreadFlag", back_populates="thread", cascade="all, delete-orphan"
     )
@@ -141,9 +119,7 @@ class MessageParticipant(Base):
 
     __tablename__ = "message_participants"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -152,21 +128,17 @@ class MessageParticipant(Base):
     )
     participant_type: Mapped[str] = mapped_column(String(20), nullable=False)  # "user" or "applicant"
     participant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    last_read_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    last_read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    thread: Mapped["MessageThread"] = relationship(
-        "MessageThread", back_populates="participants"
-    )
+    thread: Mapped["MessageThread"] = relationship("MessageThread", back_populates="participants")
 
     __table_args__ = (
         UniqueConstraint(
-            "thread_id", "participant_type", "participant_id",
+            "thread_id",
+            "participant_type",
+            "participant_id",
             name="uq_message_participants_thread_entity",
         ),
         Index("idx_message_participants_thread", "thread_id"),
@@ -179,9 +151,7 @@ class Message(Base):
 
     __tablename__ = "messages"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -192,17 +162,11 @@ class Message(Base):
     sender_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     body_html: Mapped[str] = mapped_column(Text, nullable=False)
     is_internal_note: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    archived_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    thread: Mapped["MessageThread"] = relationship(
-        "MessageThread", back_populates="messages"
-    )
+    thread: Mapped["MessageThread"] = relationship("MessageThread", back_populates="messages")
 
     __table_args__ = (
         Index("idx_messages_thread", "thread_id"),
@@ -215,20 +179,14 @@ class ThreadFlag(Base):
 
     __tablename__ = "thread_flags"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     thread_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("message_threads.id", ondelete="CASCADE"), nullable=False
     )
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    thread: Mapped["MessageThread"] = relationship(
-        "MessageThread", back_populates="flags"
-    )
+    thread: Mapped["MessageThread"] = relationship("MessageThread", back_populates="flags")
 
     __table_args__ = (
         UniqueConstraint("thread_id", "user_id", name="uq_thread_flags_thread_user"),

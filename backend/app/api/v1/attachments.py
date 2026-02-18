@@ -9,14 +9,23 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
-from app.core.file_validation import sanitize_filename, safe_content_disposition, strip_image_metadata, validate_upload
+from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.schemas.attachment import AttachmentListResponse, AttachmentResponse
 
 router = APIRouter()
 
-ALLOWED_ENTITY_TYPES = {"location", "volunteer", "conference", "service_provider", "applicant_picture", "applicant_video", "paper_video", "sponsor_logo"}
+ALLOWED_ENTITY_TYPES = {
+    "location",
+    "volunteer",
+    "conference",
+    "service_provider",
+    "applicant_picture",
+    "applicant_video",
+    "paper_video",
+    "sponsor_logo",
+}
 
 
 @router.get("", response_model=AttachmentListResponse)

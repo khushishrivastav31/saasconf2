@@ -30,9 +30,7 @@ async def get_tenant_modules(
         raise NotFoundError(f"Tenant with ID '{tenant_id}' not found")
 
     # Get assigned modules
-    result = await db.execute(
-        select(TenantModule).where(TenantModule.tenant_id == tenant_id)
-    )
+    result = await db.execute(select(TenantModule).where(TenantModule.tenant_id == tenant_id))
     tenant_modules = result.scalars().all()
 
     items = []
@@ -173,9 +171,7 @@ async def update_tenant_module(
     """Update a tenant's module assignment (dates, limits, pricing)."""
     # Find the assignment
     result = await db.execute(
-        select(TenantModule)
-        .where(TenantModule.tenant_id == tenant_id)
-        .where(TenantModule.module_id == module_id)
+        select(TenantModule).where(TenantModule.tenant_id == tenant_id).where(TenantModule.module_id == module_id)
     )
     tenant_module = result.scalar_one_or_none()
 
@@ -241,9 +237,7 @@ async def revoke_module_from_tenant(
     """Revoke a module from a tenant."""
     # Find the assignment
     result = await db.execute(
-        select(TenantModule)
-        .where(TenantModule.tenant_id == tenant_id)
-        .where(TenantModule.module_id == module_id)
+        select(TenantModule).where(TenantModule.tenant_id == tenant_id).where(TenantModule.module_id == module_id)
     )
     tenant_module = result.scalar_one_or_none()
 

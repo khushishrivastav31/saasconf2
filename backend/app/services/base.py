@@ -11,7 +11,8 @@ Provides reusable helpers that every domain service inherits:
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Select, func, select
@@ -87,7 +88,7 @@ class BaseService:
     async def get_or_404(
         db: AsyncSession,
         model: type,
-        id: UUID,  # noqa: A002 -- intentionally shadowing built-in for clarity
+        id: UUID,
         *,
         tenant_id: UUID | None = None,
         conference_id: UUID | None = None,
@@ -157,9 +158,7 @@ class BaseService:
 
         from app.core.dependencies import check_conference_admin_access
 
-        has_access = await check_conference_admin_access(
-            db, current_user.user_id, conference_id
-        )
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 

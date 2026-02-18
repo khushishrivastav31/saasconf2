@@ -4,7 +4,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
-
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import (
@@ -58,9 +57,9 @@ async def list_volunteers(
     )
 
     if conference_id:
-        query = query.join(
-            ConferenceVolunteer, ConferenceVolunteer.volunteer_id == Volunteer.id
-        ).where(ConferenceVolunteer.conference_id == conference_id)
+        query = query.join(ConferenceVolunteer, ConferenceVolunteer.volunteer_id == Volunteer.id).where(
+            ConferenceVolunteer.conference_id == conference_id
+        )
 
     if status:
         query = query.where(Volunteer.status == status)
@@ -147,11 +146,7 @@ async def get_volunteer_stats(
 
     # Total hours
     total_hours = (
-        await db.execute(
-            select(func.sum(Volunteer.total_hours)).where(
-                Volunteer.tenant_id == current_user.tenant_id
-            )
-        )
+        await db.execute(select(func.sum(Volunteer.total_hours)).where(Volunteer.tenant_id == current_user.tenant_id))
     ).scalar() or 0.0
 
     return VolunteerStats(
@@ -213,10 +208,12 @@ async def create_volunteer(
     await db.flush()  # Get volunteer.id before creating association
 
     # Create conference association
-    db.add(ConferenceVolunteer(
-        conference_id=volunteer_data.conference_id,
-        volunteer_id=volunteer.id,
-    ))
+    db.add(
+        ConferenceVolunteer(
+            conference_id=volunteer_data.conference_id,
+            volunteer_id=volunteer.id,
+        )
+    )
 
     # Audit log
     audit_log = AuditLog(
@@ -356,9 +353,7 @@ async def update_volunteer(
 
     # Re-fetch with eager-loaded conferences
     refreshed_result = await db.execute(
-        select(Volunteer)
-        .where(Volunteer.id == volunteer_id)
-        .options(selectinload(Volunteer.conferences))
+        select(Volunteer).where(Volunteer.id == volunteer_id).options(selectinload(Volunteer.conferences))
     )
     volunteer = refreshed_result.scalar_one()
 
@@ -393,7 +388,10 @@ async def delete_volunteer(
     current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
-    conference_id: UUID | None = Query(None, description="Conference to unlink from. If volunteer is only in this conference, they will be deleted entirely."),
+    conference_id: UUID | None = Query(
+        None,
+        description="Conference to unlink from. If volunteer is only in this conference, they will be deleted entirely.",
+    ),
 ) -> dict:
     """
     Delete or unlink a volunteer.
@@ -444,9 +442,7 @@ async def delete_volunteer(
             raise ValidationError(f"Volunteer is not linked to conference '{conference.name}'")
 
         # Count how many conferences this volunteer is linked to
-        count_result = await db.execute(
-            select(func.count()).where(ConferenceVolunteer.volunteer_id == volunteer_id)
-        )
+        count_result = await db.execute(select(func.count()).where(ConferenceVolunteer.volunteer_id == volunteer_id))
         link_count = count_result.scalar() or 0
 
         if link_count > 1:
@@ -493,7 +489,9 @@ async def delete_volunteer(
     return {"message": f"Volunteer '{volunteer_name}' deleted successfully"}
 
 
-@router.post("/{volunteer_id}/approve", response_model=VolunteerResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/{volunteer_id}/approve", response_model=VolunteerResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def approve_volunteer(
     volunteer_id: UUID,
     current_user: TenantAdminDep,
@@ -533,9 +531,7 @@ async def approve_volunteer(
 
     # Re-fetch with eager-loaded conferences
     refreshed_result = await db.execute(
-        select(Volunteer)
-        .where(Volunteer.id == volunteer_id)
-        .options(selectinload(Volunteer.conferences))
+        select(Volunteer).where(Volunteer.id == volunteer_id).options(selectinload(Volunteer.conferences))
     )
     volunteer = refreshed_result.scalar_one()
 

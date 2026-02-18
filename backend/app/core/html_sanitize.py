@@ -8,20 +8,48 @@ regardless of client.
 
 import nh3
 
-
 # Tags allowed in rich text content (messaging, CFP fields)
 _ALLOWED_TAGS = {
     # Block
-    "p", "br", "hr",
-    "h1", "h2", "h3", "h4", "h5", "h6",
-    "blockquote", "pre", "code",
+    "p",
+    "br",
+    "hr",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "blockquote",
+    "pre",
+    "code",
     # Lists
-    "ul", "ol", "li",
+    "ul",
+    "ol",
+    "li",
     # Inline
-    "a", "strong", "b", "em", "i", "u", "s", "del", "ins",
-    "sub", "sup", "small", "mark", "span",
+    "a",
+    "strong",
+    "b",
+    "em",
+    "i",
+    "u",
+    "s",
+    "del",
+    "ins",
+    "sub",
+    "sup",
+    "small",
+    "mark",
+    "span",
     # Tables
-    "table", "thead", "tbody", "tfoot", "tr", "th", "td",
+    "table",
+    "thead",
+    "tbody",
+    "tfoot",
+    "tr",
+    "th",
+    "td",
     # Media (images only — no script, no iframe)
     "img",
 }

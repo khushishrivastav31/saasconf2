@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -16,9 +16,7 @@ class ReviewScoreScale(Base):
 
     __tablename__ = "review_score_scales"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -29,17 +27,18 @@ class ReviewScoreScale(Base):
     scale_type: Mapped[str] = mapped_column(String(20), nullable=False)  # "numeric_range", "custom", "binary"
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     # Relationships
     options: Mapped[list["ReviewScaleOption"]] = relationship(
-        "ReviewScaleOption", back_populates="scale", cascade="all, delete-orphan",
-        lazy="selectin", order_by="ReviewScaleOption.display_order"
+        "ReviewScaleOption",
+        back_populates="scale",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="ReviewScaleOption.display_order",
     )
 
     __table_args__ = (
@@ -57,9 +56,7 @@ class ReviewScaleOption(Base):
 
     __tablename__ = "review_scale_options"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     scale_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("review_score_scales.id", ondelete="CASCADE"), nullable=False
     )
@@ -68,9 +65,7 @@ class ReviewScaleOption(Base):
     is_unsure: Mapped[bool] = mapped_column(Boolean, default=False)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -78,9 +73,7 @@ class ReviewScaleOption(Base):
     # Relationships
     scale: Mapped["ReviewScoreScale"] = relationship("ReviewScoreScale", back_populates="options")
 
-    __table_args__ = (
-        Index("idx_review_scale_options_scale", "scale_id"),
-    )
+    __table_args__ = (Index("idx_review_scale_options_scale", "scale_id"),)
 
     def __repr__(self) -> str:
         return f"<ReviewScaleOption {self.label}>"
@@ -91,9 +84,7 @@ class ReviewCriterion(Base):
 
     __tablename__ = "review_criteria"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -105,17 +96,18 @@ class ReviewCriterion(Base):
     display_order: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     # Relationships
     questions: Mapped[list["ReviewQuestion"]] = relationship(
-        "ReviewQuestion", back_populates="criterion", cascade="all, delete-orphan",
-        lazy="selectin", order_by="ReviewQuestion.display_order"
+        "ReviewQuestion",
+        back_populates="criterion",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="ReviewQuestion.display_order",
     )
 
     __table_args__ = (
@@ -133,9 +125,7 @@ class ReviewQuestion(Base):
 
     __tablename__ = "review_questions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     criterion_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("review_criteria.id", ondelete="CASCADE"), nullable=False
     )
@@ -153,16 +143,16 @@ class ReviewQuestion(Base):
         UUID(as_uuid=True), ForeignKey("review_score_scales.id", ondelete="SET NULL"), nullable=True
     )
     weight: Mapped[float] = mapped_column(Float, default=1.0)
-    comment_requirement: Mapped[str] = mapped_column(String(30), default="optional")  # "optional", "required", "required_if_low_score"
+    comment_requirement: Mapped[str] = mapped_column(
+        String(30), default="optional"
+    )  # "optional", "required", "required_if_low_score"
     low_score_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
     show_to_reviewers: Mapped[bool] = mapped_column(Boolean, default=True)
     count_in_score: Mapped[bool] = mapped_column(Boolean, default=True)
     display_order: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -180,8 +170,9 @@ class ReviewQuestion(Base):
         return f"<ReviewQuestion {self.id}>"
 
 
-class ReviewStatus(str, Enum):
+class ReviewStatus(StrEnum):
     """Review submission status."""
+
     DRAFT = "draft"
     SUBMITTED = "submitted"
 
@@ -191,9 +182,7 @@ class PaperReview(Base):
 
     __tablename__ = "paper_reviews"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -215,9 +204,7 @@ class PaperReview(Base):
     config_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -247,9 +234,7 @@ class ReviewAnswer(Base):
 
     __tablename__ = "review_answers"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     review_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("paper_reviews.id", ondelete="CASCADE"), nullable=False
     )
@@ -269,9 +254,7 @@ class ReviewAnswer(Base):
     snapshot_question_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     snapshot_option_label: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -296,9 +279,7 @@ class ReviewFormSettings(Base):
 
     __tablename__ = "review_form_settings"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -309,9 +290,7 @@ class ReviewFormSettings(Base):
     enable_internal_comment: Mapped[bool] = mapped_column(Boolean, default=True)
     enable_must_have: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

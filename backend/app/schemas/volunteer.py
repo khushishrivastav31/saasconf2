@@ -1,7 +1,7 @@
 """Volunteer schemas."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from app.core.validators import validate_phone
 
 
-class VolunteerStatus(str, Enum):
+class VolunteerStatus(StrEnum):
     """Volunteer status enum."""
 
     PENDING = "pending"

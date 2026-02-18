@@ -57,9 +57,7 @@ def upgrade() -> None:
         ),
     )
     op.create_index("idx_billing_profiles_tenant", "billing_profiles", ["tenant_id"])
-    op.create_index(
-        "idx_billing_profiles_conference", "billing_profiles", ["conference_id"]
-    )
+    op.create_index("idx_billing_profiles_conference", "billing_profiles", ["conference_id"])
     op.create_index(
         "idx_billing_profiles_tenant_conference",
         "billing_profiles",
@@ -184,9 +182,7 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column("item_name", sa.String(500), nullable=False),
-        sa.Column(
-            "pending", sa.Boolean(), server_default="false", nullable=False
-        ),
+        sa.Column("pending", sa.Boolean(), server_default="false", nullable=False),
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column(
             "created_at",
@@ -195,9 +191,7 @@ def upgrade() -> None:
             nullable=False,
         ),
     )
-    op.create_index(
-        "idx_registration_items_tenant", "registration_items", ["tenant_id"]
-    )
+    op.create_index("idx_registration_items_tenant", "registration_items", ["tenant_id"])
     op.create_index(
         "idx_registration_items_registration",
         "registration_items",
@@ -212,9 +206,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("idx_registration_items_type", table_name="registration_items")
-    op.drop_index(
-        "idx_registration_items_registration", table_name="registration_items"
-    )
+    op.drop_index("idx_registration_items_registration", table_name="registration_items")
     op.drop_index("idx_registration_items_tenant", table_name="registration_items")
     op.drop_table("registration_items")
 
@@ -226,9 +218,7 @@ def downgrade() -> None:
     op.drop_index("idx_registrations_tenant", table_name="registrations")
     op.drop_table("registrations")
 
-    op.drop_index(
-        "idx_billing_profiles_tenant_conference", table_name="billing_profiles"
-    )
+    op.drop_index("idx_billing_profiles_tenant_conference", table_name="billing_profiles")
     op.drop_index("idx_billing_profiles_conference", table_name="billing_profiles")
     op.drop_index("idx_billing_profiles_tenant", table_name="billing_profiles")
     op.drop_table("billing_profiles")

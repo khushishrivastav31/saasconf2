@@ -5,6 +5,7 @@ Revises: 049_applicant_pronouns
 Create Date: 2026-01-30
 
 """
+
 from collections.abc import Sequence
 from typing import Union
 

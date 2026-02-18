@@ -5,8 +5,8 @@ Revises: 066_program_design
 Create Date: 2026-02-12
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
 
 revision = "067_program_event_types"
@@ -20,7 +20,9 @@ def upgrade() -> None:
         "program_event_types",
         sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("conference_id", UUID(as_uuid=True), sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "conference_id", UUID(as_uuid=True), sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("name", sa.String(100), nullable=False),
         sa.Column("code", sa.String(50), nullable=False),  # e.g., "break", "lunch", "custom_event"
         sa.Column("color", sa.String(7), nullable=False, server_default="#6B7280"),

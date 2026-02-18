@@ -27,7 +27,8 @@ async def upload_tenant_logo(
 
     Only accessible by super admins.
     """
-    from fastapi import UploadFile, File
+    from fastapi import UploadFile
+
     from app.models.attachment import Attachment
 
     # Get form data
@@ -100,8 +101,9 @@ async def get_tenant_logo(
 ) -> bytes:
     """Get the tenant logo image."""
     from fastapi.responses import Response
-    from app.models.attachment import Attachment
+
     from app.db.session import set_rls_context
+    from app.models.attachment import Attachment
 
     # Set RLS context to allow access (logos are public)
     await set_rls_context(db, is_super_admin=True)

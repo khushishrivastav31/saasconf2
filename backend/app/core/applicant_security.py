@@ -52,9 +52,7 @@ def create_applicant_refresh_token(applicant_id: UUID) -> tuple[str, str, dateti
         "jti": jti,
     }
 
-    raw_token = jwt.encode(
-        payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
-    )
+    raw_token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
 
@@ -64,9 +62,7 @@ def create_applicant_refresh_token(applicant_id: UUID) -> tuple[str, str, dateti
 def decode_applicant_token(token: str, token_type: str = "applicant_access") -> dict[str, Any]:
     """Decode and validate an applicant JWT token."""
     try:
-        payload = jwt.decode(
-            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         if payload.get("type") != token_type:
             raise AuthenticationError(f"Invalid token type. Expected {token_type}.")

@@ -9,7 +9,9 @@ from .booking_periods import router as booking_periods_router
 from .committee_roles import router as committee_roles_router
 from .currencies import router as currencies_router
 from .discount_codes import router as discount_codes_router
+from .email_templates import router as email_templates_router
 from .location_types import router as location_types_router
+from .pronouns import router as pronouns_router
 from .review_criteria import router as review_criteria_router
 from .review_form_settings import router as review_form_settings_router
 from .review_questions import router as review_questions_router
@@ -17,8 +19,6 @@ from .score_scales import router as score_scales_router
 from .session_types import router as session_types_router
 from .sponsor_packages import router as sponsor_packages_router
 from .volunteer_roles import router as volunteer_roles_router
-from .pronouns import router as pronouns_router
-from .email_templates import router as email_templates_router
 
 router = APIRouter()
 

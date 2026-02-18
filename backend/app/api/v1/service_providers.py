@@ -49,9 +49,7 @@ def build_service_provider_response(sp: ServiceProvider) -> ServiceProviderRespo
     )
 
 
-async def _get_location_or_404(
-    db, location_id: UUID, tenant_id: UUID
-) -> Location:
+async def _get_location_or_404(db, location_id: UUID, tenant_id: UUID) -> Location:
     """Fetch location and raise 404 if not found."""
     result = await db.execute(
         select(Location).where(
@@ -89,7 +87,9 @@ async def list_service_providers(
     return ServiceProviderListResponse(items=items, total=len(items))
 
 
-@router.post("", response_model=ServiceProviderResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "", response_model=ServiceProviderResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def create_service_provider(
     location_id: UUID,
     sp_data: ServiceProviderCreate,
@@ -138,7 +138,9 @@ async def create_service_provider(
     return build_service_provider_response(sp)
 
 
-@router.put("/{provider_id}", response_model=ServiceProviderResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.put(
+    "/{provider_id}", response_model=ServiceProviderResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def update_service_provider(
     location_id: UUID,
     provider_id: UUID,

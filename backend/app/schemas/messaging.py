@@ -5,8 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # --- Shared ---
+
 
 class SenderInfo(BaseModel):
     """Resolved participant info."""
@@ -56,6 +56,7 @@ class ParticipantInfo(BaseModel):
 
 # --- Thread list ---
 
+
 class ThreadListItem(BaseModel):
     """Inbox row."""
 
@@ -87,6 +88,7 @@ class ThreadListResponse(BaseModel):
 
 # --- Thread detail ---
 
+
 class ThreadDetailResponse(BaseModel):
     """Full thread with participants and messages."""
 
@@ -103,6 +105,7 @@ class ThreadDetailResponse(BaseModel):
 
 
 # --- Admin create / reply ---
+
 
 class AdminCreateThread(BaseModel):
     """Admin creates new thread(s) to one or more applicants."""
@@ -128,6 +131,7 @@ class ReplyCreate(BaseModel):
 
 
 # --- Bulk send ---
+
 
 class BulkRecipientFilter(BaseModel):
     """Filter for selecting bulk recipients."""
@@ -165,6 +169,7 @@ class BulkThreadSummary(BaseModel):
 
 # --- Portal ---
 
+
 class PortalCreateThread(BaseModel):
     """Applicant creates a new thread to conference admins."""
 
@@ -187,6 +192,7 @@ class NotificationPreferenceUpdate(BaseModel):
 
 
 # --- Message Templates ---
+
 
 class MessageTemplateCreate(BaseModel):
     """Create a new message template."""
@@ -225,6 +231,7 @@ class MessageTemplateListResponse(BaseModel):
 
 
 # --- Recipient Lists ---
+
 
 class RecipientListCreate(BaseModel):
     """Create a new recipient list."""
@@ -286,6 +293,7 @@ class RecipientListListResponse(BaseModel):
 
 # --- Global unread ---
 
+
 class ConferenceUnreadCount(BaseModel):
     """Unread count for a single conference."""
 
@@ -302,6 +310,7 @@ class GlobalUnreadCountResponse(BaseModel):
 
 
 # --- Internal Notes ---
+
 
 class InternalNoteCreate(BaseModel):
     """Create an internal note on a thread."""

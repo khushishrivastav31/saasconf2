@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
@@ -19,8 +20,6 @@ from app.schemas.program import (
     ProgramDaysGenerateResponse,
     ProgramDayUpdate,
 )
-
-from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 
 from ._shared import MODULE_CODE, _build_day_response
 
@@ -200,9 +199,7 @@ async def generate_days(
         end = end + timedelta(days=1)
 
     # Get existing days
-    existing_result = await db.execute(
-        select(ProgramDay.date).where(ProgramDay.conference_id == conference_id)
-    )
+    existing_result = await db.execute(select(ProgramDay.date).where(ProgramDay.conference_id == conference_id))
     existing_dates = {row[0] for row in existing_result.all()}
 
     # Create missing days
@@ -304,9 +301,7 @@ async def update_day(
 
     # Sync name change to the linked booking option
     if day_data.name is not None:
-        opt_result = await db.execute(
-            select(BookingOption).where(BookingOption.conference_day_id == day.id)
-        )
+        opt_result = await db.execute(select(BookingOption).where(BookingOption.conference_day_id == day.id))
         linked_opt = opt_result.scalar_one_or_none()
         if linked_opt and linked_opt.name != day.name:
             linked_opt.name = day.name

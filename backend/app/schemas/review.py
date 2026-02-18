@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # --- Score Scale Option ---
 
+
 class ReviewScaleOptionCreate(BaseModel):
     label: str = Field(..., min_length=1, max_length=100)
     numeric_value: float | None = None
@@ -27,6 +28,7 @@ class ReviewScaleOptionResponse(BaseModel):
 
 
 # --- Score Scale ---
+
 
 class ReviewScoreScaleCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -62,6 +64,7 @@ class ReviewScoreScaleListResponse(BaseModel):
 
 
 # --- Review Question ---
+
 
 class ReviewQuestionCreate(BaseModel):
     text: str = Field(..., min_length=1)
@@ -121,6 +124,7 @@ class ReviewQuestionListResponse(BaseModel):
 
 # --- Review Criterion ---
 
+
 class ReviewCriterionCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     description: str | None = None
@@ -157,6 +161,7 @@ class ReviewCriterionListResponse(BaseModel):
 
 # --- Review Answer (for submission/response) ---
 
+
 class ReviewAnswerSubmit(BaseModel):
     question_id: UUID
     selected_option_id: UUID | None = None
@@ -178,6 +183,7 @@ class ReviewAnswerResponse(BaseModel):
 
 
 # --- Paper Review ---
+
 
 class PaperReviewSubmit(BaseModel):
     answers: list[ReviewAnswerSubmit]
@@ -215,6 +221,7 @@ class PaperReviewListResponse(BaseModel):
 
 
 # --- Review Form Settings ---
+
 
 class ReviewFormSettingsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

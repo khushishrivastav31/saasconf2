@@ -15,7 +15,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.v1.router import api_router
 from app.config import get_settings
-from app.core.logging import setup_logging
 from app.core.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -24,6 +23,7 @@ from app.core.exceptions import (
     SaaSConfException,
     SubmissionValidationError,
 )
+from app.core.logging import setup_logging
 
 settings = get_settings()
 
@@ -33,6 +33,7 @@ limiter = Limiter(key_func=get_remote_address)
 # Sentry error monitoring
 if settings.SENTRY_DSN:
     import sentry_sdk
+
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,
         environment=settings.SENTRY_ENVIRONMENT,
@@ -112,6 +113,7 @@ Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_sch
 # ---------------------------------------------------------------------------
 # Middleware classes
 # ---------------------------------------------------------------------------
+
 
 class OriginValidationMiddleware(BaseHTTPMiddleware):
     """Reject state-changing requests with mismatched Origin header (CSRF defense-in-depth)."""
@@ -206,49 +208,31 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # Exception handlers
 @app.exception_handler(AuthenticationError)
-async def authentication_error_handler(
-    request: Request, exc: AuthenticationError
-) -> JSONResponse:
+async def authentication_error_handler(request: Request, exc: AuthenticationError) -> JSONResponse:
     """Handle authentication errors."""
-    return _cors_response(
-        request, 401, {"detail": exc.message, "type": "authentication_error"}
-    )
+    return _cors_response(request, 401, {"detail": exc.message, "type": "authentication_error"})
 
 
 @app.exception_handler(AuthorizationError)
-async def authorization_error_handler(
-    request: Request, exc: AuthorizationError
-) -> JSONResponse:
+async def authorization_error_handler(request: Request, exc: AuthorizationError) -> JSONResponse:
     """Handle authorization errors."""
-    return _cors_response(
-        request, 403, {"detail": exc.message, "type": "authorization_error"}
-    )
+    return _cors_response(request, 403, {"detail": exc.message, "type": "authorization_error"})
 
 
 @app.exception_handler(NotFoundError)
-async def not_found_error_handler(
-    request: Request, exc: NotFoundError
-) -> JSONResponse:
+async def not_found_error_handler(request: Request, exc: NotFoundError) -> JSONResponse:
     """Handle not found errors."""
-    return _cors_response(
-        request, 404, {"detail": exc.message, "type": "not_found_error"}
-    )
+    return _cors_response(request, 404, {"detail": exc.message, "type": "not_found_error"})
 
 
 @app.exception_handler(ConflictError)
-async def conflict_error_handler(
-    request: Request, exc: ConflictError
-) -> JSONResponse:
+async def conflict_error_handler(request: Request, exc: ConflictError) -> JSONResponse:
     """Handle resource conflict errors."""
-    return _cors_response(
-        request, 409, {"detail": exc.message, "type": "conflict_error"}
-    )
+    return _cors_response(request, 409, {"detail": exc.message, "type": "conflict_error"})
 
 
 @app.exception_handler(SubmissionValidationError)
-async def submission_validation_error_handler(
-    request: Request, exc: SubmissionValidationError
-) -> JSONResponse:
+async def submission_validation_error_handler(request: Request, exc: SubmissionValidationError) -> JSONResponse:
     """Handle paper submission validation errors with structured details."""
     return _cors_response(
         request,
@@ -263,19 +247,13 @@ async def submission_validation_error_handler(
 
 
 @app.exception_handler(SaaSConfException)
-async def saasconf_error_handler(
-    request: Request, exc: SaaSConfException
-) -> JSONResponse:
+async def saasconf_error_handler(request: Request, exc: SaaSConfException) -> JSONResponse:
     """Handle general application errors."""
-    return _cors_response(
-        request, 400, {"detail": exc.message, "type": "error"}
-    )
+    return _cors_response(request, 400, {"detail": exc.message, "type": "error"})
 
 
 @app.exception_handler(Exception)
-async def unhandled_error_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unhandled exceptions, ensuring CORS headers are present."""
     import logging
     import traceback
@@ -286,19 +264,20 @@ async def unhandled_error_handler(
     # but our catch-all handler prevents propagation, so capture explicitly
     if settings.SENTRY_DSN:
         import sentry_sdk
+
         sentry_sdk.capture_exception(exc)
     if settings.DEBUG:
         traceback.print_exc()
         # Return actual error details in debug mode to help diagnose issues
         return _cors_response(
-            request, 500, {
-                "detail": f"{type(exc).__name__}: {str(exc)}",
+            request,
+            500,
+            {
+                "detail": f"{type(exc).__name__}: {exc!s}",
                 "type": "server_error",
-            }
+            },
         )
-    return _cors_response(
-        request, 500, {"detail": "Internal server error", "type": "server_error"}
-    )
+    return _cors_response(request, 500, {"detail": "Internal server error", "type": "server_error"})
 
 
 # Health check endpoints

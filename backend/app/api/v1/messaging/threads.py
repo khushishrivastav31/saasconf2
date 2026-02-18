@@ -2,36 +2,34 @@
 
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import Response
-from sqlalchemy import and_, func, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
+from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
     get_client_ip,
     require_module,
 )
-from app.core.html_sanitize import sanitize_html
 from app.core.exceptions import NotFoundError
+from app.core.html_sanitize import sanitize_html
 from app.core.search import unaccent_ilike
 from app.models.associations import ConferenceCFP
-from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.models.cfp import CFPApplicant, CFPPaper
-from app.models.conference import Conference
-from app.models.tenant import Tenant
 from app.models.messaging import Message, MessageParticipant, MessageThread, ThreadFlag
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.messaging import (
     AdminCreateThread,
     CreateThreadResponse,
     InternalNoteCreate,
-    MessageAttachmentInfo,
     MessageResponse,
     ParticipantInfo,
     ReplyCreate,
@@ -40,8 +38,6 @@ from app.schemas.messaging import (
     ThreadListItem,
     ThreadListResponse,
 )
-
-from app.core.conference_helpers import get_conference_for_tenant
 
 from ._shared import (
     MODULE_CODE,
@@ -102,14 +98,9 @@ async def list_threads(
     if search:
         if search_body:
             # Full-text search: match subject OR message body
-            matching_thread_ids = (
-                select(Message.thread_id)
-                .where(unaccent_ilike(Message.body_html, search))
-                .distinct()
-            )
+            matching_thread_ids = select(Message.thread_id).where(unaccent_ilike(Message.body_html, search)).distinct()
             query = query.where(
-                unaccent_ilike(MessageThread.subject, search)
-                | MessageThread.id.in_(matching_thread_ids)
+                unaccent_ilike(MessageThread.subject, search) | MessageThread.id.in_(matching_thread_ids)
             )
         else:
             query = query.where(unaccent_ilike(MessageThread.subject, search))
@@ -118,11 +109,7 @@ async def list_threads(
 
     # Filter: flagged by current user
     if flagged is True:
-        flagged_thread_ids = (
-            select(ThreadFlag.thread_id).where(
-                ThreadFlag.user_id == current_user.user_id
-            )
-        )
+        flagged_thread_ids = select(ThreadFlag.thread_id).where(ThreadFlag.user_id == current_user.user_id)
         query = query.where(MessageThread.id.in_(flagged_thread_ids))
 
     # Filter: has attachments
@@ -140,8 +127,7 @@ async def list_threads(
             .where(
                 MessageParticipant.participant_type == "user",
                 MessageParticipant.participant_id == current_user.user_id,
-                (MessageParticipant.last_read_at.is_(None))
-                | (Message.created_at > MessageParticipant.last_read_at),
+                (MessageParticipant.last_read_at.is_(None)) | (Message.created_at > MessageParticipant.last_read_at),
             )
             .distinct()
         )
@@ -150,17 +136,13 @@ async def list_threads(
     # Filter: participant name
     if participant_name:
         # Find threads where any applicant participant matches name
-        applicant_ids_q = (
-            select(CFPApplicant.id).where(
-                (unaccent_ilike(CFPApplicant.first_name, participant_name))
-                | (unaccent_ilike(CFPApplicant.last_name, participant_name))
-            )
+        applicant_ids_q = select(CFPApplicant.id).where(
+            (unaccent_ilike(CFPApplicant.first_name, participant_name))
+            | (unaccent_ilike(CFPApplicant.last_name, participant_name))
         )
-        matching_thread_ids_by_name = (
-            select(MessageParticipant.thread_id).where(
-                MessageParticipant.participant_type == "applicant",
-                MessageParticipant.participant_id.in_(applicant_ids_q),
-            )
+        matching_thread_ids_by_name = select(MessageParticipant.thread_id).where(
+            MessageParticipant.participant_type == "applicant",
+            MessageParticipant.participant_id.in_(applicant_ids_q),
         )
         query = query.where(MessageThread.id.in_(matching_thread_ids_by_name))
 
@@ -169,11 +151,7 @@ async def list_threads(
     total = (await db.execute(count_q)).scalar() or 0
 
     # Fetch page
-    threads = (
-        await db.execute(
-            query.offset((page - 1) * page_size).limit(page_size)
-        )
-    ).scalars().all()
+    threads = (await db.execute(query.offset((page - 1) * page_size).limit(page_size))).scalars().all()
 
     if not threads:
         return ThreadListResponse(items=[], total=total, page=page, page_size=page_size)
@@ -193,8 +171,7 @@ async def list_threads(
     last_msgs_result = await db.execute(
         select(Message).join(
             last_msg_subq,
-            (Message.thread_id == last_msg_subq.c.thread_id)
-            & (Message.created_at == last_msg_subq.c.max_created),
+            (Message.thread_id == last_msg_subq.c.thread_id) & (Message.created_at == last_msg_subq.c.max_created),
         )
     )
     last_msgs = {m.thread_id: m for m in last_msgs_result.scalars()}
@@ -219,9 +196,7 @@ async def list_threads(
 
     # Fetch all participants for these threads (to find "other" participants)
     all_participants_result = await db.execute(
-        select(MessageParticipant).where(
-            MessageParticipant.thread_id.in_(thread_ids)
-        )
+        select(MessageParticipant).where(MessageParticipant.thread_id.in_(thread_ids))
     )
     all_participants = list(all_participants_result.scalars().all())
 
@@ -260,10 +235,10 @@ async def list_threads(
             if my_p.last_read_at is None or my_p.last_read_at < last_msg.created_at:
                 unread = True
 
-        last_sender = sender_map.get(
-            (last_msg.sender_type, last_msg.sender_id)
-        ) if last_msg else SenderInfo(
-            id=uuid.UUID(int=0), type="user", first_name="", last_name="", email=""
+        last_sender = (
+            sender_map.get((last_msg.sender_type, last_msg.sender_id))
+            if last_msg
+            else SenderInfo(id=uuid.UUID(int=0), type="user", first_name="", last_name="", email="")
         )
 
         items.append(
@@ -410,9 +385,7 @@ async def create_thread(
     applicant_ids_list = [a.id for a in applicants]
     paper_titles: dict[UUID, str] = {}
     if applicant_ids_list:
-        conference_cfp_ids = select(ConferenceCFP.cfp_id).where(
-            ConferenceCFP.conference_id == conference_id
-        )
+        conference_cfp_ids = select(ConferenceCFP.cfp_id).where(ConferenceCFP.conference_id == conference_id)
         paper_result = await db.execute(
             select(CFPPaper.main_speaker_id, CFPPaper.title)
             .where(
@@ -426,7 +399,7 @@ async def create_thread(
             if row[0] not in paper_titles:
                 paper_titles[row[0]] = row[1] or ""
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     first_thread = None
     first_message_id = None
 
@@ -460,19 +433,23 @@ async def create_thread(
         if first_thread is None:
             first_thread = thread
 
-        db.add(MessageParticipant(
-            tenant_id=tenant_id,
-            thread_id=thread.id,
-            participant_type="user",
-            participant_id=current_user.user_id,
-            last_read_at=now,
-        ))
-        db.add(MessageParticipant(
-            tenant_id=tenant_id,
-            thread_id=thread.id,
-            participant_type="applicant",
-            participant_id=applicant.id,
-        ))
+        db.add(
+            MessageParticipant(
+                tenant_id=tenant_id,
+                thread_id=thread.id,
+                participant_type="user",
+                participant_id=current_user.user_id,
+                last_read_at=now,
+            )
+        )
+        db.add(
+            MessageParticipant(
+                tenant_id=tenant_id,
+                thread_id=thread.id,
+                participant_type="applicant",
+                participant_id=applicant.id,
+            )
+        )
         msg = Message(
             tenant_id=tenant_id,
             thread_id=thread.id,
@@ -493,9 +470,7 @@ async def create_thread(
             first_thread.has_attachments = True
 
     # Audit log
-    recipient_names = ", ".join(
-        f"{a.first_name} {a.last_name}" for a in applicants
-    )
+    recipient_names = ", ".join(f"{a.first_name} {a.last_name}" for a in applicants)
     db.add(
         AuditLog(
             tenant_id=tenant_id,
@@ -503,7 +478,9 @@ async def create_thread(
             action="create",
             resource_type="message_thread",
             resource_id=first_thread.id,
-            details={"message": f"Created thread '{data.subject}' to {len(applicants)} recipient(s): {recipient_names}"},
+            details={
+                "message": f"Created thread '{data.subject}' to {len(applicants)} recipient(s): {recipient_names}"
+            },
             ip_address=get_client_ip(request),
             user_agent=request.headers.get("user-agent"),
         )
@@ -518,14 +495,16 @@ async def create_thread(
 
     if messaging_mode == "email_only":
         # Send actual message content directly via email
-        user_result = await db.execute(
-            select(User).where(User.id == current_user.user_id)
-        )
+        user_result = await db.execute(select(User).where(User.id == current_user.user_id))
         user = user_result.scalar_one()
         sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
         await _send_direct_emails(
-            db, applicants, data.subject, sanitize_html(data.body_html),
-            conference.name, sender_name,
+            db,
+            applicants,
+            data.subject,
+            sanitize_html(data.body_html),
+            conference.name,
+            sender_name,
             reply_to=conference.contact_email,
         )
     else:
@@ -540,13 +519,16 @@ async def create_thread(
         )
         for t in created_threads_result.scalars():
             await _notify_participants(
-                db, t, "user", current_user.user_id,
-                conference.name, tenant_slug, conference_id,
+                db,
+                t,
+                "user",
+                current_user.user_id,
+                conference.name,
+                tenant_slug,
+                conference_id,
             )
 
-    first_thread_detail = await get_thread(
-        conference_id, first_thread.id, current_user, db
-    )
+    first_thread_detail = await get_thread(conference_id, first_thread.id, current_user, db)
     return CreateThreadResponse(
         threads_created=len(applicants),
         first_thread=first_thread_detail,
@@ -601,7 +583,7 @@ async def reply_to_thread(
         db.add(participant)
 
     # Mark as read
-    participant.last_read_at = datetime.now(timezone.utc)
+    participant.last_read_at = datetime.now(UTC)
 
     # Create message
     message = Message(
@@ -620,7 +602,7 @@ async def reply_to_thread(
         thread.has_attachments = True
 
     # Touch thread updated_at
-    thread.updated_at = datetime.now(timezone.utc)
+    thread.updated_at = datetime.now(UTC)
 
     await db.commit()
     await db.refresh(message)
@@ -641,30 +623,33 @@ async def reply_to_thread(
         )
         applicant_ids = [p.participant_id for p in other_p_result.scalars()]
         if applicant_ids:
-            app_result = await db.execute(
-                select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids))
-            )
+            app_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids)))
             recipients = list(app_result.scalars().all())
-            user_result = await db.execute(
-                select(User).where(User.id == current_user.user_id)
-            )
+            user_result = await db.execute(select(User).where(User.id == current_user.user_id))
             user = user_result.scalar_one()
             sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
             await _send_direct_emails(
-                db, recipients, thread.subject, sanitize_html(data.body_html),
-                conference.name, sender_name,
+                db,
+                recipients,
+                thread.subject,
+                sanitize_html(data.body_html),
+                conference.name,
+                sender_name,
                 reply_to=conference.contact_email,
             )
     else:
         await _notify_participants(
-            db, thread, "user", current_user.user_id,
-            conference.name, tenant_slug, conference_id,
+            db,
+            thread,
+            "user",
+            current_user.user_id,
+            conference.name,
+            tenant_slug,
+            conference_id,
         )
 
     # Resolve sender
-    user_result = await db.execute(
-        select(User).where(User.id == current_user.user_id)
-    )
+    user_result = await db.execute(select(User).where(User.id == current_user.user_id))
     user = user_result.scalar_one()
 
     # Fetch attachments for this message
@@ -711,7 +696,7 @@ async def archive_thread(
     if not thread:
         raise NotFoundError("Thread not found")
 
-    thread.archived_at = datetime.now(timezone.utc)
+    thread.archived_at = datetime.now(UTC)
     await db.commit()
     return {"ok": True}
 
@@ -783,10 +768,12 @@ async def toggle_thread_flag(
         await db.commit()
         return {"flagged": False}
     else:
-        db.add(ThreadFlag(
-            thread_id=thread_id,
-            user_id=current_user.user_id,
-        ))
+        db.add(
+            ThreadFlag(
+                thread_id=thread_id,
+                user_id=current_user.user_id,
+            )
+        )
         await db.commit()
         return {"flagged": True}
 
@@ -832,15 +819,13 @@ async def create_internal_note(
     db.add(message)
 
     # Touch thread updated_at
-    thread.updated_at = datetime.now(timezone.utc)
+    thread.updated_at = datetime.now(UTC)
 
     await db.commit()
     await db.refresh(message)
 
     # Resolve sender
-    user_result = await db.execute(
-        select(User).where(User.id == current_user.user_id)
-    )
+    user_result = await db.execute(select(User).where(User.id == current_user.user_id))
     user = user_result.scalar_one()
 
     return MessageResponse(
@@ -961,8 +946,6 @@ async def mark_thread_read(
     db: DbSessionDep,
 ) -> dict:
     """Mark a thread as read for the current user."""
-    tenant_id = current_user.tenant_id
-
     result = await db.execute(
         select(MessageParticipant).where(
             MessageParticipant.thread_id == thread_id,
@@ -972,7 +955,7 @@ async def mark_thread_read(
     )
     participant = result.scalar_one_or_none()
     if participant:
-        participant.last_read_at = datetime.now(timezone.utc)
+        participant.last_read_at = datetime.now(UTC)
         await db.commit()
 
     return {"ok": True}

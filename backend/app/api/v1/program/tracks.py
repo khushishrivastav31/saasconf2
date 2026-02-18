@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
@@ -17,8 +18,6 @@ from app.schemas.program import (
     ProgramTrackResponse,
     ProgramTrackUpdate,
 )
-
-from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 
 from ._shared import MODULE_CODE, _build_track_response
 
@@ -59,9 +58,7 @@ async def list_tracks(
     location_ids = [t.location_id for t in tracks if t.location_id]
     location_map: dict[UUID, str] = {}
     if location_ids:
-        loc_result = await db.execute(
-            select(Location.id, Location.name).where(Location.id.in_(location_ids))
-        )
+        loc_result = await db.execute(select(Location.id, Location.name).where(Location.id.in_(location_ids)))
         location_map = {row.id: row.name for row in loc_result.all()}
 
     return ProgramTrackListResponse(
@@ -230,9 +227,7 @@ async def update_track(
     if track_data.location_id is not None:
         track.location_id = track_data.location_id
         if track_data.location_id:
-            loc_result = await db.execute(
-                select(Location).where(Location.id == track_data.location_id)
-            )
+            loc_result = await db.execute(select(Location).where(Location.id == track_data.location_id))
             loc = loc_result.scalar_one_or_none()
             location_name = loc.name if loc else None
     if track_data.sort_order is not None:
@@ -258,9 +253,7 @@ async def update_track(
 
     # Get location name if not already fetched
     if location_name is None and track.location_id:
-        loc_result = await db.execute(
-            select(Location.name).where(Location.id == track.location_id)
-        )
+        loc_result = await db.execute(select(Location.name).where(Location.id == track.location_id))
         row = loc_result.scalar_one_or_none()
         location_name = row if row else None
 

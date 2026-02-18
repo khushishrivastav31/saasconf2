@@ -21,7 +21,7 @@ from app.schemas.email_template import (
     EmailTemplateUpdate,
 )
 
-from ._shared import _resolve_conference, _check_conference_admin
+from ._shared import _check_conference_admin, _resolve_conference
 
 router = APIRouter()
 

@@ -113,9 +113,7 @@ def upgrade() -> None:
             name="uq_message_participants_thread_entity",
         ),
     )
-    op.create_index(
-        "idx_message_participants_thread", "message_participants", ["thread_id"]
-    )
+    op.create_index("idx_message_participants_thread", "message_participants", ["thread_id"])
     op.create_index(
         "idx_message_participants_lookup",
         "message_participants",
@@ -154,9 +152,7 @@ def upgrade() -> None:
         ),
     )
     op.create_index("idx_messages_thread", "messages", ["thread_id"])
-    op.create_index(
-        "idx_messages_thread_created", "messages", ["thread_id", "created_at"]
-    )
+    op.create_index("idx_messages_thread_created", "messages", ["thread_id", "created_at"])
 
     # RLS policies
     for table in ["message_threads", "message_participants", "messages"]:

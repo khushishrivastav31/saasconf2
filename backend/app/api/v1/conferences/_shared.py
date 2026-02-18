@@ -3,12 +3,9 @@
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import func, literal, select
+from sqlalchemy import literal, select
 
 from app.core.dependencies import CurrentUserDep, DbSessionDep
-from app.core.exceptions import NotFoundError
-from app.core.pagination import paginate
-from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
 from app.models.cfp import CallForPapers
 from app.models.conference import Conference
 from app.models.location import Location
@@ -30,9 +27,7 @@ def _tenant_filter(current_user: CurrentUserDep):
     return Conference.tenant_id == current_user.tenant_id
 
 
-async def _get_accessible_conference_ids(
-    db: DbSessionDep, current_user: CurrentUserDep
-) -> list[UUID] | None:
+async def _get_accessible_conference_ids(db: DbSessionDep, current_user: CurrentUserDep) -> list[UUID] | None:
     """
     Get list of conference IDs the user can access.
 
@@ -46,9 +41,7 @@ async def _get_accessible_conference_ids(
         return None
 
     # Check if user has all conference access
-    user_result = await db.execute(
-        select(User.has_all_conference_access).where(User.id == current_user.user_id)
-    )
+    user_result = await db.execute(select(User.has_all_conference_access).where(User.id == current_user.user_id))
     has_all_access = user_result.scalar_one_or_none()
 
     if has_all_access is True:
@@ -56,9 +49,7 @@ async def _get_accessible_conference_ids(
 
     # Get explicit conference access records
     access_result = await db.execute(
-        select(UserConferenceAccess.conference_id).where(
-            UserConferenceAccess.user_id == current_user.user_id
-        )
+        select(UserConferenceAccess.conference_id).where(UserConferenceAccess.user_id == current_user.user_id)
     )
     conference_ids = list(access_result.scalars().all())
     return conference_ids
@@ -81,17 +72,19 @@ def _build_conference_response(conf: Conference, tenant_slug: str | None = None)
 
     # Parse team members (informational only, no user linking)
     team_members = []
-    for tm in (conf.team_members or []):
+    for tm in conf.team_members or []:
         # first_name is required with min_length=1, ensure we have a valid value
         first_name = tm.get("first_name") or "(Unknown)"
-        team_members.append(TeamMember(
-            first_name=first_name,
-            last_name=tm.get("last_name", ""),
-            email=tm.get("email"),
-            phone=tm.get("phone"),
-            role=tm.get("role"),
-            is_manager=tm.get("is_manager", False),
-        ))
+        team_members.append(
+            TeamMember(
+                first_name=first_name,
+                last_name=tm.get("last_name", ""),
+                email=tm.get("email"),
+                phone=tm.get("phone"),
+                role=tm.get("role"),
+                is_manager=tm.get("is_manager", False),
+            )
+        )
 
     managers_count = sum(1 for tm in team_members if tm.is_manager)
 
@@ -131,9 +124,7 @@ def _build_conference_response(conf: Conference, tenant_slug: str | None = None)
     )
 
 
-def _build_volunteer_response(
-    v: Volunteer, conference_ids: list[UUID] | None = None
-) -> VolunteerResponse:
+def _build_volunteer_response(v: Volunteer, conference_ids: list[UUID] | None = None) -> VolunteerResponse:
     """Build a VolunteerResponse from a Volunteer model."""
     return VolunteerResponse(
         id=v.id,
@@ -160,9 +151,7 @@ def _build_volunteer_response(
     )
 
 
-def _build_location_response_assoc(
-    loc: Location, conference_ids: list[UUID] | None = None
-) -> LocationResponse:
+def _build_location_response_assoc(loc: Location, conference_ids: list[UUID] | None = None) -> LocationResponse:
     """Build a LocationResponse from a Location model."""
     return LocationResponse(
         id=loc.id,

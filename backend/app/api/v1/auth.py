@@ -2,8 +2,6 @@
 
 from typing import Annotated
 
-from app.core.utils import utcnow
-
 from fastapi import APIRouter, Depends, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -16,7 +14,6 @@ from app.core.dependencies import (
     get_client_ip,
     get_token_from_header,
 )
-from app.core.token_blacklist import blacklist_token
 from app.core.exceptions import AuthenticationError
 from app.core.security import (
     create_access_token,
@@ -25,6 +22,8 @@ from app.core.security import (
     hash_token,
     verify_password,
 )
+from app.core.token_blacklist import blacklist_token
+from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
 from app.models.module import TenantModule
 from app.models.tenant import Tenant
@@ -77,9 +76,7 @@ async def login(
     # Check if the user's tenant is active and if user is tenant super user
     is_tenant_super_user = False
     if user.tenant_id:
-        tenant_result = await db.execute(
-            select(Tenant).where(Tenant.id == user.tenant_id)
-        )
+        tenant_result = await db.execute(select(Tenant).where(Tenant.id == user.tenant_id))
         tenant = tenant_result.scalar_one_or_none()
         if not tenant or not tenant.is_active:
             raise AuthenticationError("Your company account has been deactivated")
@@ -90,9 +87,7 @@ async def login(
     modules: list[str] = []
     if user.tenant_id:
         result = await db.execute(
-            select(TenantModule)
-            .where(TenantModule.tenant_id == user.tenant_id)
-            .where(TenantModule.is_enabled == True)
+            select(TenantModule).where(TenantModule.tenant_id == user.tenant_id).where(TenantModule.is_enabled == True)
         )
         tenant_modules = result.scalars().all()
         # We need to load the module codes
@@ -162,9 +157,7 @@ async def refresh_token(
     # Verify refresh token exists and is valid
     token_hash = hash_token(refresh_data.refresh_token)
     result = await db.execute(
-        select(RefreshToken)
-        .where(RefreshToken.token_hash == token_hash)
-        .where(RefreshToken.revoked_at.is_(None))
+        select(RefreshToken).where(RefreshToken.token_hash == token_hash).where(RefreshToken.revoked_at.is_(None))
     )
     db_token = result.scalar_one_or_none()
 
@@ -181,9 +174,7 @@ async def refresh_token(
     # Check if the user's tenant is active and if user is tenant super user
     is_tenant_super_user = False
     if user.tenant_id:
-        tenant_result = await db.execute(
-            select(Tenant).where(Tenant.id == user.tenant_id)
-        )
+        tenant_result = await db.execute(select(Tenant).where(Tenant.id == user.tenant_id))
         tenant = tenant_result.scalar_one_or_none()
         if not tenant or not tenant.is_active:
             raise AuthenticationError("Your company account has been deactivated")
@@ -194,9 +185,7 @@ async def refresh_token(
     modules: list[str] = []
     if user.tenant_id:
         result = await db.execute(
-            select(TenantModule)
-            .where(TenantModule.tenant_id == user.tenant_id)
-            .where(TenantModule.is_enabled == True)
+            select(TenantModule).where(TenantModule.tenant_id == user.tenant_id).where(TenantModule.is_enabled == True)
         )
         tenant_modules = result.scalars().all()
         for tm in tenant_modules:
@@ -214,9 +203,7 @@ async def refresh_token(
     )
 
     # Optionally rotate refresh token (for enhanced security)
-    new_refresh_token, new_token_hash, expires_at = create_refresh_token(
-        user_id=user.id
-    )
+    new_refresh_token, new_token_hash, expires_at = create_refresh_token(user_id=user.id)
 
     # Revoke old refresh token
     db_token.revoked_at = utcnow()
@@ -315,9 +302,7 @@ async def get_current_user_info(
 
         # Load modules from DB so assignments are reflected immediately
         result = await db.execute(
-            select(TenantModule)
-            .where(TenantModule.tenant_id == user.tenant_id)
-            .where(TenantModule.is_enabled == True)
+            select(TenantModule).where(TenantModule.tenant_id == user.tenant_id).where(TenantModule.is_enabled == True)
         )
         tenant_modules = result.scalars().all()
         for tm in tenant_modules:

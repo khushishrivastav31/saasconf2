@@ -18,7 +18,7 @@ from app.models.cfp import (
     PaperStatus,
 )
 from app.models.conference import Conference
-from app.models.review import PaperReview, ReviewQuestion, ReviewScaleOption, ReviewStatus
+from app.models.review import PaperReview, ReviewQuestion, ReviewStatus
 from app.models.settings import SessionType
 from app.schemas.cfp import (
     ApplicantResponse,
@@ -35,11 +35,14 @@ MODULE_CODE = "cfp"
 async def _get_applicant_picture_url(db: DbSessionDep, applicant_id: UUID, tenant_id: UUID) -> str | None:
     """Get the picture download URL for an applicant, if one exists."""
     result = await db.execute(
-        select(Attachment.id).where(
+        select(Attachment.id)
+        .where(
             Attachment.tenant_id == tenant_id,
             Attachment.entity_type == "applicant_picture",
             Attachment.entity_id == applicant_id,
-        ).order_by(Attachment.created_at.desc()).limit(1)
+        )
+        .order_by(Attachment.created_at.desc())
+        .limit(1)
     )
     attachment_id = result.scalar_one_or_none()
     if attachment_id:
@@ -50,11 +53,14 @@ async def _get_applicant_picture_url(db: DbSessionDep, applicant_id: UUID, tenan
 async def _get_applicant_video_url(db: DbSessionDep, applicant_id: UUID, tenant_id: UUID) -> str | None:
     """Get the video download URL for an applicant, if one exists."""
     result = await db.execute(
-        select(Attachment.id).where(
+        select(Attachment.id)
+        .where(
             Attachment.tenant_id == tenant_id,
             Attachment.entity_type == "applicant_video",
             Attachment.entity_id == applicant_id,
-        ).order_by(Attachment.created_at.desc()).limit(1)
+        )
+        .order_by(Attachment.created_at.desc())
+        .limit(1)
     )
     attachment_id = result.scalar_one_or_none()
     if attachment_id:
@@ -90,23 +96,21 @@ async def _batch_get_attachment_urls(
         )
         .subquery()
     )
-    result = await db.execute(
-        select(ranked.c.entity_id, ranked.c.attachment_id).where(ranked.c.rn == 1)
-    )
-    return {
-        row.entity_id: f"/attachments/{row.attachment_id}/download"
-        for row in result.all()
-    }
+    result = await db.execute(select(ranked.c.entity_id, ranked.c.attachment_id).where(ranked.c.rn == 1))
+    return {row.entity_id: f"/attachments/{row.attachment_id}/download" for row in result.all()}
 
 
 async def _get_paper_video_url(db: DbSessionDep, paper_id: UUID, tenant_id: UUID) -> str | None:
     """Get the video download URL for a paper."""
     result = await db.execute(
-        select(Attachment.id).where(
+        select(Attachment.id)
+        .where(
             Attachment.tenant_id == tenant_id,
             Attachment.entity_type == "paper_video",
             Attachment.entity_id == paper_id,
-        ).order_by(Attachment.created_at.desc()).limit(1)
+        )
+        .order_by(Attachment.created_at.desc())
+        .limit(1)
     )
     attachment_id = result.scalar_one_or_none()
     if attachment_id:
@@ -165,9 +169,9 @@ def _paper_eager_options():
         selectinload(CFPPaper.main_speaker),
         selectinload(CFPPaper.cospeaker_associations).selectinload(CFPPaperCospeaker.applicant),
         selectinload(CFPPaper.topics),
-        selectinload(CFPPaper.comments).selectinload(
-            CFPPaperComment.committee_member
-        ).selectinload(CFPCommitteeMember.applicant),
+        selectinload(CFPPaper.comments)
+        .selectinload(CFPPaperComment.committee_member)
+        .selectinload(CFPCommitteeMember.applicant),
     ]
 
 
@@ -197,12 +201,14 @@ async def _build_paper_response(
     cospeakers_responses = []
     for assoc in paper.cospeaker_associations:
         applicant_response = await _build_applicant_response(db, assoc.applicant, tenant_id)
-        cospeakers_responses.append(CospeakerResponse(
-            applicant=applicant_response,
-            invitation_status=assoc.invitation_status,
-            invited_at=assoc.invited_at,
-            responded_at=assoc.responded_at,
-        ))
+        cospeakers_responses.append(
+            CospeakerResponse(
+                applicant=applicant_response,
+                invitation_status=assoc.invitation_status,
+                invited_at=assoc.invited_at,
+                responded_at=assoc.responded_at,
+            )
+        )
 
     # Build topics
     topics_responses = [
@@ -235,9 +241,7 @@ async def _build_paper_response(
     session_type_name = None
     session_type_duration = None
     if paper.session_type_id:
-        st_result = await db.execute(
-            select(SessionType).where(SessionType.id == paper.session_type_id)
-        )
+        st_result = await db.execute(select(SessionType).where(SessionType.id == paper.session_type_id))
         st = st_result.scalar_one_or_none()
         if st:
             session_type_name = st.name
@@ -266,11 +270,13 @@ async def _build_paper_response(
 
     # Build lightweight review summaries (submitted reviews only)
     reviews_result = await db.execute(
-        select(PaperReview).where(
+        select(PaperReview)
+        .where(
             PaperReview.paper_id == paper.id,
             PaperReview.tenant_id == tenant_id,
             PaperReview.status == ReviewStatus.SUBMITTED.value,
-        ).order_by(PaperReview.submitted_at)
+        )
+        .order_by(PaperReview.submitted_at)
     )
     reviews = list(reviews_result.scalars().all())
 
@@ -288,13 +294,15 @@ async def _build_paper_response(
     review_summaries = []
     for rev in reviews:
         member = rev_members_map.get(rev.committee_member_id)
-        review_summaries.append(PaperReviewSummary(
-            reviewer_first_name=member.applicant.first_name if member and member.applicant else None,
-            reviewer_last_name=member.applicant.last_name if member and member.applicant else None,
-            total_score=rev.total_score,
-            internal_comment=rev.internal_comment,
-            must_have=rev.must_have,
-        ))
+        review_summaries.append(
+            PaperReviewSummary(
+                reviewer_first_name=member.applicant.first_name if member and member.applicant else None,
+                reviewer_last_name=member.applicant.last_name if member and member.applicant else None,
+                total_score=rev.total_score,
+                internal_comment=rev.internal_comment,
+                must_have=rev.must_have,
+            )
+        )
 
     # Compute maximum possible review score from conference review criteria
     max_review_score: float | None = None

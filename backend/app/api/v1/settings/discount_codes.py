@@ -20,7 +20,7 @@ from app.schemas.settings import (
     DiscountCodeUpdate,
 )
 
-from ._shared import _resolve_conference, _check_conference_admin
+from ._shared import _check_conference_admin, _resolve_conference
 
 router = APIRouter()
 
@@ -28,9 +28,7 @@ router = APIRouter()
 async def _get_applicable_option_ids(db: DbSessionDep, discount_code_id: UUID) -> list[UUID]:
     """Get the list of applicable booking option IDs for a discount code."""
     result = await db.execute(
-        select(DiscountCodeOption.booking_option_id).where(
-            DiscountCodeOption.discount_code_id == discount_code_id
-        )
+        select(DiscountCodeOption.booking_option_id).where(DiscountCodeOption.discount_code_id == discount_code_id)
     )
     return [row[0] for row in result.fetchall()]
 
@@ -43,20 +41,18 @@ async def _set_applicable_option_ids(
 ) -> None:
     """Set the applicable booking option IDs for a discount code."""
     # Delete existing associations
-    await db.execute(
-        delete(DiscountCodeOption).where(
-            DiscountCodeOption.discount_code_id == discount_code_id
-        )
-    )
+    await db.execute(delete(DiscountCodeOption).where(DiscountCodeOption.discount_code_id == discount_code_id))
 
     # Add new associations if provided
     if option_ids:
         for option_id in option_ids:
-            db.add(DiscountCodeOption(
-                tenant_id=tenant_id,
-                discount_code_id=discount_code_id,
-                booking_option_id=option_id,
-            ))
+            db.add(
+                DiscountCodeOption(
+                    tenant_id=tenant_id,
+                    discount_code_id=discount_code_id,
+                    booking_option_id=option_id,
+                )
+            )
 
 
 def _build_response(discount: DiscountCode, applicable_option_ids: list[UUID]) -> DiscountCodeResponse:
@@ -149,9 +145,7 @@ async def create_discount_code(
     await db.flush()  # Get the ID before adding associations
 
     # Set applicable options
-    await _set_applicable_option_ids(
-        db, discount.id, conference.tenant_id, code_data.applicable_option_ids
-    )
+    await _set_applicable_option_ids(db, discount.id, conference.tenant_id, code_data.applicable_option_ids)
 
     audit_log = AuditLog(
         tenant_id=conference.tenant_id,
@@ -222,9 +216,7 @@ async def update_discount_code(
 
     # Update applicable options if provided
     if applicable_option_ids is not None:
-        await _set_applicable_option_ids(
-            db, discount.id, conference.tenant_id, applicable_option_ids
-        )
+        await _set_applicable_option_ids(db, discount.id, conference.tenant_id, applicable_option_ids)
 
     audit_log = AuditLog(
         tenant_id=conference.tenant_id,

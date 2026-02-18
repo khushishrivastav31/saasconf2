@@ -60,16 +60,10 @@ async def list_applicants(
     if conference_id is not None:
         # Sub-query: CFP IDs linked to this conference
         cfp_ids_subq = (
-            select(ConferenceCFP.cfp_id)
-            .where(ConferenceCFP.conference_id == conference_id)
-            .scalar_subquery()
+            select(ConferenceCFP.cfp_id).where(ConferenceCFP.conference_id == conference_id).scalar_subquery()
         )
         # Main speakers of papers in those CFPs
-        main_speaker_ids = (
-            select(CFPPaper.main_speaker_id)
-            .where(CFPPaper.cfp_id.in_(cfp_ids_subq))
-            .scalar_subquery()
-        )
+        main_speaker_ids = select(CFPPaper.main_speaker_id).where(CFPPaper.cfp_id.in_(cfp_ids_subq)).scalar_subquery()
         # Accepted co-speakers of papers in those CFPs
         cospeaker_ids = (
             select(CFPPaperCospeaker.applicant_id)
@@ -80,21 +74,15 @@ async def list_applicants(
             )
             .scalar_subquery()
         )
-        query = query.where(
-            CFPApplicant.id.in_(main_speaker_ids) | CFPApplicant.id.in_(cospeaker_ids)
-        )
+        query = query.where(CFPApplicant.id.in_(main_speaker_ids) | CFPApplicant.id.in_(cospeaker_ids))
 
     result = await db.execute(query)
     applicants = list(result.scalars().all())
 
     # Batch-fetch picture and video URLs to avoid N+1
     applicant_ids = [a.id for a in applicants]
-    picture_urls = await _batch_get_attachment_urls(
-        db, applicant_ids, "applicant_picture", current_user.tenant_id
-    )
-    video_urls = await _batch_get_attachment_urls(
-        db, applicant_ids, "applicant_video", current_user.tenant_id
-    )
+    picture_urls = await _batch_get_attachment_urls(db, applicant_ids, "applicant_picture", current_user.tenant_id)
+    video_urls = await _batch_get_attachment_urls(db, applicant_ids, "applicant_video", current_user.tenant_id)
 
     items = [
         ApplicantResponse(
@@ -123,7 +111,12 @@ async def list_applicants(
     return ApplicantListResponse(items=items, total=len(items))
 
 
-@router.post("/applicants", response_model=ApplicantResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/applicants",
+    response_model=ApplicantResponse,
+    status_code=201,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def create_applicant(
     applicant_data: ApplicantCreate,
     current_user: TenantAdminDep,
@@ -173,7 +166,9 @@ async def create_applicant(
     )
 
 
-@router.put("/applicants/{applicant_id}", response_model=ApplicantResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.put(
+    "/applicants/{applicant_id}", response_model=ApplicantResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def update_applicant(
     applicant_id: UUID,
     applicant_data: ApplicantUpdate,
@@ -261,21 +256,15 @@ async def delete_applicant(
     applicant_name = f"{applicant.first_name} {applicant.last_name}"
 
     # Check for papers as main speaker
-    papers_result = await db.execute(
-        select(func.count()).where(CFPPaper.main_speaker_id == applicant_id)
-    )
+    papers_result = await db.execute(select(func.count()).where(CFPPaper.main_speaker_id == applicant_id))
     paper_count = papers_result.scalar() or 0
 
     # Check for co-speaker invitations
-    cospeaker_result = await db.execute(
-        select(func.count()).where(CFPPaperCospeaker.applicant_id == applicant_id)
-    )
+    cospeaker_result = await db.execute(select(func.count()).where(CFPPaperCospeaker.applicant_id == applicant_id))
     cospeaker_count = cospeaker_result.scalar() or 0
 
     # Check for committee memberships
-    committee_result = await db.execute(
-        select(func.count()).where(CFPCommitteeMember.applicant_id == applicant_id)
-    )
+    committee_result = await db.execute(select(func.count()).where(CFPCommitteeMember.applicant_id == applicant_id))
     committee_count = committee_result.scalar() or 0
 
     # Build error message if there are dependencies

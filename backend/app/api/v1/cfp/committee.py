@@ -57,8 +57,11 @@ def _build_committee_member_response(
         picture_url=picture_url,
         topics=[
             TopicResponse(
-                id=t.id, tenant_id=t.tenant_id, name=t.name,
-                description=t.description, created_at=t.created_at,
+                id=t.id,
+                tenant_id=t.tenant_id,
+                name=t.name,
+                description=t.description,
+                created_at=t.created_at,
                 updated_at=t.updated_at,
             )
             for t in member.topics
@@ -70,9 +73,7 @@ def _build_committee_member_response(
 
 async def _check_committee_conflict(db: DbSessionDep, applicant_id: UUID, paper_id: UUID) -> bool:
     """Check if an applicant has a conflict of interest for a given paper."""
-    paper_result = await db.execute(
-        select(CFPPaper).where(CFPPaper.id == paper_id)
-    )
+    paper_result = await db.execute(select(CFPPaper).where(CFPPaper.id == paper_id))
     paper = paper_result.scalar_one_or_none()
     if not paper:
         return False
@@ -91,7 +92,11 @@ async def _check_committee_conflict(db: DbSessionDep, applicant_id: UUID, paper_
     return cospeaker_result.scalar_one_or_none() is not None
 
 
-@router.get("/committee-members", response_model=CommitteeMemberListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.get(
+    "/committee-members",
+    response_model=CommitteeMemberListResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def list_committee_members(
     current_user: CurrentUserDep,
     db: DbSessionDep,
@@ -106,9 +111,7 @@ async def list_committee_members(
         filters.append(CFPCommitteeMember.conference_id == conference_id)
 
     # Total count
-    count_result = await db.execute(
-        select(func.count()).select_from(CFPCommitteeMember).where(*filters)
-    )
+    count_result = await db.execute(select(func.count()).select_from(CFPCommitteeMember).where(*filters))
     total = count_result.scalar() or 0
 
     # Paginated data
@@ -125,19 +128,19 @@ async def list_committee_members(
 
     # Batch-fetch picture URLs to avoid N+1
     applicant_ids = [m.applicant_id for m in members]
-    picture_urls = await _batch_get_attachment_urls(
-        db, applicant_ids, "applicant_picture", current_user.tenant_id
-    )
+    picture_urls = await _batch_get_attachment_urls(db, applicant_ids, "applicant_picture", current_user.tenant_id)
 
-    items = [
-        _build_committee_member_response(m, picture_urls.get(m.applicant_id))
-        for m in members
-    ]
+    items = [_build_committee_member_response(m, picture_urls.get(m.applicant_id)) for m in members]
 
     return CommitteeMemberListResponse(items=items, total=total)
 
 
-@router.post("/committee-members", response_model=CommitteeMemberResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/committee-members",
+    response_model=CommitteeMemberResponse,
+    status_code=201,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def create_committee_member(
     member_data: CommitteeMemberCreate,
     current_user: TenantAdminDep,
@@ -233,7 +236,11 @@ async def create_committee_member(
     return _build_committee_member_response(member, picture_url=None)
 
 
-@router.put("/committee-members/{member_id}", response_model=CommitteeMemberResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.put(
+    "/committee-members/{member_id}",
+    response_model=CommitteeMemberResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def update_committee_member(
     member_id: UUID,
     member_data: CommitteeMemberUpdate,

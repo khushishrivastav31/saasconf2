@@ -107,9 +107,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.UniqueConstraint(
-            "program_day_id", "start_time", name="uq_program_slots_day_start"
-        ),
+        sa.UniqueConstraint("program_day_id", "start_time", name="uq_program_slots_day_start"),
     )
     op.create_index(
         "idx_program_slots_day",

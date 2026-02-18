@@ -9,7 +9,7 @@ from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.models.review import ReviewFormSettings
 from app.schemas.review import ReviewFormSettingsResponse, ReviewFormSettingsUpdate
 
-from ._shared import _resolve_conference, _check_conference_admin
+from ._shared import _check_conference_admin, _resolve_conference
 
 router = APIRouter()
 

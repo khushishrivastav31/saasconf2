@@ -28,6 +28,8 @@ from app.api.v1 import (
     users,
     volunteers,
 )
+from app.api.v1.messaging.global_unread import router as global_unread_router
+
 api_router = APIRouter()
 
 # Authentication endpoints
@@ -67,10 +69,14 @@ api_router.include_router(cfp.router, prefix="/cfp", tags=["Call for Papers"])
 api_router.include_router(settings.router, prefix="/conferences/{conference_id}/settings", tags=["Settings"])
 
 # Paper form schema (conference-scoped)
-api_router.include_router(form_schema.router, prefix="/conferences/{conference_id}/paper-form-schema", tags=["Paper Form Schema"])
+api_router.include_router(
+    form_schema.router, prefix="/conferences/{conference_id}/paper-form-schema", tags=["Paper Form Schema"]
+)
 
 # Service providers (nested under locations)
-api_router.include_router(service_providers.router, prefix="/locations/{location_id}/service-providers", tags=["Service Providers"])
+api_router.include_router(
+    service_providers.router, prefix="/locations/{location_id}/service-providers", tags=["Service Providers"]
+)
 
 # Sponsors (conference-scoped)
 api_router.include_router(sponsors.router, prefix="/conferences/{conference_id}/sponsors", tags=["Sponsors"])
@@ -85,13 +91,14 @@ api_router.include_router(program.router, prefix="/conferences/{conference_id}/p
 api_router.include_router(news.router, prefix="/conferences/{conference_id}/news", tags=["News"])
 
 # Registrations (conference-scoped)
-api_router.include_router(registrations.router, prefix="/conferences/{conference_id}/registrations", tags=["Registrations"])
+api_router.include_router(
+    registrations.router, prefix="/conferences/{conference_id}/registrations", tags=["Registrations"]
+)
 
 # Messaging (conference-scoped)
 api_router.include_router(messaging.router, prefix="/conferences/{conference_id}/messaging", tags=["Messaging"])
 
 # Cross-conference messaging (global unread count)
-from app.api.v1.messaging.global_unread import router as global_unread_router
 api_router.include_router(global_unread_router, prefix="/messaging", tags=["Messaging"])
 
 # File attachments

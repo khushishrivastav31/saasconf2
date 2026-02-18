@@ -1,51 +1,25 @@
 """Shared helpers and constants for admin messaging endpoints."""
 
 import logging
-import uuid
-from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
-from fastapi.responses import Response
-from sqlalchemy import delete as sa_delete, func, select
-from sqlalchemy.orm import selectinload
-
-logger = logging.getLogger(__name__)
+from sqlalchemy import select
 
 from app.core.dependencies import (
-    CurrentUserDep,
-    DbSessionDep,
     check_conference_admin_access,
-    get_client_ip,
-    require_module,
 )
-from app.config import get_settings
-from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
-from app.core.file_validation import validate_upload, sanitize_filename
+from app.core.exceptions import AuthorizationError
 from app.models.attachment import Attachment
-from app.models.audit import AuditLog
-from app.models.cfp import CFPApplicant, CFPPaper, CFPCommitteeMember
+from app.models.cfp import CFPApplicant
 from app.models.conference import Conference
-from app.models.tenant import Tenant
-from app.models.messaging import Message, MessageParticipant, MessageThread
+from app.models.messaging import MessageParticipant
 from app.models.user import User
 from app.schemas.messaging import (
-    AdminBulkSend,
-    AdminCreateThread,
-    BulkSendResponse,
-    BulkThreadSummary,
-    CreateThreadResponse,
     MessageAttachmentInfo,
-    MessageResponse,
-    ParticipantInfo,
-    ReplyCreate,
     SenderInfo,
-    ThreadDetailResponse,
-    ThreadListItem,
-    ThreadListResponse,
-    UnreadCountResponse,
 )
-from app.schemas.attachment import AttachmentResponse
+
+logger = logging.getLogger(__name__)
 
 MODULE_CODE = "cfp"
 
@@ -67,10 +41,7 @@ async def _notify_participants(
     result = await db.execute(
         select(MessageParticipant).where(
             MessageParticipant.thread_id == thread.id,
-            ~(
-                (MessageParticipant.participant_type == sender_type)
-                & (MessageParticipant.participant_id == sender_id)
-            ),
+            ~((MessageParticipant.participant_type == sender_type) & (MessageParticipant.participant_id == sender_id)),
         )
     )
     other_participants = result.scalars().all()
@@ -78,9 +49,7 @@ async def _notify_participants(
     for p in other_participants:
         # Check notification preference
         if p.participant_type == "applicant":
-            applicant_result = await db.execute(
-                select(CFPApplicant).where(CFPApplicant.id == p.participant_id)
-            )
+            applicant_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == p.participant_id))
             applicant = applicant_result.scalar_one_or_none()
             if not applicant or not applicant.message_notifications_enabled:
                 continue
@@ -98,13 +67,13 @@ async def _notify_participants(
             except Exception:
                 logger.exception(f"Failed to send message notification to {applicant.email}")
         elif p.participant_type == "user":
-            user_result = await db.execute(
-                select(User).where(User.id == p.participant_id)
-            )
+            user_result = await db.execute(select(User).where(User.id == p.participant_id))
             user = user_result.scalar_one_or_none()
             if not user or not user.message_notifications_enabled:
                 continue
-            messages_link = f"http://localhost:3001/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
+            messages_link = (
+                f"http://localhost:3001/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
+            )
             try:
                 await send_new_message_notification(
                     db,
@@ -119,24 +88,18 @@ async def _notify_participants(
                 logger.exception(f"Failed to send message notification to {user.email}")
 
 
-async def _check_messaging_access(
-    db, current_user, conference_id: UUID
-) -> None:
+async def _check_messaging_access(db, current_user, conference_id: UUID) -> None:
     """Verify user has admin access to this conference."""
     if current_user.is_super_admin:
         return
     if current_user.is_tenant_admin:
         return
-    has_access = await check_conference_admin_access(
-        db, current_user.user_id, conference_id
-    )
+    has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
     if not has_access:
         raise AuthorizationError("Admin access to this conference required")
 
 
-async def _resolve_senders(
-    db, sender_pairs: set[tuple[str, UUID]]
-) -> dict[tuple[str, UUID], SenderInfo]:
+async def _resolve_senders(db, sender_pairs: set[tuple[str, UUID]]) -> dict[tuple[str, UUID], SenderInfo]:
     """Batch-resolve sender info from (type, id) pairs."""
     result_map: dict[tuple[str, UUID], SenderInfo] = {}
     user_ids = [pid for ptype, pid in sender_pairs if ptype == "user"]
@@ -154,9 +117,7 @@ async def _resolve_senders(
             )
 
     if applicant_ids:
-        result = await db.execute(
-            select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids))
-        )
+        result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids)))
         for applicant in result.scalars():
             result_map[("applicant", applicant.id)] = SenderInfo(
                 id=applicant.id,
@@ -172,6 +133,7 @@ async def _resolve_senders(
 def _strip_html(html: str, max_len: int = 120) -> str:
     """Strip HTML tags for preview text."""
     import re
+
     text = re.sub(r"<[^>]+>", "", html)
     text = re.sub(r"\s+", " ", text).strip()
     if len(text) > max_len:
@@ -179,9 +141,7 @@ def _strip_html(html: str, max_len: int = 120) -> str:
     return text
 
 
-async def _fetch_message_attachments(
-    db, message_ids: list[UUID]
-) -> dict[UUID, list[MessageAttachmentInfo]]:
+async def _fetch_message_attachments(db, message_ids: list[UUID]) -> dict[UUID, list[MessageAttachmentInfo]]:
     """Batch-fetch attachments for messages."""
     if not message_ids:
         return {}
@@ -204,9 +164,7 @@ async def _fetch_message_attachments(
     return attachment_map
 
 
-async def _link_attachments_to_message(
-    db, attachment_ids: list[UUID], message_id: UUID, tenant_id: UUID
-) -> None:
+async def _link_attachments_to_message(db, attachment_ids: list[UUID], message_id: UUID, tenant_id: UUID) -> None:
     """Update pre-uploaded attachments to point to the real message."""
     if not attachment_ids:
         return

@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select
 
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
@@ -17,8 +18,6 @@ from app.schemas.program import (
     ProgramTimeSlotResponse,
     ProgramTimeSlotUpdate,
 )
-
-from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 
 from ._shared import MODULE_CODE, _build_slot_response
 
@@ -174,7 +173,7 @@ async def create_slots_batch(
     existing_starts = {row[0] for row in existing_result.all()}
 
     # Generate slots
-    from datetime import datetime, time as dt_time
+    from datetime import datetime
 
     created = []
     current_start = datetime.combine(datetime.today(), batch_data.start_time)
@@ -318,9 +317,7 @@ async def delete_slot(
         raise NotFoundError(f"Time slot with ID '{slot_id}' not found")
 
     # Check for sessions using this slot
-    session_count = await db.execute(
-        select(func.count()).where(ProgramSession.start_slot_id == slot_id)
-    )
+    session_count = await db.execute(select(func.count()).where(ProgramSession.start_slot_id == slot_id))
     count = session_count.scalar() or 0
     if count > 0:
         raise ValidationError(f"Cannot delete slot: {count} session(s) use this time slot")

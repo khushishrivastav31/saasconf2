@@ -22,7 +22,7 @@ from app.schemas.review import (
     ReviewScoreScaleResponse,
 )
 
-from ._shared import _resolve_conference, _check_conference_admin
+from ._shared import _check_conference_admin, _resolve_conference
 
 router = APIRouter()
 
@@ -142,9 +142,7 @@ async def create_review_question(
             )
         )
         if not scale_result.scalar_one_or_none():
-            raise ValidationError(
-                f"Score scale with ID '{question_data.score_scale_id}' not found in this conference"
-            )
+            raise ValidationError(f"Score scale with ID '{question_data.score_scale_id}' not found in this conference")
 
     question = ReviewQuestion(
         criterion_id=criterion_id,
@@ -214,10 +212,7 @@ async def update_review_question(
         raise NotFoundError(f"Review question with ID '{question_id}' not found")
 
     # If score_scale_id is being updated, validate it exists in same conference
-    if (
-        question_data.score_scale_id is not None
-        and question_data.score_scale_id != question.score_scale_id
-    ):
+    if question_data.score_scale_id is not None and question_data.score_scale_id != question.score_scale_id:
         scale_result = await db.execute(
             select(ReviewScoreScale).where(
                 ReviewScoreScale.id == question_data.score_scale_id,
@@ -225,9 +220,7 @@ async def update_review_question(
             )
         )
         if not scale_result.scalar_one_or_none():
-            raise ValidationError(
-                f"Score scale with ID '{question_data.score_scale_id}' not found in this conference"
-            )
+            raise ValidationError(f"Score scale with ID '{question_data.score_scale_id}' not found in this conference")
 
     update_data = question_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():

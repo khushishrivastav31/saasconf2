@@ -4,6 +4,7 @@ Revision ID: 019_sponsors
 Revises: 018_platform_currencies
 Create Date: 2026-01-27
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -18,14 +19,17 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "sponsors",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True,
-                  server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", UUID(as_uuid=True),
-                  sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("conference_id", UUID(as_uuid=True),
-                  sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("sponsor_package_id", UUID(as_uuid=True),
-                  sa.ForeignKey("sponsor_packages.id", ondelete="SET NULL"), nullable=True),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "conference_id", UUID(as_uuid=True), sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "sponsor_package_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("sponsor_packages.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("company_name", sa.String(255), nullable=False),
         sa.Column("phone", sa.String(50), nullable=True),
         sa.Column("website", sa.String(500), nullable=True),
@@ -41,10 +45,8 @@ def upgrade() -> None:
         sa.Column("comments", sa.Text(), nullable=True),
         sa.Column("contact_persons", JSONB, nullable=True, server_default="[]"),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="true"),
-        sa.Column("created_at", sa.DateTime(timezone=True),
-                  server_default=sa.text("NOW()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True),
-                  server_default=sa.text("NOW()"), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()"), nullable=False),
     )
 
     op.create_index("idx_sponsors_tenant", "sponsors", ["tenant_id"])

@@ -26,9 +26,18 @@ def upgrade() -> None:
         "cfp_papers",
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
         sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("cfp_id", UUID(as_uuid=True), sa.ForeignKey("call_for_papers.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("main_speaker_id", UUID(as_uuid=True), sa.ForeignKey("cfp_applicants.id", ondelete="RESTRICT"), nullable=False),
-        sa.Column("session_type_id", UUID(as_uuid=True), sa.ForeignKey("session_types.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "cfp_id", UUID(as_uuid=True), sa.ForeignKey("call_for_papers.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "main_speaker_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("cfp_applicants.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
+        sa.Column(
+            "session_type_id", UUID(as_uuid=True), sa.ForeignKey("session_types.id", ondelete="SET NULL"), nullable=True
+        ),
         # Content fields
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("abstract_short", sa.Text, nullable=True),
@@ -52,7 +61,9 @@ def upgrade() -> None:
     op.create_table(
         "cfp_paper_cospeakers",
         sa.Column("paper_id", UUID(as_uuid=True), sa.ForeignKey("cfp_papers.id", ondelete="CASCADE"), primary_key=True),
-        sa.Column("applicant_id", UUID(as_uuid=True), sa.ForeignKey("cfp_applicants.id", ondelete="CASCADE"), primary_key=True),
+        sa.Column(
+            "applicant_id", UUID(as_uuid=True), sa.ForeignKey("cfp_applicants.id", ondelete="CASCADE"), primary_key=True
+        ),
         sa.Column("sort_order", sa.Integer, nullable=False, server_default="0"),
     )
 
@@ -69,7 +80,12 @@ def upgrade() -> None:
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
         sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
         sa.Column("paper_id", UUID(as_uuid=True), sa.ForeignKey("cfp_papers.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("committee_member_id", UUID(as_uuid=True), sa.ForeignKey("cfp_committee_members.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "committee_member_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("cfp_committee_members.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("content", sa.Text, nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )

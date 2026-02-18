@@ -5,6 +5,7 @@ Revises: 008_configurable_roles_types
 Create Date: 2026-01-26
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
@@ -28,10 +29,8 @@ def upgrade() -> None:
     # --- Create attachments table ---
     op.create_table(
         "attachments",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True,
-                  server_default=sa.text("uuid_generate_v4()")),
-        sa.Column("tenant_id", UUID(as_uuid=True),
-                  sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
+        sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
         sa.Column("entity_type", sa.String(50), nullable=False),
         sa.Column("entity_id", UUID(as_uuid=True), nullable=False),
         sa.Column("filename", sa.String(255), nullable=False),
@@ -39,16 +38,12 @@ def upgrade() -> None:
         sa.Column("file_size", sa.Integer(), nullable=False),
         sa.Column("file_data", sa.LargeBinary(), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("uploaded_by", UUID(as_uuid=True),
-                  sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True),
-                  server_default=sa.text("NOW()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True),
-                  server_default=sa.text("NOW()")),
+        sa.Column("uploaded_by", UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
     )
     op.create_index("idx_attachments_tenant", "attachments", ["tenant_id"])
-    op.create_index("idx_attachments_entity", "attachments",
-                    ["tenant_id", "entity_type", "entity_id"])
+    op.create_index("idx_attachments_entity", "attachments", ["tenant_id", "entity_type", "entity_id"])
     op.create_index("idx_attachments_uploaded_by", "attachments", ["uploaded_by"])
 
     # Enable RLS
@@ -73,11 +68,7 @@ def downgrade() -> None:
     op.drop_table("attachments")
 
     # Re-add columns
-    op.add_column("tenant_location_types",
-                  sa.Column("sort_order", sa.Integer(), server_default="0"))
-    op.add_column("tenant_location_types",
-                  sa.Column("color", sa.String(20), nullable=True))
-    op.add_column("volunteer_roles",
-                  sa.Column("sort_order", sa.Integer(), server_default="0"))
-    op.add_column("volunteer_roles",
-                  sa.Column("color", sa.String(20), nullable=True))
+    op.add_column("tenant_location_types", sa.Column("sort_order", sa.Integer(), server_default="0"))
+    op.add_column("tenant_location_types", sa.Column("color", sa.String(20), nullable=True))
+    op.add_column("volunteer_roles", sa.Column("sort_order", sa.Integer(), server_default="0"))
+    op.add_column("volunteer_roles", sa.Column("color", sa.String(20), nullable=True))

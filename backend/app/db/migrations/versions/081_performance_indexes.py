@@ -17,7 +17,11 @@ INDEXES = [
     ("ix_cfp_papers_tenant_status", "cfp_papers", ["tenant_id", "status"]),
     ("ix_paper_reviews_tenant_status", "paper_reviews", ["tenant_id", "status"]),
     ("ix_message_threads_tenant_conf_archived", "message_threads", ["tenant_id", "conference_id", "archived_at"]),
-    ("ix_message_participants_thread_lookup", "message_participants", ["thread_id", "participant_type", "participant_id"]),
+    (
+        "ix_message_participants_thread_lookup",
+        "message_participants",
+        ["thread_id", "participant_type", "participant_id"],
+    ),
     ("ix_conferences_tenant_active", "conferences", ["tenant_id", "is_active"]),
     ("ix_conferences_tenant_published", "conferences", ["tenant_id", "is_published"]),
     ("ix_sponsors_conference_active", "sponsors", ["conference_id", "is_active"]),

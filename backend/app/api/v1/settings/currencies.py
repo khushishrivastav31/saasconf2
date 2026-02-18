@@ -25,6 +25,7 @@ async def _cascade_code_change(entity: Any, update_data: dict[str, Any], confere
     # Since update_data was applied before this hook, we need to check against
     # what was stored. We can detect this from the inspection state.
     from sqlalchemy import inspect as sa_inspect
+
     state = sa_inspect(entity)
     history = state.attrs.code.history
     if history.deleted and history.deleted[0] != entity.code:
@@ -51,9 +52,7 @@ async def _check_packages_using_currency(entity: Any, conference: Any, db: Any) 
     ).scalar() or 0
 
     if usage_count > 0:
-        raise ValidationError(
-            f"Cannot delete currency '{entity.code}': {usage_count} sponsor package(s) are using it"
-        )
+        raise ValidationError(f"Cannot delete currency '{entity.code}': {usage_count} sponsor package(s) are using it")
 
 
 router = create_crud_router(

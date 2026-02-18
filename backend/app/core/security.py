@@ -6,9 +6,9 @@ from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-import jwt
 from jwt.exceptions import PyJWTError
 
 from app.config import get_settings
@@ -116,9 +116,7 @@ def create_refresh_token(user_id: UUID) -> tuple[str, str, datetime]:
         "jti": jti,
     }
 
-    raw_token = jwt.encode(
-        payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
-    )
+    raw_token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
     # Hash the token for storage
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
@@ -141,9 +139,7 @@ def decode_token(token: str, token_type: str = "access") -> dict[str, Any]:
         AuthenticationError: If token is invalid or expired
     """
     try:
-        payload = jwt.decode(
-            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         # Verify token type
         if payload.get("type") != token_type:

@@ -4,6 +4,7 @@ Revision ID: 027_cfp_committee_members
 Revises: 026_cfp_topics
 Create Date: 2026-01-28
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID

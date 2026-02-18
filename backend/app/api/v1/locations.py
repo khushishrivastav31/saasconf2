@@ -98,9 +98,9 @@ async def list_locations(
     query = select(Location).where(Location.tenant_id == current_user.tenant_id)
 
     if conference_id:
-        query = query.join(
-            ConferenceLocation, ConferenceLocation.location_id == Location.id
-        ).where(ConferenceLocation.conference_id == conference_id)
+        query = query.join(ConferenceLocation, ConferenceLocation.location_id == Location.id).where(
+            ConferenceLocation.conference_id == conference_id
+        )
 
     if location_type:
         query = query.where(Location.location_type == location_type)
@@ -131,8 +131,9 @@ async def list_locations(
     conf_ids_map: dict[UUID, list[UUID]] = {lid: [] for lid in loc_ids}
     if loc_ids:
         assoc_result = await db.execute(
-            select(ConferenceLocation.location_id, ConferenceLocation.conference_id)
-            .where(ConferenceLocation.location_id.in_(loc_ids))
+            select(ConferenceLocation.location_id, ConferenceLocation.conference_id).where(
+                ConferenceLocation.location_id.in_(loc_ids)
+            )
         )
         for row in assoc_result:
             conf_ids_map[row.location_id].append(row.conference_id)
@@ -173,9 +174,7 @@ async def get_location_tree(
 
     # Get all locations for this tenant
     result = await db.execute(
-        select(Location)
-        .where(Location.tenant_id == current_user.tenant_id)
-        .order_by(Location.name)
+        select(Location).where(Location.tenant_id == current_user.tenant_id).order_by(Location.name)
     )
     all_locations = result.scalars().all()
 
@@ -265,11 +264,7 @@ async def get_location_stats(
 
     # Total capacity
     total_capacity = (
-        await db.execute(
-            select(func.sum(Location.capacity)).where(
-                Location.tenant_id == current_user.tenant_id
-            )
-        )
+        await db.execute(select(func.sum(Location.capacity)).where(Location.tenant_id == current_user.tenant_id))
     ).scalar() or 0
 
     return LocationStats(
@@ -354,16 +349,20 @@ async def create_location(
         virtual_url=location_data.virtual_url,
         virtual_platform=location_data.virtual_platform,
         settings=location_data.settings,
-        contact_persons=[cp.model_dump() for cp in location_data.contact_persons] if location_data.contact_persons else [],
+        contact_persons=[cp.model_dump() for cp in location_data.contact_persons]
+        if location_data.contact_persons
+        else [],
     )
     db.add(location)
     await db.flush()
 
     # Create conference association
-    db.add(ConferenceLocation(
-        conference_id=location_data.conference_id,
-        location_id=location.id,
-    ))
+    db.add(
+        ConferenceLocation(
+            conference_id=location_data.conference_id,
+            location_id=location.id,
+        )
+    )
 
     # Audit log
     audit_log = AuditLog(
@@ -404,16 +403,11 @@ async def get_location(
         raise NotFoundError(f"Location with ID '{location_id}' not found")
 
     # Get children count
-    children_count = (
-        await db.execute(
-            select(func.count()).where(Location.parent_id == location.id)
-        )
-    ).scalar() or 0
+    children_count = (await db.execute(select(func.count()).where(Location.parent_id == location.id))).scalar() or 0
 
     # Get conference_ids
     assoc_result = await db.execute(
-        select(ConferenceLocation.conference_id)
-        .where(ConferenceLocation.location_id == location.id)
+        select(ConferenceLocation.conference_id).where(ConferenceLocation.location_id == location.id)
     )
     conf_ids = [row[0] for row in assoc_result]
 
@@ -487,16 +481,11 @@ async def update_location(
     await db.refresh(location)
 
     # Get children count
-    children_count = (
-        await db.execute(
-            select(func.count()).where(Location.parent_id == location.id)
-        )
-    ).scalar() or 0
+    children_count = (await db.execute(select(func.count()).where(Location.parent_id == location.id))).scalar() or 0
 
     # Get conference_ids
     assoc_result = await db.execute(
-        select(ConferenceLocation.conference_id)
-        .where(ConferenceLocation.location_id == location.id)
+        select(ConferenceLocation.conference_id).where(ConferenceLocation.location_id == location.id)
     )
     conf_ids = [row[0] for row in assoc_result]
 
@@ -509,7 +498,10 @@ async def delete_location(
     current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
-    conference_id: UUID | None = Query(None, description="Conference to unlink from. If location is only in this conference, it will be deleted entirely."),
+    conference_id: UUID | None = Query(
+        None,
+        description="Conference to unlink from. If location is only in this conference, it will be deleted entirely.",
+    ),
 ) -> dict:
     """
     Delete or unlink a location.
@@ -560,9 +552,7 @@ async def delete_location(
             raise ValidationError(f"Location is not linked to conference '{conference.name}'")
 
         # Count how many conferences this location is linked to
-        count_result = await db.execute(
-            select(func.count()).where(ConferenceLocation.location_id == location_id)
-        )
+        count_result = await db.execute(select(func.count()).where(ConferenceLocation.location_id == location_id))
         link_count = count_result.scalar() or 0
 
         if link_count > 1:

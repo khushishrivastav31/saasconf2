@@ -104,7 +104,11 @@ VALID_ADMIN_STATUS_TRANSITIONS: dict[str, set[str]] = {
 # ============ Paper Assignment Endpoints ============
 
 
-@router.get("/paper-assignments", response_model=PaperAssignmentListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.get(
+    "/paper-assignments",
+    response_model=PaperAssignmentListResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def list_paper_assignments(
     current_user: CurrentUserDep,
     db: DbSessionDep,
@@ -120,9 +124,11 @@ async def list_paper_assignments(
     )
 
     if conference_id:
-        query = query.join(CFPPaper, CFPPaperAssignment.paper_id == CFPPaper.id).join(
-            ConferenceCFP, CFPPaper.cfp_id == ConferenceCFP.cfp_id
-        ).where(ConferenceCFP.conference_id == conference_id)
+        query = (
+            query.join(CFPPaper, CFPPaperAssignment.paper_id == CFPPaper.id)
+            .join(ConferenceCFP, CFPPaper.cfp_id == ConferenceCFP.cfp_id)
+            .where(ConferenceCFP.conference_id == conference_id)
+        )
 
     if paper_id:
         query = query.where(CFPPaperAssignment.paper_id == paper_id)
@@ -155,21 +161,28 @@ async def list_paper_assignments(
     for a in assignments:
         paper = papers_map.get(a.paper_id)
         member = members_map.get(a.committee_member_id)
-        items.append(PaperAssignmentResponse(
-            id=a.id,
-            paper_id=a.paper_id,
-            paper_title=paper.title if paper else "",
-            committee_member_id=a.committee_member_id,
-            committee_member_first_name=member.applicant.first_name if member and member.applicant else None,
-            committee_member_last_name=member.applicant.last_name if member and member.applicant else None,
-            is_anonymous=a.is_anonymous,
-            assigned_at=a.assigned_at,
-        ))
+        items.append(
+            PaperAssignmentResponse(
+                id=a.id,
+                paper_id=a.paper_id,
+                paper_title=paper.title if paper else "",
+                committee_member_id=a.committee_member_id,
+                committee_member_first_name=member.applicant.first_name if member and member.applicant else None,
+                committee_member_last_name=member.applicant.last_name if member and member.applicant else None,
+                is_anonymous=a.is_anonymous,
+                assigned_at=a.assigned_at,
+            )
+        )
 
     return PaperAssignmentListResponse(items=items, total=len(items))
 
 
-@router.post("/paper-assignments", response_model=PaperAssignmentResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/paper-assignments",
+    response_model=PaperAssignmentResponse,
+    status_code=201,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def create_paper_assignment(
     data: PaperAssignmentCreate,
     current_user: TenantAdminDep,
@@ -188,7 +201,9 @@ async def create_paper_assignment(
     member_result = await db.execute(
         select(CFPCommitteeMember)
         .options(selectinload(CFPCommitteeMember.applicant))
-        .where(CFPCommitteeMember.id == data.committee_member_id, CFPCommitteeMember.tenant_id == current_user.tenant_id)
+        .where(
+            CFPCommitteeMember.id == data.committee_member_id, CFPCommitteeMember.tenant_id == current_user.tenant_id
+        )
     )
     member = member_result.scalar_one_or_none()
     if not member:
@@ -197,7 +212,9 @@ async def create_paper_assignment(
     # Check conflict of interest
     has_conflict = await _check_committee_conflict(db, member.applicant_id, data.paper_id)
     if has_conflict:
-        raise HTTPException(status_code=409, detail="Committee member has a conflict of interest with this paper (speaker/cospeaker)")
+        raise HTTPException(
+            status_code=409, detail="Committee member has a conflict of interest with this paper (speaker/cospeaker)"
+        )
 
     # Check for existing assignment
     existing = await db.execute(
@@ -236,7 +253,11 @@ async def create_paper_assignment(
     )
 
 
-@router.post("/paper-assignments/auto-assign", response_model=AutoAssignResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/paper-assignments/auto-assign",
+    response_model=AutoAssignResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def auto_assign_papers(
     data: AutoAssignRequest,
     current_user: TenantAdminDep,
@@ -280,8 +301,9 @@ async def auto_assign_papers(
 
     # 4. Get existing assignments for deduplication
     existing_pairs_result = await db.execute(
-        select(CFPPaperAssignment.paper_id, CFPPaperAssignment.committee_member_id)
-        .where(CFPPaperAssignment.tenant_id == current_user.tenant_id)
+        select(CFPPaperAssignment.paper_id, CFPPaperAssignment.committee_member_id).where(
+            CFPPaperAssignment.tenant_id == current_user.tenant_id
+        )
     )
     existing_pairs = {(row[0], row[1]) for row in existing_pairs_result}
 
@@ -381,9 +403,7 @@ async def delete_paper_assignment(
     # an assignment has been removed (fewer assignments may already be covered
     # by submitted reviews).
     remaining_assignments = (
-        await db.execute(
-            select(func.count()).where(CFPPaperAssignment.paper_id == paper_id)
-        )
+        await db.execute(select(func.count()).where(CFPPaperAssignment.paper_id == paper_id))
     ).scalar() or 0
     if remaining_assignments > 0:
         submitted_reviews = (
@@ -395,9 +415,7 @@ async def delete_paper_assignment(
             )
         ).scalar() or 0
         if submitted_reviews >= remaining_assignments:
-            paper_result = await db.execute(
-                select(CFPPaper).where(CFPPaper.id == paper_id)
-            )
+            paper_result = await db.execute(select(CFPPaper).where(CFPPaper.id == paper_id))
             paper = paper_result.scalar_one_or_none()
             if paper and paper.status == PaperStatus.IN_EVALUATION.value:
                 paper.status = PaperStatus.FINAL_CONSIDERATION.value
@@ -408,6 +426,7 @@ async def delete_paper_assignment(
 
 # ============ Paper Endpoints ============
 # NOTE: These routes must be defined BEFORE /{cfp_id} routes to avoid path conflicts
+
 
 @router.get("/papers", response_model=PaperListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_papers(
@@ -443,13 +462,9 @@ async def list_papers(
 
     if applicant_id:
         cospeaker_paper_ids = (
-            select(CFPPaperCospeaker.paper_id)
-            .where(CFPPaperCospeaker.applicant_id == applicant_id)
-            .scalar_subquery()
+            select(CFPPaperCospeaker.paper_id).where(CFPPaperCospeaker.applicant_id == applicant_id).scalar_subquery()
         )
-        query = query.where(
-            (CFPPaper.main_speaker_id == applicant_id) | CFPPaper.id.in_(cospeaker_paper_ids)
-        )
+        query = query.where((CFPPaper.main_speaker_id == applicant_id) | CFPPaper.id.in_(cospeaker_paper_ids))
 
     result = await db.execute(query)
     papers = list(result.scalars().all())
@@ -493,7 +508,9 @@ async def get_paper_stats(
     return PaperStats(**stats)
 
 
-@router.post("/papers", response_model=PaperResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/papers", response_model=PaperResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def create_paper(
     paper_data: PaperCreate,
     current_user: TenantAdminDep,
@@ -644,9 +661,8 @@ async def update_paper(
         allowed = VALID_ADMIN_STATUS_TRANSITIONS.get(current_status, set())
         if new_status not in allowed:
             from app.core.exceptions import ValidationError
-            raise ValidationError(
-                f"Cannot transition paper from '{current_status}' to '{new_status}'"
-            )
+
+            raise ValidationError(f"Cannot transition paper from '{current_status}' to '{new_status}'")
         update_data["status"] = new_status
         # Clear submitted_at, delete assignments & reviews when reverting to draft
         if new_status == PaperStatus.DRAFT.value:
@@ -689,7 +705,9 @@ async def update_paper(
     return await _build_paper_response(db, paper, current_user.tenant_id)
 
 
-@router.post("/papers/{paper_id}/submit", response_model=PaperResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/papers/{paper_id}/submit", response_model=PaperResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def submit_paper(
     paper_id: UUID,
     current_user: TenantAdminDep,
@@ -712,6 +730,7 @@ async def submit_paper(
 
     if paper.status != PaperStatus.DRAFT.value:
         from app.core.exceptions import ValidationError
+
         raise ValidationError(f"Paper cannot be submitted. Current status: {paper.status}")
 
     paper.status = PaperStatus.SUBMITTED.value
@@ -736,7 +755,9 @@ async def submit_paper(
     return await _build_paper_response(db, paper, current_user.tenant_id)
 
 
-@router.post("/papers/{paper_id}/unsubmit", response_model=PaperResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/papers/{paper_id}/unsubmit", response_model=PaperResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def unsubmit_paper(
     paper_id: UUID,
     current_user: TenantAdminDep,
@@ -759,6 +780,7 @@ async def unsubmit_paper(
 
     if paper.status != PaperStatus.SUBMITTED.value:
         from app.core.exceptions import ValidationError
+
         raise ValidationError(f"Paper cannot be reverted to draft. Current status: {paper.status}")
 
     paper.status = PaperStatus.DRAFT.value
@@ -849,7 +871,11 @@ async def delete_paper(
     return {"message": f"Paper '{paper_title}' deleted successfully"}
 
 
-@router.get("/papers/{paper_id}/assignments", response_model=PaperAssignmentListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.get(
+    "/papers/{paper_id}/assignments",
+    response_model=PaperAssignmentListResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def get_paper_assignments(
     paper_id: UUID,
     current_user: CurrentUserDep,
@@ -864,10 +890,12 @@ async def get_paper_assignments(
         raise NotFoundError(f"Paper with ID '{paper_id}' not found")
 
     result = await db.execute(
-        select(CFPPaperAssignment).where(
+        select(CFPPaperAssignment)
+        .where(
             CFPPaperAssignment.paper_id == paper_id,
             CFPPaperAssignment.tenant_id == current_user.tenant_id,
-        ).order_by(CFPPaperAssignment.assigned_at.desc())
+        )
+        .order_by(CFPPaperAssignment.assigned_at.desc())
     )
     assignments = list(result.scalars().all())
 
@@ -885,21 +913,24 @@ async def get_paper_assignments(
     items = []
     for a in assignments:
         member = members_map.get(a.committee_member_id)
-        items.append(PaperAssignmentResponse(
-            id=a.id,
-            paper_id=a.paper_id,
-            paper_title=paper.title,
-            committee_member_id=a.committee_member_id,
-            committee_member_first_name=member.applicant.first_name if member and member.applicant else None,
-            committee_member_last_name=member.applicant.last_name if member and member.applicant else None,
-            is_anonymous=a.is_anonymous,
-            assigned_at=a.assigned_at,
-        ))
+        items.append(
+            PaperAssignmentResponse(
+                id=a.id,
+                paper_id=a.paper_id,
+                paper_title=paper.title,
+                committee_member_id=a.committee_member_id,
+                committee_member_first_name=member.applicant.first_name if member and member.applicant else None,
+                committee_member_last_name=member.applicant.last_name if member and member.applicant else None,
+                is_anonymous=a.is_anonymous,
+                assigned_at=a.assigned_at,
+            )
+        )
 
     return PaperAssignmentListResponse(items=items, total=len(items))
 
 
 # ============ Paper Reviews (Admin View) ============
+
 
 @router.get("/papers/{paper_id}/reviews", dependencies=[Depends(require_module(MODULE_CODE))])
 async def get_paper_reviews(
@@ -919,10 +950,12 @@ async def get_paper_reviews(
         raise NotFoundError(f"Paper with ID '{paper_id}' not found")
 
     reviews_result = await db.execute(
-        select(PaperReview).where(
+        select(PaperReview)
+        .where(
             PaperReview.paper_id == paper_id,
             PaperReview.tenant_id == current_user.tenant_id,
-        ).order_by(PaperReview.created_at)
+        )
+        .order_by(PaperReview.created_at)
     )
     reviews = list(reviews_result.scalars().all())
 
@@ -943,43 +976,50 @@ async def get_paper_reviews(
         reviewer_first_name = member.applicant.first_name if member and member.applicant else None
         reviewer_last_name = member.applicant.last_name if member and member.applicant else None
 
-        items.append(AdminPaperReviewResponse(
-            id=review.id,
-            assignment_id=review.assignment_id,
-            paper_id=review.paper_id,
-            committee_member_id=review.committee_member_id,
-            reviewer_first_name=reviewer_first_name,
-            reviewer_last_name=reviewer_last_name,
-            status=review.status,
-            total_score=review.total_score,
-            speaker_feedback=review.speaker_feedback,
-            internal_comment=review.internal_comment,
-            must_have=review.must_have,
-            answers=[
-                ReviewAnswerResponse(
-                    id=a.id,
-                    question_id=a.question_id,
-                    selected_option_id=a.selected_option_id,
-                    numeric_score=a.numeric_score,
-                    is_unsure=a.is_unsure,
-                    comment=a.comment,
-                    snapshot_weight=a.snapshot_weight,
-                    snapshot_question_text=a.snapshot_question_text,
-                    snapshot_option_label=a.snapshot_option_label,
-                )
-                for a in review.answers
-            ],
-            submitted_at=review.submitted_at,
-            created_at=review.created_at,
-            updated_at=review.updated_at,
-        ))
+        items.append(
+            AdminPaperReviewResponse(
+                id=review.id,
+                assignment_id=review.assignment_id,
+                paper_id=review.paper_id,
+                committee_member_id=review.committee_member_id,
+                reviewer_first_name=reviewer_first_name,
+                reviewer_last_name=reviewer_last_name,
+                status=review.status,
+                total_score=review.total_score,
+                speaker_feedback=review.speaker_feedback,
+                internal_comment=review.internal_comment,
+                must_have=review.must_have,
+                answers=[
+                    ReviewAnswerResponse(
+                        id=a.id,
+                        question_id=a.question_id,
+                        selected_option_id=a.selected_option_id,
+                        numeric_score=a.numeric_score,
+                        is_unsure=a.is_unsure,
+                        comment=a.comment,
+                        snapshot_weight=a.snapshot_weight,
+                        snapshot_question_text=a.snapshot_question_text,
+                        snapshot_option_label=a.snapshot_option_label,
+                    )
+                    for a in review.answers
+                ],
+                submitted_at=review.submitted_at,
+                created_at=review.created_at,
+                updated_at=review.updated_at,
+            )
+        )
 
     return PaperReviewListResponse(items=items, total=len(items))
 
 
 # ============ Cospeaker Invitation Endpoints ============
 
-@router.get("/papers/my-invitations", response_model=CospeakerInvitationListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+
+@router.get(
+    "/papers/my-invitations",
+    response_model=CospeakerInvitationListResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def list_my_invitations(
     current_user: CurrentUserDep,
     db: DbSessionDep,
@@ -1055,7 +1095,9 @@ async def accept_cospeaker_invitation(
     return {"message": "Invitation accepted"}
 
 
-@router.post("/papers/{paper_id}/cospeakers/{applicant_id}/decline", dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/papers/{paper_id}/cospeakers/{applicant_id}/decline", dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def decline_cospeaker_invitation(
     paper_id: UUID,
     applicant_id: UUID,

@@ -8,6 +8,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.core.default_settings import seed_default_settings
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -16,7 +17,6 @@ from app.core.dependencies import (
     get_client_ip,
     require_module,
 )
-from app.core.default_settings import seed_default_settings
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
@@ -28,7 +28,6 @@ from app.models.location import Location
 from app.models.tenant import Tenant
 from app.models.volunteer import Volunteer
 from app.schemas.conference import (
-    ConferenceAssociationRequest,
     ConferenceCreate,
     ConferenceListResponse,
     ConferenceResponse,
@@ -70,9 +69,7 @@ async def list_conferences(
     if accessible_ids is not None:
         if not accessible_ids:
             # User has no conference access - return empty result
-            return ConferenceListResponse(
-                items=[], total=0, page=page, page_size=page_size, pages=0
-            )
+            return ConferenceListResponse(items=[], total=0, page=page, page_size=page_size, pages=0)
         query = query.where(Conference.id.in_(accessible_ids))
 
     if is_active is not None:
@@ -93,8 +90,7 @@ async def list_conferences(
             query = query.where(Conference.start_date > today)
         elif status == "ongoing":
             query = query.where(
-                (Conference.start_date <= today) &
-                ((Conference.end_date >= today) | (Conference.end_date.is_(None)))
+                (Conference.start_date <= today) & ((Conference.end_date >= today) | (Conference.end_date.is_(None)))
             )
         elif status == "past":
             query = query.where(Conference.end_date < today)
@@ -117,7 +113,9 @@ async def list_conferences(
     )
 
 
-@router.post("", response_model=ConferenceResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "", response_model=ConferenceResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def create_conference(
     conference_data: ConferenceCreate,
     current_user: TenantAdminDep,
@@ -150,8 +148,10 @@ async def create_conference(
         timezone=conference_data.timezone,
         venue_type=conference_data.venue_type,
         virtual_platform_url=conference_data.virtual_platform_url,
-        social_links=conference_data.social_links.model_dump(mode='json') if conference_data.social_links else {},
-        team_members=[tm.model_dump(mode='json') for tm in conference_data.team_members] if conference_data.team_members else [],
+        social_links=conference_data.social_links.model_dump(mode="json") if conference_data.social_links else {},
+        team_members=[tm.model_dump(mode="json") for tm in conference_data.team_members]
+        if conference_data.team_members
+        else [],
         settings=conference_data.settings,
         currency=conference_data.currency,
     )
@@ -202,9 +202,7 @@ async def get_conference_stats(
     accessible_ids = await _get_accessible_conference_ids(db, current_user)
     if accessible_ids is not None and not accessible_ids:
         # User has no conference access - return zeros
-        return ConferenceStats(
-            total=0, active=0, published=0, upcoming=0, ongoing=0, past=0
-        )
+        return ConferenceStats(total=0, active=0, published=0, upcoming=0, ongoing=0, past=0)
 
     def _apply_access_filter(query):
         """Apply conference access filter to a query."""
@@ -214,50 +212,47 @@ async def get_conference_stats(
         return q
 
     # Total conferences
-    total = (await db.execute(
-        _apply_access_filter(select(func.count()).select_from(Conference))
-    )).scalar() or 0
+    total = (await db.execute(_apply_access_filter(select(func.count()).select_from(Conference)))).scalar() or 0
 
     # Active conferences
-    active = (await db.execute(
-        _apply_access_filter(
-            select(func.count()).select_from(Conference)
-            .where(Conference.is_active == True)
+    active = (
+        await db.execute(
+            _apply_access_filter(select(func.count()).select_from(Conference).where(Conference.is_active == True))
         )
-    )).scalar() or 0
+    ).scalar() or 0
 
     # Published conferences
-    published = (await db.execute(
-        _apply_access_filter(
-            select(func.count()).select_from(Conference)
-            .where(Conference.is_published == True)
+    published = (
+        await db.execute(
+            _apply_access_filter(select(func.count()).select_from(Conference).where(Conference.is_published == True))
         )
-    )).scalar() or 0
+    ).scalar() or 0
 
     # Upcoming conferences
-    upcoming = (await db.execute(
-        _apply_access_filter(
-            select(func.count()).select_from(Conference)
-            .where(Conference.start_date > today)
+    upcoming = (
+        await db.execute(
+            _apply_access_filter(select(func.count()).select_from(Conference).where(Conference.start_date > today))
         )
-    )).scalar() or 0
+    ).scalar() or 0
 
     # Ongoing conferences
-    ongoing = (await db.execute(
-        _apply_access_filter(
-            select(func.count()).select_from(Conference)
-            .where(Conference.start_date <= today)
-            .where((Conference.end_date >= today) | (Conference.end_date.is_(None)))
+    ongoing = (
+        await db.execute(
+            _apply_access_filter(
+                select(func.count())
+                .select_from(Conference)
+                .where(Conference.start_date <= today)
+                .where((Conference.end_date >= today) | (Conference.end_date.is_(None)))
+            )
         )
-    )).scalar() or 0
+    ).scalar() or 0
 
     # Past conferences
-    past = (await db.execute(
-        _apply_access_filter(
-            select(func.count()).select_from(Conference)
-            .where(Conference.end_date < today)
+    past = (
+        await db.execute(
+            _apply_access_filter(select(func.count()).select_from(Conference).where(Conference.end_date < today))
         )
-    )).scalar() or 0
+    ).scalar() or 0
 
     return ConferenceStats(
         total=total,
@@ -322,9 +317,7 @@ async def update_conference(
             raise AuthorizationError("Admin access to this conference required")
 
     result = await db.execute(
-        select(Conference)
-        .where(Conference.id == conference_id)
-        .where(_tenant_filter(current_user))
+        select(Conference).where(Conference.id == conference_id).where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
 
@@ -337,13 +330,17 @@ async def update_conference(
     # Handle special fields
     if "social_links" in update_data and update_data["social_links"] is not None:
         # Use mode='json' to ensure proper JSON serialization for JSONB storage
-        update_data["social_links"] = update_data["social_links"].model_dump(mode='json') if hasattr(update_data["social_links"], "model_dump") else update_data["social_links"]
+        update_data["social_links"] = (
+            update_data["social_links"].model_dump(mode="json")
+            if hasattr(update_data["social_links"], "model_dump")
+            else update_data["social_links"]
+        )
 
     if "team_members" in update_data and update_data["team_members"] is not None:
         team_members_data = []
         for tm in update_data["team_members"]:
             # Serialize to dict
-            tm_dict = tm.model_dump(mode='json') if hasattr(tm, "model_dump") else tm
+            tm_dict = tm.model_dump(mode="json") if hasattr(tm, "model_dump") else tm
             # Sanitize empty strings to None for optional fields
             for key in ("email", "phone", "role"):
                 if tm_dict.get(key) == "":
@@ -409,21 +406,14 @@ async def delete_conference(
     # Check authorization: only SaaS super admin OR tenant super user can delete
     if not current_user.is_super_admin:
         # Check if user is the tenant super user
-        tenant_result = await db.execute(
-            select(Tenant.super_user_id)
-            .where(Tenant.id == current_user.tenant_id)
-        )
+        tenant_result = await db.execute(select(Tenant.super_user_id).where(Tenant.id == current_user.tenant_id))
         tenant_super_user_id = tenant_result.scalar_one_or_none()
 
         if tenant_super_user_id != current_user.user_id:
-            raise AuthorizationError(
-                "Only the Tenant Super User or SaaS Super Admin can delete conferences"
-            )
+            raise AuthorizationError("Only the Tenant Super User or SaaS Super Admin can delete conferences")
 
     result = await db.execute(
-        select(Conference)
-        .where(Conference.id == conference_id)
-        .where(_tenant_filter(current_user))
+        select(Conference).where(Conference.id == conference_id).where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
 
@@ -432,10 +422,7 @@ async def delete_conference(
 
     # Check that conference is deactivated
     if conference.is_active:
-        raise ValidationError(
-            "Conference must be deactivated before deletion. "
-            "Please deactivate the conference first."
-        )
+        raise ValidationError("Conference must be deactivated before deletion. Please deactivate the conference first.")
 
     conference_name = conference.name
 
@@ -506,25 +493,19 @@ async def delete_conference(
     deleted_cfps = 0
 
     if dd.exclusive_vol_ids:
-        vols_result = await db.execute(
-            select(Volunteer).where(Volunteer.id.in_(dd.exclusive_vol_ids))
-        )
+        vols_result = await db.execute(select(Volunteer).where(Volunteer.id.in_(dd.exclusive_vol_ids)))
         for vol in vols_result.scalars().all():
             await db.delete(vol)
             deleted_volunteers += 1
 
     if dd.exclusive_loc_ids:
-        locs_result = await db.execute(
-            select(Location).where(Location.id.in_(dd.exclusive_loc_ids))
-        )
+        locs_result = await db.execute(select(Location).where(Location.id.in_(dd.exclusive_loc_ids)))
         for loc in locs_result.scalars().all():
             await db.delete(loc)
             deleted_locations += 1
 
     if dd.exclusive_cfp_ids:
-        cfps_result = await db.execute(
-            select(CallForPapers).where(CallForPapers.id.in_(dd.exclusive_cfp_ids))
-        )
+        cfps_result = await db.execute(select(CallForPapers).where(CallForPapers.id.in_(dd.exclusive_cfp_ids)))
         for cfp in cfps_result.scalars().all():
             await db.delete(cfp)
             deleted_cfps += 1
@@ -533,9 +514,7 @@ async def delete_conference(
     deleted_applicants = 0
     if dd.orphaned_applicant_ids:
         for aid in dd.orphaned_applicant_ids:
-            applicant_result = await db.execute(
-                select(CFPApplicant).where(CFPApplicant.id == aid)
-            )
+            applicant_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == aid))
             applicant = applicant_result.scalar_one_or_none()
             if applicant:
                 await db.delete(applicant)
@@ -591,9 +570,7 @@ async def delete_conference_preview(
     - Orphaned applicants that will be removed
     """
     result = await db.execute(
-        select(Conference)
-        .where(Conference.id == conference_id)
-        .where(_tenant_filter(current_user))
+        select(Conference).where(Conference.id == conference_id).where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
     if not conference:
@@ -604,9 +581,7 @@ async def delete_conference_preview(
     if current_user.is_super_admin:
         can_delete = True
     else:
-        tenant_result = await db.execute(
-            select(Tenant.super_user_id).where(Tenant.id == current_user.tenant_id)
-        )
+        tenant_result = await db.execute(select(Tenant.super_user_id).where(Tenant.id == current_user.tenant_id))
         tenant_super_user_id = tenant_result.scalar_one_or_none()
         can_delete = tenant_super_user_id == current_user.user_id
 
@@ -653,7 +628,9 @@ async def delete_conference_preview(
     }
 
 
-@router.post("/{conference_id}/publish", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/{conference_id}/publish", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def publish_conference(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -672,9 +649,7 @@ async def publish_conference(
             raise AuthorizationError("Admin access to this conference required")
 
     result = await db.execute(
-        select(Conference)
-        .where(Conference.id == conference_id)
-        .where(_tenant_filter(current_user))
+        select(Conference).where(Conference.id == conference_id).where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
 
@@ -706,7 +681,9 @@ async def publish_conference(
     return _build_conference_response(conference, tenant_slug)
 
 
-@router.post("/{conference_id}/unpublish", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.post(
+    "/{conference_id}/unpublish", response_model=ConferenceResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def unpublish_conference(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -725,9 +702,7 @@ async def unpublish_conference(
             raise AuthorizationError("Admin access to this conference required")
 
     result = await db.execute(
-        select(Conference)
-        .where(Conference.id == conference_id)
-        .where(_tenant_filter(current_user))
+        select(Conference).where(Conference.id == conference_id).where(_tenant_filter(current_user))
     )
     conference = result.scalar_one_or_none()
 

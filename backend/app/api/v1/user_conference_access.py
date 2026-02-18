@@ -2,13 +2,18 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Request
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip, check_conference_admin_access
+from app.core.dependencies import (
+    CurrentUserDep,
+    DbSessionDep,
+    TenantAdminDep,
+    get_client_ip,
+)
 from app.core.exceptions import NotFoundError, ValidationError
-from app.models.audit import AuditAction, AuditLog
+from app.models.audit import AuditLog
 from app.models.conference import Conference
 from app.models.user import User
 from app.models.user_conference_access import ConferenceAccessLevel, UserConferenceAccess
@@ -87,9 +92,7 @@ async def grant_conference_access(
         raise NotFoundError(f"User with ID '{access_data.user_id}' not found")
 
     # Verify conference exists and belongs to same tenant
-    conf_result = await db.execute(
-        select(Conference).where(Conference.id == access_data.conference_id)
-    )
+    conf_result = await db.execute(select(Conference).where(Conference.id == access_data.conference_id))
     conference = conf_result.scalar_one_or_none()
     if not conference:
         raise NotFoundError(f"Conference with ID '{access_data.conference_id}' not found")
@@ -192,9 +195,7 @@ async def list_conference_user_access(
 ) -> UserAccessListResponse:
     """List all users who have access to a conference."""
     # Verify conference exists and belongs to same tenant
-    conf_result = await db.execute(
-        select(Conference).where(Conference.id == conference_id)
-    )
+    conf_result = await db.execute(select(Conference).where(Conference.id == conference_id))
     conference = conf_result.scalar_one_or_none()
     if not conference:
         raise NotFoundError(f"Conference with ID '{conference_id}' not found")
@@ -353,9 +354,7 @@ async def bulk_grant_access(
 
     for conference_id in bulk_data.conference_ids:
         # Verify conference exists and belongs to same tenant
-        conf_result = await db.execute(
-            select(Conference).where(Conference.id == conference_id)
-        )
+        conf_result = await db.execute(select(Conference).where(Conference.id == conference_id))
         conference = conf_result.scalar_one_or_none()
         if not conference:
             skipped_count += 1

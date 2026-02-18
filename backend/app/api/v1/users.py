@@ -147,9 +147,7 @@ async def create_tenant_user(
 
     # Check email uniqueness within tenant
     existing = await db.execute(
-        select(User)
-        .where(User.tenant_id == target_tenant_id)
-        .where(User.email == user_data.email)
+        select(User).where(User.tenant_id == target_tenant_id).where(User.email == user_data.email)
     )
     if existing.scalar_one_or_none():
         raise ValidationError(f"User with email '{user_data.email}' already exists in this tenant")
@@ -359,9 +357,7 @@ async def deactivate_tenant_user(
 
     # Clear super_user_id if this user was the tenant's super user
     if user.tenant_id:
-        tenant_result = await db.execute(
-            select(Tenant).where(Tenant.id == user.tenant_id)
-        )
+        tenant_result = await db.execute(select(Tenant).where(Tenant.id == user.tenant_id))
         tenant = tenant_result.scalar_one_or_none()
         if tenant and tenant.super_user_id == user.id:
             tenant.super_user_id = None

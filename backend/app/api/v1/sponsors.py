@@ -26,9 +26,7 @@ MODULE_CODE = "sponsors"
 svc = ConferenceService
 
 
-def build_sponsor_response(
-    sponsor: Sponsor, package_name: str | None = None
-) -> SponsorResponse:
+def build_sponsor_response(sponsor: Sponsor, package_name: str | None = None) -> SponsorResponse:
     """Build a SponsorResponse from a Sponsor model."""
     return SponsorResponse(
         id=sponsor.id,
@@ -84,15 +82,15 @@ async def list_sponsors(
     )
 
     if search:
-        query = query.where(
-            unaccent_ilike(Sponsor.company_name, search)
-            | unaccent_ilike(Sponsor.city, search)
-        )
+        query = query.where(unaccent_ilike(Sponsor.company_name, search) | unaccent_ilike(Sponsor.city, search))
 
-    query = svc.apply_filters(query, [
-        (Sponsor.sponsor_package_id == sponsor_package_id, sponsor_package_id),
-        (Sponsor.is_active == is_active, is_active),
-    ])
+    query = svc.apply_filters(
+        query,
+        [
+            (Sponsor.sponsor_package_id == sponsor_package_id, sponsor_package_id),
+            (Sponsor.is_active == is_active, is_active),
+        ],
+    )
 
     query = query.order_by(Sponsor.company_name)
 
@@ -131,9 +129,7 @@ async def create_sponsor(
     """Create a new sponsor for a conference."""
     await svc.require_admin(db, current_user, conference_id)
 
-    conference = await svc.resolve_conference(
-        db, conference_id, current_user.tenant_id
-    )
+    conference = await svc.resolve_conference(db, conference_id, current_user.tenant_id)
 
     # Validate package if provided
     package_name: str | None = None
@@ -172,9 +168,7 @@ async def create_sponsor(
         currency=sponsor_data.currency,
         comments=sponsor_data.comments,
         contact_persons=(
-            [cp.model_dump() for cp in sponsor_data.contact_persons]
-            if sponsor_data.contact_persons
-            else []
+            [cp.model_dump() for cp in sponsor_data.contact_persons] if sponsor_data.contact_persons else []
         ),
         is_active=sponsor_data.is_active,
     )
@@ -246,7 +240,9 @@ async def update_sponsor(
     await svc.require_admin(db, current_user, conference_id)
 
     sponsor = await svc.get_resource(
-        db, Sponsor, sponsor_id,
+        db,
+        Sponsor,
+        sponsor_id,
         conference_id=conference_id,
         tenant_id=current_user.tenant_id,
         label="Sponsor",
@@ -268,8 +264,7 @@ async def update_sponsor(
     # Serialize contact persons if present
     if "contact_persons" in update_data and update_data["contact_persons"] is not None:
         update_data["contact_persons"] = [
-            cp.model_dump() if hasattr(cp, "model_dump") else cp
-            for cp in update_data["contact_persons"]
+            cp.model_dump() if hasattr(cp, "model_dump") else cp for cp in update_data["contact_persons"]
         ]
 
     audit_log = svc.create_audit_log(
@@ -287,9 +282,7 @@ async def update_sponsor(
 
     # Re-fetch with eager-loaded package
     refreshed_result = await db.execute(
-        select(Sponsor)
-        .where(Sponsor.id == sponsor_id)
-        .options(joinedload(Sponsor.sponsor_package))
+        select(Sponsor).where(Sponsor.id == sponsor_id).options(joinedload(Sponsor.sponsor_package))
     )
     sponsor = refreshed_result.scalar_one()
 
@@ -314,7 +307,9 @@ async def delete_sponsor(
     await svc.require_admin(db, current_user, conference_id)
 
     sponsor = await svc.get_resource(
-        db, Sponsor, sponsor_id,
+        db,
+        Sponsor,
+        sponsor_id,
         conference_id=conference_id,
         tenant_id=current_user.tenant_id,
         label="Sponsor",
@@ -323,9 +318,7 @@ async def delete_sponsor(
     company_name = sponsor.company_name
 
     # Delete associated attachments
-    await svc.delete_related_attachments(
-        db, "sponsor", sponsor_id, current_user.tenant_id
-    )
+    await svc.delete_related_attachments(db, "sponsor", sponsor_id, current_user.tenant_id)
 
     audit_log = svc.create_audit_log(
         tenant_id=current_user.tenant_id,

@@ -25,9 +25,7 @@ def upgrade() -> None:
             nullable=True,
         ),
     )
-    op.create_index(
-        "idx_booking_options_day", "booking_options", ["conference_day_id"]
-    )
+    op.create_index("idx_booking_options_day", "booking_options", ["conference_day_id"])
 
 
 def downgrade() -> None:

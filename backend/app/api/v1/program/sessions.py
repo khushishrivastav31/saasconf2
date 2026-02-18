@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
 from app.core.exceptions import NotFoundError
 from app.models.audit import AuditLog
@@ -25,16 +26,12 @@ from app.schemas.program import (
     ProgramSessionUpdate,
 )
 
-from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
-
 from ._shared import MODULE_CODE, _build_session_response
 
 router = APIRouter()
 
 
-async def _resolve_session_display_data(
-    db, session: ProgramSession
-) -> tuple[str | None, str | None, str | None]:
+async def _resolve_session_display_data(db, session: ProgramSession) -> tuple[str | None, str | None, str | None]:
     """Resolve session type name, paper title, and speaker name in a single query.
 
     Returns (session_type_name, paper_title, speaker_name).
@@ -57,9 +54,7 @@ async def _resolve_session_display_data(
         return None, None, None
     session_type_name = row.session_type_name
     paper_title = row.paper_title
-    speaker_name = (
-        f"{row.speaker_first} {row.speaker_last}" if row.speaker_first else None
-    )
+    speaker_name = f"{row.speaker_first} {row.speaker_last}" if row.speaker_first else None
     return session_type_name, paper_title, speaker_name
 
 
@@ -146,10 +141,12 @@ async def list_sessions_enriched(
 
     # Fetch days
     days_result = await db.execute(
-        select(ProgramDay).where(
+        select(ProgramDay)
+        .where(
             ProgramDay.conference_id == conference_id,
             ProgramDay.tenant_id == tenant_id,
-        ).order_by(ProgramDay.sort_order)
+        )
+        .order_by(ProgramDay.sort_order)
     )
     days = {d.id: d for d in days_result.scalars().all()}
 
@@ -159,9 +156,9 @@ async def list_sessions_enriched(
     slot_day_map: dict[UUID, UUID] = {}
     if day_ids:
         slots_result = await db.execute(
-            select(ProgramTimeSlot).where(
-                ProgramTimeSlot.program_day_id.in_(day_ids)
-            ).order_by(ProgramTimeSlot.sort_order)
+            select(ProgramTimeSlot)
+            .where(ProgramTimeSlot.program_day_id.in_(day_ids))
+            .order_by(ProgramTimeSlot.sort_order)
         )
         for s in slots_result.scalars().all():
             slots_map[s.id] = s
@@ -187,9 +184,7 @@ async def list_sessions_enriched(
     type_ids = [s.session_type_id for s in sessions if s.session_type_id]
     type_map: dict[UUID, str] = {}
     if type_ids:
-        type_result = await db.execute(
-            select(SessionType.id, SessionType.name).where(SessionType.id.in_(type_ids))
-        )
+        type_result = await db.execute(select(SessionType.id, SessionType.name).where(SessionType.id.in_(type_ids)))
         type_map = {row.id: row.name for row in type_result.all()}
 
     # Fetch papers with full details
@@ -199,27 +194,19 @@ async def list_sessions_enriched(
     cospeaker_map: dict[UUID, list[str]] = {}
 
     if paper_ids:
-        paper_result = await db.execute(
-            select(CFPPaper).where(CFPPaper.id.in_(paper_ids))
-        )
+        paper_result = await db.execute(select(CFPPaper).where(CFPPaper.id.in_(paper_ids)))
         for paper in paper_result.scalars().all():
             paper_map[paper.id] = paper
 
         # Fetch main speakers
         speaker_ids = [p.main_speaker_id for p in paper_map.values()]
         if speaker_ids:
-            speaker_result = await db.execute(
-                select(CFPApplicant).where(CFPApplicant.id.in_(speaker_ids))
-            )
+            speaker_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(speaker_ids)))
             for a in speaker_result.scalars().all():
                 speaker_map[a.id] = a
 
         # Fetch co-speakers
-        cs_result = await db.execute(
-            select(CFPPaperCospeaker).where(
-                CFPPaperCospeaker.paper_id.in_(paper_ids)
-            )
-        )
+        cs_result = await db.execute(select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id.in_(paper_ids)))
         cs_applicant_ids: set[UUID] = set()
         cs_by_paper: dict[UUID, list[UUID]] = defaultdict(list)
         for cs in cs_result.scalars().all():
@@ -233,15 +220,10 @@ async def list_sessions_enriched(
                     CFPApplicant.id.in_(list(cs_applicant_ids))
                 )
             )
-            cs_names = {
-                row.id: f"{row.first_name} {row.last_name}".strip()
-                for row in cs_name_result.all()
-            }
+            cs_names = {row.id: f"{row.first_name} {row.last_name}".strip() for row in cs_name_result.all()}
 
         for pid, cs_ids in cs_by_paper.items():
-            cospeaker_map[pid] = [
-                cs_names[cid] for cid in cs_ids if cid in cs_names
-            ]
+            cospeaker_map[pid] = [cs_names[cid] for cid in cs_ids if cid in cs_names]
 
     # Fetch form schema custom fields
     custom_fields: list[CustomFieldMeta] = []
@@ -257,11 +239,13 @@ async def list_sessions_enriched(
     if form_schema:
         for field in form_schema.fields:
             if field.is_visible:
-                custom_fields.append(CustomFieldMeta(
-                    field_key=field.field_key,
-                    label=field.label,
-                    field_type=field.field_type,
-                ))
+                custom_fields.append(
+                    CustomFieldMeta(
+                        field_key=field.field_key,
+                        label=field.label,
+                        field_type=field.field_type,
+                    )
+                )
 
     # Build enriched response items
     items: list[EnrichedSessionResponse] = []
@@ -284,40 +268,44 @@ async def list_sessions_enriched(
 
         cospeakers_str = ", ".join(cospeaker_map.get(session.paper_id, [])) if session.paper_id else None
 
-        items.append(EnrichedSessionResponse(
-            id=session.id,
-            title=session.title,
-            description=session.description,
-            session_type_id=session.session_type_id,
-            session_type_name=type_map.get(session.session_type_id) if session.session_type_id else None,
-            is_general_event=session.is_general_event,
-            color=session.color,
-            notes=session.notes,
-            paper_id=session.paper_id,
-            paper_title=paper.title if paper else None,
-            paper_abstract_short=paper.abstract_short if paper else None,
-            paper_level=paper.level if paper else None,
-            paper_learning_objectives=paper.learning_objectives if paper else None,
-            paper_importance=paper.importance if paper else None,
-            paper_status=paper.status if paper else None,
-            paper_custom_field_answers=paper.custom_field_answers if paper else None,
-            speaker_name=f"{speaker.first_name} {speaker.last_name}".strip() if speaker else None,
-            speaker_email=speaker.email if speaker else None,
-            speaker_company=speaker.company if speaker else None,
-            cospeakers=cospeakers_str or None,
-            day_id=day_id,
-            day_name=day.name if day else None,
-            day_date=day.date if day else None,
-            start_time=slot.start_time if slot else None,
-            end_time=end_time,
-            track_name=track.name if track else None,
-        ))
+        items.append(
+            EnrichedSessionResponse(
+                id=session.id,
+                title=session.title,
+                description=session.description,
+                session_type_id=session.session_type_id,
+                session_type_name=type_map.get(session.session_type_id) if session.session_type_id else None,
+                is_general_event=session.is_general_event,
+                color=session.color,
+                notes=session.notes,
+                paper_id=session.paper_id,
+                paper_title=paper.title if paper else None,
+                paper_abstract_short=paper.abstract_short if paper else None,
+                paper_level=paper.level if paper else None,
+                paper_learning_objectives=paper.learning_objectives if paper else None,
+                paper_importance=paper.importance if paper else None,
+                paper_status=paper.status if paper else None,
+                paper_custom_field_answers=paper.custom_field_answers if paper else None,
+                speaker_name=f"{speaker.first_name} {speaker.last_name}".strip() if speaker else None,
+                speaker_email=speaker.email if speaker else None,
+                speaker_company=speaker.company if speaker else None,
+                cospeakers=cospeakers_str or None,
+                day_id=day_id,
+                day_name=day.name if day else None,
+                day_date=day.date if day else None,
+                start_time=slot.start_time if slot else None,
+                end_time=end_time,
+                track_name=track.name if track else None,
+            )
+        )
 
     # Sort by day date, then start time
-    items.sort(key=lambda item: (
-        item.day_date or "",
-        item.start_time or "",
-    ))
+    items.sort(
+        key=lambda item: (
+            item.day_date or "",
+            item.start_time or "",
+        )
+    )
 
     return EnrichedSessionsResponse(
         items=items,
@@ -512,9 +500,7 @@ async def update_session(
         session.paper_id = session_data.paper_id
         if session_data.paper_id is not None:
             # Assign: auto-populate title and session type from the paper
-            paper_result = await db.execute(
-                select(CFPPaper).where(CFPPaper.id == session_data.paper_id)
-            )
+            paper_result = await db.execute(select(CFPPaper).where(CFPPaper.id == session_data.paper_id))
             paper = paper_result.scalar_one_or_none()
             if paper:
                 session.title = paper.title
@@ -629,7 +615,10 @@ async def move_session(
             action="program_session.move",
             resource_type="program_session",
             resource_id=str(session_id),
-            details={"new_slot_id": str(move_data.start_slot_id), "new_track_id": str(move_data.start_track_id) if move_data.start_track_id else None},
+            details={
+                "new_slot_id": str(move_data.start_slot_id),
+                "new_track_id": str(move_data.start_track_id) if move_data.start_track_id else None,
+            },
             ip_address=get_client_ip(request),
             user_agent=request.headers.get("user-agent"),
         )

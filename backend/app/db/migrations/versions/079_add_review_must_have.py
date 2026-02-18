@@ -10,8 +10,8 @@ Create Date: 2026-02-16
 
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "079_add_review_must_have"
 down_revision: str | None = "078_add_conference_locale"

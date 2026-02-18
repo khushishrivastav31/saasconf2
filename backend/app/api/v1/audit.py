@@ -18,7 +18,6 @@ from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.utils import utcnow
 from app.models.audit import AuditLog
-from app.models.tenant import Tenant
 from app.models.user import User
 
 router = APIRouter()
@@ -145,12 +144,16 @@ def _log_to_response(log: AuditLog) -> AuditLogResponse:
             email=log.user.email,
             first_name=log.user.first_name,
             last_name=log.user.last_name,
-        ) if log.user else None,
+        )
+        if log.user
+        else None,
         tenant=AuditLogTenantResponse(
             id=log.tenant.id,
             name=log.tenant.name,
             slug=log.tenant.slug,
-        ) if log.tenant else None,
+        )
+        if log.tenant
+        else None,
     )
 
 
@@ -215,9 +218,7 @@ async def list_resource_types(
     db: DbSessionDep,
 ) -> list[str]:
     """Get list of all distinct resource types in the system."""
-    result = await db.execute(
-        select(AuditLog.resource_type).distinct().where(AuditLog.resource_type.isnot(None))
-    )
+    result = await db.execute(select(AuditLog.resource_type).distinct().where(AuditLog.resource_type.isnot(None)))
     resource_types = result.scalars().all()
     return sorted([rt for rt in resource_types if rt])
 
@@ -259,11 +260,20 @@ async def export_audit_logs(
         # BOM + header
         header_buf = io.StringIO()
         writer = csv.writer(header_buf)
-        writer.writerow([
-            "Timestamp", "Action", "Resource Type", "Resource ID",
-            "User Email", "User Name", "Tenant", "IP Address",
-            "User Agent", "Details",
-        ])
+        writer.writerow(
+            [
+                "Timestamp",
+                "Action",
+                "Resource Type",
+                "Resource ID",
+                "User Email",
+                "User Name",
+                "Tenant",
+                "IP Address",
+                "User Agent",
+                "Details",
+            ]
+        )
         yield b"\xef\xbb\xbf" + header_buf.getvalue().encode("utf-8")
 
         # Stream rows in batches
@@ -285,18 +295,20 @@ async def export_audit_logs(
                     names = [log.user.first_name, log.user.last_name]
                     user_name = " ".join(n for n in names if n)
                 tenant_name = log.tenant.name if log.tenant else ""
-                w.writerow([
-                    log.created_at.isoformat(),
-                    log.action,
-                    log.resource_type or "",
-                    str(log.resource_id) if log.resource_id else "",
-                    user_email,
-                    user_name,
-                    tenant_name,
-                    str(log.ip_address) if log.ip_address else "",
-                    log.user_agent or "",
-                    json.dumps(log.details) if log.details else "",
-                ])
+                w.writerow(
+                    [
+                        log.created_at.isoformat(),
+                        log.action,
+                        log.resource_type or "",
+                        str(log.resource_id) if log.resource_id else "",
+                        user_email,
+                        user_name,
+                        tenant_name,
+                        str(log.ip_address) if log.ip_address else "",
+                        log.user_agent or "",
+                        json.dumps(log.details) if log.details else "",
+                    ]
+                )
             yield chunk.getvalue().encode("utf-8")
 
             if len(logs) < batch_size:

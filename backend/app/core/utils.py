@@ -1,8 +1,8 @@
 """Core utility functions."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def utcnow() -> datetime:
     """Timezone-aware UTC now. Use instead of datetime.utcnow()."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

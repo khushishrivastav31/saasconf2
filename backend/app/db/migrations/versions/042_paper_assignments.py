@@ -24,14 +24,28 @@ def upgrade() -> None:
     op.create_table(
         "cfp_paper_assignments",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("paper_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("cfp_papers.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("committee_member_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("cfp_committee_members.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "paper_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("cfp_papers.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "committee_member_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("cfp_committee_members.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("is_anonymous", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("assigned_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
 
-    op.create_unique_constraint("uq_paper_assignment_paper_member", "cfp_paper_assignments", ["paper_id", "committee_member_id"])
+    op.create_unique_constraint(
+        "uq_paper_assignment_paper_member", "cfp_paper_assignments", ["paper_id", "committee_member_id"]
+    )
     op.create_index("idx_paper_assignments_tenant", "cfp_paper_assignments", ["tenant_id"])
     op.create_index("idx_paper_assignments_paper", "cfp_paper_assignments", ["paper_id"])
     op.create_index("idx_paper_assignments_member", "cfp_paper_assignments", ["committee_member_id"])

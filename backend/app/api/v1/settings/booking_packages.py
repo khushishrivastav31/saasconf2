@@ -20,7 +20,7 @@ from app.schemas.settings import (
     BookingPackageUpdate,
 )
 
-from ._shared import _resolve_conference, _check_conference_admin
+from ._shared import _check_conference_admin, _resolve_conference
 
 router = APIRouter()
 
@@ -28,9 +28,7 @@ router = APIRouter()
 async def _get_package_option_ids(db: DbSessionDep, package_id: UUID) -> list[UUID]:
     """Get all option IDs for a package."""
     result = await db.execute(
-        select(BookingPackageOption.booking_option_id).where(
-            BookingPackageOption.booking_package_id == package_id
-        )
+        select(BookingPackageOption.booking_option_id).where(BookingPackageOption.booking_package_id == package_id)
     )
     return [row[0] for row in result.all()]
 
@@ -123,11 +121,13 @@ async def create_booking_package(
 
     # Create package-option associations
     for option_id in package_data.option_ids:
-        db.add(BookingPackageOption(
-            tenant_id=conference.tenant_id,
-            booking_package_id=package.id,
-            booking_option_id=option_id,
-        ))
+        db.add(
+            BookingPackageOption(
+                tenant_id=conference.tenant_id,
+                booking_package_id=package.id,
+                booking_option_id=option_id,
+            )
+        )
 
     audit_log = AuditLog(
         tenant_id=conference.tenant_id,
@@ -135,7 +135,11 @@ async def create_booking_package(
         action="booking_package.create",
         resource_type="booking_package",
         resource_id=package.id,
-        details={"name": package.name, "conference_id": str(conference.id), "option_count": len(package_data.option_ids)},
+        details={
+            "name": package.name,
+            "conference_id": str(conference.id),
+            "option_count": len(package_data.option_ids),
+        },
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
@@ -214,18 +218,18 @@ async def update_booking_package(
 
         # Delete existing associations
         await db.execute(
-            BookingPackageOption.__table__.delete().where(
-                BookingPackageOption.booking_package_id == package_id
-            )
+            BookingPackageOption.__table__.delete().where(BookingPackageOption.booking_package_id == package_id)
         )
 
         # Create new associations
         for option_id in package_data.option_ids:
-            db.add(BookingPackageOption(
-                tenant_id=conference.tenant_id,
-                booking_package_id=package.id,
-                booking_option_id=option_id,
-            ))
+            db.add(
+                BookingPackageOption(
+                    tenant_id=conference.tenant_id,
+                    booking_package_id=package.id,
+                    booking_option_id=option_id,
+                )
+            )
 
     audit_log = AuditLog(
         tenant_id=conference.tenant_id,

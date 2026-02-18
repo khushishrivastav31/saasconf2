@@ -5,18 +5,17 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 
+from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, require_module
 from app.core.exceptions import NotFoundError
 from app.models.cfp import CFPApplicant, CFPPaper
 from app.models.location import Location
-from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
+from app.models.program import ProgramDay, ProgramSession, ProgramTrack
 from app.models.settings import SessionType
 from app.schemas.program import (
     ProgramFullGridResponse,
     ProgramGridResponse,
 )
-
-from app.core.conference_helpers import get_conference_for_tenant
 
 from ._shared import (
     MODULE_CODE,
@@ -68,9 +67,7 @@ async def get_full_grid(
     location_ids = [t.location_id for t in all_tracks if t.location_id]
     location_map: dict[UUID, str] = {}
     if location_ids:
-        loc_result = await db.execute(
-            select(Location.id, Location.name).where(Location.id.in_(location_ids))
-        )
+        loc_result = await db.execute(select(Location.id, Location.name).where(Location.id.in_(location_ids)))
         location_map = {row.id: row.name for row in loc_result.all()}
 
     # Group tracks by day_id
@@ -92,9 +89,7 @@ async def get_full_grid(
     type_ids = [s.session_type_id for s in all_sessions if s.session_type_id]
     type_map: dict[UUID, str] = {}
     if type_ids:
-        type_result = await db.execute(
-            select(SessionType.id, SessionType.name).where(SessionType.id.in_(type_ids))
-        )
+        type_result = await db.execute(select(SessionType.id, SessionType.name).where(SessionType.id.in_(type_ids)))
         type_map = {row.id: row.name for row in type_result.all()}
 
     # Get paper titles and speaker names
@@ -185,9 +180,7 @@ async def get_day_grid(
     location_ids = [t.location_id for t in tracks if t.location_id]
     location_map: dict[UUID, str] = {}
     if location_ids:
-        loc_result = await db.execute(
-            select(Location.id, Location.name).where(Location.id.in_(location_ids))
-        )
+        loc_result = await db.execute(select(Location.id, Location.name).where(Location.id.in_(location_ids)))
         location_map = {row.id: row.name for row in loc_result.all()}
 
     # Get sessions for this day
@@ -204,9 +197,7 @@ async def get_day_grid(
     type_ids = [s.session_type_id for s in sessions if s.session_type_id]
     type_map: dict[UUID, str] = {}
     if type_ids:
-        type_result = await db.execute(
-            select(SessionType.id, SessionType.name).where(SessionType.id.in_(type_ids))
-        )
+        type_result = await db.execute(select(SessionType.id, SessionType.name).where(SessionType.id.in_(type_ids)))
         type_map = {row.id: row.name for row in type_result.all()}
 
     # Get paper titles and speaker names

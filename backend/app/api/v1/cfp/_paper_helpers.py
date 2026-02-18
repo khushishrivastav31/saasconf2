@@ -15,9 +15,7 @@ from app.models.cfp import (
 from app.models.settings import SessionType
 
 
-async def validate_main_speaker(
-    db: AsyncSession, speaker_id: UUID, tenant_id: UUID
-) -> None:
+async def validate_main_speaker(db: AsyncSession, speaker_id: UUID, tenant_id: UUID) -> None:
     """Validate main speaker exists and belongs to tenant.
 
     Raises ``NotFoundError`` when the applicant cannot be found.
@@ -57,9 +55,7 @@ async def validate_co_speakers(
             raise NotFoundError(f"Co-speaker with ID '{co_speaker_id}' not found")
 
 
-async def validate_session_type(
-    db: AsyncSession, session_type_id: UUID, tenant_id: UUID
-) -> None:
+async def validate_session_type(db: AsyncSession, session_type_id: UUID, tenant_id: UUID) -> None:
     """Validate session type exists, is active, and is CFP-eligible.
 
     Raises ``ValidationError`` when the session type is missing or ineligible.
@@ -68,17 +64,15 @@ async def validate_session_type(
         select(SessionType).where(
             SessionType.id == session_type_id,
             SessionType.tenant_id == tenant_id,
-            SessionType.is_active == True,  # noqa: E712
-            SessionType.cfp_eligible == True,  # noqa: E712
+            SessionType.is_active == True,
+            SessionType.cfp_eligible == True,
         )
     )
     if not result.scalar_one_or_none():
         raise ValidationError("Invalid or ineligible session type")
 
 
-async def validate_topics(
-    db: AsyncSession, topic_ids: list[UUID], tenant_id: UUID
-) -> None:
+async def validate_topics(db: AsyncSession, topic_ids: list[UUID], tenant_id: UUID) -> None:
     """Validate all topics exist and belong to tenant.
 
     Raises ``NotFoundError`` for any topic that cannot be found.
@@ -94,18 +88,14 @@ async def validate_topics(
             raise NotFoundError(f"Topic with ID '{topic_id}' not found")
 
 
-async def sync_paper_co_speakers(
-    db: AsyncSession, paper_id: UUID, co_speaker_ids: list[UUID]
-) -> None:
+async def sync_paper_co_speakers(db: AsyncSession, paper_id: UUID, co_speaker_ids: list[UUID]) -> None:
     """Delete existing co-speakers for a paper and create new ones.
 
     For newly-created papers the delete is a harmless no-op.  Each
     co-speaker is assigned a ``sort_order`` matching its position in the
     list and an initial ``invitation_status`` of ``"pending"``.
     """
-    await db.execute(
-        delete(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper_id)
-    )
+    await db.execute(delete(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper_id))
 
     for idx, co_speaker_id in enumerate(co_speaker_ids):
         cospeaker = CFPPaperCospeaker(
@@ -117,16 +107,12 @@ async def sync_paper_co_speakers(
         db.add(cospeaker)
 
 
-async def sync_paper_topics(
-    db: AsyncSession, paper_id: UUID, topic_ids: list[UUID]
-) -> None:
+async def sync_paper_topics(db: AsyncSession, paper_id: UUID, topic_ids: list[UUID]) -> None:
     """Delete existing topic associations for a paper and create new ones.
 
     For newly-created papers the delete is a harmless no-op.
     """
-    await db.execute(
-        cfp_paper_topics.delete().where(cfp_paper_topics.c.paper_id == paper_id)
-    )
+    await db.execute(cfp_paper_topics.delete().where(cfp_paper_topics.c.paper_id == paper_id))
 
     for topic_id in topic_ids:
         await db.execute(

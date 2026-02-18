@@ -5,6 +5,7 @@ Revises: 045_review_criteria_scoring
 Create Date: 2026-01-29
 
 """
+
 from collections.abc import Sequence
 from typing import Union
 
@@ -30,8 +31,15 @@ def upgrade() -> None:
     op.create_table(
         "review_form_settings",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("conference_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "conference_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("conferences.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("enable_speaker_feedback", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("enable_internal_comment", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),

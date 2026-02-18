@@ -5,8 +5,8 @@ Revises: 050_pronouns_conference_scoped
 Create Date: 2026-02-08
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers
@@ -18,9 +18,7 @@ depends_on = None
 
 def upgrade() -> None:
     # Create enum for access level
-    access_level_enum = postgresql.ENUM(
-        "admin", "read_only", name="conference_access_level", create_type=False
-    )
+    access_level_enum = postgresql.ENUM("admin", "read_only", name="conference_access_level", create_type=False)
     access_level_enum.create(op.get_bind(), checkfirst=True)
 
     # Create user_conference_access table
@@ -100,7 +98,5 @@ def downgrade() -> None:
     op.drop_table("user_conference_access")
 
     # Drop enum
-    access_level_enum = postgresql.ENUM(
-        "admin", "read_only", name="conference_access_level"
-    )
+    access_level_enum = postgresql.ENUM("admin", "read_only", name="conference_access_level")
     access_level_enum.drop(op.get_bind(), checkfirst=True)

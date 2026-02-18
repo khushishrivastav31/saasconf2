@@ -84,9 +84,7 @@ async def get_review_config(
         raise NotFoundError("Assignment not found")
 
     # Determine the conference for this assignment's paper
-    paper_result = await db.execute(
-        select(CFPPaper.cfp_id).where(CFPPaper.id == assignment.paper_id)
-    )
+    paper_result = await db.execute(select(CFPPaper.cfp_id).where(CFPPaper.id == assignment.paper_id))
     cfp_id = paper_result.scalar_one_or_none()
     if not cfp_id:
         raise NotFoundError("Paper not found")
@@ -129,10 +127,7 @@ async def get_review_config(
 
     portal_criteria = []
     for criterion in criteria:
-        active_questions = [
-            q for q in criterion.questions
-            if q.is_active and q.show_to_reviewers
-        ]
+        active_questions = [q for q in criterion.questions if q.is_active and q.show_to_reviewers]
         if not active_questions:
             continue
 
@@ -156,26 +151,30 @@ async def get_review_config(
                     ],
                 )
 
-            portal_questions.append(PortalReviewQuestionResponse(
-                id=q.id,
-                text=q.text,
-                help_text=q.help_text,
-                question_type=q.question_type,
-                weight=q.weight,
-                comment_requirement=q.comment_requirement,
-                low_score_threshold=q.low_score_threshold,
-                count_in_score=q.count_in_score,
-                display_order=q.display_order,
-                scale=scale,
-            ))
+            portal_questions.append(
+                PortalReviewQuestionResponse(
+                    id=q.id,
+                    text=q.text,
+                    help_text=q.help_text,
+                    question_type=q.question_type,
+                    weight=q.weight,
+                    comment_requirement=q.comment_requirement,
+                    low_score_threshold=q.low_score_threshold,
+                    count_in_score=q.count_in_score,
+                    display_order=q.display_order,
+                    scale=scale,
+                )
+            )
 
-        portal_criteria.append(PortalReviewCriterionResponse(
-            id=criterion.id,
-            title=criterion.title,
-            description=criterion.description,
-            display_order=criterion.display_order,
-            questions=portal_questions,
-        ))
+        portal_criteria.append(
+            PortalReviewCriterionResponse(
+                id=criterion.id,
+                title=criterion.title,
+                description=criterion.description,
+                display_order=criterion.display_order,
+                questions=portal_questions,
+            )
+        )
 
     # Load existing review if any
     existing_review = None
@@ -285,9 +284,7 @@ async def submit_or_save_review(
     await db.flush()
 
     # Determine conference for loading questions
-    paper_result = await db.execute(
-        select(CFPPaper.cfp_id).where(CFPPaper.id == assignment.paper_id)
-    )
+    paper_result = await db.execute(select(CFPPaper.cfp_id).where(CFPPaper.id == assignment.paper_id))
     cfp_id = paper_result.scalar_one_or_none()
     if not cfp_id:
         raise NotFoundError("Paper's CFP not found")
@@ -426,9 +423,7 @@ async def submit_or_save_review(
             )
         ).scalar() or 0
         if total_assignments > 0 and submitted_reviews >= total_assignments:
-            paper_result2 = await db.execute(
-                select(CFPPaper).where(CFPPaper.id == assignment.paper_id)
-            )
+            paper_result2 = await db.execute(select(CFPPaper).where(CFPPaper.id == assignment.paper_id))
             paper = paper_result2.scalar_one_or_none()
             if paper and paper.status == PaperStatus.IN_EVALUATION.value:
                 paper.status = PaperStatus.FINAL_CONSIDERATION.value
@@ -462,24 +457,22 @@ async def get_speaker_feedback(
     from uuid import UUID as UUIDType
 
     # Verify the caller owns or is co-speaker on this paper
-    paper = await _get_applicant_or_cospeaker_paper(
-        db, paper_id, current.applicant_id, current.tenant_id
-    )
+    paper = await _get_applicant_or_cospeaker_paper(db, paper_id, current.applicant_id, current.tenant_id)
 
     # Verify CFP is completed
-    cfp_result = await db.execute(
-        select(CallForPapers).where(CallForPapers.id == paper.cfp_id)
-    )
+    cfp_result = await db.execute(select(CallForPapers).where(CallForPapers.id == paper.cfp_id))
     cfp = cfp_result.scalar_one_or_none()
     if not cfp or cfp.status != "completed":
         return PortalSpeakerFeedbackListResponse(items=[], total=0)
 
     # Get all submitted reviews for this paper
     reviews_result = await db.execute(
-        select(PaperReview).where(
+        select(PaperReview)
+        .where(
             PaperReview.paper_id == UUIDType(paper_id),
             PaperReview.status == ReviewStatus.SUBMITTED.value,
-        ).order_by(PaperReview.submitted_at)
+        )
+        .order_by(PaperReview.submitted_at)
     )
     reviews = list(reviews_result.scalars().all())
 

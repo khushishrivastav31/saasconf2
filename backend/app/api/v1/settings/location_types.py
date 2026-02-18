@@ -18,9 +18,7 @@ from app.schemas.settings import (
 from ._crud_factory import create_crud_router
 
 
-async def _build_location_type_response(
-    entity: Any, conference: Any, db: Any
-) -> LocationTypeResponse:
+async def _build_location_type_response(entity: Any, conference: Any, db: Any) -> LocationTypeResponse:
     """Build a response including usage_count from the Location table."""
     usage_count = (
         await db.execute(
@@ -45,9 +43,7 @@ async def _build_location_type_response(
     )
 
 
-async def _cascade_slug_change(
-    entity: Any, update_data: dict[str, Any], conference: Any, db: Any
-) -> None:
+async def _cascade_slug_change(entity: Any, update_data: dict[str, Any], conference: Any, db: Any) -> None:
     """If slug changed, update all locations using the old slug."""
     if "slug" not in update_data:
         return
@@ -79,9 +75,7 @@ async def _check_locations_using_type(entity: Any, conference: Any, db: Any) -> 
     ).scalar() or 0
 
     if usage_count > 0:
-        raise ValidationError(
-            f"Cannot delete location type '{entity.name}': {usage_count} location(s) are using it"
-        )
+        raise ValidationError(f"Cannot delete location type '{entity.name}': {usage_count} location(s) are using it")
 
 
 router = create_crud_router(

@@ -22,8 +22,7 @@ class ModuleBase(BaseModel):
         """Validate module code format (lowercase, alphanumeric, underscores)."""
         if not re.match(r"^[a-z][a-z0-9_]*$", v):
             raise ValueError(
-                "Module code must be lowercase, start with a letter, "
-                "and contain only letters, numbers, and underscores"
+                "Module code must be lowercase, start with a letter, and contain only letters, numbers, and underscores"
             )
         return v
 

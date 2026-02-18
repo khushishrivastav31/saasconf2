@@ -36,11 +36,7 @@ async def list_recipient_lists(
     """List recipient lists for the tenant."""
     tenant_id = current_user.tenant_id
 
-    query = (
-        select(RecipientList)
-        .where(RecipientList.tenant_id == tenant_id)
-        .order_by(RecipientList.name)
-    )
+    query = select(RecipientList).where(RecipientList.tenant_id == tenant_id).order_by(RecipientList.name)
 
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
@@ -51,9 +47,7 @@ async def list_recipient_lists(
     # Get member counts
     items = []
     for rl in lists:
-        count_result = await db.execute(
-            select(func.count()).where(RecipientListMember.list_id == rl.id)
-        )
+        count_result = await db.execute(select(func.count()).where(RecipientListMember.list_id == rl.id))
         member_count = count_result.scalar() or 0
         items.append(
             RecipientListResponse(
@@ -164,17 +158,13 @@ async def get_recipient_list(
 
     # Get members
     members_result = await db.execute(
-        select(RecipientListMember.applicant_id).where(
-            RecipientListMember.list_id == list_id
-        )
+        select(RecipientListMember.applicant_id).where(RecipientListMember.list_id == list_id)
     )
     applicant_ids = [row[0] for row in members_result.all()]
 
     applicants = []
     if applicant_ids:
-        app_result = await db.execute(
-            select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids))
-        )
+        app_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids)))
         applicants = list(app_result.scalars().all())
 
     return RecipientListDetailResponse(
@@ -249,9 +239,7 @@ async def update_recipient_list(
         valid_ids = {a.id for a in applicants}
 
         # Remove existing members
-        existing_members = await db.execute(
-            select(RecipientListMember).where(RecipientListMember.list_id == list_id)
-        )
+        existing_members = await db.execute(select(RecipientListMember).where(RecipientListMember.list_id == list_id))
         for m in existing_members.scalars():
             await db.delete(m)
         await db.flush()

@@ -1,13 +1,13 @@
 """Registration schemas."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
-class RegistrationStatus(str, Enum):
+class RegistrationStatus(StrEnum):
     """Registration status values."""
 
     REGISTERED_PENDING_INVOICE = "registered_pending_invoice"
@@ -16,7 +16,7 @@ class RegistrationStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class RegistrationMode(str, Enum):
+class RegistrationMode(StrEnum):
     """How the registration was created."""
 
     INDIVIDUAL = "individual"
@@ -24,7 +24,7 @@ class RegistrationMode(str, Enum):
     COMPANY_BULK = "company_bulk"
 
 
-class RegistrationItemType(str, Enum):
+class RegistrationItemType(StrEnum):
     """Type of add-on item."""
 
     BOOKING_OPTION = "booking_option"

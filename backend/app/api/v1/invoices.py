@@ -7,13 +7,18 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 
 from app.core.conference_helpers import get_conference_for_tenant
-from app.core.dependencies import CurrentUserDep, DbSessionDep, check_conference_admin_access, get_client_ip, require_module
+from app.core.dependencies import (
+    CurrentUserDep,
+    DbSessionDep,
+    check_conference_admin_access,
+    get_client_ip,
+    require_module,
+)
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
-from app.models.conference import Conference
 from app.models.invoice import Invoice
 from app.schemas.invoice import (
     InvoiceCreate,
@@ -85,8 +90,7 @@ async def list_invoices(
 
     if search:
         query = query.where(
-            unaccent_ilike(Invoice.invoice_number, search)
-            | unaccent_ilike(Invoice.recipient_name, search)
+            unaccent_ilike(Invoice.invoice_number, search) | unaccent_ilike(Invoice.recipient_name, search)
         )
 
     if status is not None:
@@ -130,9 +134,7 @@ async def create_invoice(
         if not has_access:
             raise AuthorizationError("Admin access to this conference required")
 
-    conference = await get_conference_for_tenant(
-        db, conference_id, current_user.tenant_id
-    )
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     invoice = Invoice(
         tenant_id=current_user.tenant_id,
@@ -150,11 +152,7 @@ async def create_invoice(
         recipient_postal_code=invoice_data.recipient_postal_code,
         recipient_country=invoice_data.recipient_country,
         recipient_vat_number=invoice_data.recipient_vat_number,
-        line_items=(
-            [li.model_dump(mode="json") for li in invoice_data.line_items]
-            if invoice_data.line_items
-            else []
-        ),
+        line_items=([li.model_dump(mode="json") for li in invoice_data.line_items] if invoice_data.line_items else []),
         subtotal=invoice_data.subtotal,
         tax_rate=invoice_data.tax_rate,
         tax_amount=invoice_data.tax_amount,
@@ -162,9 +160,7 @@ async def create_invoice(
         currency=invoice_data.currency,
         notes=invoice_data.notes,
         contact_persons=(
-            [cp.model_dump(mode="json") for cp in invoice_data.contact_persons]
-            if invoice_data.contact_persons
-            else []
+            [cp.model_dump(mode="json") for cp in invoice_data.contact_persons] if invoice_data.contact_persons else []
         ),
         is_active=invoice_data.is_active,
     )
@@ -253,15 +249,13 @@ async def update_invoice(
     # Serialize line items if present (mode="json" ensures Decimals become strings)
     if "line_items" in update_data and update_data["line_items"] is not None:
         update_data["line_items"] = [
-            li.model_dump(mode="json") if hasattr(li, "model_dump") else li
-            for li in update_data["line_items"]
+            li.model_dump(mode="json") if hasattr(li, "model_dump") else li for li in update_data["line_items"]
         ]
 
     # Serialize contact persons if present
     if "contact_persons" in update_data and update_data["contact_persons"] is not None:
         update_data["contact_persons"] = [
-            cp.model_dump(mode="json") if hasattr(cp, "model_dump") else cp
-            for cp in update_data["contact_persons"]
+            cp.model_dump(mode="json") if hasattr(cp, "model_dump") else cp for cp in update_data["contact_persons"]
         ]
 
     for field, value in update_data.items():

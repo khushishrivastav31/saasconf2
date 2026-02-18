@@ -1,10 +1,5 @@
 """Shared helpers for program sub-modules."""
 
-from uuid import UUID
-
-from sqlalchemy import select
-
-from app.core.exceptions import NotFoundError
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
 from app.schemas.program import (
     ProgramDayResponse,

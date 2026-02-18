@@ -16,9 +16,7 @@ from app.schemas.review import (
 from ._crud_factory import create_crud_router
 
 
-async def _build_criterion_response(
-    criterion: Any, conference: Any, db: Any
-) -> ReviewCriterionResponse:
+async def _build_criterion_response(criterion: Any, conference: Any, db: Any) -> ReviewCriterionResponse:
     """Build a response with nested questions, each including score_scale with options."""
     questions = []
     for q in criterion.questions:

@@ -1,6 +1,7 @@
 """Schemas for email template management."""
 
 from datetime import datetime
+from typing import ClassVar
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -71,10 +72,10 @@ class EmailTemplateType:
     PAPER_REJECTION = "paper_rejection"
 
     # System templates (no tenant_id)
-    SYSTEM_TYPES = [TENANT_USER_WELCOME]
+    SYSTEM_TYPES: ClassVar[list[str]] = [TENANT_USER_WELCOME]
 
     # Conference templates (require tenant_id + conference_id)
-    CONFERENCE_TYPES = [
+    CONFERENCE_TYPES: ClassVar[list[str]] = [
         APPLICANT_VERIFICATION,
         COMMITTEE_VERIFICATION,
         SUBMISSION_CONFIRMATION,
@@ -85,4 +86,4 @@ class EmailTemplateType:
         PAPER_REJECTION,
     ]
 
-    ALL_TYPES = SYSTEM_TYPES + CONFERENCE_TYPES
+    ALL_TYPES: ClassVar[list[str]] = SYSTEM_TYPES + CONFERENCE_TYPES

@@ -5,6 +5,7 @@ Revises: 046_review_form_settings
 Create Date: 2026-01-30
 
 """
+
 from collections.abc import Sequence
 from typing import Union
 
@@ -22,11 +23,7 @@ depends_on: Union[str, Sequence[str], None] = None
 # first_name = first word, last_name = everything after first space (or '')
 # ---------------------------------------------------------------------------
 _SPLIT_FIRST = "split_part({col}, ' ', 1)"
-_SPLIT_LAST = (
-    "CASE WHEN position(' ' IN {col}) > 0 "
-    "THEN substring({col} FROM position(' ' IN {col}) + 1) "
-    "ELSE '' END"
-)
+_SPLIT_LAST = "CASE WHEN position(' ' IN {col}) > 0 THEN substring({col} FROM position(' ' IN {col}) + 1) ELSE '' END"
 
 # JSONB helper: rewrite array elements, replacing "name" key with first_name + last_name
 _JSONB_REWRITE = """

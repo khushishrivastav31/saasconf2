@@ -34,7 +34,9 @@ def upgrade() -> None:
     )
 
     # Rename RLS policy
-    op.execute("ALTER POLICY booking_packages_tenant_isolation ON booking_options RENAME TO booking_options_tenant_isolation")
+    op.execute(
+        "ALTER POLICY booking_packages_tenant_isolation ON booking_options RENAME TO booking_options_tenant_isolation"
+    )
 
 
 def downgrade() -> None:
@@ -58,4 +60,6 @@ def downgrade() -> None:
     )
 
     # Rename RLS policy back
-    op.execute("ALTER POLICY booking_options_tenant_isolation ON booking_packages RENAME TO booking_packages_tenant_isolation")
+    op.execute(
+        "ALTER POLICY booking_options_tenant_isolation ON booking_packages RENAME TO booking_packages_tenant_isolation"
+    )

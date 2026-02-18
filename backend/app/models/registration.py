@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 
-class RegistrationStatus(str, Enum):
+class RegistrationStatus(StrEnum):
     """Registration status values."""
 
     REGISTERED_PENDING_INVOICE = "registered_pending_invoice"
@@ -20,7 +20,7 @@ class RegistrationStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class RegistrationMode(str, Enum):
+class RegistrationMode(StrEnum):
     """How the registration was created."""
 
     INDIVIDUAL = "individual"
@@ -28,7 +28,7 @@ class RegistrationMode(str, Enum):
     COMPANY_BULK = "company_bulk"
 
 
-class RegistrationItemType(str, Enum):
+class RegistrationItemType(StrEnum):
     """Type of add-on item."""
 
     BOOKING_OPTION = "booking_option"
@@ -45,9 +45,7 @@ class BillingProfile(Base):
 
     __tablename__ = "billing_profiles"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("tenants.id", ondelete="CASCADE"),
@@ -79,9 +77,7 @@ class BillingProfile(Base):
     vat_validated: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     procurement_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -112,9 +108,7 @@ class Registration(Base):
 
     __tablename__ = "registrations"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("tenants.id", ondelete="CASCADE"),
@@ -165,17 +159,13 @@ class Registration(Base):
         nullable=True,
     )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     # Relationships
-    billing_profile: Mapped["BillingProfile"] = relationship(
-        "BillingProfile", back_populates="registrations"
-    )
+    billing_profile: Mapped["BillingProfile"] = relationship("BillingProfile", back_populates="registrations")
     items: Mapped[list["RegistrationItem"]] = relationship(
         "RegistrationItem", back_populates="registration", cascade="all, delete-orphan"
     )
@@ -209,9 +199,7 @@ class RegistrationItem(Base):
 
     __tablename__ = "registration_items"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("tenants.id", ondelete="CASCADE"),
@@ -242,20 +230,14 @@ class RegistrationItem(Base):
     item_name: Mapped[str] = mapped_column(String(500), nullable=False)
 
     # For tutorials when program is not yet published
-    pending: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
+    pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    registration: Mapped["Registration"] = relationship(
-        "Registration", back_populates="items"
-    )
+    registration: Mapped["Registration"] = relationship("Registration", back_populates="items")
 
     __table_args__ = (
         Index("idx_registration_items_tenant", "tenant_id"),

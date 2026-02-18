@@ -18,9 +18,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     conn = op.get_bind()
     # Only insert if the module doesn't already exist (idempotent)
-    exists = conn.execute(
-        sa.text("SELECT 1 FROM modules WHERE code = 'news'")
-    ).fetchone()
+    exists = conn.execute(sa.text("SELECT 1 FROM modules WHERE code = 'news'")).fetchone()
     if not exists:
         conn.execute(
             sa.text(

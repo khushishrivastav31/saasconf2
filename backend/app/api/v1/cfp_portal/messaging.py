@@ -3,7 +3,7 @@
 import logging
 import re
 import uuid as _uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, File, Query, UploadFile
@@ -14,16 +14,14 @@ from sqlalchemy.orm import selectinload
 from app.config import get_settings
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.file_validation import safe_content_disposition, sanitize_filename, validate_upload
 from app.core.html_sanitize import sanitize_html
-from app.core.file_validation import validate_upload, sanitize_filename, safe_content_disposition
 from app.models.attachment import Attachment
 from app.models.cfp import CFPApplicant
 from app.models.conference import Conference
 from app.models.messaging import Message, MessageParticipant, MessageThread
 from app.models.tenant import Tenant
 from app.models.user import User
-
-logger = logging.getLogger(__name__)
 from app.schemas.attachment import AttachmentResponse
 from app.schemas.messaging import (
     MessageAttachmentInfo,
@@ -38,12 +36,12 @@ from app.schemas.messaging import (
     UnreadCountResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
-async def _resolve_senders(
-    db, sender_pairs: set[tuple[str, UUID]]
-) -> dict[tuple[str, UUID], SenderInfo]:
+async def _resolve_senders(db, sender_pairs: set[tuple[str, UUID]]) -> dict[tuple[str, UUID], SenderInfo]:
     """Batch-resolve sender info from (type, id) pairs."""
     result_map: dict[tuple[str, UUID], SenderInfo] = {}
     user_ids = [pid for ptype, pid in sender_pairs if ptype == "user"]
@@ -61,9 +59,7 @@ async def _resolve_senders(
             )
 
     if applicant_ids:
-        result = await db.execute(
-            select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids))
-        )
+        result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(applicant_ids)))
         for applicant in result.scalars():
             result_map[("applicant", applicant.id)] = SenderInfo(
                 id=applicant.id,
@@ -100,10 +96,7 @@ async def _notify_other_participants(
     result = await db.execute(
         select(MessageParticipant).where(
             MessageParticipant.thread_id == thread.id,
-            ~(
-                (MessageParticipant.participant_type == sender_type)
-                & (MessageParticipant.participant_id == sender_id)
-            ),
+            ~((MessageParticipant.participant_type == sender_type) & (MessageParticipant.participant_id == sender_id)),
         )
     )
     for p in result.scalars():
@@ -115,9 +108,13 @@ async def _notify_other_participants(
             link = f"http://localhost:3001/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
             try:
                 await send_new_message_notification(
-                    db, email=user.email, first_name=user.first_name or "",
-                    conference_id=conference_id, conference_name=conference_name,
-                    message_subject=thread.subject, messages_link=link,
+                    db,
+                    email=user.email,
+                    first_name=user.first_name or "",
+                    conference_id=conference_id,
+                    conference_name=conference_name,
+                    message_subject=thread.subject,
+                    messages_link=link,
                 )
             except Exception:
                 logger.exception(f"Failed to send message notification to {user.email}")
@@ -129,17 +126,19 @@ async def _notify_other_participants(
             link = f"http://localhost:3002/{tenant_slug}/portal/messages/{thread.id}"
             try:
                 await send_new_message_notification(
-                    db, email=applicant.email, first_name=applicant.first_name,
-                    conference_id=conference_id, conference_name=conference_name,
-                    message_subject=thread.subject, messages_link=link,
+                    db,
+                    email=applicant.email,
+                    first_name=applicant.first_name,
+                    conference_id=conference_id,
+                    conference_name=conference_name,
+                    message_subject=thread.subject,
+                    messages_link=link,
                 )
             except Exception:
                 logger.exception(f"Failed to send message notification to {applicant.email}")
 
 
-async def _fetch_message_attachments(
-    db, message_ids: list[UUID]
-) -> dict[UUID, list[MessageAttachmentInfo]]:
+async def _fetch_message_attachments(db, message_ids: list[UUID]) -> dict[UUID, list[MessageAttachmentInfo]]:
     """Batch-fetch attachments for messages."""
     if not message_ids:
         return {}
@@ -162,9 +161,7 @@ async def _fetch_message_attachments(
     return attachment_map
 
 
-async def _link_attachments_to_message(
-    db, attachment_ids: list[UUID], message_id: UUID, tenant_id: UUID
-) -> None:
+async def _link_attachments_to_message(db, attachment_ids: list[UUID], message_id: UUID, tenant_id: UUID) -> None:
     """Update pre-uploaded attachments to point to the real message."""
     if not attachment_ids:
         return
@@ -194,9 +191,7 @@ async def upload_portal_message_attachment(
     settings = get_settings()
     max_size = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
     if file_size > max_size:
-        raise ValidationError(
-            f"File size exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)"
-        )
+        raise ValidationError(f"File size exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)")
 
     content_type = file.content_type or "application/octet-stream"
     verified_type = validate_upload(file_data, content_type, "message")
@@ -295,11 +290,9 @@ async def list_my_threads(
     applicant_id = current_applicant.applicant_id
 
     # Find threads where applicant is a participant
-    my_thread_ids_q = (
-        select(MessageParticipant.thread_id).where(
-            MessageParticipant.participant_type == "applicant",
-            MessageParticipant.participant_id == applicant_id,
-        )
+    my_thread_ids_q = select(MessageParticipant.thread_id).where(
+        MessageParticipant.participant_type == "applicant",
+        MessageParticipant.participant_id == applicant_id,
     )
 
     query = (
@@ -325,11 +318,7 @@ async def list_my_threads(
     total = (await db.execute(count_q)).scalar() or 0
 
     # Fetch page
-    threads = (
-        await db.execute(
-            query.offset((page - 1) * page_size).limit(page_size)
-        )
-    ).scalars().all()
+    threads = (await db.execute(query.offset((page - 1) * page_size).limit(page_size))).scalars().all()
 
     if not threads:
         return ThreadListResponse(items=[], total=total, page=page, page_size=page_size)
@@ -352,8 +341,7 @@ async def list_my_threads(
     last_msgs_result = await db.execute(
         select(Message).join(
             last_msg_subq,
-            (Message.thread_id == last_msg_subq.c.thread_id)
-            & (Message.created_at == last_msg_subq.c.max_created),
+            (Message.thread_id == last_msg_subq.c.thread_id) & (Message.created_at == last_msg_subq.c.max_created),
         )
     )
     last_msgs = {m.thread_id: m for m in last_msgs_result.scalars()}
@@ -381,9 +369,7 @@ async def list_my_threads(
 
     # Fetch all participants for these threads (to find "other" participants)
     all_participants_result = await db.execute(
-        select(MessageParticipant).where(
-            MessageParticipant.thread_id.in_(thread_ids)
-        )
+        select(MessageParticipant).where(MessageParticipant.thread_id.in_(thread_ids))
     )
     all_participants = list(all_participants_result.scalars().all())
 
@@ -413,10 +399,10 @@ async def list_my_threads(
             if my_p.last_read_at is None or my_p.last_read_at < last_msg.created_at:
                 unread = True
 
-        last_sender = sender_map.get(
-            (last_msg.sender_type, last_msg.sender_id)
-        ) if last_msg else SenderInfo(
-            id=_uuid.UUID(int=0), type="user", first_name="", last_name="", email=""
+        last_sender = (
+            sender_map.get((last_msg.sender_type, last_msg.sender_id))
+            if last_msg
+            else SenderInfo(id=_uuid.UUID(int=0), type="user", first_name="", last_name="", email="")
         )
 
         items.append(
@@ -468,7 +454,7 @@ async def archive_portal_thread(
     if not p_result.scalar_one_or_none():
         raise NotFoundError("Thread not found")
 
-    thread.archived_at = datetime.now(timezone.utc)
+    thread.archived_at = datetime.now(UTC)
     await db.commit()
     return {"ok": True}
 
@@ -539,14 +525,10 @@ async def get_portal_unread_count(
         .select_from(my_threads)
         .join(
             MessageThread,
-            (MessageThread.id == my_threads.c.thread_id)
-            & (MessageThread.tenant_id == tenant_id),
+            (MessageThread.id == my_threads.c.thread_id) & (MessageThread.tenant_id == tenant_id),
         )
         .join(last_msg, last_msg.c.thread_id == my_threads.c.thread_id)
-        .where(
-            (my_threads.c.last_read_at.is_(None))
-            | (last_msg.c.last_at > my_threads.c.last_read_at)
-        )
+        .where((my_threads.c.last_read_at.is_(None)) | (last_msg.c.last_at > my_threads.c.last_read_at))
     )
 
     return UnreadCountResponse(unread_count=result.scalar() or 0)
@@ -579,8 +561,7 @@ async def get_portal_thread(
 
     # Verify applicant is a participant
     is_participant = any(
-        p.participant_type == "applicant" and p.participant_id == applicant_id
-        for p in thread.participants
+        p.participant_type == "applicant" and p.participant_id == applicant_id for p in thread.participants
     )
     if not is_participant:
         raise NotFoundError("Thread not found")
@@ -674,7 +655,7 @@ async def create_portal_thread(
     await db.flush()
 
     # Add applicant as participant
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     db.add(
         MessageParticipant(
             tenant_id=tenant_id,
@@ -726,8 +707,13 @@ async def create_portal_thread(
     tenant_obj = tenant_result.scalar_one_or_none()
     tenant_slug = tenant_obj.slug if tenant_obj else ""
     await _notify_other_participants(
-        db, thread, "applicant", applicant_id,
-        conference.name, tenant_slug, data.conference_id,
+        db,
+        thread,
+        "applicant",
+        applicant_id,
+        conference.name,
+        tenant_slug,
+        data.conference_id,
     )
 
     return await get_portal_thread(thread.id, current_applicant, db)
@@ -771,7 +757,7 @@ async def reply_to_portal_thread(
         raise NotFoundError("Thread not found")
 
     # Mark as read
-    participant.last_read_at = datetime.now(timezone.utc)
+    participant.last_read_at = datetime.now(UTC)
 
     # Create message
     message = Message(
@@ -789,22 +775,25 @@ async def reply_to_portal_thread(
         await _link_attachments_to_message(db, data.attachment_ids, message.id, tenant_id)
 
     # Touch thread
-    thread.updated_at = datetime.now(timezone.utc)
+    thread.updated_at = datetime.now(UTC)
 
     await db.commit()
     await db.refresh(message)
 
     # Send email notifications
-    conf_result = await db.execute(
-        select(Conference).where(Conference.id == thread.conference_id)
-    )
+    conf_result = await db.execute(select(Conference).where(Conference.id == thread.conference_id))
     conference = conf_result.scalar_one_or_none()
     tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     tenant_obj = tenant_result.scalar_one_or_none()
     tenant_slug = tenant_obj.slug if tenant_obj else ""
     await _notify_other_participants(
-        db, thread, "applicant", applicant_id,
-        conference.name if conference else "", tenant_slug, thread.conference_id,
+        db,
+        thread,
+        "applicant",
+        applicant_id,
+        conference.name if conference else "",
+        tenant_slug,
+        thread.conference_id,
     )
 
     # Fetch attachments for this message
@@ -843,7 +832,7 @@ async def mark_portal_thread_read(
     )
     participant = result.scalar_one_or_none()
     if participant:
-        participant.last_read_at = datetime.now(timezone.utc)
+        participant.last_read_at = datetime.now(UTC)
         await db.commit()
 
     return {"ok": True}

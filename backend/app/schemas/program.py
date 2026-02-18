@@ -1,12 +1,12 @@
 """Program design schemas."""
 
 from datetime import date as date_type
-from datetime import datetime, time as time_type
+from datetime import datetime
+from datetime import time as time_type
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
-
 
 # ============================================================================
 # Program Day Schemas

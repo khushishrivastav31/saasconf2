@@ -4,6 +4,7 @@ Revision ID: 023_discount_codes
 Revises: 022_booking_prices_on_periods
 Create Date: 2026-01-27
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
@@ -18,12 +19,11 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "discount_codes",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True,
-                  server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", UUID(as_uuid=True),
-                  sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("conference_id", UUID(as_uuid=True),
-                  sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "conference_id", UUID(as_uuid=True), sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("name", sa.String(100), nullable=False),
         sa.Column("code", sa.String(50), nullable=False),
         sa.Column("discount_type", sa.String(10), nullable=False),
@@ -40,8 +40,10 @@ def upgrade() -> None:
     op.create_index("idx_discount_codes_tenant", "discount_codes", ["tenant_id"])
     op.create_index("idx_discount_codes_conference", "discount_codes", ["conference_id"])
     op.create_index(
-        "idx_discount_codes_code", "discount_codes",
-        ["tenant_id", "conference_id", "code"], unique=True,
+        "idx_discount_codes_code",
+        "discount_codes",
+        ["tenant_id", "conference_id", "code"],
+        unique=True,
     )
 
     # RLS policy for discount_codes

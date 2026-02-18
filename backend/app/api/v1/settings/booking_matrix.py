@@ -22,9 +22,7 @@ router = APIRouter()
 async def _get_package_option_ids(db: DbSessionDep, package_id: UUID) -> list[UUID]:
     """Get all option IDs for a package."""
     result = await db.execute(
-        select(BookingPackageOption.booking_option_id).where(
-            BookingPackageOption.booking_package_id == package_id
-        )
+        select(BookingPackageOption.booking_option_id).where(BookingPackageOption.booking_package_id == package_id)
     )
     return [row[0] for row in result.all()]
 

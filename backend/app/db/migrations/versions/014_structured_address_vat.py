@@ -4,6 +4,7 @@ Revision ID: 014_structured_address_vat
 Revises: 013_location_sp_contact_fields
 Create Date: 2026-01-27
 """
+
 import sqlalchemy as sa
 from alembic import op
 

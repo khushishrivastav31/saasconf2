@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from app.models.tenant import Tenant
 
 
-class VolunteerStatus(str, Enum):
+class VolunteerStatus(StrEnum):
     """Volunteer application status."""
 
     PENDING = "pending"
@@ -35,9 +35,7 @@ class Volunteer(Base):
 
     __tablename__ = "volunteers"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -49,9 +47,7 @@ class Volunteer(Base):
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Volunteer Details
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=VolunteerStatus.PENDING.value
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=VolunteerStatus.PENDING.value)
     role: Mapped[str | None] = mapped_column(String(100), nullable=True)  # e.g., "Registration Desk", "Speaker Liaison"
     skills: Mapped[list] = mapped_column(JSONB, default=list)  # List of skills
     availability: Mapped[dict] = mapped_column(JSONB, default=dict)  # Availability schedule
@@ -65,20 +61,14 @@ class Volunteer(Base):
     tshirt_size: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     # Dates
-    application_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    approved_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    application_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    approved_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Hours tracking
     total_hours: Mapped[float] = mapped_column(default=0.0)
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -86,7 +76,9 @@ class Volunteer(Base):
     # Relationships
     tenant: Mapped["Tenant"] = relationship("Tenant")
     conferences: Mapped[list["Conference"]] = relationship(
-        "Conference", secondary="conference_volunteers", viewonly=True,
+        "Conference",
+        secondary="conference_volunteers",
+        viewonly=True,
     )
 
     # Indexes

@@ -112,13 +112,9 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("applicant_id", UUID(as_uuid=True), nullable=False),
-        sa.UniqueConstraint(
-            "list_id", "applicant_id", name="uq_recipient_list_members_list_applicant"
-        ),
+        sa.UniqueConstraint("list_id", "applicant_id", name="uq_recipient_list_members_list_applicant"),
     )
-    op.create_index(
-        "idx_recipient_list_members_list", "recipient_list_members", ["list_id"]
-    )
+    op.create_index("idx_recipient_list_members_list", "recipient_list_members", ["list_id"])
 
     # RLS policies for new tables
     for table in ["message_templates", "recipient_lists"]:
@@ -163,7 +159,5 @@ def downgrade() -> None:
     op.drop_column("message_threads", "archived_at")
 
     for table in ["recipient_list_members", "recipient_lists", "message_templates"]:
-        op.execute(
-            f"DROP POLICY IF EXISTS {table}_tenant_isolation ON {table}"
-        )
+        op.execute(f"DROP POLICY IF EXISTS {table}_tenant_isolation ON {table}")
         op.drop_table(table)

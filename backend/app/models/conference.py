@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,9 +23,7 @@ class Conference(Base):
 
     __tablename__ = "conferences"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -78,14 +76,10 @@ class Conference(Base):
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Program publication
-    program_published_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    program_published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -93,13 +87,19 @@ class Conference(Base):
     # Relationships
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="conferences")
     volunteers: Mapped[list["Volunteer"]] = relationship(
-        "Volunteer", secondary="conference_volunteers", viewonly=True,
+        "Volunteer",
+        secondary="conference_volunteers",
+        viewonly=True,
     )
     locations: Mapped[list["Location"]] = relationship(
-        "Location", secondary="conference_locations", viewonly=True,
+        "Location",
+        secondary="conference_locations",
+        viewonly=True,
     )
     cfps: Mapped[list["CallForPapers"]] = relationship(
-        "CallForPapers", secondary="conference_cfps", viewonly=True,
+        "CallForPapers",
+        secondary="conference_cfps",
+        viewonly=True,
     )
     user_access: Mapped[list["UserConferenceAccess"]] = relationship(
         "UserConferenceAccess",

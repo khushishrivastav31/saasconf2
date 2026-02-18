@@ -48,9 +48,7 @@ class CurrentUser:
         return self.is_super_admin or module_code in self.modules
 
 
-async def get_token_from_header(
-    authorization: Annotated[str | None, Header()] = None
-) -> str:
+async def get_token_from_header(authorization: Annotated[str | None, Header()] = None) -> str:
     """Extract token from Authorization header."""
     if not authorization:
         raise AuthenticationError("Authorization header missing")
@@ -83,6 +81,7 @@ async def get_current_user(
     jti = payload.get("jti")
     if jti:
         from app.core.token_blacklist import is_token_blacklisted
+
         if await is_token_blacklisted(jti):
             raise AuthenticationError("Token has been revoked")
 
@@ -191,9 +190,7 @@ async def require_conference_admin(
         return current_user
 
     # Check conference-specific admin access
-    has_access = await check_conference_admin_access(
-        db, current_user.user_id, conference_id
-    )
+    has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
     if not has_access:
         raise AuthorizationError("Admin access to this conference required")
 

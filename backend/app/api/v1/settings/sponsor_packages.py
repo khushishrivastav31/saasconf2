@@ -20,9 +20,7 @@ from ._crud_factory import create_crud_router
 async def _check_sponsors_using_package(entity: Any, conference: Any, db: Any) -> None:
     """Block deletion if any sponsors are using this package."""
     sponsor_count = (
-        await db.execute(
-            select(func.count()).where(Sponsor.sponsor_package_id == entity.id)
-        )
+        await db.execute(select(func.count()).where(Sponsor.sponsor_package_id == entity.id))
     ).scalar() or 0
 
     if sponsor_count > 0:

@@ -1,23 +1,24 @@
 """Admin messaging bulk send and count endpoints."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select
 
+from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
     get_client_ip,
     require_module,
 )
-from app.core.html_sanitize import sanitize_html
 from app.core.exceptions import NotFoundError
+from app.core.html_sanitize import sanitize_html
 from app.models.associations import ConferenceCFP
 from app.models.audit import AuditLog
-from app.models.cfp import CFPApplicant, CFPPaper, CFPCommitteeMember
+from app.models.cfp import CFPApplicant, CFPCommitteeMember, CFPPaper
 from app.models.messaging import Message, MessageParticipant, MessageThread, RecipientListMember
 from app.schemas.messaging import (
     AdminBulkSend,
@@ -25,8 +26,6 @@ from app.schemas.messaging import (
     BulkThreadSummary,
     UnreadCountResponse,
 )
-
-from app.core.conference_helpers import get_conference_for_tenant
 
 from ._shared import (
     MODULE_CODE,
@@ -59,9 +58,7 @@ async def bulk_send(
     applicant_ids: set[UUID] = set()
 
     # Subquery: CFP IDs linked to this conference
-    conference_cfp_ids = select(ConferenceCFP.cfp_id).where(
-        ConferenceCFP.conference_id == conference_id
-    )
+    conference_cfp_ids = select(ConferenceCFP.cfp_id).where(ConferenceCFP.conference_id == conference_id)
 
     if data.recipients.all_applicants:
         # All applicants who have submitted papers to this conference
@@ -92,8 +89,7 @@ async def bulk_send(
 
     if data.recipients.committee_role:
         result = await db.execute(
-            select(CFPCommitteeMember.applicant_id)
-            .where(
+            select(CFPCommitteeMember.applicant_id).where(
                 CFPCommitteeMember.tenant_id == tenant_id,
                 CFPCommitteeMember.conference_id == conference_id,
                 CFPCommitteeMember.role == data.recipients.committee_role,
@@ -143,7 +139,7 @@ async def bulk_send(
                 paper_titles[row[0]] = row[1] or ""
 
     bulk_id = uuid.uuid4()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     for applicant_id in valid_ids:
         applicant = applicants[applicant_id]
@@ -305,10 +301,7 @@ async def get_unread_count(
             & (MessageThread.tenant_id == tenant_id),
         )
         .join(last_msg, last_msg.c.thread_id == my_threads.c.thread_id)
-        .where(
-            (my_threads.c.last_read_at.is_(None))
-            | (last_msg.c.last_at > my_threads.c.last_read_at)
-        )
+        .where((my_threads.c.last_read_at.is_(None)) | (last_msg.c.last_at > my_threads.c.last_read_at))
     )
 
     return UnreadCountResponse(unread_count=result.scalar() or 0)

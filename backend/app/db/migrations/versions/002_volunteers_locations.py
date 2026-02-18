@@ -5,6 +5,7 @@ Revises: 001_initial
 Create Date: 2024-01-02
 
 """
+
 from collections.abc import Sequence
 from typing import Union
 
@@ -24,7 +25,9 @@ def upgrade() -> None:
     op.create_table(
         "volunteers",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("email", sa.String(255), nullable=False),
         sa.Column("first_name", sa.String(100), nullable=False),
         sa.Column("last_name", sa.String(100), nullable=False),
@@ -51,8 +54,15 @@ def upgrade() -> None:
     op.create_table(
         "locations",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("parent_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("locations.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "parent_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("locations.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("code", sa.String(50), nullable=True),
         sa.Column("location_type", sa.String(20), nullable=False, default="room"),

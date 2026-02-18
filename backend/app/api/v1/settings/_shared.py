@@ -16,9 +16,7 @@ async def _resolve_conference(
     db: DbSessionDep,
 ) -> Conference:
     """Resolve and verify the conference belongs to the user's tenant."""
-    result = await db.execute(
-        select(Conference).where(Conference.id == conference_id)
-    )
+    result = await db.execute(select(Conference).where(Conference.id == conference_id))
     conference = result.scalar_one_or_none()
     if not conference:
         raise NotFoundError(f"Conference with ID '{conference_id}' not found")

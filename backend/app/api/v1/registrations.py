@@ -18,7 +18,6 @@ from app.models.cfp_applicants import CFPApplicant
 from app.models.cfp_papers import CFPPaper
 from app.models.conference import Conference
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot
-from app.models.settings import SessionType
 from app.models.registration import (
     BillingProfile,
     Registration,
@@ -27,14 +26,14 @@ from app.models.registration import (
     RegistrationMode,
     RegistrationStatus,
 )
+from app.models.settings import SessionType
 from app.schemas.registration import (
-    BillingProfileCreate,
     BillingProfileResponse,
     BillingProfileUpdate,
     BulkRegistrationCreate,
     BulkRegistrationResponse,
-    IndividualRegistrationCreate,
     CompanySingleRegistrationCreate,
+    IndividualRegistrationCreate,
     RegistrationItemCreate,
     RegistrationItemResponse,
     RegistrationListResponse,
@@ -53,23 +52,19 @@ limiter = Limiter(key_func=get_remote_address)
 # ---------------------------------------------------------------------------
 
 
-async def _validate_booking_option(
-    db, option_id: UUID, conference_id: UUID, tenant_id: UUID
-) -> BookingOption:
+async def _validate_booking_option(db, option_id: UUID, conference_id: UUID, tenant_id: UUID) -> BookingOption:
     """Validate that a booking option exists and belongs to this conference."""
     result = await db.execute(
         select(BookingOption).where(
             BookingOption.id == option_id,
             BookingOption.conference_id == conference_id,
             BookingOption.tenant_id == tenant_id,
-            BookingOption.is_active == True,  # noqa: E712
+            BookingOption.is_active == True,
         )
     )
     opt = result.scalar_one_or_none()
     if not opt:
-        raise ValidationError(
-            f"Booking option '{option_id}' not found or inactive for this conference"
-        )
+        raise ValidationError(f"Booking option '{option_id}' not found or inactive for this conference")
     return opt
 
 
@@ -93,9 +88,7 @@ async def _resolve_item(
         )
         option = result.scalar_one_or_none()
         if not option:
-            raise ValidationError(
-                f"Booking option '{item_data.booking_option_id}' not found for this conference"
-            )
+            raise ValidationError(f"Booking option '{item_data.booking_option_id}' not found for this conference")
         return option.name, False
 
     elif item_data.item_type == RegistrationItemType.TUTORIAL:
@@ -110,13 +103,9 @@ async def _resolve_item(
             )
             session = result.scalar_one_or_none()
             if not session:
-                raise ValidationError(
-                    f"Program session '{item_data.program_session_id}' not found for this conference"
-                )
+                raise ValidationError(f"Program session '{item_data.program_session_id}' not found for this conference")
             if not session.separately_bookable:
-                raise ValidationError(
-                    f"Session '{session.title}' is not separately bookable"
-                )
+                raise ValidationError(f"Session '{session.title}' is not separately bookable")
             return session.title or "Tutorial", False
         else:
             # Program not published yet — mark as pending placeholder
@@ -136,9 +125,7 @@ async def _create_items(
     """Create RegistrationItem records for a registration."""
     created = []
     for item_data in items_data:
-        item_name, pending = await _resolve_item(
-            db, item_data, conference_id, tenant_id, conference
-        )
+        item_name, pending = await _resolve_item(db, item_data, conference_id, tenant_id, conference)
         item = RegistrationItem(
             tenant_id=tenant_id,
             registration_id=registration.id,
@@ -154,9 +141,7 @@ async def _create_items(
     return created
 
 
-async def _get_option_name_map(
-    db, conference_id: UUID, tenant_id: UUID
-) -> dict[UUID, str]:
+async def _get_option_name_map(db, conference_id: UUID, tenant_id: UUID) -> dict[UUID, str]:
     """Batch-fetch booking option names for a conference."""
     result = await db.execute(
         select(BookingOption.id, BookingOption.name).where(
@@ -214,9 +199,7 @@ def _build_response(
     )
 
 
-async def _check_email_unique(
-    db, conference_id: UUID, email: str, exclude_id: UUID | None = None
-) -> None:
+async def _check_email_unique(db, conference_id: UUID, email: str, exclude_id: UUID | None = None) -> None:
     """Check that an email is not already registered for this conference."""
     query = select(Registration.id).where(
         Registration.conference_id == conference_id,
@@ -258,9 +241,7 @@ async def get_bookable_sessions(
         return {"day_name": None, "groups": []}
 
     # Get the day name
-    day_result = await db.execute(
-        select(ProgramDay).where(ProgramDay.id == option.conference_day_id)
-    )
+    day_result = await db.execute(select(ProgramDay).where(ProgramDay.id == option.conference_day_id))
     day = day_result.scalar_one_or_none()
     day_name = day.name if day else None
 
@@ -293,7 +274,7 @@ async def get_bookable_sessions(
             ProgramSession.conference_id == conference_id,
             ProgramSession.tenant_id == tenant_id,
             ProgramTimeSlot.program_day_id == option.conference_day_id,
-            ProgramSession.separately_bookable == True,  # noqa: E712
+            ProgramSession.separately_bookable == True,
         )
         .order_by(ProgramTimeSlot.sort_order, ProgramTimeSlot.start_time)
     )
@@ -341,25 +322,27 @@ async def get_bookable_sessions(
                 slots[slot_key]["end_time"] = new_end
                 slots[slot_key]["label"] = f"{slots[slot_key]['start_time']} – {new_end}"
 
-        speaker_name = (
-            f"{speaker_first} {speaker_last}".strip() if speaker_first else None
+        speaker_name = f"{speaker_first} {speaker_last}".strip() if speaker_first else None
+        slots[slot_key]["sessions"].append(
+            {
+                "id": str(session.id),
+                "title": session.title,
+                "description": session.description,
+                "speaker_name": speaker_name,
+                "has_paper": session.paper_id is not None,
+            }
         )
-        slots[slot_key]["sessions"].append({
-            "id": str(session.id),
-            "title": session.title,
-            "description": session.description,
-            "speaker_name": speaker_name,
-            "has_paper": session.paper_id is not None,
-        })
 
     # Convert OrderedDicts to lists
     groups = []
     for type_data in type_map.values():
-        groups.append({
-            "session_type_id": type_data["session_type_id"],
-            "session_type_name": type_data["session_type_name"],
-            "slots": list(type_data["slots"].values()),
-        })
+        groups.append(
+            {
+                "session_type_id": type_data["session_type_id"],
+                "session_type_name": type_data["session_type_name"],
+                "slots": list(type_data["slots"].values()),
+            }
+        )
 
     return {"day_name": day_name, "groups": groups}
 
@@ -425,10 +408,7 @@ async def list_registrations(
     # Batch-fetch booking option names
     opt_map = await _get_option_name_map(db, conference_id, tenant_id)
 
-    items = [
-        _build_response(reg, option_name=opt_map.get(reg.booking_option_id))
-        for reg in registrations
-    ]
+    items = [_build_response(reg, option_name=opt_map.get(reg.booking_option_id)) for reg in registrations]
 
     return RegistrationListResponse(
         items=items,
@@ -521,9 +501,7 @@ async def create_individual_registration(
     await db.flush()
 
     # Create add-on items
-    items = await _create_items(
-        db, reg, data.items, conference_id, tenant_id, conference
-    )
+    items = await _create_items(db, reg, data.items, conference_id, tenant_id, conference)
 
     await db.commit()
     await db.refresh(reg)
@@ -582,9 +560,7 @@ async def create_company_registration(
     db.add(reg)
     await db.flush()
 
-    items = await _create_items(
-        db, reg, data.items, conference_id, tenant_id, conference
-    )
+    items = await _create_items(db, reg, data.items, conference_id, tenant_id, conference)
 
     await db.commit()
     await db.refresh(reg)
@@ -654,9 +630,7 @@ async def create_bulk_registration(
         db.add(reg)
         await db.flush()
 
-        items = await _create_items(
-            db, reg, att.items, conference_id, tenant_id, conference
-        )
+        items = await _create_items(db, reg, att.items, conference_id, tenant_id, conference)
         reg.billing_profile = billing
         responses.append(
             _build_response(
@@ -712,15 +686,11 @@ async def update_registration(
 
     # Validate email uniqueness if changed
     if "email" in update_data:
-        await _check_email_unique(
-            db, conference_id, update_data["email"], exclude_id=registration_id
-        )
+        await _check_email_unique(db, conference_id, update_data["email"], exclude_id=registration_id)
 
     # Validate booking option if changed
     if "booking_option_id" in update_data:
-        await _validate_booking_option(
-            db, update_data["booking_option_id"], conference_id, tenant_id
-        )
+        await _validate_booking_option(db, update_data["booking_option_id"], conference_id, tenant_id)
 
     for field, value in update_data.items():
         setattr(reg, field, value)
@@ -794,9 +764,7 @@ async def add_registration_item(
     if not reg:
         raise NotFoundError(f"Registration '{registration_id}' not found")
 
-    item_name, pending = await _resolve_item(
-        db, data, conference_id, tenant_id, conference
-    )
+    item_name, pending = await _resolve_item(db, data, conference_id, tenant_id, conference)
 
     item = RegistrationItem(
         tenant_id=tenant_id,
@@ -930,19 +898,64 @@ async def update_billing_profile(
 # ---------------------------------------------------------------------------
 
 EU_COUNTRIES = {
-    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
-    "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
-    "PL", "PT", "RO", "SK", "SI", "ES", "SE",
+    "AT",
+    "BE",
+    "BG",
+    "HR",
+    "CY",
+    "CZ",
+    "DK",
+    "EE",
+    "FI",
+    "FR",
+    "DE",
+    "GR",
+    "HU",
+    "IE",
+    "IT",
+    "LV",
+    "LT",
+    "LU",
+    "MT",
+    "NL",
+    "PL",
+    "PT",
+    "RO",
+    "SK",
+    "SI",
+    "ES",
+    "SE",
 }
 
 # Country code prefix mapping for VAT numbers
 COUNTRY_VAT_PREFIX = {
-    "AT": "AT", "BE": "BE", "BG": "BG", "HR": "HR", "CY": "CY",
-    "CZ": "CZ", "DK": "DK", "EE": "EE", "FI": "FI", "FR": "FR",
-    "DE": "DE", "GR": "EL", "HU": "HU", "IE": "IE", "IT": "IT",
-    "LV": "LV", "LT": "LT", "LU": "LU", "MT": "MT", "NL": "NL",
-    "PL": "PL", "PT": "PT", "RO": "RO", "SK": "SK", "SI": "SI",
-    "ES": "ES", "SE": "SE",
+    "AT": "AT",
+    "BE": "BE",
+    "BG": "BG",
+    "HR": "HR",
+    "CY": "CY",
+    "CZ": "CZ",
+    "DK": "DK",
+    "EE": "EE",
+    "FI": "FI",
+    "FR": "FR",
+    "DE": "DE",
+    "GR": "EL",
+    "HU": "HU",
+    "IE": "IE",
+    "IT": "IT",
+    "LV": "LV",
+    "LT": "LT",
+    "LU": "LU",
+    "MT": "MT",
+    "NL": "NL",
+    "PL": "PL",
+    "PT": "PT",
+    "RO": "RO",
+    "SK": "SK",
+    "SI": "SI",
+    "ES": "ES",
+    "SE": "SE",
 }
 
 # Basic regex patterns per country prefix
@@ -1065,7 +1078,12 @@ async def validate_vat(
             if vies_result is False:
                 return {"valid": False, "method": "vies", "vat_normalized": vat}
             # VIES unavailable — regex passed, report as uncertain
-            return {"valid": None, "method": "regex", "vat_normalized": vat, "message": "Format OK but could not verify online"}
+            return {
+                "valid": None,
+                "method": "regex",
+                "vat_normalized": vat,
+                "message": "Format OK but could not verify online",
+            }
         return {"valid": False, "method": "stdnum", "vat_normalized": vat}
 
     # stdnum returned None (error/not applicable) — fall through to regex + VIES
@@ -1075,6 +1093,11 @@ async def validate_vat(
             return {"valid": True, "method": "vies", "vat_normalized": vat}
         if vies_result is False:
             return {"valid": False, "method": "vies", "vat_normalized": vat}
-        return {"valid": None, "method": "regex", "vat_normalized": vat, "message": "Format OK but could not verify online"}
+        return {
+            "valid": None,
+            "method": "regex",
+            "vat_normalized": vat,
+            "message": "Format OK but could not verify online",
+        }
 
     return {"valid": False, "method": "regex", "vat_normalized": vat}

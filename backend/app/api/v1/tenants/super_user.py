@@ -50,7 +50,9 @@ async def get_tenant_super_user(
             "email": super_user.email,
             "first_name": super_user.first_name,
             "last_name": super_user.last_name,
-        } if super_user else None,
+        }
+        if super_user
+        else None,
     }
 
 

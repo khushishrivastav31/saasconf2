@@ -4,29 +4,29 @@ import csv
 import io
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, update
+from sqlalchemy import select
 
+from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import ValidationError
 from app.core.file_validation import safe_content_disposition
-from app.core.html_sanitize import sanitize_html
 from app.models.associations import ConferenceCFP
 from app.models.audit import AuditLog
 from app.models.cfp import (
+    CallForPapers,
     CFPApplicant,
     CFPPaper,
     CFPPaperCospeaker,
-    CallForPapers,
     CFPStatus,
     PaperStatus,
 )
-from app.models.messaging import Message, MessageParticipant, MessageThread
 from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
+from app.models.messaging import Message, MessageParticipant, MessageThread
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
 from app.models.settings import EmailTemplate, SessionType
 from app.schemas.email_template import EmailTemplateType
@@ -35,8 +35,6 @@ from app.schemas.program import (
     ProgramPublishPreview,
     ProgramPublishResponse,
 )
-
-from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 
 from ._shared import MODULE_CODE
 
@@ -47,14 +45,12 @@ router = APIRouter()
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 async def _get_conference_papers(db, conference_id: UUID, tenant_id: UUID):
     """Get all non-draft papers for this conference's CFPs."""
-    conference_cfp_ids = select(ConferenceCFP.cfp_id).where(
-        ConferenceCFP.conference_id == conference_id
-    )
+    conference_cfp_ids = select(ConferenceCFP.cfp_id).where(ConferenceCFP.conference_id == conference_id)
     result = await db.execute(
-        select(CFPPaper)
-        .where(
+        select(CFPPaper).where(
             CFPPaper.tenant_id == tenant_id,
             CFPPaper.cfp_id.in_(conference_cfp_ids),
             CFPPaper.status != PaperStatus.DRAFT.value,
@@ -96,16 +92,12 @@ def _build_paper_list_html(titles: list[str]) -> str:
     return f"<ul>{items}</ul>"
 
 
-def _build_speaker_paper_map(
-    papers, session_paper_ids: set[UUID]
-) -> dict[UUID, dict[str, list[str]]]:
+def _build_speaker_paper_map(papers, session_paper_ids: set[UUID]) -> dict[UUID, dict[str, list[str]]]:
     """Build a map: applicant_id -> {accepted: [titles], rejected: [titles]}.
 
     Includes both main speakers and co-speakers.
     """
-    speaker_papers: dict[UUID, dict[str, list[str]]] = defaultdict(
-        lambda: {"accepted": [], "rejected": []}
-    )
+    speaker_papers: dict[UUID, dict[str, list[str]]] = defaultdict(lambda: {"accepted": [], "rejected": []})
 
     for paper in papers:
         is_accepted = paper.id in session_paper_ids
@@ -122,7 +114,10 @@ def _build_speaker_paper_map(
 
 
 async def _get_email_template(
-    db, tenant_id: UUID, conference_id: UUID, template_type: str,
+    db,
+    tenant_id: UUID,
+    conference_id: UUID,
+    template_type: str,
 ) -> tuple[str, str]:
     """Fetch a customised email template or fall back to the default.
 
@@ -178,13 +173,19 @@ async def _send_consolidated_notifications(
 
     # Fetch configurable templates once
     acceptance_subject_tpl, acceptance_body_tpl = await _get_email_template(
-        db, tenant_id, conference_id, EmailTemplateType.PAPER_ACCEPTANCE,
+        db,
+        tenant_id,
+        conference_id,
+        EmailTemplateType.PAPER_ACCEPTANCE,
     )
     rejection_subject_tpl, rejection_body_tpl = await _get_email_template(
-        db, tenant_id, conference_id, EmailTemplateType.PAPER_REJECTION,
+        db,
+        tenant_id,
+        conference_id,
+        EmailTemplateType.PAPER_REJECTION,
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     bulk_id = uuid.uuid4()
     threads_created = 0
 
@@ -214,8 +215,15 @@ async def _send_consolidated_notifications(
                 paper_list=paper_list_html,
             )
             await _create_notification_thread(
-                db, tenant_id, conference_id, current_user_id, applicant_id,
-                subject, body, bulk_id, now,
+                db,
+                tenant_id,
+                conference_id,
+                current_user_id,
+                applicant_id,
+                subject,
+                body,
+                bulk_id,
+                now,
             )
             threads_created += 1
 
@@ -237,8 +245,15 @@ async def _send_consolidated_notifications(
                 paper_list=paper_list_html,
             )
             await _create_notification_thread(
-                db, tenant_id, conference_id, current_user_id, applicant_id,
-                subject, body, bulk_id, now,
+                db,
+                tenant_id,
+                conference_id,
+                current_user_id,
+                applicant_id,
+                subject,
+                body,
+                bulk_id,
+                now,
             )
             threads_created += 1
 
@@ -266,31 +281,38 @@ async def _create_notification_thread(
     db.add(thread)
     await db.flush()
 
-    db.add(MessageParticipant(
-        tenant_id=tenant_id,
-        thread_id=thread.id,
-        participant_type="user",
-        participant_id=sender_user_id,
-        last_read_at=now,
-    ))
-    db.add(MessageParticipant(
-        tenant_id=tenant_id,
-        thread_id=thread.id,
-        participant_type="applicant",
-        participant_id=recipient_applicant_id,
-    ))
-    db.add(Message(
-        tenant_id=tenant_id,
-        thread_id=thread.id,
-        sender_type="user",
-        sender_id=sender_user_id,
-        body_html=body_html,
-    ))
+    db.add(
+        MessageParticipant(
+            tenant_id=tenant_id,
+            thread_id=thread.id,
+            participant_type="user",
+            participant_id=sender_user_id,
+            last_read_at=now,
+        )
+    )
+    db.add(
+        MessageParticipant(
+            tenant_id=tenant_id,
+            thread_id=thread.id,
+            participant_type="applicant",
+            participant_id=recipient_applicant_id,
+        )
+    )
+    db.add(
+        Message(
+            tenant_id=tenant_id,
+            thread_id=thread.id,
+            sender_type="user",
+            sender_id=sender_user_id,
+            body_html=body_html,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get(
     "/publish/preview",
@@ -313,9 +335,7 @@ async def publish_preview(
     # Collect speaker names
     speaker_ids: set[UUID] = set()
     for paper in papers:
-        all_speakers = [paper.main_speaker_id] + [
-            cs.applicant_id for cs in paper.cospeaker_associations
-        ]
+        all_speakers = [paper.main_speaker_id] + [cs.applicant_id for cs in paper.cospeaker_associations]
         speaker_ids.update(all_speakers)
     speaker_names = await _get_speaker_names(db, speaker_ids, current_user.tenant_id)
 
@@ -408,9 +428,7 @@ async def publish_program(
             papers_rejected += 1
 
     # Step 2: Update CFP statuses to COMPLETED
-    conference_cfp_ids = select(ConferenceCFP.cfp_id).where(
-        ConferenceCFP.conference_id == conference_id
-    )
+    conference_cfp_ids = select(ConferenceCFP.cfp_id).where(ConferenceCFP.conference_id == conference_id)
     cfp_result = await db.execute(
         select(CallForPapers).where(
             CallForPapers.id.in_(conference_cfp_ids),
@@ -424,29 +442,35 @@ async def publish_program(
     # Step 3: Send consolidated notifications
     speaker_paper_map = _build_speaker_paper_map(papers, session_paper_ids)
     notifications_sent = await _send_consolidated_notifications(
-        db, tenant_id, conference_id, conference.name,
-        current_user.user_id, speaker_paper_map,
+        db,
+        tenant_id,
+        conference_id,
+        conference.name,
+        current_user.user_id,
+        speaker_paper_map,
     )
 
     # Step 4: Update conference published timestamp
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     conference.program_published_at = now
 
     # Step 5: Audit log
-    db.add(AuditLog(
-        tenant_id=tenant_id,
-        user_id=current_user.user_id,
-        action="program.publish",
-        resource_type="conference",
-        resource_id=str(conference_id),
-        details={
-            "papers_accepted": papers_accepted,
-            "papers_rejected": papers_rejected,
-            "notifications_sent": notifications_sent,
-        },
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("user-agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=tenant_id,
+            user_id=current_user.user_id,
+            action="program.publish",
+            resource_type="conference",
+            resource_id=str(conference_id),
+            details={
+                "papers_accepted": papers_accepted,
+                "papers_rejected": papers_rejected,
+                "notifications_sent": notifications_sent,
+            },
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("user-agent"),
+        )
+    )
 
     await db.commit()
 
@@ -511,33 +535,39 @@ async def update_program(
         changed_session_ids = {p.id for p in newly_accepted_papers}
         speaker_paper_map = _build_speaker_paper_map(changed_papers, changed_session_ids)
         notifications_sent = await _send_consolidated_notifications(
-            db, tenant_id, conference_id, conference.name,
-            current_user.user_id, speaker_paper_map,
+            db,
+            tenant_id,
+            conference_id,
+            conference.name,
+            current_user.user_id,
+            speaker_paper_map,
         )
     else:
         notifications_sent = 0
 
     # Update timestamp
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     conference.program_published_at = now
 
     # Audit log
-    db.add(AuditLog(
-        tenant_id=tenant_id,
-        user_id=current_user.user_id,
-        action="program.update",
-        resource_type="conference",
-        resource_id=str(conference_id),
-        details={
-            "papers_accepted": papers_accepted,
-            "papers_rejected": papers_rejected,
-            "newly_accepted": len(newly_accepted_papers),
-            "newly_rejected": len(newly_rejected_papers),
-            "notifications_sent": notifications_sent,
-        },
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("user-agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=tenant_id,
+            user_id=current_user.user_id,
+            action="program.update",
+            resource_type="conference",
+            resource_id=str(conference_id),
+            details={
+                "papers_accepted": papers_accepted,
+                "papers_rejected": papers_rejected,
+                "newly_accepted": len(newly_accepted_papers),
+                "newly_rejected": len(newly_rejected_papers),
+                "notifications_sent": notifications_sent,
+            },
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("user-agent"),
+        )
+    )
 
     await db.commit()
 
@@ -574,19 +604,21 @@ async def export_sessions(
 
     # Fetch all days
     days_result = await db.execute(
-        select(ProgramDay).where(
+        select(ProgramDay)
+        .where(
             ProgramDay.conference_id == conference_id,
             ProgramDay.tenant_id == tenant_id,
-        ).order_by(ProgramDay.sort_order)
+        )
+        .order_by(ProgramDay.sort_order)
     )
     days = {d.id: d for d in days_result.scalars().all()}
 
     # Fetch all time slots
     day_ids = list(days.keys())
     slots_result = await db.execute(
-        select(ProgramTimeSlot).where(
-            ProgramTimeSlot.program_day_id.in_(day_ids) if day_ids else False
-        ).order_by(ProgramTimeSlot.sort_order)
+        select(ProgramTimeSlot)
+        .where(ProgramTimeSlot.program_day_id.in_(day_ids) if day_ids else False)
+        .order_by(ProgramTimeSlot.sort_order)
     )
     slots = {s.id: s for s in slots_result.scalars().all()}
 
@@ -603,9 +635,7 @@ async def export_sessions(
     type_ids = [s.session_type_id for s in sessions if s.session_type_id]
     type_map: dict[UUID, str] = {}
     if type_ids:
-        type_result = await db.execute(
-            select(SessionType.id, SessionType.name).where(SessionType.id.in_(type_ids))
-        )
+        type_result = await db.execute(select(SessionType.id, SessionType.name).where(SessionType.id.in_(type_ids)))
         type_map = {row.id: row.name for row in type_result.all()}
 
     # Fetch papers and speakers
@@ -615,27 +645,19 @@ async def export_sessions(
     cospeaker_map: dict[UUID, list[str]] = {}
 
     if paper_ids:
-        paper_result = await db.execute(
-            select(CFPPaper).where(CFPPaper.id.in_(paper_ids))
-        )
+        paper_result = await db.execute(select(CFPPaper).where(CFPPaper.id.in_(paper_ids)))
         for paper in paper_result.scalars().all():
             paper_map[paper.id] = paper
 
         # Fetch main speakers
         speaker_ids = [p.main_speaker_id for p in paper_map.values()]
         if speaker_ids:
-            speaker_result = await db.execute(
-                select(CFPApplicant).where(CFPApplicant.id.in_(speaker_ids))
-            )
+            speaker_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(speaker_ids)))
             for a in speaker_result.scalars().all():
                 speaker_map[a.id] = a
 
         # Fetch co-speakers
-        cospeaker_result = await db.execute(
-            select(CFPPaperCospeaker).where(
-                CFPPaperCospeaker.paper_id.in_(paper_ids)
-            )
-        )
+        cospeaker_result = await db.execute(select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id.in_(paper_ids)))
         cs_applicant_ids: set[UUID] = set()
         cs_by_paper: dict[UUID, list[UUID]] = defaultdict(list)
         for cs in cospeaker_result.scalars().all():
@@ -649,10 +671,7 @@ async def export_sessions(
                     CFPApplicant.id.in_(list(cs_applicant_ids))
                 )
             )
-            cs_names = {
-                row.id: f"{row.first_name} {row.last_name}".strip()
-                for row in cs_name_result.all()
-            }
+            cs_names = {row.id: f"{row.first_name} {row.last_name}".strip() for row in cs_name_result.all()}
 
         for paper_id, cs_ids in cs_by_paper.items():
             cospeaker_map[paper_id] = [cs_names.get(cid, "") for cid in cs_ids if cs_names.get(cid)]
@@ -668,9 +687,7 @@ async def export_sessions(
     schema = schema_result.scalar_one_or_none()
     if schema:
         fields_result = await db.execute(
-            select(PaperFormField)
-            .where(PaperFormField.schema_id == schema.id)
-            .order_by(PaperFormField.sort_order)
+            select(PaperFormField).where(PaperFormField.schema_id == schema.id).order_by(PaperFormField.sort_order)
         )
         custom_fields = list(fields_result.scalars().all())
 
@@ -678,19 +695,33 @@ async def export_sessions(
     output = io.StringIO()
     writer = csv.writer(output)
     header = [
-        "Day", "Date", "Start Time", "End Time", "Track/Room",
-        "Session Title", "Session Type", "Speaker Name", "Speaker Email",
-        "Speaker Company", "Co-Speakers", "Paper Title", "Paper Abstract",
-        "Level", "Learning Objectives", "Importance", "Paper Status",
+        "Day",
+        "Date",
+        "Start Time",
+        "End Time",
+        "Track/Room",
+        "Session Title",
+        "Session Type",
+        "Speaker Name",
+        "Speaker Email",
+        "Speaker Company",
+        "Co-Speakers",
+        "Paper Title",
+        "Paper Abstract",
+        "Level",
+        "Learning Objectives",
+        "Importance",
+        "Paper Status",
     ]
     # Add custom field columns
     for cf in custom_fields:
         header.append(cf.label)
     writer.writerow(header)
 
-    for session in sorted(sessions, key=lambda s: (
-        slots.get(s.start_slot_id, ProgramTimeSlot()).sort_order if slots.get(s.start_slot_id) else 0,
-    )):
+    for session in sorted(
+        sessions,
+        key=lambda s: (slots.get(s.start_slot_id, ProgramTimeSlot()).sort_order if slots.get(s.start_slot_id) else 0,),
+    ):
         slot = slots.get(session.start_slot_id)
         track = tracks.get(session.start_track_id) if session.start_track_id else None
         day = days.get(slot.program_day_id) if slot else None

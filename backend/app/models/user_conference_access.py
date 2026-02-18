@@ -2,10 +2,11 @@
 
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, func, Enum as SQLEnum
+from sqlalchemy import DateTime, ForeignKey, Index, func
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 
-class ConferenceAccessLevel(str, Enum):
+class ConferenceAccessLevel(StrEnum):
     """Access levels for conference access."""
 
     ADMIN = "admin"  # Can edit conference
@@ -32,9 +33,7 @@ class UserConferenceAccess(Base):
 
     __tablename__ = "user_conference_access"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -61,17 +60,11 @@ class UserConferenceAccess(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    granted_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    user: Mapped["User"] = relationship(
-        "User", foreign_keys=[user_id], back_populates="conference_access"
-    )
-    conference: Mapped["Conference"] = relationship(
-        "Conference", back_populates="user_access"
-    )
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id], back_populates="conference_access")
+    conference: Mapped["Conference"] = relationship("Conference", back_populates="user_access")
     granter: Mapped["User | None"] = relationship("User", foreign_keys=[granted_by])
 
     # Indexes

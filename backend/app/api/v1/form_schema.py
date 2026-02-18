@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 

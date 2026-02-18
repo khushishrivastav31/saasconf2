@@ -7,14 +7,13 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
 from sqlalchemy import select
 
-from app.core.dependencies import CurrentUserDep, DbSessionDep, require_module
 from app.config import get_settings
+from app.core.conference_helpers import get_conference_for_tenant
+from app.core.dependencies import CurrentUserDep, DbSessionDep, require_module
 from app.core.exceptions import NotFoundError, ValidationError
-from app.core.file_validation import validate_upload, sanitize_filename, safe_content_disposition
+from app.core.file_validation import safe_content_disposition, sanitize_filename, validate_upload
 from app.models.attachment import Attachment
 from app.schemas.attachment import AttachmentResponse
-
-from app.core.conference_helpers import get_conference_for_tenant
 
 from ._shared import MODULE_CODE
 
@@ -43,9 +42,7 @@ async def upload_message_attachment(
     settings = get_settings()
     max_size = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
     if file_size > max_size:
-        raise ValidationError(
-            f"File size exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)"
-        )
+        raise ValidationError(f"File size exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)")
 
     content_type = file.content_type or "application/octet-stream"
     verified_type = validate_upload(file_data, content_type, "message")

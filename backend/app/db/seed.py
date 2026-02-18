@@ -17,9 +17,7 @@ settings = get_settings()
 
 async def seed_super_admin(session: AsyncSession) -> None:
     """Create the initial super admin user if it doesn't exist."""
-    result = await session.execute(
-        select(User).where(User.email == settings.SUPER_ADMIN_EMAIL)
-    )
+    result = await session.execute(select(User).where(User.email == settings.SUPER_ADMIN_EMAIL))
     existing = result.scalar_one_or_none()
 
     if existing:
@@ -116,9 +114,7 @@ async def seed_default_modules(session: AsyncSession) -> None:
     ]
 
     for module_data in default_modules:
-        result = await session.execute(
-            select(Module).where(Module.code == module_data["code"])
-        )
+        result = await session.execute(select(Module).where(Module.code == module_data["code"]))
         existing = result.scalar_one_or_none()
 
         if existing:
@@ -158,9 +154,7 @@ async def seed_default_currencies(session: AsyncSession) -> None:
     ]
 
     for currency_data in default_currencies:
-        result = await session.execute(
-            select(PlatformCurrency).where(PlatformCurrency.code == currency_data["code"])
-        )
+        result = await session.execute(select(PlatformCurrency).where(PlatformCurrency.code == currency_data["code"]))
         existing = result.scalar_one_or_none()
 
         if existing:

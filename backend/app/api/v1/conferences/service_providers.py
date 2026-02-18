@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 
 from app.api.v1.service_providers import build_service_provider_response
+from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -24,14 +25,16 @@ from app.schemas.service_provider import (
     ServiceProviderUpdate,
 )
 
-from app.core.conference_helpers import get_conference_for_tenant
-
 router = APIRouter()
 
 MODULE_CODE_SP = "service_providers"
 
 
-@router.get("/{conference_id}/service-providers", response_model=ServiceProviderListResponse, dependencies=[Depends(require_module(MODULE_CODE_SP))])
+@router.get(
+    "/{conference_id}/service-providers",
+    response_model=ServiceProviderListResponse,
+    dependencies=[Depends(require_module(MODULE_CODE_SP))],
+)
 async def list_conference_service_providers(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -53,7 +56,12 @@ async def list_conference_service_providers(
     return ServiceProviderListResponse(items=items, total=len(items))
 
 
-@router.post("/{conference_id}/service-providers", response_model=ServiceProviderResponse, status_code=201, dependencies=[Depends(require_module(MODULE_CODE_SP))])
+@router.post(
+    "/{conference_id}/service-providers",
+    response_model=ServiceProviderResponse,
+    status_code=201,
+    dependencies=[Depends(require_module(MODULE_CODE_SP))],
+)
 async def create_conference_service_provider(
     conference_id: UUID,
     data: ServiceProviderCreate,
@@ -90,16 +98,18 @@ async def create_conference_service_provider(
     )
     db.add(sp)
 
-    db.add(AuditLog(
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.user_id,
-        action="service_provider.create",
-        resource_type="service_provider",
-        resource_id=sp.id,
-        details={"company_name": sp.company_name, "conference_id": str(conference.id)},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action="service_provider.create",
+            resource_type="service_provider",
+            resource_id=sp.id,
+            details={"company_name": sp.company_name, "conference_id": str(conference.id)},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     await db.refresh(sp)
@@ -107,7 +117,11 @@ async def create_conference_service_provider(
     return build_service_provider_response(sp)
 
 
-@router.put("/{conference_id}/service-providers/{provider_id}", response_model=ServiceProviderResponse, dependencies=[Depends(require_module(MODULE_CODE_SP))])
+@router.put(
+    "/{conference_id}/service-providers/{provider_id}",
+    response_model=ServiceProviderResponse,
+    dependencies=[Depends(require_module(MODULE_CODE_SP))],
+)
 async def update_conference_service_provider(
     conference_id: UUID,
     provider_id: UUID,
@@ -138,23 +152,24 @@ async def update_conference_service_provider(
     update_data = data.model_dump(exclude_unset=True)
     if "contact_persons" in update_data and update_data["contact_persons"] is not None:
         update_data["contact_persons"] = [
-            cp.model_dump() if hasattr(cp, "model_dump") else cp
-            for cp in update_data["contact_persons"]
+            cp.model_dump() if hasattr(cp, "model_dump") else cp for cp in update_data["contact_persons"]
         ]
 
     for field, value in update_data.items():
         setattr(sp, field, value)
 
-    db.add(AuditLog(
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.user_id,
-        action="service_provider.update",
-        resource_type="service_provider",
-        resource_id=sp.id,
-        details={"updated_fields": list(update_data.keys())},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action="service_provider.update",
+            resource_type="service_provider",
+            resource_id=sp.id,
+            details={"updated_fields": list(update_data.keys())},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     await db.refresh(sp)
@@ -162,7 +177,9 @@ async def update_conference_service_provider(
     return build_service_provider_response(sp)
 
 
-@router.delete("/{conference_id}/service-providers/{provider_id}", dependencies=[Depends(require_module(MODULE_CODE_SP))])
+@router.delete(
+    "/{conference_id}/service-providers/{provider_id}", dependencies=[Depends(require_module(MODULE_CODE_SP))]
+)
 async def delete_conference_service_provider(
     conference_id: UUID,
     provider_id: UUID,
@@ -191,9 +208,7 @@ async def delete_conference_service_provider(
 
     # Delete associated attachments
     attachments = await db.execute(
-        select(Attachment)
-        .where(Attachment.entity_type == "service_provider")
-        .where(Attachment.entity_id == sp.id)
+        select(Attachment).where(Attachment.entity_type == "service_provider").where(Attachment.entity_id == sp.id)
     )
     for att in attachments.scalars().all():
         await db.delete(att)
@@ -201,16 +216,18 @@ async def delete_conference_service_provider(
     company_name = sp.company_name
     await db.delete(sp)
 
-    db.add(AuditLog(
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.user_id,
-        action="service_provider.delete",
-        resource_type="service_provider",
-        resource_id=provider_id,
-        details={"company_name": company_name, "conference_id": str(conference.id)},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action="service_provider.delete",
+            resource_type="service_provider",
+            resource_id=provider_id,
+            details={"company_name": company_name, "conference_id": str(conference.id)},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     return {"message": f"Service provider '{company_name}' deleted"}

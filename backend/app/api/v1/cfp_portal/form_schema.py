@@ -27,17 +27,13 @@ async def get_cfp_paper_form_schema(
 ) -> PaperFormSchemaResponse:
     """Get the paper form schema for a CFP (via its conference)."""
     # Get the CFP
-    result = await db.execute(
-        select(CallForPapers).where(CallForPapers.id == cfp_id)
-    )
+    result = await db.execute(select(CallForPapers).where(CallForPapers.id == cfp_id))
     cfp = result.scalar_one_or_none()
     if not cfp:
         raise NotFoundError(f"CFP with ID '{cfp_id}' not found")
 
     # Get the conference ID for this CFP
-    result = await db.execute(
-        select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == cfp_id)
-    )
+    result = await db.execute(select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == cfp_id))
     row = result.first()
     if not row:
         raise NotFoundError(f"Conference not found for CFP '{cfp_id}'")
@@ -65,6 +61,7 @@ async def get_cfp_paper_form_schema(
         }
         # Create a temporary response without persisting
         from app.core.utils import utcnow
+
         return PaperFormSchemaResponse(
             id=UUID("00000000-0000-0000-0000-000000000000"),
             tenant_id=cfp.tenant_id,

@@ -9,8 +9,8 @@ Revises: 068_drop_event_types
 Create Date: 2026-02-13
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "069_session_free_slots"
 down_revision = "068_drop_event_types"

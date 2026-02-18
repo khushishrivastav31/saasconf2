@@ -47,8 +47,7 @@ class TenantBase(BaseModel):
         """Validate slug format (lowercase, alphanumeric, hyphens only)."""
         if not re.match(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$", v):
             raise ValueError(
-                "Slug must be lowercase, start/end with alphanumeric, "
-                "and contain only letters, numbers, and hyphens"
+                "Slug must be lowercase, start/end with alphanumeric, and contain only letters, numbers, and hyphens"
             )
         return v
 
@@ -111,8 +110,7 @@ class TenantUpdate(BaseModel):
             return v
         if not re.match(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$", v):
             raise ValueError(
-                "Slug must be lowercase, start/end with alphanumeric, "
-                "and contain only letters, numbers, and hyphens"
+                "Slug must be lowercase, start/end with alphanumeric, and contain only letters, numbers, and hyphens"
             )
         return v
 

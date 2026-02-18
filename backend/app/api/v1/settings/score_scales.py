@@ -25,8 +25,8 @@ from app.schemas.review import (
 from ._crud_factory import create_crud_router
 from ._shared import _check_conference_admin, _resolve_conference
 
-
 # ---- Shared helpers --------------------------------------------------------
+
 
 async def _build_scale_response(entity: Any, conference: Any, db: Any) -> ReviewScoreScaleResponse:
     """Build a response with eagerly loaded options."""
@@ -57,9 +57,7 @@ async def _build_scale_response(entity: Any, conference: Any, db: Any) -> Review
 
 async def _check_questions_using_scale(entity: Any, conference: Any, db: Any) -> None:
     """Block deletion if any review questions reference this scale."""
-    question_check = await db.execute(
-        select(ReviewQuestion).where(ReviewQuestion.score_scale_id == entity.id)
-    )
+    question_check = await db.execute(select(ReviewQuestion).where(ReviewQuestion.score_scale_id == entity.id))
     if question_check.scalar_one_or_none():
         raise ValidationError(
             f"Cannot delete score scale '{entity.name}' because it is referenced by one or more review questions"
@@ -86,7 +84,8 @@ _factory_router = create_crud_router(
 
 # Keep only GET (list) and DELETE from the factory; create/update are custom.
 _factory_router.routes = [
-    route for route in _factory_router.routes
+    route
+    for route in _factory_router.routes
     if not (
         hasattr(route, "methods")
         and (
@@ -101,6 +100,7 @@ router.include_router(_factory_router)
 
 
 # ---- Custom create / update (nested options) -------------------------------
+
 
 @router.post("/score-scales", response_model=ReviewScoreScaleResponse)
 async def create_score_scale(
@@ -135,24 +135,28 @@ async def create_score_scale(
     await db.flush()
 
     for opt_data in scale_data.options:
-        db.add(ReviewScaleOption(
-            scale_id=scale.id,
-            label=opt_data.label,
-            numeric_value=opt_data.numeric_value,
-            is_unsure=opt_data.is_unsure,
-            display_order=opt_data.display_order,
-        ))
+        db.add(
+            ReviewScaleOption(
+                scale_id=scale.id,
+                label=opt_data.label,
+                numeric_value=opt_data.numeric_value,
+                is_unsure=opt_data.is_unsure,
+                display_order=opt_data.display_order,
+            )
+        )
 
-    db.add(AuditLog(
-        tenant_id=conference.tenant_id,
-        user_id=current_user.user_id,
-        action="score_scale.create",
-        resource_type="score_scale",
-        resource_id=scale.id,
-        details={"name": scale.name, "conference_id": str(conference.id)},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=conference.tenant_id,
+            user_id=current_user.user_id,
+            action="score_scale.create",
+            resource_type="score_scale",
+            resource_id=scale.id,
+            details={"name": scale.name, "conference_id": str(conference.id)},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     await db.refresh(scale)
@@ -204,24 +208,28 @@ async def update_score_scale(
         await db.flush()
 
         for opt_data in scale_data.options:
-            db.add(ReviewScaleOption(
-                scale_id=scale.id,
-                label=opt_data.label,
-                numeric_value=opt_data.numeric_value,
-                is_unsure=opt_data.is_unsure,
-                display_order=opt_data.display_order,
-            ))
+            db.add(
+                ReviewScaleOption(
+                    scale_id=scale.id,
+                    label=opt_data.label,
+                    numeric_value=opt_data.numeric_value,
+                    is_unsure=opt_data.is_unsure,
+                    display_order=opt_data.display_order,
+                )
+            )
 
-    db.add(AuditLog(
-        tenant_id=conference.tenant_id,
-        user_id=current_user.user_id,
-        action="score_scale.update",
-        resource_type="score_scale",
-        resource_id=scale.id,
-        details={"updated_fields": list(scale_data.model_dump(exclude_unset=True).keys())},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=conference.tenant_id,
+            user_id=current_user.user_id,
+            action="score_scale.update",
+            resource_type="score_scale",
+            resource_id=scale.id,
+            details={"updated_fields": list(scale_data.model_dump(exclude_unset=True).keys())},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     await db.refresh(scale)

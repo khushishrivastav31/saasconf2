@@ -38,9 +38,7 @@ async def list_modules(
     query = select(Module)
 
     if search:
-        query = query.where(
-            unaccent_ilike(Module.name, search) | unaccent_ilike(Module.code, search)
-        )
+        query = query.where(unaccent_ilike(Module.name, search) | unaccent_ilike(Module.code, search))
 
     if is_active is not None:
         query = query.where(Module.is_active == is_active)
@@ -52,11 +50,7 @@ async def list_modules(
     # Get tenant counts for each module
     items = []
     for module in result.items:
-        tenant_count = (
-            await db.execute(
-                select(func.count()).where(TenantModule.module_id == module.id)
-            )
-        ).scalar() or 0
+        tenant_count = (await db.execute(select(func.count()).where(TenantModule.module_id == module.id))).scalar() or 0
 
         items.append(
             ModuleResponse(
@@ -147,11 +141,7 @@ async def get_module(
     if not module:
         raise NotFoundError(f"Module with ID '{module_id}' not found")
 
-    tenant_count = (
-        await db.execute(
-            select(func.count()).where(TenantModule.module_id == module.id)
-        )
-    ).scalar() or 0
+    tenant_count = (await db.execute(select(func.count()).where(TenantModule.module_id == module.id))).scalar() or 0
 
     return ModuleResponse(
         id=module.id,
@@ -201,11 +191,7 @@ async def update_module(
     await db.commit()
     await db.refresh(module)
 
-    tenant_count = (
-        await db.execute(
-            select(func.count()).where(TenantModule.module_id == module.id)
-        )
-    ).scalar() or 0
+    tenant_count = (await db.execute(select(func.count()).where(TenantModule.module_id == module.id))).scalar() or 0
 
     return ModuleResponse(
         id=module.id,

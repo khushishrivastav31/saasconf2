@@ -9,7 +9,6 @@ from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.file_validation import safe_content_disposition
@@ -173,23 +172,11 @@ async def list_applicant_activities_grouped(
     Returns activities bundled per user with pagination.
     Only accessible by tenant admins.
     """
-    # First get distinct applicants matching filters
-    base_query = _build_activity_query(
-        tenant_id=current_user.tenant_id,
-        activity_type=activity_type,
-        start_date=start_date,
-        end_date=end_date,
-        search=search,
-    )
-
     # Get unique emails with their most recent activity
-    subquery = (
-        select(
-            ApplicantActivityLog.applicant_email,
-            func.max(ApplicantActivityLog.created_at).label("last_activity"),
-        )
-        .where(ApplicantActivityLog.tenant_id == current_user.tenant_id)
-    )
+    subquery = select(
+        ApplicantActivityLog.applicant_email,
+        func.max(ApplicantActivityLog.created_at).label("last_activity"),
+    ).where(ApplicantActivityLog.tenant_id == current_user.tenant_id)
 
     if activity_type:
         subquery = subquery.where(ApplicantActivityLog.activity_type == activity_type)
@@ -210,9 +197,7 @@ async def list_applicant_activities_grouped(
     subquery = subquery.group_by(ApplicantActivityLog.applicant_email)
 
     # Count total unique emails
-    count_result = await db.execute(
-        select(func.count()).select_from(subquery.subquery())
-    )
+    count_result = await db.execute(select(func.count()).select_from(subquery.subquery()))
     total = count_result.scalar() or 0
 
     # Get paginated unique emails sorted by most recent activity
@@ -232,21 +217,13 @@ async def list_applicant_activities_grouped(
         )
 
         if activity_type:
-            activities_query = activities_query.where(
-                ApplicantActivityLog.activity_type == activity_type
-            )
+            activities_query = activities_query.where(ApplicantActivityLog.activity_type == activity_type)
         if start_date:
-            activities_query = activities_query.where(
-                ApplicantActivityLog.created_at >= start_date
-            )
+            activities_query = activities_query.where(ApplicantActivityLog.created_at >= start_date)
         if end_date:
-            activities_query = activities_query.where(
-                ApplicantActivityLog.created_at <= end_date
-            )
+            activities_query = activities_query.where(ApplicantActivityLog.created_at <= end_date)
 
-        activities_query = activities_query.order_by(
-            ApplicantActivityLog.created_at.desc()
-        )
+        activities_query = activities_query.order_by(ApplicantActivityLog.created_at.desc())
 
         result = await db.execute(activities_query)
         activities = result.scalars().all()
@@ -313,9 +290,15 @@ async def export_applicant_activities(
         # BOM + header
         header_buf = io.StringIO()
         writer = csv.writer(header_buf)
-        writer.writerow([
-            "Timestamp", "Email", "First Name", "Last Name", "Activity Type",
-        ])
+        writer.writerow(
+            [
+                "Timestamp",
+                "Email",
+                "First Name",
+                "Last Name",
+                "Activity Type",
+            ]
+        )
         yield b"\xef\xbb\xbf" + header_buf.getvalue().encode("utf-8")
 
         # Stream rows in batches
@@ -331,13 +314,15 @@ async def export_applicant_activities(
             chunk = io.StringIO()
             w = csv.writer(chunk)
             for log in logs:
-                w.writerow([
-                    log.created_at.isoformat(),
-                    log.applicant_email,
-                    log.applicant_first_name,
-                    log.applicant_last_name,
-                    log.activity_type,
-                ])
+                w.writerow(
+                    [
+                        log.created_at.isoformat(),
+                        log.applicant_email,
+                        log.applicant_first_name,
+                        log.applicant_last_name,
+                        log.activity_type,
+                    ]
+                )
             yield chunk.getvalue().encode("utf-8")
 
             if len(logs) < batch_size:

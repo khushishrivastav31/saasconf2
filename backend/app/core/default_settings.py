@@ -26,7 +26,6 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.models.review import ReviewCriterion, ReviewQuestion, ReviewScaleOption, ReviewScoreScale
 from app.models.settings import CFPCommitteeRole, PronounOption, VolunteerRole
 
-
 # ---------------------------------------------------------------------------
 # Locale-aware formatting defaults
 # ---------------------------------------------------------------------------
@@ -296,9 +295,7 @@ async def seed_default_settings(
         from app.models.conference import Conference  # local import to avoid circular deps
 
         format_defaults = get_default_settings(locale)
-        result = await db.execute(
-            select(Conference).where(Conference.id == conference_id)
-        )
+        result = await db.execute(select(Conference).where(Conference.id == conference_id))
         conference = result.scalar_one()
         existing = conference.settings or {}
         # Only set keys that are not already explicitly provided

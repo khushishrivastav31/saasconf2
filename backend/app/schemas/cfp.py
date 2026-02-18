@@ -1,24 +1,30 @@
 """Call for Papers schemas."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.core.html_sanitize import sanitize_html
 from app.core.validators import validate_phone
-from app.schemas.cfp_papers import TopicResponse  # noqa: F401 — used by CommitteeMemberResponse
+from app.schemas.cfp_papers import TopicResponse
 
 # Valid values for the configurable required-field arrays
 VALID_SPEAKER_FIELDS = {"bio", "picture", "video", "phone", "title", "company"}
 VALID_PAPER_FIELDS = {
-    "abstract_short", "abstract_long", "level",
-    "learning_objectives", "importance", "session_type", "topics", "video",
+    "abstract_short",
+    "abstract_long",
+    "level",
+    "learning_objectives",
+    "importance",
+    "session_type",
+    "topics",
+    "video",
 }
 
 
-class CFPStatus(str, Enum):
+class CFPStatus(StrEnum):
     """Call for Papers status enum."""
 
     DRAFT = "draft"
@@ -28,7 +34,7 @@ class CFPStatus(str, Enum):
     COMPLETED = "completed"
 
 
-class SubmissionStatus(str, Enum):
+class SubmissionStatus(StrEnum):
     """Submission status enum."""
 
     SUBMITTED = "submitted"
@@ -40,6 +46,7 @@ class SubmissionStatus(str, Enum):
 
 
 # Call for Papers Schemas
+
 
 class CFPBase(BaseModel):
     """Base CFP schema."""
@@ -82,8 +89,11 @@ class CFPBase(BaseModel):
     faqs: str | None = None
 
     @field_validator(
-        "code_of_conduct", "incentives_conditions", "tips_for_submission",
-        "guidelines_for_submissions", "faqs",
+        "code_of_conduct",
+        "incentives_conditions",
+        "tips_for_submission",
+        "guidelines_for_submissions",
+        "faqs",
     )
     @classmethod
     def sanitize_rich_text(cls, v: str | None) -> str | None:
@@ -141,8 +151,11 @@ class CFPUpdate(BaseModel):
     faqs: str | None = None
 
     @field_validator(
-        "code_of_conduct", "incentives_conditions", "tips_for_submission",
-        "guidelines_for_submissions", "faqs",
+        "code_of_conduct",
+        "incentives_conditions",
+        "tips_for_submission",
+        "guidelines_for_submissions",
+        "faqs",
     )
     @classmethod
     def sanitize_rich_text(cls, v: str | None) -> str | None:
@@ -206,6 +219,7 @@ class CFPStats(BaseModel):
 
 
 # Submission Schemas
+
 
 class SubmissionBase(BaseModel):
     """Base submission schema."""
@@ -349,9 +363,7 @@ class CommitteeMemberCreate(BaseModel):
     def check_applicant_or_new_user(self) -> "CommitteeMemberCreate":
         if self.applicant_id is None:
             if not self.first_name or not self.email or not self.password:
-                raise ValueError(
-                    "When applicant_id is not provided, first_name, email, and password are required"
-                )
+                raise ValueError("When applicant_id is not provided, first_name, email, and password are required")
         return self
 
 

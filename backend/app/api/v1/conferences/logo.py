@@ -9,7 +9,6 @@ from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.config import get_settings
-from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -18,6 +17,7 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
 from app.db.session import set_rls_context
 from app.models.attachment import Attachment
 from app.models.audit import AuditAction, AuditLog
@@ -45,9 +45,7 @@ async def upload_conference_logo(
     # Check conference exists and user has admin access
     await check_conference_admin_access(db, current_user.user_id, conference_id)
 
-    result = await db.execute(
-        select(Conference).where(Conference.id == conference_id)
-    )
+    result = await db.execute(select(Conference).where(Conference.id == conference_id))
     conference = result.scalar_one_or_none()
     if not conference:
         raise NotFoundError("Conference not found")
@@ -173,9 +171,7 @@ async def delete_conference_logo(
     # Check conference exists and user has admin access
     await check_conference_admin_access(db, current_user.user_id, conference_id)
 
-    result = await db.execute(
-        select(Conference).where(Conference.id == conference_id)
-    )
+    result = await db.execute(select(Conference).where(Conference.id == conference_id))
     conference = result.scalar_one_or_none()
     if not conference:
         raise NotFoundError("Conference not found")

@@ -64,6 +64,7 @@ class NewsArticleSendResponse(BaseModel):
 
 # Portal schemas
 
+
 class PortalNewsArticle(BaseModel):
     id: UUID
     conference_id: UUID

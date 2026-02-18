@@ -60,21 +60,17 @@ async def get_db_with_rls(
             # Set RLS context variables
             if tenant_id:
                 await session.execute(
-                    text("SELECT set_config('app.current_tenant_id', :tid, true)"),
-                    {"tid": str(tenant_id)}
+                    text("SELECT set_config('app.current_tenant_id', :tid, true)"), {"tid": str(tenant_id)}
                 )
             await session.execute(
-                text("SELECT set_config('app.is_super_admin', :sa, true)"),
-                {"sa": str(is_super_admin).lower()}
+                text("SELECT set_config('app.is_super_admin', :sa, true)"), {"sa": str(is_super_admin).lower()}
             )
             yield session
         finally:
             await session.close()
 
 
-async def set_rls_context(
-    session: AsyncSession, tenant_id: str | None = None, is_super_admin: bool = False
-) -> None:
+async def set_rls_context(session: AsyncSession, tenant_id: str | None = None, is_super_admin: bool = False) -> None:
     """
     Set RLS context on an existing session.
 
@@ -84,11 +80,7 @@ async def set_rls_context(
         is_super_admin: Whether the user is a super admin
     """
     if tenant_id:
-        await session.execute(
-            text("SELECT set_config('app.current_tenant_id', :tid, true)"),
-            {"tid": str(tenant_id)}
-        )
+        await session.execute(text("SELECT set_config('app.current_tenant_id', :tid, true)"), {"tid": str(tenant_id)})
     await session.execute(
-        text("SELECT set_config('app.is_super_admin', :sa, true)"),
-        {"sa": str(is_super_admin).lower()}
+        text("SELECT set_config('app.is_super_admin', :sa, true)"), {"sa": str(is_super_admin).lower()}
     )

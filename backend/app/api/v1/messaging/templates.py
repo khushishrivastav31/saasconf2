@@ -33,11 +33,7 @@ async def list_templates(
     """List message templates for the tenant."""
     tenant_id = current_user.tenant_id
 
-    query = (
-        select(MessageTemplate)
-        .where(MessageTemplate.tenant_id == tenant_id)
-        .order_by(MessageTemplate.name)
-    )
+    query = select(MessageTemplate).where(MessageTemplate.tenant_id == tenant_id).order_by(MessageTemplate.name)
 
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0

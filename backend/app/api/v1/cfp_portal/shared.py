@@ -41,11 +41,14 @@ async def _resolve_tenant_conference(
 async def _get_applicant_picture_url(db: AsyncSession, applicant_id, tenant_id) -> str | None:
     """Get the picture download URL for an applicant."""
     result = await db.execute(
-        select(Attachment.id).where(
+        select(Attachment.id)
+        .where(
             Attachment.tenant_id == tenant_id,
             Attachment.entity_type == "applicant_picture",
             Attachment.entity_id == applicant_id,
-        ).order_by(Attachment.created_at.desc()).limit(1)
+        )
+        .order_by(Attachment.created_at.desc())
+        .limit(1)
     )
     attachment_id = result.scalar_one_or_none()
     if attachment_id:
@@ -56,11 +59,14 @@ async def _get_applicant_picture_url(db: AsyncSession, applicant_id, tenant_id) 
 async def _get_applicant_video_url(db: AsyncSession, applicant_id, tenant_id) -> str | None:
     """Get the video download URL for an applicant."""
     result = await db.execute(
-        select(Attachment.id).where(
+        select(Attachment.id)
+        .where(
             Attachment.tenant_id == tenant_id,
             Attachment.entity_type == "applicant_video",
             Attachment.entity_id == applicant_id,
-        ).order_by(Attachment.created_at.desc()).limit(1)
+        )
+        .order_by(Attachment.created_at.desc())
+        .limit(1)
     )
     attachment_id = result.scalar_one_or_none()
     if attachment_id:
@@ -71,11 +77,14 @@ async def _get_applicant_video_url(db: AsyncSession, applicant_id, tenant_id) ->
 async def _get_paper_video_url(db: AsyncSession, paper_id, tenant_id) -> str | None:
     """Get the video download URL for a paper."""
     result = await db.execute(
-        select(Attachment.id).where(
+        select(Attachment.id)
+        .where(
             Attachment.tenant_id == tenant_id,
             Attachment.entity_type == "paper_video",
             Attachment.entity_id == paper_id,
-        ).order_by(Attachment.created_at.desc()).limit(1)
+        )
+        .order_by(Attachment.created_at.desc())
+        .limit(1)
     )
     attachment_id = result.scalar_one_or_none()
     if attachment_id:

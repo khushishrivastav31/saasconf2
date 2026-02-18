@@ -41,13 +41,13 @@ from app.schemas.cfp_portal import (
     ApplicantRefreshRequest,
     ApplicantRegisterRequest,
     ApplicantTokenResponse,
+    ForgotPasswordRequest,
     PortalCFPResponse,
     PortalCommitteeMembershipListResponse,
     PortalCommitteeMembershipResponse,
     PortalCommitteeMembershipUpdate,
     PortalConferenceSummary,
     PortalLandingResponse,
-    ForgotPasswordRequest,
     PortalTenantResponse,
     PortalTopicResponse,
     ResetPasswordRequest,
@@ -219,9 +219,7 @@ async def verify_email(
     verification.used_at = utcnow()
 
     # Verify the applicant's email
-    applicant_result = await db.execute(
-        select(CFPApplicant).where(CFPApplicant.id == verification.applicant_id)
-    )
+    applicant_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == verification.applicant_id))
     applicant = applicant_result.scalar_one_or_none()
     if not applicant:
         raise HTTPException(status_code=400, detail="Applicant not found")
@@ -456,9 +454,7 @@ async def refresh_applicant_token(
         raise AuthenticationError("Invalid or expired refresh token")
 
     # Load applicant
-    applicant_result = await db.execute(
-        select(CFPApplicant).where(CFPApplicant.id == db_token.applicant_id)
-    )
+    applicant_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == db_token.applicant_id))
     applicant = applicant_result.scalar_one_or_none()
     if not applicant:
         raise AuthenticationError("Applicant not found")
@@ -582,10 +578,7 @@ async def list_my_committee_memberships(
             conference_id=m.conference_id,
             conference_name=m.conference.name,
             role=m.role,
-            topics=[
-                PortalTopicResponse(id=t.id, name=t.name, description=t.description)
-                for t in m.topics
-            ],
+            topics=[PortalTopicResponse(id=t.id, name=t.name, description=t.description) for t in m.topics],
             created_at=m.created_at,
         )
         for m in members
@@ -637,10 +630,7 @@ async def update_my_committee_membership(
         conference_id=member.conference_id,
         conference_name=member.conference.name,
         role=member.role,
-        topics=[
-            PortalTopicResponse(id=t.id, name=t.name, description=t.description)
-            for t in member.topics
-        ],
+        topics=[PortalTopicResponse(id=t.id, name=t.name, description=t.description) for t in member.topics],
         created_at=member.created_at,
     )
 
@@ -683,6 +673,7 @@ async def get_tenant_logo_public(
 ) -> bytes:
     """Serve the tenant logo without authentication (public endpoint)."""
     from fastapi.responses import Response
+
     from app.core.file_validation import safe_content_disposition
     from app.models.attachment import Attachment
 

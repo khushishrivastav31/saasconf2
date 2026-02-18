@@ -123,9 +123,7 @@ class BookingPackageCreate(BaseModel):
     description: str | None = None
     sort_order: int = 0
     is_active: bool = True
-    option_ids: list[UUID] = Field(
-        ..., min_length=1, description="Booking option IDs included in this package"
-    )
+    option_ids: list[UUID] = Field(..., min_length=1, description="Booking option IDs included in this package")
 
 
 class BookingPackageUpdate(BaseModel):

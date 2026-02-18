@@ -1,17 +1,15 @@
 """Schemas for paper form builder: form schemas and custom fields."""
 
 from datetime import datetime
-from enum import Enum
-from typing import Literal
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # --- Enums ---
 
 
-class FieldType(str, Enum):
+class FieldType(StrEnum):
     """Supported field types for custom paper form fields."""
 
     TEXT = "text"
@@ -118,8 +116,7 @@ class PaperFormSchemaCreate(BaseModel):
     """Schema for creating/updating a paper form schema."""
 
     builtin_fields_config: dict[str, BuiltinFieldConfig] = Field(
-        default_factory=dict,
-        description="Configuration for built-in fields like title, abstract_short, etc."
+        default_factory=dict, description="Configuration for built-in fields like title, abstract_short, etc."
     )
 
 

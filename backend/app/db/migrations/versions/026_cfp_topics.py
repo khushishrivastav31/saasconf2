@@ -4,6 +4,7 @@ Revision ID: 026_cfp_topics
 Revises: 025_cfp_require_picture_video
 Create Date: 2026-01-28
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID

@@ -29,7 +29,9 @@ def upgrade() -> None:
         "booking_packages",
         sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("conference_id", UUID(as_uuid=True), sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "conference_id", UUID(as_uuid=True), sa.ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
@@ -53,8 +55,18 @@ def upgrade() -> None:
         "booking_package_options",
         sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("booking_package_id", UUID(as_uuid=True), sa.ForeignKey("booking_packages.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("booking_option_id", UUID(as_uuid=True), sa.ForeignKey("booking_options.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "booking_package_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("booking_packages.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "booking_option_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("booking_options.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
 

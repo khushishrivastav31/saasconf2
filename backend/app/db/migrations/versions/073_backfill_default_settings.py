@@ -15,7 +15,6 @@ from uuid import uuid4
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects.postgresql import UUID
 
 # revision identifiers
 revision: str = "073_backfill_default_settings"
@@ -28,7 +27,12 @@ depends_on: str | Sequence[str] | None = None
 # ---------------------------------------------------------------------------
 
 DEFAULT_PRONOUNS = [
-    "He/Him", "She/Her", "They/Them", "He/They", "She/They", "Prefer not to say",
+    "He/Him",
+    "She/Her",
+    "They/Them",
+    "He/They",
+    "She/They",
+    "Prefer not to say",
 ]
 
 DEFAULT_VOLUNTEER_ROLES = [
@@ -88,15 +92,24 @@ DEFAULT_REVIEW_CRITERIA = [
         "description": "Evaluate the quality and depth of the proposed content",
         "display_order": 1,
         "questions": [
-            ("Is the topic relevant to the conference theme?",
-             "Consider how well the topic aligns with the conference tracks and audience interests.",
-             "1-5 Rating", 1),
-            ("Is the content original or does it bring a fresh perspective?",
-             "Look for unique insights, new approaches, or innovative ideas.",
-             "1-5 Rating", 2),
-            ("Is the abstract clear and well-structured?",
-             "The abstract should clearly communicate what attendees will learn.",
-             "1-5 Rating", 3),
+            (
+                "Is the topic relevant to the conference theme?",
+                "Consider how well the topic aligns with the conference tracks and audience interests.",
+                "1-5 Rating",
+                1,
+            ),
+            (
+                "Is the content original or does it bring a fresh perspective?",
+                "Look for unique insights, new approaches, or innovative ideas.",
+                "1-5 Rating",
+                2,
+            ),
+            (
+                "Is the abstract clear and well-structured?",
+                "The abstract should clearly communicate what attendees will learn.",
+                "1-5 Rating",
+                3,
+            ),
         ],
     },
     {
@@ -104,12 +117,18 @@ DEFAULT_REVIEW_CRITERIA = [
         "description": "Assess the speaker's ability to deliver this content",
         "display_order": 2,
         "questions": [
-            ("Does the speaker have relevant experience with this topic?",
-             "Consider their background, previous talks, and expertise.",
-             "1-5 Rating", 1),
-            ("Has the speaker demonstrated good presentation skills?",
-             "Look at videos, previous conference feedback, or speaking history.",
-             "1-5 Rating", 2),
+            (
+                "Does the speaker have relevant experience with this topic?",
+                "Consider their background, previous talks, and expertise.",
+                "1-5 Rating",
+                1,
+            ),
+            (
+                "Has the speaker demonstrated good presentation skills?",
+                "Look at videos, previous conference feedback, or speaking history.",
+                "1-5 Rating",
+                2,
+            ),
         ],
     },
     {
@@ -117,9 +136,12 @@ DEFAULT_REVIEW_CRITERIA = [
         "description": "Your final assessment of this submission",
         "display_order": 3,
         "questions": [
-            ("Would you recommend accepting this submission?",
-             "Consider all factors: content quality, speaker ability, audience value.",
-             "Accept/Reject", 1),
+            (
+                "Would you recommend accepting this submission?",
+                "Consider all factors: content quality, speaker ability, audience value.",
+                "Accept/Reject",
+                1,
+            ),
         ],
     },
 ]
@@ -129,14 +151,16 @@ def upgrade() -> None:
     conn = op.get_bind()
 
     # Find conferences missing pronoun options (proxy for "never seeded")
-    rows = conn.execute(sa.text("""
+    rows = conn.execute(
+        sa.text("""
         SELECT c.id, c.tenant_id
         FROM conferences c
         WHERE NOT EXISTS (
             SELECT 1 FROM pronoun_options po
             WHERE po.conference_id = c.id
         )
-    """)).fetchall()
+    """)
+    ).fetchall()
 
     if not rows:
         return  # All conferences already have defaults
@@ -144,69 +168,110 @@ def upgrade() -> None:
     for conf_id, tenant_id in rows:
         # --- Pronouns ---
         for name in DEFAULT_PRONOUNS:
-            conn.execute(sa.text("""
+            conn.execute(
+                sa.text("""
                 INSERT INTO pronoun_options (id, tenant_id, conference_id, name, is_active)
                 VALUES (:id, :tid, :cid, :name, true)
                 ON CONFLICT DO NOTHING
-            """), {"id": str(uuid4()), "tid": str(tenant_id), "cid": str(conf_id), "name": name})
+            """),
+                {"id": str(uuid4()), "tid": str(tenant_id), "cid": str(conf_id), "name": name},
+            )
 
         # --- Volunteer Roles ---
         for name, description in DEFAULT_VOLUNTEER_ROLES:
-            conn.execute(sa.text("""
+            conn.execute(
+                sa.text("""
                 INSERT INTO volunteer_roles (id, tenant_id, conference_id, name, description, is_active)
                 VALUES (:id, :tid, :cid, :name, :desc, true)
                 ON CONFLICT DO NOTHING
-            """), {"id": str(uuid4()), "tid": str(tenant_id), "cid": str(conf_id),
-                   "name": name, "desc": description})
+            """),
+                {"id": str(uuid4()), "tid": str(tenant_id), "cid": str(conf_id), "name": name, "desc": description},
+            )
 
         # --- Committee Roles ---
         for name, description in DEFAULT_COMMITTEE_ROLES:
-            conn.execute(sa.text("""
+            conn.execute(
+                sa.text("""
                 INSERT INTO cfp_committee_roles (id, tenant_id, conference_id, name, description, is_active)
                 VALUES (:id, :tid, :cid, :name, :desc, true)
                 ON CONFLICT DO NOTHING
-            """), {"id": str(uuid4()), "tid": str(tenant_id), "cid": str(conf_id),
-                   "name": name, "desc": description})
+            """),
+                {"id": str(uuid4()), "tid": str(tenant_id), "cid": str(conf_id), "name": name, "desc": description},
+            )
 
         # --- Score Scales + Options ---
         scale_ids: dict[str, str] = {}
         for scale_data in DEFAULT_SCORE_SCALES:
             scale_id = str(uuid4())
             scale_ids[scale_data["name"]] = scale_id
-            conn.execute(sa.text("""
+            conn.execute(
+                sa.text("""
                 INSERT INTO review_score_scales (id, tenant_id, conference_id, name, scale_type, is_active)
                 VALUES (:id, :tid, :cid, :name, :stype, true)
                 ON CONFLICT DO NOTHING
-            """), {"id": scale_id, "tid": str(tenant_id), "cid": str(conf_id),
-                   "name": scale_data["name"], "stype": scale_data["scale_type"]})
+            """),
+                {
+                    "id": scale_id,
+                    "tid": str(tenant_id),
+                    "cid": str(conf_id),
+                    "name": scale_data["name"],
+                    "stype": scale_data["scale_type"],
+                },
+            )
 
             for label, numeric_value, is_unsure, display_order in scale_data["options"]:
-                conn.execute(sa.text("""
+                conn.execute(
+                    sa.text("""
                     INSERT INTO review_scale_options (id, scale_id, label, numeric_value, is_unsure, display_order)
                     VALUES (:id, :sid, :label, :nval, :unsure, :dorder)
-                """), {"id": str(uuid4()), "sid": scale_id, "label": label,
-                       "nval": numeric_value, "unsure": is_unsure, "dorder": display_order})
+                """),
+                    {
+                        "id": str(uuid4()),
+                        "sid": scale_id,
+                        "label": label,
+                        "nval": numeric_value,
+                        "unsure": is_unsure,
+                        "dorder": display_order,
+                    },
+                )
 
         # --- Review Criteria + Questions ---
         for crit_data in DEFAULT_REVIEW_CRITERIA:
             crit_id = str(uuid4())
-            conn.execute(sa.text("""
+            conn.execute(
+                sa.text("""
                 INSERT INTO review_criteria (id, tenant_id, conference_id, title, description, display_order, is_active)
                 VALUES (:id, :tid, :cid, :title, :desc, :dorder, true)
                 ON CONFLICT DO NOTHING
-            """), {"id": crit_id, "tid": str(tenant_id), "cid": str(conf_id),
-                   "title": crit_data["title"], "desc": crit_data["description"],
-                   "dorder": crit_data["display_order"]})
+            """),
+                {
+                    "id": crit_id,
+                    "tid": str(tenant_id),
+                    "cid": str(conf_id),
+                    "title": crit_data["title"],
+                    "desc": crit_data["description"],
+                    "dorder": crit_data["display_order"],
+                },
+            )
 
             for q_text, q_help, scale_name, q_order in crit_data["questions"]:
-                conn.execute(sa.text("""
+                conn.execute(
+                    sa.text("""
                     INSERT INTO review_questions (id, criterion_id, tenant_id, conference_id,
                         text, help_text, score_scale_id, display_order, is_active)
                     VALUES (:id, :crit_id, :tid, :cid, :text, :help, :sid, :dorder, true)
-                """), {"id": str(uuid4()), "crit_id": crit_id,
-                       "tid": str(tenant_id), "cid": str(conf_id),
-                       "text": q_text, "help": q_help,
-                       "sid": scale_ids.get(scale_name), "dorder": q_order})
+                """),
+                    {
+                        "id": str(uuid4()),
+                        "crit_id": crit_id,
+                        "tid": str(tenant_id),
+                        "cid": str(conf_id),
+                        "text": q_text,
+                        "help": q_help,
+                        "sid": scale_ids.get(scale_name),
+                        "dorder": q_order,
+                    },
+                )
 
 
 def downgrade() -> None:

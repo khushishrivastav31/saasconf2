@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from app.models.tenant import Tenant
 
 
-class LocationType(str, Enum):
+class LocationType(StrEnum):
     """Location type enum."""
 
     VENUE = "venue"  # Main conference venue
@@ -37,9 +37,7 @@ class Location(Base):
 
     __tablename__ = "locations"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -52,9 +50,7 @@ class Location(Base):
     # Basic Information
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     code: Mapped[str | None] = mapped_column(String(50), nullable=True)  # Short code like "ROOM-A1"
-    location_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=LocationType.ROOM.value
-    )
+    location_type: Mapped[str] = mapped_column(String(20), nullable=False, default=LocationType.ROOM.value)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Capacity
@@ -102,23 +98,19 @@ class Location(Base):
     contact_persons: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     # Relationships
     tenant: Mapped["Tenant"] = relationship("Tenant")
-    parent: Mapped["Location | None"] = relationship(
-        "Location", remote_side=[id], back_populates="children"
-    )
-    children: Mapped[list["Location"]] = relationship(
-        "Location", back_populates="parent", cascade="all, delete-orphan"
-    )
+    parent: Mapped["Location | None"] = relationship("Location", remote_side=[id], back_populates="children")
+    children: Mapped[list["Location"]] = relationship("Location", back_populates="parent", cascade="all, delete-orphan")
     conferences: Mapped[list["Conference"]] = relationship(
-        "Conference", secondary="conference_locations", viewonly=True,
+        "Conference",
+        secondary="conference_locations",
+        viewonly=True,
     )
     service_providers: Mapped[list["ServiceProvider"]] = relationship(
         "ServiceProvider", back_populates="location", cascade="all, delete-orphan"
@@ -136,6 +128,7 @@ class Location(Base):
     def full_address(self) -> str | None:
         """Get formatted full address (country-specific formatting)."""
         from app.core.address import format_address
+
         return format_address(
             address_line1=self.address_line1,
             address_line2=self.address_line2,

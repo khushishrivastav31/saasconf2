@@ -5,8 +5,8 @@ Revises: 055_tenant_logo
 Create Date: 2026-02-11
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "056_applicant_activity_log"

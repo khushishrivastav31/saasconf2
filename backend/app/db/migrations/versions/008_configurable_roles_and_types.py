@@ -5,6 +5,7 @@ Revises: 007_conf_associations
 Create Date: 2026-01-26
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
@@ -20,46 +21,35 @@ def upgrade() -> None:
     # --- volunteer_roles table ---
     op.create_table(
         "volunteer_roles",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True,
-                  server_default=sa.text("uuid_generate_v4()")),
-        sa.Column("tenant_id", UUID(as_uuid=True),
-                  sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
+        sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
         sa.Column("name", sa.String(100), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("color", sa.String(20), nullable=True),
         sa.Column("sort_order", sa.Integer(), server_default="0"),
         sa.Column("is_active", sa.Boolean(), server_default="true"),
-        sa.Column("created_at", sa.DateTime(timezone=True),
-                  server_default=sa.text("NOW()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True),
-                  server_default=sa.text("NOW()")),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
     )
     op.create_index("idx_volunteer_roles_tenant", "volunteer_roles", ["tenant_id"])
-    op.create_index("idx_volunteer_roles_name", "volunteer_roles",
-                    ["tenant_id", "name"], unique=True)
+    op.create_index("idx_volunteer_roles_name", "volunteer_roles", ["tenant_id", "name"], unique=True)
 
     # --- tenant_location_types table ---
     op.create_table(
         "tenant_location_types",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True,
-                  server_default=sa.text("uuid_generate_v4()")),
-        sa.Column("tenant_id", UUID(as_uuid=True),
-                  sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
+        sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
         sa.Column("name", sa.String(50), nullable=False),
         sa.Column("slug", sa.String(20), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("color", sa.String(20), nullable=True),
         sa.Column("sort_order", sa.Integer(), server_default="0"),
         sa.Column("is_active", sa.Boolean(), server_default="true"),
-        sa.Column("created_at", sa.DateTime(timezone=True),
-                  server_default=sa.text("NOW()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True),
-                  server_default=sa.text("NOW()")),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
     )
-    op.create_index("idx_tenant_location_types_tenant",
-                    "tenant_location_types", ["tenant_id"])
-    op.create_index("idx_tenant_location_types_slug",
-                    "tenant_location_types", ["tenant_id", "slug"], unique=True)
+    op.create_index("idx_tenant_location_types_tenant", "tenant_location_types", ["tenant_id"])
+    op.create_index("idx_tenant_location_types_slug", "tenant_location_types", ["tenant_id", "slug"], unique=True)
 
     # Enable RLS on new tables
     op.execute("ALTER TABLE volunteer_roles ENABLE ROW LEVEL SECURITY")

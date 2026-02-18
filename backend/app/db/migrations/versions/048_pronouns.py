@@ -5,6 +5,7 @@ Revises: 047_split_person_names
 Create Date: 2026-01-30
 
 """
+
 from collections.abc import Sequence
 from typing import Union
 

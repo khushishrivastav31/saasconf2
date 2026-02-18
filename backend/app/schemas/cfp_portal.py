@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 # --- Auth Schemas ---
 
+
 class ApplicantRegisterRequest(BaseModel):
     """Registration request."""
 
@@ -73,6 +74,7 @@ class ResetPasswordRequest(BaseModel):
 
 # --- Profile Schemas ---
 
+
 class ApplicantProfileResponse(BaseModel):
     """Applicant profile response."""
 
@@ -115,6 +117,7 @@ class ApplicantProfileUpdate(BaseModel):
 
 
 # --- Conference / CFP Schemas ---
+
 
 class PortalCFPResponse(BaseModel):
     """CFP info for the portal."""
@@ -189,6 +192,7 @@ class PortalConferenceDetailResponse(BaseModel):
 
 
 # --- Paper Schemas ---
+
 
 class PortalCospeakerResponse(BaseModel):
     """Co-speaker info in portal paper response."""
@@ -268,6 +272,7 @@ class PortalPaperUpdateRequest(BaseModel):
 
 # --- Invitation Schemas ---
 
+
 class PortalInvitationResponse(BaseModel):
     """A pending co-speaker invitation."""
 
@@ -290,6 +295,7 @@ class PortalInvitationListResponse(BaseModel):
 
 
 # --- Committee Membership Schemas ---
+
 
 class PortalTopicResponse(BaseModel):
     """Topic info for committee membership."""

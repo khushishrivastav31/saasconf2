@@ -13,13 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.email_templates import (
-    render_email,
-    build_verification_context,
-    build_submission_context,
     build_cospeaker_context,
-    build_password_reset_context,
-    build_tenant_welcome_context,
     build_new_message_context,
+    build_password_reset_context,
+    build_submission_context,
+    build_tenant_welcome_context,
+    build_verification_context,
+    render_email,
 )
 from app.schemas.email_template import EmailTemplateType
 
@@ -39,6 +39,7 @@ def _get_resend():
 
     if _resend_client is None:
         import resend
+
         resend.api_key = settings.RESEND_API_KEY
         _resend_client = resend
 
@@ -47,13 +48,7 @@ def _get_resend():
 
 def _log_email(to: str, subject: str, body: str) -> None:
     """Log email to console for development."""
-    logger.info(
-        f"=== EMAIL ===\n"
-        f"To: {to}\n"
-        f"Subject: {subject}\n"
-        f"Body:\n{body}\n"
-        f"============="
-    )
+    logger.info(f"=== EMAIL ===\nTo: {to}\nSubject: {subject}\nBody:\n{body}\n=============")
 
 
 async def send_email(
@@ -94,17 +89,13 @@ async def send_email(
         return False
 
 
-async def _is_email_enabled_for_conference(
-    db: AsyncSession, conference_id: UUID | None
-) -> bool:
+async def _is_email_enabled_for_conference(db: AsyncSession, conference_id: UUID | None) -> bool:
     """Check if email sending is enabled for this conference."""
     if conference_id is None:
         return True
     from app.models.conference import Conference
 
-    result = await db.execute(
-        select(Conference.settings).where(Conference.id == conference_id)
-    )
+    result = await db.execute(select(Conference.settings).where(Conference.id == conference_id))
     settings = result.scalar_one_or_none()
     if settings is None:
         return True
@@ -132,9 +123,7 @@ async def send_verification_email(
     verification_url = f"{base_url}/{tenant_slug}/portal/user/verify-email?token={token}"
 
     template_type = (
-        EmailTemplateType.COMMITTEE_VERIFICATION
-        if is_committee
-        else EmailTemplateType.APPLICANT_VERIFICATION
+        EmailTemplateType.COMMITTEE_VERIFICATION if is_committee else EmailTemplateType.APPLICANT_VERIFICATION
     )
 
     context = build_verification_context(
@@ -174,7 +163,9 @@ async def send_submission_confirmation_email(
 ) -> bool:
     """Send a submission confirmation email."""
     if not await _is_email_enabled_for_conference(db, conference_id):
-        logger.info(f"Email sending disabled for conference {conference_id}, skipping submission confirmation to {email}")
+        logger.info(
+            f"Email sending disabled for conference {conference_id}, skipping submission confirmation to {email}"
+        )
         return False
 
     settings = get_settings()
@@ -337,12 +328,13 @@ async def send_direct_message_email(
     The reply_to address is typically the conference's contact email.
     """
     import re
+
     body_text = re.sub(r"<[^>]+>", "", body_html)
     body_text = re.sub(r"\s+", " ", body_text).strip()
 
     full_html = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <p>Hi {first_name or 'there'},</p>
+        <p>Hi {first_name or "there"},</p>
         <p>You have received a message regarding <strong>{conference_name}</strong> from {sender_name}:</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
         <div style="padding: 16px; background-color: #f9fafb; border-radius: 8px;">

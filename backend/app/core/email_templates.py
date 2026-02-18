@@ -10,8 +10,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.settings import EmailTemplate
 from app.api.v1.settings.email_templates import DEFAULT_TEMPLATES
+from app.models.settings import EmailTemplate
 from app.schemas.email_template import EmailTemplateType
 
 
@@ -85,7 +85,7 @@ async def get_template(
     # Fall back to hardcoded defaults
     default = DEFAULT_TEMPLATES.get(template_type, {})
     return (
-        default.get("subject", f"Notification from SaaSConf"),
+        default.get("subject", "Notification from SaaSConf"),
         default.get("body_html", ""),
         default.get("body_text"),
     )
@@ -111,9 +111,7 @@ async def render_email(
     Returns:
         RenderedEmail with subject, body_html, and body_text
     """
-    subject, body_html, body_text = await get_template(
-        db, template_type, conference_id, tenant_id
-    )
+    subject, body_html, body_text = await get_template(db, template_type, conference_id, tenant_id)
 
     rendered_subject = replace_placeholders(subject, context)
     rendered_html = replace_placeholders(body_html, context, is_html=True)
@@ -123,6 +121,7 @@ async def render_email(
 
 
 # Convenience functions for building context dicts
+
 
 def build_verification_context(
     *,

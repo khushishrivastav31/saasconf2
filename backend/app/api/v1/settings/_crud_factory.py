@@ -165,8 +165,8 @@ def create_crud_router(
         query = (
             select(model_class)
             .where(
-                getattr(model_class, "conference_id") == conference.id,
-                getattr(model_class, "tenant_id") == conference.tenant_id,
+                model_class.conference_id == conference.id,
+                model_class.tenant_id == conference.tenant_id,
             )
             .order_by(*_get_order_clauses())
         )
@@ -203,8 +203,8 @@ def create_crud_router(
             field_value = getattr(entity_data, unique_field)
             existing = await db.execute(
                 select(model_class).where(
-                    getattr(model_class, "conference_id") == conference.id,
-                    getattr(model_class, "tenant_id") == conference.tenant_id,
+                    model_class.conference_id == conference.id,
+                    model_class.tenant_id == conference.tenant_id,
                     getattr(model_class, unique_field) == field_value,
                 )
             )
@@ -269,15 +269,13 @@ def create_crud_router(
 
         result = await db.execute(
             select(model_class).where(
-                getattr(model_class, "id") == entity_id,
-                getattr(model_class, "conference_id") == conference.id,
+                model_class.id == entity_id,
+                model_class.conference_id == conference.id,
             )
         )
         entity = result.scalar_one_or_none()
         if not entity:
-            raise NotFoundError(
-                f"{_human_name_cap} with ID '{entity_id}' not found"
-            )
+            raise NotFoundError(f"{_human_name_cap} with ID '{entity_id}' not found")
 
         # Uniqueness check on update
         if unique_field:
@@ -286,10 +284,10 @@ def create_crud_router(
             if new_value is not None and new_value != current_value:
                 existing = await db.execute(
                     select(model_class).where(
-                        getattr(model_class, "conference_id") == conference.id,
-                        getattr(model_class, "tenant_id") == conference.tenant_id,
+                        model_class.conference_id == conference.id,
+                        model_class.tenant_id == conference.tenant_id,
                         getattr(model_class, unique_field) == new_value,
-                        getattr(model_class, "id") != entity_id,
+                        model_class.id != entity_id,
                     )
                 )
                 if existing.scalar_one_or_none():
@@ -341,15 +339,13 @@ def create_crud_router(
 
         result = await db.execute(
             select(model_class).where(
-                getattr(model_class, "id") == entity_id,
-                getattr(model_class, "conference_id") == conference.id,
+                model_class.id == entity_id,
+                model_class.conference_id == conference.id,
             )
         )
         entity = result.scalar_one_or_none()
         if not entity:
-            raise NotFoundError(
-                f"{_human_name_cap} with ID '{entity_id}' not found"
-            )
+            raise NotFoundError(f"{_human_name_cap} with ID '{entity_id}' not found")
 
         entity_label = getattr(entity, _label_field)
 
@@ -375,9 +371,7 @@ def create_crud_router(
         await db.delete(entity)
         await db.commit()
 
-        return {
-            "message": f"{_human_name_cap} '{entity_label}' deleted successfully"
-        }
+        return {"message": f"{_human_name_cap} '{entity_label}' deleted successfully"}
 
     delete_entity.__doc__ = f"Delete a {_human_name}."
     delete_entity.__name__ = f"delete_{entity_name}"

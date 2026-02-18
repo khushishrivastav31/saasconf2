@@ -44,9 +44,7 @@ async def list_tenants(
     query = select(Tenant)
 
     if search:
-        query = query.where(
-            unaccent_ilike(Tenant.name, search) | unaccent_ilike(Tenant.slug, search)
-        )
+        query = query.where(unaccent_ilike(Tenant.name, search) | unaccent_ilike(Tenant.slug, search))
 
     if is_active is not None:
         query = query.where(Tenant.is_active == is_active)
@@ -59,18 +57,10 @@ async def list_tenants(
     items = []
     for tenant in result.items:
         # Count users
-        user_count = (
-            await db.execute(
-                select(func.count()).where(User.tenant_id == tenant.id)
-            )
-        ).scalar() or 0
+        user_count = (await db.execute(select(func.count()).where(User.tenant_id == tenant.id))).scalar() or 0
 
         # Count modules
-        module_count = (
-            await db.execute(
-                select(func.count()).where(TenantModule.tenant_id == tenant.id)
-            )
-        ).scalar() or 0
+        module_count = (await db.execute(select(func.count()).where(TenantModule.tenant_id == tenant.id))).scalar() or 0
 
         items.append(_build_tenant_response(tenant, user_count, module_count))
 
@@ -166,15 +156,9 @@ async def get_tenant(
         raise NotFoundError(f"Tenant with ID '{tenant_id}' not found")
 
     # Count users and modules
-    user_count = (
-        await db.execute(select(func.count()).where(User.tenant_id == tenant.id))
-    ).scalar() or 0
+    user_count = (await db.execute(select(func.count()).where(User.tenant_id == tenant.id))).scalar() or 0
 
-    module_count = (
-        await db.execute(
-            select(func.count()).where(TenantModule.tenant_id == tenant.id)
-        )
-    ).scalar() or 0
+    module_count = (await db.execute(select(func.count()).where(TenantModule.tenant_id == tenant.id))).scalar() or 0
 
     return _build_tenant_response(tenant, user_count, module_count)
 
@@ -196,13 +180,9 @@ async def update_tenant(
 
     # Check slug uniqueness if changing
     if tenant_data.slug and tenant_data.slug != tenant.slug:
-        existing = await db.execute(
-            select(Tenant).where(Tenant.slug == tenant_data.slug)
-        )
+        existing = await db.execute(select(Tenant).where(Tenant.slug == tenant_data.slug))
         if existing.scalar_one_or_none():
-            raise ValidationError(
-                f"Tenant with slug '{tenant_data.slug}' already exists"
-            )
+            raise ValidationError(f"Tenant with slug '{tenant_data.slug}' already exists")
 
     # Update fields
     update_data = tenant_data.model_dump(exclude_unset=True)
@@ -226,15 +206,9 @@ async def update_tenant(
     await db.refresh(tenant)
 
     # Get counts
-    user_count = (
-        await db.execute(select(func.count()).where(User.tenant_id == tenant.id))
-    ).scalar() or 0
+    user_count = (await db.execute(select(func.count()).where(User.tenant_id == tenant.id))).scalar() or 0
 
-    module_count = (
-        await db.execute(
-            select(func.count()).where(TenantModule.tenant_id == tenant.id)
-        )
-    ).scalar() or 0
+    module_count = (await db.execute(select(func.count()).where(TenantModule.tenant_id == tenant.id))).scalar() or 0
 
     return _build_tenant_response(tenant, user_count, module_count)
 

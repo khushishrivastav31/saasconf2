@@ -4,9 +4,7 @@ from app.models.tenant import Tenant
 from app.schemas.tenant import TenantResponse
 
 
-def _build_tenant_response(
-    tenant: Tenant, user_count: int = 0, module_count: int = 0
-) -> TenantResponse:
+def _build_tenant_response(tenant: Tenant, user_count: int = 0, module_count: int = 0) -> TenantResponse:
     """Build a TenantResponse from a Tenant model instance."""
     return TenantResponse(
         id=tenant.id,

@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from app.models.tenant import Tenant
 
 
-class CFPStatus(str, Enum):
+class CFPStatus(StrEnum):
     """Call for Papers status enum."""
 
     DRAFT = "draft"
@@ -40,7 +40,7 @@ class CFPStatus(str, Enum):
     COMPLETED = "completed"
 
 
-class SubmissionStatus(str, Enum):
+class SubmissionStatus(StrEnum):
     """Submission status enum."""
 
     SUBMITTED = "submitted"
@@ -60,9 +60,7 @@ class CallForPapers(Base):
 
     __tablename__ = "call_for_papers"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -70,9 +68,7 @@ class CallForPapers(Base):
     # Basic Information
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=CFPStatus.DRAFT.value
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=CFPStatus.DRAFT.value)
 
     # Dates
     open_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -103,9 +99,7 @@ class CallForPapers(Base):
     settings: Mapped[dict] = mapped_column(JSONB, default=dict)
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -116,7 +110,9 @@ class CallForPapers(Base):
         "Submission", back_populates="cfp", cascade="all, delete-orphan"
     )
     conferences: Mapped[list["Conference"]] = relationship(
-        "Conference", secondary="conference_cfps", viewonly=True,
+        "Conference",
+        secondary="conference_cfps",
+        viewonly=True,
     )
 
     # Indexes
@@ -138,9 +134,7 @@ class Submission(Base):
 
     __tablename__ = "submissions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -169,22 +163,16 @@ class Submission(Base):
     custom_answers: Mapped[dict] = mapped_column(JSONB, default=dict)  # Answers to custom fields
 
     # Status
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=SubmissionStatus.SUBMITTED.value
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=SubmissionStatus.SUBMITTED.value)
 
     # Review
     review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     review_score: Mapped[float | None] = mapped_column(nullable=True)
 
     # Timestamps
-    submitted_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -208,7 +196,12 @@ class Submission(Base):
 cfp_committee_member_topics = Table(
     "cfp_committee_member_topics",
     Base.metadata,
-    Column("committee_member_id", UUID(as_uuid=True), ForeignKey("cfp_committee_members.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "committee_member_id",
+        UUID(as_uuid=True),
+        ForeignKey("cfp_committee_members.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
     Column("topic_id", UUID(as_uuid=True), ForeignKey("cfp_topics.id", ondelete="CASCADE"), primary_key=True),
 )
 
@@ -218,18 +211,14 @@ class CFPTopic(Base):
 
     __tablename__ = "cfp_topics"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -238,9 +227,7 @@ class CFPTopic(Base):
     tenant: Mapped["Tenant"] = relationship("Tenant")
 
     # Indexes
-    __table_args__ = (
-        Index("idx_cfp_topics_tenant", "tenant_id"),
-    )
+    __table_args__ = (Index("idx_cfp_topics_tenant", "tenant_id"),)
 
     def __repr__(self) -> str:
         return f"<CFPTopic {self.name}>"
@@ -251,9 +238,7 @@ class CFPCommitteeMember(Base):
 
     __tablename__ = "cfp_committee_members"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -266,9 +251,7 @@ class CFPCommitteeMember(Base):
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="reviewer")
     expertise_areas: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -277,9 +260,7 @@ class CFPCommitteeMember(Base):
     tenant: Mapped["Tenant"] = relationship("Tenant")
     conference: Mapped["Conference"] = relationship("Conference")
     applicant: Mapped["CFPApplicant"] = relationship("CFPApplicant", lazy="selectin")
-    topics: Mapped[list["CFPTopic"]] = relationship(
-        "CFPTopic", secondary=cfp_committee_member_topics, lazy="selectin"
-    )
+    topics: Mapped[list["CFPTopic"]] = relationship("CFPTopic", secondary=cfp_committee_member_topics, lazy="selectin")
     assignments: Mapped[list["CFPPaperAssignment"]] = relationship(
         "CFPPaperAssignment", back_populates="committee_member", cascade="all, delete-orphan"
     )
@@ -297,7 +278,7 @@ class CFPCommitteeMember(Base):
 
 
 # Re-exports for backward compatibility
-from app.models.cfp_applicants import CFPApplicant  # noqa: E402, F401
+from app.models.cfp_applicants import CFPApplicant  # noqa: E402
 from app.models.cfp_papers import (  # noqa: E402, F401
     CFPPaper,
     CFPPaperAssignment,

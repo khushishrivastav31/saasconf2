@@ -5,6 +5,7 @@ Revises: 009_simplify_add_attachments
 Create Date: 2026-01-26
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB

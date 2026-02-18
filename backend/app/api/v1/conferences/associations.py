@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 
+from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -17,15 +18,12 @@ from app.core.pagination import calculate_pages, paginate
 from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
 from app.models.audit import AuditAction, AuditLog
 from app.models.cfp import CallForPapers, Submission
-from app.models.conference import Conference
 from app.models.location import Location
 from app.models.volunteer import Volunteer
 from app.schemas.cfp import CFPListResponse
 from app.schemas.conference import ConferenceAssociationRequest
 from app.schemas.location import LocationListResponse
 from app.schemas.volunteer import VolunteerListResponse
-
-from app.core.conference_helpers import get_conference_for_tenant
 
 from ._shared import (
     MODULE_CODE,
@@ -42,7 +40,11 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{conference_id}/volunteers", response_model=VolunteerListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.get(
+    "/{conference_id}/volunteers",
+    response_model=VolunteerListResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def list_conference_volunteers(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -69,8 +71,9 @@ async def list_conference_volunteers(
     conf_ids_map: dict[UUID, list[UUID]] = {vid: [] for vid in vol_ids}
     if vol_ids:
         assoc_result = await db.execute(
-            select(ConferenceVolunteer.volunteer_id, ConferenceVolunteer.conference_id)
-            .where(ConferenceVolunteer.volunteer_id.in_(vol_ids))
+            select(ConferenceVolunteer.volunteer_id, ConferenceVolunteer.conference_id).where(
+                ConferenceVolunteer.volunteer_id.in_(vol_ids)
+            )
         )
         for row in assoc_result:
             conf_ids_map[row.volunteer_id].append(row.conference_id)
@@ -105,9 +108,7 @@ async def link_volunteer_to_conference(
     await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     vol_result = await db.execute(
-        select(Volunteer)
-        .where(Volunteer.id == body.id)
-        .where(Volunteer.tenant_id == current_user.tenant_id)
+        select(Volunteer).where(Volunteer.id == body.id).where(Volunteer.tenant_id == current_user.tenant_id)
     )
     if not vol_result.scalar_one_or_none():
         raise NotFoundError("Volunteer not found")
@@ -121,16 +122,18 @@ async def link_volunteer_to_conference(
         raise ValidationError("Volunteer is already linked to this conference")
 
     db.add(ConferenceVolunteer(conference_id=conference_id, volunteer_id=body.id))
-    db.add(AuditLog(
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.user_id,
-        action=AuditAction.CONFERENCE_LINK_VOLUNTEER,
-        resource_type="conference",
-        resource_id=conference_id,
-        details={"volunteer_id": str(body.id)},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.CONFERENCE_LINK_VOLUNTEER,
+            resource_type="conference",
+            resource_id=conference_id,
+            details={"volunteer_id": str(body.id)},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     return {"message": "Volunteer linked to conference"}
@@ -162,26 +165,30 @@ async def unlink_volunteer_from_conference(
     if not assoc:
         raise NotFoundError("Volunteer is not linked to this conference")
 
-    count = (await db.execute(
-        select(func.count())
-        .select_from(ConferenceVolunteer)
-        .where(ConferenceVolunteer.volunteer_id == volunteer_id)
-    )).scalar() or 0
+    count = (
+        await db.execute(
+            select(func.count())
+            .select_from(ConferenceVolunteer)
+            .where(ConferenceVolunteer.volunteer_id == volunteer_id)
+        )
+    ).scalar() or 0
 
     if count <= 1:
         raise ValidationError("Cannot unlink: this is the volunteer's only conference")
 
     await db.delete(assoc)
-    db.add(AuditLog(
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.user_id,
-        action=AuditAction.CONFERENCE_UNLINK_VOLUNTEER,
-        resource_type="conference",
-        resource_id=conference_id,
-        details={"volunteer_id": str(volunteer_id)},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.CONFERENCE_UNLINK_VOLUNTEER,
+            resource_type="conference",
+            resource_id=conference_id,
+            details={"volunteer_id": str(volunteer_id)},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     return {"message": "Volunteer unlinked from conference"}
@@ -192,7 +199,11 @@ async def unlink_volunteer_from_conference(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{conference_id}/locations", response_model=LocationListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.get(
+    "/{conference_id}/locations",
+    response_model=LocationListResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
 async def list_conference_locations(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -218,8 +229,9 @@ async def list_conference_locations(
     conf_ids_map: dict[UUID, list[UUID]] = {lid: [] for lid in loc_ids}
     if loc_ids:
         assoc_result = await db.execute(
-            select(ConferenceLocation.location_id, ConferenceLocation.conference_id)
-            .where(ConferenceLocation.location_id.in_(loc_ids))
+            select(ConferenceLocation.location_id, ConferenceLocation.conference_id).where(
+                ConferenceLocation.location_id.in_(loc_ids)
+            )
         )
         for row in assoc_result:
             conf_ids_map[row.location_id].append(row.conference_id)
@@ -254,9 +266,7 @@ async def link_location_to_conference(
     await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     loc_result = await db.execute(
-        select(Location)
-        .where(Location.id == body.id)
-        .where(Location.tenant_id == current_user.tenant_id)
+        select(Location).where(Location.id == body.id).where(Location.tenant_id == current_user.tenant_id)
     )
     if not loc_result.scalar_one_or_none():
         raise NotFoundError("Location not found")
@@ -270,16 +280,18 @@ async def link_location_to_conference(
         raise ValidationError("Location is already linked to this conference")
 
     db.add(ConferenceLocation(conference_id=conference_id, location_id=body.id))
-    db.add(AuditLog(
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.user_id,
-        action=AuditAction.CONFERENCE_LINK_LOCATION,
-        resource_type="conference",
-        resource_id=conference_id,
-        details={"location_id": str(body.id)},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.CONFERENCE_LINK_LOCATION,
+            resource_type="conference",
+            resource_id=conference_id,
+            details={"location_id": str(body.id)},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     return {"message": "Location linked to conference"}
@@ -311,26 +323,28 @@ async def unlink_location_from_conference(
     if not assoc:
         raise NotFoundError("Location is not linked to this conference")
 
-    count = (await db.execute(
-        select(func.count())
-        .select_from(ConferenceLocation)
-        .where(ConferenceLocation.location_id == location_id)
-    )).scalar() or 0
+    count = (
+        await db.execute(
+            select(func.count()).select_from(ConferenceLocation).where(ConferenceLocation.location_id == location_id)
+        )
+    ).scalar() or 0
 
     if count <= 1:
         raise ValidationError("Cannot unlink: this is the location's only conference")
 
     await db.delete(assoc)
-    db.add(AuditLog(
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.user_id,
-        action=AuditAction.CONFERENCE_UNLINK_LOCATION,
-        resource_type="conference",
-        resource_id=conference_id,
-        details={"location_id": str(location_id)},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.CONFERENCE_UNLINK_LOCATION,
+            resource_type="conference",
+            resource_id=conference_id,
+            details={"location_id": str(location_id)},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     return {"message": "Location unlinked from conference"}
@@ -341,7 +355,9 @@ async def unlink_location_from_conference(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{conference_id}/cfps", response_model=CFPListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@router.get(
+    "/{conference_id}/cfps", response_model=CFPListResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def list_conference_cfps(
     conference_id: UUID,
     current_user: CurrentUserDep,
@@ -367,8 +383,7 @@ async def list_conference_cfps(
     conf_ids_map: dict[UUID, list[UUID]] = {cid: [] for cid in cfp_ids}
     if cfp_ids:
         assoc_result = await db.execute(
-            select(ConferenceCFP.cfp_id, ConferenceCFP.conference_id)
-            .where(ConferenceCFP.cfp_id.in_(cfp_ids))
+            select(ConferenceCFP.cfp_id, ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id.in_(cfp_ids))
         )
         for row in assoc_result:
             conf_ids_map[row.cfp_id].append(row.conference_id)
@@ -377,17 +392,12 @@ async def list_conference_cfps(
     sub_counts: dict[UUID, int] = {cid: 0 for cid in cfp_ids}
     if cfp_ids:
         sub_result = await db.execute(
-            select(Submission.cfp_id, func.count())
-            .where(Submission.cfp_id.in_(cfp_ids))
-            .group_by(Submission.cfp_id)
+            select(Submission.cfp_id, func.count()).where(Submission.cfp_id.in_(cfp_ids)).group_by(Submission.cfp_id)
         )
         for row in sub_result:
             sub_counts[row[0]] = row[1]
 
-    items = [
-        _build_cfp_response(c, conf_ids_map.get(c.id, []), sub_counts.get(c.id, 0))
-        for c in cfps
-    ]
+    items = [_build_cfp_response(c, conf_ids_map.get(c.id, []), sub_counts.get(c.id, 0)) for c in cfps]
     pages = calculate_pages(result.total, page_size)
 
     return CFPListResponse(
@@ -425,24 +435,24 @@ async def link_cfp_to_conference(
         raise NotFoundError("Call for Papers not found")
 
     existing = await db.execute(
-        select(ConferenceCFP)
-        .where(ConferenceCFP.conference_id == conference_id)
-        .where(ConferenceCFP.cfp_id == body.id)
+        select(ConferenceCFP).where(ConferenceCFP.conference_id == conference_id).where(ConferenceCFP.cfp_id == body.id)
     )
     if existing.scalar_one_or_none():
         raise ValidationError("CFP is already linked to this conference")
 
     db.add(ConferenceCFP(conference_id=conference_id, cfp_id=body.id))
-    db.add(AuditLog(
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.user_id,
-        action=AuditAction.CONFERENCE_LINK_CFP,
-        resource_type="conference",
-        resource_id=conference_id,
-        details={"cfp_id": str(body.id)},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.CONFERENCE_LINK_CFP,
+            resource_type="conference",
+            resource_id=conference_id,
+            details={"cfp_id": str(body.id)},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     return {"message": "CFP linked to conference"}
@@ -466,34 +476,32 @@ async def unlink_cfp_from_conference(
     await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
-        select(ConferenceCFP)
-        .where(ConferenceCFP.conference_id == conference_id)
-        .where(ConferenceCFP.cfp_id == cfp_id)
+        select(ConferenceCFP).where(ConferenceCFP.conference_id == conference_id).where(ConferenceCFP.cfp_id == cfp_id)
     )
     assoc = result.scalar_one_or_none()
     if not assoc:
         raise NotFoundError("CFP is not linked to this conference")
 
-    count = (await db.execute(
-        select(func.count())
-        .select_from(ConferenceCFP)
-        .where(ConferenceCFP.cfp_id == cfp_id)
-    )).scalar() or 0
+    count = (
+        await db.execute(select(func.count()).select_from(ConferenceCFP).where(ConferenceCFP.cfp_id == cfp_id))
+    ).scalar() or 0
 
     if count <= 1:
         raise ValidationError("Cannot unlink: this is the CFP's only conference")
 
     await db.delete(assoc)
-    db.add(AuditLog(
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.user_id,
-        action=AuditAction.CONFERENCE_UNLINK_CFP,
-        resource_type="conference",
-        resource_id=conference_id,
-        details={"cfp_id": str(cfp_id)},
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
-    ))
+    db.add(
+        AuditLog(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.CONFERENCE_UNLINK_CFP,
+            resource_type="conference",
+            resource_id=conference_id,
+            details={"cfp_id": str(cfp_id)},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
 
     await db.commit()
     return {"message": "CFP unlinked from conference"}

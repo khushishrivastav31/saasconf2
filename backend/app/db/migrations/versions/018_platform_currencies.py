@@ -4,6 +4,7 @@ Revision ID: 018_platform_currencies
 Revises: 017_currencies
 Create Date: 2026-01-27
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID

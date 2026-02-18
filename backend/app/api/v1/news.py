@@ -1,6 +1,6 @@
 """News article management endpoints (conference-scoped)."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -9,7 +9,6 @@ from sqlalchemy import select
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
-    get_client_ip,
     require_module,
 )
 from app.core.email import send_direct_message_email
@@ -61,9 +60,7 @@ async def _resolve_author(db, user_id: UUID | None) -> tuple[str | None, str | N
     """Resolve author first/last name from User table."""
     if not user_id:
         return None, None
-    result = await db.execute(
-        select(User.first_name, User.last_name).where(User.id == user_id)
-    )
+    result = await db.execute(select(User.first_name, User.last_name).where(User.id == user_id))
     row = result.one_or_none()
     if not row:
         return None, None
@@ -146,7 +143,9 @@ async def get_article(
     tenant_id = current_user.tenant_id
 
     article = await svc.get_resource(
-        db, NewsArticle, article_id,
+        db,
+        NewsArticle,
+        article_id,
         conference_id=conference_id,
         tenant_id=tenant_id,
         label="News article",
@@ -169,7 +168,9 @@ async def update_article(
     await svc.require_admin(db, current_user, conference_id)
 
     article = await svc.get_resource(
-        db, NewsArticle, article_id,
+        db,
+        NewsArticle,
+        article_id,
         conference_id=conference_id,
         tenant_id=tenant_id,
         label="News article",
@@ -180,7 +181,7 @@ async def update_article(
     # Handle publish/unpublish transitions
     if "is_published" in update_data:
         if update_data["is_published"] and not article.is_published:
-            update_data["published_at"] = datetime.now(timezone.utc)
+            update_data["published_at"] = datetime.now(UTC)
         elif not update_data["is_published"] and article.is_published:
             update_data["published_at"] = None
 
@@ -202,7 +203,9 @@ async def delete_article(
     await svc.require_admin(db, current_user, conference_id)
 
     article = await svc.get_resource(
-        db, NewsArticle, article_id,
+        db,
+        NewsArticle,
+        article_id,
         conference_id=conference_id,
         tenant_id=tenant_id,
         label="News article",
@@ -230,7 +233,9 @@ async def send_article(
 
     # Fetch the article
     article = await svc.get_resource(
-        db, NewsArticle, article_id,
+        db,
+        NewsArticle,
+        article_id,
         conference_id=conference_id,
         tenant_id=tenant_id,
         label="News article",
@@ -243,9 +248,7 @@ async def send_article(
     applicant_ids: set[UUID] = set()
 
     # Subquery: CFP IDs linked to this conference
-    conference_cfp_ids = select(ConferenceCFP.cfp_id).where(
-        ConferenceCFP.conference_id == conference_id
-    )
+    conference_cfp_ids = select(ConferenceCFP.cfp_id).where(ConferenceCFP.conference_id == conference_id)
 
     if data.all_applicants:
         result = await db.execute(
@@ -303,9 +306,7 @@ async def send_article(
     )
     applicants = result.scalars().all()
 
-    user_result = await db.execute(
-        select(User).where(User.id == current_user.user_id)
-    )
+    user_result = await db.execute(select(User).where(User.id == current_user.user_id))
     user = user_result.scalar_one()
     sender_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
     conference_name = conference.name or ""

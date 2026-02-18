@@ -4,6 +4,7 @@ Revision ID: 024_cfp_detail_fields
 Revises: 023_discount_codes
 Create Date: 2026-01-28
 """
+
 import sqlalchemy as sa
 from alembic import op
 

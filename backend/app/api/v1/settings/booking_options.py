@@ -31,9 +31,7 @@ async def _clean_dangling_prices(entity: Any, conference: Any, db: Any) -> None:
     )
 
 
-async def _sync_name_to_program_day(
-    entity: Any, update_data: dict, conference: Any, db: Any
-) -> None:
+async def _sync_name_to_program_day(entity: Any, update_data: dict, conference: Any, db: Any) -> None:
     """Sync the booking option name back to the linked program day.
 
     Booking options define the display name for conference days.
@@ -45,9 +43,7 @@ async def _sync_name_to_program_day(
 
     # Sync name if it was updated, or if the day link just changed
     if "name" in update_data or "conference_day_id" in update_data:
-        result = await db.execute(
-            select(ProgramDay).where(ProgramDay.id == day_id)
-        )
+        result = await db.execute(select(ProgramDay).where(ProgramDay.id == day_id))
         day = result.scalar_one_or_none()
         if day and day.name != entity.name:
             day.name = entity.name
@@ -93,8 +89,7 @@ async def sync_options_from_days(
 
     # Get all existing booking options for this conference
     options_result = await db.execute(
-        select(BookingOption)
-        .where(
+        select(BookingOption).where(
             BookingOption.conference_id == conference.id,
             BookingOption.tenant_id == conference.tenant_id,
         )

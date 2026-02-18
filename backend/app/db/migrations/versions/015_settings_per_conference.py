@@ -4,6 +4,7 @@ Revision ID: 015_settings_per_conference
 Revises: 014_structured_address_vat
 Create Date: 2026-01-27
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID

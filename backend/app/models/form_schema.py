@@ -28,9 +28,7 @@ class ConferencePaperFormSchema(Base):
 
     __tablename__ = "conference_paper_form_schemas"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("tenants.id", ondelete="CASCADE"),
@@ -45,9 +43,7 @@ class ConferencePaperFormSchema(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     builtin_fields_config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -91,9 +87,7 @@ class PaperFormField(Base):
 
     __tablename__ = "paper_form_fields"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("tenants.id", ondelete="CASCADE"),
@@ -124,17 +118,13 @@ class PaperFormField(Base):
     # Options (for dropdown, checkbox_group)
     options: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     # Relationships
-    schema: Mapped["ConferencePaperFormSchema"] = relationship(
-        "ConferencePaperFormSchema", back_populates="fields"
-    )
+    schema: Mapped["ConferencePaperFormSchema"] = relationship("ConferencePaperFormSchema", back_populates="fields")
 
     __table_args__ = (
         Index("idx_paper_form_fields_tenant", "tenant_id"),

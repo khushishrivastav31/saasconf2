@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Index, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,9 +19,7 @@ class CFPApplicant(Base):
 
     __tablename__ = "cfp_applicants"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
@@ -39,16 +37,10 @@ class CFPApplicant(Base):
     needs_accessibility: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     accessibility_details: Mapped[str | None] = mapped_column(Text, nullable=True)
     agrees_to_recording: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    email_verified_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    message_notifications_enabled: Mapped[bool] = mapped_column(
-        Boolean, default=True, server_default="true"
-    )
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    message_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -57,9 +49,7 @@ class CFPApplicant(Base):
     tenant: Mapped["Tenant"] = relationship("Tenant")
 
     # Indexes
-    __table_args__ = (
-        Index("idx_cfp_applicants_tenant", "tenant_id"),
-    )
+    __table_args__ = (Index("idx_cfp_applicants_tenant", "tenant_id"),)
 
     def __repr__(self) -> str:
         return f"<CFPApplicant {self.first_name} {self.last_name}>"

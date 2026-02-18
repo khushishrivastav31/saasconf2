@@ -68,16 +68,9 @@ async def list_portal_topics(
     db: DbSessionDep,
 ) -> list[PortalTopicResponse]:
     """List all topics available for the current tenant."""
-    result = await db.execute(
-        select(CFPTopic)
-        .where(CFPTopic.tenant_id == current.tenant_id)
-        .order_by(CFPTopic.name)
-    )
+    result = await db.execute(select(CFPTopic).where(CFPTopic.tenant_id == current.tenant_id).order_by(CFPTopic.name))
     topics = list(result.scalars().all())
-    return [
-        PortalTopicResponse(id=t.id, name=t.name, description=t.description)
-        for t in topics
-    ]
+    return [PortalTopicResponse(id=t.id, name=t.name, description=t.description) for t in topics]
 
 
 @router.get("/portal/conferences", response_model=list[PortalConferenceSummary])
@@ -108,19 +101,21 @@ async def list_conferences(
 
     items = []
     for conf in conferences:
-        items.append(PortalConferenceSummary(
-            id=conf.id,
-            name=conf.name,
-            abbreviation=conf.abbreviation,
-            description=conf.description,
-            start_date=conf.start_date,
-            end_date=conf.end_date,
-            city=conf.city,
-            country=conf.country,
-            venue_type=conf.venue_type,
-            logo_url=conf.logo_url,
-            cfps=[PortalCFPResponse.model_validate(cfp) for cfp in cfps_by_conf.get(conf.id, [])],
-        ))
+        items.append(
+            PortalConferenceSummary(
+                id=conf.id,
+                name=conf.name,
+                abbreviation=conf.abbreviation,
+                description=conf.description,
+                start_date=conf.start_date,
+                end_date=conf.end_date,
+                city=conf.city,
+                country=conf.country,
+                venue_type=conf.venue_type,
+                logo_url=conf.logo_url,
+                cfps=[PortalCFPResponse.model_validate(cfp) for cfp in cfps_by_conf.get(conf.id, [])],
+            )
+        )
 
     return items
 
@@ -170,6 +165,7 @@ async def get_conference_detail(
 
 
 # --- Papers ---
+
 
 @router.get("/portal/papers", response_model=PortalPaperListResponse)
 async def list_papers(
@@ -310,9 +306,7 @@ async def submit_paper(
         raise HTTPException(status_code=400, detail="Only draft papers can be submitted")
 
     # --- Validate required fields before submission ---
-    cfp_result = await db.execute(
-        select(CallForPapers).where(CallForPapers.id == paper.cfp_id)
-    )
+    cfp_result = await db.execute(select(CallForPapers).where(CallForPapers.id == paper.cfp_id))
     cfp = cfp_result.scalar_one_or_none()
     if cfp:
         missing: list[str] = []
@@ -327,15 +321,13 @@ async def submit_paper(
             "session_type": paper.session_type_id,
             "topics": paper.topics if paper.topics else None,
         }
-        for field in (cfp.required_paper_fields or []):
+        for field in cfp.required_paper_fields or []:
             val = paper_field_map.get(field)
             if not val:
                 missing.append(f"paper:{field}")
 
         # Check required speaker fields
-        applicant_result = await db.execute(
-            select(CFPApplicant).where(CFPApplicant.id == current.applicant_id)
-        )
+        applicant_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == current.applicant_id))
         applicant = applicant_result.scalar_one_or_none()
         if applicant:
             speaker_field_map = {
@@ -344,7 +336,7 @@ async def submit_paper(
                 "title": applicant.title,
                 "company": applicant.company,
             }
-            for field in (cfp.required_speaker_fields or []):
+            for field in cfp.required_speaker_fields or []:
                 if field in speaker_field_map:
                     if not speaker_field_map[field]:
                         missing.append(f"speaker:{field}")
@@ -411,6 +403,7 @@ async def delete_paper(
 
 # --- Invitations ---
 
+
 @router.get("/portal/invitations", response_model=PortalInvitationListResponse)
 async def list_invitations(
     current: CurrentApplicantDep,
@@ -433,25 +426,19 @@ async def list_invitations(
 
     if paper_ids:
         # Batch-load papers
-        papers_result = await db.execute(
-            select(CFPPaper).where(CFPPaper.id.in_(paper_ids))
-        )
+        papers_result = await db.execute(select(CFPPaper).where(CFPPaper.id.in_(paper_ids)))
         papers_map = {p.id: p for p in papers_result.scalars().all()}
 
         # Batch-load main speakers
         speaker_ids = list({p.main_speaker_id for p in papers_map.values() if p.main_speaker_id})
         if speaker_ids:
-            speakers_result = await db.execute(
-                select(CFPApplicant).where(CFPApplicant.id.in_(speaker_ids))
-            )
+            speakers_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(speaker_ids)))
             speakers_map = {s.id: s for s in speakers_result.scalars().all()}
 
         # Batch-load CFPs
         cfp_ids = list({p.cfp_id for p in papers_map.values() if p.cfp_id})
         if cfp_ids:
-            cfps_result = await db.execute(
-                select(CallForPapers).where(CallForPapers.id.in_(cfp_ids))
-            )
+            cfps_result = await db.execute(select(CallForPapers).where(CallForPapers.id.in_(cfp_ids)))
             cfps_map = {c.id: c for c in cfps_result.scalars().all()}
 
             # Batch-load conference names via conference_cfps
@@ -473,17 +460,19 @@ async def list_invitations(
         cfp = cfps_map.get(paper.cfp_id)
         conference_name = conf_names_map.get(paper.cfp_id)
 
-        items.append(PortalInvitationResponse(
-            paper_id=paper.id,
-            paper_title=paper.title,
-            cfp_title=cfp.title if cfp else None,
-            conference_name=conference_name,
-            main_speaker_first_name=main_speaker.first_name if main_speaker else "Unknown",
-            main_speaker_last_name=main_speaker.last_name if main_speaker else "",
-            main_speaker_email=main_speaker.email if main_speaker else "",
-            invitation_status=row.invitation_status,
-            invited_at=row.invited_at,
-        ))
+        items.append(
+            PortalInvitationResponse(
+                paper_id=paper.id,
+                paper_title=paper.title,
+                cfp_title=cfp.title if cfp else None,
+                conference_name=conference_name,
+                main_speaker_first_name=main_speaker.first_name if main_speaker else "Unknown",
+                main_speaker_last_name=main_speaker.last_name if main_speaker else "",
+                main_speaker_email=main_speaker.email if main_speaker else "",
+                invitation_status=row.invitation_status,
+                invited_at=row.invited_at,
+            )
+        )
 
     return PortalInvitationListResponse(items=items, total=len(items))
 
@@ -573,6 +562,7 @@ async def upload_portal_attachment(
     file_size = len(file_data)
 
     from app.config import get_settings
+
     settings = get_settings()
     max_size = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
     if file_size > max_size:
@@ -763,9 +753,7 @@ async def get_assigned_paper(
 # ──────────────────────────────────────────────
 
 
-async def _get_applicant_paper(
-    db: AsyncSession, paper_id: str, applicant_id, tenant_id
-) -> CFPPaper:
+async def _get_applicant_paper(db: AsyncSession, paper_id: str, applicant_id, tenant_id) -> CFPPaper:
     """Load a paper owned by the current applicant (main speaker only)."""
     result = await db.execute(
         select(CFPPaper).where(
@@ -780,9 +768,7 @@ async def _get_applicant_paper(
     return paper
 
 
-async def _get_applicant_or_cospeaker_paper(
-    db: AsyncSession, paper_id: str, applicant_id, tenant_id
-) -> CFPPaper:
+async def _get_applicant_or_cospeaker_paper(db: AsyncSession, paper_id: str, applicant_id, tenant_id) -> CFPPaper:
     """Load a paper where the applicant is main speaker or accepted co-speaker."""
     # Try as main speaker first
     result = await db.execute(
@@ -819,9 +805,7 @@ async def _build_portal_paper_response(
     """Build a PortalPaperResponse from a CFPPaper model."""
     # Load CFP
     cfp_title = None
-    cfp_result = await db.execute(
-        select(CallForPapers).where(CallForPapers.id == paper.cfp_id)
-    )
+    cfp_result = await db.execute(select(CallForPapers).where(CallForPapers.id == paper.cfp_id))
     cfp = cfp_result.scalar_one_or_none()
     if cfp:
         cfp_title = cfp.title
@@ -843,9 +827,7 @@ async def _build_portal_paper_response(
     # Session type
     session_type_name = None
     if paper.session_type_id:
-        st_result = await db.execute(
-            select(SessionType).where(SessionType.id == paper.session_type_id)
-        )
+        st_result = await db.execute(select(SessionType).where(SessionType.id == paper.session_type_id))
         st = st_result.scalar_one_or_none()
         if st:
             session_type_name = st.name
@@ -856,42 +838,38 @@ async def _build_portal_paper_response(
     main_speaker_last_name = None
     if current_applicant_id and str(paper.main_speaker_id) != str(current_applicant_id):
         is_main_speaker = False
-    main_speaker_result = await db.execute(
-        select(CFPApplicant).where(CFPApplicant.id == paper.main_speaker_id)
-    )
+    main_speaker_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == paper.main_speaker_id))
     main_speaker = main_speaker_result.scalar_one_or_none()
     if main_speaker:
         main_speaker_first_name = main_speaker.first_name
         main_speaker_last_name = main_speaker.last_name
 
     # Co-speakers
-    cospeaker_result = await db.execute(
-        select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper.id)
-    )
+    cospeaker_result = await db.execute(select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper.id))
     cospeaker_rows = cospeaker_result.scalars().all()
 
     # Batch-load all cospeaker applicants in one query
     cospeaker_applicant_ids = [row.applicant_id for row in cospeaker_rows if row.applicant_id]
     applicants_map: dict = {}
     if cospeaker_applicant_ids:
-        app_result = await db.execute(
-            select(CFPApplicant).where(CFPApplicant.id.in_(cospeaker_applicant_ids))
-        )
+        app_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(cospeaker_applicant_ids)))
         applicants_map = {a.id: a for a in app_result.scalars().all()}
 
     cospeakers = []
     for row in cospeaker_rows:
         applicant = applicants_map.get(row.applicant_id)
         if applicant:
-            cospeakers.append(PortalCospeakerResponse(
-                applicant_id=applicant.id,
-                first_name=applicant.first_name,
-                last_name=applicant.last_name,
-                email=applicant.email,
-                invitation_status=row.invitation_status,
-                invited_at=row.invited_at,
-                responded_at=row.responded_at,
-            ))
+            cospeakers.append(
+                PortalCospeakerResponse(
+                    applicant_id=applicant.id,
+                    first_name=applicant.first_name,
+                    last_name=applicant.last_name,
+                    email=applicant.email,
+                    invitation_status=row.invitation_status,
+                    invited_at=row.invited_at,
+                    responded_at=row.responded_at,
+                )
+            )
 
     # Video
     video_url = await _get_paper_video_url(db, paper.id, paper.tenant_id)
@@ -945,12 +923,8 @@ async def _sync_cospeakers(
         raise HTTPException(status_code=400, detail="Maximum 3 co-speakers allowed")
 
     # Build map of existing co-speakers: applicant_id -> record
-    existing_result = await db.execute(
-        select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper.id)
-    )
-    existing_by_applicant: dict = {
-        row.applicant_id: row for row in existing_result.scalars().all()
-    }
+    existing_result = await db.execute(select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper.id))
+    existing_by_applicant: dict = {row.applicant_id: row for row in existing_result.scalars().all()}
 
     # Resolve all emails to applicant IDs first
     new_applicants: list[tuple[int, CFPApplicant]] = []
@@ -1024,9 +998,7 @@ async def _sync_cospeakers(
 
             # Resolve tenant info for email URLs
             if tenant_slug is None:
-                tenant_result = await db.execute(
-                    select(Tenant.slug, Tenant.name).where(Tenant.id == current.tenant_id)
-                )
+                tenant_result = await db.execute(select(Tenant.slug, Tenant.name).where(Tenant.id == current.tenant_id))
                 row = tenant_result.one()
                 tenant_slug = row[0]
                 company_name = row[1]
@@ -1053,9 +1025,7 @@ async def _build_assigned_paper_response(
 ) -> PortalAssignedPaperResponse | None:
     """Build a PortalAssignedPaperResponse from an assignment."""
     paper_result = await db.execute(
-        select(CFPPaper)
-        .options(selectinload(CFPPaper.topics))
-        .where(CFPPaper.id == assignment.paper_id)
+        select(CFPPaper).options(selectinload(CFPPaper.topics)).where(CFPPaper.id == assignment.paper_id)
     )
     paper = paper_result.scalar_one_or_none()
     if not paper:
@@ -1098,45 +1068,38 @@ async def _build_assigned_paper_response(
         main_speaker_last_name = None
         cospeakers = []
     else:
-        main_speaker_result = await db.execute(
-            select(CFPApplicant).where(CFPApplicant.id == paper.main_speaker_id)
-        )
+        main_speaker_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == paper.main_speaker_id))
         main_speaker = main_speaker_result.scalar_one_or_none()
         main_speaker_first_name = main_speaker.first_name if main_speaker else None
         main_speaker_last_name = main_speaker.last_name if main_speaker else None
 
-        cospeaker_result = await db.execute(
-            select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper.id)
-        )
+        cospeaker_result = await db.execute(select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper.id))
         cospeaker_rows = cospeaker_result.scalars().all()
 
         # Batch-load all cospeaker applicants in one query
         cospeaker_applicant_ids = [row.applicant_id for row in cospeaker_rows if row.applicant_id]
         applicants_map: dict = {}
         if cospeaker_applicant_ids:
-            app_result = await db.execute(
-                select(CFPApplicant).where(CFPApplicant.id.in_(cospeaker_applicant_ids))
-            )
+            app_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(cospeaker_applicant_ids)))
             applicants_map = {a.id: a for a in app_result.scalars().all()}
 
         cospeakers = []
         for row in cospeaker_rows:
             applicant = applicants_map.get(row.applicant_id)
             if applicant:
-                cospeakers.append(PortalCospeakerResponse(
-                    applicant_id=applicant.id,
-                    first_name=applicant.first_name,
-                    last_name=applicant.last_name,
-                    email=applicant.email,
-                    invitation_status=row.invitation_status,
-                    invited_at=row.invited_at,
-                    responded_at=row.responded_at,
-                ))
+                cospeakers.append(
+                    PortalCospeakerResponse(
+                        applicant_id=applicant.id,
+                        first_name=applicant.first_name,
+                        last_name=applicant.last_name,
+                        email=applicant.email,
+                        invitation_status=row.invitation_status,
+                        invited_at=row.invited_at,
+                        responded_at=row.responded_at,
+                    )
+                )
 
-    topics = [
-        PortalTopicResponse(id=t.id, name=t.name, description=t.description)
-        for t in paper.topics
-    ]
+    topics = [PortalTopicResponse(id=t.id, name=t.name, description=t.description) for t in paper.topics]
 
     # Get video URL
     video_url = await _get_paper_video_url(db, paper.id, paper.tenant_id)

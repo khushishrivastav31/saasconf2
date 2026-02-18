@@ -20,11 +20,7 @@ from ._crud_factory import create_crud_router
 
 async def _check_papers_using_session_type(entity: Any, conference: Any, db: Any) -> None:
     """Block deletion if any papers are using this session type."""
-    paper_count = (
-        await db.execute(
-            select(func.count()).where(CFPPaper.session_type_id == entity.id)
-        )
-    ).scalar() or 0
+    paper_count = (await db.execute(select(func.count()).where(CFPPaper.session_type_id == entity.id))).scalar() or 0
 
     if paper_count > 0:
         raise ValidationError(
@@ -34,22 +30,16 @@ async def _check_papers_using_session_type(entity: Any, conference: Any, db: Any
         )
 
 
-async def _propagate_separately_bookable(
-    entity: Any, update_data: dict, conference: Any, db: Any
-) -> None:
+async def _propagate_separately_bookable(entity: Any, update_data: dict, conference: Any, db: Any) -> None:
     """When separately_bookable changes, propagate to linked papers and sessions."""
     if "separately_bookable" not in update_data:
         return
     new_value = entity.separately_bookable
     await db.execute(
-        update(CFPPaper)
-        .where(CFPPaper.session_type_id == entity.id)
-        .values(separately_bookable=new_value)
+        update(CFPPaper).where(CFPPaper.session_type_id == entity.id).values(separately_bookable=new_value)
     )
     await db.execute(
-        update(ProgramSession)
-        .where(ProgramSession.session_type_id == entity.id)
-        .values(separately_bookable=new_value)
+        update(ProgramSession).where(ProgramSession.session_type_id == entity.id).values(separately_bookable=new_value)
     )
 
 

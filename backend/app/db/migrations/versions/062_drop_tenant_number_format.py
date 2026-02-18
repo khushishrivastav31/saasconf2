@@ -7,9 +7,9 @@ Revises: 061_conference_number_format
 Create Date: 2025-02-11
 
 """
-from alembic import op
-import sqlalchemy as sa
 
+import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "062_drop_tenant_number_format"
