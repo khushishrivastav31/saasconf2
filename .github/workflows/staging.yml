@@ -320,11 +320,12 @@ jobs:
             echo "Running database migrations..."
             docker compose exec -T backend alembic upgrade head
 
-            # Seed platform data (idempotent: super admin, modules, currencies)
+            # Seed platform data (idempotent: super admin, modules, currencies, conference settings)
             echo "Seeding platform data..."
-            docker compose exec -T backend python -m app.db.seed
+            docker compose exec -T -e PYTHONUNBUFFERED=1 backend python -m app.db.seed || echo "WARNING: Seed failed with exit code $?"
 
             # Show status
+            echo "Container status:"
             docker compose ps
           EOF
 

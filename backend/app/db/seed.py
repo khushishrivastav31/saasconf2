@@ -2,14 +2,16 @@
 
 import asyncio
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.security import hash_password
 from app.db.session import async_session_maker
+from app.models.conference import Conference
 from app.models.module import Module
 from app.models.platform_currency import PlatformCurrency
+from app.models.settings import PronounOption
 from app.models.user import User, UserRole
 
 settings = get_settings()
@@ -168,6 +170,44 @@ async def seed_default_currencies(session: AsyncSession) -> None:
     await session.commit()
 
 
+async def seed_conference_defaults(session: AsyncSession) -> None:
+    """Backfill default settings for conferences that are missing them.
+
+    Checks each conference for pronoun options as a proxy for whether
+    seed_default_settings() has already run. Populates: volunteer roles,
+    committee roles, pronouns, score scales, review criteria.
+    """
+    from app.core.default_settings import seed_default_settings
+
+    # Find conferences that have no pronoun options (= never seeded)
+    subq = (
+        select(PronounOption.conference_id)
+        .group_by(PronounOption.conference_id)
+        .having(func.count() > 0)
+        .subquery()
+    )
+    result = await session.execute(
+        select(Conference).where(Conference.id.notin_(select(subq.c.conference_id)))
+    )
+    conferences = result.scalars().all()
+
+    if not conferences:
+        print("All conferences already have default settings.")
+        return
+
+    for conf in conferences:
+        print(f"Seeding defaults for conference: {conf.name} ({conf.id})")
+        await seed_default_settings(
+            session,
+            tenant_id=conf.tenant_id,
+            conference_id=conf.id,
+            locale=conf.locale,
+        )
+
+    await session.commit()
+    print(f"Seeded defaults for {len(conferences)} conference(s).")
+
+
 async def seed_database() -> None:
     """Run all seed functions."""
     print("Starting database seeding...")
@@ -176,6 +216,7 @@ async def seed_database() -> None:
         await seed_super_admin(session)
         await seed_default_modules(session)
         await seed_default_currencies(session)
+        await seed_conference_defaults(session)
 
     print("Database seeding complete!")
 
