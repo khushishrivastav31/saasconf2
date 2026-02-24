@@ -433,6 +433,14 @@ jobs:
         working-directory: frontend
         run: mkdir -p playwright/.auth
 
+      - name: Seed E2E test data
+        working-directory: frontend
+        env:
+          E2E_API_URL: https://api.staging.sonrisa.ventures
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: npx tsx e2e/seed/setup-staging-data.ts
+
       - name: Run E2E tests
         working-directory: frontend
         env:
