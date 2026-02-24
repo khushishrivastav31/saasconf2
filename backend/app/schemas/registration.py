@@ -284,3 +284,14 @@ class BulkRegistrationResponse(BaseModel):
     billing_profile_id: UUID
     registrations: list[RegistrationResponse]
     total_created: int
+
+
+# ---------------------------------------------------------------------------
+# Unified registration schemas (replaces individual + company + bulk)
+# ---------------------------------------------------------------------------
+
+# Reuse existing bulk schemas — the unified flow has the same shape:
+# one billing profile + N attendees, each with their own booking option.
+UnifiedAttendeeData = BulkAttendeeData
+UnifiedRegistrationCreate = BulkRegistrationCreate
+UnifiedRegistrationResponse = BulkRegistrationResponse

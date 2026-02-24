@@ -36,7 +36,7 @@ test.describe('Registration Tab', () => {
     expect(hasTable || hasEmpty || hasAddBtn).toBeTruthy();
   });
 
-  test('should open new registration form with mode selection', async ({ page }) => {
+  test('should open new registration form with add attendee button', async ({ page }) => {
     const detail = new ConferenceDetailPage(page);
     await detail.goto(conferenceId!);
     await detail.expectLoaded();
@@ -48,10 +48,10 @@ test.describe('Registration Tab', () => {
     if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await addBtn.click();
 
-      // Should show mode selection (Single / Group)
-      const hasSingle = await page.getByText(/single/i).isVisible({ timeout: 5000 }).catch(() => false);
-      const hasGroup = await page.getByText(/group/i).isVisible({ timeout: 5000 }).catch(() => false);
-      expect(hasSingle || hasGroup).toBeTruthy();
+      // Should show "Add Another Attendee" button (unified flow, no mode toggle)
+      const hasAddAttendee = await page.getByRole('button', { name: /add another attendee/i }).isVisible({ timeout: 5000 }).catch(() => false);
+      const hasAttendeeSection = await page.getByText(/attendee/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+      expect(hasAddAttendee || hasAttendeeSection).toBeTruthy();
     }
   });
 

@@ -27,14 +27,10 @@ from app.schemas.registration import (
     BillingProfileCreate,
     BulkAttendeeData,
     BulkRegistrationCreate,
-    IndividualRegistrationCreate,
-    RegistrationItemCreate,
-    RegistrationItemType,
     RegistrationStatus,
     RegistrationUpdate,
 )
 from tests.conftest import auth_headers
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -807,3 +803,240 @@ async def test_filter_registrations_by_status(
     )
     assert resp2.status_code == 200
     assert resp2.json()["total"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Integration tests — Unified registration endpoint
+# ---------------------------------------------------------------------------
+
+
+async def test_unified_single_attendee(
+    client: AsyncClient,
+    tenant_with_reg_module: Tenant,
+    tenant_admin_user: User,
+    reg_admin_token: str,
+    conference: Conference,
+    main_booking_option: BookingOption,
+) -> None:
+    """Unified endpoint with one attendee returns total_created=1."""
+    payload = {
+        "billing": BILLING_PAYLOAD,
+        "attendees": [
+            {
+                "first_name": "Uni",
+                "last_name": "Single",
+                "email": "uni.single@test.com",
+                "booking_option_id": str(main_booking_option.id),
+            }
+        ],
+    }
+    response = await client.post(
+        f"{BASE}/{conference.id}/registrations",
+        json=payload,
+        headers=auth_headers(reg_admin_token),
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["total_created"] == 1
+    assert len(data["registrations"]) == 1
+    reg = data["registrations"][0]
+    assert reg["first_name"] == "Uni"
+    assert reg["last_name"] == "Single"
+    assert reg["email"] == "uni.single@test.com"
+    assert reg["status"] == "registered_pending_invoice"
+    assert reg["booking_option_name"] == "Full Conference"
+
+
+async def test_unified_multiple_attendees(
+    client: AsyncClient,
+    tenant_with_reg_module: Tenant,
+    tenant_admin_user: User,
+    reg_admin_token: str,
+    conference: Conference,
+    main_booking_option: BookingOption,
+) -> None:
+    """Unified endpoint with 3 attendees shares one billing profile."""
+    payload = {
+        "billing": BILLING_PAYLOAD,
+        "attendees": [
+            {
+                "first_name": f"Multi{i}",
+                "last_name": "Unified",
+                "email": f"multi{i}@unified.com",
+                "booking_option_id": str(main_booking_option.id),
+            }
+            for i in range(3)
+        ],
+    }
+    response = await client.post(
+        f"{BASE}/{conference.id}/registrations",
+        json=payload,
+        headers=auth_headers(reg_admin_token),
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["total_created"] == 3
+    assert len(data["registrations"]) == 3
+    # All share the same billing profile
+    bp_ids = {r["billing_profile_id"] for r in data["registrations"]}
+    assert len(bp_ids) == 1
+    assert data["billing_profile_id"] == next(iter(bp_ids))
+
+
+async def test_unified_duplicate_emails_rejected(
+    client: AsyncClient,
+    tenant_with_reg_module: Tenant,
+    tenant_admin_user: User,
+    reg_admin_token: str,
+    conference: Conference,
+    main_booking_option: BookingOption,
+) -> None:
+    """Unified endpoint rejects duplicate emails within the same batch."""
+    payload = {
+        "billing": BILLING_PAYLOAD,
+        "attendees": [
+            {
+                "first_name": "Dup",
+                "last_name": "One",
+                "email": "dup@unified.com",
+                "booking_option_id": str(main_booking_option.id),
+            },
+            {
+                "first_name": "Dup",
+                "last_name": "Two",
+                "email": "dup@unified.com",
+                "booking_option_id": str(main_booking_option.id),
+            },
+        ],
+    }
+    response = await client.post(
+        f"{BASE}/{conference.id}/registrations",
+        json=payload,
+        headers=auth_headers(reg_admin_token),
+    )
+    assert response.status_code == 422
+
+
+async def test_unified_empty_attendees_rejected(
+    client: AsyncClient,
+    tenant_with_reg_module: Tenant,
+    tenant_admin_user: User,
+    reg_admin_token: str,
+    conference: Conference,
+) -> None:
+    """Unified endpoint rejects empty attendees list."""
+    payload = {
+        "billing": BILLING_PAYLOAD,
+        "attendees": [],
+    }
+    response = await client.post(
+        f"{BASE}/{conference.id}/registrations",
+        json=payload,
+        headers=auth_headers(reg_admin_token),
+    )
+    assert response.status_code == 422
+
+
+async def test_unified_email_already_registered(
+    client: AsyncClient,
+    tenant_with_reg_module: Tenant,
+    tenant_admin_user: User,
+    reg_admin_token: str,
+    conference: Conference,
+    main_booking_option: BookingOption,
+) -> None:
+    """Unified endpoint rejects email already registered for the conference."""
+    payload = {
+        "billing": BILLING_PAYLOAD,
+        "attendees": [
+            {
+                "first_name": "Already",
+                "last_name": "Exists",
+                "email": "already@exists.com",
+                "booking_option_id": str(main_booking_option.id),
+            }
+        ],
+    }
+    # First registration succeeds
+    r1 = await client.post(
+        f"{BASE}/{conference.id}/registrations",
+        json=payload,
+        headers=auth_headers(reg_admin_token),
+    )
+    assert r1.status_code == 201
+
+    # Second with same email fails
+    r2 = await client.post(
+        f"{BASE}/{conference.id}/registrations",
+        json=payload,
+        headers=auth_headers(reg_admin_token),
+    )
+    assert r2.status_code == 400
+
+
+async def test_unified_with_addon_items(
+    client: AsyncClient,
+    tenant_with_reg_module: Tenant,
+    tenant_admin_user: User,
+    reg_admin_token: str,
+    conference: Conference,
+    main_booking_option: BookingOption,
+    addon_booking_option: BookingOption,
+) -> None:
+    """Unified endpoint creates registration with add-on items."""
+    payload = {
+        "billing": BILLING_PAYLOAD,
+        "attendees": [
+            {
+                "first_name": "Addon",
+                "last_name": "Test",
+                "email": "addon@unified.com",
+                "booking_option_id": str(main_booking_option.id),
+                "items": [
+                    {
+                        "item_type": "booking_option",
+                        "booking_option_id": str(addon_booking_option.id),
+                    }
+                ],
+            }
+        ],
+    }
+    response = await client.post(
+        f"{BASE}/{conference.id}/registrations",
+        json=payload,
+        headers=auth_headers(reg_admin_token),
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["total_created"] == 1
+    reg = data["registrations"][0]
+    assert len(reg["items"]) == 1
+    assert reg["items"][0]["item_type"] == "booking_option"
+    assert reg["items"][0]["item_name"] == "Tutorial Day"
+
+
+async def test_unified_invalid_booking_option(
+    client: AsyncClient,
+    tenant_with_reg_module: Tenant,
+    tenant_admin_user: User,
+    reg_admin_token: str,
+    conference: Conference,
+) -> None:
+    """Unified endpoint rejects non-existent booking option."""
+    payload = {
+        "billing": BILLING_PAYLOAD,
+        "attendees": [
+            {
+                "first_name": "Bad",
+                "last_name": "Option",
+                "email": "bad@option.com",
+                "booking_option_id": str(uuid.uuid4()),
+            }
+        ],
+    }
+    response = await client.post(
+        f"{BASE}/{conference.id}/registrations",
+        json=payload,
+        headers=auth_headers(reg_admin_token),
+    )
+    assert response.status_code == 400

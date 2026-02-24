@@ -154,6 +154,11 @@ export interface BulkRegistrationResponse {
   total_created: number;
 }
 
+// Unified registration (replaces individual + company + bulk)
+export type UnifiedAttendeeData = BulkAttendeeData;
+export type UnifiedRegistrationCreate = BulkRegistrationCreate;
+export type UnifiedRegistrationResponse = BulkRegistrationResponse;
+
 // Update payload
 export interface RegistrationUpdate {
   first_name?: string;

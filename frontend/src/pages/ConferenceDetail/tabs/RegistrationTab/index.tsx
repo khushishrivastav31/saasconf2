@@ -6,9 +6,9 @@ import type {
   Registration,
   RegistrationListResponse,
   RegistrationUpdate,
-  IndividualRegistrationCreate,
-  BulkRegistrationCreate,
-  BulkAttendeeData,
+  UnifiedAttendeeData,
+  UnifiedRegistrationCreate,
+  UnifiedRegistrationResponse,
   BillingProfileCreate,
   AttendeeData,
   RegistrationItemCreate,
@@ -46,7 +46,7 @@ const MODE_LABELS: Record<string, string> = {
   company_bulk: 'Group',
 };
 
-type RegistrationModeType = 'single' | 'group';
+// (RegistrationModeType removed — unified flow replaces single/group toggle)
 
 // ---------------------------------------------------------------------------
 // Price helper – find the current active period price for an option
@@ -103,7 +103,7 @@ const emptyBilling: BillingProfileCreate = {
   procurement_code: '',
 };
 
-const emptyBulkAttendee: BulkAttendeeData = {
+const emptyUnifiedAttendee: UnifiedAttendeeData = {
   ...emptyAttendee,
   booking_option_id: '',
 };
@@ -696,25 +696,14 @@ export default function RegistrationTab({
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
 
-  // Create form state
+  // Create form state (unified — always an array of attendees)
   const [showCreate, setShowCreate] = useState(false);
-  const [createMode, setCreateMode] = useState<RegistrationModeType>('single');
-  const [attendee, setAttendee] = useState<AttendeeData>({ ...emptyAttendee });
+  const [attendees, setAttendees] = useState<UnifiedAttendeeData[]>([{ ...emptyUnifiedAttendee }]);
+  const [attendeeOptionIds, setAttendeeOptionIds] = useState<string[][]>([[]]);
+  const [attendeeSessionSelections, setAttendeeSessionSelections] = useState<
+    Record<string, string>[]
+  >([{}]);
   const [billing, setBilling] = useState<BillingProfileCreate>({ ...emptyBilling });
-  const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
-  const [notes, setNotes] = useState('');
-
-  // Session selections (slotId -> sessionId)
-  const [sessionSelections, setSessionSelections] = useState<Record<string, string>>({});
-
-  // Bulk attendees
-  const [bulkAttendees, setBulkAttendees] = useState<BulkAttendeeData[]>([
-    { ...emptyBulkAttendee },
-  ]);
-  const [bulkOptionIds, setBulkOptionIds] = useState<string[][]>([[]]);
-  const [bulkSessionSelections, setBulkSessionSelections] = useState<Record<string, string>[]>([
-    {},
-  ]);
 
   // Detail view
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -769,34 +758,26 @@ export default function RegistrationTab({
 
   // ---- Mutations ----
 
-  const createIndividualMutation = useMutation({
-    mutationFn: async (payload: IndividualRegistrationCreate) => {
-      const response = await api.post<Registration>(
-        `/conferences/${conference.id}/registrations/individual`,
+  const createMutation = useMutation({
+    mutationFn: async (payload: UnifiedRegistrationCreate) => {
+      const response = await api.post<UnifiedRegistrationResponse>(
+        `/conferences/${conference.id}/registrations`,
         payload
       );
       return response.data;
     },
-    onSuccess: (reg) => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['conference-registrations', conference.id] });
       resetCreateForm();
-      setSuccess(`Registration created for ${reg.first_name} ${reg.last_name}`);
-      setSelectedId(reg.id);
+      if (res.total_created === 1) {
+        const reg = res.registrations[0];
+        setSuccess(`Registration created for ${reg.first_name} ${reg.last_name}`);
+        setSelectedId(reg.id);
+      } else {
+        setSuccess(`${res.total_created} registration(s) created successfully`);
+      }
     },
     onError: (err: unknown) => setError(parseApiError(err, 'Failed to create registration')),
-  });
-
-  const createBulkMutation = useMutation({
-    mutationFn: async (payload: BulkRegistrationCreate) => {
-      const response = await api.post(`/conferences/${conference.id}/registrations/bulk`, payload);
-      return response.data;
-    },
-    onSuccess: (res: { total_created: number }) => {
-      queryClient.invalidateQueries({ queryKey: ['conference-registrations', conference.id] });
-      resetCreateForm();
-      setSuccess(`${res.total_created} registration(s) created successfully`);
-    },
-    onError: (err: unknown) => setError(parseApiError(err, 'Failed to create bulk registration')),
   });
 
   const updateMutation = useMutation({
@@ -859,14 +840,10 @@ export default function RegistrationTab({
 
   function resetCreateForm() {
     setShowCreate(false);
-    setAttendee({ ...emptyAttendee });
+    setAttendees([{ ...emptyUnifiedAttendee }]);
+    setAttendeeOptionIds([[]]);
+    setAttendeeSessionSelections([{}]);
     setBilling({ ...emptyBilling });
-    setSelectedOptionIds([]);
-    setSessionSelections({});
-    setNotes('');
-    setBulkAttendees([{ ...emptyBulkAttendee }]);
-    setBulkOptionIds([[]]);
-    setBulkSessionSelections([{}]);
     setError(null);
   }
 
@@ -875,64 +852,40 @@ export default function RegistrationTab({
     setError(null);
     setSuccess(null);
 
-    const extraItems: RegistrationItemCreate[] = selectedOptionIds.slice(1).map((id) => ({
-      item_type: 'booking_option' as const,
-      booking_option_id: id,
-    }));
-
-    // Add tutorial items from session selections
-    const tutorialItems: RegistrationItemCreate[] = Object.values(sessionSelections)
-      .filter(Boolean)
-      .map((sessionId) => ({
-        item_type: 'tutorial' as const,
-        program_session_id: sessionId,
+    const mergedAttendees: UnifiedAttendeeData[] = attendees.map((a, idx) => {
+      const ids = attendeeOptionIds[idx] || [];
+      const addOnItems: RegistrationItemCreate[] = ids.slice(1).map((id) => ({
+        item_type: 'booking_option' as const,
+        booking_option_id: id,
       }));
-
-    const allItems = [...extraItems, ...tutorialItems];
-
-    if (createMode === 'single') {
-      createIndividualMutation.mutate({
-        attendee,
-        billing,
-        booking_option_id: selectedOptionIds[0] || '',
-        items: allItems.length ? allItems : undefined,
-        notes: notes || undefined,
-      });
-    } else {
-      // Bulk — merge bulkOptionIds and session selections into each attendee
-      const mergedAttendees: BulkAttendeeData[] = bulkAttendees.map((a, idx) => {
-        const ids = bulkOptionIds[idx] || [];
-        const addOnItems: RegistrationItemCreate[] = ids.slice(1).map((id) => ({
-          item_type: 'booking_option' as const,
-          booking_option_id: id,
+      const tutorialItems: RegistrationItemCreate[] = Object.values(
+        attendeeSessionSelections[idx] || {}
+      )
+        .filter(Boolean)
+        .map((sessionId) => ({
+          item_type: 'tutorial' as const,
+          program_session_id: sessionId,
         }));
-        const bulkTutorialItems: RegistrationItemCreate[] = Object.values(
-          bulkSessionSelections[idx] || {}
-        )
-          .filter(Boolean)
-          .map((sessionId) => ({
-            item_type: 'tutorial' as const,
-            program_session_id: sessionId,
-          }));
-        const items = [...addOnItems, ...bulkTutorialItems];
-        return {
-          ...a,
-          booking_option_id: ids[0] || '',
-          items: items.length ? items : undefined,
-        };
-      });
-      const validAttendees = mergedAttendees.filter(
-        (a) => a.first_name && a.last_name && a.email && a.booking_option_id
-      );
-      if (validAttendees.length === 0) {
-        setError('Add at least one attendee with all required fields');
-        return;
-      }
-      createBulkMutation.mutate({
-        billing,
-        attendees: validAttendees,
-      });
+      const items = [...addOnItems, ...tutorialItems];
+      return {
+        ...a,
+        booking_option_id: ids[0] || '',
+        items: items.length ? items : undefined,
+      };
+    });
+
+    const validAttendees = mergedAttendees.filter(
+      (a) => a.first_name && a.last_name && a.email && a.booking_option_id
+    );
+    if (validAttendees.length === 0) {
+      setError('Please fill in all required fields for at least one attendee');
+      return;
     }
+
+    createMutation.mutate({
+      billing,
+      attendees: validAttendees,
+    });
   }
 
   function handleAddItem() {
@@ -945,7 +898,7 @@ export default function RegistrationTab({
     addItemMutation.mutate({ regId: selectedId, data: payload });
   }
 
-  const isCreating = createIndividualMutation.isPending || createBulkMutation.isPending;
+  const isCreating = createMutation.isPending;
 
   // ---- Detail view ----
   if (selectedId && selectedReg) {
@@ -1199,148 +1152,93 @@ export default function RegistrationTab({
         <ErrorBanner message={error} />
 
         <form onSubmit={handleCreateSubmit} className="space-y-6">
-          {/* Mode selector */}
+          {/* Attendee(s) */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">New Registration</h3>
-            <div className="flex gap-2 mb-6">
-              {(
-                [
-                  ['single', 'Single Registration'],
-                  ['group', 'Group Registration'],
-                ] as [RegistrationModeType, string][]
-              ).map(([mode, label]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setCreateMode(mode)}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                    createMode === mode
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
 
-            {/* Attendee section (individual/company) */}
-            {createMode !== 'group' && (
-              <>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Attendee</h4>
+            {attendees.map((att, idx) => (
+              <div
+                key={idx}
+                className={
+                  attendees.length > 1
+                    ? 'mb-4 p-4 bg-gray-50 rounded-md border border-gray-200'
+                    : ''
+                }
+              >
+                {attendees.length > 1 && (
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-600">Attendee {idx + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAttendees(attendees.filter((_, i) => i !== idx));
+                        setAttendeeOptionIds(attendeeOptionIds.filter((_, i) => i !== idx));
+                        setAttendeeSessionSelections(
+                          attendeeSessionSelections.filter((_, i) => i !== idx)
+                        );
+                      }}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+
+                {attendees.length === 1 && (
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Attendee</h4>
+                )}
+
                 <AttendeeFields
-                  data={attendee}
-                  onChange={setAttendee}
+                  prefix={attendees.length > 1 ? `att-${idx}` : undefined}
+                  data={att}
                   conferenceId={conference.id}
+                  onChange={(d) => {
+                    const updated = [...attendees];
+                    updated[idx] = { ...updated[idx], ...d };
+                    setAttendees(updated);
+                  }}
                 />
 
-                {/* Booking option selection */}
-                <div className="mt-4">
+                <div className="mt-3">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Booking Option *
                   </label>
                   <BookingOptionSelect
                     options={options}
                     periods={periods}
-                    value={selectedOptionIds}
+                    value={attendeeOptionIds[idx] || []}
                     onChange={(ids) => {
-                      setSelectedOptionIds(ids);
-                      setSessionSelections({});
+                      const updated = [...attendeeOptionIds];
+                      updated[idx] = ids;
+                      setAttendeeOptionIds(updated);
+                      const updatedSessions = [...attendeeSessionSelections];
+                      updatedSessions[idx] = {};
+                      setAttendeeSessionSelections(updatedSessions);
                     }}
                     conferenceId={conference.id}
-                    sessionSelections={sessionSelections}
-                    onSessionChange={setSessionSelections}
+                    sessionSelections={attendeeSessionSelections[idx] || {}}
+                    onSessionChange={(sel: Record<string, string>) => {
+                      const updated = [...attendeeSessionSelections];
+                      updated[idx] = sel;
+                      setAttendeeSessionSelections(updated);
+                    }}
                     required
                   />
                 </div>
+              </div>
+            ))}
 
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">Notes</label>
-                  <textarea
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                    rows={2}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Bulk attendees */}
-            {createMode === 'group' && (
-              <>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Attendees</h4>
-                {bulkAttendees.map((ba, idx) => (
-                  <div key={idx} className="mb-4 p-4 bg-gray-50 rounded-md border border-gray-200">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-600">Attendee {idx + 1}</span>
-                      {bulkAttendees.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBulkAttendees(bulkAttendees.filter((_, i) => i !== idx));
-                            setBulkOptionIds(bulkOptionIds.filter((_, i) => i !== idx));
-                            setBulkSessionSelections(
-                              bulkSessionSelections.filter((_, i) => i !== idx)
-                            );
-                          }}
-                          className="text-xs text-red-500 hover:text-red-700"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <AttendeeFields
-                      prefix={`bulk-${idx}`}
-                      data={ba}
-                      conferenceId={conference.id}
-                      onChange={(d) => {
-                        const updated = [...bulkAttendees];
-                        updated[idx] = { ...updated[idx], ...d };
-                        setBulkAttendees(updated);
-                      }}
-                    />
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Booking Option *
-                      </label>
-                      <BookingOptionSelect
-                        options={options}
-                        periods={periods}
-                        value={bulkOptionIds[idx] || []}
-                        onChange={(ids) => {
-                          const updated = [...bulkOptionIds];
-                          updated[idx] = ids;
-                          setBulkOptionIds(updated);
-                          const updatedSessions = [...bulkSessionSelections];
-                          updatedSessions[idx] = {};
-                          setBulkSessionSelections(updatedSessions);
-                        }}
-                        conferenceId={conference.id}
-                        sessionSelections={bulkSessionSelections[idx] || {}}
-                        onSessionChange={(sel: Record<string, string>) => {
-                          const updated = [...bulkSessionSelections];
-                          updated[idx] = sel;
-                          setBulkSessionSelections(updated);
-                        }}
-                        required
-                      />
-                    </div>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBulkAttendees([...bulkAttendees, { ...emptyBulkAttendee }]);
-                    setBulkOptionIds([...bulkOptionIds, []]);
-                    setBulkSessionSelections([...bulkSessionSelections, {}]);
-                  }}
-                  className="text-sm text-primary-600 hover:text-primary-800"
-                >
-                  + Add Another Attendee
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                setAttendees([...attendees, { ...emptyUnifiedAttendee }]);
+                setAttendeeOptionIds([...attendeeOptionIds, []]);
+                setAttendeeSessionSelections([...attendeeSessionSelections, {}]);
+              }}
+              className="mt-4 text-sm text-primary-600 hover:text-primary-800"
+            >
+              + Add Another Attendee
+            </button>
           </div>
 
           {/* Billing section */}
@@ -1365,8 +1263,8 @@ export default function RegistrationTab({
             >
               {isCreating ? (
                 <ButtonSpinner label="Creating..." />
-              ) : createMode === 'group' ? (
-                `Register ${bulkAttendees.length} Attendee(s)`
+              ) : attendees.length > 1 ? (
+                `Register ${attendees.length} Attendees`
               ) : (
                 'Register Attendee'
               )}

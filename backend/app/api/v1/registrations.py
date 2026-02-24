@@ -39,6 +39,8 @@ from app.schemas.registration import (
     RegistrationListResponse,
     RegistrationResponse,
     RegistrationUpdate,
+    UnifiedRegistrationCreate,
+    UnifiedRegistrationResponse,
 )
 
 MODULE_CODE = "registration"
@@ -449,11 +451,93 @@ async def get_registration(
 
 
 # ---------------------------------------------------------------------------
-# Individual registration
+# Unified registration (1 or more attendees, shared billing)
 # ---------------------------------------------------------------------------
 
 
-@router.post("/individual", response_model=RegistrationResponse, status_code=201)
+@router.post("", response_model=UnifiedRegistrationResponse, status_code=201)
+@limiter.limit("10/minute")
+async def create_registration(
+    request: Request,
+    conference_id: UUID,
+    data: UnifiedRegistrationCreate,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> UnifiedRegistrationResponse:
+    """Register one or more attendees with shared billing."""
+    tenant_id = current_user.tenant_id
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+    await check_conference_admin(conference_id, current_user, db)
+
+    # Validate all emails are unique for this conference
+    for att in data.attendees:
+        await _check_email_unique(db, conference_id, att.email)
+
+    # Validate all referenced booking options
+    option_ids = {att.booking_option_id for att in data.attendees}
+    opt_map: dict[UUID, BookingOption] = {}
+    for oid in option_ids:
+        opt_map[oid] = await _validate_booking_option(db, oid, conference_id, tenant_id)
+
+    # Create shared billing profile
+    billing = BillingProfile(
+        tenant_id=tenant_id,
+        conference_id=conference_id,
+        **data.billing.model_dump(),
+    )
+    db.add(billing)
+    await db.flush()
+
+    # Create registrations
+    responses: list[RegistrationResponse] = []
+    for att in data.attendees:
+        reg = Registration(
+            tenant_id=tenant_id,
+            conference_id=conference_id,
+            billing_profile_id=billing.id,
+            first_name=att.first_name,
+            last_name=att.last_name,
+            email=att.email.lower(),
+            pronouns=att.pronouns,
+            job_title=att.job_title,
+            department=att.department,
+            phone=att.phone,
+            booking_option_id=att.booking_option_id,
+            registration_mode=RegistrationMode.COMPANY_BULK.value,
+            status=RegistrationStatus.REGISTERED_PENDING_INVOICE.value,
+            notes=att.notes,
+            created_by=current_user.user_id,
+        )
+        db.add(reg)
+        await db.flush()
+
+        items = await _create_items(db, reg, att.items, conference_id, tenant_id, conference)
+        if items:
+            await db.flush()
+        reg.billing_profile = billing
+        responses.append(
+            _build_response(
+                reg,
+                option_name=opt_map[att.booking_option_id].name,
+                items=items,
+            )
+        )
+
+    await db.commit()
+
+    return UnifiedRegistrationResponse(
+        billing_profile_id=billing.id,
+        registrations=responses,
+        total_created=len(responses),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Individual registration (deprecated — use POST "" instead)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/individual", response_model=RegistrationResponse, status_code=201, deprecated=True)
 @limiter.limit("10/minute")
 async def create_individual_registration(
     request: Request,
@@ -511,11 +595,11 @@ async def create_individual_registration(
 
 
 # ---------------------------------------------------------------------------
-# Company single registration
+# Company single registration (deprecated — use POST "" instead)
 # ---------------------------------------------------------------------------
 
 
-@router.post("/company", response_model=RegistrationResponse, status_code=201)
+@router.post("/company", response_model=RegistrationResponse, status_code=201, deprecated=True)
 @limiter.limit("10/minute")
 async def create_company_registration(
     request: Request,
@@ -570,11 +654,11 @@ async def create_company_registration(
 
 
 # ---------------------------------------------------------------------------
-# Bulk company registration
+# Bulk company registration (deprecated — use POST "" instead)
 # ---------------------------------------------------------------------------
 
 
-@router.post("/bulk", response_model=BulkRegistrationResponse, status_code=201)
+@router.post("/bulk", response_model=BulkRegistrationResponse, status_code=201, deprecated=True)
 @limiter.limit("5/minute")
 async def create_bulk_registration(
     request: Request,
@@ -631,6 +715,8 @@ async def create_bulk_registration(
         await db.flush()
 
         items = await _create_items(db, reg, att.items, conference_id, tenant_id, conference)
+        if items:
+            await db.flush()
         reg.billing_profile = billing
         responses.append(
             _build_response(
