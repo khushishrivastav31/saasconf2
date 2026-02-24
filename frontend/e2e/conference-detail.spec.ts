@@ -208,7 +208,7 @@ test.describe('Conference Sessions Tab', () => {
     await detail.navigateToSection('Sessions');
 
     // Should show sessions heading
-    await expect(page.getByRole('heading', { name: /sessions/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Sessions', exact: true })).toBeVisible({ timeout: 10000 });
 
     // Should show table or empty state
     const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);

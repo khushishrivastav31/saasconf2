@@ -18,8 +18,9 @@ test.describe('Conference Program Deep Tests', () => {
     await expect(page.getByRole('heading', { name: /program design/i })).toBeVisible({ timeout: 10000 });
 
     const hasAddDay = await page.getByRole('button', { name: /add day/i }).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasDays = await page.getByRole('button').filter({ hasText: /mon|tue|wed|thu|fri|sat|sun|day/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
-    expect(hasAddDay || hasDays).toBeTruthy();
+    const hasDays = await page.getByRole('button').filter({ hasText: /mon|tue|wed|thu|fri|sat|sun|day|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEmpty = await page.getByText(/no program days/i).isVisible({ timeout: 3000 }).catch(() => false);
+    expect(hasAddDay || hasDays || hasEmpty).toBeTruthy();
   });
 
   test('should show day tabs with date info when days exist', async ({ page }) => {

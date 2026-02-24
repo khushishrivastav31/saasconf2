@@ -68,8 +68,8 @@ test.describe('Registration Tab', () => {
 
       // Should show billing fields
       await expect(page.getByText(/billing information/i)).toBeVisible({ timeout: 5000 });
-      await expect(page.getByLabelText(/street/i)).toBeVisible();
-      await expect(page.getByLabelText(/country/i)).toBeVisible();
+      await expect(page.getByLabel(/street/i)).toBeVisible();
+      await expect(page.getByLabel(/country/i)).toBeVisible();
     }
   });
 

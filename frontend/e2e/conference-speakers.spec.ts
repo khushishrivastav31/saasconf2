@@ -15,7 +15,7 @@ test.describe('Conference Speakers Tab', () => {
 
     await detail.navigateToSection('Speakers');
 
-    await expect(page.getByRole('heading', { name: /speakers/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Speakers', exact: true })).toBeVisible({ timeout: 10000 });
   });
 
   test('should show speakers table or empty state', async ({ page }) => {

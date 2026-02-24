@@ -7,10 +7,10 @@ export class ConferenceDetailPage {
     await this.page.goto(`/modules/conferences/${conferenceId}`);
   }
 
-  get conferenceName() { return this.page.locator('h1'); }
+  get conferenceName() { return this.page.locator('h1.text-2xl'); }
   get statusBadge() { return this.page.locator('.rounded-full').first(); }
-  get sidebar() { return this.page.locator('nav').first(); }
-  get contentArea() { return this.page.locator('.flex-1.min-w-0'); }
+  get sidebar() { return this.page.locator('nav.flex-shrink-0'); }
+  get contentArea() { return this.page.locator('.flex-1.min-w-0').first(); }
 
   async navigateToSection(name: string) {
     const btn = this.sidebar.getByRole('button', { name }).first();
@@ -19,17 +19,23 @@ export class ConferenceDetailPage {
   }
 
   async expandSection(name: string) {
-    const sectionRow = this.sidebar.locator('div').filter({ hasText: name }).first();
-    const chevron = sectionRow.locator('button:has(svg)').last();
-    if (await chevron.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await chevron.click();
+    // Find the named section button, then go to its parent container
+    // which holds both the section button and its chevron toggle
+    const sectionBtn = this.sidebar.getByRole('button', { name }).first();
+    const container = sectionBtn.locator('xpath=..');
+    const buttons = container.locator('button');
+    const count = await buttons.count();
+    if (count > 1) {
+      // The last button in the container is the chevron/expand toggle
+      await buttons.last().click();
       await this.page.waitForTimeout(300);
     }
   }
 
   async navigateToChildSection(parentName: string, childName: string) {
     await this.expandSection(parentName);
-    const childBtn = this.sidebar.getByRole('button', { name: childName });
+    const childBtn = this.sidebar.getByRole('button', { name: childName, exact: true });
+    await childBtn.waitFor({ state: 'visible', timeout: 5000 });
     await childBtn.click();
     await this.page.waitForTimeout(500);
   }
