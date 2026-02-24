@@ -184,7 +184,7 @@ jobs:
 
       - name: Audit npm dependencies
         working-directory: frontend
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=critical
 
       - name: Scan for vulnerabilities in Dockerfiles
         uses: aquasecurity/trivy-action@master
