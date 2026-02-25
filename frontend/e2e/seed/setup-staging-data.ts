@@ -397,6 +397,139 @@ async function main() {
     log(`News articles already exist (${newsResp.total}).`);
   }
 
+  // 14. Create booking periods (Early Bird + Regular)
+  log("Checking booking periods...");
+  const periodsResp = await api<{ items: Array<{ id: string; name: string }>; total: number }>(
+    "GET",
+    `/conferences/${conferenceId}/settings/booking-periods`,
+  );
+  if (periodsResp.total === 0) {
+    const periodsDef = [
+      { name: "Early Bird", start_date: "2026-01-01", end_date: "2026-03-31", sort_order: 0, is_active: true },
+      { name: "Regular", start_date: "2026-04-01", end_date: "2026-05-31", sort_order: 1, is_active: true },
+    ];
+    for (const p of periodsDef) {
+      log(`Creating booking period "${p.name}"...`);
+      await apiSafe("POST", `/conferences/${conferenceId}/settings/booking-periods`, p);
+    }
+    log("Booking periods created.");
+  } else {
+    log(`Booking periods already exist (${periodsResp.total}).`);
+  }
+
+  // 15. Create volunteers
+  log("Checking volunteers...");
+  const volunteersResp = await api<{ items: Array<{ id: string; email: string }>; total: number }>(
+    "GET",
+    `/conferences/${conferenceId}/volunteers`,
+  );
+  if (volunteersResp.total === 0) {
+    const volunteersDef = [
+      { conference_id: conferenceId, email: "volunteer1@test-e2e.example.com", first_name: "Alice", last_name: "Volunteer", role: "Registration Desk" },
+      { conference_id: conferenceId, email: "volunteer2@test-e2e.example.com", first_name: "Bob", last_name: "Helper", role: "Speaker Liaison" },
+    ];
+    for (const v of volunteersDef) {
+      log(`Creating volunteer "${v.first_name} ${v.last_name}"...`);
+      await apiSafe("POST", "/volunteers", v);
+    }
+    log("Volunteers created.");
+  } else {
+    log(`Volunteers already exist (${volunteersResp.total}).`);
+  }
+
+  // 16. Create CFP applicants and papers
+  log("Checking CFP papers...");
+  const cfpListResp = await api<{ items: Array<{ id: string }>; total: number }>(
+    "GET",
+    `/cfp/?conference_id=${conferenceId}`,
+  );
+  const cfpId = cfpListResp.items[0]?.id;
+
+  if (cfpId) {
+    const papersResp = await api<{ items: Array<{ id: string }>; total: number }>(
+      "GET",
+      `/cfp/papers?cfp_id=${cfpId}`,
+    );
+    if (papersResp.total === 0) {
+      // Create applicants (speakers)
+      const applicantsDef = [
+        { first_name: "Jane", last_name: "Speaker", email: "jane.speaker@test-e2e.example.com", password: "Test1234", title: "Senior Engineer", company: "TechCorp" },
+        { first_name: "John", last_name: "Presenter", email: "john.presenter@test-e2e.example.com", password: "Test1234", title: "CTO", company: "StartupXYZ" },
+        { first_name: "Maria", last_name: "Workshop", email: "maria.workshop@test-e2e.example.com", password: "Test1234", title: "Developer Advocate", company: "CloudCo" },
+      ];
+
+      const applicantIds: string[] = [];
+      for (const a of applicantsDef) {
+        log(`Creating applicant "${a.first_name} ${a.last_name}"...`);
+        const created = await apiSafe<{ id: string }>("POST", "/cfp/applicants", a);
+        if (created) {
+          applicantIds.push(created.id);
+        } else {
+          // Already exists — find by email
+          const existing = await api<{ items: Array<{ id: string; email: string }> }>(
+            "GET",
+            `/cfp/applicants?search=${encodeURIComponent(a.email)}`,
+          );
+          const found = existing.items.find((e) => e.email === a.email);
+          if (found) applicantIds.push(found.id);
+        }
+      }
+
+      // Re-fetch topics for paper assignment
+      const topicsFresh = await api<{ items: Array<{ id: string; name: string }> }>("GET", "/cfp/topics");
+      const aiTopic = topicsFresh.items.find((t) => t.name.includes("AI"));
+      const cloudTopic = topicsFresh.items.find((t) => t.name.includes("Cloud"));
+
+      const talkType = sessionTypes.find((t) => t.slug === "talk");
+      const workshopType = sessionTypes.find((t) => t.slug === "workshop");
+
+      // Create papers
+      const papersDef = [
+        {
+          cfp_id: cfpId,
+          main_speaker_id: applicantIds[0],
+          title: "AI-Powered Code Review: Lessons from Production",
+          abstract_short: "How we integrated AI into our code review pipeline and what we learned.",
+          level: "intermediate",
+          session_type_id: talkType?.id,
+          topic_ids: aiTopic ? [aiTopic.id] : [],
+        },
+        {
+          cfp_id: cfpId,
+          main_speaker_id: applicantIds[1],
+          title: "Building Event-Driven Microservices at Scale",
+          abstract_short: "Patterns and anti-patterns for event-driven architectures in large organizations.",
+          level: "advanced",
+          session_type_id: talkType?.id,
+          topic_ids: cloudTopic ? [cloudTopic.id] : [],
+        },
+        {
+          cfp_id: cfpId,
+          main_speaker_id: applicantIds[2],
+          title: "Hands-On: Kubernetes for Developers",
+          abstract_short: "A practical workshop on deploying and managing applications on Kubernetes.",
+          level: "beginner",
+          session_type_id: workshopType?.id,
+          topic_ids: cloudTopic ? [cloudTopic.id] : [],
+        },
+      ];
+
+      for (const paper of papersDef) {
+        if (!paper.main_speaker_id) {
+          log(`  Skipping paper "${paper.title}" — no speaker.`);
+          continue;
+        }
+        log(`Creating paper "${paper.title}"...`);
+        await apiSafe("POST", "/cfp/papers", paper);
+      }
+      log("Papers created.");
+    } else {
+      log(`Papers already exist (${papersResp.total}).`);
+    }
+  } else {
+    log("No CFP found, skipping paper creation.");
+  }
+
   // ─── Output for CI ─────────────────────────────────────────────────────
   log("=== SEED COMPLETE ===");
   log(`Conference ID: ${conferenceId}`);

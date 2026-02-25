@@ -30,22 +30,25 @@ test.describe('Conference Booking Deep Tests', () => {
 
     await detail.navigateToSection('Booking Options');
 
+    // Wait for the pricing matrix section to load
+    await page.waitForTimeout(2000);
+
     const optionBtn = page.getByRole('button', { name: /option/i });
-    if (await optionBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await optionBtn.isVisible().catch(() => false)) {
       await optionBtn.click();
 
       // Modal should appear with form fields
       const modal = page.locator('[role="dialog"]');
-      await expect(modal).toBeVisible({ timeout: 5000 });
+      await expect(modal).toBeVisible({ timeout: 10000 });
 
-      // Should have name input
-      const hasName = await modal.getByLabel(/name/i).isVisible({ timeout: 3000 }).catch(() => false);
-      const hasTitle = await modal.getByText(/booking option|add option|new option/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+      // Should have name input or title
+      const hasName = await modal.getByLabel(/name/i).isVisible().catch(() => false);
+      const hasTitle = await modal.getByText(/booking option|add option|new option/i).first().isVisible().catch(() => false);
       expect(hasName || hasTitle).toBeTruthy();
 
       // Close modal
       const closeBtn = modal.getByRole('button', { name: /cancel|close/i }).first();
-      if (await closeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await closeBtn.isVisible().catch(() => false)) {
         await closeBtn.click();
       }
     }

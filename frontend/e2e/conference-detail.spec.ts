@@ -70,12 +70,15 @@ test.describe('Conference Volunteers Tab', () => {
 
     await detail.navigateToSection('Volunteers');
 
-    // Should show table with volunteers or empty state
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no volunteer/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasAddBtn = await page.getByRole('button', { name: /add volunteer/i }).isVisible({ timeout: 3000 }).catch(() => false);
+    // Wait for volunteer data to load (API call)
+    await page.waitForTimeout(2000);
 
-    expect(hasTable || hasEmpty || hasAddBtn).toBeTruthy();
+    // Should show table with volunteers, empty state, or create button
+    const hasTable = await page.locator('table').first().isVisible().catch(() => false);
+    const hasEmpty = await page.getByText(/no volunteer/i).isVisible().catch(() => false);
+    const hasCreateBtn = await page.getByRole('button', { name: /create new/i }).isVisible().catch(() => false);
+
+    expect(hasTable || hasEmpty || hasCreateBtn).toBeTruthy();
   });
 
   test('should show volunteer table columns when data exists', async ({ page }) => {

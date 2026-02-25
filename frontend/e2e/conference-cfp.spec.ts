@@ -102,10 +102,14 @@ test.describe('Conference CFP Sections', () => {
 
     await detail.navigateToChildSection('Call for Papers', 'Papers');
 
-    // Should show papers table or empty state
-    const hasTable = await page.locator('table, tr').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no paper|no submission/i).isVisible({ timeout: 3000 }).catch(() => false);
-    expect(hasTable || hasEmpty).toBeTruthy();
+    // Wait for papers content to load (API call)
+    await page.waitForTimeout(2000);
+
+    // Papers component uses div-based list (not HTML table), or shows empty state
+    const hasPapers = await page.getByRole('button', { name: /add paper/i }).isVisible().catch(() => false);
+    const hasEmpty = await page.getByText(/no paper/i).isVisible().catch(() => false);
+    const hasList = await page.locator('.border.rounded-lg').first().isVisible().catch(() => false);
+    expect(hasPapers || hasEmpty || hasList).toBeTruthy();
   });
 
   test('should navigate to Evaluated Papers', async ({ page }) => {

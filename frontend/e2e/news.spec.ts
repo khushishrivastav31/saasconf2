@@ -26,12 +26,15 @@ test.describe('Conference News Tab', () => {
 
     await detail.navigateToSection('News');
 
-    // Should show a table/list of articles or an empty state
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasArticles = await page.getByText(/article/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no articles|no news|no posts/i).isVisible({ timeout: 5000 }).catch(() => false);
+    // Wait for news data to load (API call)
+    await page.waitForTimeout(2000);
 
-    expect(hasTable || hasArticles || hasEmpty).toBeTruthy();
+    // News renders article cards (not HTML tables) or empty state
+    const hasArticleCard = await page.locator('.border.border-gray-200.rounded-lg.shadow-sm').first().isVisible().catch(() => false);
+    const hasNewArticleBtn = await page.getByRole('button', { name: /new article/i }).isVisible().catch(() => false);
+    const hasEmpty = await page.getByText(/no news article/i).isVisible().catch(() => false);
+
+    expect(hasArticleCard || hasNewArticleBtn || hasEmpty).toBeTruthy();
   });
 
   test('should show Create Article button in News tab', async ({ page }) => {
