@@ -1,10 +1,27 @@
 import { Page, expect } from '@playwright/test';
+import { ADMIN_STORAGE_STATE } from '../fixtures/auth';
 
 export class ConferenceDetailPage {
   constructor(private page: Page) {}
 
   async goto(conferenceId: string) {
     await this.page.goto(`/modules/conferences/${conferenceId}`);
+    // Auto re-login if token expired (redirected to /login)
+    if (this.page.url().includes('/login')) {
+      await this.reAuthenticate();
+      await this.page.goto(`/modules/conferences/${conferenceId}`);
+    }
+  }
+
+  private async reAuthenticate() {
+    const email = process.env.E2E_ADMIN_EMAIL!;
+    const password = process.env.E2E_ADMIN_PASSWORD!;
+    await this.page.getByPlaceholder(/email/i).fill(email);
+    await this.page.getByPlaceholder(/password/i).fill(password);
+    await this.page.getByRole('button', { name: /sign in/i }).click();
+    await expect(this.page).toHaveURL(/dashboard|conferences/i, { timeout: 15000 });
+    await this.page.waitForFunction(() => !!localStorage.getItem('access_token'), { timeout: 10000 });
+    await this.page.context().storageState({ path: ADMIN_STORAGE_STATE });
   }
 
   get conferenceName() { return this.page.locator('h1.text-2xl'); }
