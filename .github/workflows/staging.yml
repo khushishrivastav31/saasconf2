@@ -298,14 +298,6 @@ jobs:
             fi
           EOF
 
-      - name: Update super admin password in .env (one-time)
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
-            cd ${{ env.STAGING_PATH }}/deploy/staging
-            sed -i 's/^SUPER_ADMIN_PASSWORD=.*/SUPER_ADMIN_PASSWORD=Test123456/' .env
-            echo "Updated SUPER_ADMIN_PASSWORD in .env"
-          EOF
-
       - name: Rebuild and restart containers
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
