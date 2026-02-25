@@ -298,6 +298,14 @@ jobs:
             fi
           EOF
 
+      - name: Update super admin password in .env (one-time)
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+            cd ${{ env.STAGING_PATH }}/deploy/staging
+            sed -i 's/^SUPER_ADMIN_PASSWORD=.*/SUPER_ADMIN_PASSWORD=Test123456/' .env
+            echo "Updated SUPER_ADMIN_PASSWORD in .env"
+          EOF
+
       - name: Rebuild and restart containers
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
@@ -331,25 +339,6 @@ jobs:
             echo "Container status:"
             docker compose ps
           EOF
-
-      - name: Reset super admin password (one-time)
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'RESET'
-            cd ${{ env.STAGING_PATH }}/deploy/staging
-            docker compose exec -T backend python -u -c "
-          import asyncio
-          from sqlalchemy import text
-          from app.core.security import hash_password
-          from app.db.session import async_session_maker
-          async def reset():
-              async with async_session_maker() as s:
-                  h = hash_password('Test1234')
-                  await s.execute(text(\"UPDATE users SET password_hash = :h WHERE email = 'jose.diaz@sonrisa.ventures'\"), {'h': h})
-                  await s.commit()
-                  print('Super admin password reset to Test1234')
-          asyncio.run(reset())
-          "
-          RESET
 
       - name: Verify containers are running
         run: |
