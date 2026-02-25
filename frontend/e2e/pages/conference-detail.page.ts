@@ -5,11 +5,23 @@ export class ConferenceDetailPage {
   constructor(private page: Page) {}
 
   async goto(conferenceId: string) {
-    await this.page.goto(`/modules/conferences/${conferenceId}`);
-    // Auto re-login if token expired (redirected to /login)
-    if (this.page.url().includes('/login')) {
+    const targetUrl = `/modules/conferences/${conferenceId}`;
+    await this.page.goto(targetUrl);
+
+    // Race: either the conference page loads or React redirects to /login (token expired)
+    const isLogin = await Promise.race([
+      this.conferenceName
+        .waitFor({ state: 'visible', timeout: 20000 })
+        .then(() => false),
+      this.page
+        .getByPlaceholder(/email/i)
+        .waitFor({ state: 'visible', timeout: 20000 })
+        .then(() => true),
+    ]).catch(() => false);
+
+    if (isLogin) {
       await this.reAuthenticate();
-      await this.page.goto(`/modules/conferences/${conferenceId}`);
+      await this.page.goto(targetUrl);
     }
   }
 
@@ -20,7 +32,10 @@ export class ConferenceDetailPage {
     await this.page.getByPlaceholder(/password/i).fill(password);
     await this.page.getByRole('button', { name: /sign in/i }).click();
     await expect(this.page).toHaveURL(/dashboard|conferences/i, { timeout: 15000 });
-    await this.page.waitForFunction(() => !!localStorage.getItem('access_token'), { timeout: 10000 });
+    await this.page.waitForFunction(
+      () => !!localStorage.getItem('access_token'),
+      { timeout: 10000 },
+    );
     await this.page.context().storageState({ path: ADMIN_STORAGE_STATE });
   }
 
