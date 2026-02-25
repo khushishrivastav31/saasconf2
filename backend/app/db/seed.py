@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 from app.db.session import async_session_maker
 from app.models.conference import Conference
 from app.models.module import Module
@@ -23,7 +23,13 @@ async def seed_super_admin(session: AsyncSession) -> None:
     existing = result.scalar_one_or_none()
 
     if existing:
-        print(f"Super admin already exists: {settings.SUPER_ADMIN_EMAIL}")
+        # Sync password hash with current env var if it changed
+        if not verify_password(settings.SUPER_ADMIN_PASSWORD, existing.password_hash):
+            existing.password_hash = hash_password(settings.SUPER_ADMIN_PASSWORD)
+            await session.commit()
+            print(f"Super admin password updated: {settings.SUPER_ADMIN_EMAIL}")
+        else:
+            print(f"Super admin already exists: {settings.SUPER_ADMIN_EMAIL}")
         return
 
     admin = User(
