@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { normalizeUrl } from '../../../utils/validators';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import type {
@@ -401,12 +402,19 @@ export default function ConferenceLocationsTab({
               <div>
                 <label className="block text-xs font-medium text-gray-700">URL</label>
                 <input
-                  type="url"
+                  type="text"
+                  placeholder="example.com"
                   value={createForm.virtual_url}
                   onChange={(e) =>
                     setCreateForm({
                       ...createForm,
                       virtual_url: e.target.value,
+                    })
+                  }
+                  onBlur={(e) =>
+                    setCreateForm({
+                      ...createForm,
+                      virtual_url: normalizeUrl(e.target.value),
                     })
                   }
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"

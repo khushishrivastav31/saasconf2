@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 import RichTextEditor from '../components/common/RichTextEditor';
-import { validatePhone } from '../utils/validators';
+import { validatePhone, validateEmail } from '../utils/validators';
 import { parseApiError } from '../utils/apiError';
 import { useSaveStatus } from '../hooks/useSaveStatus';
 import type { Tenant, TenantUpdate, ContactPerson } from '../types';
@@ -208,7 +208,9 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);
   const [deleteContactIndex, setDeleteContactIndex] = useState<number | null>(null);
   const [editContactPhoneError, setEditContactPhoneError] = useState<string | null>(null);
+  const [editContactEmailError, setEditContactEmailError] = useState<string | null>(null);
   const [newContactPhoneError, setNewContactPhoneError] = useState<string | null>(null);
+  const [newContactEmailError, setNewContactEmailError] = useState<string | null>(null);
 
   return (
     <div>
@@ -545,7 +547,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                           </label>
                           <input
                             type="email"
-                            className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                            className={`w-full border ${editContactEmailError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                             value={contact.email || ''}
                             onChange={(e) =>
                               updateContact(index, {
@@ -553,7 +555,11 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                                 email: e.target.value,
                               })
                             }
+                            onBlur={(e) => setEditContactEmailError(validateEmail(e.target.value))}
                           />
+                          {editContactEmailError && (
+                            <p className="mt-1 text-xs text-red-600">{editContactEmailError}</p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -581,8 +587,9 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                           onClick={() => {
                             setEditingContactIndex(null);
                             setEditContactPhoneError(null);
+                            setEditContactEmailError(null);
                           }}
-                          disabled={!!editContactPhoneError}
+                          disabled={!!editContactPhoneError || !!editContactEmailError}
                           className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Done
@@ -613,6 +620,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                           onClick={() => {
                             setEditingContactIndex(index);
                             setEditContactPhoneError(null);
+                            setEditContactEmailError(null);
                           }}
                           className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
                           title="Edit"
@@ -700,10 +708,14 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                 <input
                   type="email"
                   placeholder="email@example.com"
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className={`w-full border ${newContactEmailError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                   value={newContact.email}
                   onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                  onBlur={(e) => setNewContactEmailError(validateEmail(e.target.value))}
                 />
+                {newContactEmailError && (
+                  <p className="mt-1 text-xs text-red-600">{newContactEmailError}</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
@@ -730,7 +742,8 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                 disabled={
                   !newContact.first_name.trim() ||
                   !newContact.last_name.trim() ||
-                  !!newContactPhoneError
+                  !!newContactPhoneError ||
+                  !!newContactEmailError
                 }
                 className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >

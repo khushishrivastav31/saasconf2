@@ -5,6 +5,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import Modal from '../components/Modal';
 import { parseApiError } from '../utils/apiError';
 import { formatDate } from '../utils/formatDate';
+import { validateEmail } from '../utils/validators';
 import { useSaveStatus } from '../hooks/useSaveStatus';
 import type {
   TenantUser,
@@ -334,6 +335,7 @@ function AddMemberModal({
     role: 'user',
   });
   const [errorMessage, setErrorMessage] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const { data: pronounData } = useQuery({
     queryKey: ['user-pronoun-options'],
@@ -357,6 +359,7 @@ function AddMemberModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (emailError) return;
     setErrorMessage('');
     createMutation.mutate(formData);
   };
@@ -376,10 +379,12 @@ function AddMemberModal({
             <input
               type="email"
               required
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300'}`}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
             />
+            {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
           </div>
 
           <div>
@@ -469,7 +474,7 @@ function AddMemberModal({
           </button>
           <button
             type="submit"
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || !!emailError}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
           >
             {createMutation.isPending ? 'Creating...' : 'Create Member'}
@@ -492,6 +497,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
     has_all_conference_access: user.has_all_conference_access,
   });
   const [newPassword, setNewPassword] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Sync formData when user prop changes (e.g., after query refetch)
   useEffect(() => {
@@ -625,6 +631,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
   });
 
   const handleSave = () => {
+    if (emailError) return;
     setSaving();
     setErrorMessage('');
 
@@ -652,10 +659,12 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
               <input
                 type="email"
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300'}`}
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onBlur={(e) => setEmailError(validateEmail(e.target.value))}
               />
+              {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -890,7 +899,11 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
         <button
           type="button"
           onClick={handleSave}
-          disabled={updateMutation.isPending || (newPassword.length > 0 && newPassword.length < 8)}
+          disabled={
+            updateMutation.isPending ||
+            !!emailError ||
+            (newPassword.length > 0 && newPassword.length < 8)
+          }
           className={`px-4 py-1.5 text-sm font-medium text-white border border-transparent rounded-md transition-colors duration-200 disabled:opacity-50 ${
             saveStatus === 'saved'
               ? 'bg-green-600'

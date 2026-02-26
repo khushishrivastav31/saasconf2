@@ -5,6 +5,7 @@ import ConfirmDialog from '../../../../components/ConfirmDialog';
 import Modal from '../../../../components/Modal';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useSaveStatus } from '../../../../hooks/useSaveStatus';
+import { validateEmail } from '../../../../utils/validators';
 import type {
   TenantUser,
   TenantUserCreate,
@@ -272,6 +273,7 @@ function EditUserModal({
     is_active: user.is_active,
   });
   const [newPassword, setNewPassword] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
   const [errorMessage, setErrorMessage] = useState('');
   const [isCurrentSuperUser, setIsCurrentSuperUser] = useState(user.id === superUserId);
@@ -337,6 +339,7 @@ function EditUserModal({
   };
 
   const handleSave = () => {
+    if (emailError) return;
     const data: TenantUserUpdate = { ...formData };
     if (newPassword.trim()) {
       data.password = newPassword.trim();
@@ -397,10 +400,12 @@ function EditUserModal({
           <label className="block text-sm font-medium text-gray-700">Email</label>
           <input
             type="email"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300'}`}
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onBlur={(e) => setEmailError(validateEmail(e.target.value))}
           />
+          {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
         </div>
 
         <div>
@@ -518,7 +523,11 @@ function EditUserModal({
         <button
           type="button"
           onClick={handleSave}
-          disabled={updateMutation.isPending || (newPassword.length > 0 && newPassword.length < 8)}
+          disabled={
+            updateMutation.isPending ||
+            !!emailError ||
+            (newPassword.length > 0 && newPassword.length < 8)
+          }
           className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 transition-colors duration-200 ${
             saveStatus === 'saved'
               ? 'bg-green-600 hover:bg-green-700'
@@ -576,6 +585,7 @@ function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => 
     pronouns: '',
     role: 'user',
   });
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const createMutation = useMutation({
     mutationFn: async (data: TenantUserCreate) => {
@@ -588,6 +598,7 @@ function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (emailError) return;
     createMutation.mutate(formData);
   };
 
@@ -600,10 +611,12 @@ function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => 
             <input
               type="email"
               required
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300'}`}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
             />
+            {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
           </div>
 
           <div>
@@ -677,7 +690,7 @@ function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => 
           </button>
           <button
             type="submit"
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || !!emailError}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
           >
             {createMutation.isPending ? 'Creating...' : 'Create'}

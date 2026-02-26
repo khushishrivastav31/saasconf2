@@ -94,6 +94,13 @@ vi.mock('../../utils/validators', () => ({
     }
     return null;
   }),
+  normalizeUrl: vi.fn((value: string) => {
+    if (!value) return '';
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  }),
 }));
 
 vi.mock('../../config/api', () => ({

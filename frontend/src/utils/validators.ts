@@ -48,3 +48,18 @@ export function validatePhone(value: string | null | undefined): string | null {
 export function isValidPhone(value: string | null | undefined): boolean {
   return validatePhone(value) === null;
 }
+
+/**
+ * Normalize a URL by prepending https:// if no protocol is present.
+ * Allows users to type "example.com" and get "https://example.com".
+ *
+ * @param value - The URL string to normalize
+ * @returns Normalized URL with protocol, or empty string if blank
+ */
+export function normalizeUrl(value: string | null | undefined): string {
+  if (!value) return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}

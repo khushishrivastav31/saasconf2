@@ -1,8 +1,8 @@
-import { useState } from "react";
-import type { LocationContactPerson } from "../types";
-import RichTextEditor from "./common/RichTextEditor";
-import RichTextDisplay from "./common/RichTextDisplay";
-import { validatePhone } from "../utils/validators";
+import { useState } from 'react';
+import type { LocationContactPerson } from '../types';
+import RichTextEditor from './common/RichTextEditor';
+import RichTextDisplay from './common/RichTextDisplay';
+import { validatePhone, validateEmail } from '../utils/validators';
 
 interface ContactPersonListProps {
   contacts: LocationContactPerson[];
@@ -14,7 +14,7 @@ interface ContactPersonListProps {
 }
 
 const inputClass =
-  "block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500";
+  'block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500';
 
 export default function ContactPersonList({
   contacts,
@@ -26,25 +26,28 @@ export default function ContactPersonList({
 }: ContactPersonListProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editData, setEditData] = useState<LocationContactPerson>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    comment: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
   });
   const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
+  const [editEmailError, setEditEmailError] = useState<string | null>(null);
   const [newPhoneError, setNewPhoneError] = useState<string | null>(null);
+  const [newEmailError, setNewEmailError] = useState<string | null>(null);
 
   const startEditing = (index: number) => {
     const contact = contacts[index];
     setEditData({
       first_name: contact.first_name,
       last_name: contact.last_name,
-      email: contact.email || "",
-      phone: contact.phone || "",
-      comment: contact.comment || "",
+      email: contact.email || '',
+      phone: contact.phone || '',
+      comment: contact.comment || '',
     });
     setEditPhoneError(null);
+    setEditEmailError(null);
     setEditingIndex(index);
   };
 
@@ -53,7 +56,13 @@ export default function ContactPersonList({
   };
 
   const saveEditing = () => {
-    if (editingIndex !== null && updateContact && editData.first_name.trim() && editData.last_name.trim() && !editPhoneError) {
+    if (
+      editingIndex !== null &&
+      updateContact &&
+      editData.first_name.trim() &&
+      editData.last_name.trim() &&
+      !editPhoneError
+    ) {
       updateContact(editingIndex, { ...editData });
       setEditingIndex(null);
     }
@@ -71,10 +80,7 @@ export default function ContactPersonList({
           </h4>
           <div className="space-y-2">
             {contacts.map((contact, index) => (
-              <div
-                key={index}
-                className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
-              >
+              <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
                 {editingIndex === index ? (
                   /* Inline edit form */
                   <div className="space-y-3">
@@ -84,35 +90,35 @@ export default function ContactPersonList({
                         placeholder="First Name *"
                         className={inputClass}
                         value={editData.first_name}
-                        onChange={(e) =>
-                          setEditData({ ...editData, first_name: e.target.value })
-                        }
+                        onChange={(e) => setEditData({ ...editData, first_name: e.target.value })}
                       />
                       <input
                         type="text"
                         placeholder="Last Name *"
                         className={inputClass}
                         value={editData.last_name}
-                        onChange={(e) =>
-                          setEditData({ ...editData, last_name: e.target.value })
-                        }
+                        onChange={(e) => setEditData({ ...editData, last_name: e.target.value })}
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="email"
-                        placeholder="Email"
-                        className={inputClass}
-                        value={editData.email}
-                        onChange={(e) =>
-                          setEditData({ ...editData, email: e.target.value })
-                        }
-                      />
+                      <div>
+                        <input
+                          type="email"
+                          placeholder="Email"
+                          className={`${inputClass} ${editEmailError ? 'border-red-300' : ''}`}
+                          value={editData.email}
+                          onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                          onBlur={(e) => setEditEmailError(validateEmail(e.target.value))}
+                        />
+                        {editEmailError && (
+                          <p className="mt-1 text-xs text-red-600">{editEmailError}</p>
+                        )}
+                      </div>
                       <div>
                         <input
                           type="tel"
                           placeholder="+491234545 or 00491234566"
-                          className={`${inputClass} ${editPhoneError ? "border-red-300" : ""}`}
+                          className={`${inputClass} ${editPhoneError ? 'border-red-300' : ''}`}
                           value={editData.phone}
                           onChange={(e) => {
                             const value = e.target.value;
@@ -120,14 +126,14 @@ export default function ContactPersonList({
                             setEditPhoneError(validatePhone(value));
                           }}
                         />
-                        {editPhoneError && <p className="mt-1 text-xs text-red-600">{editPhoneError}</p>}
+                        {editPhoneError && (
+                          <p className="mt-1 text-xs text-red-600">{editPhoneError}</p>
+                        )}
                       </div>
                     </div>
                     <RichTextEditor
                       value={editData.comment}
-                      onChange={(html) =>
-                        setEditData({ ...editData, comment: html })
-                      }
+                      onChange={(html) => setEditData({ ...editData, comment: html })}
                       rows={2}
                       placeholder="Comment or notes..."
                     />
@@ -135,7 +141,12 @@ export default function ContactPersonList({
                       <button
                         type="button"
                         onClick={saveEditing}
-                        disabled={!editData.first_name.trim() || !editData.last_name.trim() || !!editPhoneError}
+                        disabled={
+                          !editData.first_name.trim() ||
+                          !editData.last_name.trim() ||
+                          !!editPhoneError ||
+                          !!editEmailError
+                        }
                         className="px-3 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
                         Save
@@ -155,11 +166,12 @@ export default function ContactPersonList({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
                         <div className="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-sm font-medium">
-                          {(contact.first_name?.charAt(0) || "").toUpperCase()}{(contact.last_name?.charAt(0) || "").toUpperCase()}
+                          {(contact.first_name?.charAt(0) || '').toUpperCase()}
+                          {(contact.last_name?.charAt(0) || '').toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-900">
-                            {[contact.first_name, contact.last_name].filter(Boolean).join(" ")}
+                            {[contact.first_name, contact.last_name].filter(Boolean).join(' ')}
                           </p>
                           <div className="flex items-center gap-3 text-xs text-gray-500">
                             {contact.email && (
@@ -260,9 +272,7 @@ export default function ContactPersonList({
       )}
 
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">
-          Add New Contact
-        </h4>
+        <h4 className="text-sm font-medium text-gray-700 mb-3">Add New Contact</h4>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <input
@@ -270,35 +280,33 @@ export default function ContactPersonList({
               placeholder="First Name *"
               className={inputClass}
               value={newContact.first_name}
-              onChange={(e) =>
-                setNewContact({ ...newContact, first_name: e.target.value })
-              }
+              onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
             />
             <input
               type="text"
               placeholder="Last Name *"
               className={inputClass}
               value={newContact.last_name}
-              onChange={(e) =>
-                setNewContact({ ...newContact, last_name: e.target.value })
-              }
+              onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <input
-              type="email"
-              placeholder="Email"
-              className={inputClass}
-              value={newContact.email}
-              onChange={(e) =>
-                setNewContact({ ...newContact, email: e.target.value })
-              }
-            />
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                className={`${inputClass} ${newEmailError ? 'border-red-300' : ''}`}
+                value={newContact.email}
+                onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                onBlur={(e) => setNewEmailError(validateEmail(e.target.value))}
+              />
+              {newEmailError && <p className="mt-1 text-xs text-red-600">{newEmailError}</p>}
+            </div>
             <div>
               <input
                 type="tel"
                 placeholder="+491234545 or 00491234566"
-                className={`${inputClass} ${newPhoneError ? "border-red-300" : ""}`}
+                className={`${inputClass} ${newPhoneError ? 'border-red-300' : ''}`}
                 value={newContact.phone}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -311,9 +319,7 @@ export default function ContactPersonList({
           </div>
           <RichTextEditor
             value={newContact.comment}
-            onChange={(html) =>
-              setNewContact({ ...newContact, comment: html })
-            }
+            onChange={(html) => setNewContact({ ...newContact, comment: html })}
             rows={2}
             placeholder="Comment or notes..."
           />
@@ -324,7 +330,12 @@ export default function ContactPersonList({
             addContact();
             setNewPhoneError(null);
           }}
-          disabled={!newContact.first_name.trim() || !newContact.last_name.trim() || !!newPhoneError}
+          disabled={
+            !newContact.first_name.trim() ||
+            !newContact.last_name.trim() ||
+            !!newPhoneError ||
+            !!newEmailError
+          }
           className="mt-3 inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           + Add Contact

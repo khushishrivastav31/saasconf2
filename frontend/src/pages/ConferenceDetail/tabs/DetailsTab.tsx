@@ -17,7 +17,7 @@ import type {
 import RichTextEditor from '../../../components/common/RichTextEditor';
 import ConferenceLogo from '../../../components/ConferenceLogo';
 import { parseApiError } from '../../../utils/apiError';
-import { validateEmail } from '../../../utils/validators';
+import { validateEmail, normalizeUrl } from '../../../utils/validators';
 
 function PortalUrlField({ tenantSlug, path }: { tenantSlug: string; path: string }) {
   const [copied, setCopied] = useState(false);
@@ -793,11 +793,12 @@ function ConferenceDetailsTab({
                   <span className="ml-1 text-xs text-gray-400">(optional)</span>
                 </label>
                 <input
-                  type="url"
-                  placeholder="https://..."
+                  type="text"
+                  placeholder="example.com"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.venue_url}
                   onChange={(e) => handleFieldChange('venue_url', e.target.value)}
+                  onBlur={(e) => handleFieldChange('venue_url', normalizeUrl(e.target.value))}
                   disabled={!isAdmin}
                 />
               </div>
@@ -808,10 +809,14 @@ function ConferenceDetailsTab({
                   Streaming Platform URL
                 </label>
                 <input
-                  type="url"
+                  type="text"
+                  placeholder="example.com"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.virtual_platform_url}
                   onChange={(e) => handleFieldChange('virtual_platform_url', e.target.value)}
+                  onBlur={(e) =>
+                    handleFieldChange('virtual_platform_url', normalizeUrl(e.target.value))
+                  }
                   disabled={!isAdmin}
                 />
               </div>

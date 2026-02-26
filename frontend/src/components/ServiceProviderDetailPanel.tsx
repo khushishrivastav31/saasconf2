@@ -3,7 +3,7 @@ import AttachmentList from './AttachmentList';
 import ContactPersonList from './ContactPersonList';
 import DetailPanelWrapper from './DetailPanelWrapper';
 import RichTextEditor from './common/RichTextEditor';
-import { validatePhone } from '../utils/validators';
+import { validatePhone, validateEmail } from '../utils/validators';
 import { useSaveStatus } from '../hooks/useSaveStatus';
 import type { ServiceProvider, ServiceProviderUpdate, LocationContactPerson } from '../types';
 
@@ -48,6 +48,7 @@ export default function ServiceProviderDetailPanel({
     comment: '',
   });
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Handle save status based on props
   useEffect(() => {
@@ -79,6 +80,7 @@ export default function ServiceProviderDetailPanel({
     });
     setNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     setPhoneError(null);
+    setEmailError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider.id]);
 
@@ -108,7 +110,7 @@ export default function ServiceProviderDetailPanel({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (phoneError) return;
+    if (phoneError || emailError) return;
     const finalData = { ...formData };
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
       finalData.contact_persons = [...(finalData.contact_persons || []), { ...newContact }];
@@ -163,10 +165,12 @@ export default function ServiceProviderDetailPanel({
             <label className="block text-sm font-medium text-gray-700">Email</label>
             <input
               type="email"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300'}`}
               value={formData.email || ''}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
             />
+            {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
           </div>
         </div>
 
@@ -308,7 +312,7 @@ export default function ServiceProviderDetailPanel({
       saveStatus={saveStatus}
       tabs={tabs}
       formId="sp-detail-form"
-      saveDisabled={isSaving || !!phoneError}
+      saveDisabled={isSaving || !!phoneError || !!emailError}
       onDelete={onDelete ? () => onDelete(provider.id) : undefined}
       deleteTitle="Delete Service Provider"
       deleteMessage={`Are you sure you want to delete "${provider.company_name}"? This action cannot be undone.`}

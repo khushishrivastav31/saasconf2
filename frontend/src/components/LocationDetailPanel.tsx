@@ -5,7 +5,7 @@ import AttachmentList from './AttachmentList';
 import ContactPersonList from './ContactPersonList';
 import DetailPanelWrapper from './DetailPanelWrapper';
 import RichTextEditor from './common/RichTextEditor';
-import { validatePhone } from '../utils/validators';
+import { validatePhone, normalizeUrl } from '../utils/validators';
 import { useSaveStatus } from '../hooks/useSaveStatus';
 import type { Location, LocationContactPerson, TenantLocationType } from '../types';
 
@@ -281,13 +281,20 @@ export default function LocationDetailPanel({
             <div>
               <label className="block text-sm font-medium text-gray-700">URL</label>
               <input
-                type="url"
+                type="text"
+                placeholder="example.com"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.virtual_url}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     virtual_url: e.target.value,
+                  })
+                }
+                onBlur={(e) =>
+                  setFormData({
+                    ...formData,
+                    virtual_url: normalizeUrl(e.target.value),
                   })
                 }
               />
@@ -410,11 +417,14 @@ export default function LocationDetailPanel({
               <div>
                 <label className="block text-sm font-medium text-gray-700">Website</label>
                 <input
-                  type="url"
-                  placeholder="https://"
+                  type="text"
+                  placeholder="example.com"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.website}
                   onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                  onBlur={(e) =>
+                    setFormData({ ...formData, website: normalizeUrl(e.target.value) })
+                  }
                 />
               </div>
             </div>

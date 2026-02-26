@@ -75,7 +75,7 @@ function ToastMessage({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: 
         flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg max-w-md w-full
         ${s.bg} ${s.border} ${s.text}
         transition-all duration-300 ease-in-out
-        ${isExiting ? 'opacity-0 translate-x-4' : 'opacity-100 translate-x-0'}
+        ${isExiting ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}
       `}
     >
       {/* Icon */}
@@ -156,11 +156,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {/* Toast container - fixed top-right */}
+      {/* Toast container - centered on screen */}
       {toasts.length > 0 && (
-        <div className="fixed top-4 right-4 z-[200] flex flex-col gap-2">
+        <div className="fixed inset-0 z-200 flex flex-col items-center justify-center gap-2 pointer-events-none">
           {toasts.map((toast) => (
-            <ToastMessage key={toast.id} toast={toast} onDismiss={dismissToast} />
+            <div key={toast.id} className="pointer-events-auto">
+              <ToastMessage toast={toast} onDismiss={dismissToast} />
+            </div>
           ))}
         </div>
       )}

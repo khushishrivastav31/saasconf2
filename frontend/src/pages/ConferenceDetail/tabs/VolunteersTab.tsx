@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSaveStatus } from '../../../hooks/useSaveStatus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
-import { validatePhone } from '../../../utils/validators';
+import { validatePhone, validateEmail } from '../../../utils/validators';
 import type {
   Conference,
   Volunteer,
@@ -31,7 +31,9 @@ function ConferenceVolunteersTab({
   const [linkError, setLinkError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createPhoneError, setCreatePhoneError] = useState<string | null>(null);
+  const [createEmailError, setCreateEmailError] = useState<string | null>(null);
   const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
+  const [editEmailError, setEditEmailError] = useState<string | null>(null);
   const [editEmergencyPhoneError, setEditEmergencyPhoneError] = useState<string | null>(null);
   const [editingVolunteer, setEditingVolunteer] = useState<Volunteer | null>(null);
   const [deleteVolunteerTarget, setDeleteVolunteerTarget] = useState<Volunteer | null>(null);
@@ -103,6 +105,7 @@ function ConferenceVolunteersTab({
       setLinkError(null);
       setShowCreateForm(false);
       setCreatePhoneError(null);
+      setCreateEmailError(null);
       setCreateForm({
         first_name: '',
         last_name: '',
@@ -160,6 +163,7 @@ function ConferenceVolunteersTab({
   const openEditVolunteer = (volunteer: Volunteer) => {
     setEditingVolunteer(volunteer);
     setEditPhoneError(null);
+    setEditEmailError(null);
     setEditEmergencyPhoneError(null);
     setEditForm({
       first_name: volunteer.first_name,
@@ -178,14 +182,14 @@ function ConferenceVolunteersTab({
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingVolunteer) return;
-    if (editPhoneError || editEmergencyPhoneError) return;
+    if (editPhoneError || editEmailError || editEmergencyPhoneError) return;
     setSaving();
     volunteerUpdateMutation.mutate({ id: editingVolunteer.id, data: editForm });
   };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (createPhoneError) return;
+    if (createPhoneError || createEmailError) return;
     createMutation.mutate({
       ...createForm,
       conference_id: conference.id,
@@ -269,8 +273,10 @@ function ConferenceVolunteersTab({
                 required
                 value={createForm.email}
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                onBlur={(e) => setCreateEmailError(validateEmail(e.target.value))}
+                className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createEmailError ? 'border-red-300' : 'border-gray-300'}`}
               />
+              {createEmailError && <p className="mt-1 text-xs text-red-600">{createEmailError}</p>}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700">Phone</label>
@@ -334,7 +340,7 @@ function ConferenceVolunteersTab({
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={createMutation.isPending || !!createPhoneError}
+              disabled={createMutation.isPending || !!createPhoneError || !!createEmailError}
               className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
             >
               {createMutation.isPending ? 'Creating...' : 'Create Volunteer'}
@@ -465,8 +471,10 @@ function ConferenceVolunteersTab({
                     required
                     value={editForm.email || ''}
                     onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    onBlur={(e) => setEditEmailError(validateEmail(e.target.value))}
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editEmailError ? 'border-red-300' : 'border-gray-300'}`}
                   />
+                  {editEmailError && <p className="mt-1 text-xs text-red-600">{editEmailError}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Phone</label>
@@ -609,7 +617,10 @@ function ConferenceVolunteersTab({
               <button
                 type="submit"
                 disabled={
-                  volunteerUpdateMutation.isPending || !!editPhoneError || !!editEmergencyPhoneError
+                  volunteerUpdateMutation.isPending ||
+                  !!editPhoneError ||
+                  !!editEmailError ||
+                  !!editEmergencyPhoneError
                 }
                 className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 transition-colors duration-200 ${
                   saveStatus === 'saved'

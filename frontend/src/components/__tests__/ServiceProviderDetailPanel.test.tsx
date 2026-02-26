@@ -87,6 +87,13 @@ vi.mock('../../utils/validators', () => ({
     }
     return null;
   }),
+  validateEmail: vi.fn((email: string) => {
+    if (!email) return null;
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      return 'Invalid email address format';
+    }
+    return null;
+  }),
 }));
 
 const createProvider = (overrides: Partial<ServiceProvider> = {}): ServiceProvider => ({

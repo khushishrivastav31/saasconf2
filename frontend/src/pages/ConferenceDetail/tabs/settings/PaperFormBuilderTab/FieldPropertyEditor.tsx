@@ -13,6 +13,28 @@ interface FieldPropertyEditorProps {
   isAdmin: boolean;
 }
 
+const FILE_TYPE_CATEGORIES: Record<string, string[]> = {
+  documents: ['pdf', 'doc', 'docx', 'odt', 'rtf', 'txt'],
+  images: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'],
+  videos: ['mp4', 'avi', 'mov', 'mkv', 'webm'],
+};
+
+const FILE_TYPE_LABELS: Record<string, string> = {
+  documents: 'Documents (pdf, doc, docx, odt, rtf, txt)',
+  images: 'Images (png, jpg, jpeg, gif, svg, webp)',
+  videos: 'Videos (mp4, avi, mov, mkv, webm)',
+};
+
+function detectFileCategory(types: string[] | undefined): string {
+  if (!types || types.length === 0) return '';
+  for (const [key, extensions] of Object.entries(FILE_TYPE_CATEGORIES)) {
+    if (extensions.length === types.length && extensions.every((ext) => types.includes(ext))) {
+      return key;
+    }
+  }
+  return '';
+}
+
 const FIELD_TYPE_OPTIONS: { value: PaperFormFieldType; label: string }[] = [
   { value: 'text', label: 'Text Field' },
   { value: 'textarea', label: 'Text Area' },
@@ -347,22 +369,25 @@ export default function FieldPropertyEditor({
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Allowed File Types (comma-separated)
-                </label>
-                <input
-                  type="text"
-                  value={(localField.validation_rules?.allowed_file_types || []).join(', ')}
+                <label className="block text-xs text-gray-500 mb-1">Allowed File Types</label>
+                <select
+                  value={detectFileCategory(localField.validation_rules?.allowed_file_types)}
                   onChange={(e) =>
                     handleValidationChange(
                       'allowed_file_types',
-                      e.target.value ? e.target.value.split(',').map((s) => s.trim()) : null
+                      e.target.value ? FILE_TYPE_CATEGORIES[e.target.value] : null
                     )
                   }
                   disabled={!isAdmin}
-                  placeholder="pdf, doc, docx"
                   className="w-full border border-gray-300 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100"
-                />
+                >
+                  <option value="">No restriction</option>
+                  {Object.entries(FILE_TYPE_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
