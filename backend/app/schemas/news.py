@@ -11,6 +11,7 @@ from app.core.html_sanitize import sanitize_html
 class NewsArticleCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     body_html: str = Field(..., min_length=1)
+    screen_overlay_id: UUID | None = None
 
     @field_validator("body_html")
     @classmethod
@@ -22,6 +23,7 @@ class NewsArticleUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=500)
     body_html: str | None = None
     is_published: bool | None = None
+    screen_overlay_id: UUID | None = None
 
     @field_validator("body_html")
     @classmethod
@@ -37,6 +39,7 @@ class NewsArticleResponse(BaseModel):
     body_html: str
     is_published: bool
     published_at: datetime | None
+    screen_overlay_id: UUID | None = None
     author_first_name: str | None = None
     author_last_name: str | None = None
     created_at: datetime

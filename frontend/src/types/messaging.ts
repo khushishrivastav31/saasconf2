@@ -1,7 +1,7 @@
 // Messaging types
 export interface SenderInfo {
   id: string;
-  type: "user" | "applicant";
+  type: 'user' | 'applicant';
   first_name: string;
   last_name: string;
   email: string;
@@ -26,7 +26,7 @@ export interface MessageResponse {
 
 export interface ParticipantInfo {
   id: string;
-  type: "user" | "applicant";
+  type: 'user' | 'applicant';
   first_name: string;
   last_name: string;
   email: string;
@@ -88,6 +88,7 @@ export interface MessageTemplate {
   name: string;
   subject: string;
   body_html: string;
+  screen_overlay_id: string | null;
   created_at: string;
   updated_at: string;
 }

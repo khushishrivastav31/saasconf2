@@ -147,7 +147,9 @@ async def create_tenant_user(
 
     # Check email uniqueness within tenant
     existing = await db.execute(
-        select(User).where(User.tenant_id == target_tenant_id).where(func.lower(User.email) == user_data.email.strip().lower())
+        select(User)
+        .where(User.tenant_id == target_tenant_id)
+        .where(func.lower(User.email) == user_data.email.strip().lower())
     )
     if existing.scalar_one_or_none():
         raise ValidationError(f"User with email '{user_data.email}' already exists in this tenant")

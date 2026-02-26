@@ -29,6 +29,7 @@ import {
   CfpThumbUpIcon,
   CfpThumbDownIcon,
   CfpAssignmentsIcon,
+  ScreenOverlaysIcon,
 } from './icons';
 
 // ---------------------------------------------------------------------------
@@ -64,6 +65,7 @@ export type SectionId =
   | 'program-build'
   | 'invoices'
   | 'registration'
+  | 'screen-overlays'
   | 'settings';
 
 export interface SectionChild {
@@ -86,6 +88,7 @@ export const coreSections: SectionDef[] = [
   { id: 'social', name: 'Social Media', icon: ShareIcon },
   { id: 'booking', name: 'Booking Options', icon: BookingIcon },
   { id: 'messaging', name: 'Messages', icon: MessagingIcon },
+  { id: 'screen-overlays', name: 'Screen Overlays', icon: ScreenOverlaysIcon },
   { id: 'settings', name: 'Settings', icon: SettingsGearIcon },
 ];
 

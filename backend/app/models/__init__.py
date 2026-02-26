@@ -58,6 +58,7 @@ from app.models.review import (
     ReviewScaleOption,
     ReviewScoreScale,
 )
+from app.models.screen_overlay import ScreenOverlay
 from app.models.service_provider import ServiceProvider
 from app.models.settings import (
     CFPCommitteeRole,
@@ -139,6 +140,7 @@ __all__ = [
     "ReviewQuestion",
     "ReviewScaleOption",
     "ReviewScoreScale",
+    "ScreenOverlay",
     "ServiceProvider",
     "SessionType",
     "Sponsor",

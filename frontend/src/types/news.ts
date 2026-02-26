@@ -6,6 +6,7 @@ export interface NewsArticle {
   body_html: string;
   is_published: boolean;
   published_at: string | null;
+  screen_overlay_id: string | null;
   author_first_name: string | null;
   author_last_name: string | null;
   created_at: string;

@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.validators import validate_email
 from app.schemas.location import LocationContactPerson, validate_vat
 
 VALID_STATUSES = {"draft", "sent", "paid", "overdue", "cancelled"}
@@ -53,6 +54,11 @@ class InvoiceCreate(BaseModel):
             raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_STATUSES))}")
         return v
 
+    @field_validator("recipient_email")
+    @classmethod
+    def check_email(cls, v: str | None) -> str | None:
+        return validate_email(v)
+
     @field_validator("recipient_vat_number")
     @classmethod
     def check_vat(cls, v: str | None) -> str | None:
@@ -91,6 +97,11 @@ class InvoiceUpdate(BaseModel):
         if v is not None and v not in VALID_STATUSES:
             raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_STATUSES))}")
         return v
+
+    @field_validator("recipient_email")
+    @classmethod
+    def check_email(cls, v: str | None) -> str | None:
+        return validate_email(v)
 
     @field_validator("recipient_vat_number")
     @classmethod

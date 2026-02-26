@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { useConferenceAdmin } from '../../hooks/useConferenceAdmin';
@@ -95,10 +95,52 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
   const canDelete = user?.role === 'super_admin' || user?.is_tenant_super_user;
 
   // -------------------------------------------------------------------------
-  // Sidebar navigation
+  // Sidebar navigation — synced with URL ?tab= param
   // -------------------------------------------------------------------------
 
-  const [activeSection, setActiveSection] = useState<SectionId>('details');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Collect all valid section IDs (including children)
+  const validSectionIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of [...coreSections, ...moduleSections]) {
+      ids.add(s.id);
+      if (s.children) {
+        for (const c of s.children) ids.add(c.id);
+      }
+    }
+    return ids;
+  }, []);
+
+  const tabFromUrl = searchParams.get('tab');
+  const initialSection: SectionId =
+    tabFromUrl && validSectionIds.has(tabFromUrl) ? (tabFromUrl as SectionId) : 'details';
+
+  const [activeSection, setActiveSectionRaw] = useState<SectionId>(initialSection);
+
+  // Wrap setActiveSection to also update the URL
+  const setActiveSection = useCallback(
+    (value: React.SetStateAction<SectionId>) => {
+      setActiveSectionRaw((prev) => {
+        const next = typeof value === 'function' ? value(prev) : value;
+        setSearchParams(
+          (params) => {
+            const updated = new URLSearchParams(params);
+            if (next === 'details') {
+              updated.delete('tab');
+            } else {
+              updated.set('tab', next);
+            }
+            return updated;
+          },
+          { replace: true }
+        );
+        return next;
+      });
+    },
+    [setSearchParams]
+  );
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 

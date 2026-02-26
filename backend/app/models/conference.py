@@ -47,10 +47,13 @@ class Conference(Base):
     venue_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     venue_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    state: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     country: Mapped[str | None] = mapped_column(String(100), nullable=True)
     timezone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     locale: Mapped[str | None] = mapped_column(String(10), nullable=True, default="en")
     venue_type: Mapped[str] = mapped_column(String(20), default="onsite")  # onsite, virtual, hybrid
+    venue_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     virtual_platform_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Social media links as JSONB

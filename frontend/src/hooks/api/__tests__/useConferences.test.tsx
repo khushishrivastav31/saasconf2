@@ -73,8 +73,11 @@ const mockConference = {
   venue_name: 'Convention Center',
   venue_address: '123 Main St',
   city: 'Berlin',
+  state: null,
+  postal_code: '10115',
   country: 'DE',
   timezone: 'Europe/Berlin',
+  venue_url: null,
   status: 'published',
 };
 

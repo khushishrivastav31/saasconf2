@@ -31,10 +31,13 @@ export interface Conference {
   venue_name: string | null;
   venue_address: string | null;
   city: string | null;
+  state: string | null;
+  postal_code: string | null;
   country: string | null;
   timezone: string | null;
   locale: string | null;
   venue_type: 'onsite' | 'virtual' | 'hybrid';
+  venue_url: string | null;
   virtual_platform_url: string | null;
   // Social links
   social_links: SocialLinks;
@@ -73,10 +76,13 @@ export interface ConferenceCreate {
   venue_name?: string;
   venue_address?: string;
   city?: string;
+  state?: string;
+  postal_code?: string;
   country?: string;
   timezone?: string;
   locale?: string;
   venue_type?: 'onsite' | 'virtual' | 'hybrid';
+  venue_url?: string;
   virtual_platform_url?: string;
   social_links?: SocialLinks;
   team_members?: TeamMember[];
@@ -98,10 +104,13 @@ export interface ConferenceUpdate {
   venue_name?: string;
   venue_address?: string;
   city?: string;
+  state?: string;
+  postal_code?: string;
   country?: string;
   timezone?: string;
   locale?: string;
   venue_type?: 'onsite' | 'virtual' | 'hybrid';
+  venue_url?: string;
   virtual_platform_url?: string;
   social_links?: SocialLinks;
   team_members?: TeamMember[];
@@ -517,6 +526,56 @@ export interface PlatformCurrencyUpdate {
   name?: string;
   symbol?: string;
   is_active?: boolean;
+}
+
+// Screen Overlay types
+export type OverlayTriggerType = 'first_registration' | 'scheduled' | 'always';
+export type OverlayAnimationStyle =
+  | 'confetti'
+  | 'fireworks'
+  | 'balloons'
+  | 'sparkle'
+  | 'spotlight'
+  | 'snow'
+  | 'stars';
+
+export interface ScreenOverlay {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  trigger_type: OverlayTriggerType;
+  title: string;
+  body_text: string | null;
+  animation_style: OverlayAnimationStyle;
+  duration_seconds: number;
+  is_active: boolean;
+  schedule_date: string | null;
+  display_order: number;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScreenOverlayCreate {
+  trigger_type: OverlayTriggerType;
+  title: string;
+  body_text?: string;
+  animation_style?: OverlayAnimationStyle;
+  duration_seconds?: number;
+  is_active?: boolean;
+  schedule_date?: string;
+  display_order?: number;
+}
+
+export interface ScreenOverlayUpdate {
+  trigger_type?: OverlayTriggerType;
+  title?: string;
+  body_text?: string | null;
+  animation_style?: OverlayAnimationStyle;
+  duration_seconds?: number;
+  is_active?: boolean;
+  schedule_date?: string | null;
+  display_order?: number;
 }
 
 export interface SuggestedNumberFormat {

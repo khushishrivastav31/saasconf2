@@ -166,6 +166,7 @@ async def bulk_send(
             conference_id=conference_id,
             subject=subj,
             bulk_id=bulk_id,
+            screen_overlay_id=data.screen_overlay_id,
         )
         db.add(thread)
         await db.flush()

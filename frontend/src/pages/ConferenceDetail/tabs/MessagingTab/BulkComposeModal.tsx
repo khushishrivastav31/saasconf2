@@ -1,19 +1,20 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import RichTextEditor from "../../../../components/common/RichTextEditor";
-import type { BulkRecipientFilter } from "../../../../types";
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import RichTextEditor from '../../../../components/common/RichTextEditor';
+import OverlaySelector from '../../../../components/OverlaySelector';
+import type { BulkRecipientFilter } from '../../../../types';
 import type {
   MessageTemplateListResponse,
   RecipientListListResponse,
-} from "../../../../types/messaging";
+} from '../../../../types/messaging';
 
 const TEMPLATE_VARIABLES = [
-  { label: "First Name", token: "[First Name]" },
-  { label: "Last Name", token: "[Last Name]" },
-  { label: "Email", token: "[Email]" },
-  { label: "Conference", token: "[Conference Name]" },
-  { label: "Paper Title", token: "[Paper Title]" },
+  { label: 'First Name', token: '[First Name]' },
+  { label: 'Last Name', token: '[Last Name]' },
+  { label: 'Email', token: '[Email]' },
+  { label: 'Conference', token: '[Conference Name]' },
+  { label: 'Paper Title', token: '[Paper Title]' },
 ];
 
 interface BulkComposeModalProps {
@@ -24,19 +25,20 @@ interface BulkComposeModalProps {
     subject: string;
     body_html: string;
     recipients: BulkRecipientFilter;
+    screen_overlay_id?: string | null;
   }) => void;
   sending: boolean;
 }
 
-type RecipientCategory = "all" | "paper_status" | "committee_role" | "recipient_list";
+type RecipientCategory = 'all' | 'paper_status' | 'committee_role' | 'recipient_list';
 
 const PAPER_STATUSES = [
-  { value: "submitted", label: "Submitted" },
-  { value: "in_evaluation", label: "In Evaluation" },
-  { value: "evaluated", label: "Evaluated" },
-  { value: "final_consideration", label: "Final Consideration" },
-  { value: "accepted", label: "Accepted" },
-  { value: "rejected", label: "Rejected" },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'in_evaluation', label: 'In Evaluation' },
+  { value: 'evaluated', label: 'Evaluated' },
+  { value: 'final_consideration', label: 'Final Consideration' },
+  { value: 'accepted', label: 'Accepted' },
+  { value: 'rejected', label: 'Rejected' },
 ];
 
 interface CommitteeRole {
@@ -51,20 +53,19 @@ export default function BulkComposeModal({
   onSend,
   sending,
 }: BulkComposeModalProps) {
-  const [subject, setSubject] = useState("");
-  const [bodyHtml, setBodyHtml] = useState("");
-  const [category, setCategory] = useState<RecipientCategory | "">("");
-  const [paperStatus, setPaperStatus] = useState("");
-  const [committeeRole, setCommitteeRole] = useState("");
-  const [recipientListId, setRecipientListId] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [subject, setSubject] = useState('');
+  const [bodyHtml, setBodyHtml] = useState('');
+  const [category, setCategory] = useState<RecipientCategory | ''>('');
+  const [paperStatus, setPaperStatus] = useState('');
+  const [committeeRole, setCommitteeRole] = useState('');
+  const [recipientListId, setRecipientListId] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [screenOverlayId, setScreenOverlayId] = useState<string | null>(null);
 
   const { data: roles } = useQuery({
-    queryKey: ["committee-roles", conferenceId],
+    queryKey: ['committee-roles', conferenceId],
     queryFn: async () => {
-      const resp = await api.get(
-        `/conferences/${conferenceId}/settings/committee-roles`
-      );
+      const resp = await api.get(`/conferences/${conferenceId}/settings/committee-roles`);
       return resp.data.items as CommitteeRole[];
     },
     enabled: open,
@@ -72,21 +73,16 @@ export default function BulkComposeModal({
 
   // Fetch templates
   const { data: templatesData } = useQuery<MessageTemplateListResponse>({
-    queryKey: ["message-templates", conferenceId],
-    queryFn: () =>
-      api
-        .get(`/conferences/${conferenceId}/messaging/templates`)
-        .then((r) => r.data),
+    queryKey: ['message-templates', conferenceId],
+    queryFn: () => api.get(`/conferences/${conferenceId}/messaging/templates`).then((r) => r.data),
     enabled: open,
   });
 
   // Fetch recipient lists
   const { data: recipientListsData } = useQuery<RecipientListListResponse>({
-    queryKey: ["recipient-lists", conferenceId],
+    queryKey: ['recipient-lists', conferenceId],
     queryFn: () =>
-      api
-        .get(`/conferences/${conferenceId}/messaging/recipient-lists`)
-        .then((r) => r.data),
+      api.get(`/conferences/${conferenceId}/messaging/recipient-lists`).then((r) => r.data),
     enabled: open,
   });
 
@@ -95,48 +91,49 @@ export default function BulkComposeModal({
 
   useEffect(() => {
     if (!open) {
-      setSubject("");
-      setBodyHtml("");
-      setCategory("");
-      setPaperStatus("");
-      setCommitteeRole("");
-      setRecipientListId("");
-      setSelectedTemplate("");
+      setSubject('');
+      setBodyHtml('');
+      setCategory('');
+      setPaperStatus('');
+      setCommitteeRole('');
+      setRecipientListId('');
+      setSelectedTemplate('');
+      setScreenOverlayId(null);
     }
   }, [open]);
 
   if (!open) return null;
 
   const hasFilter =
-    category === "all" ||
-    (category === "paper_status" && paperStatus) ||
-    (category === "committee_role" && committeeRole) ||
-    (category === "recipient_list" && recipientListId);
+    category === 'all' ||
+    (category === 'paper_status' && paperStatus) ||
+    (category === 'committee_role' && committeeRole) ||
+    (category === 'recipient_list' && recipientListId);
 
   const canSend = hasFilter && subject.trim() && bodyHtml.trim();
 
   const buildRecipients = (): BulkRecipientFilter => {
-    if (category === "all") return { all_applicants: true };
-    if (category === "paper_status") return { paper_status: paperStatus };
-    if (category === "committee_role") return { committee_role: committeeRole };
-    if (category === "recipient_list") return { recipient_list_id: recipientListId };
+    if (category === 'all') return { all_applicants: true };
+    if (category === 'paper_status') return { paper_status: paperStatus };
+    if (category === 'committee_role') return { committee_role: committeeRole };
+    if (category === 'recipient_list') return { recipient_list_id: recipientListId };
     return {};
   };
 
   const recipientLabel = () => {
-    if (category === "all") return "All applicants";
-    if (category === "paper_status" && paperStatus) {
+    if (category === 'all') return 'All applicants';
+    if (category === 'paper_status' && paperStatus) {
       const s = PAPER_STATUSES.find((ps) => ps.value === paperStatus);
       return `Applicants with ${s?.label ?? paperStatus} papers`;
     }
-    if (category === "committee_role" && committeeRole) {
+    if (category === 'committee_role' && committeeRole) {
       return `Committee members: ${committeeRole}`;
     }
-    if (category === "recipient_list" && recipientListId) {
+    if (category === 'recipient_list' && recipientListId) {
       const list = recipientLists.find((l) => l.id === recipientListId);
-      return `List: ${list?.name ?? "Unknown"} (${list?.member_count ?? 0} members)`;
+      return `List: ${list?.name ?? 'Unknown'} (${list?.member_count ?? 0} members)`;
     }
-    return "";
+    return '';
   };
 
   const handleApplyTemplate = (templateId: string) => {
@@ -155,7 +152,12 @@ export default function BulkComposeModal({
           <h2 className="text-lg font-semibold">Bulk Message</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -163,9 +165,7 @@ export default function BulkComposeModal({
           {/* Template picker */}
           {templates.length > 0 && (
             <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-600 flex-shrink-0">
-                Template:
-              </label>
+              <label className="text-sm font-medium text-gray-600 flex-shrink-0">Template:</label>
               <select
                 value={selectedTemplate}
                 onChange={(e) => handleApplyTemplate(e.target.value)}
@@ -183,23 +183,25 @@ export default function BulkComposeModal({
 
           {/* Recipient category */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Recipients
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Recipients</label>
             <select
-              value={category === "recipient_list" && recipientListId ? `list:${recipientListId}` : category}
+              value={
+                category === 'recipient_list' && recipientListId
+                  ? `list:${recipientListId}`
+                  : category
+              }
               onChange={(e) => {
                 const val = e.target.value;
-                if (val.startsWith("list:")) {
-                  setCategory("recipient_list");
+                if (val.startsWith('list:')) {
+                  setCategory('recipient_list');
                   setRecipientListId(val.slice(5));
-                  setPaperStatus("");
-                  setCommitteeRole("");
+                  setPaperStatus('');
+                  setCommitteeRole('');
                 } else {
-                  setCategory(val as RecipientCategory | "");
-                  setPaperStatus("");
-                  setCommitteeRole("");
-                  setRecipientListId("");
+                  setCategory(val as RecipientCategory | '');
+                  setPaperStatus('');
+                  setCommitteeRole('');
+                  setRecipientListId('');
                 }
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -221,11 +223,9 @@ export default function BulkComposeModal({
           </div>
 
           {/* Paper status sub-select */}
-          {category === "paper_status" && (
+          {category === 'paper_status' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Paper Status
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Paper Status</label>
               <select
                 value={paperStatus}
                 onChange={(e) => setPaperStatus(e.target.value)}
@@ -242,11 +242,9 @@ export default function BulkComposeModal({
           )}
 
           {/* Committee role sub-select */}
-          {category === "committee_role" && (
+          {category === 'committee_role' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Committee Role
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Committee Role</label>
               <select
                 value={committeeRole}
                 onChange={(e) => setCommitteeRole(e.target.value)}
@@ -271,9 +269,7 @@ export default function BulkComposeModal({
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subject
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
             <input
               type="text"
               value={subject}
@@ -293,8 +289,8 @@ export default function BulkComposeModal({
                 type="button"
                 onClick={() =>
                   setBodyHtml((prev) => {
-                    if (!prev || prev === "<p></p>") return `<p>${v.token}</p>`;
-                    if (prev.endsWith("</p>")) return prev.slice(0, -4) + v.token + "</p>";
+                    if (!prev || prev === '<p></p>') return `<p>${v.token}</p>`;
+                    if (prev.endsWith('</p>')) return prev.slice(0, -4) + v.token + '</p>';
                     return prev + v.token;
                   })
                 }
@@ -307,9 +303,7 @@ export default function BulkComposeModal({
 
           {/* Body */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Message
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
             <RichTextEditor
               value={bodyHtml}
               onChange={setBodyHtml}
@@ -317,6 +311,12 @@ export default function BulkComposeModal({
               rows={6}
             />
           </div>
+
+          <OverlaySelector
+            conferenceId={conferenceId}
+            value={screenOverlayId}
+            onChange={setScreenOverlayId}
+          />
         </div>
         <div className="flex justify-end gap-3 px-6 py-4 border-t">
           <button
@@ -331,12 +331,13 @@ export default function BulkComposeModal({
                 subject,
                 body_html: bodyHtml,
                 recipients: buildRecipients(),
+                screen_overlay_id: screenOverlayId,
               })
             }
             disabled={!canSend || sending}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            {sending ? "Sending..." : "Send to All"}
+            {sending ? 'Sending...' : 'Send to All'}
           </button>
         </div>
       </div>

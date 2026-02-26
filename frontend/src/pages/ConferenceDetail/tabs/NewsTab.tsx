@@ -1,16 +1,17 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../config/api";
-import Modal from "../../../components/Modal";
-import ConfirmDialog from "../../../components/ConfirmDialog";
-import RichTextEditor from "../../../components/common/RichTextEditor";
-import RichTextDisplay from "../../../components/common/RichTextDisplay";
-import { parseApiError } from "../../../utils/apiError";
-import { formatDateTime } from "../../../utils/formatDate";
-import type { NewsArticle, NewsArticleListResponse } from "../../../types/news";
-import SendNewsModal from "./SendNewsModal";
-import { ErrorBanner } from "../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../config/api';
+import Modal from '../../../components/Modal';
+import ConfirmDialog from '../../../components/ConfirmDialog';
+import RichTextEditor from '../../../components/common/RichTextEditor';
+import RichTextDisplay from '../../../components/common/RichTextDisplay';
+import { parseApiError } from '../../../utils/apiError';
+import { formatDateTime } from '../../../utils/formatDate';
+import type { NewsArticle, NewsArticleListResponse } from '../../../types/news';
+import SendNewsModal from './SendNewsModal';
+import { ErrorBanner } from '../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import OverlaySelector from '../../../components/OverlaySelector';
 
 interface NewsTabProps {
   conference: { id: string; name: string };
@@ -20,11 +21,13 @@ interface NewsTabProps {
 interface ArticleFormState {
   title: string;
   body_html: string;
+  screen_overlay_id: string | null;
 }
 
 const emptyForm: ArticleFormState = {
-  title: "",
-  body_html: "",
+  title: '',
+  body_html: '',
+  screen_overlay_id: null,
 };
 
 export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
@@ -42,11 +45,9 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
   // ── Queries ──────────────────────────────────────────────────────────
 
   const { data, isLoading } = useQuery({
-    queryKey: ["conference-news", conferenceId],
+    queryKey: ['conference-news', conferenceId],
     queryFn: async () => {
-      const response = await api.get<NewsArticleListResponse>(
-        `/conferences/${conferenceId}/news`,
-      );
+      const response = await api.get<NewsArticleListResponse>(`/conferences/${conferenceId}/news`);
       return response.data;
     },
   });
@@ -63,11 +64,11 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
       setError(null);
       closeModal();
       queryClient.invalidateQueries({
-        queryKey: ["conference-news", conferenceId],
+        queryKey: ['conference-news', conferenceId],
       });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to create article"));
+      setError(parseApiError(err, 'Failed to create article'));
     },
   });
 
@@ -85,11 +86,11 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
       setError(null);
       closeModal();
       queryClient.invalidateQueries({
-        queryKey: ["conference-news", conferenceId],
+        queryKey: ['conference-news', conferenceId],
       });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to update article"));
+      setError(parseApiError(err, 'Failed to update article'));
     },
   });
 
@@ -101,11 +102,11 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
       setError(null);
       setDeleteTarget(null);
       queryClient.invalidateQueries({
-        queryKey: ["conference-news", conferenceId],
+        queryKey: ['conference-news', conferenceId],
       });
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to delete article"));
+      setError(parseApiError(err, 'Failed to delete article'));
       setDeleteTarget(null);
     },
   });
@@ -121,7 +122,11 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
 
   function openEditModal(article: NewsArticle) {
     setEditingArticle(article);
-    setForm({ title: article.title, body_html: article.body_html });
+    setForm({
+      title: article.title,
+      body_html: article.body_html,
+      screen_overlay_id: article.screen_overlay_id ?? null,
+    });
     setError(null);
     setIsModalOpen(true);
   }
@@ -157,10 +162,8 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
   // ── Helpers ──────────────────────────────────────────────────────────
 
   function authorName(article: NewsArticle): string {
-    const parts = [article.author_first_name, article.author_last_name].filter(
-      Boolean,
-    );
-    return parts.length > 0 ? parts.join(" ") : "Unknown";
+    const parts = [article.author_first_name, article.author_last_name].filter(Boolean);
+    return parts.length > 0 ? parts.join(' ') : 'Unknown';
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
@@ -185,12 +188,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
             onClick={openCreateModal}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
           >
-            <svg
-              className="w-4 h-4 mr-1.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -219,13 +217,11 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
               d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
             />
           </svg>
-          <h3 className="mt-3 text-sm font-medium text-gray-900">
-            No news articles
-          </h3>
+          <h3 className="mt-3 text-sm font-medium text-gray-900">No news articles</h3>
           <p className="mt-1 text-sm text-gray-500">
             {isAdmin
-              ? "Create your first news article to share updates with attendees."
-              : "No news articles have been published yet."}
+              ? 'Create your first news article to share updates with attendees.'
+              : 'No news articles have been published yet.'}
           </p>
         </div>
       )}
@@ -259,9 +255,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
                   <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
                     <span>By {authorName(article)}</span>
                     {article.published_at && (
-                      <span>
-                        Published {formatDateTime(article.published_at)}
-                      </span>
+                      <span>Published {formatDateTime(article.published_at)}</span>
                     )}
                     {!article.published_at && (
                       <span>Created {formatDateTime(article.created_at)}</span>
@@ -302,12 +296,10 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
                       onClick={() => setPublishTarget(article)}
                       className={`p-2 rounded transition-colors ${
                         article.is_published
-                          ? "text-green-500 hover:text-orange-600 hover:bg-orange-50"
-                          : "text-gray-400 hover:text-green-600 hover:bg-green-50"
+                          ? 'text-green-500 hover:text-orange-600 hover:bg-orange-50'
+                          : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                       }`}
-                      title={
-                        article.is_published ? "Unpublish" : "Publish"
-                      }
+                      title={article.is_published ? 'Unpublish' : 'Publish'}
                     >
                       {article.is_published ? (
                         <svg
@@ -401,37 +393,35 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
       <Modal
         open={isModalOpen}
         onClose={closeModal}
-        title={editingArticle ? "Edit Article" : "New Article"}
+        title={editingArticle ? 'Edit Article' : 'New Article'}
         size="max-w-4xl"
       >
         <div className="px-6 py-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
             <input
               type="text"
               value={form.title}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, title: e.target.value }))
-              }
+              onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
               placeholder="Article title"
               className="block w-full h-10 border border-gray-300 rounded-md shadow-sm px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Body
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Body</label>
             <RichTextEditor
               value={form.body_html}
-              onChange={(html) =>
-                setForm((prev) => ({ ...prev, body_html: html }))
-              }
+              onChange={(html) => setForm((prev) => ({ ...prev, body_html: html }))}
               rows={12}
             />
           </div>
+
+          <OverlaySelector
+            conferenceId={conferenceId}
+            value={form.screen_overlay_id}
+            onChange={(id) => setForm((prev) => ({ ...prev, screen_overlay_id: id }))}
+          />
         </div>
 
         <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
@@ -446,7 +436,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
             disabled={isSaving || !form.title.trim()}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
           >
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? 'Saving...' : 'Save'}
           </button>
         </div>
       </Modal>
@@ -454,13 +444,13 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
       {/* Publish / Unpublish confirmation */}
       <ConfirmDialog
         open={!!publishTarget}
-        title={publishTarget?.is_published ? "Unpublish Article" : "Publish Article"}
+        title={publishTarget?.is_published ? 'Unpublish Article' : 'Publish Article'}
         message={
           publishTarget?.is_published
-            ? `Are you sure you want to unpublish "${publishTarget?.title ?? ""}"? It will no longer be visible to portal users.`
-            : `Are you sure you want to publish "${publishTarget?.title ?? ""}"? It will become visible to all portal users.`
+            ? `Are you sure you want to unpublish "${publishTarget?.title ?? ''}"? It will no longer be visible to portal users.`
+            : `Are you sure you want to publish "${publishTarget?.title ?? ''}"? It will become visible to all portal users.`
         }
-        confirmLabel={publishTarget?.is_published ? "Unpublish" : "Publish"}
+        confirmLabel={publishTarget?.is_published ? 'Unpublish' : 'Publish'}
         variant="warning"
         onConfirm={handleConfirmPublish}
         onCancel={() => setPublishTarget(null)}
@@ -470,7 +460,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
       <ConfirmDialog
         open={!!deleteTarget}
         title="Delete Article"
-        message={`Are you sure you want to delete "${deleteTarget?.title ?? ""}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete "${deleteTarget?.title ?? ''}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={() => {
           if (deleteTarget) deleteMutation.mutate(deleteTarget.id);

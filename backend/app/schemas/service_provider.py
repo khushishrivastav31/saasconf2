@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.validators import validate_phone
+from app.core.validators import validate_email, validate_phone
 from app.schemas.location import LocationContactPerson, LocationContactPersonResponse, validate_vat
 
 
@@ -31,6 +31,11 @@ class ServiceProviderCreate(BaseModel):
     def check_vat(cls, v: str | None) -> str | None:
         return validate_vat(v)
 
+    @field_validator("email")
+    @classmethod
+    def check_email(cls, v: str | None) -> str | None:
+        return validate_email(v)
+
     @field_validator("phone")
     @classmethod
     def check_phone(cls, v: str | None) -> str | None:
@@ -53,6 +58,11 @@ class ServiceProviderUpdate(BaseModel):
     country: str | None = Field(None, max_length=100)
     vat_number: str | None = Field(None, max_length=20)
     contact_persons: list[LocationContactPerson] | None = None
+
+    @field_validator("email")
+    @classmethod
+    def check_email(cls, v: str | None) -> str | None:
+        return validate_email(v)
 
     @field_validator("vat_number")
     @classmethod

@@ -426,6 +426,7 @@ async def create_thread(
             tenant_id=tenant_id,
             conference_id=conference_id,
             subject=subj,
+            screen_overlay_id=data.screen_overlay_id,
         )
         db.add(thread)
         await db.flush()

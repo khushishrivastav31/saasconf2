@@ -1,18 +1,17 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import RichTextEditor from "../../../../components/common/RichTextEditor";
-import MessageFileAttach, {
-  type StagedAttachment,
-} from "../../../../components/MessageFileAttach";
-import type { MessageTemplateListResponse } from "../../../../types/messaging";
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import RichTextEditor from '../../../../components/common/RichTextEditor';
+import MessageFileAttach, { type StagedAttachment } from '../../../../components/MessageFileAttach';
+import type { MessageTemplateListResponse } from '../../../../types/messaging';
+import OverlaySelector from '../../../../components/OverlaySelector';
 
 const TEMPLATE_VARIABLES = [
-  { label: "First Name", token: "[First Name]" },
-  { label: "Last Name", token: "[Last Name]" },
-  { label: "Email", token: "[Email]" },
-  { label: "Conference", token: "[Conference Name]" },
-  { label: "Paper Title", token: "[Paper Title]" },
+  { label: 'First Name', token: '[First Name]' },
+  { label: 'Last Name', token: '[Last Name]' },
+  { label: 'Email', token: '[Email]' },
+  { label: 'Conference', token: '[Conference Name]' },
+  { label: 'Paper Title', token: '[Paper Title]' },
 ];
 
 interface Applicant {
@@ -31,6 +30,7 @@ interface FullComposeModalProps {
     subject: string;
     body_html: string;
     attachment_ids: string[];
+    screen_overlay_id?: string | null;
   }) => void;
   sending: boolean;
   /** Pre-fill data for edit/forward mode (double-click a message) */
@@ -51,19 +51,18 @@ export default function FullComposeModal({
   emailOnlyMode,
 }: FullComposeModalProps) {
   const [selectedRecipients, setSelectedRecipients] = useState<Applicant[]>([]);
-  const [subject, setSubject] = useState("");
-  const [bodyHtml, setBodyHtml] = useState("");
-  const [search, setSearch] = useState("");
+  const [subject, setSubject] = useState('');
+  const [bodyHtml, setBodyHtml] = useState('');
+  const [search, setSearch] = useState('');
   const [attachments, setAttachments] = useState<StagedAttachment[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [screenOverlayId, setScreenOverlayId] = useState<string | null>(null);
 
   // Fetch applicants
   const { data: allApplicants } = useQuery({
-    queryKey: ["cfp-applicants-for-messaging", conferenceId],
+    queryKey: ['cfp-applicants-for-messaging', conferenceId],
     queryFn: async () => {
-      const resp = await api.get(
-        `/cfp/applicants?conference_id=${conferenceId}`
-      );
+      const resp = await api.get(`/cfp/applicants?conference_id=${conferenceId}`);
       return resp.data.items as Applicant[];
     },
     enabled: open,
@@ -71,11 +70,8 @@ export default function FullComposeModal({
 
   // Fetch templates
   const { data: templatesData } = useQuery<MessageTemplateListResponse>({
-    queryKey: ["message-templates", conferenceId],
-    queryFn: () =>
-      api
-        .get(`/conferences/${conferenceId}/messaging/templates`)
-        .then((r) => r.data),
+    queryKey: ['message-templates', conferenceId],
+    queryFn: () => api.get(`/conferences/${conferenceId}/messaging/templates`).then((r) => r.data),
     enabled: open,
   });
 
@@ -99,11 +95,12 @@ export default function FullComposeModal({
   useEffect(() => {
     if (!open) {
       setSelectedRecipients([]);
-      setSubject("");
-      setBodyHtml("");
-      setSearch("");
+      setSubject('');
+      setBodyHtml('');
+      setSearch('');
       setAttachments([]);
-      setSelectedTemplate("");
+      setSelectedTemplate('');
+      setScreenOverlayId(null);
     }
   }, [open]);
 
@@ -125,34 +122,43 @@ export default function FullComposeModal({
 
   if (!open) return null;
 
-  const canSend =
-    selectedRecipients.length > 0 && subject.trim() && bodyHtml.trim();
+  const canSend = selectedRecipients.length > 0 && subject.trim() && bodyHtml.trim();
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 flex flex-col" style={{ height: "min(85vh, 800px)" }}>
+      <div
+        className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 flex flex-col"
+        style={{ height: 'min(85vh, 800px)' }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              {prefill ? "Forward Message" : "New Message"}
+              {prefill ? 'Forward Message' : 'New Message'}
             </h2>
             {emailOnlyMode && (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
                 </svg>
                 Email only
               </span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -162,9 +168,7 @@ export default function FullComposeModal({
           {/* Template picker */}
           {templates.length > 0 && (
             <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-600 flex-shrink-0">
-                Template:
-              </label>
+              <label className="text-sm font-medium text-gray-600 flex-shrink-0">Template:</label>
               <select
                 value={selectedTemplate}
                 onChange={(e) => handleApplyTemplate(e.target.value)}
@@ -182,9 +186,7 @@ export default function FullComposeModal({
 
           {/* Recipients */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              To
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
             {selectedRecipients.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {selectedRecipients.map((r) => (
@@ -195,9 +197,7 @@ export default function FullComposeModal({
                     {r.first_name} {r.last_name}
                     <button
                       onClick={() =>
-                        setSelectedRecipients((prev) =>
-                          prev.filter((p) => p.id !== r.id)
-                        )
+                        setSelectedRecipients((prev) => prev.filter((p) => p.id !== r.id))
                       }
                       className="text-blue-400 hover:text-blue-600 ml-0.5"
                     >
@@ -214,39 +214,30 @@ export default function FullComposeModal({
               onChange={(e) => setSearch(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
             />
-            {search.trim() &&
-              filteredApplicants &&
-              filteredApplicants.length > 0 && (
-                <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md mt-1">
-                  {filteredApplicants.slice(0, 20).map((a) => (
-                    <button
-                      key={a.id}
-                      onClick={() => {
-                        setSelectedRecipients((prev) => [...prev, a]);
-                        setSearch("");
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b last:border-b-0"
-                    >
-                      {a.first_name} {a.last_name}{" "}
-                      <span className="text-gray-400">{a.email}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            {search.trim() &&
-              filteredApplicants &&
-              filteredApplicants.length === 0 && (
-                <p className="text-xs text-gray-400 mt-1">
-                  No applicants found
-                </p>
-              )}
+            {search.trim() && filteredApplicants && filteredApplicants.length > 0 && (
+              <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md mt-1">
+                {filteredApplicants.slice(0, 20).map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => {
+                      setSelectedRecipients((prev) => [...prev, a]);
+                      setSearch('');
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b last:border-b-0"
+                  >
+                    {a.first_name} {a.last_name} <span className="text-gray-400">{a.email}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {search.trim() && filteredApplicants && filteredApplicants.length === 0 && (
+              <p className="text-xs text-gray-400 mt-1">No applicants found</p>
+            )}
           </div>
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subject
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
             <input
               type="text"
               value={subject}
@@ -266,8 +257,8 @@ export default function FullComposeModal({
                 type="button"
                 onClick={() =>
                   setBodyHtml((prev) => {
-                    if (!prev || prev === "<p></p>") return `<p>${v.token}</p>`;
-                    if (prev.endsWith("</p>")) return prev.slice(0, -4) + v.token + "</p>";
+                    if (!prev || prev === '<p></p>') return `<p>${v.token}</p>`;
+                    if (prev.endsWith('</p>')) return prev.slice(0, -4) + v.token + '</p>';
                     return prev + v.token;
                   })
                 }
@@ -280,9 +271,7 @@ export default function FullComposeModal({
 
           {/* Body — takes up remaining space */}
           <div className="flex-1 min-h-0">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Message
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
             <RichTextEditor
               value={bodyHtml}
               onChange={setBodyHtml}
@@ -297,6 +286,12 @@ export default function FullComposeModal({
             uploadPath={`/conferences/${conferenceId}/messaging/upload`}
             attachments={attachments}
             onAttachmentsChange={setAttachments}
+          />
+
+          <OverlaySelector
+            conferenceId={conferenceId}
+            value={screenOverlayId}
+            onChange={setScreenOverlayId}
           />
         </div>
 
@@ -315,12 +310,13 @@ export default function FullComposeModal({
                 subject,
                 body_html: bodyHtml,
                 attachment_ids: attachments.map((a) => a.id),
+                screen_overlay_id: screenOverlayId,
               })
             }
             disabled={!canSend || sending}
             className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            {sending ? "Sending..." : "Send"}
+            {sending ? 'Sending...' : 'Send'}
           </button>
         </div>
       </div>

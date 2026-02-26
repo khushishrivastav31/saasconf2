@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.core.validators import validate_phone
+from app.core.validators import validate_email, validate_phone
 
 
 class SocialLinks(BaseModel):
@@ -31,6 +31,11 @@ class TeamMember(BaseModel):
     phone: str | None = Field(None, max_length=50)
     role: str | None = Field(None, max_length=100)  # e.g., "Conference Chair", "Program Committee"
     is_manager: bool = False  # Informational flag for conference manager role
+
+    @field_validator("email")
+    @classmethod
+    def check_email(cls, v: str | None) -> str | None:
+        return validate_email(v)
 
     @field_validator("phone")
     @classmethod
@@ -65,10 +70,13 @@ class ConferenceCreate(ConferenceBase):
     venue_name: str | None = Field(None, max_length=255)
     venue_address: str | None = Field(None, max_length=500)
     city: str | None = Field(None, max_length=100)
+    state: str | None = Field(None, max_length=100)
+    postal_code: str | None = Field(None, max_length=20)
     country: str | None = Field(None, max_length=100)
     timezone: str | None = Field(None, max_length=50)
     locale: str | None = Field("en", max_length=10)
     venue_type: str = "onsite"  # onsite, virtual, hybrid
+    venue_url: str | None = Field(None, max_length=500)
     virtual_platform_url: str | None = Field(None, max_length=500)
 
     # Social links
@@ -84,6 +92,11 @@ class ConferenceCreate(ConferenceBase):
     currency: str | None = Field(None, min_length=3, max_length=3)
     # Optional second currency for invoices
     invoice_currency: str | None = Field(None, min_length=3, max_length=3)
+
+    @field_validator("support_email", "contact_email")
+    @classmethod
+    def check_emails(cls, v: str | None) -> str | None:
+        return validate_email(v)
 
     @field_validator("end_date")
     @classmethod
@@ -118,10 +131,13 @@ class ConferenceUpdate(BaseModel):
     venue_name: str | None = Field(None, max_length=255)
     venue_address: str | None = Field(None, max_length=500)
     city: str | None = Field(None, max_length=100)
+    state: str | None = Field(None, max_length=100)
+    postal_code: str | None = Field(None, max_length=20)
     country: str | None = Field(None, max_length=100)
     timezone: str | None = Field(None, max_length=50)
     locale: str | None = Field(None, max_length=10)
     venue_type: str | None = None  # onsite, virtual, hybrid
+    venue_url: str | None = Field(None, max_length=500)
     virtual_platform_url: str | None = Field(None, max_length=500)
 
     # Social links
@@ -141,6 +157,11 @@ class ConferenceUpdate(BaseModel):
     # Status
     is_active: bool | None = None
     is_published: bool | None = None
+
+    @field_validator("support_email", "contact_email")
+    @classmethod
+    def check_emails(cls, v: str | None) -> str | None:
+        return validate_email(v)
 
 
 class ConferenceResponse(BaseModel):
@@ -169,10 +190,13 @@ class ConferenceResponse(BaseModel):
     venue_name: str | None
     venue_address: str | None
     city: str | None
+    state: str | None = None
+    postal_code: str | None = None
     country: str | None
     timezone: str | None
     locale: str | None = "en"
     venue_type: str
+    venue_url: str | None = None
     virtual_platform_url: str | None
 
     # Social links

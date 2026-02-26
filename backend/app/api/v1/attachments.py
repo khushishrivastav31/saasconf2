@@ -25,6 +25,7 @@ ALLOWED_ENTITY_TYPES = {
     "applicant_video",
     "paper_video",
     "sponsor_logo",
+    "screen_overlay_image",
 }
 
 

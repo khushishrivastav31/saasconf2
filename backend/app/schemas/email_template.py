@@ -15,6 +15,7 @@ class EmailTemplateBase(BaseModel):
     body_html: str = Field(..., description="HTML email body")
     body_text: str | None = Field(None, description="Plain text email body")
     is_active: bool = Field(True, description="Whether template is active")
+    screen_overlay_id: UUID | None = Field(None, description="Optional screen overlay to trigger")
 
 
 class EmailTemplateCreate(EmailTemplateBase):
@@ -30,6 +31,7 @@ class EmailTemplateUpdate(BaseModel):
     body_html: str | None = None
     body_text: str | None = None
     is_active: bool | None = None
+    screen_overlay_id: UUID | None = None
 
 
 class EmailTemplateResponse(EmailTemplateBase):

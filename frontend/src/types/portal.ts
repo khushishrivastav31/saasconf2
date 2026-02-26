@@ -89,7 +89,7 @@ export interface PortalConferenceSummary {
   end_date: string | null;
   city: string | null;
   country: string | null;
-  venue_type: "onsite" | "virtual" | "hybrid";
+  venue_type: 'onsite' | 'virtual' | 'hybrid';
   logo_url: string | null;
   cfps: PortalCFP[];
 }
@@ -348,13 +348,13 @@ export interface PortalSpeakerFeedbackListResponse {
 // --- Paper Form Schema ---
 
 export type PortalFieldType =
-  | "text"
-  | "textarea"
-  | "richtext"
-  | "checkbox"
-  | "checkbox_group"
-  | "dropdown"
-  | "file_upload";
+  | 'text'
+  | 'textarea'
+  | 'richtext'
+  | 'checkbox'
+  | 'checkbox_group'
+  | 'dropdown'
+  | 'file_upload';
 
 export interface PortalFieldOption {
   value: string;
@@ -400,7 +400,7 @@ export interface PortalPaperFormSchema {
 // Portal messaging types
 export interface PortalSenderInfo {
   id: string;
-  type: "user" | "applicant";
+  type: 'user' | 'applicant';
   first_name: string;
   last_name: string;
   email: string;
@@ -444,7 +444,7 @@ export interface PortalThreadListResponse {
 
 export interface PortalParticipantInfo {
   id: string;
-  type: "user" | "applicant";
+  type: 'user' | 'applicant';
   first_name: string;
   last_name: string;
   email: string;
@@ -478,5 +478,32 @@ export interface PortalNewsArticle {
 
 export interface PortalNewsListResponse {
   items: PortalNewsArticle[];
+  total: number;
+}
+
+// --- Screen Overlays ---
+
+export interface PortalScreenOverlay {
+  id: string;
+  conference_id: string;
+  conference_name: string;
+  trigger_type: 'first_registration' | 'scheduled' | 'always';
+  title: string;
+  body_text: string | null;
+  animation_style:
+    | 'confetti'
+    | 'fireworks'
+    | 'balloons'
+    | 'sparkle'
+    | 'spotlight'
+    | 'snow'
+    | 'stars';
+  duration_seconds: number;
+  image_url: string | null;
+  source: string;
+}
+
+export interface PortalScreenOverlayListResponse {
+  items: PortalScreenOverlay[];
   total: number;
 }

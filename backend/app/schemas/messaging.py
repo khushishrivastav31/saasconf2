@@ -114,6 +114,7 @@ class AdminCreateThread(BaseModel):
     subject: str = Field(..., min_length=1, max_length=500)
     body_html: str = Field(..., min_length=1)
     attachment_ids: list[UUID] = []
+    screen_overlay_id: UUID | None = None
 
 
 class CreateThreadResponse(BaseModel):
@@ -149,6 +150,7 @@ class AdminBulkSend(BaseModel):
     subject: str = Field(..., min_length=1, max_length=500)
     body_html: str = Field(..., min_length=1)
     recipients: BulkRecipientFilter
+    screen_overlay_id: UUID | None = None
 
 
 class BulkSendResponse(BaseModel):
@@ -200,6 +202,7 @@ class MessageTemplateCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     subject: str = Field(..., min_length=1, max_length=500)
     body_html: str = Field(..., min_length=1)
+    screen_overlay_id: UUID | None = None
 
 
 class MessageTemplateUpdate(BaseModel):
@@ -208,6 +211,7 @@ class MessageTemplateUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=200)
     subject: str | None = Field(None, min_length=1, max_length=500)
     body_html: str | None = Field(None, min_length=1)
+    screen_overlay_id: UUID | None = None
 
 
 class MessageTemplateResponse(BaseModel):
@@ -219,6 +223,7 @@ class MessageTemplateResponse(BaseModel):
     name: str
     subject: str
     body_html: str
+    screen_overlay_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -15,6 +15,7 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "conference_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "tenant_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "sponsor_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
+    "screen_overlay_image": {"image/jpeg", "image/png", "image/webp", "image/gif"},
 }
 
 # Default allowed types for general attachments

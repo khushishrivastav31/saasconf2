@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Navigate, Outlet, Link, useLocation, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
 import portalApi from '../../config/portalApi';
 import ConferenceLogo from '../../components/ConferenceLogo';
+
+const ScreenOverlayDisplay = lazy(() => import('../../components/portal/ScreenOverlayDisplay'));
 import type {
   PortalConferenceSummary,
   PortalTenant,
@@ -531,6 +533,11 @@ function PortalLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Screen overlay (shown after login) */}
+      <Suspense fallback={null}>
+        <ScreenOverlayDisplay />
+      </Suspense>
     </div>
   );
 }

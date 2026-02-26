@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import DOMPurify from 'dompurify';
+import { sanitizeHtml } from '../../utils/richText';
 import portalApi from '../../config/portalApi';
 import ConferenceLogo from '../../components/ConferenceLogo';
 import { formatDate } from '../../utils/formatDate';
@@ -89,7 +89,7 @@ function LandingPage() {
           {conference.description && (
             <div
               className="text-gray-600 max-w-2xl mx-auto mb-8 prose prose-sm"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(conference.description ?? '') }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(conference.description ?? '') }}
             />
           )}
 
@@ -138,7 +138,7 @@ function LandingPage() {
                 {cfp.description && (
                   <div
                     className="text-sm text-gray-600 mb-4 prose prose-sm"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cfp.description ?? '') }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(cfp.description ?? '') }}
                   />
                 )}
 
@@ -175,7 +175,7 @@ function LandingPage() {
                         <div
                           className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(cfp.guidelines_for_submissions ?? ''),
+                            __html: sanitizeHtml(cfp.guidelines_for_submissions ?? ''),
                           }}
                         />
                       </details>
@@ -201,7 +201,7 @@ function LandingPage() {
                         <div
                           className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(cfp.tips_for_submission ?? ''),
+                            __html: sanitizeHtml(cfp.tips_for_submission ?? ''),
                           }}
                         />
                       </details>
@@ -227,7 +227,7 @@ function LandingPage() {
                         <div
                           className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(cfp.code_of_conduct ?? ''),
+                            __html: sanitizeHtml(cfp.code_of_conduct ?? ''),
                           }}
                         />
                       </details>
@@ -253,7 +253,7 @@ function LandingPage() {
                         <div
                           className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(cfp.incentives_conditions ?? ''),
+                            __html: sanitizeHtml(cfp.incentives_conditions ?? ''),
                           }}
                         />
                       </details>
@@ -279,7 +279,7 @@ function LandingPage() {
                         <div
                           className="mt-2 ml-6 text-sm text-gray-600 prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(cfp.faqs ?? ''),
+                            __html: sanitizeHtml(cfp.faqs ?? ''),
                           }}
                         />
                       </details>

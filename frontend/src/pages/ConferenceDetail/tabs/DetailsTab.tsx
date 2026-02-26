@@ -1,6 +1,12 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { COUNTRY_OPTIONS } from '../../../config/countries';
+import {
+  TIMEZONE_OPTIONS,
+  resolveTimezoneValue,
+  COUNTRY_DEFAULT_TIMEZONE,
+} from '../../../config/timezones';
 import { useSaveStatus } from '../../../hooks/useSaveStatus';
 import type {
   Conference,
@@ -11,6 +17,7 @@ import type {
 import RichTextEditor from '../../../components/common/RichTextEditor';
 import ConferenceLogo from '../../../components/ConferenceLogo';
 import { parseApiError } from '../../../utils/apiError';
+import { validateEmail } from '../../../utils/validators';
 
 function PortalUrlField({ tenantSlug, path }: { tenantSlug: string; path: string }) {
   const [copied, setCopied] = useState(false);
@@ -120,9 +127,12 @@ function ConferenceDetailsTab({
     venue_name: conference.venue_name || '',
     venue_address: conference.venue_address || '',
     city: conference.city || '',
+    state: conference.state || '',
+    postal_code: conference.postal_code || '',
     country: conference.country || '',
-    timezone: conference.timezone || '',
+    timezone: resolveTimezoneValue(conference.timezone || ''),
     venue_type: conference.venue_type,
+    venue_url: conference.venue_url || '',
     virtual_platform_url: conference.virtual_platform_url || '',
     currency: conference.currency || '',
     invoice_currency: conference.invoice_currency || '',
@@ -141,6 +151,7 @@ function ConferenceDetailsTab({
   });
 
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
+  const [emailErrors, setEmailErrors] = useState<Record<string, string | null>>({});
   const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
     null
   );
@@ -152,6 +163,7 @@ function ConferenceDetailsTab({
         ...data,
         currency: data.currency || null,
         invoice_currency: data.invoice_currency || null,
+        venue_url: data.venue_url || null,
       };
       await api.put(`/conferences/${conference.id}`, payload);
     },
@@ -230,6 +242,17 @@ function ConferenceDetailsTab({
   ) => {
     const newFormData = { ...formData, [field]: value };
     setFormData(newFormData);
+
+    // Clear email error on change if the user is fixing it
+    if ((field === 'support_email' || field === 'contact_email') && emailErrors[field]) {
+      const error = validateEmail(value as string);
+      setEmailErrors((prev) => ({ ...prev, [field]: error }));
+      if (error) return; // Don't auto-save while email is still invalid
+    }
+
+    // Don't auto-save if any email field has a validation error
+    const hasEmailError = Object.values(emailErrors).some(Boolean);
+    if (hasEmailError) return;
 
     if (debounceTimeout) clearTimeout(debounceTimeout);
 
@@ -606,22 +629,40 @@ function ConferenceDetailsTab({
               <input
                 type="email"
                 placeholder="support@example.com"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className={`mt-1 block w-full border ${emailErrors.support_email ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 value={formData.support_email}
                 onChange={(e) => handleFieldChange('support_email', e.target.value)}
+                onBlur={(e) =>
+                  setEmailErrors((prev) => ({
+                    ...prev,
+                    support_email: validateEmail(e.target.value),
+                  }))
+                }
                 disabled={!isAdmin}
               />
+              {emailErrors.support_email && (
+                <p className="mt-1 text-xs text-red-600">{emailErrors.support_email}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Contact Email</label>
               <input
                 type="email"
                 placeholder="contact@example.com"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className={`mt-1 block w-full border ${emailErrors.contact_email ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 value={formData.contact_email}
                 onChange={(e) => handleFieldChange('contact_email', e.target.value)}
+                onBlur={(e) =>
+                  setEmailErrors((prev) => ({
+                    ...prev,
+                    contact_email: validateEmail(e.target.value),
+                  }))
+                }
                 disabled={!isAdmin}
               />
+              {emailErrors.contact_email && (
+                <p className="mt-1 text-xs text-red-600">{emailErrors.contact_email}</p>
+              )}
             </div>
           </div>
         </div>
@@ -652,6 +693,16 @@ function ConferenceDetailsTab({
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
+                <label className="block text-sm font-medium text-gray-700">Postal Code</label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.postal_code}
+                  onChange={(e) => handleFieldChange('postal_code', e.target.value)}
+                  disabled={!isAdmin}
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700">City</label>
                 <input
                   type="text"
@@ -662,47 +713,102 @@ function ConferenceDetailsTab({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Country</label>
+                <label className="block text-sm font-medium text-gray-700">State / Province</label>
                 <input
                   type="text"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                  value={formData.country}
-                  onChange={(e) => handleFieldChange('country', e.target.value)}
-                  disabled={!isAdmin}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Timezone</label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                  placeholder="e.g., Europe/Berlin"
-                  value={formData.timezone}
-                  onChange={(e) => handleFieldChange('timezone', e.target.value)}
+                  value={formData.state}
+                  onChange={(e) => handleFieldChange('state', e.target.value)}
                   disabled={!isAdmin}
                 />
               </div>
             </div>
-            <div className="mt-3">
-              <label className="block text-sm font-medium text-gray-700">Venue Type</label>
-              <select
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.venue_type}
-                onChange={(e) => handleFieldChange('venue_type', e.target.value)}
-                disabled={!isAdmin}
-              >
-                <option value="onsite">Onsite</option>
-                <option value="virtual">Virtual</option>
-                <option value="hybrid">Hybrid</option>
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Country</label>
+                <select
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.country}
+                  onChange={(e) => {
+                    const country = e.target.value;
+                    const newFormData = { ...formData, country };
+                    // Auto-suggest timezone when country changes and timezone is empty
+                    if (country && !formData.timezone) {
+                      const defaultTz = COUNTRY_DEFAULT_TIMEZONE[country];
+                      if (defaultTz) {
+                        newFormData.timezone = defaultTz;
+                      }
+                    }
+                    setFormData(newFormData);
+                    if (debounceTimeout) clearTimeout(debounceTimeout);
+                    const timeout = setTimeout(() => {
+                      updateMutation.mutate(newFormData);
+                    }, 500);
+                    setDebounceTimeout(timeout);
+                  }}
+                  disabled={!isAdmin}
+                >
+                  <option value="">Select a country...</option>
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c.code} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Timezone</label>
+                <select
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.timezone}
+                  onChange={(e) => handleFieldChange('timezone', e.target.value)}
+                  disabled={!isAdmin}
+                >
+                  <option value="">Select a timezone...</option>
+                  {TIMEZONE_OPTIONS.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Event Type</label>
+                <select
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.venue_type}
+                  onChange={(e) => handleFieldChange('venue_type', e.target.value)}
+                  disabled={!isAdmin}
+                >
+                  <option value="onsite">Onsite</option>
+                  <option value="virtual">Virtual</option>
+                  <option value="hybrid">Hybrid</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Venue URL
+                  <span className="ml-1 text-xs text-gray-400">(optional)</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  value={formData.venue_url}
+                  onChange={(e) => handleFieldChange('venue_url', e.target.value)}
+                  disabled={!isAdmin}
+                />
+              </div>
             </div>
             {(formData.venue_type === 'virtual' || formData.venue_type === 'hybrid') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Virtual Platform URL
+                  Streaming Platform URL
                 </label>
                 <input
-                  type="text"
+                  type="url"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.virtual_platform_url}
                   onChange={(e) => handleFieldChange('virtual_platform_url', e.target.value)}

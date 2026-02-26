@@ -22,9 +22,16 @@ class MessageTemplate(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
     body_html: Mapped[str] = mapped_column(Text, nullable=False)
+    screen_overlay_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("screen_overlays.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    screen_overlay: Mapped["ScreenOverlay | None"] = relationship(  # type: ignore[name-defined]  # noqa: F821
+        "ScreenOverlay", lazy="selectin"
     )
 
     __table_args__ = (
@@ -93,6 +100,9 @@ class MessageThread(Base):
     subject: Mapped[str] = mapped_column(String(500), nullable=False)
     bulk_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     has_attachments: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    screen_overlay_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("screen_overlays.id", ondelete="SET NULL"), nullable=True
+    )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -100,6 +110,9 @@ class MessageThread(Base):
     )
 
     # Relationships
+    screen_overlay: Mapped["ScreenOverlay | None"] = relationship(  # type: ignore[name-defined]  # noqa: F821
+        "ScreenOverlay", lazy="selectin"
+    )
     participants: Mapped[list["MessageParticipant"]] = relationship(
         "MessageParticipant", back_populates="thread", cascade="all, delete-orphan"
     )

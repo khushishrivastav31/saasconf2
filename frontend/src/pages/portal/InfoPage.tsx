@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import DOMPurify from 'dompurify';
+import { sanitizeHtml } from '../../utils/richText';
 import portalApi from '../../config/portalApi';
 import type { PortalConferenceSummary, PortalCFP } from '../../types/portal';
 
@@ -167,7 +167,7 @@ function InfoPage() {
         {tabContent && tabContent.trim() ? (
           <div
             className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(tabContent) }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(tabContent) }}
           />
         ) : activeTab === 'code_of_conduct' ? (
           <p className="text-sm text-gray-500 italic">

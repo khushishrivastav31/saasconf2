@@ -128,6 +128,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
       subject: string;
       body_html: string;
       attachment_ids: string[];
+      screen_overlay_id?: string | null;
     }) => {
       const resp = await api.post(`${basePath}/threads`, data);
       return resp.data as { threads_created: number; first_thread: ThreadDetailResponse };
@@ -176,6 +177,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
       subject: string;
       body_html: string;
       recipients: BulkRecipientFilter;
+      screen_overlay_id?: string | null;
     }) => {
       const resp = await api.post(`${basePath}/bulk-send`, data);
       return resp.data;

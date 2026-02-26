@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { COUNTRY_OPTIONS, EU_COUNTRY_CODES } from '../../../../config/countries';
 import type {
   Conference,
   Registration,
@@ -359,97 +360,6 @@ function BillingFields({
   >('idle');
   const [vatMessage, setVatMessage] = useState<string | null>(null);
 
-  const EU_COUNTRIES = new Set([
-    'AT',
-    'BE',
-    'BG',
-    'HR',
-    'CY',
-    'CZ',
-    'DK',
-    'EE',
-    'FI',
-    'FR',
-    'DE',
-    'GR',
-    'HU',
-    'IE',
-    'IT',
-    'LV',
-    'LT',
-    'LU',
-    'MT',
-    'NL',
-    'PL',
-    'PT',
-    'RO',
-    'SK',
-    'SI',
-    'ES',
-    'SE',
-  ]);
-
-  const COUNTRY_OPTIONS: { code: string; name: string }[] = [
-    { code: 'AT', name: 'Austria' },
-    { code: 'BE', name: 'Belgium' },
-    { code: 'BG', name: 'Bulgaria' },
-    { code: 'HR', name: 'Croatia' },
-    { code: 'CY', name: 'Cyprus' },
-    { code: 'CZ', name: 'Czechia' },
-    { code: 'DK', name: 'Denmark' },
-    { code: 'EE', name: 'Estonia' },
-    { code: 'FI', name: 'Finland' },
-    { code: 'FR', name: 'France' },
-    { code: 'DE', name: 'Germany' },
-    { code: 'GR', name: 'Greece' },
-    { code: 'HU', name: 'Hungary' },
-    { code: 'IE', name: 'Ireland' },
-    { code: 'IT', name: 'Italy' },
-    { code: 'LV', name: 'Latvia' },
-    { code: 'LT', name: 'Lithuania' },
-    { code: 'LU', name: 'Luxembourg' },
-    { code: 'MT', name: 'Malta' },
-    { code: 'NL', name: 'Netherlands' },
-    { code: 'PL', name: 'Poland' },
-    { code: 'PT', name: 'Portugal' },
-    { code: 'RO', name: 'Romania' },
-    { code: 'SK', name: 'Slovakia' },
-    { code: 'SI', name: 'Slovenia' },
-    { code: 'ES', name: 'Spain' },
-    { code: 'SE', name: 'Sweden' },
-    // Non-EU countries
-    { code: 'AL', name: 'Albania' },
-    { code: 'AD', name: 'Andorra' },
-    { code: 'AM', name: 'Armenia' },
-    { code: 'AU', name: 'Australia' },
-    { code: 'AZ', name: 'Azerbaijan' },
-    { code: 'BY', name: 'Belarus' },
-    { code: 'BA', name: 'Bosnia and Herzegovina' },
-    { code: 'BR', name: 'Brazil' },
-    { code: 'CA', name: 'Canada' },
-    { code: 'CH', name: 'Switzerland' },
-    { code: 'CN', name: 'China' },
-    { code: 'GE', name: 'Georgia' },
-    { code: 'GB', name: 'United Kingdom' },
-    { code: 'IS', name: 'Iceland' },
-    { code: 'IN', name: 'India' },
-    { code: 'IL', name: 'Israel' },
-    { code: 'JP', name: 'Japan' },
-    { code: 'KR', name: 'South Korea' },
-    { code: 'LI', name: 'Liechtenstein' },
-    { code: 'MD', name: 'Moldova' },
-    { code: 'MC', name: 'Monaco' },
-    { code: 'ME', name: 'Montenegro' },
-    { code: 'MK', name: 'North Macedonia' },
-    { code: 'NO', name: 'Norway' },
-    { code: 'NZ', name: 'New Zealand' },
-    { code: 'RS', name: 'Serbia' },
-    { code: 'RU', name: 'Russia' },
-    { code: 'TR', name: 'Turkey' },
-    { code: 'UA', name: 'Ukraine' },
-    { code: 'US', name: 'United States' },
-  ].sort((a, b) => a.name.localeCompare(b.name));
-
   // Keep a ref to always have the latest data in async handlers (avoids stale closures)
   const dataRef = useRef(data);
   useEffect(() => {
@@ -457,7 +367,7 @@ function BillingFields({
   }, [data]);
 
   function canValidateVat(d: BillingProfileCreate) {
-    return !!(d.country && EU_COUNTRIES.has(d.country.toUpperCase()) && d.vat_number);
+    return !!(d.country && EU_COUNTRY_CODES.has(d.country.toUpperCase()) && d.vat_number);
   }
 
   async function validateVat() {

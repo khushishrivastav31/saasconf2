@@ -144,9 +144,13 @@ async def create_conference(
         venue_name=conference_data.venue_name,
         venue_address=conference_data.venue_address,
         city=conference_data.city,
+        state=conference_data.state,
+        postal_code=conference_data.postal_code,
         country=conference_data.country,
         timezone=conference_data.timezone,
+        locale=conference_data.locale,
         venue_type=conference_data.venue_type,
+        venue_url=conference_data.venue_url,
         virtual_platform_url=conference_data.virtual_platform_url,
         social_links=conference_data.social_links.model_dump(mode="json") if conference_data.social_links else {},
         team_members=[tm.model_dump(mode="json") for tm in conference_data.team_members]

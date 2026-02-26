@@ -1,8 +1,27 @@
 /**
- * Phone number validation utilities using libphonenumber-js.
+ * Validation utilities for phone numbers and email addresses.
  */
 
-import { isValidPhoneNumber } from "libphonenumber-js";
+import { isValidPhoneNumber } from 'libphonenumber-js';
+
+// Same regex used by the backend (app/core/validators.py)
+const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+/**
+ * Validate email format.
+ *
+ * @param value - The email to validate
+ * @returns Error message if invalid, null if valid
+ */
+export function validateEmail(value: string | null | undefined): string | null {
+  if (!value || value === '') {
+    return null; // Empty is valid (email is optional)
+  }
+  if (!EMAIL_RE.test(value)) {
+    return 'Invalid email address format';
+  }
+  return null;
+}
 
 /**
  * Validate phone number using libphonenumber.
@@ -12,11 +31,11 @@ import { isValidPhoneNumber } from "libphonenumber-js";
  * @returns Error message if invalid, null if valid
  */
 export function validatePhone(value: string | null | undefined): string | null {
-  if (!value || value === "") {
+  if (!value || value === '') {
     return null; // Empty is valid (phone is optional)
   }
   if (!isValidPhoneNumber(value)) {
-    return "Invalid phone number. Use international format with country code, e.g. +49123456789";
+    return 'Invalid phone number. Use international format with country code, e.g. +49123456789';
   }
   return null;
 }

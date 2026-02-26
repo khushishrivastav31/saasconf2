@@ -13,7 +13,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
@@ -41,9 +41,18 @@ class NewsArticle(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
+    screen_overlay_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("screen_overlays.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    screen_overlay: Mapped["ScreenOverlay | None"] = relationship(  # type: ignore[name-defined]  # noqa: F821
+        "ScreenOverlay", lazy="selectin"
     )
 
     __table_args__ = (

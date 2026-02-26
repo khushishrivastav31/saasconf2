@@ -53,6 +53,7 @@ function LoginPage() {
 
     try {
       await login({ email, password });
+      sessionStorage.setItem('just_logged_in', 'true');
       navigate(`${basePath}/news`);
     } catch (err: unknown) {
       // Check if this is a tenant admin redirect response

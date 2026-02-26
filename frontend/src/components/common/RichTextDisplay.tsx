@@ -1,5 +1,4 @@
-import DOMPurify from "dompurify";
-import { isHtml, stripHtml } from "../../utils/richText";
+import { isHtml, stripHtml, sanitizeHtml } from '../../utils/richText';
 
 interface RichTextDisplayProps {
   content: string | null | undefined;
@@ -10,11 +9,11 @@ interface RichTextDisplayProps {
 
 export default function RichTextDisplay({
   content,
-  fallback = "--",
-  className = "",
+  fallback = '--',
+  className = '',
   truncate = false,
 }: RichTextDisplayProps) {
-  if (!content || content.trim() === "") {
+  if (!content || content.trim() === '') {
     return <span className={`text-gray-400 ${className}`}>{fallback}</span>;
   }
 
@@ -31,12 +30,10 @@ export default function RichTextDisplay({
     return (
       <div
         className={`prose prose-sm max-w-none ${className}`}
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
       />
     );
   }
 
-  return (
-    <p className={`whitespace-pre-wrap ${className}`}>{content}</p>
-  );
+  return <p className={`whitespace-pre-wrap ${className}`}>{content}</p>;
 }

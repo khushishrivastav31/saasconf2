@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.core.validators import validate_phone
+from app.core.validators import validate_email, validate_phone
 
 
 class ContactPerson(BaseModel):
@@ -17,6 +17,11 @@ class ContactPerson(BaseModel):
     email: str | None = Field(None, max_length=255)
     phone: str | None = Field(None, max_length=50)
     role: str | None = Field(None, max_length=100)  # e.g., "Manager", "Technical Contact"
+
+    @field_validator("email")
+    @classmethod
+    def check_email(cls, v: str | None) -> str | None:
+        return validate_email(v)
 
     @field_validator("phone")
     @classmethod

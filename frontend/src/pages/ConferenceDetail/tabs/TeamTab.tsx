@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useSaveStatus } from '../../../hooks/useSaveStatus';
 import type { Conference, TeamMember } from '../../../types';
-import { validatePhone } from '../../../utils/validators';
+import { validateEmail, validatePhone } from '../../../utils/validators';
 import { parseApiError } from '../../../utils/apiError';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import ConfirmDialog from '../../../components/ConfirmDialog';
@@ -38,7 +38,9 @@ function ConferenceTeamTab({
     is_manager: false,
   });
   const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
+  const [editEmailError, setEditEmailError] = useState<string | null>(null);
   const [newPhoneError, setNewPhoneError] = useState<string | null>(null);
+  const [newEmailError, setNewEmailError] = useState<string | null>(null);
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
   const [userError, setUserError] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<{ index: number; member: TeamMember } | null>(
@@ -94,6 +96,7 @@ function ConferenceTeamTab({
       is_manager: false,
     });
     setNewPhoneError(null);
+    setNewEmailError(null);
     updateMutation.mutate(newMembers);
   };
 
@@ -109,12 +112,14 @@ function ConferenceTeamTab({
     setEditingIndex(index);
     setEditForm({ ...teamMembers[index] });
     setEditPhoneError(null);
+    setEditEmailError(null);
     setUserError(null);
   };
 
   const cancelEditing = () => {
     setEditingIndex(null);
     setEditPhoneError(null);
+    setEditEmailError(null);
     setUserError(null);
   };
 
@@ -246,10 +251,17 @@ function ConferenceTeamTab({
                     <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
                     <input
                       type="email"
-                      className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className={`w-full border ${editEmailError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                       value={editForm.email || ''}
-                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      onChange={(e) => {
+                        setEditForm({ ...editForm, email: e.target.value });
+                        if (editEmailError) setEditEmailError(validateEmail(e.target.value));
+                      }}
+                      onBlur={(e) => setEditEmailError(validateEmail(e.target.value))}
                     />
+                    {editEmailError && (
+                      <p className="mt-1 text-xs text-red-600">{editEmailError}</p>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-3">
@@ -307,7 +319,8 @@ function ConferenceTeamTab({
                       disabled={
                         !editForm.first_name.trim() ||
                         !editForm.last_name.trim() ||
-                        !!editPhoneError
+                        !!editPhoneError ||
+                        !!editEmailError
                       }
                       className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
                     >
@@ -409,10 +422,15 @@ function ConferenceTeamTab({
               <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
               <input
                 type="email"
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className={`w-full border ${newEmailError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 value={newMember.email}
-                onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                onChange={(e) => {
+                  setNewMember({ ...newMember, email: e.target.value });
+                  if (newEmailError) setNewEmailError(validateEmail(e.target.value));
+                }}
+                onBlur={(e) => setNewEmailError(validateEmail(e.target.value))}
               />
+              {newEmailError && <p className="mt-1 text-xs text-red-600">{newEmailError}</p>}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
@@ -450,7 +468,10 @@ function ConferenceTeamTab({
               type="button"
               onClick={addMember}
               disabled={
-                !newMember.first_name.trim() || !newMember.last_name.trim() || !!newPhoneError
+                !newMember.first_name.trim() ||
+                !newMember.last_name.trim() ||
+                !!newPhoneError ||
+                !!newEmailError
               }
               className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
             >

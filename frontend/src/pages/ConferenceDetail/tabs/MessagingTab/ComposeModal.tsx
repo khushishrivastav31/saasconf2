@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import RichTextEditor from "../../../../components/common/RichTextEditor";
-import MessageFileAttach, {
-  type StagedAttachment,
-} from "../../../../components/MessageFileAttach";
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import RichTextEditor from '../../../../components/common/RichTextEditor';
+import MessageFileAttach, { type StagedAttachment } from '../../../../components/MessageFileAttach';
+import OverlaySelector from '../../../../components/OverlaySelector';
 
 interface ComposeModalProps {
   conferenceId: string;
@@ -15,6 +14,7 @@ interface ComposeModalProps {
     subject: string;
     body_html: string;
     attachment_ids: string[];
+    screen_overlay_id?: string | null;
   }) => void;
   sending: boolean;
 }
@@ -34,18 +34,17 @@ export default function ComposeModal({
   sending,
 }: ComposeModalProps) {
   const [selectedRecipients, setSelectedRecipients] = useState<Applicant[]>([]);
-  const [subject, setSubject] = useState("");
-  const [bodyHtml, setBodyHtml] = useState("");
-  const [search, setSearch] = useState("");
+  const [subject, setSubject] = useState('');
+  const [bodyHtml, setBodyHtml] = useState('');
+  const [search, setSearch] = useState('');
   const [attachments, setAttachments] = useState<StagedAttachment[]>([]);
+  const [screenOverlayId, setScreenOverlayId] = useState<string | null>(null);
 
   // Fetch applicants for recipient picker
   const { data: allApplicants } = useQuery({
-    queryKey: ["cfp-applicants-for-messaging", conferenceId],
+    queryKey: ['cfp-applicants-for-messaging', conferenceId],
     queryFn: async () => {
-      const resp = await api.get(
-        `/cfp/applicants?conference_id=${conferenceId}`
-      );
+      const resp = await api.get(`/cfp/applicants?conference_id=${conferenceId}`);
       return resp.data.items as Applicant[];
     },
     enabled: open,
@@ -68,17 +67,17 @@ export default function ComposeModal({
   useEffect(() => {
     if (!open) {
       setSelectedRecipients([]);
-      setSubject("");
-      setBodyHtml("");
-      setSearch("");
+      setSubject('');
+      setBodyHtml('');
+      setSearch('');
       setAttachments([]);
+      setScreenOverlayId(null);
     }
   }, [open]);
 
   if (!open) return null;
 
-  const canSend =
-    selectedRecipients.length > 0 && subject.trim() && bodyHtml.trim();
+  const canSend = selectedRecipients.length > 0 && subject.trim() && bodyHtml.trim();
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -86,16 +85,8 @@ export default function ComposeModal({
       <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="text-lg font-semibold">New Message</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -108,9 +99,7 @@ export default function ComposeModal({
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {/* Recipients */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              To
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
             {/* Selected recipients chips */}
             {selectedRecipients.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-2">
@@ -122,9 +111,7 @@ export default function ComposeModal({
                     {r.first_name} {r.last_name}
                     <button
                       onClick={() =>
-                        setSelectedRecipients((prev) =>
-                          prev.filter((p) => p.id !== r.id)
-                        )
+                        setSelectedRecipients((prev) => prev.filter((p) => p.id !== r.id))
                       }
                       className="text-blue-400 hover:text-blue-600 ml-0.5"
                     >
@@ -143,38 +130,29 @@ export default function ComposeModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
             />
             {/* Dropdown results */}
-            {search.trim() &&
-              filteredApplicants &&
-              filteredApplicants.length > 0 && (
-                <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md mt-1">
-                  {filteredApplicants.map((a) => (
-                    <button
-                      key={a.id}
-                      onClick={() => {
-                        setSelectedRecipients((prev) => [...prev, a]);
-                        setSearch("");
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b last:border-b-0"
-                    >
-                      {a.first_name} {a.last_name}{" "}
-                      <span className="text-gray-400">{a.email}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            {search.trim() &&
-              filteredApplicants &&
-              filteredApplicants.length === 0 && (
-                <p className="text-xs text-gray-400 mt-1">
-                  No applicants found
-                </p>
-              )}
+            {search.trim() && filteredApplicants && filteredApplicants.length > 0 && (
+              <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md mt-1">
+                {filteredApplicants.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => {
+                      setSelectedRecipients((prev) => [...prev, a]);
+                      setSearch('');
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b last:border-b-0"
+                  >
+                    {a.first_name} {a.last_name} <span className="text-gray-400">{a.email}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {search.trim() && filteredApplicants && filteredApplicants.length === 0 && (
+              <p className="text-xs text-gray-400 mt-1">No applicants found</p>
+            )}
           </div>
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subject
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
             <input
               type="text"
               value={subject}
@@ -186,9 +164,7 @@ export default function ComposeModal({
           </div>
           {/* Body */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Message
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
             <RichTextEditor
               value={bodyHtml}
               onChange={setBodyHtml}
@@ -202,6 +178,12 @@ export default function ComposeModal({
             uploadPath={`/conferences/${conferenceId}/messaging/upload`}
             attachments={attachments}
             onAttachmentsChange={setAttachments}
+          />
+
+          <OverlaySelector
+            conferenceId={conferenceId}
+            value={screenOverlayId}
+            onChange={setScreenOverlayId}
           />
         </div>
         <div className="flex justify-end gap-3 px-6 py-4 border-t">
@@ -218,12 +200,13 @@ export default function ComposeModal({
                 subject,
                 body_html: bodyHtml,
                 attachment_ids: attachments.map((a) => a.id),
+                screen_overlay_id: screenOverlayId,
               })
             }
             disabled={!canSend || sending}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            {sending ? "Sending..." : "Send"}
+            {sending ? 'Sending...' : 'Send'}
           </button>
         </div>
       </div>

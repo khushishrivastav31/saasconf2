@@ -19,6 +19,7 @@ from app.api.v1 import (
     news,
     program,
     registrations,
+    screen_overlays,
     service_providers,
     settings,
     sponsors,
@@ -80,6 +81,11 @@ api_router.include_router(
 
 # Sponsors (conference-scoped)
 api_router.include_router(sponsors.router, prefix="/conferences/{conference_id}/sponsors", tags=["Sponsors"])
+
+# Screen Overlays (conference-scoped)
+api_router.include_router(
+    screen_overlays.router, prefix="/conferences/{conference_id}/screen-overlays", tags=["Screen Overlays"]
+)
 
 # Invoices (conference-scoped)
 api_router.include_router(invoices.router, prefix="/conferences/{conference_id}/invoices", tags=["Invoices"])

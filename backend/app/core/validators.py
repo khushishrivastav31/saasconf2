@@ -1,6 +1,24 @@
 """Custom validators for the application."""
 
+import re
+
 import phonenumbers
+
+# Simple email regex: local@domain.tld
+_EMAIL_RE = re.compile(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$")
+
+
+def validate_email(value: str | None) -> str | None:
+    """Validate email format.
+
+    Uses a simple regex check for proper email format.
+    Can be used directly in Pydantic field_validator decorators.
+    """
+    if value is None or value == "":
+        return value
+    if not _EMAIL_RE.match(value):
+        raise ValueError("Invalid email address format")
+    return value.strip().lower()
 
 
 def validate_phone(value: str | None) -> str | None:

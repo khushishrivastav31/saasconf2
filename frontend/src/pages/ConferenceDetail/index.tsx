@@ -24,6 +24,7 @@ const SpeakersTab = lazy(() => import('./tabs/SpeakersTab'));
 const MessagingTab = lazy(() => import('./tabs/MessagingTab'));
 const NewsTab = lazy(() => import('./tabs/NewsTab'));
 const RegistrationTab = lazy(() => import('./tabs/RegistrationTab'));
+const ScreenOverlaysTab = lazy(() => import('./tabs/ScreenOverlaysTab'));
 const CFPTopics = lazy(() => import('../modules/cfp').then((m) => ({ default: m.CFPTopics })));
 const CFPProgramCommittee = lazy(() =>
   import('../modules/cfp').then((m) => ({ default: m.CFPProgramCommittee }))
@@ -418,6 +419,9 @@ function ConferenceDetailContent() {
               )}
               {activeSection === 'registration' && conference && (
                 <RegistrationTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'screen-overlays' && conference && (
+                <ScreenOverlaysTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'settings' && (
                 <ConferenceSettingsTab conference={conference} isAdmin={isAdmin} />

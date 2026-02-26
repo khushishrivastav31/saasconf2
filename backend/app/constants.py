@@ -43,6 +43,7 @@ class ResourceType:
     PROGRAM_TRACK = "program_track"
     REVIEW_QUESTION = "review_question"
     SCORE_SCALE = "score_scale"
+    SCREEN_OVERLAY = "screen_overlay"
     SERVICE_PROVIDER = "service_provider"
     SPONSOR = "sponsor"
     SUBMISSION = "submission"
@@ -64,6 +65,7 @@ class EntityType:
     MESSAGE = "message"
     PAPER_VIDEO = "paper_video"
     SERVICE_PROVIDER = "service_provider"
+    SCREEN_OVERLAY_IMAGE = "screen_overlay_image"
     SPONSOR = "sponsor"
     TENANT_LOGO = "tenant_logo"
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import DOMPurify from 'dompurify';
+import { sanitizeHtml } from '../../utils/richText';
 import portalApi from '../../config/portalApi';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
 import { usePortalBasePath } from '../../hooks/usePortalBasePath';
@@ -789,7 +789,7 @@ function PaperDetailPage() {
                 <dd
                   className="text-sm text-gray-900 mt-0.5 prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(paper.abstract_short),
+                    __html: sanitizeHtml(paper.abstract_short),
                   }}
                 />
               </div>
@@ -801,7 +801,7 @@ function PaperDetailPage() {
                 <dd
                   className="text-sm text-gray-900 mt-0.5 prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(paper.abstract_long),
+                    __html: sanitizeHtml(paper.abstract_long),
                   }}
                 />
               </div>
@@ -813,7 +813,7 @@ function PaperDetailPage() {
                 <dd
                   className="text-sm text-gray-900 mt-0.5 prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(paper.learning_objectives),
+                    __html: sanitizeHtml(paper.learning_objectives),
                   }}
                 />
               </div>
@@ -825,7 +825,7 @@ function PaperDetailPage() {
                 <dd
                   className="text-sm text-gray-900 mt-0.5 prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(paper.importance),
+                    __html: sanitizeHtml(paper.importance),
                   }}
                 />
               </div>
