@@ -47,7 +47,7 @@ nh3==0.2.21
 resend==2.7.0
 
 # Document processing
-mammoth==1.8.0
+mammoth==1.11.0
 fpdf2==2.8.3
 striprtf==0.0.26
 python-docx==1.1.2
