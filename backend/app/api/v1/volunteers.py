@@ -183,7 +183,7 @@ async def create_volunteer(
     existing = await db.execute(
         select(Volunteer).where(
             Volunteer.tenant_id == current_user.tenant_id,
-            Volunteer.email == volunteer_data.email,
+            func.lower(Volunteer.email) == volunteer_data.email.strip().lower(),
         )
     )
     if existing.scalar_one_or_none():

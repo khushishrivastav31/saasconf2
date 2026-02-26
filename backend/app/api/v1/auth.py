@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.config import get_settings
 from app.core.dependencies import (
@@ -49,7 +49,7 @@ async def login(
     Rate limited to prevent brute force attacks.
     """
     # Find user by email
-    result = await db.execute(select(User).where(User.email == login_data.email))
+    result = await db.execute(select(User).where(func.lower(User.email) == login_data.email.strip().lower()))
     user = result.scalar_one_or_none()
 
     client_ip = get_client_ip(request)

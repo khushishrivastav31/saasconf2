@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
@@ -147,7 +147,7 @@ async def create_tenant_user(
 
     # Check email uniqueness within tenant
     existing = await db.execute(
-        select(User).where(User.tenant_id == target_tenant_id).where(User.email == user_data.email)
+        select(User).where(User.tenant_id == target_tenant_id).where(func.lower(User.email) == user_data.email.strip().lower())
     )
     if existing.scalar_one_or_none():
         raise ValidationError(f"User with email '{user_data.email}' already exists in this tenant")
@@ -260,7 +260,7 @@ async def update_tenant_user(
         existing = await db.execute(
             select(User)
             .where(User.tenant_id == user.tenant_id)
-            .where(User.email == update_data["email"])
+            .where(func.lower(User.email) == update_data["email"].strip().lower())
             .where(User.id != user_id)
         )
         if existing.scalar_one_or_none():

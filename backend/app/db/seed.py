@@ -19,7 +19,7 @@ settings = get_settings()
 
 async def seed_super_admin(session: AsyncSession) -> None:
     """Create the initial super admin user if it doesn't exist."""
-    result = await session.execute(select(User).where(User.email == settings.SUPER_ADMIN_EMAIL))
+    result = await session.execute(select(User).where(func.lower(User.email) == settings.SUPER_ADMIN_EMAIL.lower()))
     existing = result.scalar_one_or_none()
 
     if existing:
