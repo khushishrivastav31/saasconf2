@@ -10,7 +10,7 @@ SaaSConf is a multi-tenant SaaS platform for conference management. This documen
 |-------|-----------|---------|
 | Backend framework | FastAPI | 0.109.0 |
 | ORM | SQLAlchemy (async) | 2.0.25 |
-| Database | PostgreSQL | 15 |
+| Database | PostgreSQL | 16 |
 | Cache / Token store | Redis | 7 |
 | Migrations | Alembic | 1.13.1 |
 | Frontend framework | React | 18.2.0 |
@@ -127,7 +127,7 @@ Frontend routes use the `ModuleRoute` wrapper component:
 | `sessions` | Session management (coming soon) |
 | `speakers` | Speaker management (coming soon) |
 | `attendees` | Attendee management (coming soon) |
-| `sponsors` | Sponsor management (coming soon) |
+| `sponsors` | Sponsor management (with contract lifecycle) |
 | `analytics` | Analytics & reports (coming soon) |
 | `service_providers` | Service provider management (coming soon) |
 
@@ -213,3 +213,20 @@ return {"items": result.items, "total": result.total}
 ```
 
 Response includes `items` (list) and `total` (count), allowing the frontend to render page controls.
+
+### Shared validation between backend and frontend
+
+Phone, email, and URL validation use the same logic on both sides:
+- **Phone**: `libphonenumber` (backend) / `libphonenumber-js` (frontend) — international format required
+- **Email**: Same regex (`^[a-zA-Z0-9._%+-]+@...`) in both `app/core/validators.py` and `utils/validators.ts`
+- **URL normalization**: Frontend-only `normalizeUrl()` auto-prepends `https://` on blur; backend stores the normalized value
+
+All frontend validation runs **on blur** with inline red-border error display. This keeps forms responsive while catching issues before submission.
+
+### Document generation for contracts
+
+Sponsor contracts use server-side document conversion to support multiple formats:
+- **Upload**: DOCX → HTML (via `mammoth`), RTF → text → HTML (via `striprtf`)
+- **Export**: HTML → DOCX (via `html2docx`), HTML → PDF (via `fpdf2`)
+- **Editing**: Rich-text HTML editor (TipTap) with full formatting
+- **Versioning**: Every content save creates an immutable `SponsorContractVersion` snapshot

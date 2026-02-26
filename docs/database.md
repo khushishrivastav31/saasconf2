@@ -8,7 +8,7 @@ This document covers the database layer: ORM setup, models, migrations, seeding,
 
 | Component | Technology |
 |-----------|-----------|
-| Database | PostgreSQL 15 |
+| Database | PostgreSQL 16 |
 | ORM | SQLAlchemy 2.0 (async) |
 | Driver | asyncpg |
 | Migrations | Alembic |
@@ -124,8 +124,10 @@ All models use the declarative base from `backend/app/db/base.py`.
 |-------|-------|-------------|
 | `BookingOption` | `booking_options` | id, conference_id, name, price |
 | `BookingPeriod` | `booking_periods` | id, conference_id, name, start_date, end_date |
-| `DiscountCode` | `discount_codes` | id, conference_id, code, discount_percent |
+| `DiscountCode` | `discount_codes` | id, conference_id, code, discount_type, discount_value, currency, start_date, end_date, max_uses, is_combinable |
 | `DiscountCodeOption` | `discount_code_options` | id, discount_code_id, booking_option_id |
+| `DiscountCodePeriod` | `discount_code_periods` | id, discount_code_id, booking_period_id |
+| `SponsorPackage` | `sponsor_packages` | id, conference_id, name, price, currency, contract_template |
 | `EmailTemplate` | `email_templates` | id, conference_id, template_type, subject, body |
 | `PronounOption` | `pronoun_options` | id, tenant_id, label |
 | `SessionType` | `session_types` | id, conference_id, name, color |
@@ -159,7 +161,9 @@ All models use the declarative base from `backend/app/db/base.py`.
 |-------|-------|-------------|
 | `Location` | `locations` | id, tenant_id, name, address, city, country |
 | `Volunteer` | `volunteers` | id, tenant_id, name, email, phone |
-| `Sponsor` | `sponsors` | id, conference_id, name, tier |
+| `Sponsor` | `sponsors` | id, conference_id, company_name, sponsor_package_id, price, currency |
+| `SponsorContract` | `sponsor_contracts` | id, sponsor_id, html_content, filename, status, version_number, sent_at, sent_to_email |
+| `SponsorContractVersion` | `sponsor_contract_versions` | id, contract_id, version_number, html_content, filename, created_by_user_id |
 | `ServiceProvider` | `service_providers` | id, location_id, name, type |
 | `Invoice` | `invoices` | id, conference_id, sponsor_id, amount, status |
 | `Attachment` | `attachments` | id, tenant_id, entity_type, entity_id, filename, file_data |
@@ -204,7 +208,7 @@ Pydantic `TeamMember` schema validates each entry. This avoids a separate table 
 
 **Location:** `backend/app/db/migrations/versions/`
 
-The project has 79 Alembic migrations (001 through 079).
+The project has 98 Alembic migrations (001 through 098).
 
 ### Creating a migration
 
@@ -213,7 +217,7 @@ cd backend
 alembic revision --autogenerate -m "description_of_change"
 ```
 
-This generates a new file like `080_description_of_change.py` in the migrations directory.
+This generates a new file like `099_description_of_change.py` in the migrations directory.
 
 ### Naming convention
 
@@ -236,7 +240,10 @@ alembic current
 
 | # | Description |
 |---|-------------|
-| 079 | (latest) |
+| 098 | Sponsor contracts and versions |
+| 097 | Discount code enhancements (description, periods, combinable, bulk) |
+| ... | ... |
+| 079 | (previous latest) |
 | 078 | Add conference locale column |
 | 077 | Enable unaccent extension |
 | 076 | Program publication |

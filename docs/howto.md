@@ -616,3 +616,74 @@ now = utcnow()
 ### Phone validation
 
 The phone validator requires `+` prefix with country code (E.164 format). Invalid phone numbers in the database will cause 500 errors when the Pydantic response schema validates them. See `docs/i18n.md` for details.
+
+---
+
+## 13. Generate DOCX/PDF Documents
+
+The sponsor contract system demonstrates the pattern for server-side document generation.
+
+### Converting uploaded documents to HTML
+
+```python
+import io
+import mammoth
+from striprtf.striprtf import rtf_to_text
+
+def convert_docx_to_html(file_data: bytes) -> str:
+    result = mammoth.convert_to_html(io.BytesIO(file_data))
+    return result.value  # HTML string
+
+def convert_rtf_to_html(file_data: bytes) -> str:
+    text = rtf_to_text(file_data.decode("utf-8", errors="replace"))
+    paragraphs = text.strip().split("\n\n")
+    return "".join(f"<p>{p.replace(chr(10), '<br>')}</p>" for p in paragraphs if p.strip())
+```
+
+### Generating DOCX from HTML
+
+```python
+from html2docx import html2docx
+
+def generate_docx(html_content: str) -> bytes:
+    buf = html2docx(html_content, title="Document")
+    return buf.getvalue()
+```
+
+### Generating PDF from HTML
+
+```python
+from fpdf import FPDF
+import re
+
+def generate_pdf(html_content: str) -> bytes:
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=11)
+    # Strip HTML tags for plain text rendering
+    text = re.sub(r"<[^>]+>", "", html_content)
+    text = text.encode("latin-1", "replace").decode("latin-1")
+    pdf.multi_cell(0, 6, text)
+    return pdf.output()
+```
+
+### Serving documents for download
+
+```python
+from fastapi.responses import Response
+from app.core.file_validation import safe_content_disposition
+
+@router.get("/download")
+async def download_document(...):
+    docx_bytes = generate_docx(html_content)
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": safe_content_disposition("contract.docx"),
+            "Content-Length": str(len(docx_bytes)),
+        },
+    )
+```
+
+**Dependencies** (all in `requirements.txt`): `mammoth`, `fpdf2`, `striprtf`, `python-docx`, `html2docx`

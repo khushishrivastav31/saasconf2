@@ -87,7 +87,7 @@ frontend/src/
 │   │   └── tabs/            # One component per tab
 │   │       ├── DetailsTab.tsx
 │   │       ├── TeamTab.tsx
-│   │       ├── BookingTab/  # Pricing matrix, discount codes, packages
+│   │       ├── BookingTab/  # Pricing matrix, discount codes, packages, bulk generation
 │   │       ├── ProgramDesignTab/
 │   │       ├── settings/    # Sub-tabs: CommitteeRoles, EmailTemplates, etc.
 │   │       └── ...
@@ -112,6 +112,7 @@ frontend/src/
 │   ├── Toast.tsx            # Toast notification system (provider + hook)
 │   ├── ConfirmDialog.tsx    # Confirmation dialog (danger/warning variants)
 │   ├── SponsorDetailPanel.tsx
+│   ├── SponsorContractTab.tsx       # Contract editor/send/versions tab
 │   ├── LocationDetailPanel.tsx
 │   ├── SponsorLogoUpload.tsx
 │   ├── common/              # Generic shared components
@@ -159,7 +160,7 @@ frontend/src/
 │   ├── apiError.ts          # parseApiError()
 │   ├── formatDate.ts        # formatDate(), formatDateTime(), formatTime()
 │   ├── formatCurrency.ts    # formatCurrency(), formatNumber(), parseFormattedCurrency()
-│   ├── validators.ts        # validatePhone(), isValidPhone()
+│   ├── validators.ts        # validatePhone(), validateEmail(), normalizeUrl()
 │   ├── mediaValidation.ts   # validateImage(), validateVideo()
 │   └── richText.ts          # isHtml(), stripHtml()
 │
@@ -756,6 +757,10 @@ interface SectionDef {
 Committee Roles, Email Templates, Location Types, Score Scales, Session Types,
 Sponsor Packages, Volunteer Roles, Paper Form Builder.
 
+**Notable tab components:**
+- `BookingTab/` — contains `DiscountCodesSection.tsx` (list + search), `DiscountModal.tsx` (create/edit), and `BulkDiscountModal.tsx` (two-step bulk generation from sponsors/speakers/committee/recipient lists)
+- `SponsorsTab.tsx` — sponsor list with `SponsorDetailPanel` slide-over; each sponsor has a **Contracts** tab (`SponsorContractTab.tsx`) for rich-text contract editing, DOCX upload, PDF/DOCX download, email sending, and version history
+
 ### Adding a New Conference Tab
 
 1. Create a component in `frontend/src/pages/ConferenceDetail/tabs/`:
@@ -859,6 +864,27 @@ import { validatePhone } from "../utils/validators";
 
 const error = validatePhone("+49123456789"); // null (valid)
 const error2 = validatePhone("123");         // "Invalid phone number..."
+```
+
+### `validateEmail(value)`
+Email validation using regex (matches backend `EMAIL_RE`). Returns error string or `null`. Used on blur across all email fields in admin forms.
+
+```tsx
+import { validateEmail } from "../utils/validators";
+
+const error = validateEmail("user@example.com"); // null (valid)
+const error2 = validateEmail("bad-email");       // "Invalid email address format"
+```
+
+### `normalizeUrl(value)`
+Auto-prepends `https://` to URLs missing a protocol. Used on blur for all website URL fields (`type="text"`, not `type="url"`). Returns empty string for null/empty input.
+
+```tsx
+import { normalizeUrl } from "../utils/validators";
+
+normalizeUrl("example.com");        // "https://example.com"
+normalizeUrl("https://example.com"); // "https://example.com" (unchanged)
+normalizeUrl("");                    // ""
 ```
 
 ### `validateImage(file)` / `validateVideo(file, maxSizeMB)`

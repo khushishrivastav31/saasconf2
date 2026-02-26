@@ -49,6 +49,7 @@ backend/
         admin_settings.py              # Platform admin settings
         service_providers.py           # Service provider endpoints
         sponsors.py                    # Sponsor endpoints
+        sponsor_contracts.py           # Sponsor contract management
         conferences/                   # Conference CRUD (sub-package)
           __init__.py                  # Barrel export
           _shared.py                   # Shared helpers
@@ -119,6 +120,8 @@ backend/
       settings.py
       program.py
       messaging.py
+      sponsor.py
+      sponsor_contract.py             # Sponsor contracts + versions
       ...
     schemas/                           # Pydantic schemas
       cfp.py
@@ -136,7 +139,7 @@ backend/
       email.py                         # Resend email integration
       search.py                        # Accent-insensitive search
       utils.py                         # utcnow() helper
-      validators.py                    # Phone number validation
+      validators.py                    # Phone + email validation
       address.py                       # Country-specific formatting
       html_sanitize.py                 # nh3 HTML sanitization
       token_blacklist.py               # Redis token revocation
@@ -274,6 +277,7 @@ The main `api_router` composes all endpoint routers. Every route is prefixed wit
 | `form_schema` | `/conferences/{conference_id}/paper-form-schema` | Paper Form Schema | Conference admin+ |
 | `service_providers` | `/locations/{location_id}/service-providers` | Service Providers | Module access |
 | `sponsors` | `/conferences/{conference_id}/sponsors` | Sponsors | Conference admin+ |
+| `sponsor_contracts` | `/conferences/{conference_id}/sponsors/{sponsor_id}/contract` | Sponsor Contracts | Conference admin+ |
 | `invoices` | `/conferences/{conference_id}/invoices` | Invoices | Conference admin+ |
 | `program` | `/conferences/{conference_id}/program` | Program | Conference admin+ |
 | `messaging` | `/conferences/{conference_id}/messaging` | Messaging | Conference admin+ |
@@ -477,6 +481,8 @@ class Conference(Base):
 | `BookingPeriod` | `booking_periods` | `settings.py` | Booking time periods |
 | `DiscountCode` | `discount_codes` | `settings.py` | Discount codes |
 | `DiscountCodeOption` | `discount_code_options` | `settings.py` | Discount-to-option mapping |
+| `DiscountCodePeriod` | `discount_code_periods` | `settings.py` | Discount-to-period mapping |
+| `SponsorPackage` | `sponsor_packages` | `settings.py` | Sponsor package tiers |
 | `EmailTemplate` | `email_templates` | `settings.py` | Customizable email templates |
 | `PronounOption` | `pronoun_options` | `settings.py` | Pronoun choices |
 | `SessionType` | `session_types` | `settings.py` | Session type definitions |
@@ -511,6 +517,8 @@ class Conference(Base):
 | `Location` | `locations` | `location.py` | Venue locations |
 | `Volunteer` | `volunteers` | `volunteer.py` | Volunteer records |
 | `Sponsor` | `sponsors` | `sponsor.py` | Conference sponsors |
+| `SponsorContract` | `sponsor_contracts` | `sponsor_contract.py` | Sponsor contract (one per sponsor) |
+| `SponsorContractVersion` | `sponsor_contract_versions` | `sponsor_contract.py` | Immutable version snapshots |
 | `ServiceProvider` | `service_providers` | `service_provider.py` | Location service providers |
 | `Invoice` | `invoices` | `invoice.py` | Financial invoices |
 | `Attachment` | `attachments` | `attachment.py` | Uploaded file references |
@@ -896,6 +904,32 @@ The `_is_email_enabled_for_conference()` helper checks `conference.settings["ema
 
 ---
 
+### email_templates.py
+
+**File:** `backend/app/core/email_templates.py`
+
+Renders email content by replacing `[Placeholder]` tokens with context values. Supports per-conference template overrides stored in the `email_templates` table.
+
+#### Template Types (`EmailTemplateType`)
+
+| Type | Purpose |
+|------|---------|
+| `applicant_verification` | Email verification for CFP applicants |
+| `committee_verification` | Email verification for committee members |
+| `submission_confirmation` | Paper submission confirmation |
+| `co_speaker_invitation` | Co-speaker invitation link |
+| `password_reset` | Password reset link |
+| `tenant_user_welcome` | Welcome email for new tenant users |
+| `new_message_notification` | In-app message notification |
+| `sponsor_contract_send` | Sponsor contract delivery with DOCX attachment |
+
+#### Context Builders
+
+- `render_email(db, conference_id, template_type, context)` — loads template, replaces placeholders, returns `(subject, html_body)`
+- `build_sponsor_contract_context(sponsor, contract, package, custom_message)` — builds context dict for `sponsor_contract_send` with `[Recipient Name]`, `[Package Name]`, `[Custom Message]`, `[Contract Content]`
+
+---
+
 ### search.py
 
 **File:** `backend/app/core/search.py`
@@ -938,13 +972,20 @@ Always use `utcnow()` instead of `datetime.utcnow()` (which returns a naive date
 
 ```python
 def validate_phone(value: str | None) -> str | None:
+def validate_email_format(value: str | None) -> str | None:
 ```
 
+**`validate_phone`:**
 - Uses `libphonenumber` (Google's phone number library) for validation.
 - Requires international format with country code (e.g., `+49123456789`).
 - Returns the E.164 normalized value on success, raises `ValueError` on invalid input.
 - Passes through `None` and empty string unchanged.
 - Designed for direct use in Pydantic `@field_validator` decorators.
+
+**`validate_email_format`:**
+- Regex-based email validation (`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`).
+- Returns `None` on valid input, error string on invalid.
+- Same regex is shared between backend and frontend (`validators.ts`).
 
 ---
 
@@ -1207,7 +1248,13 @@ From `backend/requirements.txt`:
 | `filetype` | 1.2.0 | Magic byte MIME detection |
 | `Pillow` | 11.1.0 | Image processing (metadata stripping) |
 | `nh3` | 0.2.21 | HTML sanitization (Rust-based) |
-| `resend` | 2.0.0 | Email delivery API |
+| `resend` | 2.7.0 | Email delivery API |
+| `mammoth` | 1.11.0 | DOCX → HTML conversion (contract upload) |
+| `fpdf2` | 2.8.3 | HTML → PDF generation (contract export) |
+| `striprtf` | 0.0.26 | RTF → text conversion (contract upload) |
+| `python-docx` | 1.1.2 | DOCX support |
+| `html2docx` | 1.6.0 | HTML → DOCX generation (contract export) |
+| `python-stdnum` | 2.2 | VAT number validation (offline format check) |
 
 ---
 

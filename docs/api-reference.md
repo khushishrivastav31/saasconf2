@@ -24,7 +24,8 @@ Base URL: `/api/v1`
 16. [Conference Settings](#15-conference-settings)
 17. [Paper Form Schema](#16-paper-form-schema)
 18. [Sponsors](#17-sponsors)
-19. [Invoices](#18-invoices)
+19. [Sponsor Contracts](#18-sponsor-contracts)
+20. [Invoices](#19-invoices)
 20. [Program Design](#19-program-design)
 21. [Messaging](#20-messaging)
 22. [Attachments](#21-attachments)
@@ -526,6 +527,11 @@ All conference settings endpoints are scoped to a specific conference. They requ
 | POST | `/conferences/{conference_id}/settings/discount-codes` | Create a discount code | Tenant Admin |
 | PUT | `/conferences/{conference_id}/settings/discount-codes/{discount_code_id}` | Update a discount code | Tenant Admin |
 | DELETE | `/conferences/{conference_id}/settings/discount-codes/{discount_code_id}` | Delete a discount code | Tenant Admin |
+| POST | `/conferences/{conference_id}/settings/discount-codes/bulk` | Bulk-generate discount codes from people sources | Tenant Admin |
+
+Discount codes support `description`, `discount_type` (percentage/fixed), `discount_value`, `currency`, date ranges (`start_date`/`end_date`), `max_uses` (0=unlimited), `is_combinable`, and scoping to specific booking options and/or periods.
+
+**Bulk generation** receives a list of `BulkDiscountEntry` objects (code, description, settings). The frontend resolves template variables like `[FirstName]`, `[LastName]`, `[CompanyName]` from people sources (sponsors, speakers, committee, recipient lists) before sending.
 
 ### Session Types
 
@@ -634,7 +640,34 @@ Requires the `sponsors` module to be enabled.
 
 ---
 
-## 18. Invoices
+## 18. Sponsor Contracts
+
+Prefix: `/conferences/{conference_id}/sponsors/{sponsor_id}/contract`
+
+Manage contract lifecycle for sponsor agreements: create from templates or DOCX upload, edit rich-text content, export as PDF/DOCX, send via email, and track version history.
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | `.../contract` | Get current contract for sponsor | Conference Admin |
+| POST | `.../contract/generate` | Create contract from template or DOCX/RTF upload | Conference Admin |
+| PUT | `.../contract/content` | Update HTML content (creates new version) | Conference Admin |
+| PUT | `.../contract/status` | Change status (draft → sent → signed) | Conference Admin |
+| GET | `.../contract/download` | Download contract as DOCX | Conference Admin |
+| GET | `.../contract/pdf` | Download contract as PDF | Conference Admin |
+| GET | `.../contract/send-preview` | Preview email before sending | Conference Admin |
+| POST | `.../contract/send` | Send contract via email with DOCX attachment | Conference Admin |
+| DELETE | `.../contract` | Delete contract and all versions | Conference Admin |
+| GET | `.../contract/versions` | List all version snapshots | Conference Admin |
+| GET | `.../contract/versions/{version_number}` | Get specific version | Conference Admin |
+| GET | `.../contract/versions/{version_number}/download` | Download version as DOCX | Conference Admin |
+
+**Contract statuses:** `draft` → `sent` → `signed`
+
+**Document formats:** DOCX upload (via `mammoth`), RTF upload (via `striprtf`), PDF export (via `fpdf2`), DOCX export (via `html2docx`)
+
+---
+
+## 19. Invoices
 
 Prefix: `/conferences/{conference_id}/invoices`
 

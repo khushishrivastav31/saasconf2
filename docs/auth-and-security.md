@@ -212,6 +212,15 @@ All validation logic lives in `app/core/file_validation.py`.
 - Uses RFC 5987 `filename*` encoding for non-ASCII names
 - Prevents header injection attacks
 
+### Document upload security (sponsor contracts)
+
+Contract uploads (DOCX, RTF) are processed server-side before storage:
+
+- **DOCX files**: Converted to HTML via `mammoth` — only safe HTML tags are preserved (mammoth strips macros, embedded objects, etc.)
+- **RTF files**: Converted to plain text via `striprtf`, then wrapped in HTML paragraphs
+- **No raw file storage**: The uploaded file is converted to HTML and discarded; only the sanitized HTML is stored in the database
+- **Content served as HTML**: Contracts are edited as rich text and exported to DOCX/PDF on demand — no user-uploaded binary files are ever served directly
+
 ---
 
 ## HTML Sanitization
