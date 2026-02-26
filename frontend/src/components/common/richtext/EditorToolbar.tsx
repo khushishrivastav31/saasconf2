@@ -808,14 +808,14 @@ function ColorPicker({
                 </div>
               </div>
             ))}
-            <div className="border-t border-gray-200 mt-2 pt-2">
+            <div className="border-t border-gray-200 mt-2 pt-2 flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => {
                   onChange('');
                   setIsOpen(false);
                 }}
-                className="flex items-center gap-1.5 w-full text-left text-xs text-gray-600 hover:text-gray-900 py-1 px-1 rounded hover:bg-gray-100"
+                className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 py-1 px-1 rounded hover:bg-gray-100"
               >
                 <svg
                   className="w-3.5 h-3.5"
@@ -830,8 +830,19 @@ function ColorPicker({
                     d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
                   />
                 </svg>
-                Remove {mode === 'text' ? 'color' : 'highlight'}
+                Remove
               </button>
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 py-1 px-1 rounded hover:bg-gray-100 cursor-pointer">
+                Custom
+                <input
+                  type="color"
+                  value={activeColor || (mode === 'text' ? '#000000' : '#FBBF24')}
+                  onChange={(e) => {
+                    onChange(e.target.value);
+                  }}
+                  className="w-5 h-5 rounded border border-gray-300 cursor-pointer p-0"
+                />
+              </label>
             </div>
           </div>
         </>
