@@ -187,7 +187,11 @@ export default function RichTextEditor({
   const setTextColor = useCallback(
     (color: string) => {
       if (!editor) return;
-      editor.chain().focus().setColor(color).run();
+      if (color) {
+        editor.chain().focus().setColor(color).run();
+      } else {
+        editor.chain().focus().unsetColor().run();
+      }
     },
     [editor]
   );
@@ -195,7 +199,11 @@ export default function RichTextEditor({
   const setHighlightColor = useCallback(
     (color: string) => {
       if (!editor) return;
-      editor.chain().focus().toggleHighlight({ color }).run();
+      if (color) {
+        editor.chain().focus().toggleHighlight({ color }).run();
+      } else {
+        editor.chain().focus().unsetHighlight().run();
+      }
     },
     [editor]
   );

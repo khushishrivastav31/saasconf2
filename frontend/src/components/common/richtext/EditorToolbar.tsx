@@ -232,43 +232,18 @@ export default function EditorToolbar({
         onChange={onSetTextColor}
         disabled={disabled}
         title="Text Color"
-        icon={
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 3v1m0 16v1m8-9h1M3 12H2m15.364-6.364l.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707"
-            />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8a4 4 0 100 8 4 4 0 000-8z" />
-          </svg>
-        }
+        activeColor={editor.getAttributes('textStyle').color}
+        mode="text"
       />
       {/* Highlight */}
       <ColorPicker
         onChange={onSetHighlightColor}
         disabled={disabled}
-        title="Highlight"
-        icon={
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-            />
-          </svg>
+        title="Highlight Color"
+        activeColor={
+          editor.isActive('highlight') ? editor.getAttributes('highlight').color : undefined
         }
+        mode="highlight"
       />
       <div className="w-px h-5 bg-gray-300 mx-1" />
 
@@ -713,33 +688,52 @@ function ToolbarButton({
   );
 }
 
-const COLOR_PRESETS = [
-  '#000000',
-  '#374151',
-  '#6B7280',
-  '#EF4444',
-  '#F59E0B',
-  '#10B981',
-  '#3B82F6',
-  '#6366F1',
-  '#8B5CF6',
-  '#EC4899',
-  '#FFFFFF',
-  '#F3F4F6',
+const COLOR_GROUPS = [
+  {
+    label: 'Grayscale',
+    colors: [
+      { value: '#000000', name: 'Black' },
+      { value: '#374151', name: 'Dark Gray' },
+      { value: '#6B7280', name: 'Gray' },
+      { value: '#9CA3AF', name: 'Medium Gray' },
+      { value: '#D1D5DB', name: 'Light Gray' },
+      { value: '#F3F4F6', name: 'Near White' },
+    ],
+  },
+  {
+    label: 'Colors',
+    colors: [
+      { value: '#DC2626', name: 'Red' },
+      { value: '#EA580C', name: 'Orange' },
+      { value: '#D97706', name: 'Amber' },
+      { value: '#16A34A', name: 'Green' },
+      { value: '#2563EB', name: 'Blue' },
+      { value: '#7C3AED', name: 'Purple' },
+      { value: '#DB2777', name: 'Pink' },
+      { value: '#0891B2', name: 'Cyan' },
+      { value: '#4F46E5', name: 'Indigo' },
+      { value: '#059669', name: 'Emerald' },
+      { value: '#CA8A04', name: 'Yellow' },
+      { value: '#E11D48', name: 'Rose' },
+    ],
+  },
 ];
 
 function ColorPicker({
   onChange,
   disabled,
   title,
-  icon,
+  activeColor,
+  mode,
 }: {
   onChange: (color: string) => void;
   disabled: boolean;
   title: string;
-  icon: React.ReactNode;
+  activeColor?: string;
+  mode: 'text' | 'highlight';
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const displayColor = activeColor || (mode === 'text' ? '#000000' : '#FBBF24');
 
   return (
     <div className="relative">
@@ -748,27 +742,97 @@ function ColorPicker({
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
         title={title}
-        className={`p-1.5 rounded text-sm leading-none transition-colors text-gray-600 hover:bg-gray-200 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`p-1 rounded text-sm leading-none transition-colors ${
+          activeColor
+            ? 'bg-primary-50 text-primary-700'
+            : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+        } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
-        {icon}
+        {mode === 'text' ? (
+          <div className="w-5 h-5 flex flex-col items-center justify-center">
+            <span
+              className="text-xs font-bold leading-none"
+              style={{ color: activeColor || 'currentColor' }}
+            >
+              A
+            </span>
+            <div className="w-4 h-1 rounded-sm mt-0.5" style={{ backgroundColor: displayColor }} />
+          </div>
+        ) : (
+          <div className="w-5 h-5 flex flex-col items-center justify-center">
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 2L3 19h4l1.5-4h7l1.5 4h4L12 2z"
+              />
+            </svg>
+            <div className="w-4 h-1 rounded-sm mt-0.5" style={{ backgroundColor: displayColor }} />
+          </div>
+        )}
       </button>
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 p-2 bg-white rounded-lg shadow-lg border border-gray-200 z-20 grid grid-cols-6 gap-1">
-            {COLOR_PRESETS.map((color) => (
+          <div className="absolute top-full left-0 mt-1 p-2.5 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-50">
+            <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">
+              {title}
+            </div>
+            {COLOR_GROUPS.map((group) => (
+              <div key={group.label} className="mb-2 last:mb-0">
+                <div className="text-[10px] text-gray-400 mb-1">{group.label}</div>
+                <div className="grid grid-cols-6 gap-1">
+                  {group.colors.map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => {
+                        onChange(color.value);
+                        setIsOpen(false);
+                      }}
+                      className={`w-6 h-6 rounded border transition-transform hover:scale-110 ${
+                        activeColor === color.value
+                          ? 'border-primary-500 ring-1 ring-primary-500'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                      style={{ backgroundColor: color.value }}
+                      title={color.name}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div className="border-t border-gray-200 mt-2 pt-2">
               <button
-                key={color}
                 type="button"
                 onClick={() => {
-                  onChange(color);
+                  onChange('');
                   setIsOpen(false);
                 }}
-                className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform"
-                style={{ backgroundColor: color }}
-                title={color}
-              />
-            ))}
+                className="flex items-center gap-1.5 w-full text-left text-xs text-gray-600 hover:text-gray-900 py-1 px-1 rounded hover:bg-gray-100"
+              >
+                <svg
+                  className="w-3.5 h-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                  />
+                </svg>
+                Remove {mode === 'text' ? 'color' : 'highlight'}
+              </button>
+            </div>
           </div>
         </>
       )}
