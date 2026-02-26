@@ -41,6 +41,52 @@ The result is persisted on the `billing_profiles.vat_validated` column (`true`/`
 
 **Dependencies**: `python-stdnum` (added to `requirements.txt`)
 
+## Screen Overlays
+
+### Overview
+Full-screen overlays shown to portal users on login events. Support text content (title + body), animations, and optional image uploads.
+
+### Image Upload
+- **One image per overlay** with replace semantics (uploading new deletes old)
+- Follows the **conference logo pattern**: dedicated upload/serve/delete endpoints with `image_url` column on the model
+- Stored via polymorphic `Attachment` model (`entity_type="screen_overlay_image"`, `entity_id=overlay.id`) — files as `bytea` in PostgreSQL
+- **Allowed types**: JPEG, PNG, WebP, GIF (no SVG — XSS risk in portal)
+- EXIF metadata stripped for JPEG/PNG/WebP via `strip_image_metadata()`
+- **Public serve endpoint** (no auth) — portal users load image directly; `Cache-Control: public, max-age=86400`
+- Cache-bust URL: `/conferences/{id}/screen-overlays/{overlay_id}/image?v={timestamp}`
+- Image upload only in **edit mode** (overlay must exist to have an ID)
+- Attachment cleaned up automatically on overlay delete
+
+### Endpoints
+- `POST /conferences/{id}/screen-overlays/{overlay_id}/image` — upload/replace (admin)
+- `GET /conferences/{id}/screen-overlays/{overlay_id}/image` — serve (public)
+- `DELETE /conferences/{id}/screen-overlays/{overlay_id}/image` — remove (admin)
+
+### Trigger Types & Linking
+- `first_registration` — shown once per user (localStorage key: `overlay_seen_{id}`)
+- `scheduled` — shown on/after `schedule_date`
+- `always` — shown every login
+- Overlays can be linked to content entities (news articles, email/message templates) via FK columns; linked overlays always show regardless of trigger type
+
+## Booking Module
+
+### Discount Codes
+Each conference can have discount codes for attendee bookings. Stored in `discount_codes` table with junction tables for many-to-many relationships.
+
+- **Fields**: `description` (String 200), `code` (unique per conference), `discount_type` (percentage/fixed), `discount_value`, `currency`, `start_date`/`end_date`, `max_uses` (0=unlimited), `usage_count`, `is_active`, `is_combinable`
+- **Applicability**: Discounts can be scoped to specific booking **options** (`discount_code_options` junction) and/or booking **periods** (`discount_code_periods` junction). Empty = applies to all.
+- **Combinable flag**: `is_combinable` controls whether a discount can be stacked with others
+
+### Bulk Discount Generation
+Generate multiple discount codes at once from people sources using template variables.
+
+- **People Sources**: Sponsors, Speakers (CFP Applicants), Program Committee, Recipient Lists
+- **Template Variables**: `[ConferenceSlug]`, `[FirstName]`, `[LastName]`, `[FullName]`, `[CompanyName]`, `[Email]`, `[Counter]` (zero-padded sequential)
+- **Endpoint**: `POST /conferences/{id}/settings/discount-codes/bulk` — receives pre-resolved `BulkDiscountEntry` list (frontend maps source data to entries)
+- **Validation**: All generated codes checked for uniqueness (fail entire batch on conflict); duplicate detection shown client-side in preview
+- **Two-step UI**: Step 1 (configure source, template, settings) → Step 2 (preview resolved codes with duplicate highlighting)
+- **Code template**: Variables are case-sensitive (`[LastName]` not `[LASTNAME]`); resolved codes are uppercased only in the final output
+
 ## Dev Environment & Tooling
 
 ### Code Quality

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import AttachmentList from './AttachmentList';
 import ContactPersonList from './ContactPersonList';
 import DetailPanelWrapper from './DetailPanelWrapper';
+import SponsorContractTab from './SponsorContractTab';
 import RichTextEditor from './common/RichTextEditor';
 import SponsorLogoUpload from './SponsorLogoUpload';
-import { validatePhone } from '../utils/validators';
+import { validatePhone, normalizeUrl } from '../utils/validators';
 import { useSaveStatus } from '../hooks/useSaveStatus';
 import type {
   Sponsor,
@@ -19,6 +20,7 @@ interface SponsorDetailPanelProps {
   sponsorPackages: SponsorPackage[];
   currencies: PlatformCurrency[];
   defaultCurrency?: string;
+  conferenceId: string;
   onSave: (data: SponsorUpdate) => Promise<void>;
   onDelete?: (id: string) => void;
 }
@@ -28,6 +30,7 @@ export default function SponsorDetailPanel({
   sponsorPackages,
   currencies,
   defaultCurrency,
+  conferenceId,
   onSave,
   onDelete,
 }: SponsorDetailPanelProps) {
@@ -252,11 +255,12 @@ export default function SponsorDetailPanel({
           <div>
             <label className="block text-sm font-medium text-gray-700">Website</label>
             <input
-              type="url"
-              placeholder="https://"
+              type="text"
+              placeholder="example.com"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.website || ''}
               onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+              onBlur={(e) => setFormData({ ...formData, website: normalizeUrl(e.target.value) })}
             />
           </div>
         </div>
@@ -374,6 +378,12 @@ export default function SponsorDetailPanel({
     </form>
   );
 
+  const contractContent = (
+    <div className="px-6 py-5">
+      <SponsorContractTab sponsor={sponsor} conferenceId={conferenceId} />
+    </div>
+  );
+
   const documentsContent = (
     <div className="px-6 py-5">
       <AttachmentList entityType="sponsor" entityId={sponsor.id} />
@@ -387,6 +397,7 @@ export default function SponsorDetailPanel({
       label: `Contacts${(formData.contact_persons?.length || 0) > 0 ? ` (${formData.contact_persons?.length})` : ''}`,
       content: contactsContent,
     },
+    { id: 'contract', label: 'Contract', content: contractContent },
     { id: 'documents', label: 'Documents', content: documentsContent },
   ];
 

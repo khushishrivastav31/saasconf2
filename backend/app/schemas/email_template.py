@@ -72,6 +72,7 @@ class EmailTemplateType:
     NEW_MESSAGE_NOTIFICATION = "new_message_notification"
     PAPER_ACCEPTANCE = "paper_acceptance"
     PAPER_REJECTION = "paper_rejection"
+    SPONSOR_CONTRACT_SEND = "sponsor_contract_send"
 
     # System templates (no tenant_id)
     SYSTEM_TYPES: ClassVar[list[str]] = [TENANT_USER_WELCOME]
@@ -86,6 +87,7 @@ class EmailTemplateType:
         NEW_MESSAGE_NOTIFICATION,
         PAPER_ACCEPTANCE,
         PAPER_REJECTION,
+        SPONSOR_CONTRACT_SEND,
     ]
 
     ALL_TYPES: ClassVar[list[str]] = SYSTEM_TYPES + CONFERENCE_TYPES

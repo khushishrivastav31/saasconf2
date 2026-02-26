@@ -16,6 +16,14 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "tenant_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "sponsor_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "screen_overlay_image": {"image/jpeg", "image/png", "image/webp", "image/gif"},
+    "sponsor_package_contract": {
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+        "text/rtf",
+        "application/rtf",
+    },
 }
 
 # Default allowed types for general attachments

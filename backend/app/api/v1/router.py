@@ -22,6 +22,7 @@ from app.api.v1 import (
     screen_overlays,
     service_providers,
     settings,
+    sponsor_contracts,
     sponsors,
     tenant_company,
     tenants,
@@ -81,6 +82,13 @@ api_router.include_router(
 
 # Sponsors (conference-scoped)
 api_router.include_router(sponsors.router, prefix="/conferences/{conference_id}/sponsors", tags=["Sponsors"])
+
+# Sponsor contracts (nested under sponsors)
+api_router.include_router(
+    sponsor_contracts.router,
+    prefix="/conferences/{conference_id}/sponsors/{sponsor_id}/contract",
+    tags=["Sponsor Contracts"],
+)
 
 # Screen Overlays (conference-scoped)
 api_router.include_router(

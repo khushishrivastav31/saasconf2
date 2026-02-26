@@ -1,20 +1,21 @@
-import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../../../config/api";
+import { useState, useRef, useMemo, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../../config/api';
 import type {
+  Attachment,
   Conference,
   SponsorPackage,
   SponsorPackageCreate,
   SponsorPackageUpdate,
   PlatformCurrency,
   PaginatedResponse,
-} from "../../../../types";
-import RichTextEditor from "../../../../components/common/RichTextEditor";
-import RichTextDisplay from "../../../../components/common/RichTextDisplay";
-import StatusBadge from "../../../../components/common/StatusBadge";
-import { ErrorBanner } from "../../../../components/common/ErrorBanner";
-import ModalFooter from "../../../../components/common/ModalFooter";
-import CRUDSettingsTab, { type ColumnConfig } from "./CRUDSettingsTab";
+} from '../../../../types';
+import RichTextEditor from '../../../../components/common/RichTextEditor';
+import RichTextDisplay from '../../../../components/common/RichTextDisplay';
+import StatusBadge from '../../../../components/common/StatusBadge';
+import { ErrorBanner } from '../../../../components/common/ErrorBanner';
+import ModalFooter from '../../../../components/common/ModalFooter';
+import CRUDSettingsTab, { type ColumnConfig } from './CRUDSettingsTab';
 
 // --- Modal form body --------------------------------------------------------
 
@@ -35,23 +36,110 @@ function SponsorPackageForm({
   isLoading: boolean;
   error: string | null;
 }) {
-  // Use conference currency if set
+  const isEditMode = !!item;
   const isCurrencyLocked = !!conferenceCurrency;
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'deleting'>('idle');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Contract attachment query (only in edit mode)
+  const { data: contractData } = useQuery({
+    queryKey: ['attachments', 'sponsor_package_contract', item?.id],
+    queryFn: async () => {
+      const res = await api.get<{ items: Attachment[]; total: number }>(
+        `/attachments?entity_type=sponsor_package_contract&entity_id=${item!.id}`
+      );
+      return res.data;
+    },
+    enabled: isEditMode,
+  });
+  const contract = contractData?.items?.[0] ?? null;
+
+  const uploadContract = useMutation({
+    mutationFn: async (file: File) => {
+      if (contract) await api.delete(`/attachments/${contract.id}`);
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('entity_type', 'sponsor_package_contract');
+      fd.append('entity_id', item!.id);
+      return api.post<Attachment>('/attachments', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    },
+    onMutate: () => {
+      setUploadStatus('uploading');
+      setUploadError(null);
+    },
+    onSuccess: () => {
+      setUploadStatus('idle');
+      queryClient.invalidateQueries({
+        queryKey: ['attachments', 'sponsor_package_contract', item?.id],
+      });
+    },
+    onError: () => {
+      setUploadStatus('idle');
+      setUploadError('Upload failed. Please try again.');
+    },
+  });
+
+  const deleteContract = useMutation({
+    mutationFn: async () => {
+      if (contract) await api.delete(`/attachments/${contract.id}`);
+    },
+    onMutate: () => {
+      setUploadStatus('deleting');
+      setUploadError(null);
+    },
+    onSuccess: () => {
+      setUploadStatus('idle');
+      queryClient.invalidateQueries({
+        queryKey: ['attachments', 'sponsor_package_contract', item?.id],
+      });
+    },
+    onError: () => {
+      setUploadStatus('idle');
+      setUploadError('Delete failed. Please try again.');
+    },
+  });
+
+  const handleContractUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadContract.mutate(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleContractDownload = async () => {
+    if (!contract) return;
+    const res = await api.get(`/attachments/${contract.id}/download`, { responseType: 'blob' });
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = contract.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   const [formData, setFormData] = useState<SponsorPackageCreate>({
-    name: "",
-    description: "",
+    name: '',
+    description: '',
     price: 0,
-    currency: conferenceCurrency || "",
+    currency: conferenceCurrency || '',
     is_active: true,
   });
 
   useEffect(() => {
     setFormData({
-      name: item?.name || "",
-      description: item?.description || "",
+      name: item?.name || '',
+      description: item?.description || '',
       price: item?.price ?? 0,
-      currency: isCurrencyLocked ? conferenceCurrency : (item?.currency || ""),
+      currency: isCurrencyLocked ? conferenceCurrency : item?.currency || '',
       is_active: item?.is_active ?? true,
     });
   }, [item, isCurrencyLocked, conferenceCurrency]);
@@ -72,38 +160,28 @@ function SponsorPackageForm({
         <ErrorBanner message={error} />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Package Name *
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Package Name *</label>
           <input
             type="text"
             required
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.name}
-            onChange={(e) =>
-              setFormData({ ...formData, name: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Description
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Description</label>
           <RichTextEditor
-            value={formData.description || ""}
-            onChange={(html) =>
-              setFormData({ ...formData, description: html })
-            }
+            value={formData.description || ''}
+            onChange={(html) => setFormData({ ...formData, description: html })}
             rows={3}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Price *
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Price *</label>
             <input
               type="number"
               required
@@ -120,13 +198,11 @@ function SponsorPackageForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Currency
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Currency</label>
             {isCurrencyLocked ? (
               <input
                 type="text"
-                value={conferenceCurrency || ""}
+                value={conferenceCurrency || ''}
                 disabled
                 title="Set by conference"
                 className="mt-1 block w-full border border-gray-300 rounded-md bg-gray-100 shadow-sm py-2 px-3 text-sm text-gray-600"
@@ -134,10 +210,8 @@ function SponsorPackageForm({
             ) : (
               <select
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.currency || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, currency: e.target.value })
-                }
+                value={formData.currency || ''}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
               >
                 <option value="">-- None --</option>
                 {activeCurrencies.map((c) => (
@@ -156,17 +230,117 @@ function SponsorPackageForm({
             type="checkbox"
             className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             checked={formData.is_active ?? true}
-            onChange={(e) =>
-              setFormData({ ...formData, is_active: e.target.checked })
-            }
+            onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
           />
-          <label
-            htmlFor="conf-sponsor-pkg-active"
-            className="ml-2 block text-sm text-gray-900"
-          >
+          <label htmlFor="conf-sponsor-pkg-active" className="ml-2 block text-sm text-gray-900">
             Active
           </label>
         </div>
+
+        {/* Contract template — edit mode only */}
+        {isEditMode && (
+          <div className="border-t border-gray-200 pt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Contract Template
+            </label>
+            {contract ? (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                <svg
+                  className="h-8 w-8 text-gray-400 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <div className="flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={handleContractDownload}
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700 truncate block"
+                    title={contract.filename}
+                  >
+                    {contract.filename}
+                  </button>
+                  <p className="text-xs text-gray-500">{formatFileSize(contract.file_size)}</p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt,.rtf"
+                    onChange={handleContractUpload}
+                    className="hidden"
+                    id="contract-upload"
+                  />
+                  <label
+                    htmlFor="contract-upload"
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer ${
+                      uploadStatus === 'uploading'
+                        ? 'bg-gray-100 text-gray-400 cursor-wait'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {uploadStatus === 'uploading' ? 'Uploading...' : 'Replace'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => deleteContract.mutate()}
+                    disabled={uploadStatus === 'deleting'}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md ${
+                      uploadStatus === 'deleting'
+                        ? 'bg-gray-100 text-gray-400 cursor-wait'
+                        : 'text-red-600 border border-red-300 hover:bg-red-50'
+                    }`}
+                  >
+                    {uploadStatus === 'deleting' ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt,.rtf"
+                  onChange={handleContractUpload}
+                  className="hidden"
+                  id="contract-upload"
+                />
+                <label
+                  htmlFor="contract-upload"
+                  className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer ${
+                    uploadStatus === 'uploading'
+                      ? 'bg-gray-100 text-gray-400 cursor-wait'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <svg
+                    className="h-4 w-4 mr-1.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                    />
+                  </svg>
+                  {uploadStatus === 'uploading' ? 'Uploading...' : 'Upload Contract'}
+                </label>
+                <span className="text-xs text-gray-500">PDF, Word, or text files. Max 10MB.</span>
+              </div>
+            )}
+            {uploadError && <p className="mt-1 text-sm text-red-600">{uploadError}</p>}
+          </div>
+        )}
       </div>
 
       <ModalFooter onCancel={onClose} isLoading={isLoading} />
@@ -184,11 +358,11 @@ function ConferenceSponsorPackagesTab({
   isAdmin: boolean;
 }) {
   const { data: currenciesData } = useQuery({
-    queryKey: ["platform-currencies"],
+    queryKey: ['platform-currencies'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
-        "/admin/settings/currencies",
-        { params: { page_size: 100, is_active: true } },
+        '/admin/settings/currencies',
+        { params: { page_size: 100, is_active: true } }
       );
       return response.data.items;
     },
@@ -204,7 +378,7 @@ function ConferenceSponsorPackagesTab({
 
   const formatPrice = (price: number, currencyCode: string | null) => {
     const formatted = new Intl.NumberFormat(undefined, {
-      style: "decimal",
+      style: 'decimal',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(price);
@@ -218,24 +392,28 @@ function ConferenceSponsorPackagesTab({
   const columns: ColumnConfig<SponsorPackage>[] = useMemo(
     () => [
       {
-        key: "name",
-        label: "Name",
+        key: 'name',
+        label: 'Name',
         render: (pkg: SponsorPackage) => (
           <div className="text-sm font-medium text-gray-900">{pkg.name}</div>
         ),
       },
       {
-        key: "description",
-        label: "Description",
-        cellClassName: "",
+        key: 'description',
+        label: 'Description',
+        cellClassName: '',
         render: (pkg: SponsorPackage) => (
-          <RichTextDisplay content={pkg.description} truncate className="text-sm text-gray-500 max-w-xs" />
+          <RichTextDisplay
+            content={pkg.description}
+            truncate
+            className="text-sm text-gray-500 max-w-xs"
+          />
         ),
       },
       {
-        key: "price",
-        label: "Price",
-        headerAlign: "text-right",
+        key: 'price',
+        label: 'Price',
+        headerAlign: 'text-right',
         render: (pkg: SponsorPackage) => (
           <div className="text-sm font-medium text-gray-900 text-right">
             {formatPrice(pkg.price, pkg.currency)}
@@ -243,12 +421,12 @@ function ConferenceSponsorPackagesTab({
         ),
       },
       {
-        key: "is_active",
-        label: "Active",
+        key: 'is_active',
+        label: 'Active',
         render: (pkg: SponsorPackage) => <StatusBadge isActive={pkg.is_active} />,
       },
     ],
-    [currencyMap], // eslint-disable-line react-hooks/exhaustive-deps
+    [currencyMap] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   return (

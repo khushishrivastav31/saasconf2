@@ -407,6 +407,9 @@ function ConferenceDetailContent() {
               {activeSection === 'booking' && conference && (
                 <ConferenceBookingTab
                   conferenceId={conference.id}
+                  conferenceSlug={(conference.abbreviation || conference.name || '')
+                    .toUpperCase()
+                    .replace(/\s+/g, '')}
                   isAdmin={isAdmin}
                   conferenceCurrency={conference.currency}
                 />

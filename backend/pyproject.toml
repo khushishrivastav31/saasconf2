@@ -99,6 +99,14 @@ module = [
     "resend.*",
     "stdnum",
     "stdnum.*",
+    "mammoth",
+    "fpdf",
+    "fpdf.*",
+    "striprtf",
+    "striprtf.*",
+    "docx",
+    "docx.*",
+    "html2docx",
 ]
 ignore_missing_imports = true
 

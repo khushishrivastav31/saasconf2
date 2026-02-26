@@ -45,3 +45,10 @@ nh3==0.2.21
 
 # Email
 resend==2.7.0
+
+# Document processing
+mammoth==1.8.0
+fpdf2==2.8.3
+striprtf==0.0.26
+python-docx==1.1.2
+html2docx==1.6.0

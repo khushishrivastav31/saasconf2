@@ -230,6 +230,10 @@ const VALID_PLACEHOLDERS = [
   'Support Email',
   'Message Subject',
   'Messages Link',
+  'Recipient Name',
+  'Package Name',
+  'Custom Message',
+  'Contract Content',
 ];
 
 // Extract all placeholders from text (anything in [brackets])
@@ -488,6 +492,18 @@ function EmailTemplateForm({
             </div>
             <div>
               <code>[Support Email]</code> - Support contact email
+            </div>
+            <div>
+              <code>[Recipient Name]</code> - Contract recipient name
+            </div>
+            <div>
+              <code>[Package Name]</code> - Sponsor package name
+            </div>
+            <div>
+              <code>[Custom Message]</code> - Cover message from sender
+            </div>
+            <div>
+              <code>[Contract Content]</code> - Inline contract HTML
             </div>
           </div>
         </div>

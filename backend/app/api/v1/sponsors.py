@@ -9,8 +9,11 @@ from sqlalchemy.orm import joinedload
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
 from app.core.exceptions import NotFoundError
 from app.core.search import unaccent_ilike
+from app.models.attachment import Attachment
+from app.models.conference import Conference
 from app.models.settings import SponsorPackage
 from app.models.sponsor import Sponsor
+from app.models.sponsor_contract import SponsorContract
 from app.schemas.sponsor import (
     SponsorCreate,
     SponsorListResponse,
@@ -24,6 +27,62 @@ router = APIRouter()
 MODULE_CODE = "sponsors"
 
 svc = ConferenceService
+
+
+async def _auto_generate_contract(
+    db: DbSessionDep,
+    sponsor: Sponsor,
+    current_user: CurrentUserDep,
+) -> None:
+    """Auto-generate a contract from the package template if one exists."""
+    from app.api.v1.sponsor_contracts import _convert_to_html, _generate_contract_filename
+
+    # Check if template exists for the package
+    template_result = await db.execute(
+        select(Attachment)
+        .where(
+            Attachment.entity_type == "sponsor_package_contract",
+            Attachment.entity_id == sponsor.sponsor_package_id,
+            Attachment.tenant_id == current_user.tenant_id,
+        )
+        .order_by(Attachment.created_at.desc())
+    )
+    template = template_result.scalar_one_or_none()
+    if not template:
+        return  # No template — nothing to generate
+
+    # Get package and conference
+    pkg_result = await db.execute(select(SponsorPackage).where(SponsorPackage.id == sponsor.sponsor_package_id))
+    package = pkg_result.scalar_one_or_none()
+    if not package:
+        return
+
+    conf_result = await db.execute(select(Conference).where(Conference.id == sponsor.conference_id))
+    conference = conf_result.scalar_one_or_none()
+    if not conference:
+        return
+
+    filename = _generate_contract_filename(conference, package, sponsor.company_name)
+    is_pdf = template.content_type == "application/pdf"
+    html_content = _convert_to_html(template.file_data, template.content_type)
+
+    contract = SponsorContract(
+        tenant_id=current_user.tenant_id,
+        sponsor_id=sponsor.id,
+        conference_id=sponsor.conference_id,
+        source_package_id=sponsor.sponsor_package_id,
+        filename=filename,
+        content_type=template.content_type,
+        file_data=template.file_data,
+        file_size=template.file_size,
+        html_content=html_content,
+        is_editable=not is_pdf,
+        version=1,
+        status="draft",
+        created_by=current_user.user_id,
+    )
+    db.add(contract)
+    await db.flush()
 
 
 def build_sponsor_response(sponsor: Sponsor, package_name: str | None = None) -> SponsorResponse:
@@ -188,6 +247,10 @@ async def create_sponsor(
     )
 
     await svc.create_resource(db, sponsor, audit_log=audit_log)
+
+    # Auto-generate contract if package has a template
+    if sponsor.sponsor_package_id:
+        await _auto_generate_contract(db, sponsor, current_user)
 
     return build_sponsor_response(sponsor, package_name)
 

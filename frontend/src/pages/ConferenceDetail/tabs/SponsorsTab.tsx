@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
-import { validatePhone } from '../../../utils/validators';
+import { validatePhone, normalizeUrl } from '../../../utils/validators';
 import type {
   Conference,
   Sponsor,
@@ -246,6 +246,7 @@ function ConferenceSponsorsTab({
             sponsorPackages={sponsorPackagesData?.items || []}
             currencies={currenciesData || []}
             defaultCurrency={conference.currency || undefined}
+            conferenceId={conference.id}
             onSave={async (sponsorData) => {
               await updateMutation.mutateAsync({
                 id: selectedSponsor.id,
@@ -412,14 +413,20 @@ function ConferenceSponsorsTab({
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
                   <input
-                    type="url"
-                    placeholder="https://"
+                    type="text"
+                    placeholder="example.com"
                     className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.website || ''}
                     onChange={(e) =>
                       setCreateForm({
                         ...createForm,
                         website: e.target.value,
+                      })
+                    }
+                    onBlur={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        website: normalizeUrl(e.target.value),
                       })
                     }
                   />

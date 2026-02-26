@@ -46,6 +46,7 @@ class ResourceType:
     SCREEN_OVERLAY = "screen_overlay"
     SERVICE_PROVIDER = "service_provider"
     SPONSOR = "sponsor"
+    SPONSOR_CONTRACT = "sponsor_contract"
     SUBMISSION = "submission"
     TENANT = "tenant"
     TENANT_MODULE = "tenant_module"
@@ -67,6 +68,7 @@ class EntityType:
     SERVICE_PROVIDER = "service_provider"
     SCREEN_OVERLAY_IMAGE = "screen_overlay_image"
     SPONSOR = "sponsor"
+    SPONSOR_PACKAGE_CONTRACT = "sponsor_package_contract"
     TENANT_LOGO = "tenant_logo"
 
 
@@ -80,3 +82,13 @@ class InvoiceStatus:
     CANCELLED = "cancelled"
 
     ALL: ClassVar[set[str]] = {DRAFT, SENT, PAID, OVERDUE, CANCELLED}
+
+
+class ContractStatus:
+    """Sponsor contract lifecycle statuses."""
+
+    DRAFT = "draft"
+    SENT = "sent"
+    SIGNED = "signed"
+
+    ALL: ClassVar[set[str]] = {DRAFT, SENT, SIGNED}

@@ -38,6 +38,14 @@ vi.mock('../ContactPersonList', () => ({
   ),
 }));
 
+vi.mock('../SponsorContractTab', () => ({
+  default: ({ sponsor, conferenceId }: { sponsor: { id: string }; conferenceId: string }) => (
+    <div data-testid="sponsor-contract-tab">
+      Contract: {sponsor.id}/{conferenceId}
+    </div>
+  ),
+}));
+
 vi.mock('../common/RichTextEditor', () => ({
   default: ({
     value,
@@ -107,6 +115,13 @@ vi.mock('../../utils/validators', () => ({
     }
     return null;
   }),
+  normalizeUrl: vi.fn((value: string) => {
+    if (!value) return '';
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  }),
 }));
 
 const createSponsor = (overrides: Partial<Sponsor> = {}): Sponsor => ({
@@ -169,6 +184,7 @@ describe('SponsorDetailPanel', () => {
     sponsorPackages: [createPackage()],
     currencies: [createCurrency()],
     defaultCurrency: 'EUR',
+    conferenceId: 'conf-1',
     onSave: mockOnSave,
     onDelete: mockOnDelete,
   };
@@ -230,7 +246,7 @@ describe('SponsorDetailPanel', () => {
 
     it('renders website input', () => {
       render(<SponsorDetailPanel {...defaultProps} />);
-      const websiteInput = screen.getByPlaceholderText('https://');
+      const websiteInput = screen.getByPlaceholderText('example.com');
       expect(websiteInput).toBeInTheDocument();
     });
 

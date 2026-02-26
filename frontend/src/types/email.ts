@@ -8,7 +8,8 @@ export type EmailTemplateType =
   | 'password_reset'
   | 'new_message_notification'
   | 'paper_acceptance'
-  | 'paper_rejection';
+  | 'paper_rejection'
+  | 'sponsor_contract_send';
 
 export const EMAIL_TEMPLATE_TYPES = {
   SYSTEM: ['tenant_user_welcome'] as const,
@@ -21,6 +22,7 @@ export const EMAIL_TEMPLATE_TYPES = {
     'new_message_notification',
     'paper_acceptance',
     'paper_rejection',
+    'sponsor_contract_send',
   ] as const,
 };
 
@@ -34,6 +36,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateType, string> = {
   new_message_notification: 'New Message Notification',
   paper_acceptance: 'Paper Acceptance',
   paper_rejection: 'Paper Rejection',
+  sponsor_contract_send: 'Sponsor Contract',
 };
 
 export interface EmailTemplate {

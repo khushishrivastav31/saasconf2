@@ -358,6 +358,41 @@ export interface SponsorUpdate {
   is_active?: boolean;
 }
 
+// Sponsor contract types
+export type ContractStatus = 'draft' | 'sent' | 'signed';
+
+export interface SponsorContract {
+  id: string;
+  tenant_id: string;
+  sponsor_id: string;
+  conference_id: string;
+  source_package_id: string | null;
+  filename: string;
+  content_type: string;
+  file_size: number;
+  html_content: string | null;
+  is_editable: boolean;
+  version: number;
+  version_count: number;
+  status: ContractStatus;
+  last_sent_at: string | null;
+  sent_to: Array<{ email: string; sent_at: string; version: number }> | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SponsorContractVersion {
+  id: string;
+  version: number;
+  filename: string;
+  content_type: string;
+  file_size: number;
+  html_content: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 // Invoice types
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 

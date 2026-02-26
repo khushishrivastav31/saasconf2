@@ -14,6 +14,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.conference import Conference
     from app.models.settings import SponsorPackage
+    from app.models.sponsor_contract import SponsorContract
     from app.models.tenant import Tenant
 
 
@@ -82,6 +83,9 @@ class Sponsor(Base):
     tenant: Mapped["Tenant"] = relationship("Tenant")
     conference: Mapped["Conference"] = relationship("Conference")
     sponsor_package: Mapped["SponsorPackage | None"] = relationship("SponsorPackage")
+    contract: Mapped["SponsorContract | None"] = relationship(
+        "SponsorContract", back_populates="sponsor", uselist=False
+    )
 
     # Indexes
     __table_args__ = (

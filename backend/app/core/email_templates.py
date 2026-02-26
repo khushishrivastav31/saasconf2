@@ -265,3 +265,41 @@ def build_new_message_context(
         "Message Subject": message_subject,
         "Messages Link": messages_link,
     }
+
+
+def build_sponsor_contract_context(
+    *,
+    recipient_name: str = "",
+    company_name: str = "",
+    conference_name: str = "",
+    package_name: str = "",
+    custom_message: str = "",
+    contract_content: str = "",
+) -> dict[str, str]:
+    """Build context for sponsor contract send emails."""
+    # Custom message block — only render if the user typed something
+    custom_block = ""
+    if custom_message:
+        custom_block = (
+            '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />'
+            f'<div style="margin-bottom: 16px;">{custom_message}</div>'
+        )
+
+    # Contract content block — inline HTML when not sent as attachment
+    content_block = ""
+    if contract_content:
+        content_block = (
+            '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />'
+            '<div style="padding: 24px; background-color: #ffffff; '
+            'border: 1px solid #e5e7eb; border-radius: 8px;">'
+            f"{contract_content}</div>"
+        )
+
+    return {
+        "Recipient Name": recipient_name or "Sir or Madam",
+        "Company Name": company_name,
+        "Conference Name": conference_name,
+        "Package Name": package_name,
+        "Custom Message": custom_block,
+        "Contract Content": content_block,
+    }

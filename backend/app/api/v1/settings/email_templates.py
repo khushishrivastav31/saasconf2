@@ -225,6 +225,28 @@ We appreciate your interest and encourage you to submit again in the future.
 Warm regards,
 The [Conference Name] Team""",
     },
+    EmailTemplateType.SPONSOR_CONTRACT_SEND: {
+        "subject": "[Conference Name] — Sponsorship Contract for [Company Name]",
+        "body_html": """<p>Dear [Recipient Name],</p>
+<p>Please find the sponsorship contract for <strong>[Company Name]</strong> regarding <strong>[Conference Name]</strong>.</p>
+<p><strong>Package:</strong> [Package Name]</p>
+[Custom Message]
+[Contract Content]
+<p>If you have any questions, please don't hesitate to reach out.</p>
+<p>Warm regards,<br>The [Conference Name] Team</p>""",
+        "body_text": """Dear [Recipient Name],
+
+Please find the sponsorship contract for [Company Name] regarding [Conference Name].
+
+Package: [Package Name]
+
+[Custom Message]
+
+If you have any questions, please don't hesitate to reach out.
+
+Warm regards,
+The [Conference Name] Team""",
+    },
 }
 
 

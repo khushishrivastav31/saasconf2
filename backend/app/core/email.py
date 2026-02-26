@@ -57,12 +57,16 @@ async def send_email(
     html: str,
     text: str | None = None,
     reply_to: str | None = None,
+    attachments: list[dict] | None = None,
 ) -> bool:
     """
     Send an email using Resend.
 
     Returns True if sent successfully, False otherwise.
     Falls back to console logging if Resend is not configured.
+
+    Args:
+        attachments: Optional list of dicts with 'filename' and 'content' (base64-encoded).
     """
     settings = get_settings()
     resend = _get_resend()
@@ -81,6 +85,8 @@ async def send_email(
         }
         if reply_to:
             payload["reply_to"] = reply_to
+        if attachments:
+            payload["attachments"] = attachments
         await asyncio.to_thread(resend.Emails.send, payload)
         logger.info(f"Email sent to {to}: {subject}")
         return True

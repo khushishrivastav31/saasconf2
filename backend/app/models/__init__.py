@@ -71,6 +71,7 @@ from app.models.settings import (
     VolunteerRole,
 )
 from app.models.sponsor import Sponsor
+from app.models.sponsor_contract import SponsorContract, SponsorContractVersion
 from app.models.tenant import Tenant
 from app.models.token import RefreshToken
 from app.models.user import User
@@ -144,6 +145,8 @@ __all__ = [
     "ServiceProvider",
     "SessionType",
     "Sponsor",
+    "SponsorContract",
+    "SponsorContractVersion",
     "SponsorPackage",
     "Submission",
     "Tenant",
