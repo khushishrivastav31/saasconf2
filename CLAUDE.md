@@ -87,6 +87,69 @@ Generate multiple discount codes at once from people sources using template vari
 - **Two-step UI**: Step 1 (configure source, template, settings) → Step 2 (preview resolved codes with duplicate highlighting)
 - **Code template**: Variables are case-sensitive (`[LastName]` not `[LASTNAME]`); resolved codes are uppercased only in the final output
 
+## Field Validation (`frontend/src/utils/validators.ts`)
+
+Shared validation utilities used across all admin forms. Validation runs **on blur** with inline error display (red border + message below field).
+
+- **`validatePhone(value)`** — libphonenumber-js validation, requires international format (`+49...`). Returns error string or `null`.
+- **`validateEmail(value)`** — regex validation matching backend `EMAIL_RE`. Returns error string or `null`.
+- **`isValidPhone(value)`** — boolean wrapper around `validatePhone`.
+- **`normalizeUrl(value)`** — auto-prepends `https://` on blur if no protocol present. Used on all website URL fields (`type="text"`, not `type="url"`).
+
+All functions accept `string | null | undefined` and treat empty/null as valid (fields are optional).
+
+**Applied to**: SponsorDetailPanel, ServiceProviderDetailPanel, ContactPersonList, LocationDetailPanel, VolunteersTab, DetailsTab, LocationsTab, Team, MyCompany, CompanyInfoTab, UsersTab.
+
+## Sponsor Contract Management
+
+### Overview
+Full contract lifecycle for sponsor agreements: create from templates or DOCX upload, edit rich-text content, version history, PDF/DOCX export, and email delivery.
+
+### Data Model
+- **`sponsor_contracts`** — one active contract per sponsor. Fields: `html_content`, `filename`, `status` (draft/sent/signed), `version_number`, `sent_at`, `sent_to_email`, `sent_by_user_id`
+- **`sponsor_contract_versions`** — immutable snapshots created on each content save. Fields: `version_number`, `html_content`, `filename`, `created_by_user_id`
+- Migration: `098_sponsor_contracts.py`
+
+### Contract Statuses (`app/constants.py: ContractStatus`)
+- `draft` — initial state, content editable
+- `sent` — emailed to sponsor contact, still editable (creates new version)
+- `signed` — final state
+
+### Document Processing
+- **DOCX upload → HTML**: `mammoth` converts DOCX to HTML for rich-text editing
+- **RTF upload → HTML**: `striprtf` extracts text, wrapped in HTML
+- **HTML → PDF export**: `fpdf2` generates PDF with Latin-1 character normalization
+- **HTML → DOCX export**: `html2docx` generates downloadable DOCX
+- **Dependencies**: `mammoth==1.11.0`, `fpdf2==2.8.3`, `striprtf==0.0.26`, `python-docx==1.1.2`, `html2docx==1.6.0`
+
+### API Endpoints (12 routes)
+All nested under `/conferences/{id}/sponsors/{sponsor_id}/contract`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Get current contract |
+| POST | `/generate` | Create from template or DOCX/RTF upload |
+| PUT | `/content` | Update HTML content (creates version) |
+| PUT | `/status` | Change status (draft→sent→signed) |
+| GET | `/download` | Download as DOCX |
+| GET | `/pdf` | Download as PDF |
+| GET | `/send-preview` | Preview email before sending |
+| POST | `/send` | Send contract via email |
+| DELETE | `/` | Delete contract and all versions |
+| GET | `/versions` | List all versions |
+| GET | `/versions/{n}` | Get specific version |
+| GET | `/versions/{n}/download` | Download version as DOCX |
+
+### Email Integration
+- Template type: `sponsor_contract_send` (configurable in Settings → Email Templates)
+- Placeholders: `[Recipient Name]`, `[Package Name]`, `[Custom Message]`, `[Contract Content]`
+- Contract attached as DOCX; HTML content inlined via `[Contract Content]` placeholder
+- Uses `build_sponsor_contract_context()` in `app/core/email_templates.py`
+
+### Frontend
+- **`SponsorContractTab.tsx`** — tab in SponsorDetailPanel; rich-text editor for contract content, upload, download, send, version history
+- **`SponsorPackagesTab.tsx`** — package-level contract template (default content for new contracts)
+
 ## Dev Environment & Tooling
 
 ### Code Quality
@@ -118,6 +181,7 @@ Generate multiple discount codes at once from people sources using template vari
 - `ResourceType` — audit log resource types (conference, paper, volunteer, etc.)
 - `EntityType` — polymorphic attachment types (conference_logo, sponsor, message, etc.)
 - `InvoiceStatus` — invoice lifecycle states (draft, sent, paid, overdue, cancelled)
+- `ContractStatus` — sponsor contract lifecycle (draft, sent, signed)
 
 ### Health Probes & Ops
 - `GET /health` — liveness probe (process running)
