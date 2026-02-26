@@ -216,9 +216,9 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 bg-gray-900 flex flex-col transform transition-all duration-200 ease-in-out lg:translate-x-0 ${
-          sidebarCollapsed ? 'w-16' : 'w-64'
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 bg-gray-900 flex flex-col transform transition-all duration-200 ease-in-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}
       >
         <div className="flex h-16 items-center justify-between bg-gray-900 px-3 flex-shrink-0">
           {!sidebarCollapsed && <h1 className="text-xl font-bold text-white ml-1">SaaSConf</h1>}
@@ -265,6 +265,7 @@ export default function AdminLayout() {
                   <Link
                     key={item.name}
                     to={item.href}
+                    onClick={() => setSidebarOpen(false)}
                     title={sidebarCollapsed ? item.name : undefined}
                     aria-current={isActive ? 'page' : undefined}
                     className={`flex items-center py-2 text-sm font-medium rounded-md ${
@@ -305,6 +306,7 @@ export default function AdminLayout() {
                         <Link
                           key={item.name}
                           to={item.href}
+                          onClick={() => setSidebarOpen(false)}
                           title={sidebarCollapsed ? item.name : undefined}
                           aria-current={isActive ? 'page' : undefined}
                           className={`flex items-center py-2 text-sm font-medium rounded-md ${
@@ -339,6 +341,7 @@ export default function AdminLayout() {
                   {user?.role === 'tenant_admin' && (
                     <Link
                       to="/my-company"
+                      onClick={() => setSidebarOpen(false)}
                       title={sidebarCollapsed ? 'My Company' : undefined}
                       aria-current={location.pathname === '/my-company' ? 'page' : undefined}
                       className={`flex items-center py-2 text-sm font-medium rounded-md ${
@@ -355,6 +358,7 @@ export default function AdminLayout() {
                   )}
                   <Link
                     to="/team"
+                    onClick={() => setSidebarOpen(false)}
                     title={sidebarCollapsed ? 'Team' : undefined}
                     aria-current={location.pathname === '/team' ? 'page' : undefined}
                     className={`flex items-center py-2 text-sm font-medium rounded-md ${
@@ -372,6 +376,7 @@ export default function AdminLayout() {
                   {user?.role === 'tenant_admin' && (
                     <Link
                       to="/applicant-activity"
+                      onClick={() => setSidebarOpen(false)}
                       title={sidebarCollapsed ? 'Activity Log' : undefined}
                       aria-current={
                         location.pathname === '/applicant-activity' ? 'page' : undefined
@@ -409,6 +414,7 @@ export default function AdminLayout() {
                       <Link
                         key={item.name}
                         to={item.href}
+                        onClick={() => setSidebarOpen(false)}
                         title={sidebarCollapsed ? item.name : undefined}
                         aria-current={isActive ? 'page' : undefined}
                         className={`flex items-center py-2 text-sm font-medium rounded-md ${
@@ -430,6 +436,14 @@ export default function AdminLayout() {
           </nav>
         </div>
       </div>
+
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* Main content */}
       <div className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>

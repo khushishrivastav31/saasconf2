@@ -1,9 +1,46 @@
 # SaaSConf Project Notes
 
+## What This Is
+
+SaaSConf is a **multi-tenant SaaS platform** for conference management. Each tenant (organization) manages their own conferences, CFPs, registrations, sponsors, and programs — fully isolated via PostgreSQL Row-Level Security (RLS). **Performance is essential** — the platform must handle multiple tenants with concurrent users without degradation.
+
 ## Architecture
 - **Backend**: FastAPI + SQLAlchemy async + PostgreSQL (port 8000)
 - **Frontend**: React + TypeScript + TanStack Query + Tailwind CSS (port 3000)
 - **Migrations**: Alembic (sequential numbered: `001_`, `002_`, etc.)
+- **Multi-tenancy**: Shared database, shared schema, RLS-based isolation (`tenant_id` on every table, PostgreSQL policies filter per request)
+- **Async throughout**: All DB queries use `AsyncSession`, email sending via `asyncio.to_thread()`, streaming exports via `async generators`
+
+## Performance Requirements
+
+**Every code change must consider performance impact.** This is a multi-tenant system where slow queries or memory issues affect all tenants.
+
+### Backend Performance Rules
+- **Never introduce N+1 queries** — use `joinedload()`, `selectinload()`, or batch lookups (see `_batch_get_attachment_urls` pattern in `app/api/v1/cfp/shared.py`)
+- **Always paginate list endpoints** — use `skip`/`limit` params with reasonable defaults (100) and max caps (500)
+- **Use async for I/O** — never block the event loop with synchronous calls; wrap with `asyncio.to_thread()` if needed (e.g., email sending, document generation)
+- **Stream large exports** — use `StreamingResponse` with async generators in batches of 1,000 rows; cap at 50k rows for safety
+- **Index new columns** used in WHERE/JOIN/ORDER BY — especially `tenant_id` (always), `conference_id`, `status`, and any FK columns
+- **Connection pool**: 10 connections + 20 overflow — avoid long-running transactions that hold connections
+- **Avoid `select *`** in queries with many columns — select only what the response schema needs when practical
+
+### Frontend Performance Rules
+- **Use `React.memo`** on components rendered in lists (already applied to SessionCard, MemberListRow, ApplicantListRow, LocationItem)
+- **Use `useMemo`/`useCallback`** for expensive computations and stable callback references in dependency arrays
+- **Set appropriate `staleTime`** on queries — `0` for data that must be fresh (registration sessions), longer for stable data (modules, currencies)
+- **Lazy load routes** — all page components use `React.lazy()` with code splitting (already configured in App.tsx)
+- **Avoid re-renders** — don't create new objects/arrays in render (e.g., `options={[]}` → memoize or define outside component)
+
+### Responsive Design Rules (Portal)
+- **Portal must be mobile-friendly** — conference attendees use phones to submit papers, check messages, and view program
+- **Admin is desktop-first** — admin users typically work on desktop; mobile is nice-to-have
+- **Sidebar pattern**: Both layouts use off-screen sidebar on mobile (`-translate-x-full` / `translate-x-0`) with backdrop overlay and hamburger toggle in header
+- **Breakpoint strategy**: `sm:` (640px) for form field stacking, `lg:` (1024px) for sidebar visibility — skip `md:` unless specifically needed
+- **Touch targets**: Minimum `min-h-[44px]` on interactive elements in portal (buttons, links, form inputs)
+- **Flex wrapping**: Always use `flex-wrap` on button groups and action bars — never assume horizontal space
+- **Fixed widths**: Avoid fixed `w-*` in portal pages — use `w-full sm:w-48` pattern instead
+- **Close sidebar on navigate**: All sidebar `<Link>` clicks must call `setSidebarOpen(false)` for mobile UX
+- **Reference implementation**: MessagesPage.tsx has the best responsive pattern (list/detail toggle with `hidden lg:block`)
 
 ## Registration Module
 
@@ -281,6 +318,147 @@ All nested under `/conferences/{id}/sponsors/{sponsor_id}/contract`:
 - [x] MED #28: Added React.memo to list-rendered components (SessionCard, MemberListRow, ApplicantListRow, LocationItem)
 
 ### Round 2 — Complete
+
+## Refactoring Guidelines
+
+When modifying existing files, apply the "boy scout rule" — improve patterns incrementally rather than doing big refactors. The codebase is functional and shipping; duplication is maintenance cost, not a blocker.
+
+### Backend: Service Layer Adoption
+
+**Current state**: `app/services/base.py` (BaseService) and `app/services/conference.py` (ConferenceService) exist but most endpoints don't use them. Business logic lives inline in route handlers.
+
+**BaseService provides**: `resolve_conference`, `paginate`, `get_or_404`, `apply_filters`, `require_admin`, `create_audit_log`
+
+**When touching a large route file** (especially registrations.py 1,189 lines, cfp_portal/papers.py 1,148, cfp/papers.py 1,122, cfp/topics.py 1,006, messaging/threads.py 962):
+- Extract repeated tenant/conference guards into service methods
+- Use `BaseService.create_audit_log()` instead of inline `AuditLog(...)` construction (currently repeated in 34 files)
+- Use `BaseService.get_or_404()` instead of inline query + `if not result: raise NotFoundError`
+- Move response builder functions into schemas or a dedicated response module
+
+**Duplicated patterns to consolidate on touch** (not proactively):
+- Audit logging: 115 inline occurrences across 34 files → `BaseService.create_audit_log()`
+- Tenant/conference resolution: 156 occurrences across 25 files → `BaseService.resolve_conference()`
+- CRUD with filters + pagination: 10+ files → `BaseService.paginate()` + `apply_filters()`
+
+### Frontend: Hook Extraction
+
+**Current state**: Only 12 custom hooks; 515 inline `useQuery`/`useMutation` calls across 95 files. Patterns repeated hundreds of times.
+
+**When touching a component with these patterns, extract to hooks**:
+
+1. **Error state** (200+ occurrences) — extract to `useErrorState()`:
+   ```tsx
+   // Before (repeated everywhere):
+   const [error, setError] = useState<string | null>(null);
+   // After:
+   const { error, setError, clearError } = useErrorState();
+   ```
+
+2. **Modal/dialog management** (90+ occurrences) — extract to `useModalState()`:
+   ```tsx
+   // Before (repeated everywhere):
+   const [isAdding, setIsAdding] = useState(false);
+   const [editingId, setEditingId] = useState<string | null>(null);
+   const [deleteTarget, setDeleteTarget] = useState<Item | null>(null);
+   // After:
+   const { isAdding, editingId, deleteTarget, openAdd, openEdit, openDelete, close } = useModalState<Item>();
+   ```
+
+3. **Inline mutations** — when modifying a page, extract to `hooks/api/`:
+   ```tsx
+   // Before (inline in component):
+   const mutation = useMutation({ mutationFn: ... });
+   // After (in hooks/api/useSponsorMutations.ts):
+   export function useCreateSponsor(conferenceId: string) { ... }
+   ```
+
+**Largest components to split when modifying** (not proactively):
+- RegistrationTab (1,351 lines) → BookingOptionSelect, AttendeeFields, SessionSelector
+- ScreenOverlaysTab (1,204 lines) → OverlayEditor, OverlayPreview, OverlayList
+- ProgramGrid (1,144 lines) → GridCell, GridHeader, GridControls
+
+### What NOT to Refactor
+
+- Don't refactor files you're not already modifying for a feature/fix
+- Don't split schema files just for size — they're organized by domain and that's fine
+- Don't add abstractions for one-time patterns — three similar lines > premature abstraction
+- Don't migrate all inline queries to hooks at once — do it file by file as you touch them
+- The 17 `TYPE_CHECKING` imports in models are intentional circular dependency mitigation — leave them
+
+## Security Guidelines (OWASP)
+
+Follow these rules when writing new code. The codebase has defense-in-depth patterns — use them consistently.
+
+### SQL Injection Prevention
+- **Always** use SQLAlchemy ORM queries or parameterized `text()` with named params — never string concatenation/f-strings in SQL
+- Example: `text("SELECT ... WHERE id = :id"), {"id": value}` — never `f"SELECT ... WHERE id = {value}"`
+
+### XSS Prevention
+- **Backend**: Sanitize all user-supplied HTML through `sanitize_html()` from `app/core/html_sanitize.py` (uses `nh3`) before storing
+- **Frontend**: Every `dangerouslySetInnerHTML` must use `sanitizeHtml()` from `utils/richText.ts` (uses DOMPurify)
+- **Never** render raw user HTML without sanitization on either side — defense-in-depth requires both
+
+### Input Validation
+- **Pydantic schemas** are the first line of defense — add field constraints (`min_length`, `max_length`, `pattern`, enums) on all new schemas
+- **Password validation**: min 8 chars, must contain uppercase + lowercase + digit (enforced in `schemas/user.py`)
+- **Email/phone**: Use `validate_email_format()` from `app/core/validators.py` and `phonenumbers` library — never custom regex
+- **File uploads**: Always use `validate_upload()` from `app/core/file_validation.py` — it checks magic bytes, MIME whitelist, strips EXIF metadata, and sanitizes filenames (blocks `.php`, `.js`, `.exe`, `.svg`, etc.)
+
+### Field-Level Validation (MUST use when developing)
+
+The project has established validation utilities on both backend and frontend. **Always apply these when adding or modifying forms/fields** — never skip validation or write ad-hoc checks.
+
+**Backend** (`app/core/validators.py`):
+- **Email**: `validate_email_format(value)` — regex-based, returns normalized lowercase email or raises `ValidationError`
+- **Phone**: `validate_phone(value)` — uses `phonenumbers` library, requires international format (`+49...`)
+- **VAT number**: `validate_vat_number(vat_number, country)` — three-stage cascade: python-stdnum → regex fallback → VIES API. Returns `true`/`false`/`null` (uncertain)
+
+**Frontend** (`src/utils/validators.ts`):
+- **`validateEmail(value)`** — regex matching backend `EMAIL_RE`. Returns error message or `null`
+- **`validatePhone(value)`** — `libphonenumber-js` validation. Returns error message or `null`
+- **`isValidPhone(value)`** — boolean wrapper
+- **`normalizeUrl(value)`** — auto-prepends `https://` if no protocol. Use on all website/URL fields
+
+**Rules for new forms**:
+1. Every **email field** must call `validateEmail()` on blur and show inline error
+2. Every **phone field** must call `validatePhone()` on blur and show inline error
+3. Every **URL/website field** must use `normalizeUrl()` on blur (field `type="text"`, not `type="url"`)
+4. Every **VAT number field** must trigger backend validation on blur when company name + EU country are present
+5. All validators accept `string | null | undefined` and treat empty as valid (fields are optional unless marked required)
+6. Validation pattern: red border + error message below field on blur, clears on next valid blur
+
+### Authentication & Authorization
+- **Protect every new endpoint** with the appropriate dependency: `CurrentUserDep`, `TenantAdminDep`, `SuperAdminDep`, or `require_module(MODULE_CODE)`
+- **Conference-scoped endpoints** must call `_check_conference_admin()` or `_resolve_conference()` — never trust client-provided `tenant_id`
+- **RLS context** is set automatically via `get_current_user` dependency — don't bypass it
+- **Applicant endpoints** use separate auth: `get_current_applicant` with `applicant_access` token type
+
+### Tenant Isolation
+- **Every tenant-scoped query** must filter by `tenant_id` — RLS is defense-in-depth, not a replacement for application-level filtering
+- **New tables** must have `tenant_id` FK + RLS policy (see migration 001 for policy pattern)
+- **Tests**: Verify cross-tenant isolation — a tenant admin must not access another tenant's data
+
+### Secrets & Sensitive Data
+- **Never hardcode** secrets, API keys, or passwords — use environment variables via `app/config.py`
+- **Password hashing**: Always use `hash_password()` / `verify_password()` from `app/core/security.py` (Argon2id)
+- **Refresh tokens**: Store SHA256 hash in DB, return raw token to client once — see `token_hash` pattern in models
+- **Logging**: Never log passwords, tokens, or PII — log resource IDs and actions only
+
+### CSRF & CORS
+- **CORS origins** are whitelisted in `CORS_ORIGINS` env var — never use `allow_origins=["*"]` with credentials
+- **Origin validation middleware** rejects state-changing requests (POST/PUT/PATCH/DELETE) from unknown origins
+
+### Rate Limiting
+- **All new auth/registration endpoints** must have rate limits via `@limiter.limit()` decorator
+- Suggested defaults: `5/minute` for auth, `10/minute` for CRUD, `3/minute` for sensitive operations (forgot-password, bulk actions)
+
+### Security Headers
+- CSP, HSTS, X-Frame-Options, X-Content-Type-Options are set via `SecurityHeadersMiddleware` (backend) and nginx — don't weaken them
+- New API responses inherit headers automatically — no action needed
+
+### Dependency Security
+- **Adding a new dependency**: Pin exact version in `requirements.txt` / `package.json` — CI runs `pip-audit` and `npm audit`
+- **Dockerfile images**: Pin to SHA digest, not floating tags
 
 ### CI Fixes (Round 3)
 - [x] Fixed all ruff lint/format violations across 209 backend files

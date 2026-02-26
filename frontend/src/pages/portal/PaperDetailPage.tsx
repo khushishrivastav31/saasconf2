@@ -345,7 +345,7 @@ function PaperDetailPage() {
           </p>
         </div>
         {isDraft && !isEditing && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {paper.is_main_speaker && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
@@ -590,7 +590,7 @@ function PaperDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Co-speakers <span className="text-gray-400 font-normal">(max 3)</span>
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="email"
                     value={cospeakerInput}
@@ -693,7 +693,7 @@ function PaperDetailPage() {
                   </button>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setIsEditing(false)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"

@@ -128,6 +128,8 @@ function PortalLayout() {
   const { applicant, isLoading, logout } = useApplicantAuth();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const closeMobileSidebar = () => setSidebarOpen(false);
   const { companySlug } = useParams<{ companySlug: string }>();
   const basePath = `/${companySlug}/portal`;
 
@@ -266,9 +268,9 @@ function PortalLayout() {
     <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 bg-gray-900 flex flex-col transform transition-all duration-200 ease-in-out lg:translate-x-0 ${
-          sidebarCollapsed ? 'w-16' : 'w-64'
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 bg-gray-900 flex flex-col transform transition-all duration-200 ease-in-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}
       >
         <div
           className={`flex flex-col items-center bg-gray-900 px-3 flex-shrink-0 ${
@@ -357,6 +359,7 @@ function PortalLayout() {
               <div className="space-y-0.5">
                 <Link
                   to={newsItem.href}
+                  onClick={closeMobileSidebar}
                   title={sidebarCollapsed ? newsItem.name : undefined}
                   className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
                     sidebarCollapsed ? 'justify-center px-2' : 'px-3'
@@ -371,6 +374,7 @@ function PortalLayout() {
                 </Link>
                 <Link
                   to={messagesItem.href}
+                  onClick={closeMobileSidebar}
                   title={sidebarCollapsed ? messagesItem.name : undefined}
                   className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
                     sidebarCollapsed ? 'justify-center px-2' : 'px-3'
@@ -414,6 +418,7 @@ function PortalLayout() {
                     <Link
                       key={item.name}
                       to={item.href}
+                      onClick={closeMobileSidebar}
                       title={sidebarCollapsed ? item.name : undefined}
                       className={`relative flex items-center py-2 text-sm font-medium rounded-md ${
                         sidebarCollapsed ? 'justify-center px-2' : 'px-3'
@@ -467,6 +472,7 @@ function PortalLayout() {
                         )}
                         <Link
                           to={infoHref}
+                          onClick={closeMobileSidebar}
                           title={sidebarCollapsed ? `${conf.name} — Info` : undefined}
                           className={`flex items-center py-1.5 text-sm font-medium rounded-md ${
                             sidebarCollapsed ? 'justify-center px-2' : 'px-3 pl-6'
@@ -489,12 +495,32 @@ function PortalLayout() {
         </div>
       </div>
 
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main content */}
       <div className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
         {/* Header */}
         <header className="sticky top-0 z-40 bg-white shadow">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div />
+            <button
+              className="lg:hidden -ml-2 p-2 text-gray-500 hover:text-gray-700 rounded-md"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
             <div className="flex items-center gap-4">
               <Link
                 to={`${basePath}/messages`}

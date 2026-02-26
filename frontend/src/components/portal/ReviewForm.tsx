@@ -1,16 +1,16 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import portalApi from "../../config/portalApi";
-import { formatDateTime } from "../../utils/formatDate";
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import portalApi from '../../config/portalApi';
+import { formatDateTime } from '../../utils/formatDate';
 import type {
   PortalReviewConfig,
   PortalReviewCriterion,
   PortalReviewQuestion,
   PortalReviewSubmitRequest,
-} from "../../types/portal";
-import RichTextDisplay from "../../components/common/RichTextDisplay";
-import RichTextEditor from "../../components/common/RichTextEditor";
-import { parseApiError } from "../../utils/apiError";
+} from '../../types/portal';
+import RichTextDisplay from '../../components/common/RichTextDisplay';
+import RichTextEditor from '../../components/common/RichTextEditor';
+import { parseApiError } from '../../utils/apiError';
 
 interface ReviewFormProps {
   assignmentId: string;
@@ -31,7 +31,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     isError,
     error,
   } = useQuery<PortalReviewConfig>({
-    queryKey: ["portal-review-config", assignmentId],
+    queryKey: ['portal-review-config', assignmentId],
     queryFn: async () => {
       const res = await portalApi.get<PortalReviewConfig>(
         `/portal/assignments/${assignmentId}/review-config`
@@ -41,8 +41,8 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
   });
 
   const [answers, setAnswers] = useState<Map<string, AnswerState>>(new Map());
-  const [speakerFeedback, setSpeakerFeedback] = useState<string>("");
-  const [internalComment, setInternalComment] = useState<string>("");
+  const [speakerFeedback, setSpeakerFeedback] = useState<string>('');
+  const [internalComment, setInternalComment] = useState<string>('');
   const [mustHave, setMustHave] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -57,7 +57,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
       for (const question of criterion.questions) {
         initial.set(question.id, {
           selected_option_id: null,
-          comment: "",
+          comment: '',
         });
       }
     }
@@ -67,35 +67,32 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
       for (const ans of config.existing_review.answers) {
         initial.set(ans.question_id, {
           selected_option_id: ans.selected_option_id ?? null,
-          comment: ans.comment ?? "",
+          comment: ans.comment ?? '',
         });
       }
-      setSpeakerFeedback(config.existing_review.speaker_feedback ?? "");
-      setInternalComment(config.existing_review.internal_comment ?? "");
+      setSpeakerFeedback(config.existing_review.speaker_feedback ?? '');
+      setInternalComment(config.existing_review.internal_comment ?? '');
       setMustHave(config.existing_review.must_have ?? false);
     } else {
-      setSpeakerFeedback("");
-      setInternalComment("");
+      setSpeakerFeedback('');
+      setInternalComment('');
       setMustHave(false);
     }
 
     setAnswers(initial);
   }, [config]);
 
-  const updateAnswer = useCallback(
-    (questionId: string, patch: Partial<AnswerState>) => {
-      setAnswers((prev) => {
-        const next = new Map(prev);
-        const current = next.get(questionId) ?? { selected_option_id: null, comment: "" };
-        next.set(questionId, { ...current, ...patch });
-        return next;
-      });
-    },
-    []
-  );
+  const updateAnswer = useCallback((questionId: string, patch: Partial<AnswerState>) => {
+    setAnswers((prev) => {
+      const next = new Map(prev);
+      const current = next.get(questionId) ?? { selected_option_id: null, comment: '' };
+      next.set(questionId, { ...current, ...patch });
+      return next;
+    });
+  }, []);
 
   const buildRequestBody = useCallback((): PortalReviewSubmitRequest => {
-    const answerList: PortalReviewSubmitRequest["answers"] = [];
+    const answerList: PortalReviewSubmitRequest['answers'] = [];
     for (const [questionId, state] of answers.entries()) {
       answerList.push({
         question_id: questionId,
@@ -114,43 +111,37 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
   const saveDraftMutation = useMutation({
     mutationFn: async () => {
       const body = buildRequestBody();
-      await portalApi.post(
-        `/portal/assignments/${assignmentId}/review?submit=false`,
-        body
-      );
+      await portalApi.post(`/portal/assignments/${assignmentId}/review?submit=false`, body);
     },
     onSuccess: () => {
       setFormError(null);
-      queryClient.invalidateQueries({ queryKey: ["portal-review-config", assignmentId] });
-      queryClient.invalidateQueries({ queryKey: ["portal-assigned-papers"] });
+      queryClient.invalidateQueries({ queryKey: ['portal-review-config', assignmentId] });
+      queryClient.invalidateQueries({ queryKey: ['portal-assigned-papers'] });
       onReviewSubmitted?.();
     },
     onError: (err: unknown) => {
-      setFormError(parseApiError(err, "Failed to save draft. Please try again."));
+      setFormError(parseApiError(err, 'Failed to save draft. Please try again.'));
     },
   });
 
   const submitMutation = useMutation({
     mutationFn: async () => {
       const body = buildRequestBody();
-      await portalApi.post(
-        `/portal/assignments/${assignmentId}/review?submit=true`,
-        body
-      );
+      await portalApi.post(`/portal/assignments/${assignmentId}/review?submit=true`, body);
     },
     onSuccess: () => {
       setFormError(null);
-      queryClient.invalidateQueries({ queryKey: ["portal-review-config", assignmentId] });
-      queryClient.invalidateQueries({ queryKey: ["portal-assigned-papers"] });
+      queryClient.invalidateQueries({ queryKey: ['portal-review-config', assignmentId] });
+      queryClient.invalidateQueries({ queryKey: ['portal-assigned-papers'] });
       onReviewSubmitted?.();
     },
     onError: (err: unknown) => {
-      setFormError(parseApiError(err, "Failed to submit review. Please try again."));
+      setFormError(parseApiError(err, 'Failed to submit review. Please try again.'));
     },
   });
 
   const isSubmitting = saveDraftMutation.isPending || submitMutation.isPending;
-  const isReadOnly = config?.existing_review?.status === "submitted";
+  const isReadOnly = config?.existing_review?.status === 'submitted';
 
   // Sort criteria by display_order
   const sortedCriteria = useMemo(() => {
@@ -172,7 +163,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     return (
       <div className="rounded-md bg-red-50 border border-red-200 p-4">
         <p className="text-sm text-red-700">
-          {parseApiError(error, "Failed to load review configuration.")}
+          {parseApiError(error, 'Failed to load review configuration.')}
         </p>
       </div>
     );
@@ -225,9 +216,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
 
         {config.form_settings.enable_internal_comment && existingReview.internal_comment && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">
-              Internal Comment
-            </h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Internal Comment</h3>
             <RichTextDisplay
               content={existingReview.internal_comment}
               className="text-sm text-gray-700"
@@ -283,11 +272,10 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
       {/* Internal Comment */}
       {config.form_settings.enable_internal_comment && (
         <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-2">
-            Internal Comment
-          </label>
+          <label className="block text-sm font-semibold text-gray-900 mb-2">Internal Comment</label>
           <p className="text-xs text-gray-500 mb-2">
-            This comment is only visible to the conference team and will not be shared with the speaker(s).
+            This comment is only visible to the conference team and will not be shared with the
+            speaker(s).
           </p>
           <RichTextEditor
             value={internalComment}
@@ -310,7 +298,10 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
             className="mt-0.5 h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
           />
           <div>
-            <label htmlFor="must-have" className="text-sm font-semibold text-gray-900 cursor-pointer">
+            <label
+              htmlFor="must-have"
+              className="text-sm font-semibold text-gray-900 cursor-pointer"
+            >
               Must have in program
             </label>
             <p className="text-xs text-gray-500">
@@ -328,7 +319,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
       )}
 
       {/* Action buttons */}
-      <div className="flex items-center gap-3 pt-2">
+      <div className="flex flex-wrap items-center gap-3 pt-2">
         <button
           type="button"
           onClick={() => saveDraftMutation.mutate()}
@@ -341,7 +332,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
               Saving...
             </>
           ) : (
-            "Save Draft"
+            'Save Draft'
           )}
         </button>
         <button
@@ -356,7 +347,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
               Submitting...
             </>
           ) : (
-            "Submit Review"
+            'Submit Review'
           )}
         </button>
       </div>
@@ -393,7 +384,7 @@ function EditableCriterionSection({
         <EditableQuestion
           key={question.id}
           question={question}
-          answer={answers.get(question.id) ?? { selected_option_id: null, comment: "" }}
+          answer={answers.get(question.id) ?? { selected_option_id: null, comment: '' }}
           onUpdate={(patch) => onUpdateAnswer(question.id, patch)}
         />
       ))}
@@ -415,21 +406,17 @@ function EditableQuestion({
     return [...question.scale.options].sort((a, b) => a.display_order - b.display_order);
   }, [question.scale]);
 
-  const commentLabel = "Comment (optional)";
+  const commentLabel = 'Comment (optional)';
 
   const showComment =
-    question.comment_requirement === "required" ||
-    question.comment_requirement === "optional" ||
-    question.comment_requirement === "required_if_low_score";
+    question.comment_requirement === 'required' ||
+    question.comment_requirement === 'optional' ||
+    question.comment_requirement === 'required_if_low_score';
 
   return (
     <div className="pl-3 border-l-2 border-gray-200 space-y-2">
-      <label className="block text-sm font-medium text-gray-800">
-        {question.text}
-      </label>
-      {question.help_text && (
-        <p className="text-xs text-gray-500">{question.help_text}</p>
-      )}
+      <label className="block text-sm font-medium text-gray-800">{question.text}</label>
+      {question.help_text && <p className="text-xs text-gray-500">{question.help_text}</p>}
 
       {/* Scale options (radio buttons) */}
       {question.scale && sortedOptions.length > 0 && (
@@ -438,7 +425,7 @@ function EditableQuestion({
             <label
               key={option.id}
               className={`flex items-center gap-2 text-sm cursor-pointer ${
-                option.is_unsure ? "italic text-gray-500" : "text-gray-700"
+                option.is_unsure ? 'italic text-gray-500' : 'text-gray-700'
               }`}
             >
               <input
@@ -463,9 +450,7 @@ function EditableQuestion({
       {/* Comment textarea */}
       {showComment && (
         <div className="mt-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            {commentLabel}
-          </label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{commentLabel}</label>
           <textarea
             value={answer.comment}
             onChange={(e) => onUpdate({ comment: e.target.value })}
@@ -502,9 +487,7 @@ function ReadOnlyCriterionSection({
 
       {sortedQuestions.map((question) => {
         const answer = answers.find((a) => a.question_id === question.id);
-        return (
-          <ReadOnlyQuestion key={question.id} question={question} answer={answer ?? null} />
-        );
+        return <ReadOnlyQuestion key={question.id} question={question} answer={answer ?? null} />;
       })}
     </div>
   );
@@ -525,9 +508,7 @@ function ReadOnlyQuestion({
   return (
     <div className="pl-3 border-l-2 border-gray-200 space-y-2">
       <p className="text-sm font-medium text-gray-800">{question.text}</p>
-      {question.help_text && (
-        <p className="text-xs text-gray-500">{question.help_text}</p>
-      )}
+      {question.help_text && <p className="text-xs text-gray-500">{question.help_text}</p>}
 
       {/* Display selected option highlighted */}
       {question.scale && sortedOptions.length > 0 && (
@@ -539,17 +520,15 @@ function ReadOnlyQuestion({
                 key={option.id}
                 className={`flex items-center gap-2 text-sm px-2 py-1 rounded ${
                   isSelected
-                    ? "bg-primary-50 text-primary-800 font-medium"
+                    ? 'bg-primary-50 text-primary-800 font-medium'
                     : option.is_unsure
-                      ? "italic text-gray-400"
-                      : "text-gray-400"
+                      ? 'italic text-gray-400'
+                      : 'text-gray-400'
                 }`}
               >
                 <span
                   className={`inline-block h-3.5 w-3.5 rounded-full border-2 flex-shrink-0 ${
-                    isSelected
-                      ? "border-primary-600 bg-primary-600"
-                      : "border-gray-300"
+                    isSelected ? 'border-primary-600 bg-primary-600' : 'border-gray-300'
                   }`}
                 />
                 <span>

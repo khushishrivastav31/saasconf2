@@ -157,7 +157,7 @@ function DashboardPage() {
                       <Link
                         key={paper.id}
                         to={`${basePath}/papers/${paper.id}`}
-                        className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
+                        className="w-full flex flex-wrap items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -202,7 +202,7 @@ function DashboardPage() {
                             </span>
                           )}
                         </div>
-                        <div className="flex-shrink-0 w-48">
+                        <div className="flex-shrink-0 w-full sm:w-48">
                           <PaperStatusLifeline status={paper.status} compact />
                         </div>
                         <svg
