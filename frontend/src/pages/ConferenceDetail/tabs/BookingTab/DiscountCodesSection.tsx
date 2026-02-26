@@ -1,95 +1,189 @@
-import { EditIcon, DeleteIcon } from "../../icons";
-import { formatDate } from "../../../../utils/formatDate";
-import type {
-  BookingOption,
-  DiscountCode,
-} from "../../../../types";
+import { useState, useMemo } from 'react';
+import { EditIcon, DeleteIcon } from '../../icons';
+import { formatDate } from '../../../../utils/formatDate';
+import type { BookingOption, BookingPeriod, DiscountCode } from '../../../../types';
 
 export interface DiscountCodesSectionProps {
   isAdmin: boolean;
   discountCodes: DiscountCode[] | undefined;
   bookingOptions: BookingOption[];
+  bookingPeriods: BookingPeriod[];
   onAddDiscount: () => void;
+  onBulkDiscount: () => void;
   onEditDiscount: (discount: DiscountCode) => void;
-  onDeleteTarget: (target: { type: "period" | "option" | "discount"; id: string; name: string }) => void;
+  onDeleteTarget: (target: {
+    type: 'period' | 'option' | 'discount';
+    id: string;
+    name: string;
+  }) => void;
 }
 
 export default function DiscountCodesSection({
   isAdmin,
   discountCodes,
   bookingOptions,
+  bookingPeriods,
   onAddDiscount,
+  onBulkDiscount,
   onEditDiscount,
   onDeleteTarget,
 }: DiscountCodesSectionProps) {
+  const [search, setSearch] = useState('');
+  const allCodes = useMemo(() => discountCodes || [], [discountCodes]);
+
+  const filteredCodes = useMemo(() => {
+    if (!search.trim()) return allCodes;
+    const q = search.trim().toLowerCase();
+    return allCodes.filter(
+      (dc) => dc.code.toLowerCase().includes(q) || (dc.description || '').toLowerCase().includes(q)
+    );
+  }, [allCodes, search]);
+
   return (
     <div className="mt-10">
       <div className="sm:flex sm:items-center sm:justify-between mb-4">
         <div>
           <h3 className="text-base font-semibold text-gray-900">Discount Codes</h3>
-          <p className="mt-0.5 text-sm text-gray-500">Manage discount codes for attendee bookings.</p>
+          <p className="mt-0.5 text-sm text-gray-500">
+            Manage discount codes for attendee bookings.
+          </p>
         </div>
         {isAdmin && (
-          <button
-            onClick={onAddDiscount}
-            className="mt-2 sm:mt-0 inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700"
-          >
-            + Discount Code
-          </button>
+          <div className="mt-2 sm:mt-0 flex gap-2">
+            <button
+              onClick={onBulkDiscount}
+              className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 shadow-sm hover:bg-gray-50"
+            >
+              Generate Bulk
+            </button>
+            <button
+              onClick={onAddDiscount}
+              className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700"
+            >
+              + Discount Code
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Discount Codes List */}
-      {(discountCodes || []).length === 0 ? (
+      {allCodes.length > 0 && (
+        <div className="mb-3">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by code or description..."
+            className="block w-full max-w-sm rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+          />
+        </div>
+      )}
+
+      {allCodes.length === 0 ? (
         <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
-          <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          <svg
+            className="mx-auto h-10 w-10 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+            />
           </svg>
           <p className="mt-2 text-sm text-gray-500">No discount codes yet.</p>
+        </div>
+      ) : filteredCodes.length === 0 ? (
+        <div className="text-center py-6 bg-white rounded-lg border border-gray-200">
+          <p className="text-sm text-gray-500">No discount codes match &ldquo;{search}&rdquo;</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Code</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Discount</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Applies To</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Valid Period</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Max Uses</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Code
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Description
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Discount
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Options
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Periods
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Valid Period
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Uses
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Comb.
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Active
+                </th>
                 {isAdmin && (
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[80px]"></th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-20"></th>
                 )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {(discountCodes || []).map((dc) => (
+              {filteredCodes.map((dc) => (
                 <tr key={dc.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-3">
                     <span className="text-sm font-mono font-medium text-gray-900">{dc.code}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-gray-700">{dc.name}</span>
+                    <span className="text-sm text-gray-700">{dc.description}</span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                      {dc.discount_type === "percentage"
+                      {dc.discount_type === 'percentage'
                         ? `${dc.discount_value}%`
-                        : `${dc.currency || ""} ${dc.discount_value}`}
+                        : `${dc.currency || ''} ${dc.discount_value}`}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {dc.applicable_option_ids.length === 0 ? (
-                      <span className="text-xs text-gray-400 italic">None selected</span>
+                    {(dc.applicable_option_ids || []).length === 0 ? (
+                      <span className="text-xs text-gray-400 italic">All</span>
                     ) : (
                       <div className="flex flex-wrap gap-1">
-                        {dc.applicable_option_ids.map((optId) => {
+                        {(dc.applicable_option_ids || []).map((optId) => {
                           const opt = bookingOptions.find((o) => o.id === optId);
                           return opt ? (
-                            <span key={optId} className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                            <span
+                              key={optId}
+                              className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
+                            >
                               {opt.name}
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(dc.applicable_period_ids || []).length === 0 ? (
+                      <span className="text-xs text-gray-400 italic">All</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {(dc.applicable_period_ids || []).map((perId) => {
+                          const per = bookingPeriods.find((p) => p.id === perId);
+                          return per ? (
+                            <span
+                              key={perId}
+                              className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600"
+                            >
+                              {per.name}
                             </span>
                           ) : null;
                         })}
@@ -99,20 +193,31 @@ export default function DiscountCodesSection({
                   <td className="px-4 py-3 text-sm text-gray-500">
                     {dc.start_date || dc.end_date ? (
                       <>
-                        {dc.start_date ? formatDate(dc.start_date) : "---"}
-                        {" — "}
-                        {dc.end_date ? formatDate(dc.end_date) : "---"}
+                        {dc.start_date ? formatDate(dc.start_date) : '---'}
+                        {' — '}
+                        {dc.end_date ? formatDate(dc.end_date) : '---'}
                       </>
                     ) : (
                       <span className="text-gray-400">No expiry</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
-                    {dc.max_uses === 0 ? "Unlimited" : dc.max_uses}
+                    {dc.usage_count}/{dc.max_uses === 0 ? '∞' : dc.max_uses}
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${dc.is_active ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                      {dc.is_active ? "Active" : "Inactive"}
+                  <td className="px-4 py-3 text-center">
+                    {dc.is_combinable ? (
+                      <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">No</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${dc.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                    >
+                      {dc.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   {isAdmin && (
@@ -126,7 +231,9 @@ export default function DiscountCodesSection({
                           <EditIcon />
                         </button>
                         <button
-                          onClick={() => onDeleteTarget({ type: "discount", id: dc.id, name: dc.code })}
+                          onClick={() =>
+                            onDeleteTarget({ type: 'discount', id: dc.id, name: dc.code })
+                          }
                           className="text-gray-300 hover:text-red-500 transition-colors"
                           title="Delete discount code"
                         >

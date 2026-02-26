@@ -205,7 +205,7 @@ class DiscountCode(Base):
         ForeignKey("conferences.id", ondelete="CASCADE"),
         nullable=False,
     )
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(String(200), nullable=False)
     code: Mapped[str] = mapped_column(String(50), nullable=False)
     discount_type: Mapped[str] = mapped_column(String(10), nullable=False)
     discount_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
@@ -215,6 +215,7 @@ class DiscountCode(Base):
     max_uses: Mapped[int] = mapped_column(Integer, default=0)
     usage_count: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_combinable: Mapped[bool] = mapped_column(Boolean, default=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -269,3 +270,43 @@ class DiscountCodeOption(Base):
 
     def __repr__(self) -> str:
         return f"<DiscountCodeOption discount={self.discount_code_id} option={self.booking_option_id}>"
+
+
+class DiscountCodePeriod(Base):
+    """
+    Association table linking discount codes to specific booking periods.
+
+    When a discount code has associated periods, it only applies during those periods.
+    If a discount code has no associated periods, it applies to all periods.
+    """
+
+    __tablename__ = "discount_code_periods"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    discount_code_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("discount_codes.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    booking_period_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("booking_periods.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_discount_code_periods_tenant", "tenant_id"),
+        Index("idx_discount_code_periods_discount", "discount_code_id"),
+        Index("idx_discount_code_periods_period", "booking_period_id"),
+        Index("uq_discount_code_period", "discount_code_id", "booking_period_id", unique=True),
+    )
+
+    def __repr__(self) -> str:
+        return f"<DiscountCodePeriod discount={self.discount_code_id} period={self.booking_period_id}>"

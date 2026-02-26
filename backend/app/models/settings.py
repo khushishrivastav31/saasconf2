@@ -386,4 +386,5 @@ from app.models.booking import (  # noqa: E402, F401
     BookingPeriod,
     DiscountCode,
     DiscountCodeOption,
+    DiscountCodePeriod,
 )

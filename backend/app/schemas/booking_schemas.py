@@ -177,7 +177,7 @@ class BookingMatrixResponse(BaseModel):
 class DiscountCodeCreate(BaseModel):
     """Schema for creating a discount code."""
 
-    name: str = Field(..., min_length=1, max_length=100)
+    description: str = Field(..., min_length=1, max_length=200)
     code: str = Field(..., min_length=1, max_length=50)
     discount_type: Literal["fixed", "percentage"] = Field(...)
     discount_value: Decimal = Field(..., gt=0)
@@ -186,8 +186,12 @@ class DiscountCodeCreate(BaseModel):
     end_date: date | None = None
     max_uses: int = Field(0, ge=0)
     is_active: bool = True
+    is_combinable: bool = False
     applicable_option_ids: list[UUID] | None = Field(
         None, description="List of booking option IDs this discount applies to. Empty means applies to all."
+    )
+    applicable_period_ids: list[UUID] | None = Field(
+        None, description="List of booking period IDs this discount applies to. Empty means applies to all."
     )
 
     @model_validator(mode="after")
@@ -203,7 +207,7 @@ class DiscountCodeCreate(BaseModel):
 class DiscountCodeUpdate(BaseModel):
     """Schema for updating a discount code."""
 
-    name: str | None = Field(None, min_length=1, max_length=100)
+    description: str | None = Field(None, min_length=1, max_length=200)
     code: str | None = Field(None, min_length=1, max_length=50)
     discount_type: Literal["fixed", "percentage"] | None = None
     discount_value: Decimal | None = Field(None, gt=0)
@@ -212,8 +216,12 @@ class DiscountCodeUpdate(BaseModel):
     end_date: date | None = None
     max_uses: int | None = Field(None, ge=0)
     is_active: bool | None = None
+    is_combinable: bool | None = None
     applicable_option_ids: list[UUID] | None = Field(
         None, description="List of booking option IDs this discount applies to. Empty list means applies to all."
+    )
+    applicable_period_ids: list[UUID] | None = Field(
+        None, description="List of booking period IDs this discount applies to. Empty list means applies to all."
     )
 
 
@@ -225,7 +233,7 @@ class DiscountCodeResponse(BaseModel):
     id: UUID
     tenant_id: UUID
     conference_id: UUID
-    name: str
+    description: str
     code: str
     discount_type: str
     discount_value: Decimal
@@ -235,7 +243,9 @@ class DiscountCodeResponse(BaseModel):
     max_uses: int
     usage_count: int
     is_active: bool
+    is_combinable: bool
     applicable_option_ids: list[UUID] = Field(default_factory=list)
+    applicable_period_ids: list[UUID] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
@@ -244,4 +254,52 @@ class DiscountCodeListResponse(BaseModel):
     """List of discount codes."""
 
     items: list[DiscountCodeResponse]
+    total: int
+
+
+# --- Bulk Discount Code Schemas ---
+
+
+class BulkDiscountEntry(BaseModel):
+    """Single entry in a bulk generation request — one person from any source."""
+
+    first_name: str = Field(..., min_length=1)
+    last_name: str = Field(..., min_length=1)
+    company_name: str = ""
+    email: str = ""
+
+
+class BulkDiscountCodeCreate(BaseModel):
+    """Bulk discount code generation request."""
+
+    description_template: str = Field(..., min_length=1, max_length=200)
+    code_template: str = Field(..., min_length=1, max_length=50)
+    discount_type: Literal["fixed", "percentage"] = Field(...)
+    discount_value: Decimal = Field(..., gt=0)
+    currency: str | None = Field(None, max_length=3)
+    start_date: date | None = None
+    end_date: date | None = None
+    max_uses: int = Field(1, ge=0)
+    is_active: bool = True
+    is_combinable: bool = False
+    applicable_option_ids: list[UUID] | None = None
+    applicable_period_ids: list[UUID] | None = None
+    entries: list[BulkDiscountEntry] = Field(..., min_length=1)
+    counter_start: int = Field(1, ge=0)
+    counter_padding: int = Field(3, ge=1, le=6)
+
+    @model_validator(mode="after")
+    def validate_bulk_discount(self) -> "BulkDiscountCodeCreate":
+        if self.end_date is not None and self.start_date is not None:
+            if self.end_date < self.start_date:
+                raise ValueError("end_date must be on or after start_date")
+        if self.discount_type == "percentage" and self.discount_value > 100:
+            raise ValueError("percentage discount_value cannot exceed 100")
+        return self
+
+
+class BulkDiscountCodeResponse(BaseModel):
+    """Response for bulk discount code generation."""
+
+    created: list[DiscountCodeResponse]
     total: int

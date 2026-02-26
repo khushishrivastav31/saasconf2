@@ -12,6 +12,7 @@ import type {
   PaginatedResponse,
   DiscountCode,
   DiscountCodeCreate,
+  BulkDiscountCodeCreate,
 } from '../../../../types';
 import { parseApiError } from '../../../../utils/apiError';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
@@ -25,14 +26,21 @@ import AddOptionModal from './AddOptionModal';
 import AddPeriodModal from './AddPeriodModal';
 import PackageModal from './PackageModal';
 import DiscountModal from './DiscountModal';
+import BulkDiscountModal from './BulkDiscountModal';
 
 interface BookingTabProps {
   conferenceId: string;
+  conferenceSlug: string;
   isAdmin: boolean;
   conferenceCurrency?: string | null;
 }
 
-function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: BookingTabProps) {
+function ConferenceBookingTab({
+  conferenceId,
+  conferenceSlug,
+  isAdmin,
+  conferenceCurrency,
+}: BookingTabProps) {
   const queryClient = useQueryClient();
 
   // Modal state
@@ -42,6 +50,7 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
   const [editingPackage, setEditingPackage] = useState<BookingPackage | null>(null);
   const [showAddDiscount, setShowAddDiscount] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState<DiscountCode | null>(null);
+  const [showBulkDiscount, setShowBulkDiscount] = useState(false);
 
   // Inline editing state (kept for table row editing)
   const [editingOptionId, setEditingOptionId] = useState<string | null>(null);
@@ -244,6 +253,18 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
     onError: (error) => setApiError(parseApiError(error)),
   });
 
+  const bulkCreateDiscountMutation = useMutation({
+    mutationFn: async (data: BulkDiscountCodeCreate) => {
+      await api.post(`/conferences/${conferenceId}/settings/discount-codes/bulk`, data);
+    },
+    onSuccess: () => {
+      invalidateDiscounts();
+      setShowBulkDiscount(false);
+      setApiError('');
+    },
+    onError: (error) => setApiError(parseApiError(error)),
+  });
+
   // --- Package mutations ---
   const createPackageMutation = useMutation({
     mutationFn: async (data: BookingPackageCreate) => {
@@ -394,9 +415,11 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
         isAdmin={isAdmin}
         discountCodes={discountCodes}
         bookingOptions={options}
+        bookingPeriods={periods}
         onAddDiscount={() => setShowAddDiscount(true)}
         onEditDiscount={(dc) => setEditingDiscount(dc)}
         onDeleteTarget={setDeleteTarget}
+        onBulkDiscount={() => setShowBulkDiscount(true)}
       />
 
       {/* Modals */}
@@ -441,8 +464,26 @@ function ConferenceBookingTab({ conferenceId, isAdmin, conferenceCurrency }: Boo
         onEdit={(id, data) => updateDiscountMutation.mutate({ id, data })}
         discount={editingDiscount}
         bookingOptions={options}
+        bookingPeriods={periods}
         currencyOptions={currencyOptions}
         conferenceCurrency={conferenceCurrency}
+      />
+
+      <BulkDiscountModal
+        open={showBulkDiscount}
+        onClose={() => {
+          setShowBulkDiscount(false);
+          setApiError('');
+        }}
+        onSubmit={(data) => bulkCreateDiscountMutation.mutate(data)}
+        conferenceId={conferenceId}
+        conferenceSlug={conferenceSlug}
+        bookingOptions={options}
+        bookingPeriods={periods}
+        currencyOptions={currencyOptions}
+        conferenceCurrency={conferenceCurrency}
+        isPending={bulkCreateDiscountMutation.isPending}
+        error={apiError}
       />
 
       {/* Delete confirmation dialog */}

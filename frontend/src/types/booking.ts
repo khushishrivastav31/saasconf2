@@ -104,7 +104,7 @@ export interface DiscountCode {
   id: string;
   tenant_id: string;
   conference_id: string;
-  name: string;
+  description: string;
   code: string;
   discount_type: 'fixed' | 'percentage';
   discount_value: number;
@@ -114,13 +114,15 @@ export interface DiscountCode {
   max_uses: number;
   usage_count: number;
   is_active: boolean;
+  is_combinable: boolean;
   applicable_option_ids: string[];
+  applicable_period_ids: string[];
   created_at: string;
   updated_at: string;
 }
 
 export interface DiscountCodeCreate {
-  name: string;
+  description: string;
   code: string;
   discount_type: 'fixed' | 'percentage';
   discount_value: number;
@@ -129,11 +131,13 @@ export interface DiscountCodeCreate {
   end_date?: string | null;
   max_uses?: number;
   is_active?: boolean;
+  is_combinable?: boolean;
   applicable_option_ids?: string[];
+  applicable_period_ids?: string[];
 }
 
 export interface DiscountCodeUpdate {
-  name?: string;
+  description?: string;
   code?: string;
   discount_type?: 'fixed' | 'percentage';
   discount_value?: number;
@@ -142,5 +146,33 @@ export interface DiscountCodeUpdate {
   end_date?: string | null;
   max_uses?: number;
   is_active?: boolean;
+  is_combinable?: boolean;
   applicable_option_ids?: string[];
+  applicable_period_ids?: string[];
+}
+
+// Bulk Discount Generation types
+export interface BulkDiscountEntry {
+  first_name: string;
+  last_name: string;
+  company_name: string;
+  email: string;
+}
+
+export interface BulkDiscountCodeCreate {
+  description_template: string;
+  code_template: string;
+  discount_type: 'fixed' | 'percentage';
+  discount_value: number;
+  currency?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  max_uses?: number;
+  is_active?: boolean;
+  is_combinable?: boolean;
+  applicable_option_ids?: string[];
+  applicable_period_ids?: string[];
+  entries: BulkDiscountEntry[];
+  counter_start: number;
+  counter_padding: number;
 }
