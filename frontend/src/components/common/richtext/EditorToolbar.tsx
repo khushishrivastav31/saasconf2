@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Editor } from '@tiptap/react';
 
 interface EditorToolbarProps {
@@ -733,11 +734,25 @@ function ColorPicker({
   mode: 'text' | 'highlight';
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const displayColor = activeColor || (mode === 'text' ? '#000000' : '#FBBF24');
+
+  // Compute dropdown position from button ref
+  const getDropdownStyle = (): React.CSSProperties => {
+    if (!btnRef.current) return { top: 0, left: 0 };
+    const rect = btnRef.current.getBoundingClientRect();
+    return {
+      position: 'fixed',
+      top: rect.bottom + 4,
+      left: rect.left,
+      zIndex: 50,
+    };
+  };
 
   return (
     <div className="relative">
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
@@ -777,76 +792,81 @@ function ColorPicker({
           </div>
         )}
       </button>
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 p-2.5 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-50">
-            <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-              {title}
-            </div>
-            {COLOR_GROUPS.map((group) => (
-              <div key={group.label} className="mb-2 last:mb-0">
-                <div className="text-[10px] text-gray-400 mb-1">{group.label}</div>
-                <div className="grid grid-cols-6 gap-1">
-                  {group.colors.map((color) => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      onClick={() => {
-                        onChange(color.value);
-                        setIsOpen(false);
-                      }}
-                      className={`w-6 h-6 rounded border transition-transform hover:scale-110 ${
-                        activeColor === color.value
-                          ? 'border-primary-500 ring-1 ring-primary-500'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                      style={{ backgroundColor: color.value }}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
+      {isOpen &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            <div
+              style={getDropdownStyle()}
+              className="p-2.5 bg-white rounded-lg shadow-lg border border-gray-200"
+            >
+              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">
+                {title}
               </div>
-            ))}
-            <div className="border-t border-gray-200 mt-2 pt-2 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  onChange('');
-                  setIsOpen(false);
-                }}
-                className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 py-1 px-1 rounded hover:bg-gray-100"
-              >
-                <svg
-                  className="w-3.5 h-3.5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                  />
-                </svg>
-                Remove
-              </button>
-              <label className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 py-1 px-1 rounded hover:bg-gray-100 cursor-pointer">
-                Custom
-                <input
-                  type="color"
-                  value={activeColor || (mode === 'text' ? '#000000' : '#FBBF24')}
-                  onChange={(e) => {
-                    onChange(e.target.value);
+              {COLOR_GROUPS.map((group) => (
+                <div key={group.label} className="mb-2 last:mb-0">
+                  <div className="text-[10px] text-gray-400 mb-1">{group.label}</div>
+                  <div className="grid grid-cols-6 gap-1">
+                    {group.colors.map((color) => (
+                      <button
+                        key={color.value}
+                        type="button"
+                        onClick={() => {
+                          onChange(color.value);
+                          setIsOpen(false);
+                        }}
+                        className={`w-6 h-6 rounded border transition-transform hover:scale-110 ${
+                          activeColor === color.value
+                            ? 'border-primary-500 ring-1 ring-primary-500'
+                            : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                        style={{ backgroundColor: color.value }}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="border-t border-gray-200 mt-2 pt-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange('');
+                    setIsOpen(false);
                   }}
-                  className="w-5 h-5 rounded border border-gray-300 cursor-pointer p-0"
-                />
-              </label>
+                  className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 py-1 px-1 rounded hover:bg-gray-100"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                    />
+                  </svg>
+                  Remove
+                </button>
+                <label className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 py-1 px-1 rounded hover:bg-gray-100 cursor-pointer">
+                  Custom
+                  <input
+                    type="color"
+                    value={activeColor || (mode === 'text' ? '#000000' : '#FBBF24')}
+                    onChange={(e) => {
+                      onChange(e.target.value);
+                    }}
+                    className="w-5 h-5 rounded border border-gray-300 cursor-pointer p-0"
+                  />
+                </label>
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>,
+          document.body
+        )}
     </div>
   );
 }
