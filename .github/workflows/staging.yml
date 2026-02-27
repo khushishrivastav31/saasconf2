@@ -323,14 +323,20 @@ jobs:
 
       - name: Seed platform data
         run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+          SA_PWD='${{ secrets.STAGING_SUPER_ADMIN_PASSWORD }}'
+          if [ -n "$SA_PWD" ]; then
+            SEED_ENV="-e SUPER_ADMIN_PASSWORD=${SA_PWD}"
+          else
+            SEED_ENV=""
+          fi
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << SEED_EOF
             cd ${{ env.STAGING_PATH }}/deploy/staging
             echo "Seeding platform data..."
-            docker compose exec -T backend python -u -m app.db.seed 2>&1
-            echo "Seed exit code: $?"
+            docker compose exec -T ${SEED_ENV} backend python -u -m app.db.seed 2>&1
+            echo "Seed exit code: \$?"
             echo "Container status:"
             docker compose ps
-          EOF
+          SEED_EOF
 
       - name: Verify containers are running
         run: |
