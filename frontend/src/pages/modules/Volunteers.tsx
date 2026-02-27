@@ -175,7 +175,7 @@ export default function Volunteers() {
                   Email
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Role
+                  Task
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
@@ -495,14 +495,14 @@ function CreateVolunteerModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Role
+              Task
             </label>
             <select
               className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
             >
-              <option value="">Select a role...</option>
+              <option value="">Select a task...</option>
               {rolesData?.items
                 ?.filter((r) => r.is_active)
                 .map((r) => (
@@ -672,14 +672,14 @@ function EditVolunteerModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Role
+              Task
             </label>
             <select
               className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
             >
-              <option value="">Select a role...</option>
+              <option value="">Select a task...</option>
               {rolesData?.items
                 ?.filter((r) => r.is_active)
                 .map((r) => (

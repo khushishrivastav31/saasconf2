@@ -29,7 +29,9 @@ import {
   CfpThumbUpIcon,
   CfpThumbDownIcon,
   CfpAssignmentsIcon,
-  ScreenOverlaysIcon,
+  TaskAssignmentIcon,
+  VolunteerAssignmentIcon,
+  VolunteerScheduleIcon,
 } from './icons';
 
 // ---------------------------------------------------------------------------
@@ -65,7 +67,9 @@ export type SectionId =
   | 'program-build'
   | 'invoices'
   | 'registration'
-  | 'screen-overlays'
+  | 'volunteer-task-assignment'
+  | 'volunteer-assignment'
+  | 'volunteer-schedule'
   | 'settings';
 
 export interface SectionChild {
@@ -88,7 +92,6 @@ export const coreSections: SectionDef[] = [
   { id: 'social', name: 'Social Media', icon: ShareIcon },
   { id: 'booking', name: 'Booking Options', icon: BookingIcon },
   { id: 'messaging', name: 'Messages', icon: MessagingIcon },
-  { id: 'screen-overlays', name: 'Screen Overlays', icon: ScreenOverlaysIcon },
   { id: 'settings', name: 'Settings', icon: SettingsGearIcon },
 ];
 
@@ -168,6 +171,11 @@ export const moduleSections: SectionDef[] = [
     name: 'Volunteers',
     icon: PeopleIcon,
     moduleCode: 'volunteers',
+    children: [
+      { id: 'volunteer-task-assignment', name: 'Task Assignment', icon: TaskAssignmentIcon },
+      { id: 'volunteer-assignment', name: 'Volunteer Assignment', icon: VolunteerAssignmentIcon },
+      { id: 'volunteer-schedule', name: 'Volunteer Schedule', icon: VolunteerScheduleIcon },
+    ],
   },
   {
     id: 'sponsors',

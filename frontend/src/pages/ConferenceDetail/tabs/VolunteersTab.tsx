@@ -8,7 +8,6 @@ import type {
   Volunteer,
   VolunteerCreate,
   VolunteerUpdate,
-  VolunteerRole,
   VolunteerStatus,
   PaginatedResponse,
 } from '../../../types';
@@ -43,7 +42,6 @@ function ConferenceVolunteersTab({
     last_name: '',
     email: '',
     phone: '',
-    role: '',
     tshirt_size: '',
     notes: '',
   });
@@ -65,16 +63,6 @@ function ConferenceVolunteersTab({
     queryKey: ['all-volunteers'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<Volunteer>>(`/volunteers?page_size=100`);
-      return response.data;
-    },
-  });
-
-  const { data: rolesData } = useQuery({
-    queryKey: ['volunteer-roles', conference.id],
-    queryFn: async () => {
-      const response = await api.get<{ items: VolunteerRole[]; total: number }>(
-        `/conferences/${conference.id}/settings/volunteer-roles`
-      );
       return response.data;
     },
   });
@@ -111,7 +99,6 @@ function ConferenceVolunteersTab({
         last_name: '',
         email: '',
         phone: '',
-        role: '',
         tshirt_size: '',
         notes: '',
       });
@@ -171,7 +158,6 @@ function ConferenceVolunteersTab({
       email: volunteer.email,
       phone: volunteer.phone || '',
       status: volunteer.status,
-      role: volunteer.role || '',
       tshirt_size: volunteer.tshirt_size || '',
       notes: volunteer.notes || '',
       emergency_contact_name: volunteer.emergency_contact_name || '',
@@ -305,25 +291,6 @@ function ConferenceVolunteersTab({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                Role
-              </label>
-              <select
-                value={createForm.role}
-                onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">Select a role...</option>
-                {rolesData?.items
-                  ?.filter((r) => r.is_active)
-                  .map((r) => (
-                    <option key={r.id} value={r.name}>
-                      {r.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
                 T-Shirt Size
               </label>
               <select
@@ -339,6 +306,7 @@ function ConferenceVolunteersTab({
                 ))}
               </select>
             </div>
+            <div></div>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -381,9 +349,6 @@ function ConferenceVolunteersTab({
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Role
-                </th>
                 {isAdmin && (
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Actions
@@ -414,9 +379,6 @@ function ConferenceVolunteersTab({
                     >
                       {volunteer.status}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                    {volunteer.role || '-'}
                   </td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
@@ -544,27 +506,6 @@ function ConferenceVolunteersTab({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Role
-                  </label>
-                  <select
-                    value={editForm.role || ''}
-                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Select a role...</option>
-                    {rolesData?.items
-                      ?.filter((r) => r.is_active)
-                      .map((r) => (
-                        <option key={r.id} value={r.name}>
-                          {r.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     T-Shirt Size
                   </label>
                   <select
@@ -585,7 +526,6 @@ function ConferenceVolunteersTab({
                     ))}
                   </select>
                 </div>
-                <div></div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">

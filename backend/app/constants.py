@@ -53,6 +53,8 @@ class ResourceType:
     USER = "user"
     USER_CONFERENCE_ACCESS = "user_conference_access"
     VOLUNTEER = "volunteer"
+    SESSION_VOLUNTEER_TASK = "session_volunteer_task"
+    VOLUNTEER_ASSIGNMENT = "volunteer_assignment"
 
 
 class EntityType:

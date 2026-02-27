@@ -141,9 +141,9 @@ function ConferenceVolunteerRolesTab({
       isAdmin={isAdmin}
       endpoint="volunteer-roles"
       queryKey="volunteer-roles"
-      title="Volunteer Roles"
-      description="Define the roles available for volunteers"
-      entityName="Role"
+      title="Volunteer Tasks"
+      description="Define the tasks that volunteers can perform"
+      entityName="Task"
       columns={columns}
       renderForm={(ctx) => (
         <VolunteerRoleForm

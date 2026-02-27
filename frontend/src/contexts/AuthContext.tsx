@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import api, { clearTokens, setTokens, getAccessToken } from '../config/api';
 import type { User, LoginRequest, TokenResponse } from '../types';
@@ -21,16 +21,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Keep a stable ref to syncFromServer so fetchUser doesn't depend on themeCtx.
+  // Without this, every theme toggle re-creates fetchUser → re-fires the
+  // useEffect → GET /auth/me returns the OLD preference → double flash.
+  const syncThemeRef = useRef(themeCtx?.syncFromServer);
+  useEffect(() => {
+    syncThemeRef.current = themeCtx?.syncFromServer;
+  }, [themeCtx?.syncFromServer]);
+
   const fetchUser = useCallback(async () => {
     try {
       const response = await api.get<User>('/auth/me');
       setUser(response.data);
-      themeCtx?.syncFromServer(response.data.theme_preference);
+      syncThemeRef.current?.(response.data.theme_preference);
     } catch {
       setUser(null);
       clearTokens();
     }
-  }, [themeCtx]);
+  }, []);
 
   const refreshUser = useCallback(async () => {
     await fetchUser();

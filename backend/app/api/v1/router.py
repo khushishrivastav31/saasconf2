@@ -28,6 +28,7 @@ from app.api.v1 import (
     tenants,
     user_conference_access,
     users,
+    volunteer_tasks,
     volunteers,
 )
 from app.api.v1.messaging.global_unread import router as global_unread_router
@@ -100,6 +101,13 @@ api_router.include_router(invoices.router, prefix="/conferences/{conference_id}/
 
 # Program design (conference-scoped)
 api_router.include_router(program.router, prefix="/conferences/{conference_id}/program", tags=["Program"])
+
+# Volunteer task assignments (conference-scoped)
+api_router.include_router(
+    volunteer_tasks.router,
+    prefix="/conferences/{conference_id}/volunteer-tasks",
+    tags=["Volunteer Tasks"],
+)
 
 # News (conference-scoped)
 api_router.include_router(news.router, prefix="/conferences/{conference_id}/news", tags=["News"])

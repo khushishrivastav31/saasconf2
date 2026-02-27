@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
@@ -116,30 +116,27 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
   const initialSection: SectionId =
     tabFromUrl && validSectionIds.has(tabFromUrl) ? (tabFromUrl as SectionId) : 'details';
 
-  const [activeSection, setActiveSectionRaw] = useState<SectionId>(initialSection);
+  const [activeSection, setActiveSection] = useState<SectionId>(initialSection);
 
-  // Wrap setActiveSection to also update the URL
-  const setActiveSection = useCallback(
-    (value: React.SetStateAction<SectionId>) => {
-      setActiveSectionRaw((prev) => {
-        const next = typeof value === 'function' ? value(prev) : value;
-        setSearchParams(
-          (params) => {
-            const updated = new URLSearchParams(params);
-            if (next === 'details') {
-              updated.delete('tab');
-            } else {
-              updated.set('tab', next);
-            }
-            return updated;
-          },
-          { replace: true }
-        );
-        return next;
-      });
-    },
-    [setSearchParams]
-  );
+  // Sync URL ?tab= param whenever activeSection changes (in an effect, not during render)
+  useEffect(() => {
+    const currentTab = searchParams.get('tab');
+    const expectedTab = activeSection === 'details' ? null : activeSection;
+    if (currentTab !== expectedTab) {
+      setSearchParams(
+        (params) => {
+          const updated = new URLSearchParams(params);
+          if (activeSection === 'details') {
+            updated.delete('tab');
+          } else {
+            updated.set('tab', activeSection);
+          }
+          return updated;
+        },
+        { replace: true }
+      );
+    }
+  }, [activeSection, searchParams, setSearchParams]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());

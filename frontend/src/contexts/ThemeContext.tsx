@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useState } from 'react';
+import { createContext, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 
 type ThemePreference = 'light' | 'dark' | null;
 type EffectiveTheme = 'light' | 'dark';
@@ -34,14 +34,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const theme = resolveTheme(preference);
 
-  // Apply .dark class to <html>
-  useEffect(() => {
+  // Apply .dark class to <html> synchronously before paint to prevent flicker
+  useLayoutEffect(() => {
     const root = document.documentElement;
+    // Disable transitions during theme switch to prevent color flash
+    root.classList.add('no-transition');
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
+    // Force reflow, then re-enable transitions
+    root.offsetHeight; // eslint-disable-line @typescript-eslint/no-unused-expressions
+    root.classList.remove('no-transition');
   }, [theme]);
 
   // Listen for OS theme changes

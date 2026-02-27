@@ -91,10 +91,10 @@ The result is persisted on the `billing_profiles.vat_validated` column (`true`/`
 
 **Dependencies**: `python-stdnum` (added to `requirements.txt`)
 
-## Screen Overlays
+## Screen Overlays (Settings > Communication)
 
 ### Overview
-Full-screen overlays shown to portal users on login events. Support text content (title + body), animations, and optional image uploads.
+Full-screen overlays shown to portal users on login events. Support text content (title + body), animations, and optional image uploads. Admin UI is in **Settings → Communication → Screen Overlays** (moved from top-level sidebar).
 
 ### Image Upload
 - **One image per overlay** with replace semantics (uploading new deletes old)
@@ -200,6 +200,47 @@ All nested under `/conferences/{id}/sponsors/{sponsor_id}/contract`:
 - **`SponsorContractTab.tsx`** — tab in SponsorDetailPanel; rich-text editor for contract content, upload, download, send, version history
 - **`SponsorPackagesTab.tsx`** — package-level contract template (default content for new contracts)
 
+## Volunteer Task System
+
+### Data Model
+- **`volunteer_roles`** (Settings) — Task definitions (name, description, is_active). UI labels say "Volunteer Tasks" but table name is `volunteer_roles` for backwards compatibility.
+- **`session_volunteer_tasks`** — Links program sessions to volunteer tasks. Each record has `session_id`, `volunteer_task_id`, and `required_count` (how many volunteers needed). Unique constraint: `(session_id, volunteer_task_id)`.
+- **`volunteer_assignments`** — Links volunteers to specific session-tasks. Each record has `session_volunteer_task_id` and `volunteer_id`. Unique constraint: `(session_volunteer_task_id, volunteer_id)`.
+- **`conference_volunteers.color`** — Per-conference hex color (`#RRGGBB`) for visual identification in assignment views.
+- Both new tables have RLS policies (`tenant_isolation_*`) and are indexed on `conference_id`.
+
+### Migration
+- **`100_volunteer_task_system`** (revises `099_theme_preference`) — Creates `session_volunteer_tasks`, `volunteer_assignments`, adds `color` column to `conference_volunteers`, enables RLS on new tables.
+- **Run locally**: `cd backend && venv/bin/python -m alembic upgrade head` (or `make db-migrate`)
+- **Staging/prod**: Migration runs automatically during deploy via `alembic upgrade head` in the backend container entrypoint.
+
+### API Endpoints (`/conferences/{id}/volunteer-tasks/`)
+Module-gated by `volunteers`. All require tenant admin auth.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/session-tasks` | List all session-task assignments grouped by session |
+| POST | `/session-tasks` | Assign a task to a session |
+| PUT | `/session-tasks/{id}` | Update required_count |
+| DELETE | `/session-tasks/{id}` | Remove task from session (cascades assignments) |
+| GET | `/volunteer-assignments` | Task overview with sessions + assigned volunteers |
+| POST | `/volunteer-assignments` | Assign volunteer to session-task |
+| DELETE | `/volunteer-assignments/{id}` | Remove volunteer assignment |
+| PATCH | `/volunteers/{id}/color` | Set volunteer's color for this conference |
+| GET | `/volunteer-schedule` | All volunteers' schedules |
+| GET | `/volunteer-schedule/{id}` | Single volunteer schedule |
+| GET | `/volunteer-schedule/unassigned` | Sessions needing more volunteers |
+| GET | `/volunteer-schedule/{id}/pdf` | Single volunteer PDF schedule |
+| GET | `/volunteer-schedules-pdf` | Bulk ZIP of all volunteer PDFs |
+
+### Frontend Sections
+Sidebar tree: **Volunteers** (list) → **Task Assignment** | **Volunteer Assignment** | **Volunteer Schedule**
+
+- **Task Assignment** (`TaskAssignmentTab.tsx`) — Program grid (day tabs, CSS grid with time slots × tracks) with drag-and-drop. Drag tasks from sidebar → drop on session cells. Session detail modal for editing assigned tasks and required counts. Uses `useGridPositions` hook for visual segment positioning.
+- **Volunteer Assignment** (`VolunteerAssignmentTab.tsx`) — Program grid with drag-and-drop. Drag volunteers from sidebar → drop on session cells. Single-task sessions auto-assign; multi-task sessions show task picker modal. Session detail modal shows assigned volunteers per task with add/remove. Volunteer names with color dots shown on grid cells. Uses same grid infrastructure as TaskAssignmentTab.
+- **Volunteer Schedule** (`VolunteerScheduleTab.tsx`) — Expandable volunteer list with schedule grouped by day. Unassigned sessions shown at bottom. PDF export per volunteer or bulk ZIP.
+- **Shared grid infrastructure** — `useGridPositions` hook (extracted from ProgramGrid.tsx) computes `SessionVisualSegment[]` for CSS grid positioning. Handles multi-slot sessions, track spans, and break splitting. Used by TaskAssignmentTab and VolunteerAssignmentTab.
+
 ## Dev Environment & Tooling
 
 ### Code Quality
@@ -292,7 +333,7 @@ All nested under `/conferences/{id}/sponsors/{sponsor_id}/contract`:
 - Shared fixtures: `tenant`, `conference`, `conferences_module`, `tenant_with_modules`, `super_admin_user`, `tenant_admin_user`, `regular_user`
 - Auth helper: `_make_token(user, modules)` creates JWT tokens; `auth_headers(token)` wraps in Bearer header
 - Rate limiting disabled globally in tests via `RATELIMIT_ENABLED=false` env var
-- 745+ backend tests, all passing
+- 780+ backend tests, all passing
 
 ## Development Process
 

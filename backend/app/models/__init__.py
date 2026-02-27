@@ -77,6 +77,7 @@ from app.models.token import RefreshToken
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
 from app.models.volunteer import Volunteer
+from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 
 __all__ = [
     "ApplicantActivityLog",
@@ -157,4 +158,6 @@ __all__ = [
     "UserConferenceAccess",
     "Volunteer",
     "VolunteerRole",
+    "SessionVolunteerTask",
+    "VolunteerAssignment",
 ]

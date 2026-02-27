@@ -10,6 +10,9 @@ const ConferenceDetailsTab = lazy(() => import('./tabs/DetailsTab'));
 const ConferenceTeamTab = lazy(() => import('./tabs/TeamTab'));
 const ConferenceSocialTab = lazy(() => import('./tabs/SocialTab'));
 const ConferenceVolunteersTab = lazy(() => import('./tabs/VolunteersTab'));
+const TaskAssignmentTab = lazy(() => import('./tabs/TaskAssignmentTab'));
+const VolunteerAssignmentTab = lazy(() => import('./tabs/VolunteerAssignmentTab'));
+const VolunteerScheduleTab = lazy(() => import('./tabs/VolunteerScheduleTab'));
 const ConferenceLocationsTab = lazy(() => import('./tabs/LocationsTab'));
 const ConferenceCFPsTab = lazy(() => import('./tabs/CFPsTab'));
 const ConferenceSponsorsTab = lazy(() => import('./tabs/SponsorsTab'));
@@ -24,7 +27,6 @@ const SpeakersTab = lazy(() => import('./tabs/SpeakersTab'));
 const MessagingTab = lazy(() => import('./tabs/MessagingTab'));
 const NewsTab = lazy(() => import('./tabs/NewsTab'));
 const RegistrationTab = lazy(() => import('./tabs/RegistrationTab'));
-const ScreenOverlaysTab = lazy(() => import('./tabs/ScreenOverlaysTab'));
 const CFPTopics = lazy(() => import('../modules/cfp').then((m) => ({ default: m.CFPTopics })));
 const CFPProgramCommittee = lazy(() =>
   import('../modules/cfp').then((m) => ({ default: m.CFPProgramCommittee }))
@@ -362,6 +364,15 @@ function ConferenceDetailContent() {
               {activeSection === 'volunteers' && (
                 <ConferenceVolunteersTab conference={conference} isAdmin={isAdmin} />
               )}
+              {activeSection === 'volunteer-task-assignment' && (
+                <TaskAssignmentTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'volunteer-assignment' && (
+                <VolunteerAssignmentTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'volunteer-schedule' && (
+                <VolunteerScheduleTab conference={conference} isAdmin={isAdmin} />
+              )}
               {activeSection === 'locations' && (
                 <ConferenceLocationsTab conference={conference} isAdmin={isAdmin} />
               )}
@@ -426,9 +437,6 @@ function ConferenceDetailContent() {
               )}
               {activeSection === 'registration' && conference && (
                 <RegistrationTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'screen-overlays' && conference && (
-                <ScreenOverlaysTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'settings' && (
                 <ConferenceSettingsTab conference={conference} isAdmin={isAdmin} />
