@@ -39,7 +39,11 @@ interface ConferenceListResponse {
 // Drag handle icon (6-dot grid)
 function DragHandle({ className }: { className?: string }) {
   return (
-    <svg className={className || 'w-4 h-4 text-gray-300'} fill="currentColor" viewBox="0 0 24 24">
+    <svg
+      className={className || 'w-4 h-4 text-gray-300 dark:text-gray-600'}
+      fill="currentColor"
+      viewBox="0 0 24 24"
+    >
       <circle cx="9" cy="5" r="1.5" />
       <circle cx="15" cy="5" r="1.5" />
       <circle cx="9" cy="12" r="1.5" />
@@ -497,25 +501,25 @@ export default function CFPAssignments({
                       onDragOver={(e) => handleMemberDragOver(e, member.id)}
                       onDragLeave={handleDragLeave(setDragOverMemberId)}
                       onDrop={(e) => handleMemberDrop(e, member.id)}
-                      className={`bg-white rounded-md shadow-sm border px-2.5 py-1.5 transition-all ${
+                      className={`bg-white dark:bg-gray-800 rounded-md shadow-sm border px-2.5 py-1.5 transition-all ${
                         isAdmin && !isDropTarget ? 'cursor-grab active:cursor-grabbing' : ''
                       } ${
                         isDragging
-                          ? 'opacity-40 border-primary-300 bg-primary-50'
+                          ? 'opacity-40 border-primary-300 bg-primary-50 dark:bg-primary-900/30'
                           : isOver && canDrop
-                            ? 'border-primary-400 ring-2 ring-primary-200 bg-primary-50'
+                            ? 'border-primary-400 ring-2 ring-primary-200 dark:ring-primary-800 bg-primary-50 dark:bg-primary-900/30'
                             : isOver && !canDrop
-                              ? 'border-red-300 bg-red-50'
+                              ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/30'
                               : isDropTarget
                                 ? canDrop
-                                  ? 'border-dashed border-gray-300'
-                                  : 'border-gray-200 opacity-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                  ? 'border-dashed border-gray-300 dark:border-gray-600'
+                                  : 'border-gray-200 dark:border-gray-700 opacity-50'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
                         {isAdmin && !isDropTarget && (
-                          <DragHandle className="w-3 h-3 text-gray-300 flex-shrink-0" />
+                          <DragHandle className="w-3 h-3 text-gray-300 dark:text-gray-600 flex-shrink-0" />
                         )}
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate min-w-0 flex-1">
                           {`${member.first_name} ${member.last_name}`.trim()}
@@ -592,7 +596,7 @@ export default function CFPAssignments({
                       onClick={() => setStatusFilter(opt.value)}
                       className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
                         statusFilter === opt.value
-                          ? 'bg-primary-100 text-primary-700'
+                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                           : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
@@ -642,26 +646,26 @@ export default function CFPAssignments({
                       onDragOver={(e) => handlePaperDragOver(e, paper.id)}
                       onDragLeave={handleDragLeave(setDragOverPaperId)}
                       onDrop={(e) => handlePaperDrop(e, paper.id)}
-                      className={`bg-white rounded-lg shadow-sm border transition-all ${
+                      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border transition-all ${
                         isAdmin && !isDropTarget ? 'cursor-grab active:cursor-grabbing' : ''
                       } ${
                         isDragging
-                          ? 'opacity-40 border-primary-300 bg-primary-50'
+                          ? 'opacity-40 border-primary-300 bg-primary-50 dark:bg-primary-900/30'
                           : isOver && canDrop
-                            ? 'border-primary-400 ring-2 ring-primary-200 bg-primary-50'
+                            ? 'border-primary-400 ring-2 ring-primary-200 dark:ring-primary-800 bg-primary-50 dark:bg-primary-900/30'
                             : isOver && !canDrop
-                              ? 'border-red-300 bg-red-50'
+                              ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/30'
                               : isDropTarget
                                 ? canDrop
-                                  ? 'border-dashed border-gray-300'
-                                  : 'border-gray-200 opacity-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                  ? 'border-dashed border-gray-300 dark:border-gray-600'
+                                  : 'border-gray-200 dark:border-gray-700 opacity-50'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
                       <div className="px-3 py-2.5">
                         <div className="flex items-start gap-2">
                           {isAdmin && !isDropTarget && (
-                            <DragHandle className="w-3.5 h-3.5 text-gray-300 flex-shrink-0 mt-0.5" />
+                            <DragHandle className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 flex-shrink-0 mt-0.5" />
                           )}
                           <div className="min-w-0 flex-1">
                             {/* Paper header */}
@@ -673,7 +677,7 @@ export default function CFPAssignments({
                                     e.stopPropagation();
                                     setSelectedPaperId(paper.id);
                                   }}
-                                  className="text-sm font-medium text-primary-700 hover:text-primary-800 hover:underline leading-tight text-left"
+                                  className="text-sm font-medium text-primary-700 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 hover:underline leading-tight text-left"
                                 >
                                   {paper.title}
                                 </button>
@@ -731,13 +735,13 @@ export default function CFPAssignments({
                                 {paperAssigns.map((a) => (
                                   <span
                                     key={a.id}
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary-50 text-primary-700 border border-primary-200"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800"
                                   >
                                     <span>
                                       {`${a.committee_member_first_name} ${a.committee_member_last_name}`.trim()}
                                     </span>
                                     {a.is_anonymous && (
-                                      <span className="px-1 rounded text-[9px] bg-yellow-100 text-yellow-700">
+                                      <span className="px-1 rounded text-[9px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
                                         anon
                                       </span>
                                     )}
