@@ -1,6 +1,6 @@
-import { useState } from "react";
-import Modal from "../../../../components/Modal";
-import type { BookingPeriodCreate, PlatformCurrency } from "../../../../types";
+import { useState } from 'react';
+import Modal from '../../../../components/Modal';
+import type { BookingPeriodCreate, PlatformCurrency } from '../../../../types';
 
 interface AddPeriodModalProps {
   open: boolean;
@@ -18,16 +18,16 @@ export default function AddPeriodModal({
   onSubmit,
   existingCount,
   currencyOptions,
-  defaultCurrency = "EUR",
+  defaultCurrency = 'EUR',
   conferenceCurrency,
 }: AddPeriodModalProps) {
   // Use conference currency if set, otherwise allow selection
   const effectiveCurrency = conferenceCurrency || defaultCurrency;
   const isCurrencyLocked = !!conferenceCurrency;
 
-  const [name, setName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [name, setName] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [currency, setCurrency] = useState(effectiveCurrency);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -43,16 +43,16 @@ export default function AddPeriodModal({
     });
 
     // Reset form
-    setName("");
-    setStartDate("");
-    setEndDate("");
+    setName('');
+    setStartDate('');
+    setEndDate('');
     setCurrency(effectiveCurrency);
   };
 
   const handleClose = () => {
-    setName("");
-    setStartDate("");
-    setEndDate("");
+    setName('');
+    setStartDate('');
+    setEndDate('');
     setCurrency(effectiveCurrency);
     onClose();
   };
@@ -70,7 +70,10 @@ export default function AddPeriodModal({
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-4 space-y-4">
           <div>
-            <label htmlFor="period-name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="period-name"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Period Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -80,13 +83,16 @@ export default function AddPeriodModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Early Bird"
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+              className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="period-start" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="period-start"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 Start Date <span className="text-red-500">*</span>
               </label>
               <input
@@ -94,11 +100,14 @@ export default function AddPeriodModal({
                 type="date"
                 value={startDate}
                 onChange={(e) => handleStartDateChange(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
-              <label htmlFor="period-end" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="period-end"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 End Date <span className="text-red-500">*</span>
               </label>
               <input
@@ -107,13 +116,16 @@ export default function AddPeriodModal({
                 value={endDate}
                 min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="period-currency" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="period-currency"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Currency
             </label>
             {isCurrencyLocked ? (
@@ -123,14 +135,14 @@ export default function AddPeriodModal({
                 value={conferenceCurrency}
                 disabled
                 title="Set by conference"
-                className="block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm text-gray-600"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 shadow-sm text-sm text-gray-600 dark:text-gray-300"
               />
             ) : (
               <select
                 id="period-currency"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               >
                 {(currencyOptions || []).map((c) => (
                   <option key={c.code} value={c.code}>
@@ -142,11 +154,11 @@ export default function AddPeriodModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

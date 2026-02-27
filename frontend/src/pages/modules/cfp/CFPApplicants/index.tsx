@@ -41,9 +41,9 @@ const ApplicantListRow = memo(function ApplicantListRow({
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
+      className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
     >
-      <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
+      <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800">
         {imgSrc ? (
           <img
             src={imgSrc}
@@ -59,10 +59,10 @@ const ApplicantListRow = memo(function ApplicantListRow({
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
           {`${applicant.first_name} ${applicant.last_name}`}
         </p>
-        <p className="text-xs text-gray-500 truncate">{applicant.email}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{applicant.email}</p>
         {applicant.company && (
           <span className="inline-flex items-center mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600">
             {applicant.company}
@@ -70,12 +70,12 @@ const ApplicantListRow = memo(function ApplicantListRow({
         )}
       </div>
       {applicant.title && (
-        <span className="hidden sm:block text-xs text-gray-400 flex-shrink-0">
+        <span className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
           {applicant.title}
         </span>
       )}
       <svg
-        className="w-4 h-4 text-gray-300 flex-shrink-0"
+        className="w-4 h-4 text-gray-300 dark:text-gray-600 flex-shrink-0"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -340,19 +340,19 @@ export default function CFPApplicants({
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {isAdding
               ? 'New User'
               : selectedApplicant
                 ? `${selectedApplicant.first_name} ${selectedApplicant.last_name}`
                 : 'Users'}
             {!isAdding && !selectedApplicant && applicantCount > 0 && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                 {applicantCount}
               </span>
             )}
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {isAdding
               ? 'Fill in the details to add a new user.'
               : selectedApplicant
@@ -417,7 +417,7 @@ export default function CFPApplicants({
               <select
                 value={filterConferenceId}
                 onChange={(e) => setFilterConferenceId(e.target.value)}
-                className="border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white min-w-[180px]"
+                className="border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-800 dark:text-gray-100 min-w-[180px]"
               >
                 <option value="">All Conferences</option>
                 {conferencesData.items.map((c) => (
@@ -429,7 +429,7 @@ export default function CFPApplicants({
             )}
             <div className="relative flex-1">
               <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -446,13 +446,13 @@ export default function CFPApplicants({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name, email, company, or title..."
-                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
                 >
                   <CloseIcon />
                 </button>
@@ -462,7 +462,7 @@ export default function CFPApplicants({
 
           {/* List */}
           {filteredApplicants.length > 0 ? (
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
               {filteredApplicants.map((a) => (
                 <ApplicantListRow
                   key={a.id}
@@ -472,7 +472,7 @@ export default function CFPApplicants({
               ))}
             </div>
           ) : (
-            <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
               No users match "{searchQuery}"
             </div>
           )}
@@ -483,7 +483,7 @@ export default function CFPApplicants({
             <select
               value={filterConferenceId}
               onChange={(e) => setFilterConferenceId(e.target.value)}
-              className="border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white min-w-[180px]"
+              className="border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-800 dark:text-gray-100 min-w-[180px]"
             >
               <option value="">All Conferences</option>
               {conferencesData.items.map((c) => (
@@ -493,7 +493,7 @@ export default function CFPApplicants({
               ))}
             </select>
           )}
-          <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+          <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
             {filterConferenceId
               ? 'No users for this conference.'
               : 'No users yet. Click "+ Add User" to get started.'}

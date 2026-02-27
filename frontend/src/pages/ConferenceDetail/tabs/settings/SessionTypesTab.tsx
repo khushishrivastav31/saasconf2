@@ -26,19 +26,25 @@ const columns: ColumnConfig<SessionType>[] = [
   {
     key: 'name',
     label: 'Name',
-    render: (st) => <div className="text-sm font-medium text-gray-900">{st.name}</div>,
+    render: (st) => (
+      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{st.name}</div>
+    ),
   },
   {
     key: 'slug',
     label: 'Slug',
     render: (st) => (
-      <code className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{st.slug}</code>
+      <code className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+        {st.slug}
+      </code>
     ),
   },
   {
     key: 'duration_minutes',
     label: 'Duration',
-    render: (st) => <span className="text-sm text-gray-900">{st.duration_minutes} min</span>,
+    render: (st) => (
+      <span className="text-sm text-gray-900 dark:text-gray-100">{st.duration_minutes} min</span>
+    ),
   },
   {
     key: 'cfp_eligible',
@@ -46,7 +52,9 @@ const columns: ColumnConfig<SessionType>[] = [
     render: (st) => (
       <span
         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-          st.cfp_eligible ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+          st.cfp_eligible
+            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
         }`}
       >
         {st.cfp_eligible ? 'Yes' : 'No'}
@@ -59,7 +67,9 @@ const columns: ColumnConfig<SessionType>[] = [
     render: (st) => (
       <span
         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-          st.separately_bookable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+          st.separately_bookable
+            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
         }`}
       >
         {st.separately_bookable ? 'Yes' : 'No'}
@@ -146,11 +156,13 @@ function SessionTypeForm({
         {error && <ErrorBanner message={error} />}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Name *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Name *
+          </label>
           <input
             type="text"
             required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
             value={formData.name}
             onChange={(e) => handleNameChange(e.target.value)}
             placeholder="e.g., Keynote Speech"
@@ -158,28 +170,32 @@ function SessionTypeForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Slug *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Slug *
+          </label>
           <input
             type="text"
             required
             pattern="^[-a-z0-9_]+$"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm font-mono"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm font-mono dark:bg-gray-800 dark:text-gray-100"
             value={formData.slug}
             onChange={(e) => handleSlugChange(e.target.value.toLowerCase())}
             placeholder="e.g., keynote"
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Lowercase letters, numbers, hyphens, and underscores only
           </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Duration (minutes) *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Duration (minutes) *
+          </label>
           <input
             type="number"
             required
             min={1}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
             value={formData.duration_minutes}
             onChange={(e) =>
               setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 0 })
@@ -191,14 +207,17 @@ function SessionTypeForm({
           <input
             id="cfp-eligible"
             type="checkbox"
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
             checked={formData.cfp_eligible ?? true}
             onChange={(e) => setFormData({ ...formData, cfp_eligible: e.target.checked })}
           />
-          <label htmlFor="cfp-eligible" className="ml-2 block text-sm text-gray-900">
+          <label
+            htmlFor="cfp-eligible"
+            className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
+          >
             CFP Eligible
           </label>
-          <span className="ml-2 text-xs text-gray-500">
+          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
             (can be selected for Call for Papers submissions)
           </span>
         </div>
@@ -207,14 +226,17 @@ function SessionTypeForm({
           <input
             id="separately-bookable"
             type="checkbox"
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
             checked={formData.separately_bookable ?? false}
             onChange={(e) => setFormData({ ...formData, separately_bookable: e.target.checked })}
           />
-          <label htmlFor="separately-bookable" className="ml-2 block text-sm text-gray-900">
+          <label
+            htmlFor="separately-bookable"
+            className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
+          >
             Separately Bookable
           </label>
-          <span className="ml-2 text-xs text-gray-500">
+          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
             (session can be booked individually by attendees)
           </span>
         </div>
@@ -223,11 +245,14 @@ function SessionTypeForm({
           <input
             id="session-type-active"
             type="checkbox"
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
             checked={formData.is_active ?? true}
             onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
           />
-          <label htmlFor="session-type-active" className="ml-2 block text-sm text-gray-900">
+          <label
+            htmlFor="session-type-active"
+            className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
+          >
             Active
           </label>
         </div>

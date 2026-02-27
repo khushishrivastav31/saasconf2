@@ -37,7 +37,7 @@ const ANIMATION_OPTIONS: { value: OverlayAnimationStyle; label: string }[] = [
 
 const triggerBadgeClass: Record<OverlayTriggerType, string> = {
   first_registration: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
-  scheduled: 'bg-purple-100 text-purple-800',
+  scheduled: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300',
   always: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
 };
 
@@ -379,13 +379,13 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 capitalize">
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 capitalize">
                     {overlay.animation_style}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                     {overlay.duration_seconds}s
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                     {overlay.display_order}
                   </td>
                   <td className="px-4 py-3">
@@ -399,7 +399,7 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
                       }
                       disabled={!isAdmin}
                       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                        overlay.is_active ? 'bg-primary-600' : 'bg-gray-300'
+                        overlay.is_active ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
                       } ${isAdmin ? 'cursor-pointer' : 'cursor-default'}`}
                     >
                       <span
@@ -567,7 +567,7 @@ function OverlayForm({
           value={form.title}
           onChange={(e) => onChange({ title: e.target.value })}
           placeholder="Welcome to {conference_name}!"
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
         />
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
           Use {'{conference_name}'} to insert the conference name.
@@ -595,7 +595,7 @@ function OverlayForm({
         <select
           value={form.trigger_type}
           onChange={(e) => onChange({ trigger_type: e.target.value as OverlayTriggerType })}
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
         >
           {TRIGGER_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -613,7 +613,7 @@ function OverlayForm({
         <select
           value={form.animation_style}
           onChange={(e) => onChange({ animation_style: e.target.value as OverlayAnimationStyle })}
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
         >
           {ANIMATION_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -634,7 +634,7 @@ function OverlayForm({
           max={30}
           value={form.duration_seconds}
           onChange={(e) => onChange({ duration_seconds: parseInt(e.target.value) || 5 })}
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
         />
       </div>
 
@@ -648,7 +648,7 @@ function OverlayForm({
           min={0}
           value={form.display_order}
           onChange={(e) => onChange({ display_order: parseInt(e.target.value) || 0 })}
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
         />
       </div>
 
@@ -666,7 +666,7 @@ function OverlayForm({
                 schedule_date: e.target.value ? new Date(e.target.value).toISOString() : undefined,
               })
             }
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
       )}

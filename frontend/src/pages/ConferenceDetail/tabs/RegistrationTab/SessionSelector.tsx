@@ -34,9 +34,11 @@ function SlotDropdown({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{slot.label}</label>
+      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+        {slot.label}
+      </label>
       <select
-        className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+        className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
         value={selectedSessionId || ''}
         onChange={(e) => onSelect(e.target.value)}
       >
@@ -64,9 +66,11 @@ function SessionTypeGroup({
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-semibold text-gray-700">Choose a {group.session_type_name}:</div>
+      <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+        Choose a {group.session_type_name}:
+      </div>
       {allTba ? (
-        <p className="text-sm text-gray-500 italic">
+        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
           You can choose your sessions later. We will come back to you.
         </p>
       ) : (
@@ -110,7 +114,7 @@ export function OptionSessions({
   });
 
   if (isLoading) {
-    return <div className="text-xs text-gray-400 py-2">Loading sessions...</div>;
+    return <div className="text-xs text-gray-400 dark:text-gray-500 py-2">Loading sessions...</div>;
   }
 
   if (!data || data.groups.length === 0) {

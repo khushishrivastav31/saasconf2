@@ -37,11 +37,11 @@ function EvaluatedPaperCard({ paper }: { paper: PortalAssignedPaper }) {
                 >
                   {paper.status}
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
                   Review: Submitted
                 </span>
                 {paper.is_anonymous && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
                     Anonymous
                   </span>
                 )}
@@ -208,7 +208,7 @@ function EvaluatedPaperCard({ paper }: { paper: PortalAssignedPaper }) {
                 <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                   Co-speakers
                 </h4>
-                <ul className="text-sm text-gray-700 space-y-1">
+                <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                   {paper.cospeakers.map((cs) => (
                     <li key={cs.applicant_id}>
                       {`${cs.first_name || ''} ${cs.last_name || ''}`.trim()} ({cs.email})

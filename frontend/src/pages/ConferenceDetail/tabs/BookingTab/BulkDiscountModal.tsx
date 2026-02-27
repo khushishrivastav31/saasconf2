@@ -317,7 +317,9 @@ export default function BulkDiscountModal({
         <div className="px-6 py-4 space-y-5 max-h-[70vh] overflow-y-auto">
           {/* Source selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">People Source</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              People Source
+            </label>
             <div className="flex gap-2 flex-wrap">
               {(
                 [
@@ -334,7 +336,7 @@ export default function BulkDiscountModal({
                   className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
                     source === s.value
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
                   {s.label}
@@ -346,11 +348,13 @@ export default function BulkDiscountModal({
           {/* Recipient list picker */}
           {source === 'recipient_list' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select List</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Select List
+              </label>
               <select
                 value={selectedListId}
                 onChange={(e) => setSelectedListId(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">Choose a recipient list...</option>
                 {(recipientLists || []).map((rl) => (
@@ -366,7 +370,7 @@ export default function BulkDiscountModal({
           {people.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Select People ({selectedPeople.size}/{people.length})
                 </label>
                 <button
@@ -377,11 +381,11 @@ export default function BulkDiscountModal({
                   {selectedPeople.size === people.length ? 'Deselect All' : 'Select All'}
                 </button>
               </div>
-              <div className="border border-gray-200 rounded-md p-2 bg-gray-50 max-h-48 overflow-y-auto space-y-1">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-gray-50 dark:bg-gray-900 max-h-48 overflow-y-auto space-y-1">
                 {people.map((p) => (
                   <label
                     key={p.id}
-                    className="flex items-center gap-2 px-2 py-1 text-sm text-gray-700 cursor-pointer hover:bg-white rounded"
+                    className="flex items-center gap-2 px-2 py-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-white dark:hover:bg-gray-800 rounded"
                   >
                     <input
                       type="checkbox"
@@ -392,8 +396,14 @@ export default function BulkDiscountModal({
                     <span className="font-medium">
                       {p.first_name} {p.last_name}
                     </span>
-                    {p.company_name && <span className="text-gray-400">— {p.company_name}</span>}
-                    {p.email && <span className="text-gray-400 text-xs ml-auto">{p.email}</span>}
+                    {p.company_name && (
+                      <span className="text-gray-400 dark:text-gray-500">— {p.company_name}</span>
+                    )}
+                    {p.email && (
+                      <span className="text-gray-400 dark:text-gray-500 text-xs ml-auto">
+                        {p.email}
+                      </span>
+                    )}
                   </label>
                 ))}
               </div>
@@ -401,20 +411,22 @@ export default function BulkDiscountModal({
           )}
 
           {people.length === 0 && source !== 'recipient_list' && (
-            <p className="text-sm text-gray-500 italic">No people found for this source.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+              No people found for this source.
+            </p>
           )}
 
           {/* Template fields */}
-          <div className="border-t border-gray-200 pt-4 space-y-3">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Description Template
               </label>
               <input
                 type="text"
                 value={descTemplate}
                 onChange={(e) => setDescTemplate(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               />
               <div className="flex flex-wrap gap-1 mt-1">
                 {TEMPLATE_VARS.map((v) => (
@@ -422,7 +434,7 @@ export default function BulkDiscountModal({
                     key={v.label}
                     type="button"
                     onClick={() => insertVar(setDescTemplate, v.label)}
-                    className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 font-mono"
+                    className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 font-mono"
                     title={v.example}
                   >
                     [{v.label}]
@@ -432,12 +444,14 @@ export default function BulkDiscountModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Code Template</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Code Template
+              </label>
               <input
                 type="text"
                 value={codeTemplate}
                 onChange={(e) => setCodeTemplate(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm font-mono"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm font-mono dark:bg-gray-800 dark:text-gray-100"
               />
               <div className="flex flex-wrap gap-1 mt-1">
                 {TEMPLATE_VARS.map((v) => (
@@ -445,7 +459,7 @@ export default function BulkDiscountModal({
                     key={v.label}
                     type="button"
                     onClick={() => insertVar(setCodeTemplate, v.label)}
-                    className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 font-mono"
+                    className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 font-mono"
                     title={v.example}
                   >
                     [{v.label}]
@@ -453,7 +467,7 @@ export default function BulkDiscountModal({
                 ))}
               </div>
               {duplicateCodes.size > 0 && selectedEntries.length > 0 && (
-                <div className="mt-1.5 p-2 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-700">
+                <div className="mt-1.5 p-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 rounded-md text-xs text-amber-700 dark:text-amber-300">
                   <p>
                     {duplicateCodes.size} duplicate code{duplicateCodes.size !== 1 ? 's' : ''}{' '}
                     detected after resolving variables:{' '}
@@ -481,7 +495,7 @@ export default function BulkDiscountModal({
 
             <div className="grid grid-cols-4 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Counter Start
                 </label>
                 <input
@@ -489,41 +503,49 @@ export default function BulkDiscountModal({
                   min="0"
                   value={counterStart}
                   onChange={(e) => setCounterStart(parseInt(e.target.value) || 0)}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Zero-padding</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                  Zero-padding
+                </label>
                 <input
                   type="number"
                   min="1"
                   max="6"
                   value={counterPadding}
                   onChange={(e) => setCounterPadding(parseInt(e.target.value) || 3)}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
                 />
               </div>
             </div>
           </div>
 
           {/* Shared discount settings */}
-          <div className="border-t border-gray-200 pt-4 space-y-3">
-            <h4 className="text-sm font-medium text-gray-900">Discount Settings</h4>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              Discount Settings
+            </h4>
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                  Type
+                </label>
                 <select
                   value={discountType}
                   onChange={(e) => setDiscountType(e.target.value as 'fixed' | 'percentage')}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="percentage">Percentage (%)</option>
                   <option value="fixed">Fixed Amount</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Value *</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                  Value *
+                </label>
                 <input
                   type="number"
                   step="0.01"
@@ -531,24 +553,26 @@ export default function BulkDiscountModal({
                   max={discountType === 'percentage' ? '100' : undefined}
                   value={discountValue}
                   onChange={(e) => setDiscountValue(e.target.value)}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
                 />
               </div>
               {discountType === 'fixed' && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Currency</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                    Currency
+                  </label>
                   {isCurrencyLocked ? (
                     <input
                       type="text"
                       value={conferenceCurrency || ''}
                       disabled
-                      className="block w-full rounded-md border-gray-300 bg-gray-100 text-sm text-gray-600"
+                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-sm text-gray-600 dark:text-gray-300"
                     />
                   ) : (
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
                     >
                       <option value="">Select...</option>
                       {(currencyOptions || []).map((c) => (
@@ -564,7 +588,9 @@ export default function BulkDiscountModal({
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                  Start Date
+                </label>
                 <input
                   type="date"
                   value={startDate}
@@ -573,21 +599,23 @@ export default function BulkDiscountModal({
                     if (endDate && e.target.value && endDate < e.target.value)
                       setEndDate(e.target.value);
                   }}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">End Date</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                  End Date
+                </label>
                 <input
                   type="date"
                   value={endDate}
                   min={startDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Max Uses (0=∞)
                 </label>
                 <input
@@ -595,13 +623,13 @@ export default function BulkDiscountModal({
                   min="0"
                   value={maxUses}
                   onChange={(e) => setMaxUses(e.target.value)}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
                 />
               </div>
             </div>
 
             <div className="flex gap-6">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isCombinable}
@@ -610,7 +638,7 @@ export default function BulkDiscountModal({
                 />
                 Combinable
               </label>
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isActive}
@@ -623,14 +651,14 @@ export default function BulkDiscountModal({
 
             {bookingOptions.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Applies to Options
                 </label>
                 <div className="flex flex-wrap gap-x-4 gap-y-1">
                   {bookingOptions.map((opt) => (
                     <label
                       key={opt.id}
-                      className="inline-flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -653,14 +681,14 @@ export default function BulkDiscountModal({
 
             {bookingPeriods.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Applies to Periods
                 </label>
                 <div className="flex flex-wrap gap-x-4 gap-y-1">
                   {bookingPeriods.map((per) => (
                     <label
                       key={per.id}
-                      className="inline-flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -685,35 +713,46 @@ export default function BulkDiscountModal({
       ) : (
         /* Step 2: Preview */
         <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
             {preview.length} discount code{preview.length !== 1 ? 's' : ''} will be created:
           </p>
           {duplicateCodes.size > 0 && (
-            <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+            <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
               Duplicate codes detected! Adjust your template or selection.
             </div>
           )}
-          <div className="border border-gray-200 rounded-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">#</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Code</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    #
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    Code
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">
                     Description
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">
                     Person
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {preview.map((row, i) => (
-                  <tr key={i} className={duplicateCodes.has(row.code) ? 'bg-red-50' : ''}>
-                    <td className="px-3 py-1.5 text-gray-400">{i + 1}</td>
-                    <td className="px-3 py-1.5 font-mono font-medium text-gray-900">{row.code}</td>
-                    <td className="px-3 py-1.5 text-gray-700">{row.description}</td>
-                    <td className="px-3 py-1.5 text-gray-500">
+                  <tr
+                    key={i}
+                    className={duplicateCodes.has(row.code) ? 'bg-red-50 dark:bg-red-900/30' : ''}
+                  >
+                    <td className="px-3 py-1.5 text-gray-400 dark:text-gray-500">{i + 1}</td>
+                    <td className="px-3 py-1.5 font-mono font-medium text-gray-900 dark:text-gray-100">
+                      {row.code}
+                    </td>
+                    <td className="px-3 py-1.5 text-gray-700 dark:text-gray-300">
+                      {row.description}
+                    </td>
+                    <td className="px-3 py-1.5 text-gray-500 dark:text-gray-400">
                       {row.entry.first_name} {row.entry.last_name}
                     </td>
                   </tr>
@@ -727,17 +766,17 @@ export default function BulkDiscountModal({
       {/* Footer */}
       {error && (
         <div className="px-6 py-2">
-          <div className="p-2 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+          <div className="p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
             {error}
           </div>
         </div>
       )}
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between">
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-between">
         {step === 2 ? (
           <button
             type="button"
             onClick={() => setStep(1)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Back
           </button>
@@ -748,7 +787,7 @@ export default function BulkDiscountModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

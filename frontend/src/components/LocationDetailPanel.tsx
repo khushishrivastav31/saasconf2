@@ -172,21 +172,25 @@ export default function LocationDetailPanel({
       <div className="px-6 py-5 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Name *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Name *
+            </label>
             <input
               type="text"
               required
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Code</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Code
+            </label>
             <input
               type="text"
               placeholder="e.g., ROOM-A1"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value })}
             />
@@ -195,10 +199,12 @@ export default function LocationDetailPanel({
 
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Type *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Type *
+            </label>
             <select
               required
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.location_type}
               onChange={(e) =>
                 setFormData({
@@ -217,9 +223,11 @@ export default function LocationDetailPanel({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Parent Location</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Parent Location
+            </label>
             <select
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.parent_id || ''}
               onChange={(e) =>
                 setFormData({
@@ -239,12 +247,14 @@ export default function LocationDetailPanel({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Capacity</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Capacity
+            </label>
             <input
               type="number"
               min="0"
               placeholder="Max attendees"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.capacity ?? ''}
               onChange={(e) =>
                 setFormData({
@@ -259,9 +269,11 @@ export default function LocationDetailPanel({
         {isVirtual ? (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Platform</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Platform
+              </label>
               <select
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.virtual_platform}
                 onChange={(e) =>
                   setFormData({
@@ -279,11 +291,13 @@ export default function LocationDetailPanel({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">URL</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                URL
+              </label>
               <input
                 type="text"
                 placeholder="example.com"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.virtual_url}
                 onChange={(e) =>
                   setFormData({
@@ -304,10 +318,12 @@ export default function LocationDetailPanel({
           <>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Address Line 1</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Address Line 1
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.address_line1}
                   onChange={(e) =>
                     setFormData({
@@ -318,10 +334,12 @@ export default function LocationDetailPanel({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Address Line 2</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Address Line 2
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.address_line2}
                   onChange={(e) =>
                     setFormData({
@@ -335,28 +353,34 @@ export default function LocationDetailPanel({
 
             <div className="grid grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">City</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  City
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">State</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  State
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.state}
                   onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Postal Code</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Postal Code
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.postal_code}
                   onChange={(e) =>
                     setFormData({
@@ -367,10 +391,12 @@ export default function LocationDetailPanel({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Country</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Country
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.country}
                   onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                 />
@@ -379,19 +405,23 @@ export default function LocationDetailPanel({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Building</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Building
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.building}
                   onChange={(e) => setFormData({ ...formData, building: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Floor</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Floor
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.floor}
                   onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
                 />
@@ -400,10 +430,12 @@ export default function LocationDetailPanel({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Phone</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Phone
+                </label>
                 <input
                   type="tel"
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${phoneError ? 'border-red-300' : 'border-gray-300'}`}
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${phoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
                   value={formData.phone}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -415,11 +447,13 @@ export default function LocationDetailPanel({
                 {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Website</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Website
+                </label>
                 <input
                   type="text"
                   placeholder="example.com"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.website}
                   onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                   onBlur={(e) =>
@@ -430,11 +464,13 @@ export default function LocationDetailPanel({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">VAT Number</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                VAT Number
+              </label>
               <input
                 type="text"
                 placeholder="e.g., DE123456789"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.vat_number}
                 onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
               />
@@ -443,7 +479,9 @@ export default function LocationDetailPanel({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Description
+          </label>
           <RichTextEditor
             value={formData.description}
             onChange={(html) => setFormData({ ...formData, description: html })}
@@ -455,11 +493,14 @@ export default function LocationDetailPanel({
           <input
             id="detail-panel-active-toggle"
             type="checkbox"
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
             checked={formData.is_active}
             onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
           />
-          <label htmlFor="detail-panel-active-toggle" className="ml-2 block text-sm text-gray-900">
+          <label
+            htmlFor="detail-panel-active-toggle"
+            className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
+          >
             Active
           </label>
         </div>

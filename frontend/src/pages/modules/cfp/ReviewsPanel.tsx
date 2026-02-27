@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../../config/api";
-import RichTextDisplay from "../../../components/common/RichTextDisplay";
-import { formatDateTime } from "../../../utils/formatDate";
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../config/api';
+import RichTextDisplay from '../../../components/common/RichTextDisplay';
+import { formatDateTime } from '../../../utils/formatDate';
 
 interface ReviewAnswer {
   id: string;
@@ -39,32 +39,40 @@ interface ReviewListResponse {
   total: number;
 }
 
-function CollapsibleReview({ review, maxReviewScore }: { review: AdminReview; maxReviewScore?: number | null }) {
+function CollapsibleReview({
+  review,
+  maxReviewScore,
+}: {
+  review: AdminReview;
+  maxReviewScore?: number | null;
+}) {
   const [open, setOpen] = useState(false);
   const reviewerName = review.reviewer_first_name
-    ? `${review.reviewer_first_name} ${review.reviewer_last_name || ""}`.trim()
-    : "Anonymous Reviewer";
+    ? `${review.reviewer_first_name} ${review.reviewer_last_name || ''}`.trim()
+    : 'Anonymous Reviewer';
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
       <button
         type="button"
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         onClick={() => setOpen(!open)}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-medium text-gray-900">{reviewerName}</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            {reviewerName}
+          </span>
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-              review.status === "submitted"
-                ? "bg-green-100 text-green-700"
-                : "bg-yellow-100 text-yellow-700"
+              review.status === 'submitted'
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
             }`}
           >
             {review.status}
           </span>
           {review.must_have && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
@@ -75,11 +83,12 @@ function CollapsibleReview({ review, maxReviewScore }: { review: AdminReview; ma
         <div className="flex items-center gap-2 flex-shrink-0">
           {review.total_score != null && (
             <span className="text-sm font-semibold text-primary-700 bg-primary-50 px-2 py-0.5 rounded">
-              {review.total_score.toFixed(1)}{maxReviewScore != null ? ` / ${maxReviewScore.toFixed(1)}` : ""}
+              {review.total_score.toFixed(1)}
+              {maxReviewScore != null ? ` / ${maxReviewScore.toFixed(1)}` : ''}
             </span>
           )}
           <svg
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -90,23 +99,26 @@ function CollapsibleReview({ review, maxReviewScore }: { review: AdminReview; ma
       </button>
 
       {open && (
-        <div className="px-4 pb-4 border-t border-gray-100 space-y-3">
+        <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
           {review.answers.length > 0 && (
             <div className="mt-3 space-y-1.5">
               {review.answers.map((answer) => (
-                <div key={answer.id} className="text-xs text-gray-600">
+                <div key={answer.id} className="text-xs text-gray-600 dark:text-gray-300">
                   <div className="flex items-start gap-2">
-                    <span className="font-medium text-gray-700 min-w-0 flex-1">
-                      {answer.snapshot_question_text || "Question"}
+                    <span className="font-medium text-gray-700 dark:text-gray-300 min-w-0 flex-1">
+                      {answer.snapshot_question_text || 'Question'}
                     </span>
-                    <span className="flex-shrink-0 text-gray-900 font-medium">
+                    <span className="flex-shrink-0 text-gray-900 dark:text-gray-100 font-medium">
                       {answer.is_unsure
-                        ? "Unsure"
-                        : answer.snapshot_option_label || (answer.numeric_score != null ? `${answer.numeric_score}` : "\u2014")}
+                        ? 'Unsure'
+                        : answer.snapshot_option_label ||
+                          (answer.numeric_score != null ? `${answer.numeric_score}` : '\u2014')}
                     </span>
                   </div>
                   {answer.comment && (
-                    <p className="text-gray-500 mt-0.5 ml-2 italic">{answer.comment}</p>
+                    <p className="text-gray-500 dark:text-gray-400 mt-0.5 ml-2 italic">
+                      {answer.comment}
+                    </p>
                   )}
                 </div>
               ))}
@@ -114,21 +126,31 @@ function CollapsibleReview({ review, maxReviewScore }: { review: AdminReview; ma
           )}
 
           {review.speaker_feedback && (
-            <div className="pt-2 border-t border-gray-100">
-              <p className="text-xs font-medium text-gray-700">Speaker Feedback</p>
-              <RichTextDisplay content={review.speaker_feedback} className="text-xs text-gray-600 mt-0.5" />
+            <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                Speaker Feedback
+              </p>
+              <RichTextDisplay
+                content={review.speaker_feedback}
+                className="text-xs text-gray-600 dark:text-gray-300 mt-0.5"
+              />
             </div>
           )}
 
           {review.internal_comment && (
-            <div className="pt-2 border-t border-gray-100">
-              <p className="text-xs font-medium text-gray-700">Internal Comment</p>
-              <RichTextDisplay content={review.internal_comment} className="text-xs text-gray-600 mt-0.5" />
+            <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                Internal Comment
+              </p>
+              <RichTextDisplay
+                content={review.internal_comment}
+                className="text-xs text-gray-600 dark:text-gray-300 mt-0.5"
+              />
             </div>
           )}
 
           {review.submitted_at && (
-            <p className="text-[10px] text-gray-400 mt-2">
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">
               Submitted {formatDateTime(review.submitted_at)}
             </p>
           )}
@@ -138,9 +160,15 @@ function CollapsibleReview({ review, maxReviewScore }: { review: AdminReview; ma
   );
 }
 
-export default function ReviewsPanel({ paperId, maxReviewScore }: { paperId: string; maxReviewScore?: number | null }) {
+export default function ReviewsPanel({
+  paperId,
+  maxReviewScore,
+}: {
+  paperId: string;
+  maxReviewScore?: number | null;
+}) {
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["paper-reviews", paperId],
+    queryKey: ['paper-reviews', paperId],
     queryFn: async () => {
       const res = await api.get<ReviewListResponse>(`/cfp/papers/${paperId}/reviews`);
       return res.data;
@@ -158,7 +186,7 @@ export default function ReviewsPanel({ paperId, maxReviewScore }: { paperId: str
   if (isError) {
     return (
       <p className="text-sm text-red-600 py-2">
-        Failed to load reviews: {error instanceof Error ? error.message : "Unknown error"}
+        Failed to load reviews: {error instanceof Error ? error.message : 'Unknown error'}
       </p>
     );
   }
@@ -166,7 +194,9 @@ export default function ReviewsPanel({ paperId, maxReviewScore }: { paperId: str
   const reviews = data?.items ?? [];
 
   if (reviews.length === 0) {
-    return <p className="text-sm text-gray-500 py-2">No reviews submitted yet.</p>;
+    return (
+      <p className="text-sm text-gray-500 dark:text-gray-400 py-2">No reviews submitted yet.</p>
+    );
   }
 
   return (

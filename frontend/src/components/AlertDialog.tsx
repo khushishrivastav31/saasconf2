@@ -38,22 +38,22 @@ export default function AlertDialog({
 
   const variantStyles = {
     error: {
-      bg: 'bg-red-100',
+      bg: 'bg-red-100 dark:bg-red-900/30',
       icon: 'text-red-600',
       button: 'bg-red-600 hover:bg-red-700',
     },
     warning: {
-      bg: 'bg-yellow-100',
+      bg: 'bg-yellow-100 dark:bg-yellow-900/30',
       icon: 'text-yellow-600',
       button: 'bg-yellow-600 hover:bg-yellow-700',
     },
     info: {
-      bg: 'bg-blue-100',
+      bg: 'bg-blue-100 dark:bg-blue-900/30',
       icon: 'text-blue-600',
       button: 'bg-blue-600 hover:bg-blue-700',
     },
     success: {
-      bg: 'bg-green-100',
+      bg: 'bg-green-100 dark:bg-green-900/30',
       icon: 'text-green-600',
       button: 'bg-green-600 hover:bg-green-700',
     },

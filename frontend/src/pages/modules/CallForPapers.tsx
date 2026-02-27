@@ -222,7 +222,7 @@ export default function CallForPapersPage() {
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">Draft</p>
-            <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.draft}</p>
+            <p className="text-2xl font-bold text-gray-600 dark:text-gray-300">{stats.draft}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">Open</p>

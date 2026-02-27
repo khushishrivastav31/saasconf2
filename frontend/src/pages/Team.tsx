@@ -385,7 +385,7 @@ function AddMemberModal({
             <input
               type="email"
               required
-              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300'}`}
+              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               onBlur={(e) => setEmailError(validateEmail(e.target.value))}
@@ -677,7 +677,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
               <input
                 type="email"
                 required
-                className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300'}`}
+                className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 onBlur={(e) => setEmailError(validateEmail(e.target.value))}
@@ -693,7 +693,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
                 <input
                   type="text"
                   required
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
                   value={formData.first_name}
                   onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                 />
@@ -705,7 +705,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
                 <input
                   type="text"
                   required
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
                   value={formData.last_name}
                   onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                 />
@@ -719,7 +719,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
                     Pronouns
                   </label>
                   <select
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
                     value={formData.pronouns || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, pronouns: e.target.value || undefined })
@@ -739,7 +739,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
                   Role
                 </label>
                 <select
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
                   value={formData.role}
                   onChange={(e) =>
                     setFormData({ ...formData, role: e.target.value as 'tenant_admin' | 'user' })
@@ -752,12 +752,12 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
             </div>
 
             <div className="flex items-center justify-between py-1">
-              <label className="text-sm font-medium text-gray-700">Active</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Active</label>
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
                 className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                  formData.is_active ? 'bg-primary-600' : 'bg-gray-200'
+                  formData.is_active ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
                 }`}
               >
                 <span
@@ -774,7 +774,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
                 type="password"
                 minLength={8}
                 placeholder="Leave empty to keep current"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
@@ -807,7 +807,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
                 }}
                 className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
               />
-              <span className="text-sm text-gray-700">All Conferences</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">All Conferences</span>
             </label>
 
             {!formData.has_all_conference_access && (
@@ -831,7 +831,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
                                 accessLevel: e.target.value as 'admin' | 'read_only',
                               })
                             }
-                            className="text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            className="text-xs border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
                           >
                             <option value="read_only">Read-only</option>
                             <option value="admin">Admin</option>
@@ -880,7 +880,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
                       <div className="flex items-center gap-1.5">
                         <select
                           id="add-conference-select"
-                          className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          className="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
                           defaultValue=""
                         >
                           <option value="" disabled>
@@ -920,7 +920,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
         </div>
       </div>
 
-      <div className="px-6 py-3 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+      <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end gap-3">
         <button
           type="button"
           onClick={onClose}

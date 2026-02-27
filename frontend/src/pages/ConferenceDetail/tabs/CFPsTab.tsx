@@ -327,7 +327,7 @@ export default function ConferenceCFPsTab({
               type="text"
               readOnly
               value={`${window.location.origin}/${conference.tenant_slug}/portal/${conference.abbreviation}`}
-              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400"
+              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-300"
             />
             <button
               type="button"

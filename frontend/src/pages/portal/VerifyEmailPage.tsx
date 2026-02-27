@@ -42,7 +42,7 @@ function VerifyEmailPage() {
           {status === 'verifying' && (
             <>
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-4"></div>
-              <p className="text-gray-600 dark:text-gray-400">Verifying your email...</p>
+              <p className="text-gray-600 dark:text-gray-300">Verifying your email...</p>
             </>
           )}
 
@@ -66,7 +66,7 @@ function VerifyEmailPage() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Email Verified
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{message}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">{message}</p>
               <Link
                 to={`/${companySlug}/portal/user/login`}
                 className="text-sm text-primary-600 hover:text-primary-700 font-medium"
@@ -96,7 +96,7 @@ function VerifyEmailPage() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Verification Failed
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{message}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{message}</p>
             </>
           )}
         </div>

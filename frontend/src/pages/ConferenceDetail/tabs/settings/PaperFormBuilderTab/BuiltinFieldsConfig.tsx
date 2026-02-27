@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -9,15 +9,15 @@ import {
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import type { BuiltinFieldConfig } from "../../../../../types";
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import type { BuiltinFieldConfig } from '../../../../../types';
 
 interface BuiltinFieldDef {
   key: string;
@@ -71,9 +71,9 @@ function SortableBuiltinField({
       style={style}
       className={`flex items-center justify-between p-3 rounded-lg border ${
         fieldConfig.visible
-          ? "border-gray-200 bg-white"
-          : "border-gray-100 bg-gray-50"
-      } ${isDragging ? "shadow-lg" : ""}`}
+          ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+          : 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'
+      } ${isDragging ? 'shadow-lg' : ''}`}
     >
       <div className="flex items-center gap-3">
         {/* Drag Handle */}
@@ -81,16 +81,23 @@ function SortableBuiltinField({
           <button
             {...attributes}
             {...listeners}
-            className="flex-shrink-0 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing touch-none"
+            className="flex-shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 8h16M4 16h16"
+              />
             </svg>
           </button>
         )}
         <span
           className={`text-sm font-medium ${
-            fieldConfig.visible ? "text-gray-900" : "text-gray-400"
+            fieldConfig.visible
+              ? 'text-gray-900 dark:text-gray-100'
+              : 'text-gray-400 dark:text-gray-500'
           }`}
         >
           {field.label}
@@ -117,9 +124,9 @@ function SortableBuiltinField({
               })
             }
             disabled={!isAdmin || field.alwaysRequired}
-            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+            className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
           />
-          <span className="text-xs text-gray-600">Visible</span>
+          <span className="text-xs text-gray-600 dark:text-gray-300">Visible</span>
         </label>
         <label className="flex items-center gap-2">
           <input
@@ -132,9 +139,9 @@ function SortableBuiltinField({
               })
             }
             disabled={!isAdmin || field.alwaysRequired}
-            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+            className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
           />
-          <span className="text-xs text-gray-600">Required</span>
+          <span className="text-xs text-gray-600 dark:text-gray-300">Required</span>
         </label>
       </div>
     </div>
@@ -160,8 +167,10 @@ export default function BuiltinFieldsConfig({
   // Sort fields by display_order from config, falling back to original order
   const sortedFields = useMemo(() => {
     return [...builtinFields].sort((a, b) => {
-      const orderA = config[a.key]?.display_order ?? builtinFields.findIndex((f) => f.key === a.key);
-      const orderB = config[b.key]?.display_order ?? builtinFields.findIndex((f) => f.key === b.key);
+      const orderA =
+        config[a.key]?.display_order ?? builtinFields.findIndex((f) => f.key === a.key);
+      const orderB =
+        config[b.key]?.display_order ?? builtinFields.findIndex((f) => f.key === b.key);
       return orderA - orderB;
     });
   }, [builtinFields, config]);
@@ -193,10 +202,8 @@ export default function BuiltinFieldsConfig({
 
   return (
     <div>
-      <h4 className="text-sm font-medium text-gray-700 mb-3">
-        Built-in Fields
-      </h4>
-      <p className="text-xs text-gray-500 mb-4">
+      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Built-in Fields</h4>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
         Configure visibility, requirements, and order for standard paper fields
       </p>
       <DndContext

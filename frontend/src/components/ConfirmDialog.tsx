@@ -56,7 +56,7 @@ export default function ConfirmDialog({
         <div className="flex items-start gap-4">
           <div
             className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-              isDanger ? 'bg-red-100' : 'bg-yellow-100'
+              isDanger ? 'bg-red-100 dark:bg-red-900/30' : 'bg-yellow-100 dark:bg-yellow-900/30'
             }`}
           >
             <svg

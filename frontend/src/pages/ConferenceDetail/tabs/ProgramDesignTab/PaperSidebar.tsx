@@ -322,7 +322,7 @@ export default function PaperSidebar({
           title="Show accepted papers"
         >
           <svg
-            className="w-5 h-5 text-gray-600 dark:text-gray-400"
+            className="w-5 h-5 text-gray-600 dark:text-gray-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -421,7 +421,7 @@ export default function PaperSidebar({
             {groupedUnassigned.map((group) => (
               <div key={group.name}>
                 <div className="px-2 py-1.5 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-10">
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
                     {group.name}
                   </span>
                   <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">

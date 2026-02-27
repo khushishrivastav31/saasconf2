@@ -1,9 +1,9 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import { PAPER_STATUS_COLORS, PAPER_STATUS_LABELS } from "../../../../config/statusColors";
-import { formatDate } from "../../../../utils/formatDate";
-import type { Paper } from "../../../../types";
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import { PAPER_STATUS_COLORS, PAPER_STATUS_LABELS } from '../../../../config/statusColors';
+import { formatDate } from '../../../../utils/formatDate';
+import type { Paper } from '../../../../types';
 
 interface PaperListResponse {
   items: Paper[];
@@ -17,9 +17,9 @@ interface ConferenceGroup {
 
 export function ApplicantPapers({ applicantId }: { applicantId: string }) {
   const { data, isLoading } = useQuery({
-    queryKey: ["cfp-applicant-papers", applicantId],
+    queryKey: ['cfp-applicant-papers', applicantId],
     queryFn: async () => {
-      const response = await api.get<PaperListResponse>("/cfp/papers", {
+      const response = await api.get<PaperListResponse>('/cfp/papers', {
         params: { applicant_id: applicantId },
       });
       return response.data;
@@ -32,7 +32,7 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
     const groups = new Map<string, ConferenceGroup>();
 
     for (const paper of data.items) {
-      const key = paper.conference_name || "Other";
+      const key = paper.conference_name || 'Other';
       if (!groups.has(key)) {
         groups.set(key, { conferenceName: key, papers: [] });
       }
@@ -49,7 +49,7 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
     }
 
     return Array.from(groups.values()).sort((a, b) =>
-      a.conferenceName.localeCompare(b.conferenceName),
+      a.conferenceName.localeCompare(b.conferenceName)
     );
   }, [data]);
 
@@ -57,7 +57,7 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
 
   if (isLoading) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
         <div className="flex justify-center py-4">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600" />
         </div>
@@ -66,12 +66,12 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-200">
+      <div className="px-5 py-3.5 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2.5">
           <svg
-            className="w-5 h-5 text-gray-500"
+            className="w-5 h-5 text-gray-500 dark:text-gray-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -83,7 +83,7 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="text-sm font-semibold text-gray-900">Papers</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Papers</h3>
           {totalPapers > 0 && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
               {totalPapers}
@@ -96,7 +96,7 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
       {totalPapers === 0 ? (
         <div className="px-5 py-8 text-center">
           <svg
-            className="mx-auto w-8 h-8 text-gray-300 mb-2"
+            className="mx-auto w-8 h-8 text-gray-300 dark:text-gray-600 mb-2"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -108,16 +108,16 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <p className="text-sm text-gray-400">No papers submitted yet.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">No papers submitted yet.</p>
         </div>
       ) : (
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {grouped.map((group) => (
             <div key={group.conferenceName}>
               {/* Conference group header */}
-              <div className="px-5 py-2.5 bg-gray-50/60 flex items-center gap-2">
+              <div className="px-5 py-2.5 bg-gray-50/60 dark:bg-gray-900/60 flex items-center gap-2">
                 <svg
-                  className="w-4 h-4 text-gray-400 flex-shrink-0"
+                  className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -129,10 +129,10 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
                   {group.conferenceName}
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 dark:text-gray-500">
                   ({group.papers.length})
                 </span>
               </div>
@@ -143,28 +143,28 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
                 return (
                   <div
                     key={paper.id}
-                    className="px-5 py-3 flex items-start gap-3 hover:bg-gray-50/50 transition-colors"
+                    className="px-5 py-3 flex items-start gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors"
                   >
                     {/* Status dot */}
                     <div className="pt-1.5 flex-shrink-0">
                       <div
                         className={`w-2 h-2 rounded-full ${
-                          paper.status === "accepted"
-                            ? "bg-green-500"
-                            : paper.status === "rejected"
-                              ? "bg-red-500"
-                              : paper.status === "submitted" ||
-                                  paper.status === "in_evaluation" ||
-                                  paper.status === "evaluated"
-                                ? "bg-blue-500"
-                                : "bg-gray-300"
+                          paper.status === 'accepted'
+                            ? 'bg-green-500'
+                            : paper.status === 'rejected'
+                              ? 'bg-red-500'
+                              : paper.status === 'submitted' ||
+                                  paper.status === 'in_evaluation' ||
+                                  paper.status === 'evaluated'
+                                ? 'bg-blue-500'
+                                : 'bg-gray-300'
                         }`}
                       />
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                           {paper.title}
                         </p>
                         {isCospeaker && (
@@ -175,7 +175,7 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
                       </div>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                         {paper.cfp_title && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
                             {paper.cfp_title}
                           </span>
                         )}
@@ -185,14 +185,12 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
                           </span>
                         )}
                         {paper.submitted_at ? (
-                          <span className="text-xs text-gray-400">
-                            Submitted{" "}
-                            {formatDate(paper.submitted_at)}
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            Submitted {formatDate(paper.submitted_at)}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-400">
-                            Created{" "}
-                            {formatDate(paper.created_at)}
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            Created {formatDate(paper.created_at)}
                           </span>
                         )}
                       </div>
@@ -201,11 +199,10 @@ export function ApplicantPapers({ applicantId }: { applicantId: string }) {
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 mt-0.5 ${
                         PAPER_STATUS_COLORS[paper.status] ||
-                        "bg-gray-100 text-gray-700"
+                        'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                       }`}
                     >
-                      {PAPER_STATUS_LABELS[paper.status] ||
-                        paper.status.replace("_", " ")}
+                      {PAPER_STATUS_LABELS[paper.status] || paper.status.replace('_', ' ')}
                     </span>
                   </div>
                 );

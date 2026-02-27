@@ -58,7 +58,7 @@ function PortalAttachmentDisplay({
       className={`flex items-center gap-2 text-xs px-2.5 py-1.5 rounded mt-1 ${
         isMe
           ? 'bg-blue-500/30 text-blue-100 hover:bg-blue-500/50'
-          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
       }`}
     >
       <svg
@@ -219,7 +219,7 @@ export default function MessagesPage() {
             className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
               showArchived
                 ? 'bg-gray-700 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
           >
             {showArchived ? 'Showing Archived' : 'Archived'}
@@ -360,7 +360,7 @@ export default function MessagesPage() {
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
                       isArchived
                         ? 'text-blue-700 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 hover:bg-blue-100'
-                        : 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        : 'text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >
                     <svg
@@ -537,12 +537,15 @@ function PortalComposeModal({
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div
-        className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 flex flex-col"
+        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl mx-4 flex flex-col"
         style={{ height: 'min(80vh, 700px)' }}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
-          <h2 className="text-lg font-semibold">New Message</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-700 flex-shrink-0">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">New Message</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -557,11 +560,13 @@ function PortalComposeModal({
           {/* Conference selector */}
           {conferences && conferences.length > 1 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Conference</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Conference
+              </label>
               <select
                 value={conferenceId}
                 onChange={(e) => setConferenceId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">Select a conference...</option>
                 {conferences.map((c) => (
@@ -574,25 +579,33 @@ function PortalComposeModal({
           )}
           {conferences && conferences.length === 1 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
-              <p className="text-sm text-gray-600">{conferences[0].name} organizers</p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                To
+              </label>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {conferences[0].name} organizers
+              </p>
             </div>
           )}
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Subject
+            </label>
             <input
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Message subject"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
               maxLength={500}
             />
           </div>
           {/* Body */}
           <div className="flex-1 min-h-0">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Message
+            </label>
             <RichTextEditor
               value={bodyHtml}
               onChange={setBodyHtml}
@@ -608,10 +621,10 @@ function PortalComposeModal({
             onAttachmentsChange={setAttachments}
           />
         </div>
-        <div className="flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t dark:border-gray-700 flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

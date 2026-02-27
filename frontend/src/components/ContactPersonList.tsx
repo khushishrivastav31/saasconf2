@@ -157,7 +157,7 @@ export default function ContactPersonList({
                       <button
                         type="button"
                         onClick={cancelEditing}
-                        className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
                         Cancel
                       </button>
@@ -217,7 +217,7 @@ export default function ContactPersonList({
                         </div>
                       </div>
                       {contact.comment && (
-                        <div className="mt-2 ml-11 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded px-3 py-1.5">
+                        <div className="mt-2 ml-11 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded px-3 py-1.5">
                           <RichTextDisplay content={contact.comment} />
                         </div>
                       )}

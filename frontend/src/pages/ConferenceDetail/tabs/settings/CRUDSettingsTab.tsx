@@ -238,8 +238,8 @@ export default function CRUDSettingsTab<
       {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between mb-4">
         <div>
-          <h2 className="text-lg font-medium text-gray-900">{title}</h2>
-          <p className="mt-1 text-sm text-gray-500">{description}</p>
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
         </div>
         {isAdmin && (
           <button
@@ -266,26 +266,26 @@ export default function CRUDSettingsTab<
           message={`Failed to load ${title.toLowerCase()}: ${parseApiError(queryError)}`}
         />
       ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 {columns.map((col) => (
                   <th
                     key={col.key}
-                    className={`px-6 py-3 ${col.headerAlign ?? 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    className={`px-6 py-3 ${col.headerAlign ?? 'text-left'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider`}
                   >
                     {col.label}
                   </th>
                 ))}
                 {isAdmin && (
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 )}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {data?.items?.map((item) => (
                 <tr key={item.id}>
                   {columns.map((col) => (
@@ -296,7 +296,7 @@ export default function CRUDSettingsTab<
                       {col.render ? (
                         col.render(item)
                       ) : (
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-gray-900 dark:text-gray-100">
                           {String((item as Record<string, unknown>)[col.key] ?? '')}
                         </div>
                       )}
@@ -306,7 +306,7 @@ export default function CRUDSettingsTab<
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => handleEdit(item)}
-                        className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors mr-2"
+                        className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors mr-2"
                         title="Edit"
                       >
                         <EditIcon />
@@ -314,7 +314,7 @@ export default function CRUDSettingsTab<
                       {deleteConfig?.canDelete && !deleteConfig.canDelete(item) ? (
                         <button
                           disabled
-                          className="text-gray-300 cursor-not-allowed p-1 rounded transition-colors"
+                          className="text-gray-300 dark:text-gray-600 cursor-not-allowed p-1 rounded transition-colors"
                           title={deleteConfig.disabledTitle?.(item) ?? 'Cannot delete'}
                         >
                           <DeleteIcon />
@@ -322,7 +322,7 @@ export default function CRUDSettingsTab<
                       ) : (
                         <button
                           onClick={() => handleDelete(item)}
-                          className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                          className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                           title={deleteConfig?.enabledTitle ?? 'Delete'}
                         >
                           <DeleteIcon />
@@ -336,7 +336,7 @@ export default function CRUDSettingsTab<
                 <tr>
                   <td
                     colSpan={totalColumns}
-                    className="px-6 py-12 text-center text-sm text-gray-500"
+                    className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
                   >
                     No {title.toLowerCase()} defined yet. Click &quot;
                     {addButtonLabel ?? `Add ${entityName}`}&quot; to create one.
@@ -479,13 +479,13 @@ function DefaultFormModal<TEntity extends { id: string; name: string }, TCreate>
                   <input
                     id={field.checkboxId ?? `crud-field-${field.key}`}
                     type="checkbox"
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                     checked={!!formData[field.key]}
                     onChange={(e) => setField(field.key, e.target.checked)}
                   />
                   <label
                     htmlFor={field.checkboxId ?? `crud-field-${field.key}`}
-                    className="ml-2 block text-sm text-gray-900"
+                    className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
                   >
                     {field.label}
                   </label>
@@ -495,7 +495,7 @@ function DefaultFormModal<TEntity extends { id: string; name: string }, TCreate>
 
             return (
               <div key={field.key}>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   {field.label}
                   {field.required ? ' *' : ''}
                 </label>
@@ -504,7 +504,7 @@ function DefaultFormModal<TEntity extends { id: string; name: string }, TCreate>
                     required={field.required}
                     rows={field.rows ?? 3}
                     placeholder={field.placeholder}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                     value={String(formData[field.key] ?? '')}
                     onChange={(e) => setField(field.key, e.target.value)}
                   />
@@ -515,14 +515,14 @@ function DefaultFormModal<TEntity extends { id: string; name: string }, TCreate>
                     min={field.min}
                     step={field.step}
                     placeholder={field.placeholder}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                     value={String(formData[field.key] ?? '')}
                     onChange={(e) => setField(field.key, parseFloat(e.target.value) || 0)}
                   />
                 ) : field.type === 'select' ? (
                   <select
                     required={field.required}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                     value={String(formData[field.key] ?? '')}
                     onChange={(e) => setField(field.key, e.target.value)}
                   >
@@ -541,12 +541,14 @@ function DefaultFormModal<TEntity extends { id: string; name: string }, TCreate>
                       pattern={field.pattern}
                       title={field.title}
                       placeholder={field.placeholder}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                       value={String(formData[field.key] ?? '')}
                       onChange={(e) => setField(field.key, e.target.value)}
                     />
                     {field.helpText && (
-                      <p className="mt-1 text-xs text-gray-500">{field.helpText}</p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {field.helpText}
+                      </p>
                     )}
                   </>
                 )}

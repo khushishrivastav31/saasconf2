@@ -368,7 +368,7 @@ export function PaperForm({
 
       {/* Title */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Title <span className="text-red-500">*</span>
         </label>
         <input
@@ -377,19 +377,21 @@ export function PaperForm({
           onChange={(e) => setFormData((d) => ({ ...d, title: e.target.value }))}
           disabled={!canEdit}
           maxLength={500}
-          className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
           required
         />
       </div>
 
       {/* Session Type */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Session Type</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Session Type
+        </label>
         <select
           value={formData.session_type_id}
           onChange={(e) => setFormData((d) => ({ ...d, session_type_id: e.target.value }))}
           disabled={!canEdit}
-          className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
         >
           <option value="">Select session type...</option>
           {sessionTypes.map((st) => (
@@ -402,7 +404,9 @@ export function PaperForm({
 
       {/* Topics */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Topics</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Topics
+        </label>
         {topics.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {topics.map((topic) => {
@@ -416,7 +420,7 @@ export function PaperForm({
                   className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     isSelected
                       ? 'bg-primary-100 text-primary-700 border-2 border-primary-500'
-                      : 'bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-transparent hover:bg-gray-200 dark:hover:bg-gray-700'
                   } ${!canEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
                   {topic.name}
@@ -434,18 +438,20 @@ export function PaperForm({
             })}
           </div>
         ) : (
-          <p className="text-sm text-gray-500 italic">No topics available.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No topics available.</p>
         )}
       </div>
 
       {/* Level */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Level</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Level
+        </label>
         <select
           value={formData.level}
           onChange={(e) => setFormData((d) => ({ ...d, level: e.target.value as PaperLevel | '' }))}
           disabled={!canEdit}
-          className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
         >
           <option value="">Select level...</option>
           {LEVEL_OPTIONS.map((opt) => (
@@ -458,7 +464,9 @@ export function PaperForm({
 
       {/* Short Abstract */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Short Abstract</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Short Abstract
+        </label>
         <RichTextEditor
           value={formData.abstract_short}
           onChange={(html) => setFormData((d) => ({ ...d, abstract_short: html }))}
@@ -471,7 +479,9 @@ export function PaperForm({
 
       {/* Long Abstract */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Long Abstract</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Long Abstract
+        </label>
         <RichTextEditor
           value={formData.abstract_long}
           onChange={(html) => setFormData((d) => ({ ...d, abstract_long: html }))}
@@ -484,7 +494,9 @@ export function PaperForm({
 
       {/* Learning Objectives */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Learning Objectives</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Learning Objectives
+        </label>
         <RichTextEditor
           value={formData.learning_objectives}
           onChange={(html) => setFormData((d) => ({ ...d, learning_objectives: html }))}
@@ -497,7 +509,7 @@ export function PaperForm({
 
       {/* Why Important */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Why is this talk important?
         </label>
         <RichTextEditor
@@ -512,7 +524,9 @@ export function PaperForm({
 
       {/* Video */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Video</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Video
+        </label>
         <div className="flex items-start gap-4">
           <button
             type="button"
@@ -522,7 +536,7 @@ export function PaperForm({
               }
             }}
             disabled={!videoPreviewSrc}
-            className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex-shrink-0 bg-gray-50 relative ${
+            className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-900 relative ${
               videoPreviewSrc
                 ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
                 : ''
@@ -540,7 +554,7 @@ export function PaperForm({
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                   <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
                     <svg
-                      className="w-4 h-4 text-gray-700 ml-0.5"
+                      className="w-4 h-4 text-gray-700 dark:text-gray-300 ml-0.5"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                     >
@@ -550,7 +564,7 @@ export function PaperForm({
                 </div>
               </>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300">
+              <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -569,9 +583,11 @@ export function PaperForm({
                   type="file"
                   accept={ACCEPTED_VIDEO_FORMATS}
                   onChange={handleVideoChange}
-                  className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                  className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
                 />
-                <p className="mt-1 text-xs text-gray-400">MP4, MOV, WebM, AVI, or MKV. Max 50MB.</p>
+                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                  MP4, MOV, WebM, AVI, or MKV. Max 50MB.
+                </p>
               </>
             )}
             {videoError && <p className="mt-1 text-xs text-red-600">{videoError}</p>}
@@ -582,23 +598,32 @@ export function PaperForm({
       {/* Comments (read-only) */}
       {paper && paper.comments.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Committee Comments</label>
-          <div className="space-y-3 bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Committee Comments
+          </label>
+          <div className="space-y-3 bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
             {paper.comments.map((comment) => (
-              <div key={comment.id} className="bg-white rounded-md p-3 border border-gray-100">
+              <div
+                key={comment.id}
+                className="bg-white dark:bg-gray-800 rounded-md p-3 border border-gray-100 dark:border-gray-700"
+              >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-900">
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {`${comment.committee_member_first_name} ${comment.committee_member_last_name}`.trim() ||
                       'Committee Member'}
                     {comment.committee_member_role && (
-                      <span className="text-xs text-gray-400 font-normal ml-1.5 capitalize">
+                      <span className="text-xs text-gray-400 dark:text-gray-500 font-normal ml-1.5 capitalize">
                         ({comment.committee_member_role.replace('_', ' ')})
                       </span>
                     )}
                   </span>
-                  <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    {formatDate(comment.created_at)}
+                  </span>
                 </div>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  {comment.content}
+                </p>
               </div>
             ))}
           </div>
@@ -608,10 +633,12 @@ export function PaperForm({
       {/* Assigned Reviewers (read-only) */}
       {paper && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Assigned Reviewers
             {assignments.length > 0 && (
-              <span className="text-gray-400 font-normal ml-1">({assignments.length})</span>
+              <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">
+                ({assignments.length})
+              </span>
             )}
           </label>
           {assignments.length > 0 ? (
@@ -631,13 +658,15 @@ export function PaperForm({
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 italic">No reviewers assigned yet.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+              No reviewers assigned yet.
+            </p>
           )}
         </div>
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
         <div className="flex gap-2">
           {isEditing && onDelete && canEdit && (
             <button
@@ -655,7 +684,7 @@ export function PaperForm({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

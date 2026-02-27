@@ -218,7 +218,7 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
-                        className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400"
+                        className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"
                       >
                         {renderCell(col.key, session, col.getValue(session))}
                       </td>

@@ -122,17 +122,21 @@ export default function ServiceProviderDetailPanel({
     <form id="sp-detail-form" onSubmit={handleSubmit}>
       <div className="px-6 py-5 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Company Name *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Company Name *
+          </label>
           <input
             type="text"
             required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.company_name}
             onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Service Description</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Service Description
+          </label>
           <RichTextEditor
             value={formData.service_description || ''}
             onChange={(html) =>
@@ -147,10 +151,12 @@ export default function ServiceProviderDetailPanel({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Phone</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Phone
+            </label>
             <input
               type="tel"
-              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${phoneError ? 'border-red-300' : 'border-gray-300'}`}
+              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${phoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
               value={formData.phone || ''}
               onChange={(e) => {
                 const value = e.target.value;
@@ -162,10 +168,12 @@ export default function ServiceProviderDetailPanel({
             {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Email
+            </label>
             <input
               type="email"
-              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300'}`}
+              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
               value={formData.email || ''}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               onBlur={(e) => setEmailError(validateEmail(e.target.value))}
@@ -175,11 +183,13 @@ export default function ServiceProviderDetailPanel({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Website</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Website
+          </label>
           <input
             type="url"
             placeholder="https://"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.website || ''}
             onChange={(e) => setFormData({ ...formData, website: e.target.value })}
           />
@@ -187,10 +197,12 @@ export default function ServiceProviderDetailPanel({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Address Line 1</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Address Line 1
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.address_line1 || ''}
               onChange={(e) =>
                 setFormData({
@@ -201,10 +213,12 @@ export default function ServiceProviderDetailPanel({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Address Line 2</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Address Line 2
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.address_line2 || ''}
               onChange={(e) =>
                 setFormData({
@@ -218,28 +232,34 @@ export default function ServiceProviderDetailPanel({
 
         <div className="grid grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">City</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              City
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.city || ''}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">State</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              State
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.state || ''}
               onChange={(e) => setFormData({ ...formData, state: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Postal Code</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Postal Code
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.postal_code || ''}
               onChange={(e) =>
                 setFormData({
@@ -250,10 +270,12 @@ export default function ServiceProviderDetailPanel({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Country</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Country
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.country || ''}
               onChange={(e) => setFormData({ ...formData, country: e.target.value })}
             />
@@ -261,11 +283,13 @@ export default function ServiceProviderDetailPanel({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">VAT Number</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            VAT Number
+          </label>
           <input
             type="text"
             placeholder="e.g., DE123456789"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.vat_number || ''}
             onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
           />

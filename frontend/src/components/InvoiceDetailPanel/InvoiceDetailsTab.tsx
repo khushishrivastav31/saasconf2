@@ -268,7 +268,7 @@ export default function InvoiceDetailsTab({
                 value={conferenceCurrency || ''}
                 disabled
                 title="Set by conference"
-                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 shadow-sm py-2 px-3 text-sm text-gray-600 dark:text-gray-400"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 shadow-sm py-2 px-3 text-sm text-gray-600 dark:text-gray-300"
               />
             ) : (
               <select

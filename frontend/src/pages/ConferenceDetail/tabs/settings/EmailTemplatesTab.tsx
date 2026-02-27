@@ -96,8 +96,8 @@ function EmailTemplatesTab({ conference, isAdmin }: { conference: Conference; is
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-4">
         <div>
-          <h2 className="text-lg font-medium text-gray-900">Email Templates</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Email Templates</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Customize email templates sent to speakers and committee members
           </p>
         </div>
@@ -110,42 +110,47 @@ function EmailTemplatesTab({ conference, isAdmin }: { conference: Conference; is
       ) : isError ? (
         <ErrorBanner message={parseApiError(queryError, 'Failed to load templates')} />
       ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Template Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Subject
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {data?.items?.map((template) => (
-                <tr key={template.template_type} className="hover:bg-gray-50">
+                <tr
+                  key={template.template_type}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {EMAIL_TEMPLATE_LABELS[template.template_type as EmailTemplateType] ||
                             template.template_type}
                         </div>
                         {!template.id && (
-                          <div className="text-xs text-gray-400">Using default template</div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                            Using default template
+                          </div>
                         )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 truncate max-w-md">
+                    <div className="text-sm text-gray-900 dark:text-gray-100 truncate max-w-md">
                       {template.subject}
                     </div>
                   </td>
@@ -167,7 +172,10 @@ function EmailTemplatesTab({ conference, isAdmin }: { conference: Conference; is
               ))}
               {(!data?.items || data.items.length === 0) && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                  <td
+                    colSpan={4}
+                    className="px-6 py-4 text-center text-gray-500 dark:text-gray-400"
+                  >
                     No email templates found
                   </td>
                 </tr>
@@ -359,24 +367,26 @@ function EmailTemplateForm({
               </svg>
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
                 The following placeholders are not recognized and will not be replaced:
               </p>
-              <ul className="mt-2 list-disc list-inside text-sm text-gray-600">
+              <ul className="mt-2 list-disc list-inside text-sm text-gray-600 dark:text-gray-300">
                 {placeholderWarning?.map((p) => (
                   <li key={p}>
-                    <code className="bg-yellow-100 px-1 rounded text-yellow-800">[{p}]</code>
+                    <code className="bg-yellow-100 dark:bg-yellow-900/30 px-1 rounded text-yellow-800">
+                      [{p}]
+                    </code>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
         </div>
-        <div className="px-4 py-3 bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900 flex justify-end space-x-3 rounded-b-lg">
           <button
             type="button"
             onClick={() => setPlaceholderWarning(null)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Go Back & Fix
           </button>
@@ -392,18 +402,22 @@ function EmailTemplateForm({
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Subject
+          </label>
           <input
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">HTML Body</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            HTML Body
+          </label>
           <RichTextEditor
             value={bodyHtml}
             onChange={handleHtmlChange}
@@ -412,15 +426,17 @@ function EmailTemplateForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Plain Text Body{' '}
-            <span className="text-gray-400 font-normal">(auto-generated from HTML)</span>
+            <span className="text-gray-400 dark:text-gray-500 font-normal">
+              (auto-generated from HTML)
+            </span>
           </label>
           <textarea
             value={bodyText}
             onChange={(e) => setBodyText(e.target.value)}
             rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 font-mono text-sm dark:bg-gray-800 dark:text-gray-100"
             placeholder="Plain text version will be auto-generated..."
           />
         </div>
@@ -431,9 +447,12 @@ function EmailTemplateForm({
             id="is_active"
             checked={isActive}
             onChange={(e) => setIsActive(e.target.checked)}
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
           />
-          <label htmlFor="is_active" className="ml-2 block text-sm text-gray-700">
+          <label
+            htmlFor="is_active"
+            className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+          >
             Template is active
           </label>
         </div>
@@ -445,9 +464,11 @@ function EmailTemplateForm({
         />
 
         {/* Placeholders reference */}
-        <div className="bg-gray-50 p-4 rounded-md">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Available Placeholders</h4>
-          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+        <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md">
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Available Placeholders
+          </h4>
+          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300">
             <div>
               <code>[First Name]</code> - Recipient's first name
             </div>
@@ -511,7 +532,9 @@ function EmailTemplateForm({
         {/* Preview section */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">Preview</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Preview
+            </label>
             <div className="flex space-x-2">
               <button
                 type="button"
@@ -519,7 +542,7 @@ function EmailTemplateForm({
                 className={`px-3 py-1 text-xs rounded ${
                   activePreviewTab === 'html'
                     ? 'bg-primary-100 text-primary-700'
-                    : 'bg-gray-100 text-gray-600'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
                 }`}
               >
                 HTML
@@ -530,21 +553,21 @@ function EmailTemplateForm({
                 className={`px-3 py-1 text-xs rounded ${
                   activePreviewTab === 'text'
                     ? 'bg-primary-100 text-primary-700'
-                    : 'bg-gray-100 text-gray-600'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
                 }`}
               >
                 Plain Text
               </button>
             </div>
           </div>
-          <div className="border border-gray-200 rounded-md p-4 bg-white max-h-64 overflow-auto">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-md p-4 bg-white dark:bg-gray-800 max-h-64 overflow-auto">
             {activePreviewTab === 'html' ? (
               <div
                 className="prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(bodyHtml) }}
               />
             ) : (
-              <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700">
+              <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700 dark:text-gray-300">
                 {bodyText || '(No plain text version)'}
               </pre>
             )}

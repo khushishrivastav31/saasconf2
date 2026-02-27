@@ -386,7 +386,7 @@ function EditableCriterionSection({
         {criterion.description && (
           <RichTextDisplay
             content={criterion.description}
-            className="text-sm text-gray-600 dark:text-gray-400 mt-1"
+            className="text-sm text-gray-600 dark:text-gray-300 mt-1"
           />
         )}
       </div>
@@ -469,7 +469,7 @@ function EditableQuestion({
       {/* Comment textarea */}
       {showComment && (
         <div className="mt-2">
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
             {commentLabel}
           </label>
           <textarea
@@ -506,7 +506,7 @@ function ReadOnlyCriterionSection({
         {criterion.description && (
           <RichTextDisplay
             content={criterion.description}
-            className="text-sm text-gray-600 dark:text-gray-400 mt-1"
+            className="text-sm text-gray-600 dark:text-gray-300 mt-1"
           />
         )}
       </div>

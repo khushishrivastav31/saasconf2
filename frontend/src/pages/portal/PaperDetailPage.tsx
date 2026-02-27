@@ -534,7 +534,7 @@ function PaperDetailPage() {
                     }
                   }}
                   disabled={!videoPreviewSrc}
-                  className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex-shrink-0 bg-gray-50 relative ${
+                  className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-900 relative ${
                     videoPreviewSrc
                       ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
                       : ''
@@ -870,7 +870,7 @@ function PaperDetailPage() {
                       src: videoPreviewSrc,
                     })
                   }
-                  className="w-24 h-24 rounded-lg border-2 border-gray-300 overflow-hidden bg-gray-50 relative cursor-pointer hover:border-primary-400 hover:shadow-md transition-all"
+                  className="w-24 h-24 rounded-lg border-2 border-gray-300 dark:border-gray-600 overflow-hidden bg-gray-50 dark:bg-gray-900 relative cursor-pointer hover:border-primary-400 hover:shadow-md transition-all"
                   title="Click to play video"
                 >
                   <video
@@ -955,7 +955,7 @@ function PaperDetailPage() {
                 </div>
                 <RichTextDisplay
                   content={feedback.speaker_feedback}
-                  className="text-sm text-gray-700"
+                  className="text-sm text-gray-700 dark:text-gray-300"
                 />
               </div>
             ))}

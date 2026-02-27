@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../../config/api";
-import { useIsAdmin } from "../../../../hooks/useIsAdmin";
+import { useState, useMemo, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../../config/api';
+import { useIsAdmin } from '../../../../hooks/useIsAdmin';
 import type {
   Paper,
   PaperAssignment,
@@ -10,13 +10,13 @@ import type {
   Conference,
   CallForPapers,
   AutoAssignResponse,
-} from "../../../../types";
-import { parseApiError } from "../../../../utils/apiError";
-import { PAPER_STATUS_COLORS } from "../../../../config/statusColors";
-import Modal from "../../../../components/Modal";
-import { ErrorBanner } from "../../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../../components/common/LoadingSpinner";
-import { PaperDetailModal } from "./PaperDetailModal";
+} from '../../../../types';
+import { parseApiError } from '../../../../utils/apiError';
+import { PAPER_STATUS_COLORS } from '../../../../config/statusColors';
+import Modal from '../../../../components/Modal';
+import { ErrorBanner } from '../../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
+import { PaperDetailModal } from './PaperDetailModal';
 
 interface PaperListResponse {
   items: Paper[];
@@ -39,7 +39,7 @@ interface ConferenceListResponse {
 // Drag handle icon (6-dot grid)
 function DragHandle({ className }: { className?: string }) {
   return (
-    <svg className={className || "w-4 h-4 text-gray-300"} fill="currentColor" viewBox="0 0 24 24">
+    <svg className={className || 'w-4 h-4 text-gray-300'} fill="currentColor" viewBox="0 0 24 24">
       <circle cx="9" cy="5" r="1.5" />
       <circle cx="15" cy="5" r="1.5" />
       <circle cx="9" cy="12" r="1.5" />
@@ -55,16 +55,19 @@ interface CFPAssignmentsProps {
   isAdmin?: boolean;
 }
 
-export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: CFPAssignmentsProps = {}) {
+export default function CFPAssignments({
+  conferenceId,
+  isAdmin: isAdminProp,
+}: CFPAssignmentsProps = {}) {
   const isAdminFallback = useIsAdmin();
   const isAdmin = isAdminProp ?? isAdminFallback;
   const queryClient = useQueryClient();
-  const [selectedConferenceId, setSelectedConferenceId] = useState<string>(conferenceId ?? "");
-  const [search, setSearch] = useState("");
-  const [memberSearch, setMemberSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "none" | "partial" | "complete">("all");
-  const [paperStatusFilter, setPaperStatusFilter] = useState<string>("all");
-  const [reviewerFilter, setReviewerFilter] = useState<string>("all");
+  const [selectedConferenceId, setSelectedConferenceId] = useState<string>(conferenceId ?? '');
+  const [search, setSearch] = useState('');
+  const [memberSearch, setMemberSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'none' | 'partial' | 'complete'>('all');
+  const [paperStatusFilter, setPaperStatusFilter] = useState<string>('all');
+  const [reviewerFilter, setReviewerFilter] = useState<string>('all');
   const [showAutoAssign, setShowAutoAssign] = useState(false);
   const [autoAssignOnlySubmitted, setAutoAssignOnlySubmitted] = useState(true);
   const [autoAssignResult, setAutoAssignResult] = useState<AutoAssignResponse | null>(null);
@@ -72,7 +75,7 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
 
   // Drag state — tracks what is being dragged and what is being hovered
-  const [dragType, setDragType] = useState<"member" | "paper" | null>(null);
+  const [dragType, setDragType] = useState<'member' | 'paper' | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverPaperId, setDragOverPaperId] = useState<string | null>(null);
   const [dragOverMemberId, setDragOverMemberId] = useState<string | null>(null);
@@ -80,9 +83,9 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
   // ─── Data queries ──────────────────────────────────────────────────────────
 
   const { data: conferencesData } = useQuery({
-    queryKey: ["conferences-for-assignments"],
+    queryKey: ['conferences-for-assignments'],
     queryFn: async () => {
-      const res = await api.get<ConferenceListResponse>("/conferences?page_size=100");
+      const res = await api.get<ConferenceListResponse>('/conferences?page_size=100');
       return res.data;
     },
     enabled: !conferenceId,
@@ -97,7 +100,7 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     pages: number;
   }
   const { data: cfpData } = useQuery({
-    queryKey: ["conference-cfp", selectedConferenceId],
+    queryKey: ['conference-cfp', selectedConferenceId],
     queryFn: async () => {
       const res = await api.get<CFPListResponse>(
         `/cfp?conference_id=${selectedConferenceId}&page_size=1`
@@ -107,11 +110,14 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     enabled: !!selectedConferenceId,
   });
   const cfpSettings = cfpData
-    ? { is_anonymous_review: cfpData.is_anonymous_review, reviewers_per_paper: cfpData.reviewers_per_paper }
+    ? {
+        is_anonymous_review: cfpData.is_anonymous_review,
+        reviewers_per_paper: cfpData.reviewers_per_paper,
+      }
     : { is_anonymous_review: false, reviewers_per_paper: 3 };
 
   const { data: papersData, isLoading: papersLoading } = useQuery({
-    queryKey: ["assignment-papers", selectedConferenceId],
+    queryKey: ['assignment-papers', selectedConferenceId],
     queryFn: async () => {
       const res = await api.get<PaperListResponse>(
         `/cfp/papers?conference_id=${selectedConferenceId}&page_size=500`
@@ -121,10 +127,10 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     enabled: !!selectedConferenceId,
     refetchInterval: 15000,
   });
-  const papers = (papersData?.items ?? []).filter((p) => p.status !== "draft");
+  const papers = (papersData?.items ?? []).filter((p) => p.status !== 'draft');
 
   const { data: allAssignmentsData } = useQuery({
-    queryKey: ["conference-assignments", selectedConferenceId],
+    queryKey: ['conference-assignments', selectedConferenceId],
     queryFn: async () => {
       const res = await api.get<PaperAssignmentListResponse>(
         `/cfp/paper-assignments?conference_id=${selectedConferenceId}`
@@ -134,10 +140,13 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     enabled: !!selectedConferenceId,
     refetchInterval: 15000,
   });
-  const allAssignments = useMemo(() => allAssignmentsData?.items ?? [], [allAssignmentsData?.items]);
+  const allAssignments = useMemo(
+    () => allAssignmentsData?.items ?? [],
+    [allAssignmentsData?.items]
+  );
 
   const { data: membersData } = useQuery({
-    queryKey: ["assignment-committee-members", selectedConferenceId],
+    queryKey: ['assignment-committee-members', selectedConferenceId],
     queryFn: async () => {
       const res = await api.get<CommitteeMemberListResponse>(
         `/cfp/committee-members?conference_id=${selectedConferenceId}`
@@ -171,14 +180,20 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
   }, [allAssignments]);
 
   const paperStatuses = useMemo(() => {
-    const set = new Set<string>(["submitted", "in_evaluation", "final_consideration", "accepted", "rejected"]);
+    const set = new Set<string>([
+      'submitted',
+      'in_evaluation',
+      'final_consideration',
+      'accepted',
+      'rejected',
+    ]);
     for (const p of papers) set.add(p.status);
     return Array.from(set).sort();
   }, [papers]);
 
   const filteredPapers = useMemo(() => {
     let result = papers;
-    if (paperStatusFilter !== "all") {
+    if (paperStatusFilter !== 'all') {
       result = result.filter((p) => p.status === paperStatusFilter);
     }
     if (search) {
@@ -186,18 +201,21 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
       result = result.filter(
         (p) =>
           p.title.toLowerCase().includes(lower) ||
-          `${p.main_speaker?.first_name ?? ""} ${p.main_speaker?.last_name ?? ""}`.trim().toLowerCase().includes(lower)
+          `${p.main_speaker?.first_name ?? ''} ${p.main_speaker?.last_name ?? ''}`
+            .trim()
+            .toLowerCase()
+            .includes(lower)
       );
     }
-    if (statusFilter !== "all") {
+    if (statusFilter !== 'all') {
       result = result.filter((p) => {
         const count = (assignmentsByPaper.get(p.id) || []).length;
-        if (statusFilter === "none") return count === 0;
-        if (statusFilter === "complete") return count >= cfpSettings.reviewers_per_paper;
+        if (statusFilter === 'none') return count === 0;
+        if (statusFilter === 'complete') return count >= cfpSettings.reviewers_per_paper;
         return count > 0 && count < cfpSettings.reviewers_per_paper;
       });
     }
-    if (reviewerFilter !== "all") {
+    if (reviewerFilter !== 'all') {
       result = result.filter((p) => {
         const assigns = assignmentsByPaper.get(p.id) || [];
         return assigns.some((a) => a.committee_member_id === reviewerFilter);
@@ -209,7 +227,15 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
       if (aCount !== bCount) return aCount - bCount;
       return a.title.localeCompare(b.title);
     });
-  }, [papers, search, statusFilter, paperStatusFilter, reviewerFilter, assignmentsByPaper, cfpSettings.reviewers_per_paper]);
+  }, [
+    papers,
+    search,
+    statusFilter,
+    paperStatusFilter,
+    reviewerFilter,
+    assignmentsByPaper,
+    cfpSettings.reviewers_per_paper,
+  ]);
 
   const filteredMembers = useMemo(() => {
     const sorted = [...members].sort((a, b) =>
@@ -256,15 +282,15 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
 
   const assignMutation = useMutation({
     mutationFn: async (data: { paper_id: string; committee_member_id: string }) => {
-      await api.post("/cfp/paper-assignments", {
+      await api.post('/cfp/paper-assignments', {
         ...data,
         is_anonymous: cfpSettings.is_anonymous_review,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conference-assignments", selectedConferenceId] });
-      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ['conference-assignments', selectedConferenceId] });
+      queryClient.invalidateQueries({ queryKey: ['paper-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
       setError(null);
     },
     onError: (err) => setError(parseApiError(err)),
@@ -275,16 +301,16 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
       await api.delete(`/cfp/paper-assignments/${assignmentId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conference-assignments", selectedConferenceId] });
-      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ['conference-assignments', selectedConferenceId] });
+      queryClient.invalidateQueries({ queryKey: ['paper-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
     },
     onError: (err) => setError(parseApiError(err)),
   });
 
   const autoAssignMutation = useMutation({
     mutationFn: async () => {
-      const res = await api.post<AutoAssignResponse>("/cfp/paper-assignments/auto-assign", {
+      const res = await api.post<AutoAssignResponse>('/cfp/paper-assignments/auto-assign', {
         conference_id: selectedConferenceId,
         reviewers_per_paper: cfpSettings.reviewers_per_paper,
         is_anonymous: cfpSettings.is_anonymous_review,
@@ -294,18 +320,18 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     },
     onSuccess: (data) => {
       setAutoAssignResult(data);
-      queryClient.invalidateQueries({ queryKey: ["conference-assignments", selectedConferenceId] });
-      queryClient.invalidateQueries({ queryKey: ["paper-assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["assignment-papers"] });
+      queryClient.invalidateQueries({ queryKey: ['conference-assignments', selectedConferenceId] });
+      queryClient.invalidateQueries({ queryKey: ['paper-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-papers'] });
     },
     onError: (err) => setError(parseApiError(err)),
   });
 
   // ─── Drag & Drop ──────────────────────────────────────────────────────────
 
-  const handleDragStart = (e: React.DragEvent, type: "member" | "paper", id: string) => {
-    e.dataTransfer.setData("application/json", JSON.stringify({ type, id }));
-    e.dataTransfer.effectAllowed = "copy";
+  const handleDragStart = (e: React.DragEvent, type: 'member' | 'paper', id: string) => {
+    e.dataTransfer.setData('application/json', JSON.stringify({ type, id }));
+    e.dataTransfer.effectAllowed = 'copy';
     setDragType(type);
     setDragId(id);
   };
@@ -319,12 +345,12 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
 
   // Drop on a paper card (expects a member being dragged)
   const handlePaperDragOver = (e: React.DragEvent, paperId: string) => {
-    if (dragType !== "member" || !dragId) return;
+    if (dragType !== 'member' || !dragId) return;
     e.preventDefault();
     if (canAssignMemberToPaper(dragId, paperId)) {
-      e.dataTransfer.dropEffect = "copy";
+      e.dataTransfer.dropEffect = 'copy';
     } else {
-      e.dataTransfer.dropEffect = "none";
+      e.dataTransfer.dropEffect = 'none';
     }
     setDragOverPaperId(paperId);
   };
@@ -335,8 +361,8 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     if (!isAdmin) return;
 
     try {
-      const data = JSON.parse(e.dataTransfer.getData("application/json"));
-      if (data.type === "member" && canAssignMemberToPaper(data.id, paperId)) {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      if (data.type === 'member' && canAssignMemberToPaper(data.id, paperId)) {
         assignMutation.mutate({ paper_id: paperId, committee_member_id: data.id });
       }
     } catch {
@@ -347,12 +373,12 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
 
   // Drop on a member card (expects a paper being dragged)
   const handleMemberDragOver = (e: React.DragEvent, memberId: string) => {
-    if (dragType !== "paper" || !dragId) return;
+    if (dragType !== 'paper' || !dragId) return;
     e.preventDefault();
     if (canAssignMemberToPaper(memberId, dragId)) {
-      e.dataTransfer.dropEffect = "copy";
+      e.dataTransfer.dropEffect = 'copy';
     } else {
-      e.dataTransfer.dropEffect = "none";
+      e.dataTransfer.dropEffect = 'none';
     }
     setDragOverMemberId(memberId);
   };
@@ -363,8 +389,8 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     if (!isAdmin) return;
 
     try {
-      const data = JSON.parse(e.dataTransfer.getData("application/json"));
-      if (data.type === "paper" && canAssignMemberToPaper(memberId, data.id)) {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      if (data.type === 'paper' && canAssignMemberToPaper(memberId, data.id)) {
         assignMutation.mutate({ paper_id: data.id, committee_member_id: memberId });
       }
     } catch {
@@ -381,8 +407,8 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Paper Assignments</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Paper Assignments</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Drag members onto papers or papers onto members to assign
           </p>
         </div>
@@ -406,12 +432,13 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
           <select
             value={selectedConferenceId}
             onChange={(e) => setSelectedConferenceId(e.target.value)}
-            className="w-full sm:w-80 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            className="w-full sm:w-80 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           >
             <option value="">Select a conference...</option>
             {conferences.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}{c.abbreviation ? ` (${c.abbreviation})` : ""}
+                {c.name}
+                {c.abbreviation ? ` (${c.abbreviation})` : ''}
               </option>
             ))}
           </select>
@@ -419,14 +446,18 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
       )}
 
       {selectedConferenceId && (
-        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6" style={{ minHeight: "calc(100vh - 300px)" }}>
-
+        <div
+          className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6"
+          style={{ minHeight: 'calc(100vh - 300px)' }}
+        >
           {/* ── Left: Committee Members ────────────────────────────────── */}
           <div className="flex flex-col min-w-0">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-700">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Committee Members
-                <span className="ml-1.5 text-gray-400 font-normal">({members.length})</span>
+                <span className="ml-1.5 text-gray-400 dark:text-gray-500 font-normal">
+                  ({members.length})
+                </span>
               </h2>
             </div>
             <div className="mb-3">
@@ -435,62 +466,65 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
                 placeholder="Search members..."
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-1.5">
               {members.length === 0 ? (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-8 text-center text-gray-400 text-sm">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-8 text-center text-gray-400 dark:text-gray-500 text-sm">
                   No committee members found.
                 </div>
               ) : filteredMembers.length === 0 ? (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-8 text-center text-gray-400 text-sm">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-8 text-center text-gray-400 dark:text-gray-500 text-sm">
                   No members match your search.
                 </div>
               ) : (
                 filteredMembers.map((member) => {
                   const memberAssigns = assignmentsByMember.get(member.id) || [];
-                  const isDragging = dragType === "member" && dragId === member.id;
-                  const isDropTarget = dragType === "paper" && dragId;
+                  const isDragging = dragType === 'member' && dragId === member.id;
+                  const isDropTarget = dragType === 'paper' && dragId;
                   const isOver = dragOverMemberId === member.id;
-                  const canDrop = isDropTarget && dragId ? canAssignMemberToPaper(member.id, dragId) : false;
+                  const canDrop =
+                    isDropTarget && dragId ? canAssignMemberToPaper(member.id, dragId) : false;
 
                   return (
                     <div
                       key={member.id}
                       draggable={isAdmin}
-                      onDragStart={(e) => handleDragStart(e, "member", member.id)}
+                      onDragStart={(e) => handleDragStart(e, 'member', member.id)}
                       onDragEnd={handleDragEnd}
                       onDragOver={(e) => handleMemberDragOver(e, member.id)}
                       onDragLeave={handleDragLeave(setDragOverMemberId)}
                       onDrop={(e) => handleMemberDrop(e, member.id)}
                       className={`bg-white rounded-md shadow-sm border px-2.5 py-1.5 transition-all ${
-                        isAdmin && !isDropTarget ? "cursor-grab active:cursor-grabbing" : ""
+                        isAdmin && !isDropTarget ? 'cursor-grab active:cursor-grabbing' : ''
                       } ${
                         isDragging
-                          ? "opacity-40 border-primary-300 bg-primary-50"
+                          ? 'opacity-40 border-primary-300 bg-primary-50'
                           : isOver && canDrop
-                          ? "border-primary-400 ring-2 ring-primary-200 bg-primary-50"
-                          : isOver && !canDrop
-                          ? "border-red-300 bg-red-50"
-                          : isDropTarget
-                          ? canDrop
-                            ? "border-dashed border-gray-300"
-                            : "border-gray-200 opacity-50"
-                          : "border-gray-200 hover:border-gray-300"
+                            ? 'border-primary-400 ring-2 ring-primary-200 bg-primary-50'
+                            : isOver && !canDrop
+                              ? 'border-red-300 bg-red-50'
+                              : isDropTarget
+                                ? canDrop
+                                  ? 'border-dashed border-gray-300'
+                                  : 'border-gray-200 opacity-50'
+                                : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
                         {isAdmin && !isDropTarget && (
                           <DragHandle className="w-3 h-3 text-gray-300 flex-shrink-0" />
                         )}
-                        <p className="text-sm font-medium text-gray-900 truncate min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate min-w-0 flex-1">
                           {`${member.first_name} ${member.last_name}`.trim()}
                         </p>
-                        <span className={`text-xs font-medium flex-shrink-0 ${
-                          memberAssigns.length > 0 ? "text-primary-600" : "text-gray-400"
-                        }`}>
+                        <span
+                          className={`text-xs font-medium flex-shrink-0 ${
+                            memberAssigns.length > 0 ? 'text-primary-600' : 'text-gray-400'
+                          }`}
+                        >
                           {memberAssigns.length}
                         </span>
                       </div>
@@ -509,54 +543,62 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
           {/* ── Right: Papers ──────────────────────────────────────────── */}
           <div className="flex flex-col min-w-0">
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <h2 className="text-sm font-semibold text-gray-700">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Papers
-                <span className="ml-1.5 text-gray-400 font-normal">({filteredPapers.length})</span>
+                <span className="ml-1.5 text-gray-400 dark:text-gray-500 font-normal">
+                  ({filteredPapers.length})
+                </span>
               </h2>
               <div className="flex items-center gap-2">
                 <select
                   value={paperStatusFilter}
                   onChange={(e) => setPaperStatusFilter(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="all">All statuses</option>
                   {paperStatuses.map((s) => (
                     <option key={s} value={s}>
-                      {s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                      {s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                     </option>
                   ))}
                 </select>
                 <select
                   value={reviewerFilter}
                   onChange={(e) => setReviewerFilter(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="all">All reviewers</option>
-                  {[...members].sort((a, b) =>
-                    `${a.first_name} ${a.last_name}`.trim().localeCompare(`${b.first_name} ${b.last_name}`.trim())
-                  ).map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {`${m.first_name} ${m.last_name}`.trim()}
-                    </option>
-                  ))}
+                  {[...members]
+                    .sort((a, b) =>
+                      `${a.first_name} ${a.last_name}`
+                        .trim()
+                        .localeCompare(`${b.first_name} ${b.last_name}`.trim())
+                    )
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {`${m.first_name} ${m.last_name}`.trim()}
+                      </option>
+                    ))}
                 </select>
                 <div className="flex items-center gap-1">
-                  {([
-                    { value: "all" as const, label: "All", dot: "" },
-                    { value: "none" as const, label: "None", dot: "bg-gray-300" },
-                    { value: "partial" as const, label: "Partial", dot: "bg-yellow-500" },
-                    { value: "complete" as const, label: "Complete", dot: "bg-green-500" },
-                  ]).map((opt) => (
+                  {[
+                    { value: 'all' as const, label: 'All', dot: '' },
+                    { value: 'none' as const, label: 'None', dot: 'bg-gray-300' },
+                    { value: 'partial' as const, label: 'Partial', dot: 'bg-yellow-500' },
+                    { value: 'complete' as const, label: 'Complete', dot: 'bg-green-500' },
+                  ].map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => setStatusFilter(opt.value)}
                       className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
                         statusFilter === opt.value
-                          ? "bg-primary-100 text-primary-700"
-                          : "text-gray-500 hover:bg-gray-100"
+                          ? 'bg-primary-100 text-primary-700'
+                          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
-                      {opt.dot && <span className={`inline-block w-1.5 h-1.5 rounded-full ${opt.dot}`} />}
+                      {opt.dot && (
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${opt.dot}`} />
+                      )}
                       {opt.label}
                     </button>
                   ))}
@@ -569,7 +611,7 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
                 placeholder="Search papers..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
 
@@ -577,40 +619,43 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
               {papersLoading ? (
                 <LoadingSpinner />
               ) : filteredPapers.length === 0 ? (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-12 text-center text-gray-500 text-sm">
-                  {papers.length === 0 ? "No papers found for this conference." : "No papers match your search."}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
+                  {papers.length === 0
+                    ? 'No papers found for this conference.'
+                    : 'No papers match your search.'}
                 </div>
               ) : (
                 filteredPapers.map((paper) => {
                   const paperAssigns = assignmentsByPaper.get(paper.id) || [];
-                  const isDragging = dragType === "paper" && dragId === paper.id;
-                  const isDropTarget = dragType === "member" && dragId;
+                  const isDragging = dragType === 'paper' && dragId === paper.id;
+                  const isDropTarget = dragType === 'member' && dragId;
                   const isOver = dragOverPaperId === paper.id;
-                  const canDrop = isDropTarget && dragId ? canAssignMemberToPaper(dragId, paper.id) : false;
+                  const canDrop =
+                    isDropTarget && dragId ? canAssignMemberToPaper(dragId, paper.id) : false;
 
                   return (
                     <div
                       key={paper.id}
                       draggable={isAdmin}
-                      onDragStart={(e) => handleDragStart(e, "paper", paper.id)}
+                      onDragStart={(e) => handleDragStart(e, 'paper', paper.id)}
                       onDragEnd={handleDragEnd}
                       onDragOver={(e) => handlePaperDragOver(e, paper.id)}
                       onDragLeave={handleDragLeave(setDragOverPaperId)}
                       onDrop={(e) => handlePaperDrop(e, paper.id)}
                       className={`bg-white rounded-lg shadow-sm border transition-all ${
-                        isAdmin && !isDropTarget ? "cursor-grab active:cursor-grabbing" : ""
+                        isAdmin && !isDropTarget ? 'cursor-grab active:cursor-grabbing' : ''
                       } ${
                         isDragging
-                          ? "opacity-40 border-primary-300 bg-primary-50"
+                          ? 'opacity-40 border-primary-300 bg-primary-50'
                           : isOver && canDrop
-                          ? "border-primary-400 ring-2 ring-primary-200 bg-primary-50"
-                          : isOver && !canDrop
-                          ? "border-red-300 bg-red-50"
-                          : isDropTarget
-                          ? canDrop
-                            ? "border-dashed border-gray-300"
-                            : "border-gray-200 opacity-50"
-                          : "border-gray-200 hover:border-gray-300"
+                            ? 'border-primary-400 ring-2 ring-primary-200 bg-primary-50'
+                            : isOver && !canDrop
+                              ? 'border-red-300 bg-red-50'
+                              : isDropTarget
+                                ? canDrop
+                                  ? 'border-dashed border-gray-300'
+                                  : 'border-gray-200 opacity-50'
+                                : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className="px-3 py-2.5">
@@ -632,27 +677,35 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
                                 >
                                   {paper.title}
                                 </button>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                  {`${paper.main_speaker?.first_name ?? ""} ${paper.main_speaker?.last_name ?? ""}`.trim() || "Unknown speaker"}
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                  {`${paper.main_speaker?.first_name ?? ''} ${paper.main_speaker?.last_name ?? ''}`.trim() ||
+                                    'Unknown speaker'}
                                   {paper.cospeakers && paper.cospeakers.length > 0 && (
-                                    <span className="text-gray-400">
-                                      {" "}+ {paper.cospeakers.length} co-speaker{paper.cospeakers.length > 1 ? "s" : ""}
+                                    <span className="text-gray-400 dark:text-gray-500">
+                                      {' '}
+                                      + {paper.cospeakers.length} co-speaker
+                                      {paper.cospeakers.length > 1 ? 's' : ''}
                                     </span>
                                   )}
                                 </p>
                               </div>
                               <div className="ml-2 flex items-center gap-1.5 flex-shrink-0">
-                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${PAPER_STATUS_COLORS[paper.status] || "bg-gray-100 text-gray-700"}`}>
+                                <span
+                                  className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${PAPER_STATUS_COLORS[paper.status] || 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+                                >
                                   {paper.status}
                                 </span>
-                                <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
-                                  paperAssigns.length >= cfpSettings.reviewers_per_paper
-                                    ? "bg-green-500"
-                                    : paperAssigns.length > 0
-                                    ? "bg-yellow-500"
-                                    : "bg-gray-300"
-                                }`} title={`${paperAssigns.length}/${cfpSettings.reviewers_per_paper} reviewers`} />
-                                <span className="text-[10px] text-gray-400">
+                                <span
+                                  className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+                                    paperAssigns.length >= cfpSettings.reviewers_per_paper
+                                      ? 'bg-green-500'
+                                      : paperAssigns.length > 0
+                                        ? 'bg-yellow-500'
+                                        : 'bg-gray-300'
+                                  }`}
+                                  title={`${paperAssigns.length}/${cfpSettings.reviewers_per_paper} reviewers`}
+                                />
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500">
                                   {paperAssigns.length}/{cfpSettings.reviewers_per_paper}
                                 </span>
                               </div>
@@ -664,7 +717,7 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
                                 {paper.topics.map((t) => (
                                   <span
                                     key={t.id}
-                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600"
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
                                   >
                                     {t.name}
                                   </span>
@@ -680,7 +733,9 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
                                     key={a.id}
                                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary-50 text-primary-700 border border-primary-200"
                                   >
-                                    <span>{`${a.committee_member_first_name} ${a.committee_member_last_name}`.trim()}</span>
+                                    <span>
+                                      {`${a.committee_member_first_name} ${a.committee_member_last_name}`.trim()}
+                                    </span>
                                     {a.is_anonymous && (
                                       <span className="px-1 rounded text-[9px] bg-yellow-100 text-yellow-700">
                                         anon
@@ -696,8 +751,18 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
                                         className="flex-shrink-0 text-primary-400 hover:text-red-500 transition-colors"
                                         title={`Remove ${`${a.committee_member_first_name} ${a.committee_member_last_name}`.trim()}`}
                                       >
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M6 18L18 6M6 6l12 12"
+                                          />
                                         </svg>
                                       </button>
                                     )}
@@ -744,9 +809,11 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
         <div className="p-6 space-y-4">
           {autoAssignResult ? (
             <div className="space-y-3">
-              <div className="bg-green-50 border border-green-200 rounded-md p-4">
-                <h4 className="text-sm font-medium text-green-800 mb-2">Auto-assignment complete</h4>
-                <ul className="text-sm text-green-700 space-y-1">
+              <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md p-4">
+                <h4 className="text-sm font-medium text-green-800 dark:text-green-300 mb-2">
+                  Auto-assignment complete
+                </h4>
+                <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
                   <li>Papers processed: {autoAssignResult.papers_processed}</li>
                   <li>Assignments created: {autoAssignResult.assignments_created}</li>
                   {autoAssignResult.papers_skipped > 0 && (
@@ -757,9 +824,11 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
                 </ul>
               </div>
               {autoAssignResult.skipped_details.length > 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-                  <h4 className="text-sm font-medium text-yellow-800 mb-2">Details</h4>
-                  <ul className="text-xs text-yellow-700 space-y-1">
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
+                  <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-2">
+                    Details
+                  </h4>
+                  <ul className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
                     {autoAssignResult.skipped_details.map((d, i) => (
                       <li key={i}>{d}</li>
                     ))}
@@ -777,14 +846,16 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
             </div>
           ) : (
             <>
-              <div className="bg-gray-50 rounded-md p-3 space-y-1">
-                <p className="text-sm text-gray-700">
-                  <span className="font-medium">Reviewers per paper:</span> {cfpSettings.reviewers_per_paper}
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-md p-3 space-y-1">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <span className="font-medium">Reviewers per paper:</span>{' '}
+                  {cfpSettings.reviewers_per_paper}
                 </p>
-                <p className="text-sm text-gray-700">
-                  <span className="font-medium">Review mode:</span> {cfpSettings.is_anonymous_review ? "Anonymous" : "Non-anonymous"}
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <span className="font-medium">Review mode:</span>{' '}
+                  {cfpSettings.is_anonymous_review ? 'Anonymous' : 'Non-anonymous'}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   These settings are configured in the CFP settings.
                 </p>
               </div>
@@ -795,15 +866,18 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
                   onChange={(e) => setAutoAssignOnlySubmitted(e.target.checked)}
                   className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
-                <span className="ml-2 text-sm text-gray-700">Only submitted papers</span>
+                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Only submitted papers
+                </span>
               </label>
-              <p className="text-xs text-gray-500">
-                Papers will be matched to committee members based on shared topics. Members who are speakers or co-speakers on a paper will be excluded from reviewing that paper.
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Papers will be matched to committee members based on shared topics. Members who are
+                speakers or co-speakers on a paper will be excluded from reviewing that paper.
               </p>
               <div className="flex justify-end gap-3 pt-2 border-t">
                 <button
                   onClick={() => setShowAutoAssign(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>
@@ -812,7 +886,7 @@ export default function CFPAssignments({ conferenceId, isAdmin: isAdminProp }: C
                   disabled={autoAssignMutation.isPending}
                   className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {autoAssignMutation.isPending ? "Assigning..." : "Run Auto-Assign"}
+                  {autoAssignMutation.isPending ? 'Assigning...' : 'Run Auto-Assign'}
                 </button>
               </div>
             </>

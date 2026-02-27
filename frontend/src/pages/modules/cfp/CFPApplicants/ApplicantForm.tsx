@@ -266,7 +266,9 @@ export function ApplicantForm({
 
       {/* Picture */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Picture</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Picture
+        </label>
         <div className="flex items-start gap-4">
           <button
             type="button"
@@ -276,7 +278,7 @@ export function ApplicantForm({
               }
             }}
             disabled={!picturePreviewSrc}
-            className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex-shrink-0 bg-gray-50 ${
+            className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-900 ${
               picturePreviewSrc
                 ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
                 : ''
@@ -286,7 +288,7 @@ export function ApplicantForm({
             {picturePreviewSrc ? (
               <img src={picturePreviewSrc} alt="Preview" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300">
+              <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -303,9 +305,9 @@ export function ApplicantForm({
               type="file"
               accept={ACCEPTED_IMAGE_FORMATS}
               onChange={handlePictureChange}
-              className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+              className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
             />
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
               JPEG, PNG, WebP, TIFF, or BMP. Min 600×600px (300 DPI).
             </p>
             {pictureError && <p className="mt-1 text-xs text-red-600">{pictureError}</p>}
@@ -315,7 +317,9 @@ export function ApplicantForm({
 
       {/* Video */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Video</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Video
+        </label>
         <div className="flex items-start gap-4">
           <button
             type="button"
@@ -325,7 +329,7 @@ export function ApplicantForm({
               }
             }}
             disabled={!videoPreviewSrc}
-            className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex-shrink-0 bg-gray-50 relative ${
+            className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-900 relative ${
               videoPreviewSrc
                 ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
                 : ''
@@ -344,7 +348,7 @@ export function ApplicantForm({
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                   <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
                     <svg
-                      className="w-4 h-4 text-gray-700 ml-0.5"
+                      className="w-4 h-4 text-gray-700 dark:text-gray-300 ml-0.5"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                     >
@@ -354,7 +358,7 @@ export function ApplicantForm({
                 </div>
               </>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300">
+              <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -371,9 +375,11 @@ export function ApplicantForm({
               type="file"
               accept={ACCEPTED_VIDEO_FORMATS}
               onChange={handleVideoChange}
-              className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+              className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
             />
-            <p className="mt-1 text-xs text-gray-400">MP4, MOV, WebM, AVI, or MKV. Max 5MB.</p>
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              MP4, MOV, WebM, AVI, or MKV. Max 5MB.
+            </p>
             {videoError && <p className="mt-1 text-xs text-red-600">{videoError}</p>}
           </div>
         </div>
@@ -382,37 +388,39 @@ export function ApplicantForm({
       {/* Fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             First Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={formData.first_name}
             onChange={(e) => setFormData((d) => ({ ...d, first_name: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Last Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={formData.last_name}
             onChange={(e) => setFormData((d) => ({ ...d, last_name: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Pronouns</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Pronouns
+          </label>
           <select
             value={formData.pronouns}
             onChange={(e) => setFormData((d) => ({ ...d, pronouns: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           >
             <option value="">Select pronouns...</option>
             {pronounOptions?.map((opt) => (
@@ -424,20 +432,22 @@ export function ApplicantForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Email <span className="text-red-500">*</span>
           </label>
           <input
             type="email"
             value={formData.email}
             onChange={(e) => setFormData((d) => ({ ...d, email: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Phone
+          </label>
           <input
             type="tel"
             value={formData.phone}
@@ -446,8 +456,8 @@ export function ApplicantForm({
               setFormData((d) => ({ ...d, phone: value }));
               setPhoneError(validatePhone(value));
             }}
-            className={`w-full border rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
-              phoneError ? 'border-red-300' : 'border-gray-300'
+            className={`w-full border rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 ${
+              phoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
             }`}
             placeholder="+491234545 or 00491234566"
           />
@@ -455,31 +465,37 @@ export function ApplicantForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Title
+          </label>
           <input
             type="text"
             value={formData.title}
             onChange={(e) => setFormData((d) => ({ ...d, title: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             placeholder="e.g. Senior Developer"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Company
+          </label>
           <input
             type="text"
             value={formData.company}
             onChange={(e) => setFormData((d) => ({ ...d, company: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Password{' '}
             {isEditing ? (
-              <span className="text-gray-400 font-normal">(leave blank to keep current)</span>
+              <span className="text-gray-400 dark:text-gray-500 font-normal">
+                (leave blank to keep current)
+              </span>
             ) : (
               <span className="text-red-500">*</span>
             )}
@@ -488,7 +504,7 @@ export function ApplicantForm({
             type="password"
             value={formData.password}
             onChange={(e) => setFormData((d) => ({ ...d, password: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             required={!isEditing}
             minLength={6}
           />
@@ -497,7 +513,9 @@ export function ApplicantForm({
 
       {/* Bio */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Short Bio</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Short Bio
+        </label>
         <RichTextEditor
           value={formData.bio}
           onChange={(html) => setFormData((d) => ({ ...d, bio: html }))}
@@ -508,7 +526,7 @@ export function ApplicantForm({
 
       {/* Social Media Links - Dynamic Add/Remove */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
           Social Media Profiles
         </label>
 
@@ -566,13 +584,13 @@ export function ApplicantForm({
                 <div className="space-y-2 mb-3">
                   {allEntries.map((platform) => (
                     <div key={platform.key} className="flex items-center gap-2">
-                      <label className="block text-xs text-gray-500 w-24 flex-shrink-0">
+                      <label className="block text-xs text-gray-500 dark:text-gray-400 w-24 flex-shrink-0">
                         {platform.label}
                       </label>
                       <input
                         type="url"
                         placeholder={platform.placeholder}
-                        className="flex-1 border border-gray-300 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                         value={formData.social_links[platform.key] || ''}
                         onChange={(e) =>
                           setFormData((d) => ({
@@ -587,7 +605,7 @@ export function ApplicantForm({
                       <button
                         type="button"
                         onClick={() => handleDeletePlatform(platform.key)}
-                        className="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                        className="flex-shrink-0 p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                         title={`Remove ${platform.label}`}
                       >
                         <DeleteIcon />
@@ -596,7 +614,7 @@ export function ApplicantForm({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-4 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200 mb-3">
+                <div className="text-center py-4 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 mb-3">
                   No social media links added yet.
                 </div>
               )}
@@ -609,7 +627,7 @@ export function ApplicantForm({
                     setAddPlatform(e.target.value);
                     if (e.target.value !== '__custom__') setCustomPlatformName('');
                   }}
-                  className="border border-gray-300 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="">Select platform...</option>
                   {availablePlatforms.map((p) => (
@@ -625,7 +643,7 @@ export function ApplicantForm({
                     placeholder="Platform name"
                     value={customPlatformName}
                     onChange={(e) => setCustomPlatformName(e.target.value)}
-                    className="border border-gray-300 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-32"
+                    className="border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 w-32"
                   />
                 )}
                 <button
@@ -675,10 +693,10 @@ export function ApplicantForm({
             className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
           <label htmlFor="needs_accessibility" className="flex-1">
-            <span className="block text-sm font-medium text-gray-700">
+            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Needs accessibility accommodations
             </span>
-            <span className="block text-xs text-gray-500 mt-0.5">
+            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Check if this user requires accessibility accommodations for the conference.
             </span>
           </label>
@@ -687,7 +705,7 @@ export function ApplicantForm({
         {/* Accessibility Details - shown when checkbox is checked */}
         {formData.needs_accessibility && (
           <div className="ml-7">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Please describe your accessibility needs
             </label>
             <textarea
@@ -697,7 +715,7 @@ export function ApplicantForm({
               }
               placeholder="e.g., wheelchair access, sign language interpreter, dietary requirements, etc."
               rows={3}
-              className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             />
           </div>
         )}
@@ -713,10 +731,10 @@ export function ApplicantForm({
           className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
         />
         <label htmlFor="agrees_to_recording" className="flex-1">
-          <span className="block text-sm font-medium text-gray-700">
+          <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Agrees to session recording
           </span>
-          <span className="block text-xs text-gray-500 mt-0.5">
+          <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             The user agrees that any selected session from them can be recorded and shared publicly.
           </span>
         </label>
@@ -732,17 +750,17 @@ export function ApplicantForm({
           className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
         />
         <label htmlFor="allow_out_of_timeframe" className="flex-1">
-          <span className="block text-sm font-medium text-gray-700">
+          <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Allow out-of-timeframe submissions
           </span>
-          <span className="block text-xs text-gray-500 mt-0.5">
+          <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             Allow this user to submit papers even outside the CFP open/close dates.
           </span>
         </label>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
         <div>
           {isEditing && onDelete && (
             <button
@@ -760,7 +778,7 @@ export function ApplicantForm({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

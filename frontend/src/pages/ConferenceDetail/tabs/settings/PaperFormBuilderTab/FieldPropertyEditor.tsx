@@ -63,9 +63,11 @@ export default function FieldPropertyEditor({
 
   if (!field || !localField) {
     return (
-      <div className="bg-gray-50 shadow rounded-lg p-4">
-        <h3 className="text-sm font-medium text-gray-900 mb-2">Field Properties</h3>
-        <p className="text-sm text-gray-500">
+      <div className="bg-gray-50 dark:bg-gray-900 shadow rounded-lg p-4">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+          Field Properties
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Select a field from the canvas to edit its properties
         </p>
       </div>
@@ -132,9 +134,9 @@ export default function FieldPropertyEditor({
   const showFileValidation = localField.field_type === 'file_upload';
 
   return (
-    <div className="bg-white shadow rounded-lg p-4 h-full overflow-y-auto">
+    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 h-full overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-gray-900">Field Properties</h3>
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Field Properties</h3>
         {isDirty && isAdmin && (
           <button
             onClick={handleSave}
@@ -148,26 +150,32 @@ export default function FieldPropertyEditor({
       <div className="space-y-4">
         {/* Field Key */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Field Key</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Field Key
+          </label>
           <input
             type="text"
             value={localField.field_key}
             onChange={(e) => handleChange('field_key', e.target.value)}
             disabled={!isAdmin}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
             pattern="^[a-z][a-z0-9_]*$"
           />
-          <p className="mt-1 text-xs text-gray-400">Lowercase letters, numbers, underscores only</p>
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            Lowercase letters, numbers, underscores only
+          </p>
         </div>
 
         {/* Field Type */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Field Type</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Field Type
+          </label>
           <select
             value={localField.field_type}
             onChange={(e) => handleChange('field_type', e.target.value as PaperFormFieldType)}
             disabled={!isAdmin}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
           >
             {FIELD_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -179,49 +187,57 @@ export default function FieldPropertyEditor({
 
         {/* Label */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Label</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Label
+          </label>
           <input
             type="text"
             value={localField.label}
             onChange={(e) => handleChange('label', e.target.value)}
             disabled={!isAdmin}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
 
         {/* Description */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Description
+          </label>
           <textarea
             value={localField.description || ''}
             onChange={(e) => handleChange('description', e.target.value || null)}
             disabled={!isAdmin}
             rows={2}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
 
         {/* Placeholder */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Placeholder</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Placeholder
+          </label>
           <input
             type="text"
             value={localField.placeholder || ''}
             onChange={(e) => handleChange('placeholder', e.target.value || null)}
             disabled={!isAdmin}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
 
         {/* Help Text */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Help Text</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Help Text
+          </label>
           <input
             type="text"
             value={localField.help_text || ''}
             onChange={(e) => handleChange('help_text', e.target.value || null)}
             disabled={!isAdmin}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
 
@@ -233,9 +249,9 @@ export default function FieldPropertyEditor({
               checked={localField.is_visible}
               onChange={(e) => handleChange('is_visible', e.target.checked)}
               disabled={!isAdmin}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
             />
-            <span className="text-sm text-gray-700">Visible</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Visible</span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -243,16 +259,18 @@ export default function FieldPropertyEditor({
               checked={localField.is_required}
               onChange={(e) => handleChange('is_required', e.target.checked)}
               disabled={!isAdmin}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
             />
-            <span className="text-sm text-gray-700">Required</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Required</span>
           </label>
         </div>
 
         {/* Options for dropdown/checkbox_group */}
         {showOptions && (
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">Options</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Options
+            </label>
             <div className="space-y-2">
               {(localField.options || []).map((opt, idx) => (
                 <div key={idx} className="flex items-center gap-2">
@@ -262,7 +280,7 @@ export default function FieldPropertyEditor({
                     onChange={(e) => handleUpdateOption(idx, { value: e.target.value })}
                     disabled={!isAdmin}
                     placeholder="Value"
-                    className="flex-1 border border-gray-300 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
                   />
                   <input
                     type="text"
@@ -270,12 +288,12 @@ export default function FieldPropertyEditor({
                     onChange={(e) => handleUpdateOption(idx, { label: e.target.value })}
                     disabled={!isAdmin}
                     placeholder="Label"
-                    className="flex-1 border border-gray-300 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
                   />
                   {isAdmin && (
                     <button
                       onClick={() => handleRemoveOption(idx)}
-                      className="text-gray-400 hover:text-red-500"
+                      className="text-gray-400 dark:text-gray-500 hover:text-red-500"
                     >
                       <svg
                         className="h-4 w-4"
@@ -309,10 +327,14 @@ export default function FieldPropertyEditor({
         {/* Text Validation */}
         {showTextValidation && (
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">Validation</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Validation
+            </label>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Min Length</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Min Length
+                </label>
                 <input
                   type="number"
                   value={localField.validation_rules?.min_length || ''}
@@ -324,11 +346,13 @@ export default function FieldPropertyEditor({
                   }
                   disabled={!isAdmin}
                   min={0}
-                  className="w-full border border-gray-300 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Max Length</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Max Length
+                </label>
                 <input
                   type="number"
                   value={localField.validation_rules?.max_length || ''}
@@ -340,7 +364,7 @@ export default function FieldPropertyEditor({
                   }
                   disabled={!isAdmin}
                   min={0}
-                  className="w-full border border-gray-300 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 />
               </div>
             </div>
@@ -350,10 +374,14 @@ export default function FieldPropertyEditor({
         {/* File Validation */}
         {showFileValidation && (
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2">File Validation</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+              File Validation
+            </label>
             <div className="space-y-2">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Max File Size (MB)</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Max File Size (MB)
+                </label>
                 <input
                   type="number"
                   value={localField.validation_rules?.max_file_size_mb || ''}
@@ -365,11 +393,13 @@ export default function FieldPropertyEditor({
                   }
                   disabled={!isAdmin}
                   min={1}
-                  className="w-full border border-gray-300 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Allowed File Types</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Allowed File Types
+                </label>
                 <select
                   value={detectFileCategory(localField.validation_rules?.allowed_file_types)}
                   onChange={(e) =>
@@ -379,7 +409,7 @@ export default function FieldPropertyEditor({
                     )
                   }
                   disabled={!isAdmin}
-                  className="w-full border border-gray-300 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-1.5 text-sm disabled:bg-gray-100 dark:disabled:bg-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="">No restriction</option>
                   {Object.entries(FILE_TYPE_LABELS).map(([key, label]) => (

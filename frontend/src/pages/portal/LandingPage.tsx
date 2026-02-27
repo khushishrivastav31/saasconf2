@@ -71,7 +71,7 @@ function LandingPage() {
           )}
 
           {/* Date & Location */}
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
+          <div className="flex items-center justify-center gap-4 text-sm text-gray-600 dark:text-gray-300 mb-6">
             {conference.start_date && (
               <span>
                 {formatDate(conference.start_date)}
@@ -92,7 +92,7 @@ function LandingPage() {
 
           {conference.description && (
             <div
-              className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8 prose prose-sm dark:prose-invert"
+              className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8 prose prose-sm dark:prose-invert"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(conference.description ?? '') }}
             />
           )}
@@ -143,7 +143,7 @@ function LandingPage() {
 
                 {cfp.description && (
                   <div
-                    className="text-sm text-gray-600 dark:text-gray-400 mb-4 prose prose-sm dark:prose-invert"
+                    className="text-sm text-gray-600 dark:text-gray-300 mb-4 prose prose-sm dark:prose-invert"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(cfp.description ?? '') }}
                   />
                 )}
@@ -179,7 +179,7 @@ function LandingPage() {
                           Submission Guidelines
                         </summary>
                         <div
-                          className="mt-2 ml-6 text-sm text-gray-600 dark:text-gray-400 prose prose-sm dark:prose-invert max-w-none"
+                          className="mt-2 ml-6 text-sm text-gray-600 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none"
                           dangerouslySetInnerHTML={{
                             __html: sanitizeHtml(cfp.guidelines_for_submissions ?? ''),
                           }}
@@ -205,7 +205,7 @@ function LandingPage() {
                           Tips for a Strong Submission
                         </summary>
                         <div
-                          className="mt-2 ml-6 text-sm text-gray-600 dark:text-gray-400 prose prose-sm dark:prose-invert max-w-none"
+                          className="mt-2 ml-6 text-sm text-gray-600 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none"
                           dangerouslySetInnerHTML={{
                             __html: sanitizeHtml(cfp.tips_for_submission ?? ''),
                           }}
@@ -231,7 +231,7 @@ function LandingPage() {
                           Code of Conduct
                         </summary>
                         <div
-                          className="mt-2 ml-6 text-sm text-gray-600 dark:text-gray-400 prose prose-sm dark:prose-invert max-w-none"
+                          className="mt-2 ml-6 text-sm text-gray-600 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none"
                           dangerouslySetInnerHTML={{
                             __html: sanitizeHtml(cfp.code_of_conduct ?? ''),
                           }}
@@ -257,7 +257,7 @@ function LandingPage() {
                           Incentives & Conditions
                         </summary>
                         <div
-                          className="mt-2 ml-6 text-sm text-gray-600 dark:text-gray-400 prose prose-sm dark:prose-invert max-w-none"
+                          className="mt-2 ml-6 text-sm text-gray-600 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none"
                           dangerouslySetInnerHTML={{
                             __html: sanitizeHtml(cfp.incentives_conditions ?? ''),
                           }}
@@ -283,7 +283,7 @@ function LandingPage() {
                           FAQs
                         </summary>
                         <div
-                          className="mt-2 ml-6 text-sm text-gray-600 dark:text-gray-400 prose prose-sm dark:prose-invert max-w-none"
+                          className="mt-2 ml-6 text-sm text-gray-600 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none"
                           dangerouslySetInnerHTML={{
                             __html: sanitizeHtml(cfp.faqs ?? ''),
                           }}

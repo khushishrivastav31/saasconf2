@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import type { AxiosInstance } from "axios";
-import api from "../config/api";
+import { useState, useEffect } from 'react';
+import type { AxiosInstance } from 'axios';
+import api from '../config/api';
 
 interface ConferenceLogoProps {
   logoUrl: string | null;
@@ -20,16 +20,16 @@ interface ConferenceLogoProps {
  */
 export default function ConferenceLogo({
   logoUrl,
-  alt = "Conference logo",
-  className = "max-w-full max-h-full object-contain",
-  placeholderClassName = "text-gray-400 text-xs",
+  alt = 'Conference logo',
+  className = 'max-w-full max-h-full object-contain',
+  placeholderClassName = 'text-gray-400 dark:text-gray-500 text-xs',
   showPlaceholder = true,
   apiInstance = api,
 }: ConferenceLogoProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const baseURL = apiInstance.defaults.baseURL || "";
+  const baseURL = apiInstance.defaults.baseURL || '';
 
   useEffect(() => {
     if (!logoUrl) {
@@ -40,7 +40,7 @@ export default function ConferenceLogo({
     let cancelled = false;
     setLoading(true);
 
-    const fullUrl = `${baseURL.replace(/\/+$/, "")}/${logoUrl.replace(/^\/+/, "")}`;
+    const fullUrl = `${baseURL.replace(/\/+$/, '')}/${logoUrl.replace(/^\/+/, '')}`;
 
     fetch(fullUrl)
       .then((res) => {
@@ -83,9 +83,7 @@ export default function ConferenceLogo({
   }
 
   if (loading) {
-    return showPlaceholder ? (
-      <span className={placeholderClassName}>Loading...</span>
-    ) : null;
+    return showPlaceholder ? <span className={placeholderClassName}>Loading...</span> : null;
   }
 
   if (!logoUrl && showPlaceholder) {

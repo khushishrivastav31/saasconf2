@@ -273,7 +273,7 @@ export default function ConferenceServiceProvidersTab({
           <div className="w-64 flex-shrink-0">
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-3 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <h5 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                <h5 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                   Providers
                 </h5>
               </div>

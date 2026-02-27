@@ -296,7 +296,7 @@ export default function ApplicantActivityLog() {
 
       {/* Results Count */}
       {data && (
-        <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">
           Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, data.total)} of{' '}
           {data.total} applicants
         </div>
@@ -350,7 +350,7 @@ export default function ApplicantActivityLog() {
                       </span>
                     ))}
                     {group.activities.length > 3 && (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                         +{group.activities.length - 3}
                       </span>
                     )}

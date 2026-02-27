@@ -47,7 +47,8 @@ SaaSConf is a **multi-tenant SaaS platform** for conference management. Each ten
 - **ThemeContext** manages preference state, localStorage persistence, and `<html>` class toggling
 - **FOUC prevention** — `public/theme-init.js` runs before React to apply `.dark` class from localStorage
 - **DB persistence** — `theme_preference` column (nullable varchar(5)) on both `users` and `cfp_applicants`: `'light'`, `'dark'`, or `NULL` (system)
-- **Color mapping** — always add `dark:` counterparts when using gray/white backgrounds and text: `bg-white` → + `dark:bg-gray-800`, `text-gray-900` → + `dark:text-gray-100`, etc.
+- **Color mapping** — always add `dark:` counterparts when using gray/white backgrounds and text: `bg-white` → + `dark:bg-gray-800`, `bg-gray-50` → + `dark:bg-gray-900`, `bg-gray-100` → + `dark:bg-gray-800`, `text-gray-900` → + `dark:text-gray-100`, `text-gray-700` → + `dark:text-gray-300`, `text-gray-600` → + `dark:text-gray-300` (NOT gray-400 — insufficient contrast), `text-gray-500` → + `dark:text-gray-400`, `border-gray-200` → + `dark:border-gray-700`, `border-gray-300` → + `dark:border-gray-600`, `hover:bg-gray-50` → + `dark:hover:bg-gray-700`
+- **Form inputs in dark mode** — all inputs/selects need: `dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100`
 - **Semantic colors** — status colors (red, green, blue, amber) use `/30` opacity in dark: `bg-red-50` → + `dark:bg-red-900/30`
 - **Sidebar stays dark** — both layout sidebars use `bg-gray-900` + light text, unchanged in dark mode
 - **Primary colors unchanged** — `bg-primary-600` buttons, focus rings, links work in both themes

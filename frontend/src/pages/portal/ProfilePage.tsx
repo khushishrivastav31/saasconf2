@@ -343,7 +343,7 @@ function ProfilePage() {
                   }
                 }}
                 disabled={!picturePreviewSrc}
-                className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex-shrink-0 bg-gray-50 ${
+                className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-900 ${
                   picturePreviewSrc
                     ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
                     : ''
@@ -402,7 +402,7 @@ function ProfilePage() {
                   }
                 }}
                 disabled={!videoPreviewSrc}
-                className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex-shrink-0 bg-gray-50 relative ${
+                className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-900 relative ${
                   videoPreviewSrc
                     ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
                     : ''
@@ -627,7 +627,7 @@ function ProfilePage() {
                   placeholder="Platform name"
                   value={customPlatformName}
                   onChange={(e) => setCustomPlatformName(e.target.value)}
-                  className="border border-gray-300 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-32"
+                  className="border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 w-32"
                 />
               )}
               <button

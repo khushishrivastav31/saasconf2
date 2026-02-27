@@ -17,7 +17,7 @@ export default function CFPLayout() {
 
   return (
     <div>
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav className="-mb-px flex space-x-6 overflow-x-auto">
           {cfpTabs.map((tab) => {
             const isActive = location.pathname === tab.href;
@@ -28,7 +28,7 @@ export default function CFPLayout() {
                 className={`whitespace-nowrap border-b-2 py-3 px-1 text-sm font-medium ${
                   isActive
                     ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
                 {tab.name}

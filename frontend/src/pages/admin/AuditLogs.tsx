@@ -328,7 +328,7 @@ export default function AuditLogs() {
 
       {/* Results Count */}
       {data && (
-        <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">
           Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, data.total)} of{' '}
           {data.total} entries
         </div>

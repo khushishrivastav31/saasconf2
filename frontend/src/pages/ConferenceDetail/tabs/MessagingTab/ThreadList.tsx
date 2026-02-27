@@ -35,14 +35,14 @@ export default function ThreadList({
 
   if (threads.length === 0) {
     return (
-      <div className="p-8 text-center text-gray-500 text-sm">
+      <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
         {showArchived ? 'No archived messages' : 'No messages yet'}
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-gray-100">
+    <div className="divide-y divide-gray-100 dark:divide-gray-700">
       {threads.map((thread) => {
         const recipientName =
           thread.other_participants.length > 0
@@ -61,9 +61,11 @@ export default function ThreadList({
             <div
               onClick={() => onSelect(thread.id)}
               onDoubleClick={() => onDoubleClick?.(thread.id)}
-              className={`w-full text-left px-4 py-3 cursor-pointer select-none hover:bg-gray-50 transition-colors ${
-                selectedId === thread.id ? 'bg-blue-50 border-l-2 border-l-blue-600' : ''
-              } ${thread.unread ? 'bg-blue-50/40' : ''}`}
+              className={`w-full text-left px-4 py-3 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                selectedId === thread.id
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-l-2 border-l-blue-600'
+                  : ''
+              } ${thread.unread ? 'bg-blue-50/40 dark:bg-blue-900/20' : ''}`}
             >
               <div className="flex items-center justify-between gap-2 mb-0.5">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -81,14 +83,16 @@ export default function ThreadList({
                   )}
                   <span
                     className={`text-sm truncate ${
-                      thread.unread ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'
+                      thread.unread
+                        ? 'font-semibold text-gray-900 dark:text-gray-100'
+                        : 'font-medium text-gray-800 dark:text-gray-200'
                     }`}
                   >
                     {recipientName}
                   </span>
                   {thread.has_attachments && (
                     <svg
-                      className="w-3 h-3 text-gray-400 flex-shrink-0"
+                      className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -102,17 +106,17 @@ export default function ThreadList({
                     </svg>
                   )}
                 </div>
-                <span className="text-xs text-gray-400 flex-shrink-0">
+                <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
                   {formatRelativeDate(thread.last_message_at)}
                 </span>
               </div>
               <p
-                className={`text-xs truncate ${thread.unread ? 'font-medium text-gray-700' : 'text-gray-500'}`}
+                className={`text-xs truncate ${thread.unread ? 'font-medium text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}
               >
                 {thread.subject}
               </p>
               {thread.last_message_preview && (
-                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
                   {thread.last_message_preview}
                 </p>
               )}
@@ -128,7 +132,7 @@ export default function ThreadList({
                     setArchiveConfirmId(thread.id);
                   }
                 }}
-                className="absolute top-2 right-2 p-1 rounded bg-white shadow-sm border border-gray-200 text-gray-400 hover:text-gray-700"
+                className="absolute top-2 right-2 p-1 rounded bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 title={thread.archived_at ? 'Unarchive' : 'Archive'}
               >
                 {thread.archived_at ? (
@@ -165,8 +169,8 @@ export default function ThreadList({
 
             {/* Archive confirmation popover */}
             {archiveConfirmId === thread.id && onArchive && (
-              <div className="absolute top-0 right-0 z-10 mt-1 mr-1 bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-56">
-                <p className="text-xs text-gray-700 mb-2">
+              <div className="absolute top-0 right-0 z-10 mt-1 mr-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-56">
+                <p className="text-xs text-gray-700 dark:text-gray-300 mb-2">
                   Archive this thread? You can restore it later.
                 </p>
                 <div className="flex items-center justify-end gap-2">
@@ -175,7 +179,7 @@ export default function ThreadList({
                       e.stopPropagation();
                       setArchiveConfirmId(null);
                     }}
-                    className="px-2.5 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200"
+                    className="px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </button>

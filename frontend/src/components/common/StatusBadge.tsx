@@ -6,9 +6,9 @@ export default function StatusBadge({
   onClick?: (newState: boolean) => void;
 }) {
   const colors = isActive
-    ? "bg-green-100 text-green-800"
-    : "bg-red-100 text-red-800";
-  const label = isActive ? "Active" : "Inactive";
+    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+  const label = isActive ? 'Active' : 'Inactive';
 
   if (onClick) {
     return (
@@ -18,9 +18,11 @@ export default function StatusBadge({
           onClick(!isActive);
         }}
         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-colors ${colors} ${
-          isActive ? "hover:bg-green-200" : "hover:bg-red-200"
+          isActive
+            ? 'hover:bg-green-200 dark:hover:bg-green-900/50'
+            : 'hover:bg-red-200 dark:hover:bg-red-900/50'
         }`}
-        title={`Click to ${isActive ? "deactivate" : "activate"}`}
+        title={`Click to ${isActive ? 'deactivate' : 'activate'}`}
       >
         {label}
       </button>
@@ -28,9 +30,7 @@ export default function StatusBadge({
   }
 
   return (
-    <span
-      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colors}`}
-    >
+    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${colors}`}>
       {label}
     </span>
   );

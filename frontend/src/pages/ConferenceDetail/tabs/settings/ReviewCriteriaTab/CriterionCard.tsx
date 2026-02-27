@@ -1,7 +1,7 @@
-import type { ReviewCriterion, ReviewQuestion } from "../../../../../types";
-import RichTextDisplay from "../../../../../components/common/RichTextDisplay";
-import StatusBadge from "../../../../../components/common/StatusBadge";
-import { EditIcon, DeleteIcon, ChevronRightIcon } from "../../../icons";
+import type { ReviewCriterion, ReviewQuestion } from '../../../../../types';
+import RichTextDisplay from '../../../../../components/common/RichTextDisplay';
+import StatusBadge from '../../../../../components/common/StatusBadge';
+import { EditIcon, DeleteIcon, ChevronRightIcon } from '../../../icons';
 
 export default function CriterionCard({
   criterion,
@@ -29,27 +29,26 @@ export default function CriterionCard({
   onToggleQuestionActive: (questionId: string, active: boolean) => void;
 }) {
   return (
-    <div className="bg-white shadow sm:rounded-lg overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden">
       {/* Card Header */}
       <div
-        className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+        className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
         onClick={onToggle}
       >
         <div className="flex items-center space-x-3">
           <span
-            className={`text-gray-400 transition-transform ${
-              isExpanded ? "rotate-90" : ""
+            className={`text-gray-400 dark:text-gray-500 transition-transform ${
+              isExpanded ? 'rotate-90' : ''
             }`}
           >
             <ChevronRightIcon />
           </span>
           <div>
-            <h3 className="text-sm font-medium text-gray-900">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {criterion.title}
             </h3>
-            <p className="text-xs text-gray-500">
-              Order: {criterion.display_order} | Questions:{" "}
-              {criterion.questions.length}
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Order: {criterion.display_order} | Questions: {criterion.questions.length}
             </p>
           </div>
           <StatusBadge
@@ -61,14 +60,14 @@ export default function CriterionCard({
           <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={onEdit}
-              className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
+              className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
               title="Edit Criterion"
             >
               <EditIcon />
             </button>
             <button
               onClick={onDelete}
-              className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+              className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
               title="Delete Criterion"
             >
               <DeleteIcon />
@@ -79,29 +78,29 @@ export default function CriterionCard({
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="border-t border-gray-200 px-6 py-4">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4">
           {/* Description */}
           {criterion.description && (
             <div className="mb-4">
-              <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
+              <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                 Description
               </h4>
               <RichTextDisplay
                 content={criterion.description}
-                className="text-sm text-gray-700"
+                className="text-sm text-gray-700 dark:text-gray-300"
               />
             </div>
           )}
 
           {/* Questions Table */}
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Questions
             </h4>
             {isAdmin && (
               <button
                 onClick={onAddQuestion}
-                className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 shadow-sm text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Add Question
               </button>
@@ -109,55 +108,55 @@ export default function CriterionCard({
           </div>
 
           {criterion.questions.length === 0 ? (
-            <p className="text-sm text-gray-400 italic py-4 text-center">
+            <p className="text-sm text-gray-400 dark:text-gray-500 italic py-4 text-center">
               No questions added yet.
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Text
                     </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Scale
                     </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Weight
                     </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Comment Req
                     </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Active
                     </th>
                     {isAdmin && (
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
                     )}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {criterion.questions.map((question) => (
                     <tr key={question.id}>
-                      <td className="px-4 py-2 text-sm text-gray-900 max-w-xs truncate">
+                      <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
                         {question.text}
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-500 whitespace-nowrap">
+                      <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {question.question_type}
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-500 whitespace-nowrap">
-                        {question.score_scale?.name || "-"}
+                      <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {question.score_scale?.name || '-'}
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-500 whitespace-nowrap">
+                      <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {question.weight}
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-500 whitespace-nowrap">
+                      <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {question.comment_requirement}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap">
@@ -165,8 +164,7 @@ export default function CriterionCard({
                           isActive={question.is_active}
                           onClick={
                             isAdmin
-                              ? (active) =>
-                                  onToggleQuestionActive(question.id, active)
+                              ? (active) => onToggleQuestionActive(question.id, active)
                               : undefined
                           }
                         />
@@ -175,14 +173,14 @@ export default function CriterionCard({
                         <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
                           <button
                             onClick={() => onEditQuestion(question)}
-                            className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors mr-1"
+                            className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors mr-1"
                             title="Edit Question"
                           >
                             <EditIcon />
                           </button>
                           <button
                             onClick={() => onDeleteQuestion(question)}
-                            className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                            className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                             title="Delete Question"
                           >
                             <DeleteIcon />

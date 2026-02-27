@@ -252,7 +252,7 @@ function ConferenceDetailContent() {
                       } text-sm font-medium ${
                         isParentActive
                           ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
                       }`}
                     >
                       <section.icon />
@@ -313,7 +313,7 @@ function ConferenceDetailContent() {
                           className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
                             activeSection === child.id
                               ? 'bg-primary-50 text-primary-700 font-medium'
-                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                         >
                           <child.icon />
@@ -451,7 +451,7 @@ function ConferenceDetailContent() {
       >
         {deletePreview && (
           <div className="p-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               Are you sure you want to delete <strong>{deletePreview.conference_name}</strong>? This
               action cannot be undone.
             </p>

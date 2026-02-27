@@ -25,7 +25,7 @@ export default function Modal({
 
   return (
     <div
-      className={`fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center ${zIndex}`}
+      className={`fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-80 flex items-center justify-center ${zIndex}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}

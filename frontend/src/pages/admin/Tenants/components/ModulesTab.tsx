@@ -73,8 +73,8 @@ export default function ModulesTab({
                     <span
                       className={`px-2 text-xs font-semibold rounded-full ${
                         tm.is_active_subscription
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
                       }`}
                     >
                       {tm.is_active_subscription ? 'Active' : 'Inactive'}
@@ -119,7 +119,7 @@ export default function ModulesTab({
 
                     return limitValue ? (
                       <div className="mt-2">
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">
                           {limitLabel}: {limitValue}
                         </span>
                       </div>
@@ -396,7 +396,9 @@ function AssignModuleModal({ tenantId, onClose }: { tenantId: string; onClose: (
 
           {showResourceLimits && (
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Resource Limit</h4>
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+                Resource Limit
+              </h4>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   {getResourceLimitLabel()}
@@ -572,7 +574,7 @@ function EditModuleModal({
         <p className="text-sm text-gray-500 dark:text-gray-400">{module.module_code}</p>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md">
               <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"

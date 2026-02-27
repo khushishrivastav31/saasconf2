@@ -147,10 +147,13 @@ export default function BulkComposeModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold">Bulk Message</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-700">
+          <h2 className="text-lg font-semibold dark:text-gray-100">Bulk Message</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -165,11 +168,13 @@ export default function BulkComposeModal({
           {/* Template picker */}
           {templates.length > 0 && (
             <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-600 flex-shrink-0">Template:</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-300 flex-shrink-0">
+                Template:
+              </label>
               <select
                 value={selectedTemplate}
                 onChange={(e) => handleApplyTemplate(e.target.value)}
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm flex-1 max-w-xs"
+                className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm flex-1 max-w-xs dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">Use a template...</option>
                 {templates.map((t) => (
@@ -183,7 +188,9 @@ export default function BulkComposeModal({
 
           {/* Recipient category */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Recipients</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Recipients
+            </label>
             <select
               value={
                 category === 'recipient_list' && recipientListId
@@ -204,7 +211,7 @@ export default function BulkComposeModal({
                   setRecipientListId('');
                 }
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
             >
               <option value="">Select recipient group...</option>
               <option value="all">All applicants</option>
@@ -225,11 +232,13 @@ export default function BulkComposeModal({
           {/* Paper status sub-select */}
           {category === 'paper_status' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Paper Status</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Paper Status
+              </label>
               <select
                 value={paperStatus}
                 onChange={(e) => setPaperStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">Select status...</option>
                 {PAPER_STATUSES.map((s) => (
@@ -244,11 +253,13 @@ export default function BulkComposeModal({
           {/* Committee role sub-select */}
           {category === 'committee_role' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Committee Role</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Committee Role
+              </label>
               <select
                 value={committeeRole}
                 onChange={(e) => setCommitteeRole(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">Select role...</option>
                 {(roles ?? []).map((r) => (
@@ -262,27 +273,29 @@ export default function BulkComposeModal({
 
           {/* Selected summary */}
           {hasFilter && (
-            <div className="text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded-md">
+            <div className="text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-3 py-2 rounded-md">
               Sending to: <span className="font-medium">{recipientLabel()}</span>
             </div>
           )}
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Subject
+            </label>
             <input
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Message subject"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
               maxLength={500}
             />
           </div>
 
           {/* Variable pills */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-gray-400 mr-1">Insert variable:</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">Insert variable:</span>
             {TEMPLATE_VARIABLES.map((v) => (
               <button
                 key={v.token}
@@ -303,7 +316,9 @@ export default function BulkComposeModal({
 
           {/* Body */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Message
+            </label>
             <RichTextEditor
               value={bodyHtml}
               onChange={setBodyHtml}
@@ -318,10 +333,10 @@ export default function BulkComposeModal({
             onChange={setScreenOverlayId}
           />
         </div>
-        <div className="flex justify-end gap-3 px-6 py-4 border-t">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t dark:border-gray-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

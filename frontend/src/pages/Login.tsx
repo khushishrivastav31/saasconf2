@@ -45,7 +45,7 @@ export default function Login() {
           <h1 className="text-center text-3xl font-bold text-gray-900 dark:text-gray-100">
             SaaSConf
           </h1>
-          <h2 className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+          <h2 className="mt-2 text-center text-sm text-gray-600 dark:text-gray-300">
             Conference Management Platform
           </h2>
         </div>

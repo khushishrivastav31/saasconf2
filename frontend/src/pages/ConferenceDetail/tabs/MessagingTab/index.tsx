@@ -269,12 +269,12 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
 
   return (
     <div
-      className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col"
       style={{ height: 'calc(100vh - 120px)' }}
     >
       {/* Email-only banner */}
       {emailOnly && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200 text-sm text-amber-800">
+        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 text-sm text-amber-800">
           <svg
             className="w-4 h-4 flex-shrink-0"
             fill="none"
@@ -293,13 +293,13 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
       )}
 
       {/* Toolbar */}
-      <div className="border-b bg-gray-50">
+      <div className="border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
         {/* Row 1: Title + actions */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Messages</h2>
             {threadList && (
-              <span className="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">
+              <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">
                 {threadList.total}
               </span>
             )}
@@ -307,7 +307,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowBulkCompose(true)}
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Bulk Send
             </button>
@@ -342,7 +342,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
               className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
                 showArchived
                   ? 'bg-gray-700 text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
               {showArchived ? 'Showing Archived' : 'Archived'}
@@ -354,8 +354,8 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
               }}
               className={`text-xs font-medium px-2 py-1 rounded-full transition-colors flex items-center gap-1 ${
                 filterFlagged
-                  ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 border border-yellow-300'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
               title="Show flagged threads"
             >
@@ -382,7 +382,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
               className={`text-xs font-medium px-2 py-1 rounded-full transition-colors flex items-center gap-1 ${
                 filterAttachments
                   ? 'bg-purple-100 text-purple-800 border border-purple-300'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
               title="Show threads with attachments"
             >
@@ -403,8 +403,8 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
               }}
               className={`text-xs font-medium px-2 py-1 rounded-full transition-colors flex items-center gap-1 ${
                 filterUnread
-                  ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
               title="Show unread threads"
             >
@@ -422,7 +422,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
           <div className="flex items-center gap-2">
             <div className="relative">
               <svg
-                className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -442,7 +442,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md w-44 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+                className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md w-44 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             <input
@@ -453,7 +453,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
                 setFilterParticipant(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-md w-32 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md w-32 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 dark:bg-gray-800 dark:text-gray-100"
             />
           </div>
         </div>
@@ -463,12 +463,14 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
       <div className="flex flex-1 min-h-0">
         {/* Thread list */}
         <div
-          className={`w-full lg:w-80 border-r overflow-y-auto flex-shrink-0 ${
+          className={`w-full lg:w-80 border-r dark:border-gray-700 overflow-y-auto flex-shrink-0 ${
             selectedThreadId ? 'hidden lg:block' : ''
           }`}
         >
           {loadingThreads ? (
-            <div className="p-8 text-center text-gray-400 text-sm">Loading...</div>
+            <div className="p-8 text-center text-gray-400 dark:text-gray-500 text-sm">
+              Loading...
+            </div>
           ) : (
             <ThreadList
               threads={threads}
@@ -489,19 +491,19 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
           )}
           {/* Pagination */}
           {threadList && threadList.total > 50 && (
-            <div className="flex items-center justify-center gap-2 p-3 border-t">
+            <div className="flex items-center justify-center gap-2 p-3 border-t dark:border-gray-700">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="text-sm text-gray-500 disabled:opacity-50"
+                className="text-sm text-gray-500 dark:text-gray-400 disabled:opacity-50"
               >
                 Previous
               </button>
-              <span className="text-xs text-gray-400">Page {page}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">Page {page}</span>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={threads.length < 50}
-                className="text-sm text-gray-500 disabled:opacity-50"
+                className="text-sm text-gray-500 dark:text-gray-400 disabled:opacity-50"
               >
                 Next
               </button>
@@ -532,11 +534,11 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
               noteSending={noteMutation.isPending}
             />
           ) : loadingDetail && selectedThreadId ? (
-            <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+            <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">
               Loading...
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+            <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">
               Select a thread or compose a new message
             </div>
           )}
@@ -569,7 +571,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setPopupThreadId(null)} />
           <div
-            className="relative bg-white rounded-xl shadow-2xl flex flex-col resize overflow-hidden"
+            className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl flex flex-col resize overflow-hidden"
             style={{
               width: '672px',
               height: 'min(85vh, 800px)',

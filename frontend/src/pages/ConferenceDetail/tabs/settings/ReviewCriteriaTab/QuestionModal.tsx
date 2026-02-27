@@ -1,12 +1,8 @@
-import { useState, useEffect } from "react";
-import type {
-  ReviewQuestion,
-  ReviewQuestionCreate,
-  ReviewScoreScale,
-} from "../../../../../types";
-import Modal from "../../../../../components/Modal";
-import { ErrorBanner } from "../../../../../components/common/ErrorBanner";
-import ModalFooter from "../../../../../components/common/ModalFooter";
+import { useState, useEffect } from 'react';
+import type { ReviewQuestion, ReviewQuestionCreate, ReviewScoreScale } from '../../../../../types';
+import Modal from '../../../../../components/Modal';
+import { ErrorBanner } from '../../../../../components/common/ErrorBanner';
+import ModalFooter from '../../../../../components/common/ModalFooter';
 
 export default function QuestionModal({
   open,
@@ -26,12 +22,12 @@ export default function QuestionModal({
   error: string | null;
 }) {
   const [formData, setFormData] = useState<ReviewQuestionCreate>({
-    text: question?.text || "",
-    help_text: question?.help_text || "",
-    question_type: question?.question_type || "scored",
-    score_scale_id: question?.score_scale_id || "",
+    text: question?.text || '',
+    help_text: question?.help_text || '',
+    question_type: question?.question_type || 'scored',
+    score_scale_id: question?.score_scale_id || '',
     weight: question?.weight ?? 1,
-    comment_requirement: question?.comment_requirement || "optional",
+    comment_requirement: question?.comment_requirement || 'optional',
     low_score_threshold: question?.low_score_threshold ?? undefined,
     show_to_reviewers: question?.show_to_reviewers ?? true,
     count_in_score: question?.count_in_score ?? true,
@@ -42,12 +38,12 @@ export default function QuestionModal({
   useEffect(() => {
     if (open) {
       setFormData({
-        text: question?.text || "",
-        help_text: question?.help_text || "",
-        question_type: question?.question_type || "scored",
-        score_scale_id: question?.score_scale_id || "",
+        text: question?.text || '',
+        help_text: question?.help_text || '',
+        question_type: question?.question_type || 'scored',
+        score_scale_id: question?.score_scale_id || '',
         weight: question?.weight ?? 1,
-        comment_requirement: question?.comment_requirement || "optional",
+        comment_requirement: question?.comment_requirement || 'optional',
         low_score_threshold: question?.low_score_threshold ?? undefined,
         show_to_reviewers: question?.show_to_reviewers ?? true,
         count_in_score: question?.count_in_score ?? true,
@@ -64,7 +60,7 @@ export default function QuestionModal({
       score_scale_id: formData.score_scale_id || undefined,
       help_text: formData.help_text || undefined,
       low_score_threshold:
-        formData.comment_requirement === "required_if_low_score"
+        formData.comment_requirement === 'required_if_low_score'
           ? formData.low_score_threshold
           : undefined,
     };
@@ -75,7 +71,7 @@ export default function QuestionModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={question ? "Edit Question" : "Add Question"}
+      title={question ? 'Edit Question' : 'Add Question'}
       size="max-w-2xl"
     >
       <form onSubmit={handleSubmit}>
@@ -83,46 +79,42 @@ export default function QuestionModal({
           <ErrorBanner message={error} />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Text *
             </label>
             <input
               type="text"
               required
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.text}
-              onChange={(e) =>
-                setFormData({ ...formData, text: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, text: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Help Text
             </label>
             <textarea
               rows={2}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.help_text || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, help_text: e.target.value })
-              }
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+              value={formData.help_text || ''}
+              onChange={(e) => setFormData({ ...formData, help_text: e.target.value })}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Question Type
               </label>
               <select
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.question_type}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    question_type: e.target.value as "scored" | "non_scored",
+                    question_type: e.target.value as 'scored' | 'non_scored',
                   })
                 }
               >
@@ -132,12 +124,12 @@ export default function QuestionModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Score Scale
               </label>
               <select
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.score_scale_id || ""}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+                value={formData.score_scale_id || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -157,14 +149,14 @@ export default function QuestionModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Weight
               </label>
               <input
                 type="number"
                 min={0}
                 step="any"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.weight ?? 1}
                 onChange={(e) =>
                   setFormData({
@@ -176,12 +168,12 @@ export default function QuestionModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Display Order
               </label>
               <input
                 type="number"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.display_order ?? 0}
                 onChange={(e) =>
                   setFormData({
@@ -194,50 +186,45 @@ export default function QuestionModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Comment Requirement
             </label>
             <select
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.comment_requirement}
               onChange={(e) =>
                 setFormData({
                   ...formData,
                   comment_requirement: e.target.value as
-                    | "optional"
-                    | "required"
-                    | "required_if_low_score",
+                    | 'optional'
+                    | 'required'
+                    | 'required_if_low_score',
                 })
               }
             >
               <option value="optional">Optional</option>
               <option value="required">Required</option>
-              <option value="required_if_low_score">
-                Required if Low Score
-              </option>
+              <option value="required_if_low_score">Required if Low Score</option>
             </select>
           </div>
 
-          {formData.comment_requirement === "required_if_low_score" && (
+          {formData.comment_requirement === 'required_if_low_score' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Low Score Threshold
               </label>
               <input
                 type="number"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.low_score_threshold ?? ""}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+                value={formData.low_score_threshold ?? ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    low_score_threshold:
-                      e.target.value === ""
-                        ? undefined
-                        : Number(e.target.value),
+                    low_score_threshold: e.target.value === '' ? undefined : Number(e.target.value),
                   })
                 }
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Scores at or below this value will require a comment
               </p>
             </div>
@@ -248,7 +235,7 @@ export default function QuestionModal({
               <input
                 id="question-show-reviewers"
                 type="checkbox"
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                 checked={formData.show_to_reviewers ?? true}
                 onChange={(e) =>
                   setFormData({
@@ -259,7 +246,7 @@ export default function QuestionModal({
               />
               <label
                 htmlFor="question-show-reviewers"
-                className="ml-2 block text-sm text-gray-900"
+                className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
               >
                 Show to Reviewers
               </label>
@@ -269,7 +256,7 @@ export default function QuestionModal({
               <input
                 id="question-count-score"
                 type="checkbox"
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                 checked={formData.count_in_score ?? true}
                 onChange={(e) =>
                   setFormData({
@@ -280,7 +267,7 @@ export default function QuestionModal({
               />
               <label
                 htmlFor="question-count-score"
-                className="ml-2 block text-sm text-gray-900"
+                className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
               >
                 Count in Score
               </label>
@@ -290,7 +277,7 @@ export default function QuestionModal({
               <input
                 id="question-active"
                 type="checkbox"
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                 checked={formData.is_active ?? true}
                 onChange={(e) =>
                   setFormData({
@@ -301,7 +288,7 @@ export default function QuestionModal({
               />
               <label
                 htmlFor="question-active"
-                className="ml-2 block text-sm text-gray-900"
+                className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
               >
                 Active
               </label>

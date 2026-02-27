@@ -110,7 +110,7 @@ export default function NewsPage() {
                     <RichTextDisplay content={article.body_html} />
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
                     {preview}
                   </p>
                 )}

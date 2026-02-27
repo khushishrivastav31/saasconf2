@@ -1,10 +1,6 @@
-import { useState, useEffect } from "react";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-import api from "../../../../../config/api";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../../../config/api';
 import type {
   Conference,
   ReviewCriterion,
@@ -16,14 +12,14 @@ import type {
   ReviewQuestionCreate,
   ReviewQuestionUpdate,
   ReviewScoreScale,
-} from "../../../../../types";
-import { parseApiError } from "../../../../../utils/apiError";
-import ConfirmDialog from "../../../../../components/ConfirmDialog";
-import { ErrorBanner, SuccessBanner } from "../../../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../../../components/common/LoadingSpinner";
-import CriterionCard from "./CriterionCard";
-import CriterionModal from "./CriterionModal";
-import QuestionModal from "./QuestionModal";
+} from '../../../../../types';
+import { parseApiError } from '../../../../../utils/apiError';
+import ConfirmDialog from '../../../../../components/ConfirmDialog';
+import { ErrorBanner, SuccessBanner } from '../../../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../../../components/common/LoadingSpinner';
+import CriterionCard from './CriterionCard';
+import CriterionModal from './CriterionModal';
+import QuestionModal from './QuestionModal';
 
 // --- Review Criteria Tab -----------------------------------------------------
 
@@ -72,30 +68,30 @@ function ConferenceReviewCriteriaTab({
     isError: isCriteriaError,
     error: criteriaError,
   } = useQuery({
-    queryKey: ["review-criteria", conference.id],
+    queryKey: ['review-criteria', conference.id],
     queryFn: async () => {
       const response = await api.get<{ items: ReviewCriterion[]; total: number }>(
-        `/conferences/${conference.id}/settings/review-criteria`,
+        `/conferences/${conference.id}/settings/review-criteria`
       );
       return response.data;
     },
   });
 
   const { data: scalesData } = useQuery({
-    queryKey: ["score-scales", conference.id],
+    queryKey: ['score-scales', conference.id],
     queryFn: async () => {
       const response = await api.get<{ items: ReviewScoreScale[]; total: number }>(
-        `/conferences/${conference.id}/settings/score-scales`,
+        `/conferences/${conference.id}/settings/score-scales`
       );
       return response.data;
     },
   });
 
   const { data: formSettings } = useQuery({
-    queryKey: ["review-form-settings", conference.id],
+    queryKey: ['review-form-settings', conference.id],
     queryFn: async () => {
       const response = await api.get<ReviewFormSettings>(
-        `/conferences/${conference.id}/settings/review-form-settings`,
+        `/conferences/${conference.id}/settings/review-form-settings`
       );
       return response.data;
     },
@@ -105,13 +101,13 @@ function ConferenceReviewCriteriaTab({
     mutationFn: async (data: ReviewFormSettingsUpdate) => {
       const response = await api.put<ReviewFormSettings>(
         `/conferences/${conference.id}/settings/review-form-settings`,
-        data,
+        data
       );
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["review-form-settings", conference.id],
+        queryKey: ['review-form-settings', conference.id],
       });
     },
     onError: (err: unknown) => {
@@ -125,13 +121,13 @@ function ConferenceReviewCriteriaTab({
     mutationFn: async (data: ReviewCriterionCreate) => {
       const response = await api.post<ReviewCriterion>(
         `/conferences/${conference.id}/settings/review-criteria`,
-        data,
+        data
       );
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["review-criteria", conference.id],
+        queryKey: ['review-criteria', conference.id],
       });
       setIsCriterionModalOpen(false);
       setError(null);
@@ -142,30 +138,24 @@ function ConferenceReviewCriteriaTab({
   });
 
   const updateCriterionMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: ReviewCriterionUpdate;
-    }) => {
+    mutationFn: async ({ id, data }: { id: string; data: ReviewCriterionUpdate }) => {
       const response = await api.put<ReviewCriterion>(
         `/conferences/${conference.id}/settings/review-criteria/${id}`,
-        data,
+        data
       );
       return response.data;
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["review-criteria", conference.id],
+        queryKey: ['review-criteria', conference.id],
       });
       setEditingCriterion(null);
       setIsCriterionModalOpen(false);
       setError(null);
       const msg =
         variables.data.is_active !== undefined
-          ? `Criterion ${variables.data.is_active ? "activated" : "deactivated"} successfully`
-          : "Criterion updated successfully";
+          ? `Criterion ${variables.data.is_active ? 'activated' : 'deactivated'} successfully`
+          : 'Criterion updated successfully';
       setSuccessMessage(msg);
     },
     onError: (err: unknown) => {
@@ -175,13 +165,11 @@ function ConferenceReviewCriteriaTab({
 
   const deleteCriterionMutation = useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(
-        `/conferences/${conference.id}/settings/review-criteria/${id}`,
-      );
+      await api.delete(`/conferences/${conference.id}/settings/review-criteria/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["review-criteria", conference.id],
+        queryKey: ['review-criteria', conference.id],
       });
       setError(null);
     },
@@ -202,13 +190,13 @@ function ConferenceReviewCriteriaTab({
     }) => {
       const response = await api.post<ReviewQuestion>(
         `/conferences/${conference.id}/settings/review-criteria/${criterionId}/questions`,
-        data,
+        data
       );
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["review-criteria", conference.id],
+        queryKey: ['review-criteria', conference.id],
       });
       setIsQuestionModalOpen(false);
       setQuestionCriterionId(null);
@@ -231,13 +219,13 @@ function ConferenceReviewCriteriaTab({
     }) => {
       const response = await api.put<ReviewQuestion>(
         `/conferences/${conference.id}/settings/review-criteria/${criterionId}/questions/${questionId}`,
-        data,
+        data
       );
       return response.data;
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["review-criteria", conference.id],
+        queryKey: ['review-criteria', conference.id],
       });
       setEditingQuestion(null);
       setIsQuestionModalOpen(false);
@@ -245,8 +233,8 @@ function ConferenceReviewCriteriaTab({
       setError(null);
       const msg =
         variables.data.is_active !== undefined
-          ? `Question ${variables.data.is_active ? "activated" : "deactivated"} successfully`
-          : "Question updated successfully";
+          ? `Question ${variables.data.is_active ? 'activated' : 'deactivated'} successfully`
+          : 'Question updated successfully';
       setSuccessMessage(msg);
     },
     onError: (err: unknown) => {
@@ -263,12 +251,12 @@ function ConferenceReviewCriteriaTab({
       questionId: string;
     }) => {
       await api.delete(
-        `/conferences/${conference.id}/settings/review-criteria/${criterionId}/questions/${questionId}`,
+        `/conferences/${conference.id}/settings/review-criteria/${criterionId}/questions/${questionId}`
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["review-criteria", conference.id],
+        queryKey: ['review-criteria', conference.id],
       });
       setError(null);
     },
@@ -336,21 +324,14 @@ function ConferenceReviewCriteriaTab({
     setDeleteQuestionTarget({ criterionId, question });
   };
 
-  const handleToggleCriterionActive = (
-    criterionId: string,
-    active: boolean,
-  ) => {
+  const handleToggleCriterionActive = (criterionId: string, active: boolean) => {
     updateCriterionMutation.mutate({
       id: criterionId,
       data: { is_active: active },
     });
   };
 
-  const handleToggleQuestionActive = (
-    criterionId: string,
-    questionId: string,
-    active: boolean,
-  ) => {
+  const handleToggleQuestionActive = (criterionId: string, questionId: string, active: boolean) => {
     updateQuestionMutation.mutate({
       criterionId,
       questionId,
@@ -387,12 +368,9 @@ function ConferenceReviewCriteriaTab({
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-4">
         <div>
-          <h2 className="text-lg font-medium text-gray-900">
-            Review Criteria
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Define review criteria and their associated questions for the
-            proposal review process
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Review Criteria</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Define review criteria and their associated questions for the proposal review process
           </p>
         </div>
         {isAdmin && (
@@ -410,18 +388,18 @@ function ConferenceReviewCriteriaTab({
       </div>
 
       {/* Review Form Settings */}
-      <div className="mb-6 bg-white shadow sm:rounded-lg px-6 py-4">
-        <h3 className="text-sm font-medium text-gray-900 mb-3">
+      <div className="mb-6 bg-white dark:bg-gray-800 shadow sm:rounded-lg px-6 py-4">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
           Review Form Comment Fields
         </h3>
-        <p className="text-xs text-gray-500 mb-4">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
           Control which comment fields are shown to reviewers in the review form
         </p>
         <div className="space-y-3">
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
               checked={formSettings?.enable_speaker_feedback ?? true}
               disabled={!isAdmin}
               onChange={(e) =>
@@ -431,19 +409,17 @@ function ConferenceReviewCriteriaTab({
               }
             />
             <div>
-              <span className="text-sm text-gray-900">
-                Speaker Feedback
-              </span>
-              <p className="text-xs text-gray-500">
-                Reviewers can provide anonymous feedback that will be shared
-                with the speaker(s) when the CFP is completed
+              <span className="text-sm text-gray-900 dark:text-gray-100">Speaker Feedback</span>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Reviewers can provide anonymous feedback that will be shared with the speaker(s)
+                when the CFP is completed
               </p>
             </div>
           </label>
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
               checked={formSettings?.enable_internal_comment ?? true}
               disabled={!isAdmin}
               onChange={(e) =>
@@ -453,19 +429,17 @@ function ConferenceReviewCriteriaTab({
               }
             />
             <div>
-              <span className="text-sm text-gray-900">
-                Internal Comment
-              </span>
-              <p className="text-xs text-gray-500">
-                Reviewers can leave an internal note visible only to the
-                conference team (not shared with speakers)
+              <span className="text-sm text-gray-900 dark:text-gray-100">Internal Comment</span>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Reviewers can leave an internal note visible only to the conference team (not shared
+                with speakers)
               </p>
             </div>
           </label>
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
               checked={formSettings?.enable_must_have ?? true}
               disabled={!isAdmin}
               onChange={(e) =>
@@ -475,12 +449,9 @@ function ConferenceReviewCriteriaTab({
               }
             />
             <div>
-              <span className="text-sm text-gray-900">
-                Must Have in Program
-              </span>
-              <p className="text-xs text-gray-500">
-                Reviewers can flag a paper as a must-have for the conference
-                program
+              <span className="text-sm text-gray-900 dark:text-gray-100">Must Have in Program</span>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Reviewers can flag a paper as a must-have for the conference program
               </p>
             </div>
           </label>
@@ -489,18 +460,15 @@ function ConferenceReviewCriteriaTab({
 
       <SuccessBanner message={successMessage} />
 
-      {error && !isCriterionModalOpen && !isQuestionModalOpen && (
-        <ErrorBanner message={error} />
-      )}
+      {error && !isCriterionModalOpen && !isQuestionModalOpen && <ErrorBanner message={error} />}
 
       {isCriteriaLoading ? (
         <LoadingSpinner />
       ) : isCriteriaError ? (
         <ErrorBanner message={`Failed to load review criteria: ${parseApiError(criteriaError)}`} />
       ) : criteriaData?.items.length === 0 ? (
-        <div className="bg-white shadow sm:rounded-lg px-6 py-12 text-center text-sm text-gray-500">
-          No review criteria defined yet. Click &quot;Add Criterion&quot; to
-          create one.
+        <div className="bg-white dark:bg-gray-800 shadow sm:rounded-lg px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+          No review criteria defined yet. Click &quot;Add Criterion&quot; to create one.
         </div>
       ) : (
         <div className="space-y-4">
@@ -516,9 +484,7 @@ function ConferenceReviewCriteriaTab({
               onAddQuestion={() => handleAddQuestion(criterion.id)}
               onEditQuestion={(q) => handleEditQuestion(criterion.id, q)}
               onDeleteQuestion={(q) => handleDeleteQuestion(criterion.id, q)}
-              onToggleActive={(active) =>
-                handleToggleCriterionActive(criterion.id, active)
-              }
+              onToggleActive={(active) => handleToggleCriterionActive(criterion.id, active)}
               onToggleQuestionActive={(questionId, active) =>
                 handleToggleQuestionActive(criterion.id, questionId, active)
               }
@@ -533,10 +499,7 @@ function ConferenceReviewCriteriaTab({
         criterion={editingCriterion}
         onClose={handleCloseCriterionModal}
         onSubmit={handleSubmitCriterion}
-        isLoading={
-          createCriterionMutation.isPending ||
-          updateCriterionMutation.isPending
-        }
+        isLoading={createCriterionMutation.isPending || updateCriterionMutation.isPending}
         error={error}
       />
 
@@ -547,10 +510,7 @@ function ConferenceReviewCriteriaTab({
         scales={scalesData?.items || []}
         onClose={handleCloseQuestionModal}
         onSubmit={handleSubmitQuestion}
-        isLoading={
-          createQuestionMutation.isPending ||
-          updateQuestionMutation.isPending
-        }
+        isLoading={createQuestionMutation.isPending || updateQuestionMutation.isPending}
         error={error}
       />
 
@@ -561,8 +521,7 @@ function ConferenceReviewCriteriaTab({
         message={`Are you sure you want to delete "${deleteCriterionTarget?.title}"? All associated questions will also be deleted. This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={() => {
-          if (deleteCriterionTarget)
-            deleteCriterionMutation.mutate(deleteCriterionTarget.id);
+          if (deleteCriterionTarget) deleteCriterionMutation.mutate(deleteCriterionTarget.id);
           setDeleteCriterionTarget(null);
         }}
         onCancel={() => setDeleteCriterionTarget(null)}

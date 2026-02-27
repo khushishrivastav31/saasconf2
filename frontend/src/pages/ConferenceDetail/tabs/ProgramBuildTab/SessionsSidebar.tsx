@@ -29,7 +29,7 @@ function SessionCard({ session }: { session: ProgramSession }) {
           </h4>
 
           {session.speaker_name && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 truncate">
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 truncate">
               {session.speaker_name}
             </p>
           )}
@@ -111,7 +111,7 @@ export default function SessionsSidebar({ conferenceId, sessions }: SessionsSide
           title="Show sessions"
         >
           <svg
-            className="w-5 h-5 text-gray-600 dark:text-gray-400"
+            className="w-5 h-5 text-gray-600 dark:text-gray-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -134,7 +134,7 @@ export default function SessionsSidebar({ conferenceId, sessions }: SessionsSide
       <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
           Sessions
-          <span className="ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
+          <span className="ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
             {visibleSessions.length}
           </span>
         </h3>
@@ -163,7 +163,7 @@ export default function SessionsSidebar({ conferenceId, sessions }: SessionsSide
           placeholder="Search sessions..."
           className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
         />
-        <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+        <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={paperOnly}

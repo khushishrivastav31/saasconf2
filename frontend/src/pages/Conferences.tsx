@@ -111,7 +111,7 @@ export default function Conferences() {
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">Past</div>
-            <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.past}</div>
+            <div className="text-2xl font-bold text-gray-600 dark:text-gray-300">{stats.past}</div>
           </div>
         </div>
       )}
@@ -174,7 +174,7 @@ export default function Conferences() {
                 </div>
 
                 {conference.start_date && (
-                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-300 mb-2">
                     <svg
                       className="w-4 h-4 mr-2"
                       fill="none"
@@ -196,7 +196,7 @@ export default function Conferences() {
                 )}
 
                 {(conference.city || conference.country) && (
-                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-300 mb-2">
                     <svg
                       className="w-4 h-4 mr-2"
                       fill="none"
@@ -251,7 +251,7 @@ export default function Conferences() {
                       Published
                     </span>
                   ) : (
-                    <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                    <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
                       Draft
                     </span>
                   )}

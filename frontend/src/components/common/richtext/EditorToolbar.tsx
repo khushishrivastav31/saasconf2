@@ -681,7 +681,7 @@ function ToolbarButton({
       className={`p-1.5 rounded text-sm leading-none transition-colors ${
         active
           ? 'bg-primary-100 text-primary-700'
-          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
       } disabled:opacity-50 disabled:cursor-not-allowed`}
     >
       {children}
@@ -760,7 +760,7 @@ function ColorPicker({
         className={`p-1 rounded text-sm leading-none transition-colors ${
           activeColor
             ? 'bg-primary-50 text-primary-700'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         {mode === 'text' ? (
@@ -836,7 +836,7 @@ function ColorPicker({
                     onChange('');
                     setIsOpen(false);
                   }}
-                  className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   <svg
                     className="w-3.5 h-3.5"
@@ -853,7 +853,7 @@ function ColorPicker({
                   </svg>
                   Remove
                 </button>
-                <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
                   Custom
                   <input
                     type="color"

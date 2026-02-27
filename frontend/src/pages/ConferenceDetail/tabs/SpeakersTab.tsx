@@ -229,16 +229,16 @@ export default function SpeakersTab({ conference }: SpeakersTabProps) {
                                   </p>
                                 )}
                               </td>
-                              <td className="py-2 pr-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                              <td className="py-2 pr-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                                 {sess.dayName}
                               </td>
-                              <td className="py-2 pr-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                              <td className="py-2 pr-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                                 {sess.time}
                               </td>
-                              <td className="py-2 pr-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                              <td className="py-2 pr-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                                 {sess.trackName || '-'}
                               </td>
-                              <td className="py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                              <td className="py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                                 {sess.sessionType || '-'}
                               </td>
                             </tr>

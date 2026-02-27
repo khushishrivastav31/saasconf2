@@ -470,7 +470,7 @@ function CreateTenantModal({
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                               First Name *
                             </label>
                             <input
@@ -486,7 +486,7 @@ function CreateTenantModal({
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                               Last Name *
                             </label>
                             <input
@@ -504,7 +504,7 @@ function CreateTenantModal({
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                               Role
                             </label>
                             <input
@@ -520,7 +520,7 @@ function CreateTenantModal({
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                               Email
                             </label>
                             <input
@@ -536,7 +536,7 @@ function CreateTenantModal({
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                               Phone
                             </label>
                             <input
@@ -580,7 +580,7 @@ function CreateTenantModal({
                               {[contact.first_name, contact.last_name].filter(Boolean).join(' ')}
                             </span>
                             {contact.role && (
-                              <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                              <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
                                 {contact.role}
                               </span>
                             )}
@@ -646,7 +646,7 @@ function CreateTenantModal({
               </h5>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                     First Name *
                   </label>
                   <input
@@ -658,7 +658,7 @@ function CreateTenantModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                     Last Name *
                   </label>
                   <input
@@ -672,7 +672,7 @@ function CreateTenantModal({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                     Role
                   </label>
                   <input
@@ -684,7 +684,7 @@ function CreateTenantModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                     Email
                   </label>
                   <input
@@ -696,7 +696,7 @@ function CreateTenantModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                     Phone
                   </label>
                   <input

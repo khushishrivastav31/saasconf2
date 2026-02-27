@@ -180,7 +180,7 @@ export default function DiscountModal({
             <div>
               <label
                 htmlFor={`${idPrefix}-description`}
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Description <span className="text-red-500">*</span>
               </label>
@@ -191,13 +191,13 @@ export default function DiscountModal({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Early Sponsor Discount"
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
               <label
                 htmlFor={`${idPrefix}-code`}
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Code <span className="text-red-500">*</span>
               </label>
@@ -207,7 +207,7 @@ export default function DiscountModal({
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="e.g. EARLY20"
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm font-mono"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm font-mono dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
           </div>
@@ -216,7 +216,7 @@ export default function DiscountModal({
             <div>
               <label
                 htmlFor={`${idPrefix}-type`}
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Type
               </label>
@@ -224,7 +224,7 @@ export default function DiscountModal({
                 id={`${idPrefix}-type`}
                 value={discountType}
                 onChange={(e) => setDiscountType(e.target.value as 'fixed' | 'percentage')}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="percentage">Percentage (%)</option>
                 <option value="fixed">Fixed Amount</option>
@@ -233,7 +233,7 @@ export default function DiscountModal({
             <div>
               <label
                 htmlFor={`${idPrefix}-value`}
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Value <span className="text-red-500">*</span>
               </label>
@@ -246,14 +246,14 @@ export default function DiscountModal({
                 value={discountValue}
                 onChange={(e) => setDiscountValue(e.target.value)}
                 placeholder={discountType === 'percentage' ? 'e.g. 20' : 'e.g. 50.00'}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             {discountType === 'fixed' && (
               <div>
                 <label
                   htmlFor={`${idPrefix}-currency`}
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                 >
                   Currency
                 </label>
@@ -264,14 +264,14 @@ export default function DiscountModal({
                     value={conferenceCurrency || ''}
                     disabled
                     title="Set by conference"
-                    className="block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm text-gray-600"
+                    className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 shadow-sm text-sm text-gray-600 dark:text-gray-300"
                   />
                 ) : (
                   <select
                     id={`${idPrefix}-currency`}
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value)}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                    className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
                   >
                     <option value="">Select...</option>
                     {(currencyOptions || []).map((c) => (
@@ -289,24 +289,24 @@ export default function DiscountModal({
             <div>
               <label
                 htmlFor={`${idPrefix}-start`}
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                Start Date <span className="text-gray-400">(optional)</span>
+                Start Date <span className="text-gray-400 dark:text-gray-500">(optional)</span>
               </label>
               <input
                 id={`${idPrefix}-start`}
                 type="date"
                 value={startDate}
                 onChange={(e) => handleStartDateChange(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
               <label
                 htmlFor={`${idPrefix}-end`}
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                End Date <span className="text-gray-400">(optional)</span>
+                End Date <span className="text-gray-400 dark:text-gray-500">(optional)</span>
               </label>
               <input
                 id={`${idPrefix}-end`}
@@ -314,7 +314,7 @@ export default function DiscountModal({
                 value={endDate}
                 min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
           </div>
@@ -323,9 +323,9 @@ export default function DiscountModal({
             <div>
               <label
                 htmlFor={`${idPrefix}-maxuses`}
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                Max Uses <span className="text-gray-400">(0 = unlimited)</span>
+                Max Uses <span className="text-gray-400 dark:text-gray-500">(0 = unlimited)</span>
               </label>
               <input
                 id={`${idPrefix}-maxuses`}
@@ -333,11 +333,11 @@ export default function DiscountModal({
                 min="0"
                 value={maxUses}
                 onChange={(e) => setMaxUses(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             <div className="flex items-end pb-2">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isCombinable}
@@ -349,7 +349,7 @@ export default function DiscountModal({
             </div>
             {isEditMode && (
               <div className="flex items-end pb-2">
-                <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isActive}
@@ -364,15 +364,15 @@ export default function DiscountModal({
 
           {bookingOptions.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Applies to Options <span className="text-red-500">*</span>
               </label>
-              <div className="border border-gray-200 rounded-md p-3 bg-gray-50">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-md p-3 bg-gray-50 dark:bg-gray-900">
                 <div className="flex flex-wrap gap-x-4 gap-y-2">
                   {bookingOptions.map((opt) => (
                     <label
                       key={opt.id}
-                      className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
+                      className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -390,15 +390,16 @@ export default function DiscountModal({
 
           {bookingPeriods.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Applies to Periods <span className="text-gray-400">(empty = all)</span>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Applies to Periods{' '}
+                <span className="text-gray-400 dark:text-gray-500">(empty = all)</span>
               </label>
-              <div className="border border-gray-200 rounded-md p-3 bg-gray-50">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-md p-3 bg-gray-50 dark:bg-gray-900">
                 <div className="flex flex-wrap gap-x-4 gap-y-2">
                   {bookingPeriods.map((period) => (
                     <label
                       key={period.id}
-                      className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
+                      className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -415,11 +416,11 @@ export default function DiscountModal({
           )}
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

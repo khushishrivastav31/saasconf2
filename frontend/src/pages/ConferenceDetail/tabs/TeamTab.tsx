@@ -154,7 +154,7 @@ function ConferenceTeamTab({
         </div>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md">
               <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
@@ -217,7 +217,7 @@ function ConferenceTeamTab({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                       First Name *
                     </label>
                     <input
@@ -228,7 +228,7 @@ function ConferenceTeamTab({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                       Last Name *
                     </label>
                     <input
@@ -241,7 +241,7 @@ function ConferenceTeamTab({
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                       Role
                     </label>
                     <input
@@ -253,7 +253,7 @@ function ConferenceTeamTab({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                       Email
                     </label>
                     <input
@@ -273,7 +273,7 @@ function ConferenceTeamTab({
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                       Phone
                     </label>
                     <input
@@ -350,7 +350,7 @@ function ConferenceTeamTab({
                         {[member.first_name, member.last_name].filter(Boolean).join(' ')}
                       </span>
                       {member.role && (
-                        <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                        <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
                           {member.role}
                         </span>
                       )}
@@ -401,7 +401,7 @@ function ConferenceTeamTab({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                 First Name *
               </label>
               <input
@@ -412,7 +412,7 @@ function ConferenceTeamTab({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                 Last Name *
               </label>
               <input
@@ -425,7 +425,7 @@ function ConferenceTeamTab({
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                 Role
               </label>
               <input
@@ -437,7 +437,7 @@ function ConferenceTeamTab({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                 Email
               </label>
               <input
@@ -455,7 +455,7 @@ function ConferenceTeamTab({
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                 Phone
               </label>
               <input

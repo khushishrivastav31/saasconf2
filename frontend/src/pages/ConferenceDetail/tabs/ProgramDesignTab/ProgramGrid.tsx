@@ -179,7 +179,7 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
               onKeyDown={handleKeyDown}
               className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
             />
-            <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+            <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isSessionFree}
@@ -255,7 +255,7 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
       )}
       {isAdmin && !slot.is_session_free && (
         <svg
-          className="w-3 h-3 text-gray-600 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5"
+          className="w-3 h-3 text-gray-600 dark:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -399,7 +399,7 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
       </div>
       {isAdmin && (
         <svg
-          className="w-3 h-3 text-gray-600 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-1 flex-shrink-0"
+          className="w-3 h-3 text-gray-600 dark:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity ml-1 flex-shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -1134,7 +1134,7 @@ export default function ProgramGrid({
               </button>
               <button
                 onClick={() => setMarkedCells(new Set())}
-                className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
               >
                 Cancel
               </button>

@@ -218,7 +218,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
         <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Company Details</h4>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md">
               <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
@@ -268,7 +268,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
 
       <div className="space-y-4">
         {/* Logo */}
-        <div className="border-b pb-4">
+        <div className="border-b dark:border-gray-700 pb-4">
           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Company Logo
           </h5>
@@ -312,7 +312,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                 htmlFor="logo-upload"
                 className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer ${
                   logoStatus === 'uploading'
-                    ? 'bg-gray-100 text-gray-400 cursor-wait'
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-wait'
                     : 'bg-primary-600 text-white hover:bg-primary-700'
                 }`}
               >
@@ -362,8 +362,8 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                   disabled={logoStatus === 'deleting'}
                   className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
                     logoStatus === 'deleting'
-                      ? 'bg-gray-100 text-gray-400 cursor-wait'
-                      : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-wait'
+                      : 'bg-white dark:bg-gray-800 text-red-600 border border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/30'
                   }`}
                 >
                   {logoStatus === 'deleting' ? (
@@ -454,8 +454,8 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
         </div>
 
         {/* Address */}
-        <div className="border-t pt-4">
-          <h5 className="text-sm font-medium text-gray-700 mb-2">Address</h5>
+        <div className="border-t dark:border-gray-700 pt-4">
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Address</h5>
           <div className="space-y-3">
             <input
               type="text"
@@ -491,8 +491,10 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
         </div>
 
         {/* Contact Persons */}
-        <div className="border-t pt-4">
-          <h5 className="text-sm font-medium text-gray-700 mb-2">Contact Persons</h5>
+        <div className="border-t dark:border-gray-700 pt-4">
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Contact Persons
+          </h5>
 
           {formData.contact_persons && formData.contact_persons.length > 0 && (
             <div className="mb-4 space-y-2">
@@ -505,7 +507,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                             First Name *
                           </label>
                           <input
@@ -521,7 +523,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                             Last Name *
                           </label>
                           <input
@@ -539,7 +541,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                             Role
                           </label>
                           <input
@@ -555,12 +557,12 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                             Email
                           </label>
                           <input
                             type="email"
-                            className={`w-full border ${editContactEmailError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                            className={`w-full border ${editContactEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                             value={contact.email || ''}
                             onChange={(e) =>
                               updateContact(index, {
@@ -575,13 +577,13 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                           )}
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                             Phone
                           </label>
                           <input
                             type="tel"
                             placeholder="+491234545 or 00491234566"
-                            className={`w-full border ${editContactPhoneError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                            className={`w-full border ${editContactPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                             value={contact.phone || ''}
                             onChange={(e) => {
                               const value = e.target.value;
@@ -603,7 +605,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                             setEditContactEmailError(null);
                           }}
                           disabled={!!editContactPhoneError || !!editContactEmailError}
-                          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Done
                         </button>
@@ -617,7 +619,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                             {`${contact.first_name} ${contact.last_name}`.trim()}
                           </span>
                           {contact.role && (
-                            <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                            <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
                               {contact.role}
                             </span>
                           )}
@@ -687,7 +689,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
             </h6>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   First Name *
                 </label>
                 <input
@@ -699,7 +701,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Last Name *
                 </label>
                 <input
@@ -713,7 +715,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Role
                 </label>
                 <input
@@ -725,13 +727,13 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Email
                 </label>
                 <input
                   type="email"
                   placeholder="email@example.com"
-                  className={`w-full border ${newContactEmailError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                  className={`w-full border ${newContactEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                   value={newContact.email}
                   onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
                   onBlur={(e) => setNewContactEmailError(validateEmail(e.target.value))}
@@ -741,13 +743,13 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Phone
                 </label>
                 <input
                   type="tel"
                   placeholder="+491234545 or 00491234566"
-                  className={`w-full border ${newContactPhoneError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                  className={`w-full border ${newContactPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                   value={newContact.phone}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -792,7 +794,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
         </div>
 
         {/* Comments */}
-        <div className="border-t pt-4">
+        <div className="border-t dark:border-gray-700 pt-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Comments / Notes
           </label>

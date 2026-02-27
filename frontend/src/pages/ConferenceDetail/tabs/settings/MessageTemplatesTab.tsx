@@ -129,8 +129,10 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Message Templates</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Message Templates
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Create reusable templates for composing messages.
           </p>
         </div>
@@ -145,30 +147,34 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-gray-500">Loading...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
       ) : templates.length === 0 ? (
-        <p className="text-sm text-gray-500">No templates yet.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">No templates yet.</p>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Name
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Subject
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {templates.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{t.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{t.subject}</td>
+                <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {t.name}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                    {t.subject}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     {isAdmin && (
                       <div className="flex items-center justify-end gap-2">
@@ -188,7 +194,7 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
                             </button>
                             <button
                               onClick={() => setDeleteConfirm(null)}
-                              className="text-sm text-gray-500 hover:text-gray-700"
+                              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                             >
                               Cancel
                             </button>
@@ -215,21 +221,21 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div
-            className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 flex flex-col"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl mx-4 flex flex-col"
             style={{ maxHeight: '90vh' }}
           >
-            <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-lg font-semibold text-gray-900">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingTemplate ? 'Edit Template' : 'Create Template'}
               </h3>
             </div>
             <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
               {/* Variable pills */}
               <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                   Variables
                 </label>
-                <p className="text-xs text-gray-400 mb-2">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
                   Click to insert into subject or body. Variables are replaced per recipient when
                   sending.
                 </p>
@@ -289,28 +295,34 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Name
+                </label>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                   placeholder="e.g. Acceptance Letter"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Subject
+                </label>
                 <input
                   ref={subjectRef}
                   type="text"
                   value={formSubject}
                   onChange={(e) => setFormSubject(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                   placeholder="e.g. Your paper has been accepted, [First Name]!"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Body</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Body
+                </label>
                 <RichTextEditor
                   value={formBody}
                   onChange={setFormBody}
@@ -325,10 +337,10 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
                 onChange={setFormOverlayId}
               />
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 flex-shrink-0">
               <button
                 onClick={closeModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
               >
                 Cancel
               </button>

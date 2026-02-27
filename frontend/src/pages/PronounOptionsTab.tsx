@@ -1,22 +1,23 @@
-import { useState, useEffect } from "react";
-import type {
-  Conference,
-  PronounOption,
-  PronounOptionCreate,
-  PronounOptionUpdate,
-} from "../types";
-import { parseApiError } from "../utils/apiError";
-import Modal from "../components/Modal";
-import ConfirmDialog from "../components/ConfirmDialog";
-import StatusBadge from "../components/common/StatusBadge";
-import { ErrorBanner } from "../components/common/ErrorBanner";
-import { LoadingSpinner } from "../components/common/LoadingSpinner";
-import ModalFooter from "../components/common/ModalFooter";
-import { useSettingsCrud } from "../hooks/useSettingsCrud";
+import { useState, useEffect } from 'react';
+import type { Conference, PronounOption, PronounOptionCreate, PronounOptionUpdate } from '../types';
+import { parseApiError } from '../utils/apiError';
+import Modal from '../components/Modal';
+import ConfirmDialog from '../components/ConfirmDialog';
+import StatusBadge from '../components/common/StatusBadge';
+import { ErrorBanner } from '../components/common/ErrorBanner';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import ModalFooter from '../components/common/ModalFooter';
+import { useSettingsCrud } from '../hooks/useSettingsCrud';
 
 // --- Pronoun Options Tab -----------------------------------------------------
 
-export default function PronounOptionsTab({ conference, isAdmin }: { conference: Conference; isAdmin: boolean }) {
+export default function PronounOptionsTab({
+  conference,
+  isAdmin,
+}: {
+  conference: Conference;
+  isAdmin: boolean;
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPronoun, setEditingPronoun] = useState<PronounOption | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PronounOption | null>(null);
@@ -33,8 +34,8 @@ export default function PronounOptionsTab({ conference, isAdmin }: { conference:
     setError,
   } = useSettingsCrud<PronounOption, PronounOptionCreate, PronounOptionUpdate>({
     conferenceId: conference.id,
-    endpoint: "pronouns",
-    queryKey: "pronoun-options",
+    endpoint: 'pronouns',
+    queryKey: 'pronoun-options',
     onCreateSuccess: () => {
       setIsModalOpen(false);
     },
@@ -72,10 +73,8 @@ export default function PronounOptionsTab({ conference, isAdmin }: { conference:
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-4">
         <div>
-          <h2 className="text-lg font-medium text-gray-900">
-            Pronoun Options
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Pronoun Options</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Manage available pronouns for user profiles.
           </p>
         </div>
@@ -100,28 +99,28 @@ export default function PronounOptionsTab({ conference, isAdmin }: { conference:
       ) : isError ? (
         <ErrorBanner message={`Failed to load pronoun options: ${parseApiError(queryError)}`} />
       ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
                 {isAdmin && (
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 )}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {data?.items?.map((pronoun) => (
                 <tr key={pronoun.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {pronoun.name}
                     </div>
                   </td>
@@ -132,14 +131,14 @@ export default function PronounOptionsTab({ conference, isAdmin }: { conference:
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => handleEdit(pronoun)}
-                        className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors mr-2"
+                        className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors mr-2"
                         title="Edit"
                       >
                         <EditIcon />
                       </button>
                       <button
                         onClick={() => handleDelete(pronoun)}
-                        className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                        className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                         title="Delete"
                       >
                         <DeleteIcon />
@@ -152,10 +151,9 @@ export default function PronounOptionsTab({ conference, isAdmin }: { conference:
                 <tr>
                   <td
                     colSpan={3}
-                    className="px-6 py-12 text-center text-sm text-gray-500"
+                    className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
                   >
-                    No pronoun options defined yet. Click &quot;Add Pronoun&quot;
-                    to create one.
+                    No pronoun options defined yet. Click &quot;Add Pronoun&quot; to create one.
                   </td>
                 </tr>
               )}
@@ -206,14 +204,14 @@ function PronounOptionModal({
   error: string | null;
 }) {
   const [formData, setFormData] = useState<PronounOptionCreate>({
-    name: "",
+    name: '',
     is_active: true,
   });
 
   useEffect(() => {
     if (open) {
       setFormData({
-        name: pronoun?.name || "",
+        name: pronoun?.name || '',
         is_active: pronoun?.is_active ?? true,
       });
     }
@@ -228,7 +226,7 @@ function PronounOptionModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={pronoun ? "Edit Pronoun" : "Add Pronoun"}
+      title={pronoun ? 'Edit Pronoun' : 'Add Pronoun'}
       size="max-w-lg"
     >
       <form onSubmit={handleSubmit}>
@@ -236,17 +234,15 @@ function PronounOptionModal({
           <ErrorBanner message={error} />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Name *
             </label>
             <input
               type="text"
               required
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
 
@@ -256,13 +252,11 @@ function PronounOptionModal({
               type="checkbox"
               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
               checked={formData.is_active ?? true}
-              onChange={(e) =>
-                setFormData({ ...formData, is_active: e.target.checked })
-              }
+              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
             />
             <label
               htmlFor="pronoun-active"
-              className="ml-2 block text-sm text-gray-900"
+              className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
             >
               Active
             </label>

@@ -19,9 +19,9 @@ import ConfirmDialog from './ConfirmDialog';
 // ---------------------------------------------------------------------------
 
 const STATUS_STYLES: Record<ContractStatus, string> = {
-  draft: 'bg-gray-100 text-gray-700',
-  sent: 'bg-blue-100 text-blue-700',
-  signed: 'bg-green-100 text-green-700',
+  draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  sent: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  signed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
 };
 
 function ContractStatusBadge({
@@ -154,20 +154,25 @@ function SendContractModal({
         {/* Contacts */}
         {contacts.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Sponsor Contacts</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Sponsor Contacts
+            </label>
             <div className="space-y-1">
               {contacts.map((cp, idx) => (
-                <label key={idx} className="flex items-center gap-2 text-sm text-gray-700">
+                <label
+                  key={idx}
+                  className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                >
                   <input
                     type="checkbox"
                     checked={selectedContacts.includes(idx)}
                     onChange={() => toggleContact(idx)}
-                    className="h-4 w-4 text-primary-600 border-gray-300 rounded"
+                    className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded"
                   />
                   <span>
                     {cp.first_name} {cp.last_name}
                   </span>
-                  <span className="text-gray-500">{cp.email}</span>
+                  <span className="text-gray-500 dark:text-gray-400">{cp.email}</span>
                 </label>
               ))}
             </div>
@@ -176,7 +181,7 @@ function SendContractModal({
 
         {/* Extra emails */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Additional Email Addresses
           </label>
           <div className="flex gap-2">
@@ -191,12 +196,12 @@ function SendContractModal({
                 }
               }}
               placeholder="email@example.com"
-              className="flex-1 border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
             <button
               type="button"
               onClick={addExtraEmail}
-              className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-100"
             >
               Add
             </button>
@@ -206,13 +211,13 @@ function SendContractModal({
               {extraEmails.map((email) => (
                 <span
                   key={email}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full"
                 >
                   {email}
                   <button
                     type="button"
                     onClick={() => removeExtraEmail(email)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                   >
                     &times;
                   </button>
@@ -224,20 +229,24 @@ function SendContractModal({
 
         {/* Subject */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Subject
+          </label>
           <input
             type="text"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            className="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
 
         {/* Email body (rendered template, editable) */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email Body</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Email Body
+          </label>
           {isLoadingTemplate ? (
-            <div className="flex items-center justify-center py-8 border border-gray-200 rounded-md bg-gray-50">
+            <div className="flex items-center justify-center py-8 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900">
               <svg
                 className="animate-spin h-5 w-5 text-gray-400 mr-2"
                 fill="none"
@@ -257,24 +266,24 @@ function SendContractModal({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              <span className="text-sm text-gray-500">Loading template...</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Loading template...</span>
             </div>
           ) : (
             <RichTextEditor value={bodyHtml} onChange={setBodyHtml} rows={14} />
           )}
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Pre-filled from the Sponsor Contract email template. Edit as needed before sending.
           </p>
         </div>
 
         {/* Send as PDF */}
         {contract.is_editable && (
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input
               type="checkbox"
               checked={sendAsPdf}
               onChange={(e) => setSendAsPdf(e.target.checked)}
-              className="h-4 w-4 text-primary-600 border-gray-300 rounded"
+              className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded"
             />
             Attach contract as PDF
           </label>
@@ -288,11 +297,11 @@ function SendContractModal({
         )}
       </div>
 
-      <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+      <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           Cancel
         </button>
@@ -486,7 +495,11 @@ export default function SponsorContractTab({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <svg className="animate-spin h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">
+        <svg
+          className="animate-spin h-6 w-6 text-gray-400 dark:text-gray-500"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
           <circle
             className="opacity-25"
             cx="12"
@@ -512,7 +525,7 @@ export default function SponsorContractTab({
     return (
       <div className="text-center py-12">
         <svg
-          className="mx-auto h-12 w-12 text-gray-300"
+          className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -524,7 +537,7 @@ export default function SponsorContractTab({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <p className="mt-3 text-sm text-gray-500">
+        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
           Assign a sponsor package with a contract template to generate a contract.
         </p>
       </div>
@@ -538,7 +551,7 @@ export default function SponsorContractTab({
     return (
       <div className="text-center py-12">
         <svg
-          className="mx-auto h-12 w-12 text-gray-300"
+          className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -550,7 +563,7 @@ export default function SponsorContractTab({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <p className="mt-3 text-sm text-gray-500 mb-4">
+        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 mb-4">
           No contract has been generated yet for this sponsor.
         </p>
         <button
@@ -607,7 +620,7 @@ export default function SponsorContractTab({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <svg
-            className="h-5 w-5 text-gray-400"
+            className="h-5 w-5 text-gray-400 dark:text-gray-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -619,9 +632,13 @@ export default function SponsorContractTab({
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <span className="text-sm font-medium text-gray-900">{contract.filename}</span>
-          <span className="text-xs text-gray-500">v{contract.version}</span>
-          <span className="text-xs text-gray-400">({formatFileSize(contract.file_size)})</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            {contract.filename}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">v{contract.version}</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            ({formatFileSize(contract.file_size)})
+          </span>
           <ContractStatusBadge
             status={contract.status as ContractStatus}
             onChange={(s) => statusMutation.mutate(s)}
@@ -631,7 +648,7 @@ export default function SponsorContractTab({
           <button
             type="button"
             onClick={handleDownload}
-            className="px-2.5 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Download
           </button>
@@ -639,7 +656,7 @@ export default function SponsorContractTab({
             <button
               type="button"
               onClick={handleDownloadPdf}
-              className="px-2.5 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Download PDF
             </button>
@@ -674,7 +691,7 @@ export default function SponsorContractTab({
       {/* Content area */}
       {contract.is_editable && hasHtmlContent ? (
         <div>
-          <div className="border border-gray-200 rounded-md overflow-hidden">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
             <RichTextEditor
               value={currentHtml}
               onChange={(html) => setEditedHtml(html)}
@@ -682,7 +699,7 @@ export default function SponsorContractTab({
             />
           </div>
           <div className="flex items-center justify-between mt-2">
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-gray-500 dark:text-gray-400">
               {hasUnsavedChanges && (
                 <span className="text-amber-600 font-medium">Unsaved changes</span>
               )}
@@ -702,9 +719,9 @@ export default function SponsorContractTab({
           </div>
         </div>
       ) : (
-        <div className="p-6 bg-gray-50 border border-gray-200 rounded-md text-center">
+        <div className="p-6 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md text-center">
           <svg
-            className="mx-auto h-8 w-8 text-gray-400 mb-2"
+            className="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500 mb-2"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -716,7 +733,7 @@ export default function SponsorContractTab({
               d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
             />
           </svg>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             This PDF contract cannot be edited in the browser. Use <strong>Download</strong> to view
             it.
           </p>
@@ -728,7 +745,7 @@ export default function SponsorContractTab({
         <div>
           <button
             type="button"
-            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+            className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
             onClick={(e) => {
               const el = (e.target as HTMLElement).nextElementSibling;
               if (el) el.classList.toggle('hidden');
@@ -739,21 +756,31 @@ export default function SponsorContractTab({
           <div className="mt-2 hidden">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-1.5 pr-4 font-medium text-gray-500">Version</th>
-                  <th className="text-left py-1.5 pr-4 font-medium text-gray-500">Date</th>
-                  <th className="text-left py-1.5 pr-4 font-medium text-gray-500">Size</th>
-                  <th className="text-right py-1.5 font-medium text-gray-500">Actions</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-1.5 pr-4 font-medium text-gray-500 dark:text-gray-400">
+                    Version
+                  </th>
+                  <th className="text-left py-1.5 pr-4 font-medium text-gray-500 dark:text-gray-400">
+                    Date
+                  </th>
+                  <th className="text-left py-1.5 pr-4 font-medium text-gray-500 dark:text-gray-400">
+                    Size
+                  </th>
+                  <th className="text-right py-1.5 font-medium text-gray-500 dark:text-gray-400">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {versions.map((v) => (
-                  <tr key={v.id} className="border-b border-gray-100">
-                    <td className="py-1.5 pr-4 text-gray-900">v{v.version}</td>
-                    <td className="py-1.5 pr-4 text-gray-500">
+                  <tr key={v.id} className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="py-1.5 pr-4 text-gray-900 dark:text-gray-100">v{v.version}</td>
+                    <td className="py-1.5 pr-4 text-gray-500 dark:text-gray-400">
                       {new Date(v.created_at).toLocaleDateString()}
                     </td>
-                    <td className="py-1.5 pr-4 text-gray-500">{formatFileSize(v.file_size)}</td>
+                    <td className="py-1.5 pr-4 text-gray-500 dark:text-gray-400">
+                      {formatFileSize(v.file_size)}
+                    </td>
                     <td className="py-1.5 text-right">
                       <button
                         type="button"
@@ -776,7 +803,7 @@ export default function SponsorContractTab({
         <div>
           <button
             type="button"
-            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+            className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
             onClick={(e) => {
               const el = (e.target as HTMLElement).nextElementSibling;
               if (el) el.classList.toggle('hidden');
@@ -787,18 +814,26 @@ export default function SponsorContractTab({
           <div className="mt-2 hidden">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-1.5 pr-4 font-medium text-gray-500">Email</th>
-                  <th className="text-left py-1.5 pr-4 font-medium text-gray-500">Version</th>
-                  <th className="text-left py-1.5 font-medium text-gray-500">Sent At</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-1.5 pr-4 font-medium text-gray-500 dark:text-gray-400">
+                    Email
+                  </th>
+                  <th className="text-left py-1.5 pr-4 font-medium text-gray-500 dark:text-gray-400">
+                    Version
+                  </th>
+                  <th className="text-left py-1.5 font-medium text-gray-500 dark:text-gray-400">
+                    Sent At
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {contract.sent_to.map((entry, idx) => (
-                  <tr key={idx} className="border-b border-gray-100">
-                    <td className="py-1.5 pr-4 text-gray-900">{entry.email}</td>
-                    <td className="py-1.5 pr-4 text-gray-500">v{entry.version}</td>
-                    <td className="py-1.5 text-gray-500">
+                  <tr key={idx} className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="py-1.5 pr-4 text-gray-900 dark:text-gray-100">{entry.email}</td>
+                    <td className="py-1.5 pr-4 text-gray-500 dark:text-gray-400">
+                      v{entry.version}
+                    </td>
+                    <td className="py-1.5 text-gray-500 dark:text-gray-400">
                       {new Date(entry.sent_at).toLocaleString()}
                     </td>
                   </tr>

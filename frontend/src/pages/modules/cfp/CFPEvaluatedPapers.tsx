@@ -29,18 +29,21 @@ function EvaluatedPaperCard({
   const displayStatus = paper.display_status || paper.status;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div
-        className="px-5 py-4 cursor-pointer hover:bg-gray-50"
+        className="px-5 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-4">
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-gray-900">{paper.title}</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {paper.title}
+            </h3>
             <div className="flex items-center gap-2 mt-1">
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                  PAPER_STATUS_COLORS[paper.status] || 'bg-gray-100 text-gray-700'
+                  PAPER_STATUS_COLORS[paper.status] ||
+                  'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 {paper.status === 'final_consideration' ? 'Final Consideration' : paper.status}
@@ -59,7 +62,7 @@ function EvaluatedPaperCard({
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+            <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
               <span>
                 Speaker:{' '}
                 {paper.main_speaker
@@ -94,7 +97,7 @@ function EvaluatedPaperCard({
                   <div className="mt-2 space-y-1">
                     {paper.review_summaries.map((rev, idx) => (
                       <div key={idx} className="flex items-start gap-2 text-xs">
-                        <span className="font-medium text-gray-700 min-w-[100px]">
+                        <span className="font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">
                           {rev.reviewer_first_name
                             ? `${rev.reviewer_first_name} ${rev.reviewer_last_name || ''}`.trim()
                             : 'Anonymous'}
@@ -108,8 +111,10 @@ function EvaluatedPaperCard({
                       </div>
                     ))}
                     {avgScore != null && (
-                      <div className="flex items-center gap-2 text-xs pt-1 border-t border-gray-100">
-                        <span className="font-medium text-gray-700 min-w-[100px]">Avg. Score</span>
+                      <div className="flex items-center gap-2 text-xs pt-1 border-t border-gray-100 dark:border-gray-700">
+                        <span className="font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">
+                          Avg. Score
+                        </span>
                         <span className="font-bold text-primary-800 bg-primary-100 px-1.5 py-0.5 rounded">
                           {avgScore.toFixed(1)}
                           {maxSuffix}
@@ -164,7 +169,7 @@ function EvaluatedPaperCard({
             </button>
           </div>
           <svg
-            className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -175,53 +180,64 @@ function EvaluatedPaperCard({
       </div>
 
       {expanded && (
-        <div className="px-5 py-4 border-t border-gray-200 space-y-4 bg-gray-50">
+        <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 space-y-4 bg-gray-50 dark:bg-gray-900">
           {paper.level && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+              <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                 Level
               </h4>
-              <p className="text-sm text-gray-900">{LEVEL_LABELS[paper.level] || paper.level}</p>
+              <p className="text-sm text-gray-900 dark:text-gray-100">
+                {LEVEL_LABELS[paper.level] || paper.level}
+              </p>
             </div>
           )}
 
           {paper.abstract_short && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+              <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                 Short Abstract
               </h4>
-              <RichTextDisplay content={paper.abstract_short} className="text-sm text-gray-700" />
+              <RichTextDisplay
+                content={paper.abstract_short}
+                className="text-sm text-gray-700 dark:text-gray-300"
+              />
             </div>
           )}
 
           {paper.abstract_long && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+              <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                 Detailed Abstract
               </h4>
-              <RichTextDisplay content={paper.abstract_long} className="text-sm text-gray-700" />
+              <RichTextDisplay
+                content={paper.abstract_long}
+                className="text-sm text-gray-700 dark:text-gray-300"
+              />
             </div>
           )}
 
           {/* Internal comments from reviewers */}
           {paper.review_summaries.some((r) => r.internal_comment) && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">
+              <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-2">
                 Internal Comments
               </h4>
               <div className="space-y-2">
                 {paper.review_summaries
                   .filter((r) => r.internal_comment)
                   .map((rev, idx) => (
-                    <div key={idx} className="bg-white rounded border border-gray-200 px-3 py-2">
-                      <span className="text-xs font-medium text-gray-700">
+                    <div
+                      key={idx}
+                      className="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 px-3 py-2"
+                    >
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                         {rev.reviewer_first_name
                           ? `${rev.reviewer_first_name} ${rev.reviewer_last_name || ''}`.trim()
                           : 'Anonymous'}
                       </span>
                       <RichTextDisplay
                         content={rev.internal_comment}
-                        className="text-sm text-gray-600 mt-0.5"
+                        className="text-sm text-gray-600 dark:text-gray-300 mt-0.5"
                       />
                     </div>
                   ))}
@@ -231,10 +247,10 @@ function EvaluatedPaperCard({
 
           {paper.cospeakers.length > 0 && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+              <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                 Co-speakers
               </h4>
-              <ul className="text-sm text-gray-700 space-y-1">
+              <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                 {paper.cospeakers.map((cs) => (
                   <li key={cs.applicant.id}>
                     {`${cs.applicant.first_name} ${cs.applicant.last_name}`} ({cs.applicant.email})
@@ -244,8 +260,10 @@ function EvaluatedPaperCard({
             </div>
           )}
 
-          <div className="border-t border-gray-300 my-4" />
-          <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">Reviews</h4>
+          <div className="border-t border-gray-300 dark:border-gray-600 my-4" />
+          <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-2">
+            Reviews
+          </h4>
           <ReviewsPanel paperId={paper.id} maxReviewScore={paper.max_review_score} />
         </div>
       )}
@@ -327,32 +345,34 @@ export default function CFPEvaluatedPapers() {
     <div>
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Evaluated Papers</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Evaluated Papers</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Papers that have been evaluated by the program committee ({papers.length} total)
           </p>
         </div>
       </div>
 
       {mutationError && (
-        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-sm text-red-600">{mutationError}</p>
+        <div className="mt-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-sm text-red-600 dark:text-red-400">{mutationError}</p>
         </div>
       )}
 
       {isLoading ? (
         <LoadingSpinner />
       ) : isError ? (
-        <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <h3 className="text-sm font-medium text-red-800">Failed to load evaluated papers</h3>
-          <p className="mt-1 text-sm text-red-600">
+        <div className="mt-6 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
+          <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
+            Failed to load evaluated papers
+          </h3>
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
             {error instanceof Error ? error.message : 'An unknown error occurred'}
           </p>
         </div>
       ) : papers.length === 0 ? (
-        <div className="mt-6 bg-white rounded-lg shadow p-12 text-center">
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <svg
-            className="mx-auto h-12 w-12 text-gray-300"
+            className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -364,8 +384,10 @@ export default function CFPEvaluatedPapers() {
               d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <h3 className="mt-3 text-sm font-medium text-gray-900">No evaluated papers</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="mt-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+            No evaluated papers
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Papers will appear here once all assigned reviewers have submitted their evaluations.
           </p>
         </div>
@@ -378,7 +400,7 @@ export default function CFPEvaluatedPapers() {
                 placeholder="Search papers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full max-w-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
           )}
@@ -392,7 +414,9 @@ export default function CFPEvaluatedPapers() {
               />
             ))}
             {filteredPapers.length === 0 && searchQuery && (
-              <p className="text-sm text-gray-500 text-center py-8">No papers match your search.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+                No papers match your search.
+              </p>
             )}
           </div>
         </>

@@ -271,7 +271,7 @@ function ConferenceDetailsTab({
         {isAdmin && (
           <div className="flex items-center gap-2">
             {saveStatus === 'saving' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md">
                 <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
@@ -614,7 +614,7 @@ function ConferenceDetailsTab({
             <div className="space-y-4">
               {/* General Portal Login */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   General Portal Login
                 </label>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -626,7 +626,7 @@ function ConferenceDetailsTab({
               {/* Conference-specific Landing Page */}
               {conference.abbreviation && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                     Conference Landing Page
                   </label>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">

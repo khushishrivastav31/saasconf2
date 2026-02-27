@@ -28,16 +28,18 @@ function PaperListRow({ paper, onClick }: { paper: Paper; onClick: () => void })
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
+      className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
     >
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">{paper.title}</p>
-        <p className="text-xs text-gray-500 truncate">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+          {paper.title}
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
           {paper.main_speaker
             ? `${paper.main_speaker.first_name} ${paper.main_speaker.last_name}`
             : 'No speaker assigned'}
           {paper.cospeakers.length > 0 && (
-            <span className="text-gray-400">
+            <span className="text-gray-400 dark:text-gray-500">
               {' '}
               + {paper.cospeakers.length} co-speaker{paper.cospeakers.length > 1 ? 's' : ''}
               {paper.cospeakers.some((c) => c.invitation_status === 'pending') && (
@@ -56,7 +58,7 @@ function PaperListRow({ paper, onClick }: { paper: Paper; onClick: () => void })
         <PaperStatusLifeline status={displayStatus} compact />
       </div>
       <svg
-        className="w-4 h-4 text-gray-300 flex-shrink-0"
+        className="w-4 h-4 text-gray-300 dark:text-gray-600 flex-shrink-0"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -313,15 +315,15 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {isAdding ? 'New Paper' : selectedPaper ? selectedPaper.title : 'Papers'}
             {!isAdding && !selectedPaper && paperCount > 0 && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                 {paperCount}
               </span>
             )}
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {isAdding
               ? 'Fill in the details to create a new paper submission.'
               : selectedPaper
@@ -398,7 +400,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
           {/* Search */}
           <div className="relative">
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -415,13 +417,13 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by title, speaker, or session type..."
-              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
               >
                 <CloseIcon />
               </button>
@@ -430,17 +432,17 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
 
           {/* List */}
           {filteredPapers.length > 0 ? (
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
               {filteredPapers.map((p) => (
                 <PaperListRow key={p.id} paper={p} onClick={() => setSelectedPaperId(p.id)} />
               ))}
             </div>
           ) : papers.length > 0 ? (
-            <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
               No papers match "{searchQuery}"
             </div>
           ) : (
-            <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
               No papers yet. Click "+ Add Paper" to get started.
             </div>
           )}

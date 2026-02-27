@@ -169,17 +169,17 @@ export default function PricingMatrixSection({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="px-5 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-[220px] border-b border-gray-200">
+              <tr className="bg-gray-50 dark:bg-gray-900">
+                <th className="px-5 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[220px] border-b border-gray-200 dark:border-gray-700">
                   Option
                 </th>
                 {periods.map((period) => (
                   <th
                     key={period.id}
-                    className="px-4 py-4 text-center min-w-[200px] border-b border-gray-200"
+                    className="px-4 py-4 text-center min-w-[200px] border-b border-gray-200 dark:border-gray-700"
                   >
                     {editingPeriodId === period.id ? (
                       <div className="flex flex-col gap-2 min-w-[180px]">
@@ -188,7 +188,7 @@ export default function PricingMatrixSection({
                           autoFocus
                           value={editingPeriodName}
                           onChange={(e) => setEditingPeriodName(e.target.value)}
-                          className="w-full text-sm text-center font-medium rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                          className="w-full text-sm text-center font-medium rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
                           placeholder="Period name"
                         />
                         <div className="grid grid-cols-2 gap-1.5">
@@ -202,14 +202,14 @@ export default function PricingMatrixSection({
                                 setEditingPeriodEndDate(v);
                               }
                             }}
-                            className="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                            className="w-full text-xs rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
                           />
                           <input
                             type="date"
                             value={editingPeriodEndDate}
                             min={editingPeriodStartDate}
                             onChange={(e) => setEditingPeriodEndDate(e.target.value)}
-                            className="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                            className="w-full text-xs rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
                           />
                         </div>
                         {isCurrencyLocked ? (
@@ -217,14 +217,14 @@ export default function PricingMatrixSection({
                             type="text"
                             value={conferenceCurrency || ''}
                             disabled
-                            className="w-full text-xs rounded-md border-gray-300 bg-gray-100 shadow-sm text-gray-600"
+                            className="w-full text-xs rounded-md border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-900 shadow-sm text-gray-600 dark:text-gray-300"
                             title="Currency set by conference"
                           />
                         ) : (
                           <select
                             value={editingPeriodCurrency}
                             onChange={(e) => setEditingPeriodCurrency(e.target.value)}
-                            className="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                            className="w-full text-xs rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
                           >
                             <option value="">No currency</option>
                             {(currencyOptions || []).map((c) => (
@@ -243,7 +243,7 @@ export default function PricingMatrixSection({
                           </button>
                           <button
                             onClick={() => setEditingPeriodId(null)}
-                            className="text-xs px-3 py-1 rounded-md bg-white text-gray-600 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 font-medium"
+                            className="text-xs px-3 py-1 rounded-md bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
                           >
                             Cancel
                           </button>
@@ -256,18 +256,18 @@ export default function PricingMatrixSection({
                         title={isAdmin ? 'Click to edit period' : undefined}
                       >
                         <span
-                          className={`text-sm font-semibold text-gray-800 ${isAdmin ? 'group-hover:text-primary-600' : ''} transition-colors`}
+                          className={`text-sm font-semibold text-gray-800 dark:text-gray-200 ${isAdmin ? 'group-hover:text-primary-600' : ''} transition-colors`}
                         >
                           {period.name}
                         </span>
                         <span
-                          className={`text-xs text-gray-400 ${isAdmin ? 'group-hover:text-gray-500' : ''}`}
+                          className={`text-xs text-gray-400 dark:text-gray-500 ${isAdmin ? 'group-hover:text-gray-500 dark:group-hover:text-gray-400' : ''}`}
                         >
                           {formatDate(period.start_date)} — {formatDate(period.end_date)}
                         </span>
                         {period.currency && (
                           <span
-                            className={`mt-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 ${isAdmin ? 'group-hover:bg-primary-50 group-hover:text-primary-700' : ''}`}
+                            className={`mt-0.5 inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-300 ${isAdmin ? 'group-hover:bg-primary-50 group-hover:text-primary-700' : ''}`}
                           >
                             {period.currency}
                           </span>
@@ -298,13 +298,16 @@ export default function PricingMatrixSection({
                   </th>
                 ))}
                 {isAdmin && (
-                  <th className="px-4 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[60px] border-b border-gray-200"></th>
+                  <th className="px-4 py-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[60px] border-b border-gray-200 dark:border-gray-700"></th>
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {options.map((opt) => (
-                <tr key={opt.id} className="hover:bg-gray-50/50 transition-colors">
+                <tr
+                  key={opt.id}
+                  className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors"
+                >
                   <td className="px-5 py-3">
                     {/* Option name — inline editable */}
                     <div className={`${isAdmin ? 'group' : ''}`}>
@@ -329,12 +332,12 @@ export default function PricingMatrixSection({
                               setEditingOptionId(null);
                             }
                           }}
-                          className="w-full text-sm font-medium rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                          className="w-full text-sm font-medium rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
                         />
                       ) : (
                         <div className="flex items-center">
                           <span
-                            className={`text-sm font-medium text-gray-900 ${isAdmin ? 'cursor-pointer group-hover:text-primary-600' : ''} transition-colors`}
+                            className={`text-sm font-medium text-gray-900 dark:text-gray-100 ${isAdmin ? 'cursor-pointer group-hover:text-primary-600' : ''} transition-colors`}
                             onClick={
                               isAdmin
                                 ? () => {
@@ -452,7 +455,7 @@ export default function PricingMatrixSection({
                                       openDayPicker(opt.id);
                                     }
                                   }}
-                                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-gray-300 px-2.5 py-0.5 text-xs text-gray-400 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50/50 transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-gray-300 dark:border-gray-600 px-2.5 py-0.5 text-xs text-gray-400 dark:text-gray-500 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50/50 transition-colors cursor-pointer"
                                 >
                                   <svg
                                     className="w-3 h-3"
@@ -505,7 +508,7 @@ export default function PricingMatrixSection({
                                   }
                                 : undefined
                             }
-                            className={`w-full max-w-[110px] text-right text-sm rounded-md border-gray-300 shadow-sm tabular-nums ${isAdmin ? 'focus:border-primary-500 focus:ring-primary-500' : 'bg-gray-50 cursor-default'}`}
+                            className={`w-full max-w-[110px] text-right text-sm rounded-md border-gray-300 dark:border-gray-600 shadow-sm tabular-nums ${isAdmin ? 'focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100' : 'bg-gray-50 dark:bg-gray-900 dark:text-gray-400 cursor-default'}`}
                             placeholder="—"
                           />
                         </div>
@@ -551,7 +554,7 @@ export default function PricingMatrixSection({
           return createPortal(
             <div
               ref={popoverRef}
-              className="fixed z-50 w-56 bg-white rounded-lg shadow-lg ring-1 ring-gray-200 py-1"
+              className="fixed z-50 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 py-1"
               style={{
                 left: popoverPos.left,
                 ...(popoverPos.openUp
@@ -570,7 +573,7 @@ export default function PricingMatrixSection({
                       onUpdateOption(opt.id, { conference_day_id: day.id });
                       setDayPickerOptionId(null);
                     }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-primary-50 transition-colors flex items-center gap-2 ${day.id === opt.conference_day_id ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-700'}`}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors flex items-center gap-2 ${day.id === opt.conference_day_id ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
                   >
                     <svg
                       className="w-3.5 h-3.5 flex-shrink-0 text-gray-400"
@@ -614,14 +617,14 @@ export default function PricingMatrixSection({
               )}
               {opt.conference_day_id && (
                 <>
-                  <div className="border-t border-gray-100 my-1" />
+                  <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
                   <button
                     type="button"
                     onClick={() => {
                       onUpdateOption(opt.id, { conference_day_id: null });
                       setDayPickerOptionId(null);
                     }}
-                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                   >
                     Unlink day
                   </button>

@@ -219,7 +219,7 @@ export default function CompanyInfoTab({
         <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Company Details</h4>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md">
               <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
@@ -269,7 +269,7 @@ export default function CompanyInfoTab({
 
       <div className="space-y-4">
         {/* Logo */}
-        <div className="border-b pb-4">
+        <div className="border-b dark:border-gray-700 pb-4">
           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Company Logo
           </h5>
@@ -313,7 +313,7 @@ export default function CompanyInfoTab({
                 htmlFor="logo-upload"
                 className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer ${
                   logoStatus === 'uploading'
-                    ? 'bg-gray-100 text-gray-400 cursor-wait'
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-wait'
                     : 'bg-primary-600 text-white hover:bg-primary-700'
                 }`}
               >
@@ -363,8 +363,8 @@ export default function CompanyInfoTab({
                   disabled={logoStatus === 'deleting'}
                   className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
                     logoStatus === 'deleting'
-                      ? 'bg-gray-100 text-gray-400 cursor-wait'
-                      : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-wait'
+                      : 'bg-white dark:bg-gray-800 text-red-600 border border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/30'
                   }`}
                 >
                   {logoStatus === 'deleting' ? (
@@ -455,14 +455,14 @@ export default function CompanyInfoTab({
         </div>
 
         {/* Portal URL */}
-        <div className="border-t pt-4">
+        <div className="border-t dark:border-gray-700 pt-4">
           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Portal URL</h5>
           <div className="flex items-center gap-2">
             <input
               type="text"
               readOnly
               value={portalUrl}
-              className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm text-gray-600 dark:text-gray-400 cursor-default"
+              className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm text-gray-600 dark:text-gray-300 cursor-default"
             />
             <button
               type="button"
@@ -534,7 +534,7 @@ export default function CompanyInfoTab({
         </div>
 
         {/* Address */}
-        <div className="border-t pt-4">
+        <div className="border-t dark:border-gray-700 pt-4">
           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Address</h5>
           <div className="space-y-3">
             <input
@@ -571,7 +571,7 @@ export default function CompanyInfoTab({
         </div>
 
         {/* Contact Persons */}
-        <div className="border-t pt-4">
+        <div className="border-t dark:border-gray-700 pt-4">
           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Contact Persons
           </h5>
@@ -587,7 +587,7 @@ export default function CompanyInfoTab({
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                             First Name *
                           </label>
                           <input
@@ -603,7 +603,7 @@ export default function CompanyInfoTab({
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                             Last Name *
                           </label>
                           <input
@@ -621,7 +621,7 @@ export default function CompanyInfoTab({
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                             Role
                           </label>
                           <input
@@ -637,7 +637,7 @@ export default function CompanyInfoTab({
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                             Email
                           </label>
                           <input
@@ -657,7 +657,7 @@ export default function CompanyInfoTab({
                           )}
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                             Phone
                           </label>
                           <input
@@ -699,7 +699,7 @@ export default function CompanyInfoTab({
                             {`${contact.first_name} ${contact.last_name}`.trim()}
                           </span>
                           {contact.role && (
-                            <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                            <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
                               {contact.role}
                             </span>
                           )}
@@ -763,13 +763,13 @@ export default function CompanyInfoTab({
           )}
 
           {/* Add new contact */}
-          <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <h6 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-3">
               Add New Contact
             </h6>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   First Name *
                 </label>
                 <input
@@ -781,7 +781,7 @@ export default function CompanyInfoTab({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Last Name *
                 </label>
                 <input
@@ -795,7 +795,7 @@ export default function CompanyInfoTab({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Role
                 </label>
                 <input
@@ -807,7 +807,7 @@ export default function CompanyInfoTab({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Email
                 </label>
                 <input
@@ -823,7 +823,7 @@ export default function CompanyInfoTab({
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Phone
                 </label>
                 <input
@@ -874,7 +874,7 @@ export default function CompanyInfoTab({
         </div>
 
         {/* Comments */}
-        <div className="border-t pt-4">
+        <div className="border-t dark:border-gray-700 pt-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Comments / Notes
           </label>
@@ -886,7 +886,7 @@ export default function CompanyInfoTab({
         </div>
 
         {/* Deactivate / Activate */}
-        <div className="border-t pt-4">
+        <div className="border-t dark:border-gray-700 pt-4">
           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Company Status
           </h5>
@@ -896,12 +896,12 @@ export default function CompanyInfoTab({
             <div className="flex items-center justify-between">
               <div>
                 <p
-                  className={`text-sm font-medium ${tenant.is_active ? 'text-red-900' : 'text-green-900'}`}
+                  className={`text-sm font-medium ${tenant.is_active ? 'text-red-900 dark:text-red-300' : 'text-green-900 dark:text-green-300'}`}
                 >
                   {tenant.is_active ? 'Deactivate Company' : 'Activate Company'}
                 </p>
                 <p
-                  className={`text-sm mt-1 ${tenant.is_active ? 'text-red-700' : 'text-green-700'}`}
+                  className={`text-sm mt-1 ${tenant.is_active ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}
                 >
                   {tenant.is_active
                     ? 'Deactivating will prevent all users of this company from logging in.'
@@ -929,13 +929,15 @@ export default function CompanyInfoTab({
         </div>
 
         {/* Delete Company (Permanent) */}
-        <div className="border-t pt-4">
+        <div className="border-t dark:border-gray-700 pt-4">
           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Danger Zone</h5>
-          <div className="rounded-lg p-4 bg-red-50 dark:bg-red-900/30 border-2 border-red-300">
+          <div className="rounded-lg p-4 bg-red-50 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-900">Delete Company Permanently</p>
-                <p className="text-sm mt-1 text-red-700">
+                <p className="text-sm font-medium text-red-900 dark:text-red-300">
+                  Delete Company Permanently
+                </p>
+                <p className="text-sm mt-1 text-red-700 dark:text-red-400">
                   This will permanently delete the company and all associated data including
                   conferences, CFPs, papers, users, and attachments. This action cannot be undone.
                 </p>
@@ -944,7 +946,7 @@ export default function CompanyInfoTab({
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={deleteMutation.isPending}
-                className="ml-4 inline-flex items-center px-4 py-2 border-2 border-red-600 text-sm font-medium rounded-md text-red-600 bg-white hover:bg-red-50 disabled:opacity-50"
+                className="ml-4 inline-flex items-center px-4 py-2 border-2 border-red-600 text-sm font-medium rounded-md text-red-600 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
               >
                 {deleteMutation.isPending ? 'Deleting...' : 'Delete Company'}
               </button>
@@ -1020,7 +1022,7 @@ export default function CompanyInfoTab({
                         the company <strong>"{tenant.name}"</strong> and all associated data
                         including:
                       </p>
-                      <ul className="mt-2 text-sm text-gray-500 list-disc list-inside space-y-1">
+                      <ul className="mt-2 text-sm text-gray-500 dark:text-gray-400 list-disc list-inside space-y-1">
                         <li>All users and their accounts</li>
                         <li>All conferences and their settings</li>
                         <li>All CFPs, papers, and submissions</li>

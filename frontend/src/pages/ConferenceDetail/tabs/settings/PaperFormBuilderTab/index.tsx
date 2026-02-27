@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
   DragOverlay,
@@ -10,15 +10,15 @@ import {
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   arrayMove,
-} from "@dnd-kit/sortable";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import api from "../../../../../config/api";
+} from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import api from '../../../../../config/api';
 import type {
   Conference,
   PaperFormSchema,
@@ -29,26 +29,26 @@ import type {
   BuiltinFieldConfig,
   HasSubmissionsResponse,
   PaperFormFieldType,
-} from "../../../../../types";
-import { parseApiError } from "../../../../../utils/apiError";
-import { ErrorBanner, SuccessBanner } from "../../../../../components/common/ErrorBanner";
-import { LoadingSpinner } from "../../../../../components/common/LoadingSpinner";
-import ConfirmDialog from "../../../../../components/ConfirmDialog";
-import FieldPalette from "./FieldPalette";
-import FieldPropertyEditor from "./FieldPropertyEditor";
-import UnifiedFieldCard, { type UnifiedField } from "./UnifiedFieldCard";
+} from '../../../../../types';
+import { parseApiError } from '../../../../../utils/apiError';
+import { ErrorBanner, SuccessBanner } from '../../../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../../../components/common/LoadingSpinner';
+import ConfirmDialog from '../../../../../components/ConfirmDialog';
+import FieldPalette from './FieldPalette';
+import FieldPropertyEditor from './FieldPropertyEditor';
+import UnifiedFieldCard, { type UnifiedField } from './UnifiedFieldCard';
 
 // --- Constants ---------------------------------------------------------------
 
 const BUILTIN_FIELDS_DEF = [
-  { key: "title", label: "Title", alwaysRequired: true },
-  { key: "abstract_short", label: "Short Abstract" },
-  { key: "abstract_long", label: "Long Abstract" },
-  { key: "level", label: "Level" },
-  { key: "learning_objectives", label: "Learning Objectives" },
-  { key: "importance", label: "Importance" },
-  { key: "session_type", label: "Session Type" },
-  { key: "topics", label: "Topics" },
+  { key: 'title', label: 'Title', alwaysRequired: true },
+  { key: 'abstract_short', label: 'Short Abstract' },
+  { key: 'abstract_long', label: 'Long Abstract' },
+  { key: 'level', label: 'Level' },
+  { key: 'learning_objectives', label: 'Learning Objectives' },
+  { key: 'importance', label: 'Importance' },
+  { key: 'session_type', label: 'Session Type' },
+  { key: 'topics', label: 'Topics' },
 ];
 
 // --- Main Component ----------------------------------------------------------
@@ -98,7 +98,7 @@ function PaperFormBuilderTab({
     isError,
     error: queryError,
   } = useQuery({
-    queryKey: ["paper-form-schema", conference.id],
+    queryKey: ['paper-form-schema', conference.id],
     queryFn: async () => {
       const response = await api.get<PaperFormSchema>(
         `/conferences/${conference.id}/paper-form-schema`
@@ -108,7 +108,7 @@ function PaperFormBuilderTab({
   });
 
   const { data: submissionsData } = useQuery({
-    queryKey: ["paper-form-schema-has-submissions", conference.id],
+    queryKey: ['paper-form-schema-has-submissions', conference.id],
     queryFn: async () => {
       const response = await api.get<HasSubmissionsResponse>(
         `/conferences/${conference.id}/paper-form-schema/has-submissions`
@@ -132,7 +132,7 @@ function PaperFormBuilderTab({
       const config = schema.builtin_fields_config[bf.key] || { visible: true, required: false };
       return {
         id: `builtin_${bf.key}`,
-        type: "builtin" as const,
+        type: 'builtin' as const,
         key: bf.key,
         label: bf.label,
         display_order: config.display_order ?? defaultIdx,
@@ -154,13 +154,11 @@ function PaperFormBuilderTab({
 
       // If unified ordering is in use, use the actual display_order
       // Otherwise, offset custom fields to appear after built-in fields
-      const order = unifiedOrderingInUse
-        ? f.display_order
-        : f.display_order + builtinCount;
+      const order = unifiedOrderingInUse ? f.display_order : f.display_order + builtinCount;
 
       return {
         id: f.id,
-        type: "custom" as const,
+        type: 'custom' as const,
         key: f.field_key,
         label: f.label,
         display_order: order,
@@ -178,7 +176,7 @@ function PaperFormBuilderTab({
   const selectedCustomField = useMemo(() => {
     if (!selectedFieldId || !schema) return null;
     // Only return custom fields for editing
-    if (selectedFieldId.startsWith("builtin_")) return null;
+    if (selectedFieldId.startsWith('builtin_')) return null;
     return schema.fields.find((f) => f.id === selectedFieldId) ?? null;
   }, [selectedFieldId, schema]);
 
@@ -194,9 +192,9 @@ function PaperFormBuilderTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["paper-form-schema", conference.id],
+        queryKey: ['paper-form-schema', conference.id],
       });
-      setSuccessMessage("Form schema updated successfully");
+      setSuccessMessage('Form schema updated successfully');
       setError(null);
     },
     onError: (err: unknown) => {
@@ -214,9 +212,9 @@ function PaperFormBuilderTab({
     },
     onSuccess: (newField) => {
       queryClient.invalidateQueries({
-        queryKey: ["paper-form-schema", conference.id],
+        queryKey: ['paper-form-schema', conference.id],
       });
-      setSuccessMessage("Field created successfully");
+      setSuccessMessage('Field created successfully');
       setSelectedFieldId(newField.id);
       setError(null);
     },
@@ -235,9 +233,9 @@ function PaperFormBuilderTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["paper-form-schema", conference.id],
+        queryKey: ['paper-form-schema', conference.id],
       });
-      setSuccessMessage("Field updated successfully");
+      setSuccessMessage('Field updated successfully');
       setError(null);
     },
     onError: (err: unknown) => {
@@ -251,9 +249,9 @@ function PaperFormBuilderTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["paper-form-schema", conference.id],
+        queryKey: ['paper-form-schema', conference.id],
       });
-      setSuccessMessage("Field deleted successfully");
+      setSuccessMessage('Field deleted successfully');
       setSelectedFieldId(null);
       setError(null);
     },
@@ -261,7 +259,6 @@ function PaperFormBuilderTab({
       setError(parseApiError(err));
     },
   });
-
 
   // --- Handlers --------------------------------------------------------------
 
@@ -276,7 +273,7 @@ function PaperFormBuilderTab({
 
   const handleBuiltinFieldToggle = (
     fieldKey: string,
-    property: "visible" | "required",
+    property: 'visible' | 'required',
     value: boolean
   ) => {
     if (!schema) return;
@@ -297,15 +294,15 @@ function PaperFormBuilderTab({
 
     // Provide default options for dropdown/checkbox_group
     const defaultOptions =
-      fieldType === "dropdown" || fieldType === "checkbox_group"
-        ? [{ value: "option1", label: "Option 1" }]
+      fieldType === 'dropdown' || fieldType === 'checkbox_group'
+        ? [{ value: 'option1', label: 'Option 1' }]
         : undefined;
 
     checkVersioningAndExecute(() => {
       createFieldMutation.mutate({
         field_key: fieldKey,
         field_type: fieldType,
-        label: `New ${fieldType.replace("_", " ")} field`,
+        label: `New ${fieldType.replace('_', ' ')} field`,
         display_order: nextOrder,
         is_visible: true,
         is_required: false,
@@ -321,12 +318,12 @@ function PaperFormBuilderTab({
   };
 
   const handleDeleteField = (field: UnifiedField) => {
-    if (field.type === "builtin") return; // Can't delete built-in fields
+    if (field.type === 'builtin') return; // Can't delete built-in fields
     setDeleteFieldTarget(field);
   };
 
   const confirmDeleteField = () => {
-    if (!deleteFieldTarget || deleteFieldTarget.type === "builtin") return;
+    if (!deleteFieldTarget || deleteFieldTarget.type === 'builtin') return;
     checkVersioningAndExecute(() => {
       deleteFieldMutation.mutate(deleteFieldTarget.id);
     });
@@ -360,7 +357,7 @@ function PaperFormBuilderTab({
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
     reordered.forEach((field, idx) => {
-      if (field.type === "builtin" || field.id.startsWith("builtin_")) {
+      if (field.type === 'builtin' || field.id.startsWith('builtin_')) {
         // Handle builtin fields - use key for config
         const key = field.key;
         const existing = schema.builtin_fields_config[key] || { visible: true, required: false };
@@ -374,7 +371,10 @@ function PaperFormBuilderTab({
     // Preserve any builtin fields that weren't in the reordered list (shouldn't happen, but safety)
     BUILTIN_FIELDS_DEF.forEach((bf) => {
       if (!newBuiltinConfig[bf.key]) {
-        newBuiltinConfig[bf.key] = schema.builtin_fields_config[bf.key] || { visible: true, required: false };
+        newBuiltinConfig[bf.key] = schema.builtin_fields_config[bf.key] || {
+          visible: true,
+          required: false,
+        };
       }
     });
 
@@ -399,9 +399,9 @@ function PaperFormBuilderTab({
       try {
         await Promise.all(promises);
         queryClient.invalidateQueries({
-          queryKey: ["paper-form-schema", conference.id],
+          queryKey: ['paper-form-schema', conference.id],
         });
-        setSuccessMessage("Field order updated");
+        setSuccessMessage('Field order updated');
       } catch (err) {
         setError(parseApiError(err));
       }
@@ -442,22 +442,24 @@ function PaperFormBuilderTab({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-medium text-gray-900">Paper Form Builder</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            Paper Form Builder
+          </h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Design the paper submission form for this conference. Drag fields to reorder.
           </p>
         </div>
         <div className="flex items-center gap-2">
           {hasSubmissions && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
               {submissionsData?.submission_count} submissions exist
             </span>
           )}
           <button
             onClick={() => setShowPreview(!showPreview)}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            {showPreview ? "Edit Mode" : "Preview"}
+            {showPreview ? 'Edit Mode' : 'Preview'}
           </button>
         </div>
       </div>
@@ -475,7 +477,7 @@ function PaperFormBuilderTab({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-12 gap-4" style={{ minHeight: "600px" }}>
+          <div className="grid grid-cols-12 gap-4" style={{ minHeight: '600px' }}>
             {/* Left: Field Palette */}
             <div className="col-span-3">
               <FieldPalette onAddField={handleAddField} isAdmin={isAdmin} />
@@ -483,11 +485,11 @@ function PaperFormBuilderTab({
 
             {/* Center: Unified Form Canvas */}
             <div className="col-span-6">
-              <div className="bg-white shadow rounded-lg p-4 h-full">
-                <h3 className="text-sm font-medium text-gray-900 mb-4">
+              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 h-full">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
                   Form Fields
                 </h3>
-                <p className="text-xs text-gray-500 mb-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                   All fields in submission order. Drag to reorder, toggle visibility and required.
                 </p>
 
@@ -502,15 +504,17 @@ function PaperFormBuilderTab({
                         field={field}
                         isSelected={selectedFieldId === field.id}
                         onSelect={() => setSelectedFieldId(field.id)}
-                        onDelete={field.type === "custom" ? () => handleDeleteField(field) : undefined}
+                        onDelete={
+                          field.type === 'custom' ? () => handleDeleteField(field) : undefined
+                        }
                         onToggleVisible={
-                          field.type === "builtin" && !field.alwaysRequired
-                            ? (v) => handleBuiltinFieldToggle(field.key, "visible", v)
+                          field.type === 'builtin' && !field.alwaysRequired
+                            ? (v) => handleBuiltinFieldToggle(field.key, 'visible', v)
                             : undefined
                         }
                         onToggleRequired={
-                          field.type === "builtin" && !field.alwaysRequired
-                            ? (v) => handleBuiltinFieldToggle(field.key, "required", v)
+                          field.type === 'builtin' && !field.alwaysRequired
+                            ? (v) => handleBuiltinFieldToggle(field.key, 'required', v)
                             : undefined
                         }
                         isAdmin={isAdmin}
@@ -520,7 +524,7 @@ function PaperFormBuilderTab({
                 </SortableContext>
 
                 {unifiedFields.length === 0 && (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center text-sm text-gray-500">
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center text-sm text-gray-500 dark:text-gray-400">
                     Click a field type from the palette to add custom fields
                   </div>
                 )}
@@ -577,34 +581,34 @@ function PaperFormBuilderTab({
 
 // --- Form Preview Component --------------------------------------------------
 
-function FormPreview({
-  unifiedFields,
-}: {
-  unifiedFields: UnifiedField[];
-}) {
+function FormPreview({ unifiedFields }: { unifiedFields: UnifiedField[] }) {
   return (
-    <div className="bg-white shadow rounded-lg p-6 max-w-3xl mx-auto">
-      <h3 className="text-lg font-medium text-gray-900 mb-6">Form Preview</h3>
+    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 max-w-3xl mx-auto">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">Form Preview</h3>
 
       <div className="space-y-6">
         {unifiedFields
           .filter((f) => f.is_visible)
           .map((field) => (
             <div key={field.id}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {field.label}
                 {field.is_required && <span className="text-red-500 ml-1">*</span>}
               </label>
-              {field.type === "builtin" ? (
+              {field.type === 'builtin' ? (
                 renderBuiltinPreviewField(field.key)
               ) : field.customField ? (
                 <>
                   {field.customField.description && (
-                    <p className="text-xs text-gray-500 mb-1">{field.customField.description}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      {field.customField.description}
+                    </p>
                   )}
                   {renderCustomPreviewField(field.customField)}
                   {field.customField.help_text && (
-                    <p className="text-xs text-gray-400 mt-1">{field.customField.help_text}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {field.customField.help_text}
+                    </p>
                   )}
                 </>
               ) : null}
@@ -617,20 +621,23 @@ function FormPreview({
 
 function renderBuiltinPreviewField(key: string) {
   switch (key) {
-    case "abstract_long":
-    case "learning_objectives":
-    case "importance":
+    case 'abstract_long':
+    case 'learning_objectives':
+    case 'importance':
       return (
         <textarea
-          className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
           rows={4}
-          placeholder={`Enter ${key.replace("_", " ")}...`}
+          placeholder={`Enter ${key.replace('_', ' ')}...`}
           disabled
         />
       );
-    case "level":
+    case 'level':
       return (
-        <select className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" disabled>
+        <select
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
+          disabled
+        >
           <option>Select level...</option>
           <option>Beginner</option>
           <option>Intermediate</option>
@@ -638,19 +645,22 @@ function renderBuiltinPreviewField(key: string) {
           <option>All Levels</option>
         </select>
       );
-    case "session_type":
-    case "topics":
+    case 'session_type':
+    case 'topics':
       return (
-        <select className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" disabled>
-          <option>Select {key.replace("_", " ")}...</option>
+        <select
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
+          disabled
+        >
+          <option>Select {key.replace('_', ' ')}...</option>
         </select>
       );
     default:
       return (
         <input
           type="text"
-          className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
-          placeholder={`Enter ${key.replace("_", " ")}...`}
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
+          placeholder={`Enter ${key.replace('_', ' ')}...`}
           disabled
         />
       );
@@ -659,55 +669,65 @@ function renderBuiltinPreviewField(key: string) {
 
 function renderCustomPreviewField(field: PaperFormField) {
   switch (field.field_type) {
-    case "text":
+    case 'text':
       return (
         <input
           type="text"
-          className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
-          placeholder={field.placeholder || ""}
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
+          placeholder={field.placeholder || ''}
           disabled
         />
       );
-    case "textarea":
+    case 'textarea':
       return (
         <textarea
-          className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
           rows={3}
-          placeholder={field.placeholder || ""}
+          placeholder={field.placeholder || ''}
           disabled
         />
       );
-    case "richtext":
+    case 'richtext':
       return (
-        <div className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm bg-gray-50 h-24">
-          <span className="text-gray-400">Rich text editor...</span>
+        <div className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm bg-gray-50 dark:bg-gray-900 h-24">
+          <span className="text-gray-400 dark:text-gray-500">Rich text editor...</span>
         </div>
       );
-    case "checkbox":
+    case 'checkbox':
       return (
         <label className="flex items-center gap-2">
-          <input type="checkbox" className="rounded border-gray-300" disabled />
-          <span className="text-sm text-gray-700">{field.placeholder || "Yes"}</span>
+          <input
+            type="checkbox"
+            className="rounded border-gray-300 dark:border-gray-600"
+            disabled
+          />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            {field.placeholder || 'Yes'}
+          </span>
         </label>
       );
-    case "checkbox_group":
+    case 'checkbox_group':
       return (
         <div className="space-y-2">
           {(field.options || []).map((opt, idx) => (
             <label key={idx} className="flex items-center gap-2">
-              <input type="checkbox" className="rounded border-gray-300" disabled />
-              <span className="text-sm text-gray-700">{opt.label}</span>
+              <input
+                type="checkbox"
+                className="rounded border-gray-300 dark:border-gray-600"
+                disabled
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-300">{opt.label}</span>
             </label>
           ))}
         </div>
       );
-    case "dropdown":
+    case 'dropdown':
       return (
         <select
-          className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
           disabled
         >
-          <option>{field.placeholder || "Select..."}</option>
+          <option>{field.placeholder || 'Select...'}</option>
           {(field.options || []).map((opt, idx) => (
             <option key={idx} value={opt.value}>
               {opt.label}
@@ -715,10 +735,10 @@ function renderCustomPreviewField(field: PaperFormField) {
           ))}
         </select>
       );
-    case "file_upload":
+    case 'file_upload':
       return (
-        <div className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-          <span className="text-sm text-gray-500">
+        <div className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
             Drag and drop file here or click to browse
           </span>
         </div>

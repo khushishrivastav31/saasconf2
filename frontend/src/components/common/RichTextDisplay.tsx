@@ -14,7 +14,7 @@ export default function RichTextDisplay({
   truncate = false,
 }: RichTextDisplayProps) {
   if (!content || content.trim() === '') {
-    return <span className={`text-gray-400 ${className}`}>{fallback}</span>;
+    return <span className={`text-gray-400 dark:text-gray-500 ${className}`}>{fallback}</span>;
   }
 
   if (truncate) {
@@ -29,7 +29,7 @@ export default function RichTextDisplay({
   if (isHtml(content)) {
     return (
       <div
-        className={`prose prose-sm max-w-none ${className}`}
+        className={`prose prose-sm max-w-none dark:prose-invert ${className}`}
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
       />
     );

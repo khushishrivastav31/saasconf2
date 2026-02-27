@@ -115,21 +115,21 @@ export default function Settings() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {data?.items?.map((currency) => (
                   <tr key={currency.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       {currency.code}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {currency.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {currency.symbol}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           currency.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                            : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                         }`}
                       >
                         {currency.is_active ? 'Active' : 'Inactive'}
@@ -153,7 +153,10 @@ export default function Settings() {
                 ))}
                 {data?.items.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                    <td
+                      colSpan={5}
+                      className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
+                    >
                       No currencies defined yet. Click "Add Currency" to create one.
                     </td>
                   </tr>
@@ -260,8 +263,8 @@ function CurrencyForm({
     <form onSubmit={handleSubmit}>
       <div className="p-6 space-y-4">
         {error && (
-          <div className="rounded-md bg-red-50 p-4">
-            <p className="text-sm text-red-700">{error}</p>
+          <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4">
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
           </div>
         )}
 
@@ -282,7 +285,7 @@ function CurrencyForm({
             placeholder="USD"
             className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             ISO 4217 currency code (1-3 uppercase letters)
           </p>
         </div>
@@ -333,17 +336,20 @@ function CurrencyForm({
             onChange={(e) => setIsActive(e.target.checked)}
             className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
-          <label htmlFor="currency-active" className="ml-2 block text-sm text-gray-700">
+          <label
+            htmlFor="currency-active"
+            className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+          >
             Active
           </label>
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3 rounded-b-lg">
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3 rounded-b-lg">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           Cancel
         </button>

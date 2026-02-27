@@ -29,18 +29,21 @@ function SelectedPaperCard({
   const displayStatus = paper.display_status || paper.status;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div
-        className="px-5 py-4 cursor-pointer hover:bg-gray-50"
+        className="px-5 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-4">
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-gray-900">{paper.title}</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {paper.title}
+            </h3>
             <div className="flex items-center gap-2 mt-1">
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                  PAPER_STATUS_COLORS[paper.status] || 'bg-gray-100 text-gray-700'
+                  PAPER_STATUS_COLORS[paper.status] ||
+                  'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 {paper.status === 'final_consideration' ? 'Final Consideration' : paper.status}
@@ -51,7 +54,7 @@ function SelectedPaperCard({
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+            <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
               <span>
                 Speaker:{' '}
                 {paper.main_speaker
@@ -118,7 +121,7 @@ function SelectedPaperCard({
             )}
           </div>
           <svg
-            className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -129,40 +132,48 @@ function SelectedPaperCard({
       </div>
 
       {expanded && (
-        <div className="px-5 py-4 border-t border-gray-200 space-y-4 bg-gray-50">
+        <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 space-y-4 bg-gray-50 dark:bg-gray-900">
           {paper.level && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+              <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                 Level
               </h4>
-              <p className="text-sm text-gray-900">{LEVEL_LABELS[paper.level] || paper.level}</p>
+              <p className="text-sm text-gray-900 dark:text-gray-100">
+                {LEVEL_LABELS[paper.level] || paper.level}
+              </p>
             </div>
           )}
 
           {paper.abstract_short && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+              <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                 Short Abstract
               </h4>
-              <RichTextDisplay content={paper.abstract_short} className="text-sm text-gray-700" />
+              <RichTextDisplay
+                content={paper.abstract_short}
+                className="text-sm text-gray-700 dark:text-gray-300"
+              />
             </div>
           )}
 
           {paper.abstract_long && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+              <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                 Detailed Abstract
               </h4>
-              <RichTextDisplay content={paper.abstract_long} className="text-sm text-gray-700" />
+              <RichTextDisplay
+                content={paper.abstract_long}
+                className="text-sm text-gray-700 dark:text-gray-300"
+              />
             </div>
           )}
 
           {paper.cospeakers.length > 0 && (
             <div>
-              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-1">
+              <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                 Co-speakers
               </h4>
-              <ul className="text-sm text-gray-700 space-y-1">
+              <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                 {paper.cospeakers.map((cs) => (
                   <li key={cs.applicant.id}>
                     {`${cs.applicant.first_name} ${cs.applicant.last_name}`} ({cs.applicant.email})
@@ -172,8 +183,10 @@ function SelectedPaperCard({
             </div>
           )}
 
-          <div className="border-t border-gray-300 my-4" />
-          <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-2">Reviews</h4>
+          <div className="border-t border-gray-300 dark:border-gray-600 my-4" />
+          <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-2">
+            Reviews
+          </h4>
           <ReviewsPanel paperId={paper.id} maxReviewScore={paper.max_review_score} />
         </div>
       )}
@@ -277,8 +290,8 @@ export default function CFPSelectedPapers({ filter }: CFPSelectedPapersProps = {
     <div>
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {filter === 'rejected'
               ? `Papers rejected by the program committee (${papers.length} total)`
               : `Papers accepted by the program committee (${papers.length} total)`}
@@ -287,8 +300,8 @@ export default function CFPSelectedPapers({ filter }: CFPSelectedPapersProps = {
       </div>
 
       {mutationError && (
-        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-sm text-red-600">{mutationError}</p>
+        <div className="mt-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-sm text-red-600 dark:text-red-400">{mutationError}</p>
         </div>
       )}
 
@@ -297,18 +310,18 @@ export default function CFPSelectedPapers({ filter }: CFPSelectedPapersProps = {
           <LoadingSpinner />
         </div>
       ) : isError ? (
-        <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <h3 className="text-sm font-medium text-red-800">
+        <div className="mt-6 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
+          <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
             Failed to load {statusToFetch} papers
           </h3>
-          <p className="mt-1 text-sm text-red-600">
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
             {error instanceof Error ? error.message : 'An unknown error occurred'}
           </p>
         </div>
       ) : papers.length === 0 ? (
-        <div className="mt-6 bg-white rounded-lg shadow p-12 text-center">
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <svg
-            className="mx-auto h-12 w-12 text-gray-300"
+            className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -320,8 +333,10 @@ export default function CFPSelectedPapers({ filter }: CFPSelectedPapersProps = {
               d={emptyIconPath}
             />
           </svg>
-          <h3 className="mt-3 text-sm font-medium text-gray-900">No {statusToFetch} papers</h3>
-          <p className="mt-1 text-sm text-gray-500">{emptyMessage}</p>
+          <h3 className="mt-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+            No {statusToFetch} papers
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{emptyMessage}</p>
         </div>
       ) : (
         <>
@@ -332,7 +347,7 @@ export default function CFPSelectedPapers({ filter }: CFPSelectedPapersProps = {
                 placeholder="Search papers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full max-w-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
           )}
@@ -346,7 +361,9 @@ export default function CFPSelectedPapers({ filter }: CFPSelectedPapersProps = {
               />
             ))}
             {filteredPapers.length === 0 && searchQuery && (
-              <p className="text-sm text-gray-500 text-center py-8">No papers match your search.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+                No papers match your search.
+              </p>
             )}
           </div>
         </>

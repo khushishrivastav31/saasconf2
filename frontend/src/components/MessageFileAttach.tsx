@@ -74,7 +74,7 @@ export default function MessageFileAttach({
     <div>
       {/* Attach button */}
       <div className="flex items-center gap-2">
-        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer">
+        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -105,7 +105,7 @@ export default function MessageFileAttach({
           {attachments.map((a) => (
             <div
               key={a.id}
-              className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5 rounded"
+              className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5 rounded"
             >
               <svg
                 className="w-4 h-4 flex-shrink-0 text-gray-400 dark:text-gray-500"

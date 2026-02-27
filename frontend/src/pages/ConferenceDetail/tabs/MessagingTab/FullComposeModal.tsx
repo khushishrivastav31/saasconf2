@@ -128,17 +128,17 @@ export default function FullComposeModal({
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div
-        className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 flex flex-col"
+        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl mx-4 flex flex-col"
         style={{ height: 'min(85vh, 800px)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-700 flex-shrink-0">
           <div className="flex items-center gap-4">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {prefill ? 'Forward Message' : 'New Message'}
             </h2>
             {emailOnlyMode && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-full">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -151,7 +151,10 @@ export default function FullComposeModal({
               </span>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -168,11 +171,13 @@ export default function FullComposeModal({
           {/* Template picker */}
           {templates.length > 0 && (
             <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-600 flex-shrink-0">Template:</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-300 flex-shrink-0">
+                Template:
+              </label>
               <select
                 value={selectedTemplate}
                 onChange={(e) => handleApplyTemplate(e.target.value)}
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm flex-1 max-w-xs"
+                className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm flex-1 max-w-xs dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">Use a template...</option>
                 {templates.map((t) => (
@@ -186,7 +191,9 @@ export default function FullComposeModal({
 
           {/* Recipients */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              To
+            </label>
             {selectedRecipients.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {selectedRecipients.map((r) => (
@@ -212,10 +219,10 @@ export default function FullComposeModal({
               placeholder="Search applicants..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
             />
             {search.trim() && filteredApplicants && filteredApplicants.length > 0 && (
-              <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md mt-1">
+              <div className="max-h-32 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md mt-1">
                 {filteredApplicants.slice(0, 20).map((a) => (
                   <button
                     key={a.id}
@@ -223,34 +230,37 @@ export default function FullComposeModal({
                       setSelectedRecipients((prev) => [...prev, a]);
                       setSearch('');
                     }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b last:border-b-0"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/30 border-b last:border-b-0 dark:border-gray-700 dark:text-gray-200"
                   >
-                    {a.first_name} {a.last_name} <span className="text-gray-400">{a.email}</span>
+                    {a.first_name} {a.last_name}{' '}
+                    <span className="text-gray-400 dark:text-gray-500">{a.email}</span>
                   </button>
                 ))}
               </div>
             )}
             {search.trim() && filteredApplicants && filteredApplicants.length === 0 && (
-              <p className="text-xs text-gray-400 mt-1">No applicants found</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">No applicants found</p>
             )}
           </div>
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Subject
+            </label>
             <input
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Message subject"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
               maxLength={500}
             />
           </div>
 
           {/* Variable pills */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-gray-400 mr-1">Insert variable:</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">Insert variable:</span>
             {TEMPLATE_VARIABLES.map((v) => (
               <button
                 key={v.token}
@@ -271,7 +281,9 @@ export default function FullComposeModal({
 
           {/* Body — takes up remaining space */}
           <div className="flex-1 min-h-0">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Message
+            </label>
             <RichTextEditor
               value={bodyHtml}
               onChange={setBodyHtml}
@@ -296,10 +308,10 @@ export default function FullComposeModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t dark:border-gray-700 flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

@@ -112,7 +112,7 @@ function RegisterPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Check Your Email
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{successMessage}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">{successMessage}</p>
             <Link
               to={`${basePath}/user/login${cfpAbbreviation ? `?cfp=${cfpAbbreviation}` : ''}`}
               className="text-sm text-primary-600 hover:text-primary-700 font-medium"

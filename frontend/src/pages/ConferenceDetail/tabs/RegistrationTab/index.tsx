@@ -186,7 +186,7 @@ function BookingOptionSelect({
               </span>
               {priceInfo && (
                 <span
-                  className={`mt-1 text-sm font-medium ${isSelected ? 'text-primary-700' : 'text-gray-600 dark:text-gray-400'}`}
+                  className={`mt-1 text-sm font-medium ${isSelected ? 'text-primary-700' : 'text-gray-600 dark:text-gray-300'}`}
                 >
                   {formatPrice(priceInfo.price, priceInfo.currency)}
                   <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
@@ -913,7 +913,7 @@ export default function RegistrationTab({
               >
                 {STATUS_LABELS[selectedReg.status] || selectedReg.status}
               </span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
                 {MODE_LABELS[selectedReg.registration_mode] || selectedReg.registration_mode}
               </span>
             </div>
@@ -1013,7 +1013,7 @@ export default function RegistrationTab({
             {showAddItem && (
               <div className="flex items-end gap-3 mb-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                     Type
                   </label>
                   <select
@@ -1029,7 +1029,7 @@ export default function RegistrationTab({
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                     {addItemType === 'booking_option' ? 'Option' : 'Tutorial Session'}
                   </label>
                   {addItemType === 'booking_option' ? (
@@ -1153,7 +1153,7 @@ export default function RegistrationTab({
               >
                 {attendees.length > 1 && (
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                       Attendee {idx + 1}
                     </span>
                     <button

@@ -116,7 +116,7 @@ export default function UsersTab({
                     <div className="flex items-center gap-2">
                       {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '-'}
                       {user.id === superUserId && (
-                        <span className="px-1.5 py-0.5 text-xs font-semibold rounded bg-purple-100 text-purple-800">
+                        <span className="px-1.5 py-0.5 text-xs font-semibold rounded bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
                           Super User
                         </span>
                       )}
@@ -131,7 +131,9 @@ export default function UsersTab({
                   <td className="px-4 py-3 text-sm">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        user.is_active
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                          : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                       }`}
                     >
                       {user.is_active ? 'Active' : 'Inactive'}
@@ -406,7 +408,7 @@ function EditUserModal({
           </label>
           <input
             type="email"
-            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             onBlur={(e) => setEmailError(validateEmail(e.target.value))}
@@ -524,7 +526,7 @@ function EditUserModal({
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Minimum 8 characters. Only fill in to change the password.
           </p>
         </div>
@@ -631,7 +633,7 @@ function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => 
             <input
               type="email"
               required
-              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
+              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               onBlur={(e) => setEmailError(validateEmail(e.target.value))}

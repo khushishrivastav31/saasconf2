@@ -53,7 +53,10 @@ export default function AddOptionModal({
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-5 space-y-4">
           <div>
-            <label htmlFor="option-name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="option-name"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Option Name
             </label>
             <input
@@ -63,23 +66,26 @@ export default function AddOptionModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Full Conference Pass"
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+              className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               This will appear as a row in your pricing matrix.
             </p>
           </div>
 
           {days.length > 0 && (
             <div>
-              <label htmlFor="option-day" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="option-day"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 Conference Day
               </label>
               <select
                 id="option-day"
                 value={conferenceDayId}
                 onChange={(e) => setConferenceDayId(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">No day linked</option>
                 {availableDays.map((day) => (
@@ -88,17 +94,17 @@ export default function AddOptionModal({
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Link this option to a specific conference day.
               </p>
             </div>
           )}
         </div>
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

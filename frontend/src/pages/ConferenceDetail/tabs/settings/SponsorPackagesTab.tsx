@@ -160,18 +160,22 @@ function SponsorPackageForm({
         <ErrorBanner message={error} />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Package Name *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Package Name *
+          </label>
           <input
             type="text"
             required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Description
+          </label>
           <RichTextEditor
             value={formData.description || ''}
             onChange={(html) => setFormData({ ...formData, description: html })}
@@ -181,13 +185,15 @@ function SponsorPackageForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Price *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Price *
+            </label>
             <input
               type="number"
               required
               min="0"
               step="0.01"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.price}
               onChange={(e) =>
                 setFormData({
@@ -198,18 +204,20 @@ function SponsorPackageForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Currency</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Currency
+            </label>
             {isCurrencyLocked ? (
               <input
                 type="text"
                 value={conferenceCurrency || ''}
                 disabled
                 title="Set by conference"
-                className="mt-1 block w-full border border-gray-300 rounded-md bg-gray-100 shadow-sm py-2 px-3 text-sm text-gray-600"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 shadow-sm py-2 px-3 text-sm text-gray-600 dark:text-gray-300"
               />
             ) : (
               <select
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.currency || ''}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
               >
@@ -228,25 +236,28 @@ function SponsorPackageForm({
           <input
             id="conf-sponsor-pkg-active"
             type="checkbox"
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
             checked={formData.is_active ?? true}
             onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
           />
-          <label htmlFor="conf-sponsor-pkg-active" className="ml-2 block text-sm text-gray-900">
+          <label
+            htmlFor="conf-sponsor-pkg-active"
+            className="ml-2 block text-sm text-gray-900 dark:text-gray-100"
+          >
             Active
           </label>
         </div>
 
         {/* Contract template — edit mode only */}
         {isEditMode && (
-          <div className="border-t border-gray-200 pt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Contract Template
             </label>
             {contract ? (
-              <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-md">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md">
                 <svg
-                  className="h-8 w-8 text-gray-400 shrink-0"
+                  className="h-8 w-8 text-gray-400 dark:text-gray-500 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -267,7 +278,9 @@ function SponsorPackageForm({
                   >
                     {contract.filename}
                   </button>
-                  <p className="text-xs text-gray-500">{formatFileSize(contract.file_size)}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatFileSize(contract.file_size)}
+                  </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <input
@@ -282,8 +295,8 @@ function SponsorPackageForm({
                     htmlFor="contract-upload"
                     className={`px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer ${
                       uploadStatus === 'uploading'
-                        ? 'bg-gray-100 text-gray-400 cursor-wait'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-wait'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
                   >
                     {uploadStatus === 'uploading' ? 'Uploading...' : 'Replace'}
@@ -294,7 +307,7 @@ function SponsorPackageForm({
                     disabled={uploadStatus === 'deleting'}
                     className={`px-2.5 py-1 text-xs font-medium rounded-md ${
                       uploadStatus === 'deleting'
-                        ? 'bg-gray-100 text-gray-400 cursor-wait'
+                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-wait'
                         : 'text-red-600 border border-red-300 hover:bg-red-50'
                     }`}
                   >
@@ -316,8 +329,8 @@ function SponsorPackageForm({
                   htmlFor="contract-upload"
                   className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer ${
                     uploadStatus === 'uploading'
-                      ? 'bg-gray-100 text-gray-400 cursor-wait'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-wait'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
                   <svg
@@ -335,7 +348,9 @@ function SponsorPackageForm({
                   </svg>
                   {uploadStatus === 'uploading' ? 'Uploading...' : 'Upload Contract'}
                 </label>
-                <span className="text-xs text-gray-500">PDF, Word, or text files. Max 10MB.</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  PDF, Word, or text files. Max 10MB.
+                </span>
               </div>
             )}
             {uploadError && <p className="mt-1 text-sm text-red-600">{uploadError}</p>}
@@ -395,7 +410,7 @@ function ConferenceSponsorPackagesTab({
         key: 'name',
         label: 'Name',
         render: (pkg: SponsorPackage) => (
-          <div className="text-sm font-medium text-gray-900">{pkg.name}</div>
+          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{pkg.name}</div>
         ),
       },
       {
@@ -406,7 +421,7 @@ function ConferenceSponsorPackagesTab({
           <RichTextDisplay
             content={pkg.description}
             truncate
-            className="text-sm text-gray-500 max-w-xs"
+            className="text-sm text-gray-500 dark:text-gray-400 max-w-xs"
           />
         ),
       },
@@ -415,7 +430,7 @@ function ConferenceSponsorPackagesTab({
         label: 'Price',
         headerAlign: 'text-right',
         render: (pkg: SponsorPackage) => (
-          <div className="text-sm font-medium text-gray-900 text-right">
+          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 text-right">
             {formatPrice(pkg.price, pkg.currency)}
           </div>
         ),
