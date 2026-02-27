@@ -18,6 +18,7 @@ import RichTextEditor from '../../../components/common/RichTextEditor';
 import ConferenceLogo from '../../../components/ConferenceLogo';
 import { parseApiError } from '../../../utils/apiError';
 import { validateEmail, normalizeUrl } from '../../../utils/validators';
+import FiscalRepSection from './FiscalRepSection';
 
 function PortalUrlField({ tenantSlug, path }: { tenantSlug: string; path: string }) {
   const [copied, setCopied] = useState(false);
@@ -604,6 +605,13 @@ function ConferenceDetailsTab({
             </div>
           </div>
         </div>
+
+        {/* Tax & VAT */}
+        <FiscalRepSection
+          conferenceId={conference.id}
+          conferenceCountry={conference.country}
+          isAdmin={isAdmin}
+        />
 
         {/* Portal URLs */}
         {conference.tenant_slug && (

@@ -613,6 +613,89 @@ export interface ScreenOverlayUpdate {
   display_order?: number;
 }
 
+// Fiscal Representative types
+export interface FiscalRepresentative {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  company_name: string;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  vat_number: string | null;
+  conference_vat_number: string | null;
+  contact_persons: LocationContactPerson[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FiscalRepresentativeUpsert {
+  company_name: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  vat_number?: string;
+  conference_vat_number?: string;
+  contact_persons?: LocationContactPerson[];
+  is_active?: boolean;
+}
+
+// Conference VAT Rate types
+export interface ConferenceVatRate {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  rate: number;
+  start_date: string;
+  end_date: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConferenceVatRateCreate {
+  rate: number;
+  start_date: string;
+  end_date: string;
+  description?: string;
+}
+
+export interface ConferenceVatRateUpdate {
+  rate?: number;
+  start_date?: string;
+  end_date?: string;
+  description?: string;
+}
+
+export interface TaxInfo {
+  representation_type: 'self' | 'fiscal_representative';
+  tenant_country: string | null;
+  conference_country: string | null;
+  effective_vat_number: string | null;
+  current_vat_rate: number | null;
+  fiscal_representative: {
+    id: string;
+    company_name: string;
+    vat_number: string | null;
+    conference_vat_number: string | null;
+    is_active: boolean;
+  } | null;
+  vat_rates: ConferenceVatRate[];
+}
+
 export interface SuggestedNumberFormat {
   decimal_separator: string;
   thousands_separator: string;
