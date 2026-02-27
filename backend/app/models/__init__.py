@@ -145,6 +145,7 @@ __all__ = [
     "ScreenOverlay",
     "ServiceProvider",
     "SessionType",
+    "SessionVolunteerTask",
     "Sponsor",
     "SponsorContract",
     "SponsorContractVersion",
@@ -157,7 +158,6 @@ __all__ = [
     "User",
     "UserConferenceAccess",
     "Volunteer",
-    "VolunteerRole",
-    "SessionVolunteerTask",
     "VolunteerAssignment",
+    "VolunteerRole",
 ]
