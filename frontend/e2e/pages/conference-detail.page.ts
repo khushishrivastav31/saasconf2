@@ -44,10 +44,13 @@ export class ConferenceDetailPage {
   get sidebar() { return this.page.locator('nav.flex-shrink-0'); }
   get contentArea() { return this.page.locator('.flex-1.min-w-0').first(); }
 
-  async navigateToSection(name: string) {
+  async navigateToSection(name: string, waitForContent = false) {
     const btn = this.sidebar.getByRole('button', { name }).first();
     await btn.click();
     await this.page.waitForTimeout(500);
+    if (waitForContent) {
+      await this.waitForContentLoaded();
+    }
   }
 
   async expandSection(name: string) {
@@ -70,6 +73,13 @@ export class ConferenceDetailPage {
     await childBtn.waitFor({ state: 'visible', timeout: 5000 });
     await childBtn.click();
     await this.page.waitForTimeout(500);
+  }
+
+  async waitForContentLoaded(timeout = 15000) {
+    // Wait for any loading spinner in the content area to disappear
+    await this.contentArea.locator('[role="status"]').waitFor({ state: 'hidden', timeout }).catch(() => {});
+    // Also wait for Suspense fallback spinner to disappear
+    await this.contentArea.locator('.animate-spin').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
   }
 
   async expectLoaded() {
