@@ -182,7 +182,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-gray-900">News Articles</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">News Articles</h3>
         {isAdmin && (
           <button
             onClick={openCreateModal}
@@ -203,9 +203,9 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
 
       {/* Empty state */}
       {articles.length === 0 && (
-        <div className="text-center py-16 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="text-center py-16 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -217,8 +217,10 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
               d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
             />
           </svg>
-          <h3 className="mt-3 text-sm font-medium text-gray-900">No news articles</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="mt-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+            No news articles
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {isAdmin
               ? 'Create your first news article to share updates with attendees.'
               : 'No news articles have been published yet.'}
@@ -232,27 +234,27 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
           {articles.map((article) => (
             <div
               key={article.id}
-              className="bg-white border border-gray-200 rounded-lg shadow-sm p-5"
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-5"
             >
               <div className="flex items-start justify-between gap-4">
                 {/* Left: content */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-3 mb-1">
-                    <h4 className="text-base font-semibold text-gray-900 truncate">
+                    <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
                       {article.title}
                     </h4>
                     {article.is_published ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                         Published
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
                         Draft
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
                     <span>By {authorName(article)}</span>
                     {article.published_at && (
                       <span>Published {formatDateTime(article.published_at)}</span>
@@ -262,7 +264,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
                     )}
                   </div>
 
-                  <div className="text-sm text-gray-700 line-clamp-2">
+                  <div className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
                     <RichTextDisplay content={article.body_html} truncate />
                   </div>
                 </div>
@@ -273,7 +275,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
                     {/* Edit */}
                     <button
                       onClick={() => openEditModal(article)}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                      className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                       title="Edit article"
                     >
                       <svg
@@ -297,7 +299,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
                       className={`p-2 rounded transition-colors ${
                         article.is_published
                           ? 'text-green-500 hover:text-orange-600 hover:bg-orange-50'
-                          : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                          : 'text-gray-400 dark:text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'
                       }`}
                       title={article.is_published ? 'Unpublish' : 'Publish'}
                     >
@@ -342,7 +344,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
                     {article.is_published && (
                       <button
                         onClick={() => setSendTarget(article)}
-                        className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
                         title="Send as email"
                       >
                         <svg
@@ -364,7 +366,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
                     {/* Delete */}
                     <button
                       onClick={() => setDeleteTarget(article)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                       title="Delete article"
                     >
                       <svg
@@ -398,18 +400,22 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
       >
         <div className="px-6 py-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Title
+            </label>
             <input
               type="text"
               value={form.title}
               onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
               placeholder="Article title"
-              className="block w-full h-10 border border-gray-300 rounded-md shadow-sm px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full h-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Body</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Body
+            </label>
             <RichTextEditor
               value={form.body_html}
               onChange={(html) => setForm((prev) => ({ ...prev, body_html: html }))}
@@ -424,10 +430,10 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
           />
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
           <button
             onClick={closeModal}
-            className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

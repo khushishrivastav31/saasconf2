@@ -161,8 +161,8 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
   // --- Error state ---
   if (isError) {
     return (
-      <div className="rounded-md bg-red-50 border border-red-200 p-4">
-        <p className="text-sm text-red-700">
+      <div className="rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-4">
+        <p className="text-sm text-red-700 dark:text-red-300">
           {parseApiError(error, 'Failed to load review configuration.')}
         </p>
       </div>
@@ -172,8 +172,10 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
   // --- No criteria ---
   if (!config || config.criteria.length === 0) {
     return (
-      <div className="rounded-md bg-gray-50 border border-gray-200 p-4 text-center">
-        <p className="text-sm text-gray-500">No review criteria configured for this paper.</p>
+      <div className="rounded-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 text-center">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No review criteria configured for this paper.
+        </p>
       </div>
     );
   }
@@ -188,7 +190,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
             Submitted
           </span>
           {existingReview.submitted_at && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               Submitted on {formatDateTime(existingReview.submitted_at)}
             </span>
           )}
@@ -204,22 +206,24 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
 
         {config.form_settings.enable_speaker_feedback && existingReview.speaker_feedback && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Feedback for the speaker(s)
             </h3>
             <RichTextDisplay
               content={existingReview.speaker_feedback}
-              className="text-sm text-gray-700"
+              className="text-sm text-gray-700 dark:text-gray-300"
             />
           </div>
         )}
 
         {config.form_settings.enable_internal_comment && existingReview.internal_comment && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Internal Comment</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Internal Comment
+            </h3>
             <RichTextDisplay
               content={existingReview.internal_comment}
-              className="text-sm text-gray-700"
+              className="text-sm text-gray-700 dark:text-gray-300"
             />
           </div>
         )}
@@ -239,7 +243,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
   // --- Editable form ---
   return (
     <div className="space-y-6">
-      <h3 className="text-base font-semibold text-gray-900">Review</h3>
+      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Review</h3>
 
       {sortedCriteria.map((criterion) => (
         <EditableCriterionSection
@@ -253,10 +257,10 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
       {/* Speaker Feedback */}
       {config.form_settings.enable_speaker_feedback && (
         <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-2">
+          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Feedback for the speaker(s)
           </label>
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
             This feedback will be shared anonymously with the speaker(s) when the CFP is completed.
           </p>
           <RichTextEditor
@@ -272,8 +276,10 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
       {/* Internal Comment */}
       {config.form_settings.enable_internal_comment && (
         <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-2">Internal Comment</label>
-          <p className="text-xs text-gray-500 mb-2">
+          <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            Internal Comment
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
             This comment is only visible to the conference team and will not be shared with the
             speaker(s).
           </p>
@@ -295,16 +301,16 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
             id="must-have"
             checked={mustHave}
             onChange={(e) => setMustHave(e.target.checked)}
-            className="mt-0.5 h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+            className="mt-0.5 h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
           />
           <div>
             <label
               htmlFor="must-have"
-              className="text-sm font-semibold text-gray-900 cursor-pointer"
+              className="text-sm font-semibold text-gray-900 dark:text-gray-100 cursor-pointer"
             >
               Must have in program
             </label>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Flag this paper as a must-have for the conference program.
             </p>
           </div>
@@ -313,8 +319,8 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
 
       {/* Error message */}
       {formError && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-3">
-          <p className="text-sm text-red-700">{formError}</p>
+        <div className="rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3">
+          <p className="text-sm text-red-700 dark:text-red-300">{formError}</p>
         </div>
       )}
 
@@ -324,7 +330,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
           type="button"
           onClick={() => saveDraftMutation.mutate()}
           disabled={isSubmitting}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saveDraftMutation.isPending ? (
             <>
@@ -374,9 +380,14 @@ function EditableCriterionSection({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900">{criterion.title}</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          {criterion.title}
+        </h3>
         {criterion.description && (
-          <RichTextDisplay content={criterion.description} className="text-sm text-gray-600 mt-1" />
+          <RichTextDisplay
+            content={criterion.description}
+            className="text-sm text-gray-600 dark:text-gray-400 mt-1"
+          />
         )}
       </div>
 
@@ -414,9 +425,13 @@ function EditableQuestion({
     question.comment_requirement === 'required_if_low_score';
 
   return (
-    <div className="pl-3 border-l-2 border-gray-200 space-y-2">
-      <label className="block text-sm font-medium text-gray-800">{question.text}</label>
-      {question.help_text && <p className="text-xs text-gray-500">{question.help_text}</p>}
+    <div className="pl-3 border-l-2 border-gray-200 dark:border-gray-700 space-y-2">
+      <label className="block text-sm font-medium text-gray-800 dark:text-gray-200">
+        {question.text}
+      </label>
+      {question.help_text && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">{question.help_text}</p>
+      )}
 
       {/* Scale options (radio buttons) */}
       {question.scale && sortedOptions.length > 0 && (
@@ -425,7 +440,9 @@ function EditableQuestion({
             <label
               key={option.id}
               className={`flex items-center gap-2 text-sm cursor-pointer ${
-                option.is_unsure ? 'italic text-gray-500' : 'text-gray-700'
+                option.is_unsure
+                  ? 'italic text-gray-500 dark:text-gray-400'
+                  : 'text-gray-700 dark:text-gray-300'
               }`}
             >
               <input
@@ -434,12 +451,14 @@ function EditableQuestion({
                 value={option.id}
                 checked={answer.selected_option_id === option.id}
                 onChange={() => onUpdate({ selected_option_id: option.id })}
-                className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 focus:ring-primary-500"
               />
               <span>
                 {option.label}
                 {option.numeric_value !== null && (
-                  <span className="text-gray-400 ml-1">({option.numeric_value})</span>
+                  <span className="text-gray-400 dark:text-gray-500 ml-1">
+                    ({option.numeric_value})
+                  </span>
                 )}
               </span>
             </label>
@@ -450,12 +469,14 @@ function EditableQuestion({
       {/* Comment textarea */}
       {showComment && (
         <div className="mt-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">{commentLabel}</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+            {commentLabel}
+          </label>
           <textarea
             value={answer.comment}
             onChange={(e) => onUpdate({ comment: e.target.value })}
             rows={2}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800"
             placeholder="Add your comment..."
           />
         </div>
@@ -479,9 +500,14 @@ function ReadOnlyCriterionSection({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900">{criterion.title}</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          {criterion.title}
+        </h3>
         {criterion.description && (
-          <RichTextDisplay content={criterion.description} className="text-sm text-gray-600 mt-1" />
+          <RichTextDisplay
+            content={criterion.description}
+            className="text-sm text-gray-600 dark:text-gray-400 mt-1"
+          />
         )}
       </div>
 
@@ -506,9 +532,11 @@ function ReadOnlyQuestion({
   }, [question.scale]);
 
   return (
-    <div className="pl-3 border-l-2 border-gray-200 space-y-2">
-      <p className="text-sm font-medium text-gray-800">{question.text}</p>
-      {question.help_text && <p className="text-xs text-gray-500">{question.help_text}</p>}
+    <div className="pl-3 border-l-2 border-gray-200 dark:border-gray-700 space-y-2">
+      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{question.text}</p>
+      {question.help_text && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">{question.help_text}</p>
+      )}
 
       {/* Display selected option highlighted */}
       {question.scale && sortedOptions.length > 0 && (
@@ -522,13 +550,15 @@ function ReadOnlyQuestion({
                   isSelected
                     ? 'bg-primary-50 text-primary-800 font-medium'
                     : option.is_unsure
-                      ? 'italic text-gray-400'
-                      : 'text-gray-400'
+                      ? 'italic text-gray-400 dark:text-gray-500'
+                      : 'text-gray-400 dark:text-gray-500'
                 }`}
               >
                 <span
                   className={`inline-block h-3.5 w-3.5 rounded-full border-2 flex-shrink-0 ${
-                    isSelected ? 'border-primary-600 bg-primary-600' : 'border-gray-300'
+                    isSelected
+                      ? 'border-primary-600 bg-primary-600'
+                      : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
                 <span>
@@ -546,8 +576,10 @@ function ReadOnlyQuestion({
       {/* Comment as plain text */}
       {answer?.comment && (
         <div className="mt-1">
-          <p className="text-xs font-medium text-gray-500 mb-0.5">Comment</p>
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{answer.comment}</p>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">Comment</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+            {answer.comment}
+          </p>
         </div>
       )}
     </div>

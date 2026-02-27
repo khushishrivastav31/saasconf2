@@ -35,10 +35,11 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  registered_pending_invoice: 'bg-yellow-100 text-yellow-800',
-  invoiced: 'bg-blue-100 text-blue-800',
-  paid: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  registered_pending_invoice:
+    'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300',
+  invoiced: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+  paid: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+  cancelled: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
 };
 
 const MODE_LABELS: Record<string, string> = {
@@ -153,7 +154,7 @@ function BookingOptionSelect({
             className={`relative flex flex-col items-start text-left rounded-lg border-2 p-4 transition-all ${
               isSelected
                 ? 'border-primary-600 bg-primary-50 ring-1 ring-primary-600'
-                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
             {/* Clickable header area */}
@@ -165,7 +166,9 @@ function BookingOptionSelect({
               {/* Selection indicator (checkbox style) */}
               <span
                 className={`absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded border-2 ${
-                  isSelected ? 'border-primary-600 bg-primary-600' : 'border-gray-300 bg-white'
+                  isSelected
+                    ? 'border-primary-600 bg-primary-600'
+                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
                 }`}
               >
                 {isSelected && (
@@ -177,16 +180,16 @@ function BookingOptionSelect({
 
               {/* Name + price */}
               <span
-                className={`text-sm font-semibold pr-6 ${isSelected ? 'text-primary-900' : 'text-gray-900'}`}
+                className={`text-sm font-semibold pr-6 ${isSelected ? 'text-primary-900' : 'text-gray-900 dark:text-gray-100'}`}
               >
                 {o.name}
               </span>
               {priceInfo && (
                 <span
-                  className={`mt-1 text-sm font-medium ${isSelected ? 'text-primary-700' : 'text-gray-600'}`}
+                  className={`mt-1 text-sm font-medium ${isSelected ? 'text-primary-700' : 'text-gray-600 dark:text-gray-400'}`}
                 >
                   {formatPrice(priceInfo.price, priceInfo.currency)}
-                  <span className="ml-1 text-xs font-normal text-gray-400">
+                  <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
                     ({priceInfo.periodName})
                   </span>
                 </span>
@@ -194,7 +197,9 @@ function BookingOptionSelect({
 
               {/* Description */}
               {o.description && (
-                <span className="mt-2 text-xs text-gray-500 leading-relaxed">{o.description}</span>
+                <span className="mt-2 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                  {o.description}
+                </span>
               )}
             </button>
 
@@ -248,52 +253,64 @@ function AttendeeFields({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label htmlFor={`${p}first_name`} className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor={`${p}first_name`}
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
           First Name *
         </label>
         <input
           id={`${p}first_name`}
           type="text"
           required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           value={data.first_name}
           onChange={(e) => onChange({ ...data, first_name: e.target.value })}
         />
       </div>
       <div>
-        <label htmlFor={`${p}last_name`} className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor={`${p}last_name`}
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
           Last Name *
         </label>
         <input
           id={`${p}last_name`}
           type="text"
           required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           value={data.last_name}
           onChange={(e) => onChange({ ...data, last_name: e.target.value })}
         />
       </div>
       <div>
-        <label htmlFor={`${p}email`} className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor={`${p}email`}
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
           Email *
         </label>
         <input
           id={`${p}email`}
           type="email"
           required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           value={data.email}
           onChange={(e) => onChange({ ...data, email: e.target.value })}
         />
       </div>
       {pronounOptions && pronounOptions.length > 0 && (
         <div>
-          <label htmlFor={`${p}pronouns`} className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor={`${p}pronouns`}
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Pronouns
           </label>
           <select
             id={`${p}pronouns`}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.pronouns || ''}
             onChange={(e) => onChange({ ...data, pronouns: e.target.value || null })}
           >
@@ -307,37 +324,46 @@ function AttendeeFields({
         </div>
       )}
       <div>
-        <label htmlFor={`${p}phone`} className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor={`${p}phone`}
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
           Phone
         </label>
         <input
           id={`${p}phone`}
           type="text"
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           value={data.phone || ''}
           onChange={(e) => onChange({ ...data, phone: e.target.value || null })}
         />
       </div>
       <div>
-        <label htmlFor={`${p}job_title`} className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor={`${p}job_title`}
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
           Job Title
         </label>
         <input
           id={`${p}job_title`}
           type="text"
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           value={data.job_title || ''}
           onChange={(e) => onChange({ ...data, job_title: e.target.value || null })}
         />
       </div>
       <div>
-        <label htmlFor={`${p}department`} className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor={`${p}department`}
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
           Department
         </label>
         <input
           id={`${p}department`}
           type="text"
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           value={data.department || ''}
           onChange={(e) => onChange({ ...data, department: e.target.value || null })}
         />
@@ -405,70 +431,85 @@ function BillingFields({
       ? 'mt-1 block w-full rounded-md border-red-500 ring-1 ring-red-500 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm'
       : vatStatus === 'valid'
         ? 'mt-1 block w-full rounded-md border-green-500 ring-1 ring-green-500 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm'
-        : 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm';
+        : 'mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm';
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
-          <label htmlFor="company_name" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="company_name"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Company Name
           </label>
           <input
             id="company_name"
             type="text"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.company_name || ''}
             onChange={(e) => onChange({ ...data, company_name: e.target.value || null })}
           />
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="street" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="street"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Street *
           </label>
           <input
             id="street"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.street}
             onChange={(e) => onChange({ ...data, street: e.target.value })}
           />
         </div>
         <div>
-          <label htmlFor="postal_code" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="postal_code"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Postal Code *
           </label>
           <input
             id="postal_code"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.postal_code}
             onChange={(e) => onChange({ ...data, postal_code: e.target.value })}
           />
         </div>
         <div>
-          <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="city"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             City *
           </label>
           <input
             id="city"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.city}
             onChange={(e) => onChange({ ...data, city: e.target.value })}
           />
         </div>
         <div>
-          <label htmlFor="country" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="country"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Country *
           </label>
           <select
             id="country"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.country}
             onChange={(e) => {
               onChange({ ...data, country: e.target.value, vat_validated: null });
@@ -484,10 +525,13 @@ function BillingFields({
           </select>
         </div>
         <div>
-          <label htmlFor="vat_number" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="vat_number"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             VAT Number
             {vatStatus === 'checking' && (
-              <span className="ml-2 text-xs text-gray-400">Checking...</span>
+              <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">Checking...</span>
             )}
             {vatStatus === 'valid' && <span className="ml-2 text-xs text-green-600">Valid</span>}
             {vatStatus === 'invalid' && <span className="ml-2 text-xs text-red-600">Invalid</span>}
@@ -517,68 +561,85 @@ function BillingFields({
         </div>
       </div>
 
-      <h4 className="text-sm font-semibold text-gray-700 pt-2">Contact Person</h4>
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 pt-2">
+        Contact Person
+      </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="contact_first_name" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="contact_first_name"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             First Name *
           </label>
           <input
             id="contact_first_name"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.contact_first_name}
             onChange={(e) => onChange({ ...data, contact_first_name: e.target.value })}
           />
         </div>
         <div>
-          <label htmlFor="contact_last_name" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="contact_last_name"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Last Name *
           </label>
           <input
             id="contact_last_name"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.contact_last_name}
             onChange={(e) => onChange({ ...data, contact_last_name: e.target.value })}
           />
         </div>
         <div>
-          <label htmlFor="contact_phone" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="contact_phone"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Phone *
           </label>
           <input
             id="contact_phone"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.contact_phone}
             onChange={(e) => onChange({ ...data, contact_phone: e.target.value })}
           />
         </div>
         <div>
-          <label htmlFor="contact_email" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="contact_email"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Email *
           </label>
           <input
             id="contact_email"
             type="email"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.contact_email}
             onChange={(e) => onChange({ ...data, contact_email: e.target.value })}
           />
         </div>
         <div>
-          <label htmlFor="procurement_code" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="procurement_code"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Procurement / PO Code
           </label>
           <input
             id="procurement_code"
             type="text"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={data.procurement_code || ''}
             onChange={(e) => onChange({ ...data, procurement_code: e.target.value || null })}
           />
@@ -819,7 +880,7 @@ export default function RegistrationTab({
             setSelectedId(null);
             setSuccess(null);
           }}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+          className="mb-4 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -835,23 +896,24 @@ export default function RegistrationTab({
         <ErrorBanner message={error} />
         <SuccessBanner message={success} />
 
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {selectedReg.first_name} {selectedReg.last_name}
               </h3>
-              <p className="text-sm text-gray-500">{selectedReg.email}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{selectedReg.email}</p>
             </div>
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  STATUS_COLORS[selectedReg.status] || 'bg-gray-100 text-gray-800'
+                  STATUS_COLORS[selectedReg.status] ||
+                  'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
                 }`}
               >
                 {STATUS_LABELS[selectedReg.status] || selectedReg.status}
               </span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
                 {MODE_LABELS[selectedReg.registration_mode] || selectedReg.registration_mode}
               </span>
             </div>
@@ -861,46 +923,52 @@ export default function RegistrationTab({
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6 text-sm">
             {selectedReg.phone && (
               <div>
-                <span className="text-gray-500">Phone:</span>{' '}
-                <span className="text-gray-900">{selectedReg.phone}</span>
+                <span className="text-gray-500 dark:text-gray-400">Phone:</span>{' '}
+                <span className="text-gray-900 dark:text-gray-100">{selectedReg.phone}</span>
               </div>
             )}
             {selectedReg.job_title && (
               <div>
-                <span className="text-gray-500">Job Title:</span>{' '}
-                <span className="text-gray-900">{selectedReg.job_title}</span>
+                <span className="text-gray-500 dark:text-gray-400">Job Title:</span>{' '}
+                <span className="text-gray-900 dark:text-gray-100">{selectedReg.job_title}</span>
               </div>
             )}
             {selectedReg.department && (
               <div>
-                <span className="text-gray-500">Department:</span>{' '}
-                <span className="text-gray-900">{selectedReg.department}</span>
+                <span className="text-gray-500 dark:text-gray-400">Department:</span>{' '}
+                <span className="text-gray-900 dark:text-gray-100">{selectedReg.department}</span>
               </div>
             )}
             <div>
-              <span className="text-gray-500">Booking Option:</span>{' '}
-              <span className="text-gray-900">{selectedReg.booking_option_name || '\u2014'}</span>
+              <span className="text-gray-500 dark:text-gray-400">Booking Option:</span>{' '}
+              <span className="text-gray-900 dark:text-gray-100">
+                {selectedReg.booking_option_name || '\u2014'}
+              </span>
             </div>
             {selectedReg.billing_company_name && (
               <div>
-                <span className="text-gray-500">Company:</span>{' '}
-                <span className="text-gray-900">{selectedReg.billing_company_name}</span>
+                <span className="text-gray-500 dark:text-gray-400">Company:</span>{' '}
+                <span className="text-gray-900 dark:text-gray-100">
+                  {selectedReg.billing_company_name}
+                </span>
               </div>
             )}
             {selectedReg.notes && (
               <div className="col-span-full">
-                <span className="text-gray-500">Notes:</span>{' '}
-                <span className="text-gray-900">{selectedReg.notes}</span>
+                <span className="text-gray-500 dark:text-gray-400">Notes:</span>{' '}
+                <span className="text-gray-900 dark:text-gray-100">{selectedReg.notes}</span>
               </div>
             )}
           </div>
 
           {/* Status update */}
           {isAdmin && (
-            <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-200">
-              <label className="text-sm font-medium text-gray-700">Status:</label>
+            <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Status:
+              </label>
               <select
-                className="rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 value={selectedReg.status}
                 onChange={(e) => {
                   setError(null);
@@ -919,7 +987,7 @@ export default function RegistrationTab({
               <div className="flex-1" />
               <button
                 onClick={() => setDeleteTarget(selectedReg)}
-                className="text-sm text-red-600 hover:text-red-800"
+                className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
               >
                 Delete Registration
               </button>
@@ -929,7 +997,9 @@ export default function RegistrationTab({
           {/* Add-on items */}
           <div className="mb-6">
             <div className="flex justify-between items-center mb-3">
-              <h4 className="text-sm font-semibold text-gray-700">Add-on Items</h4>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Add-on Items
+              </h4>
               {isAdmin && (
                 <button
                   onClick={() => setShowAddItem(!showAddItem)}
@@ -941,11 +1011,13 @@ export default function RegistrationTab({
             </div>
 
             {showAddItem && (
-              <div className="flex items-end gap-3 mb-3 p-3 bg-gray-50 rounded-md">
+              <div className="flex items-end gap-3 mb-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    Type
+                  </label>
                   <select
-                    className="rounded-md border-gray-300 shadow-sm sm:text-sm"
+                    className="rounded-md border-gray-300 dark:border-gray-600 shadow-sm sm:text-sm"
                     value={addItemType}
                     onChange={(e) => {
                       setAddItemType(e.target.value as 'booking_option' | 'tutorial');
@@ -957,12 +1029,12 @@ export default function RegistrationTab({
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                     {addItemType === 'booking_option' ? 'Option' : 'Tutorial Session'}
                   </label>
                   {addItemType === 'booking_option' ? (
                     <select
-                      className="w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                      className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm sm:text-sm"
                       value={addItemOptionId}
                       onChange={(e) => setAddItemOptionId(e.target.value)}
                     >
@@ -980,7 +1052,7 @@ export default function RegistrationTab({
                       type="text"
                       placeholder="Tutorial will be assigned as pending"
                       disabled
-                      className="w-full rounded-md border-gray-300 bg-gray-100 sm:text-sm"
+                      className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 sm:text-sm"
                     />
                   )}
                 </div>
@@ -995,14 +1067,16 @@ export default function RegistrationTab({
             )}
 
             {selectedReg.items.length === 0 ? (
-              <p className="text-sm text-gray-400">No add-on items</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">No add-on items</p>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                 {selectedReg.items.map((item) => (
                   <li key={item.id} className="flex items-center justify-between py-2">
                     <div>
-                      <span className="text-sm text-gray-900">{item.item_name}</span>
-                      <span className="ml-2 text-xs text-gray-400">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">
+                        {item.item_name}
+                      </span>
+                      <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
                         {item.item_type === 'tutorial' ? 'Tutorial' : 'Option'}
                       </span>
                       {item.pending && (
@@ -1017,7 +1091,7 @@ export default function RegistrationTab({
                             itemId: item.id,
                           })
                         }
-                        className="text-xs text-red-500 hover:text-red-700"
+                        className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                       >
                         Remove
                       </button>
@@ -1046,7 +1120,7 @@ export default function RegistrationTab({
       <div>
         <button
           onClick={resetCreateForm}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+          className="mb-4 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -1063,21 +1137,25 @@ export default function RegistrationTab({
 
         <form onSubmit={handleCreateSubmit} className="space-y-6">
           {/* Attendee(s) */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">New Registration</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              New Registration
+            </h3>
 
             {attendees.map((att, idx) => (
               <div
                 key={idx}
                 className={
                   attendees.length > 1
-                    ? 'mb-4 p-4 bg-gray-50 rounded-md border border-gray-200'
+                    ? 'mb-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700'
                     : ''
                 }
               >
                 {attendees.length > 1 && (
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-600">Attendee {idx + 1}</span>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Attendee {idx + 1}
+                    </span>
                     <button
                       type="button"
                       onClick={() => {
@@ -1087,7 +1165,7 @@ export default function RegistrationTab({
                           attendeeSessionSelections.filter((_, i) => i !== idx)
                         );
                       }}
-                      className="text-xs text-red-500 hover:text-red-700"
+                      className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                     >
                       Remove
                     </button>
@@ -1095,7 +1173,9 @@ export default function RegistrationTab({
                 )}
 
                 {attendees.length === 1 && (
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Attendee</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Attendee
+                  </h4>
                 )}
 
                 <AttendeeFields
@@ -1110,7 +1190,7 @@ export default function RegistrationTab({
                 />
 
                 <div className="mt-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Booking Option *
                   </label>
                   <BookingOptionSelect
@@ -1152,8 +1232,10 @@ export default function RegistrationTab({
           </div>
 
           {/* Billing section */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">Billing Information</h4>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              Billing Information
+            </h4>
             <BillingFields data={billing} onChange={setBilling} conferenceId={conference.id} />
           </div>
 
@@ -1162,7 +1244,7 @@ export default function RegistrationTab({
             <button
               type="button"
               onClick={resetCreateForm}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
             </button>
@@ -1197,7 +1279,7 @@ export default function RegistrationTab({
           <input
             type="text"
             placeholder="Search by name or email..."
-            className="rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -1205,7 +1287,7 @@ export default function RegistrationTab({
             }}
           />
           <select
-            className="rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
@@ -1237,73 +1319,76 @@ export default function RegistrationTab({
       {isLoading ? (
         <LoadingSpinner />
       ) : !data?.items?.length ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           <p className="text-lg font-medium">No registrations yet</p>
           <p className="text-sm mt-1">Create your first registration to get started.</p>
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Name
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Email
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Booking Option
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Company
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Mode
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Items
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {data.items.map((reg) => (
                   <tr
                     key={reg.id}
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                     onClick={() => {
                       setSelectedId(reg.id);
                       setError(null);
                       setSuccess(null);
                     }}
                   >
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                       {reg.first_name} {reg.last_name}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{reg.email}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                      {reg.email}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       {reg.booking_option_name || '\u2014'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       {reg.billing_company_name || '\u2014'}
                     </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          STATUS_COLORS[reg.status] || 'bg-gray-100 text-gray-800'
+                          STATUS_COLORS[reg.status] ||
+                          'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
                         }`}
                       >
                         {STATUS_LABELS[reg.status] || reg.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-400">
+                    <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500">
                       {MODE_LABELS[reg.registration_mode] || reg.registration_mode}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       {reg.items.length > 0 ? reg.items.length : '\u2014'}
                     </td>
                   </tr>
@@ -1314,7 +1399,7 @@ export default function RegistrationTab({
 
           {/* Pagination */}
           {data.pages > 1 && (
-            <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
+            <div className="flex justify-between items-center mt-4 text-sm text-gray-500 dark:text-gray-400">
               <span>
                 Page {data.page} of {data.pages} ({data.total} total)
               </span>
@@ -1322,14 +1407,14 @@ export default function RegistrationTab({
                 <button
                   disabled={page <= 1}
                   onClick={() => setPage(page - 1)}
-                  className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 hover:bg-gray-50"
+                  className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Previous
                 </button>
                 <button
                   disabled={page >= data.pages}
                   onClick={() => setPage(page + 1)}
-                  className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 hover:bg-gray-50"
+                  className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Next
                 </button>

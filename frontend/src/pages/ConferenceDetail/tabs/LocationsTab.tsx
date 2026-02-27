@@ -262,12 +262,14 @@ export default function ConferenceLocationsTab({
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900">Linked Locations ({data?.total || 0})</h4>
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          Linked Locations ({data?.total || 0})
+        </h4>
         {isAdmin && (
           <div className="flex items-center gap-2">
             {unlinkableLocations.length > 0 && (
               <select
-                className="border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 defaultValue=""
                 onChange={(e) => {
                   if (e.target.value) {
@@ -299,30 +301,36 @@ export default function ConferenceLocationsTab({
       {showCreateForm && (
         <form
           onSubmit={handleCreateSubmit}
-          className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3"
+          className="mb-4 p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg space-y-3"
         >
           <div>
-            <label className="block text-xs font-medium text-gray-700">Name *</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+              Name *
+            </label>
             <input
               type="text"
               required
               value={createForm.name}
               onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">Code</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                Code
+              </label>
               <input
                 type="text"
                 value={createForm.code}
                 onChange={(e) => setCreateForm({ ...createForm, code: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Type *</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                Type *
+              </label>
               <select
                 required
                 value={createForm.location_type}
@@ -332,7 +340,7 @@ export default function ConferenceLocationsTab({
                     location_type: e.target.value as LocationCreate['location_type'],
                   })
                 }
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               >
                 {locationTypesData?.items
                   ?.filter((t) => t.is_active)
@@ -346,11 +354,13 @@ export default function ConferenceLocationsTab({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">Parent Location</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                Parent Location
+              </label>
               <select
                 value={createForm.parent_id}
                 onChange={(e) => setCreateForm({ ...createForm, parent_id: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">None (top-level venue)</option>
                 {data?.items
@@ -361,26 +371,30 @@ export default function ConferenceLocationsTab({
                     </option>
                   ))}
               </select>
-              <p className="mt-0.5 text-xs text-gray-400">
+              <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
                 Select a venue if this is a room within it
               </p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Capacity</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                Capacity
+              </label>
               <input
                 type="number"
                 min="0"
                 value={createForm.capacity}
                 onChange={(e) => setCreateForm({ ...createForm, capacity: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               />
-              <p className="mt-0.5 text-xs text-gray-400">Max attendees</p>
+              <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">Max attendees</p>
             </div>
           </div>
           {isVirtual ? (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700">Platform</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Platform
+                </label>
                 <select
                   value={createForm.virtual_platform}
                   onChange={(e) =>
@@ -389,7 +403,7 @@ export default function ConferenceLocationsTab({
                       virtual_platform: e.target.value,
                     })
                   }
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="">Select platform</option>
                   {['zoom', 'teams', 'meet', 'webex', 'other'].map((p) => (
@@ -400,7 +414,9 @@ export default function ConferenceLocationsTab({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">URL</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                  URL
+                </label>
                 <input
                   type="text"
                   placeholder="example.com"
@@ -417,43 +433,51 @@ export default function ConferenceLocationsTab({
                       virtual_url: normalizeUrl(e.target.value),
                     })
                   }
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700">Building</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Building
+                </label>
                 <input
                   type="text"
                   value={createForm.building}
                   onChange={(e) => setCreateForm({ ...createForm, building: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">Floor</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Floor
+                </label>
                 <input
                   type="text"
                   value={createForm.floor}
                   onChange={(e) => setCreateForm({ ...createForm, floor: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700">City</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                  City
+                </label>
                 <input
                   type="text"
                   value={createForm.city}
                   onChange={(e) => setCreateForm({ ...createForm, city: e.target.value })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
             </div>
           )}
           <div>
-            <label className="block text-xs font-medium text-gray-700">Description</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+              Description
+            </label>
             <RichTextEditor
               value={createForm.description}
               onChange={(html) => setCreateForm({ ...createForm, description: html })}
@@ -462,7 +486,9 @@ export default function ConferenceLocationsTab({
           </div>
           {/* Contact Persons */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Contact Persons</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Contact Persons
+            </label>
             <ContactPersonList
               contacts={createForm.contact_persons}
               newContact={newContact}
@@ -492,13 +518,13 @@ export default function ConferenceLocationsTab({
         <div className="flex gap-6">
           {/* Location List */}
           <div className="w-64 flex-shrink-0">
-            <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-              <div className="px-3 py-2 bg-gray-100 border-b border-gray-200">
-                <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="px-3 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <h5 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
                   Locations
                 </h5>
               </div>
-              <ul className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+              <ul className="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
                 {locationTree.map(({ location: loc, level, hasChildren }) => (
                   <li key={loc.id}>
                     <button
@@ -507,13 +533,13 @@ export default function ConferenceLocationsTab({
                       className={`w-full flex items-center gap-2 py-2.5 text-sm text-left transition-colors ${
                         loc.id === selectedLocationId
                           ? 'bg-primary-50 text-primary-700 font-medium'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                       style={{ paddingLeft: level === 0 ? '0.75rem' : '1.75rem' }}
                     >
                       {level === 0 && hasChildren ? (
                         <svg
-                          className="flex-shrink-0 w-4 h-4 text-gray-400"
+                          className="flex-shrink-0 w-4 h-4 text-gray-400 dark:text-gray-500"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -548,11 +574,11 @@ export default function ConferenceLocationsTab({
                       )}
                       <span className="truncate flex-1">{loc.name}</span>
                       {loc.capacity && (
-                        <span className="text-xs text-gray-400" title="Capacity">
+                        <span className="text-xs text-gray-400 dark:text-gray-500" title="Capacity">
                           {loc.capacity}
                         </span>
                       )}
-                      <span className="text-xs text-gray-400 w-12 text-right">
+                      <span className="text-xs text-gray-400 dark:text-gray-500 w-12 text-right">
                         {loc.location_type}
                       </span>
                     </button>
@@ -578,7 +604,7 @@ export default function ConferenceLocationsTab({
                 allLocations={data?.items}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                 <svg
                   className="w-12 h-12 text-gray-300 mb-3"
                   fill="none"
@@ -598,8 +624,10 @@ export default function ConferenceLocationsTab({
                     d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                <p className="text-sm font-medium text-gray-500">Select a location</p>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Select a location
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   Choose a location from the list to view and edit its details
                 </p>
               </div>
@@ -607,7 +635,7 @@ export default function ConferenceLocationsTab({
           </div>
         </div>
       ) : (
-        <div className="text-center py-8 text-sm text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
           No locations linked to this conference yet.
         </div>
       )}

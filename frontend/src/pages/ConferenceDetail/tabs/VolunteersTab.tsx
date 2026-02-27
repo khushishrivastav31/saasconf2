@@ -202,14 +202,14 @@ function ConferenceVolunteersTab({
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
           Linked Volunteers ({data?.total || 0})
         </h4>
         {isAdmin && (
           <div className="flex items-center gap-2">
             {unlinkableVolunteers.length > 0 && (
               <select
-                className="border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 defaultValue=""
                 onChange={(e) => {
                   if (e.target.value) {
@@ -241,45 +241,53 @@ function ConferenceVolunteersTab({
       {showCreateForm && (
         <form
           onSubmit={handleCreateSubmit}
-          className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3"
+          className="mb-4 p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg space-y-3"
         >
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">First Name *</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                First Name *
+              </label>
               <input
                 type="text"
                 required
                 value={createForm.first_name}
                 onChange={(e) => setCreateForm({ ...createForm, first_name: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Last Name *</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                Last Name *
+              </label>
               <input
                 type="text"
                 required
                 value={createForm.last_name}
                 onChange={(e) => setCreateForm({ ...createForm, last_name: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">Email *</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                Email *
+              </label>
               <input
                 type="email"
                 required
                 value={createForm.email}
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                 onBlur={(e) => setCreateEmailError(validateEmail(e.target.value))}
-                className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createEmailError ? 'border-red-300' : 'border-gray-300'}`}
+                className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
               />
               {createEmailError && <p className="mt-1 text-xs text-red-600">{createEmailError}</p>}
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">Phone</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                Phone
+              </label>
               <input
                 type="tel"
                 value={createForm.phone}
@@ -288,7 +296,7 @@ function ConferenceVolunteersTab({
                   setCreateForm({ ...createForm, phone: value });
                   setCreatePhoneError(validatePhone(value));
                 }}
-                className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createPhoneError ? 'border-red-300' : 'border-gray-300'}`}
+                className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
                 placeholder="+491234545 or 00491234566"
               />
               {createPhoneError && <p className="mt-1 text-xs text-red-600">{createPhoneError}</p>}
@@ -296,11 +304,13 @@ function ConferenceVolunteersTab({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700">Role</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                Role
+              </label>
               <select
                 value={createForm.role}
                 onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">Select a role...</option>
                 {rolesData?.items
@@ -313,11 +323,13 @@ function ConferenceVolunteersTab({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700">T-Shirt Size</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                T-Shirt Size
+              </label>
               <select
                 value={createForm.tshirt_size}
                 onChange={(e) => setCreateForm({ ...createForm, tshirt_size: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">Select size</option>
                 {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((s) => (
@@ -329,7 +341,9 @@ function ConferenceVolunteersTab({
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700">Comments</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+              Comments
+            </label>
             <RichTextEditor
               value={createForm.notes}
               onChange={(html) => setCreateForm({ ...createForm, notes: html })}
@@ -354,58 +368,62 @@ function ConferenceVolunteersTab({
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
         </div>
       ) : data?.items && data.items.length > 0 ? (
-        <div className="overflow-hidden border border-gray-200 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Name
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Email
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Role
                 </th>
                 {isAdmin && (
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Actions
                   </th>
                 )}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {data.items.map((volunteer) => (
                 <tr key={volunteer.id}>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                     {volunteer.full_name}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{volunteer.email}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    {volunteer.email}
+                  </td>
                   <td className="px-4 py-3 text-sm">
                     <span
                       className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                         volunteer.status === 'active'
-                          ? 'bg-green-100 text-green-700'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                           : volunteer.status === 'approved'
-                            ? 'bg-blue-100 text-blue-700'
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                             : volunteer.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-gray-100 text-gray-700'
+                              ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                       }`}
                     >
                       {volunteer.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{volunteer.role || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    {volunteer.role || '-'}
+                  </td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => openEditVolunteer(volunteer)}
-                          className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
+                          className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
                           title="Edit"
                         >
                           <EditIcon />
@@ -413,7 +431,7 @@ function ConferenceVolunteersTab({
                         <button
                           onClick={() => setDeleteVolunteerTarget(volunteer)}
                           disabled={volunteerDeleteMutation.isPending}
-                          className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
+                          className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
                           title="Delete"
                         >
                           <DeleteIcon />
@@ -427,7 +445,7 @@ function ConferenceVolunteersTab({
           </table>
         </div>
       ) : (
-        <div className="text-center py-8 text-sm text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
           No volunteers linked to this conference yet.
         </div>
       )}
@@ -443,41 +461,49 @@ function ConferenceVolunteersTab({
             <div className="px-6 py-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">First Name</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    First Name
+                  </label>
                   <input
                     type="text"
                     required
                     value={editForm.first_name || ''}
                     onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Last Name
+                  </label>
                   <input
                     type="text"
                     required
                     value={editForm.last_name || ''}
                     onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Email
+                  </label>
                   <input
                     type="email"
                     required
                     value={editForm.email || ''}
                     onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                     onBlur={(e) => setEditEmailError(validateEmail(e.target.value))}
-                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editEmailError ? 'border-red-300' : 'border-gray-300'}`}
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
                   />
                   {editEmailError && <p className="mt-1 text-xs text-red-600">{editEmailError}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Phone</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Phone
+                  </label>
                   <input
                     type="tel"
                     value={editForm.phone || ''}
@@ -486,7 +512,7 @@ function ConferenceVolunteersTab({
                       setEditForm({ ...editForm, phone: value });
                       setEditPhoneError(validatePhone(value));
                     }}
-                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editPhoneError ? 'border-red-300' : 'border-gray-300'}`}
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
                     placeholder="+491234545 or 00491234566"
                   />
                   {editPhoneError && <p className="mt-1 text-xs text-red-600">{editPhoneError}</p>}
@@ -494,7 +520,9 @@ function ConferenceVolunteersTab({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Status</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Status
+                  </label>
                   <select
                     value={editForm.status || 'pending'}
                     onChange={(e) =>
@@ -503,7 +531,7 @@ function ConferenceVolunteersTab({
                         status: e.target.value as VolunteerStatus,
                       })
                     }
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
                     {(['pending', 'approved', 'active', 'inactive', 'rejected'] as const).map(
                       (s) => (
@@ -515,11 +543,13 @@ function ConferenceVolunteersTab({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Role</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Role
+                  </label>
                   <select
                     value={editForm.role || ''}
                     onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="">Select a role...</option>
                     {rolesData?.items
@@ -534,7 +564,9 @@ function ConferenceVolunteersTab({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">T-Shirt Size</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    T-Shirt Size
+                  </label>
                   <select
                     value={editForm.tshirt_size || ''}
                     onChange={(e) =>
@@ -543,7 +575,7 @@ function ConferenceVolunteersTab({
                         tshirt_size: e.target.value,
                       })
                     }
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="">Select size</option>
                     {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((s) => (
@@ -556,7 +588,9 @@ function ConferenceVolunteersTab({
                 <div></div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Notes</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Notes
+                </label>
                 <RichTextEditor
                   value={editForm.notes || ''}
                   onChange={(html) => setEditForm({ ...editForm, notes: html })}
@@ -565,7 +599,7 @@ function ConferenceVolunteersTab({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Emergency Contact Name
                   </label>
                   <input
@@ -577,11 +611,11 @@ function ConferenceVolunteersTab({
                         emergency_contact_name: e.target.value,
                       })
                     }
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Emergency Contact Phone
                   </label>
                   <input
@@ -595,7 +629,7 @@ function ConferenceVolunteersTab({
                       });
                       setEditEmergencyPhoneError(validatePhone(value));
                     }}
-                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editEmergencyPhoneError ? 'border-red-300' : 'border-gray-300'}`}
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${editEmergencyPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
                     placeholder="+491234545 or 00491234566"
                   />
                   {editEmergencyPhoneError && (
@@ -606,11 +640,11 @@ function ConferenceVolunteersTab({
 
               <AttachmentList entityType="volunteer" entityId={editingVolunteer.id} />
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setEditingVolunteer(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Cancel
               </button>

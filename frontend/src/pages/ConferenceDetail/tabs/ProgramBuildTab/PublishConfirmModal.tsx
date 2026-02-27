@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import Modal from "../../../../components/Modal";
-import { useToast } from "../../../../components/Toast";
-import { parseApiError } from "../../../../utils/apiError";
-import api from "../../../../config/api";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import Modal from '../../../../components/Modal';
+import { useToast } from '../../../../components/Toast';
+import { parseApiError } from '../../../../utils/apiError';
+import api from '../../../../config/api';
 
 interface PaperPreviewItem {
   id: string;
@@ -59,10 +59,10 @@ export default function PublishConfirmModal({
     isLoading: previewLoading,
     error: previewError,
   } = useQuery<PublishPreview>({
-    queryKey: ["program-publish-preview", conferenceId],
+    queryKey: ['program-publish-preview', conferenceId],
     queryFn: async () => {
       const res = await api.get<PublishPreview>(
-        `/conferences/${conferenceId}/program/publish/preview`,
+        `/conferences/${conferenceId}/program/publish/preview`
       );
       return res.data;
     },
@@ -80,14 +80,14 @@ export default function PublishConfirmModal({
     },
     onSuccess: (data) => {
       showToast(
-        `Program ${isUpdate ? "updated" : "published"} successfully. ${data.notifications_sent} notification${data.notifications_sent === 1 ? "" : "s"} sent.`,
-        "success",
+        `Program ${isUpdate ? 'updated' : 'published'} successfully. ${data.notifications_sent} notification${data.notifications_sent === 1 ? '' : 's'} sent.`,
+        'success'
       );
       onPublished();
       onClose();
     },
     onError: (error) => {
-      showToast(parseApiError(error, "Failed to publish program"), "error");
+      showToast(parseApiError(error, 'Failed to publish program'), 'error');
     },
   });
 
@@ -99,7 +99,7 @@ export default function PublishConfirmModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={isUpdate ? "Update Published Program" : "Publish Program"}
+      title={isUpdate ? 'Update Published Program' : 'Publish Program'}
       size="max-w-lg"
     >
       <div className="px-6 py-4">
@@ -126,7 +126,7 @@ export default function PublishConfirmModal({
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            <span className="ml-3 text-sm text-gray-500">
+            <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">
               Loading preview...
             </span>
           </div>
@@ -134,9 +134,9 @@ export default function PublishConfirmModal({
 
         {/* Error state */}
         {previewError && (
-          <div className="rounded-md bg-red-50 border border-red-200 p-4">
-            <p className="text-sm text-red-700">
-              {parseApiError(previewError, "Failed to load publish preview")}
+          <div className="rounded-md bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 p-4">
+            <p className="text-sm text-red-700 dark:text-red-400">
+              {parseApiError(previewError, 'Failed to load publish preview')}
             </p>
           </div>
         )}
@@ -146,7 +146,7 @@ export default function PublishConfirmModal({
           <div className="space-y-4">
             {/* Update warning banner */}
             {isUpdate && (
-              <div className="rounded-md bg-amber-50 border border-amber-200 p-3 flex items-start gap-2">
+              <div className="rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-3 flex items-start gap-2">
                 <svg
                   className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5"
                   fill="none"
@@ -160,54 +160,49 @@ export default function PublishConfirmModal({
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                   />
                 </svg>
-                <p className="text-sm text-amber-800">
-                  This will update the previously published program. Only newly
-                  affected speakers will be notified.
+                <p className="text-sm text-amber-800 dark:text-amber-300">
+                  This will update the previously published program. Only newly affected speakers
+                  will be notified.
                 </p>
               </div>
             )}
 
             {/* Summary */}
-            <div className="rounded-md bg-gray-50 border border-gray-200 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm text-gray-700">
+            <div className="rounded-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
                 <span>
-                  <strong>{preview.papers_to_accept}</strong>{" "}
-                  {preview.papers_to_accept === 1 ? "paper" : "papers"} will be
-                  accepted
+                  <strong>{preview.papers_to_accept}</strong>{' '}
+                  {preview.papers_to_accept === 1 ? 'paper' : 'papers'} will be accepted
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-700">
+              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <span className="inline-block w-2 h-2 rounded-full bg-red-500" />
                 <span>
-                  <strong>{preview.papers_to_reject}</strong>{" "}
-                  {preview.papers_to_reject === 1 ? "paper" : "papers"} will be
-                  rejected
+                  <strong>{preview.papers_to_reject}</strong>{' '}
+                  {preview.papers_to_reject === 1 ? 'paper' : 'papers'} will be rejected
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-700">
+              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
                 <span>
-                  <strong>{preview.speakers_to_notify}</strong>{" "}
-                  {preview.speakers_to_notify === 1 ? "speaker" : "speakers"}{" "}
-                  will be notified
+                  <strong>{preview.speakers_to_notify}</strong>{' '}
+                  {preview.speakers_to_notify === 1 ? 'speaker' : 'speakers'} will be notified
                 </span>
               </div>
             </div>
 
             {/* Expandable sections */}
             {preview.accepted_papers.length > 0 && (
-              <div className="border border-gray-200 rounded-md overflow-hidden">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setAcceptedExpanded(!acceptedExpanded)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
                 >
-                  <span>
-                    Papers to Accept ({preview.accepted_papers.length})
-                  </span>
+                  <span>Papers to Accept ({preview.accepted_papers.length})</span>
                   <svg
-                    className={`h-4 w-4 text-gray-400 transition-transform ${acceptedExpanded ? "rotate-180" : ""}`}
+                    className={`h-4 w-4 text-gray-400 dark:text-gray-500 transition-transform ${acceptedExpanded ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -221,18 +216,15 @@ export default function PublishConfirmModal({
                   </svg>
                 </button>
                 {acceptedExpanded && (
-                  <ul className="divide-y divide-gray-100">
+                  <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                     {preview.accepted_papers.map((paper) => (
-                      <li
-                        key={paper.id}
-                        className="px-4 py-2 flex items-start gap-2"
-                      >
+                      <li key={paper.id} className="px-4 py-2 flex items-start gap-2">
                         <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-sm text-gray-900 truncate">
+                          <p className="text-sm text-gray-900 dark:text-gray-100 truncate">
                             {paper.title}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {paper.speaker_name}
                           </p>
                         </div>
@@ -244,17 +236,15 @@ export default function PublishConfirmModal({
             )}
 
             {preview.rejected_papers.length > 0 && (
-              <div className="border border-gray-200 rounded-md overflow-hidden">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setRejectedExpanded(!rejectedExpanded)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
                 >
-                  <span>
-                    Papers to Reject ({preview.rejected_papers.length})
-                  </span>
+                  <span>Papers to Reject ({preview.rejected_papers.length})</span>
                   <svg
-                    className={`h-4 w-4 text-gray-400 transition-transform ${rejectedExpanded ? "rotate-180" : ""}`}
+                    className={`h-4 w-4 text-gray-400 dark:text-gray-500 transition-transform ${rejectedExpanded ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -268,18 +258,15 @@ export default function PublishConfirmModal({
                   </svg>
                 </button>
                 {rejectedExpanded && (
-                  <ul className="divide-y divide-gray-100">
+                  <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                     {preview.rejected_papers.map((paper) => (
-                      <li
-                        key={paper.id}
-                        className="px-4 py-2 flex items-start gap-2"
-                      >
+                      <li key={paper.id} className="px-4 py-2 flex items-start gap-2">
                         <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-sm text-gray-900 truncate">
+                          <p className="text-sm text-gray-900 dark:text-gray-100 truncate">
                             {paper.title}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {paper.speaker_name}
                           </p>
                         </div>
@@ -294,12 +281,12 @@ export default function PublishConfirmModal({
       </div>
 
       {/* Footer buttons */}
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
         <button
           type="button"
           onClick={onClose}
           disabled={publishMutation.isPending}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Cancel
         </button>
@@ -331,7 +318,7 @@ export default function PublishConfirmModal({
               />
             </svg>
           )}
-          {isUpdate ? "Update Program" : "Publish Program"}
+          {isUpdate ? 'Update Program' : 'Publish Program'}
         </button>
       </div>
     </Modal>

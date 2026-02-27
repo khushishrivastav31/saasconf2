@@ -50,9 +50,9 @@ const CFPAssignments = lazy(() =>
 function ComingSoonContent({ name }: { name: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20">
-      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
         <svg
-          className="w-8 h-8 text-gray-400"
+          className="w-8 h-8 text-gray-400 dark:text-gray-500"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -65,8 +65,8 @@ function ComingSoonContent({ name }: { name: string }) {
           />
         </svg>
       </div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">{name}</h2>
-      <p className="text-gray-500 text-sm">This module is coming soon.</p>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{name}</h2>
+      <p className="text-gray-500 dark:text-gray-400 text-sm">This module is coming soon.</p>
     </div>
   );
 }
@@ -145,8 +145,10 @@ function ConferenceDetailContent() {
   if (isError || !conference) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-lg font-medium text-gray-900">Conference not found</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+          Conference not found
+        </h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           The conference you are looking for does not exist or was deleted.
         </p>
         <button
@@ -166,14 +168,16 @@ function ConferenceDetailContent() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/modules/conferences')}
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
+            className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             <BackIcon />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{conference.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {conference.name}
+            </h1>
             {conference.abbreviation && (
-              <p className="text-sm text-gray-500">{conference.abbreviation}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{conference.abbreviation}</p>
             )}
           </div>
           <span
@@ -190,7 +194,7 @@ function ConferenceDetailContent() {
             <button
               onClick={handleDeleteClick}
               disabled={deleteLoading}
-              className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 disabled:opacity-50"
+              className="inline-flex items-center px-3 py-1.5 border border-red-300 dark:border-red-700 text-sm font-medium rounded-md text-red-700 dark:text-red-300 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
             >
               {deleteLoading && !showDeleteConfirm ? 'Loading...' : 'Delete'}
             </button>
@@ -207,12 +211,12 @@ function ConferenceDetailContent() {
           }`}
         >
           <div
-            className="bg-white rounded-lg shadow p-2 sticky top-24 overflow-y-auto"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow p-2 sticky top-24 overflow-y-auto"
             style={{ maxHeight: 'calc(100vh - 120px)' }}
           >
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="w-full flex items-center justify-center p-1.5 mb-1 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
+              className="w-full flex items-center justify-center p-1.5 mb-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -248,7 +252,7 @@ function ConferenceDetailContent() {
                       } text-sm font-medium ${
                         isParentActive
                           ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
                       }`}
                     >
                       <section.icon />
@@ -267,7 +271,7 @@ function ConferenceDetailContent() {
                             return next;
                           })
                         }
-                        className="p-1 mr-1 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
+                        className="p-1 mr-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <svg
                           className={`w-4 h-4 transition-transform ${
@@ -309,7 +313,7 @@ function ConferenceDetailContent() {
                           className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
                             activeSection === child.id
                               ? 'bg-primary-50 text-primary-700 font-medium'
-                              : 'text-gray-600 hover:bg-gray-100'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                         >
                           <child.icon />
@@ -326,7 +330,7 @@ function ConferenceDetailContent() {
 
         {/* Section content */}
         <div className="flex-1 min-w-0">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <Suspense
               fallback={
                 <div className="flex justify-center py-12">
@@ -447,7 +451,7 @@ function ConferenceDetailContent() {
       >
         {deletePreview && (
           <div className="p-6">
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Are you sure you want to delete <strong>{deletePreview.conference_name}</strong>? This
               action cannot be undone.
             </p>
@@ -460,11 +464,11 @@ function ConferenceDetailContent() {
               deletePreview.invoices.count > 0 ||
               deletePreview.papers.count > 0 ||
               deletePreview.applicants.orphaned_count > 0) && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm">
-                <p className="font-medium text-red-800 mb-2">
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm">
+                <p className="font-medium text-red-800 dark:text-red-200 mb-2">
                   The following will be permanently deleted:
                 </p>
-                <ul className="space-y-1 text-red-700">
+                <ul className="space-y-1 text-red-700 dark:text-red-300">
                   {deletePreview.volunteers.will_delete > 0 && (
                     <li>
                       {deletePreview.volunteers.will_delete} volunteer
@@ -516,11 +520,11 @@ function ConferenceDetailContent() {
             {(deletePreview.volunteers.will_unlink > 0 ||
               deletePreview.locations.will_unlink > 0 ||
               deletePreview.cfps.will_unlink > 0) && (
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm">
-                <p className="font-medium text-yellow-800 mb-2">
+              <div className="mb-4 p-3 bg-yellow-50 dark:bg-amber-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md text-sm">
+                <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
                   The following will be unlinked (shared with other conferences):
                 </p>
-                <ul className="space-y-1 text-yellow-700">
+                <ul className="space-y-1 text-yellow-700 dark:text-yellow-300">
                   {deletePreview.volunteers.will_unlink > 0 && (
                     <li>
                       {deletePreview.volunteers.will_unlink} volunteer
@@ -544,7 +548,7 @@ function ConferenceDetailContent() {
             )}
 
             {deleteError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
                 {deleteError}
               </div>
             )}
@@ -557,7 +561,7 @@ function ConferenceDetailContent() {
                   setDeleteError(null);
                 }}
                 disabled={deleteLoading}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
               >
                 Cancel
               </button>

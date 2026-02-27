@@ -59,9 +59,9 @@ export default function Conferences() {
       case 'ongoing':
         return 'bg-green-100 text-green-800';
       case 'past':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200';
       default:
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 dark:text-yellow-300';
     }
   };
 
@@ -69,8 +69,10 @@ export default function Conferences() {
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Conferences</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage your conferences and events</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Conferences</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Manage your conferences and events
+          </p>
         </div>
         {isTenantAdmin && (
           <button
@@ -93,21 +95,23 @@ export default function Conferences() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-500">Total</div>
-            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="text-sm text-gray-500 dark:text-gray-400">Total</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-500">Upcoming</div>
-            <div className="text-2xl font-bold text-blue-600">{stats.upcoming}</div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="text-sm text-gray-500 dark:text-gray-400">Upcoming</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {stats.upcoming}
+            </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-500">Ongoing</div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="text-sm text-gray-500 dark:text-gray-400">Ongoing</div>
             <div className="text-2xl font-bold text-green-600">{stats.ongoing}</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-500">Past</div>
-            <div className="text-2xl font-bold text-gray-600">{stats.past}</div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="text-sm text-gray-500 dark:text-gray-400">Past</div>
+            <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.past}</div>
           </div>
         </div>
       )}
@@ -117,7 +121,7 @@ export default function Conferences() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+          className="border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
         >
           <option value="">All Conferences</option>
           <option value="upcoming">Upcoming</option>
@@ -136,14 +140,14 @@ export default function Conferences() {
           {data.items.map((conference) => (
             <div
               key={conference.id}
-              className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => navigate(`/modules/conferences/${conference.id}`)}
             >
               <div className="p-6">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-start gap-3">
                     {conference.logo_url && (
-                      <div className="w-12 h-12 flex-shrink-0 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                      <div className="w-12 h-12 flex-shrink-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
                         <ConferenceLogo
                           logoUrl={conference.logo_url}
                           className="max-w-full max-h-full object-contain"
@@ -152,9 +156,13 @@ export default function Conferences() {
                       </div>
                     )}
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{conference.name}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {conference.name}
+                      </h3>
                       {conference.abbreviation && (
-                        <p className="text-sm text-gray-500">{conference.abbreviation}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {conference.abbreviation}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -166,7 +174,7 @@ export default function Conferences() {
                 </div>
 
                 {conference.start_date && (
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
                     <svg
                       className="w-4 h-4 mr-2"
                       fill="none"
@@ -188,7 +196,7 @@ export default function Conferences() {
                 )}
 
                 {(conference.city || conference.country) && (
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
                     <svg
                       className="w-4 h-4 mr-2"
                       fill="none"
@@ -210,14 +218,14 @@ export default function Conferences() {
                     </svg>
                     {[conference.city, conference.country].filter(Boolean).join(', ')}
                     {conference.venue_type !== 'onsite' && (
-                      <span className="ml-2 text-blue-600">
+                      <span className="ml-2 text-blue-600 dark:text-blue-400">
                         ({conference.venue_type === 'hybrid' ? 'Hybrid' : 'Virtual'})
                       </span>
                     )}
                   </div>
                 )}
 
-                <div className="flex items-center text-sm text-gray-500 mt-4">
+                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-4">
                   <svg
                     className="w-4 h-4 mr-1"
                     fill="none"
@@ -239,11 +247,11 @@ export default function Conferences() {
 
                 <div className="flex items-center gap-2 mt-3">
                   {conference.is_published ? (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                    <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded">
                       Published
                     </span>
                   ) : (
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                    <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
                       Draft
                     </span>
                   )}
@@ -253,9 +261,9 @@ export default function Conferences() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -267,8 +275,10 @@ export default function Conferences() {
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No conferences</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+            No conferences
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Get started by creating your first conference.
           </p>
           {isTenantAdmin && (

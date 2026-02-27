@@ -160,7 +160,7 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
         <div
           ref={containerRef}
           data-time-slot
-          className="sticky left-0 z-20 bg-white border-b border-r border-primary-300 shadow-lg p-1"
+          className="sticky left-0 z-20 bg-white dark:bg-gray-800 border-b border-r border-primary-300 shadow-lg p-1"
           style={{ gridRow: slotIndex + 2, gridColumn: 1 }}
         >
           <div className="flex flex-col gap-1">
@@ -169,7 +169,7 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
               autoFocus
             />
             <input
@@ -177,9 +177,9 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-1 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
             />
-            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+            <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isSessionFree}
@@ -197,7 +197,7 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
               </button>
               <button
                 onClick={handleDelete}
-                className="px-1 py-0.5 text-xs text-red-600 bg-red-50 rounded hover:bg-red-100"
+                className="px-1 py-0.5 text-xs text-red-600 bg-red-50 dark:bg-red-900/30 rounded hover:bg-red-100"
                 title="Delete slot"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -231,9 +231,9 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
   return (
     <div
       data-time-slot
-      className={`sticky left-0 z-10 border-b border-r border-gray-200 flex flex-col items-center justify-center px-2 ${
-        slot.is_session_free ? 'bg-amber-50' : 'bg-gray-50'
-      } ${isAdmin ? 'cursor-pointer hover:bg-gray-100 group' : ''}`}
+      className={`sticky left-0 z-10 border-b border-r border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center px-2 ${
+        slot.is_session_free ? 'bg-amber-50 dark:bg-amber-900/30' : 'bg-gray-50 dark:bg-gray-900'
+      } ${isAdmin ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 group' : ''}`}
       style={{ gridRow: slotIndex + 2, gridColumn: 1 }}
       onClick={() => isAdmin && setIsEditing(true)}
       title={
@@ -241,11 +241,13 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
       }
     >
       <span
-        className={`text-xs font-medium ${slot.is_session_free ? 'text-amber-700' : 'text-gray-700'}`}
+        className={`text-xs font-medium ${slot.is_session_free ? 'text-amber-700 dark:text-amber-300' : 'text-gray-700 dark:text-gray-300'}`}
       >
         {formatTime(slot.start_time)}
       </span>
-      <span className={`text-xs ${slot.is_session_free ? 'text-amber-500' : 'text-gray-400'}`}>
+      <span
+        className={`text-xs ${slot.is_session_free ? 'text-amber-500' : 'text-gray-400 dark:text-gray-500'}`}
+      >
         {formatTime(slot.end_time)}
       </span>
       {slot.is_session_free && (
@@ -253,7 +255,7 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
       )}
       {isAdmin && !slot.is_session_free && (
         <svg
-          className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5"
+          className="w-3 h-3 text-gray-600 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -326,7 +328,7 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
         <div
           ref={containerRef}
           data-track-header
-          className="sticky top-0 z-20 bg-white border-b border-r border-primary-300 shadow-lg p-1"
+          className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b border-r border-primary-300 shadow-lg p-1"
         >
           <div className="flex flex-col gap-1">
             <input
@@ -334,7 +336,7 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
               autoFocus
             />
             <div className="flex gap-1">
@@ -346,7 +348,7 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
               </button>
               <button
                 onClick={handleDelete}
-                className="px-1 py-0.5 text-xs text-red-600 bg-red-50 rounded hover:bg-red-100"
+                className="px-1 py-0.5 text-xs text-red-600 bg-red-50 dark:bg-red-900/30 rounded hover:bg-red-100"
                 title="Delete track"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -380,8 +382,8 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
   return (
     <div
       data-track-header
-      className={`sticky top-0 z-10 bg-gray-100 border-b border-r border-gray-300 flex items-center justify-center px-2 relative ${
-        isAdmin ? 'cursor-pointer hover:bg-gray-200 group' : ''
+      className={`sticky top-0 z-10 bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-300 dark:border-gray-600 flex items-center justify-center px-2 relative ${
+        isAdmin ? 'cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 group' : ''
       }`}
       onClick={() => isAdmin && setIsEditing(true)}
       title={isAdmin ? 'Click to edit track' : undefined}
@@ -391,11 +393,13 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
           className="w-3 h-3 rounded-full flex-shrink-0"
           style={{ backgroundColor: track.color || '#9CA3AF' }}
         />
-        <span className="text-sm font-medium text-gray-900 truncate">{track.name}</span>
+        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+          {track.name}
+        </span>
       </div>
       {isAdmin && (
         <svg
-          className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1 flex-shrink-0"
+          className="w-3 h-3 text-gray-600 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-1 flex-shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -443,9 +447,9 @@ function GridCell({
   } else if (isOver) {
     bgClass = 'bg-primary-100';
   } else if (isSessionFree) {
-    bgClass = 'bg-amber-50/50';
+    bgClass = 'bg-amber-50/50 dark:bg-amber-900/20';
   } else {
-    bgClass = 'bg-white hover:bg-gray-50';
+    bgClass = 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700';
   }
 
   return (
@@ -453,7 +457,7 @@ function GridCell({
       ref={setNodeRef}
       style={{ gridRow: slotIndex + 2, gridColumn: trackIndex + 2, ...sessionFreeStyle }}
       className={`
-        min-h-[80px] border-b border-r border-gray-200 transition-colors
+        min-h-[80px] border-b border-r border-gray-200 dark:border-gray-700 transition-colors
         ${bgClass}
         ${isAdmin ? 'cursor-pointer' : ''}
       `}
@@ -946,10 +950,10 @@ export default function ProgramGrid({
   // Show empty state only when both are missing and no add buttons are available
   if (sortedSlots.length === 0 && sortedTracks.length === 0 && (!onAddTrack || !onAddSlot)) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-8">
+      <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-8">
         <div className="text-center">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -961,8 +965,10 @@ export default function ProgramGrid({
               d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
             />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No grid setup yet</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+            No grid setup yet
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Add time slots and tracks to build your program grid.
           </p>
         </div>
@@ -982,8 +988,10 @@ export default function ProgramGrid({
         onMouseDown={handleGridMouseDown}
       >
         {/* Header row - Time column */}
-        <div className="sticky top-0 left-0 z-20 bg-gray-100 border-b border-r border-gray-300 flex items-center justify-center">
-          <span className="text-xs font-medium text-gray-500 uppercase">Time</span>
+        <div className="sticky top-0 left-0 z-20 bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-300 dark:border-gray-600 flex items-center justify-center">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+            Time
+          </span>
         </div>
 
         {/* Header row - Track columns */}
@@ -1000,12 +1008,12 @@ export default function ProgramGrid({
         {/* Add track button - end of header row */}
         {isAdmin && onAddTrack && (
           <div
-            className="sticky top-0 z-10 bg-gray-50 border-b border-gray-300 flex items-center justify-center"
+            className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-600 flex items-center justify-center"
             style={{ gridRow: 1, gridColumn: sortedTracks.length + 2 }}
           >
             <button
               onClick={onAddTrack}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 dark:text-gray-500 hover:text-primary-600 hover:bg-primary-50 transition-colors"
               title="Add track"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1052,12 +1060,12 @@ export default function ProgramGrid({
         {/* Add time slot button - bottom of time column */}
         {isAdmin && onAddSlot && (
           <div
-            className="sticky left-0 z-10 bg-gray-50 border-r border-gray-200 flex items-center justify-center"
+            className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex items-center justify-center"
             style={{ gridRow: sortedSlots.length + 2, gridColumn: 1 }}
           >
             <button
               onClick={onAddSlot}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 dark:text-gray-500 hover:text-primary-600 hover:bg-primary-50 transition-colors"
               title="Add time slot"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1113,7 +1121,7 @@ export default function ProgramGrid({
             }}
             className="flex items-start justify-center pt-2"
           >
-            <div className="flex gap-2 bg-white shadow-lg rounded-lg border border-gray-200 px-3 py-2">
+            <div className="flex gap-2 bg-white dark:bg-gray-800 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
               <button
                 onClick={handleMerge}
                 className="px-3 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
@@ -1126,7 +1134,7 @@ export default function ProgramGrid({
               </button>
               <button
                 onClick={() => setMarkedCells(new Set())}
-                className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
               >
                 Cancel
               </button>

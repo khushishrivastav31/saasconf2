@@ -391,7 +391,7 @@ export default function ProgramDesignTab({ conference, isAdmin }: ProgramDesignT
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Program Design</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Program Design</h2>
       </div>
 
       {/* Day tabs */}
@@ -462,9 +462,9 @@ export default function ProgramDesignTab({ conference, isAdmin }: ProgramDesignT
 
       {/* No day selected state */}
       {!selectedDayId && days.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+        <div className="flex flex-col items-center justify-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
           <svg
-            className="w-12 h-12 text-gray-400 mb-4"
+            className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -476,8 +476,10 @@ export default function ProgramDesignTab({ conference, isAdmin }: ProgramDesignT
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Program Days</h3>
-          <p className="text-sm text-gray-500 mb-4 text-center max-w-md">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+            No Program Days
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 text-center max-w-md">
             Add program days to start building your conference schedule.
           </p>
         </div>

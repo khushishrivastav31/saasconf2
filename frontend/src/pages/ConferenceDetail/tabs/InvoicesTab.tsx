@@ -22,11 +22,11 @@ import { ChevronLeftIcon, EditIcon, DeleteIcon } from '../icons';
 import { useSelection } from '../SelectionContext';
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-700',
-  sent: 'bg-blue-100 text-blue-700',
-  paid: 'bg-green-100 text-green-700',
-  overdue: 'bg-red-100 text-red-700',
-  cancelled: 'bg-yellow-100 text-yellow-700',
+  draft: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
+  sent: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+  paid: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+  overdue: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+  cancelled: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
 };
 
 export default function ConferenceInvoicesTab({
@@ -203,7 +203,7 @@ export default function ConferenceInvoicesTab({
             <button
               type="button"
               onClick={() => setSelectedInvoiceId(null)}
-              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
             >
               <ChevronLeftIcon />
               Back to invoices list
@@ -230,15 +230,17 @@ export default function ConferenceInvoicesTab({
           {/* === TABLE LIST VIEW === */}
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Invoices
                 {invoiceCount > 0 && (
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                     {invoiceCount}
                   </span>
                 )}
               </h2>
-              <p className="text-sm text-gray-500">Manage invoices for this conference.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Manage invoices for this conference.
+              </p>
             </div>
             {isAdmin && !isAdding && (
               <button
@@ -260,20 +262,20 @@ export default function ConferenceInvoicesTab({
           {isAdding && (
             <form
               onSubmit={handleCreateSubmit}
-              className="mb-4 bg-gray-50 border border-gray-200 rounded-lg p-5 space-y-4"
+              className="mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5 space-y-4"
             >
-              <h5 className="text-sm font-medium text-gray-900">New Invoice</h5>
+              <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">New Invoice</h5>
 
               {/* Invoice Number + Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Invoice Number *
                   </label>
                   <input
                     type="text"
                     required
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.invoice_number}
                     onChange={(e) =>
                       setCreateForm({
@@ -284,9 +286,11 @@ export default function ConferenceInvoicesTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Status
+                  </label>
                   <select
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.status || 'draft'}
                     onChange={(e) =>
                       setCreateForm({
@@ -307,10 +311,12 @@ export default function ConferenceInvoicesTab({
               {/* Dates */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Issue Date</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Issue Date
+                  </label>
                   <input
                     type="date"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.issue_date || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -321,10 +327,12 @@ export default function ConferenceInvoicesTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Due Date
+                  </label>
                   <input
                     type="date"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.due_date || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -339,13 +347,13 @@ export default function ConferenceInvoicesTab({
               {/* Recipient Name + Email */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Recipient Name *
                   </label>
                   <input
                     type="text"
                     required
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.recipient_name}
                     onChange={(e) =>
                       setCreateForm({
@@ -356,12 +364,12 @@ export default function ConferenceInvoicesTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Recipient Email
                   </label>
                   <input
                     type="email"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.recipient_email || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -376,18 +384,20 @@ export default function ConferenceInvoicesTab({
               {/* Currency + Active */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Currency
+                  </label>
                   {isCurrencyLocked ? (
                     <input
                       type="text"
                       value={conference.currency || ''}
                       disabled
                       title="Set by conference"
-                      className="block w-full border border-gray-300 rounded-md bg-gray-100 shadow-sm py-2 px-3 text-sm text-gray-600"
+                      className="block w-full border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 shadow-sm py-2 px-3 text-sm text-gray-600 dark:text-gray-400"
                     />
                   ) : (
                     <select
-                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       value={createForm.currency || ''}
                       onChange={(e) =>
                         setCreateForm({
@@ -416,16 +426,20 @@ export default function ConferenceInvoicesTab({
                           is_active: e.target.checked,
                         })
                       }
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">Active</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Active
+                    </span>
                   </label>
                 </div>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Notes
+                </label>
                 <RichTextEditor
                   value={createForm.notes || ''}
                   onChange={(html) =>
@@ -470,7 +484,7 @@ export default function ConferenceInvoicesTab({
                       comment: '',
                     });
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>
@@ -482,56 +496,61 @@ export default function ConferenceInvoicesTab({
           {isLoading ? (
             <LoadingSpinner />
           ) : data?.items && data.items.length > 0 ? (
-            <div className="overflow-hidden border border-gray-200 rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Invoice #
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Recipient
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Issue Date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Due Date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Total
                     </th>
                     {isAdmin && (
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
                     )}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {data.items.map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                    <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                         {invoice.invoice_number}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{invoice.recipient_name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {invoice.recipient_name}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                         {invoice.issue_date || '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{invoice.due_date || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {invoice.due_date || '-'}
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span
                           className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                            STATUS_COLORS[invoice.status] || 'bg-gray-100 text-gray-700'
+                            STATUS_COLORS[invoice.status] ||
+                            'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                           }`}
                         >
                           {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-500">
+                      <td className="px-4 py-3 text-sm text-right text-gray-500 dark:text-gray-400">
                         {invoice.total != null
                           ? `${invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${invoice.currency ? ` ${invoice.currency}` : ''}`
                           : '-'}
@@ -542,7 +561,7 @@ export default function ConferenceInvoicesTab({
                             <button
                               type="button"
                               onClick={() => setSelectedInvoiceId(invoice.id)}
-                              className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
+                              className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
                               title="Edit"
                             >
                               <EditIcon />
@@ -551,7 +570,7 @@ export default function ConferenceInvoicesTab({
                               type="button"
                               onClick={() => setDeleteTarget(invoice)}
                               disabled={deleteMutation.isPending}
-                              className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
+                              className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
                               title="Delete"
                             >
                               <DeleteIcon />
@@ -566,7 +585,7 @@ export default function ConferenceInvoicesTab({
             </div>
           ) : (
             !isAdding && (
-              <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+              <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
                 No invoices yet. Click "+ Add Invoice" to get started.
               </div>
             )

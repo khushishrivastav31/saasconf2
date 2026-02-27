@@ -81,19 +81,21 @@ function DraggablePaperCard({
       style={style}
       {...(canDrag ? { ...attributes, ...listeners } : {})}
       className={`
-        p-2 hover:bg-gray-50
+        p-2 hover:bg-gray-50 dark:hover:bg-gray-700
         ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}
         ${isDragging ? 'opacity-50 z-50' : ''}
       `}
     >
-      <h4 className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
+      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 leading-tight">
         {paper.title}
       </h4>
 
-      {speakerName && <p className="text-xs text-gray-500 mt-0.5 truncate">{speakerName}</p>}
+      {speakerName && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{speakerName}</p>
+      )}
 
       {durationWarning && (
-        <div className="mt-1 px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
+        <div className="mt-1 px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded text-xs text-amber-700 dark:text-amber-300">
           Duration ({paper.session_type_duration} min) exceeds session ({selectedSessionDuration}{' '}
           min)
         </div>
@@ -109,7 +111,9 @@ function DraggablePaperCard({
               Assign
             </button>
           ) : (
-            <span className="text-xs text-gray-400 italic">Drag to a session</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500 italic">
+              Drag to a session
+            </span>
           )}
         </div>
       )}
@@ -132,17 +136,19 @@ function AssignedPaperCard({
     : null;
 
   return (
-    <div className="p-2 hover:bg-green-50/80">
-      <h4 className="text-sm font-medium text-gray-900 line-clamp-1 leading-tight">
+    <div className="p-2 hover:bg-green-50/80 dark:hover:bg-green-900/20">
+      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1 leading-tight">
         {paper.title}
       </h4>
-      {speakerName && <p className="text-xs text-gray-500 mt-0.5 truncate">{speakerName}</p>}
-      <p className="text-xs text-green-700 mt-0.5 truncate">
+      {speakerName && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{speakerName}</p>
+      )}
+      <p className="text-xs text-green-700 dark:text-green-400 mt-0.5 truncate">
         {session.session_type_name || session.title}
       </p>
       <button
         onClick={() => onUnassignPaper(session.id)}
-        className="mt-1 px-2 py-0.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100"
+        className="mt-1 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded hover:bg-red-100 dark:hover:bg-red-900/50"
       >
         Unassign
       </button>
@@ -157,9 +163,13 @@ export function PaperCardOverlay({ paper }: { paper: Paper }) {
     : null;
 
   return (
-    <div className="p-2 bg-white border border-primary-300 rounded-md shadow-2xl opacity-90 max-w-[250px]">
-      <h4 className="text-sm font-medium text-gray-900 line-clamp-1">{paper.title}</h4>
-      {speakerName && <p className="text-xs text-gray-500 truncate">{speakerName}</p>}
+    <div className="p-2 bg-white dark:bg-gray-800 border border-primary-300 rounded-md shadow-2xl opacity-90 max-w-[250px]">
+      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1">
+        {paper.title}
+      </h4>
+      {speakerName && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{speakerName}</p>
+      )}
       {paper.session_type_name && (
         <span className="inline-block mt-1 px-1.5 py-0.5 text-xs bg-primary-100 text-primary-700 rounded">
           {paper.session_type_name}
@@ -308,11 +318,11 @@ export default function PaperSidebar({
       <div className="flex-shrink-0">
         <button
           onClick={() => setCollapsed(false)}
-          className="p-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50"
+          className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
           title="Show accepted papers"
         >
           <svg
-            className="w-5 h-5 text-gray-600"
+            className="w-5 h-5 text-gray-600 dark:text-gray-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -330,18 +340,18 @@ export default function PaperSidebar({
   }
 
   return (
-    <div className="flex-shrink-0 w-72 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col max-h-[calc(100vh-200px)]">
+    <div className="flex-shrink-0 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm flex flex-col max-h-[calc(100vh-200px)]">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900">
+      <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
           Papers
-          <span className="ml-1 text-xs font-normal text-gray-500">
+          <span className="ml-1 text-xs font-normal text-gray-500 dark:text-gray-400">
             ({unassignedPapers.length} / {papers.length})
           </span>
         </h3>
         <button
           onClick={() => setCollapsed(true)}
-          className="p-1 text-gray-400 hover:text-gray-600 rounded"
+          className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded"
           title="Collapse sidebar"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -356,18 +366,18 @@ export default function PaperSidebar({
       </div>
 
       {/* Search & Filter */}
-      <div className="p-2 border-b border-gray-100 space-y-1.5">
+      <div className="p-2 border-b border-gray-100 dark:border-gray-700 space-y-1.5">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search papers..."
-          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+          className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
         />
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white"
+          className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 dark:text-gray-100"
         >
           <option value="all">All session types</option>
           {sessionTypes.map((t) => (
@@ -399,22 +409,26 @@ export default function PaperSidebar({
           <>
             {/* Unassigned papers grouped by session type */}
             {totalUnassignedShown === 0 && !search.trim() && (
-              <div className="py-6 text-center text-sm text-gray-500">All papers assigned</div>
+              <div className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                All papers assigned
+              </div>
             )}
             {totalUnassignedShown === 0 && search.trim() && (
-              <div className="py-6 text-center text-sm text-gray-500">
+              <div className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
                 No unassigned papers match
               </div>
             )}
             {groupedUnassigned.map((group) => (
               <div key={group.name}>
-                <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
-                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                <div className="px-2 py-1.5 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-10">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                     {group.name}
                   </span>
-                  <span className="ml-1 text-xs text-gray-400">({group.papers.length})</span>
+                  <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
+                    ({group.papers.length})
+                  </span>
                 </div>
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-700">
                   {group.papers.map((paper) => (
                     <DraggablePaperCard
                       key={paper.id}
@@ -432,10 +446,10 @@ export default function PaperSidebar({
 
             {/* Assigned papers section */}
             {assignedPapers.length > 0 && (
-              <div className="border-t border-gray-200">
+              <div className="border-t border-gray-200 dark:border-gray-700">
                 <button
                   onClick={() => setShowAssigned(!showAssigned)}
-                  className="w-full px-3 py-2 flex items-center justify-between bg-green-50 hover:bg-green-100 transition-colors"
+                  className="w-full px-3 py-2 flex items-center justify-between bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
                 >
                   <span className="text-xs font-semibold text-green-800 uppercase tracking-wide">
                     Assigned ({assignedPapers.length})
@@ -455,7 +469,7 @@ export default function PaperSidebar({
                   </svg>
                 </button>
                 {showAssigned && (
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
                     {filteredAssigned.map(({ paper, session }) => (
                       <AssignedPaperCard
                         key={paper.id}
@@ -465,7 +479,7 @@ export default function PaperSidebar({
                       />
                     ))}
                     {filteredAssigned.length === 0 && search.trim() && (
-                      <div className="py-4 text-center text-xs text-gray-500">
+                      <div className="py-4 text-center text-xs text-gray-500 dark:text-gray-400">
                         No assigned papers match
                       </div>
                     )}

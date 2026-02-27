@@ -232,7 +232,7 @@ function ConferenceSponsorsTab({
             <button
               type="button"
               onClick={() => setSelectedSponsorId(null)}
-              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
             >
               <ChevronLeftIcon />
               Back to sponsors list
@@ -261,15 +261,17 @@ function ConferenceSponsorsTab({
           {/* === TABLE LIST VIEW === */}
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Sponsors
                 {sponsorCount > 0 && (
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                     {sponsorCount}
                   </span>
                 )}
               </h2>
-              <p className="text-sm text-gray-500">Manage sponsors for this conference.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Manage sponsors for this conference.
+              </p>
             </div>
             {isAdmin && !isAdding && (
               <button
@@ -291,19 +293,19 @@ function ConferenceSponsorsTab({
           {isAdding && (
             <form
               onSubmit={handleCreateSubmit}
-              className="mb-4 bg-gray-50 border border-gray-200 rounded-lg p-5 space-y-4"
+              className="mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5 space-y-4"
             >
-              <h5 className="text-sm font-medium text-gray-900">New Sponsor</h5>
+              <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">New Sponsor</h5>
 
               {/* Company Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Company Name *
                 </label>
                 <input
                   type="text"
                   required
-                  className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   value={createForm.company_name}
                   onChange={(e) =>
                     setCreateForm({
@@ -317,11 +319,11 @@ function ConferenceSponsorsTab({
               {/* Package + Active */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Sponsor Package
                   </label>
                   <select
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.sponsor_package_id || ''}
                     onChange={(e) => handleCreatePackageChange(e.target.value)}
                   >
@@ -344,11 +346,13 @@ function ConferenceSponsorsTab({
                           is_active: e.target.checked,
                         })
                       }
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
                       <span className="font-medium">Visible</span>
-                      <span className="text-gray-500 ml-1">(show on website)</span>
+                      <span className="text-gray-500 dark:text-gray-400 ml-1">
+                        (show on website)
+                      </span>
                     </span>
                   </label>
                 </div>
@@ -357,12 +361,14 @@ function ConferenceSponsorsTab({
               {/* Price + Currency */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Price
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.price ?? ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -373,8 +379,10 @@ function ConferenceSponsorsTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                  <div className="block w-full border border-gray-200 bg-gray-50 rounded-md py-2 px-3 text-sm text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Currency
+                  </label>
+                  <div className="block w-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-md py-2 px-3 text-sm text-gray-700 dark:text-gray-300">
                     {(() => {
                       const pkg = (sponsorPackagesData?.items || []).find(
                         (p) => p.id === createForm.sponsor_package_id
@@ -391,10 +399,12 @@ function ConferenceSponsorsTab({
               {/* Phone + Website */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Phone
+                  </label>
                   <input
                     type="tel"
-                    className={`block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createPhoneError ? 'border-red-300' : 'border-gray-300'}`}
+                    className={`block w-full border rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${createPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
                     value={createForm.phone || ''}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -411,11 +421,13 @@ function ConferenceSponsorsTab({
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Website
+                  </label>
                   <input
                     type="text"
                     placeholder="example.com"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.website || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -436,12 +448,12 @@ function ConferenceSponsorsTab({
               {/* Address */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Address Line 1
                   </label>
                   <input
                     type="text"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.address_line1 || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -452,12 +464,12 @@ function ConferenceSponsorsTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Address Line 2
                   </label>
                   <input
                     type="text"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.address_line2 || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -472,10 +484,12 @@ function ConferenceSponsorsTab({
               {/* City, State, Postal Code, Country */}
               <div className="grid grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    City
+                  </label>
                   <input
                     type="text"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.city || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -486,10 +500,12 @@ function ConferenceSponsorsTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    State
+                  </label>
                   <input
                     type="text"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.state || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -500,12 +516,12 @@ function ConferenceSponsorsTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Postal Code
                   </label>
                   <input
                     type="text"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.postal_code || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -516,10 +532,12 @@ function ConferenceSponsorsTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Country
+                  </label>
                   <input
                     type="text"
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     value={createForm.country || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -533,11 +551,13 @@ function ConferenceSponsorsTab({
 
               {/* VAT Number */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">VAT Number</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  VAT Number
+                </label>
                 <input
                   type="text"
                   placeholder="e.g., DE123456789"
-                  className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   value={createForm.vat_number || ''}
                   onChange={(e) =>
                     setCreateForm({
@@ -550,7 +570,9 @@ function ConferenceSponsorsTab({
 
               {/* Comments */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Comments
+                </label>
                 <RichTextEditor
                   value={createForm.comments || ''}
                   onChange={(html) =>
@@ -596,7 +618,7 @@ function ConferenceSponsorsTab({
                       comment: '',
                     });
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>
@@ -608,53 +630,55 @@ function ConferenceSponsorsTab({
           {isLoading ? (
             <LoadingSpinner />
           ) : data?.items && data.items.length > 0 ? (
-            <div className="overflow-hidden border border-gray-200 rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Company Name
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Package
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Price
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       City
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Visible
                     </th>
                     {isAdmin && (
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
                     )}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {data.items.map((sponsor) => (
-                    <tr key={sponsor.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                    <tr key={sponsor.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                         {sponsor.company_name}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                         {sponsor.sponsor_package_name || '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                         {sponsor.price != null
                           ? `${sponsor.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${sponsor.currency ? ` ${sponsor.currency}` : ''}`
                           : '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{sponsor.city || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {sponsor.city || '-'}
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span
                           className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                             sponsor.is_active
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-700'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
                           }`}
                         >
                           {sponsor.is_active ? 'Yes' : 'No'}
@@ -666,7 +690,7 @@ function ConferenceSponsorsTab({
                             <button
                               type="button"
                               onClick={() => setSelectedSponsorId(sponsor.id)}
-                              className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
+                              className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
                               title="Edit"
                             >
                               <EditIcon />
@@ -675,7 +699,7 @@ function ConferenceSponsorsTab({
                               type="button"
                               onClick={() => setDeleteTarget(sponsor)}
                               disabled={deleteMutation.isPending}
-                              className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
+                              className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
                               title="Delete"
                             >
                               <DeleteIcon />
@@ -690,7 +714,7 @@ function ConferenceSponsorsTab({
             </div>
           ) : (
             !isAdding && (
-              <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+              <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
                 No sponsors yet. Click "+ Add Sponsor" to get started.
               </div>
             )

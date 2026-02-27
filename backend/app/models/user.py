@@ -52,6 +52,7 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     message_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    theme_preference: Mapped[str | None] = mapped_column(String(5), nullable=True)
 
     # Relationships
     tenant: Mapped["Tenant | None"] = relationship(

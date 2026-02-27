@@ -126,14 +126,14 @@ export default function SessionModal({
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
         {/* Title */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Title <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
             required
             disabled={!isAdmin}
           />
@@ -141,12 +141,14 @@ export default function SessionModal({
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Description
+          </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
             disabled={!isAdmin}
           />
         </div>
@@ -158,10 +160,10 @@ export default function SessionModal({
             id="isGeneralEvent"
             checked={isGeneralEvent}
             onChange={(e) => setIsGeneralEvent(e.target.checked)}
-            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
             disabled={!isAdmin}
           />
-          <label htmlFor="isGeneralEvent" className="text-sm text-gray-700">
+          <label htmlFor="isGeneralEvent" className="text-sm text-gray-700 dark:text-gray-300">
             This is a general event (spans all tracks)
           </label>
         </div>
@@ -173,14 +175,14 @@ export default function SessionModal({
             id="allowInSessionFree"
             checked={allowInSessionFree}
             onChange={(e) => setAllowInSessionFree(e.target.checked)}
-            className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+            className="rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500"
             disabled={!isAdmin}
           />
-          <label htmlFor="allowInSessionFree" className="text-sm text-gray-700">
+          <label htmlFor="allowInSessionFree" className="text-sm text-gray-700 dark:text-gray-300">
             Allow in break/lunch slots
           </label>
           <span
-            className="text-xs text-gray-400"
+            className="text-xs text-gray-400 dark:text-gray-500"
             title="Enable this to place the session in time slots marked as breaks or lunch"
           >
             (?)
@@ -193,11 +195,13 @@ export default function SessionModal({
             {/* Session Type */}
             {safeSessionTypes.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Session Type</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Session Type
+                </label>
                 <select
                   value={sessionTypeId}
                   onChange={(e) => setSessionTypeId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                   disabled={!isAdmin}
                 >
                   <option value="">No type</option>
@@ -210,8 +214,8 @@ export default function SessionModal({
                     ))}
                 </select>
                 {durationExceedsSlots && selectedSessionType && (
-                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md">
-                    <p className="text-sm text-amber-700">
+                  <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-md">
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
                       Session type duration ({selectedSessionType.duration_minutes} min) exceeds the
                       allocated slot time ({slotDurationMinutes} min).
                     </p>
@@ -222,13 +226,13 @@ export default function SessionModal({
 
             {/* Track Span */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Track Span (columns)
               </label>
               <select
                 value={trackSpan}
                 onChange={(e) => setTrackSpan(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                 disabled={!isAdmin}
               >
                 {Array.from({ length: maxTrackSpan }, (_, i) => i + 1).map((n) => (
@@ -243,13 +247,13 @@ export default function SessionModal({
 
         {/* Slot Span */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Time Slot Span (rows)
           </label>
           <select
             value={slotSpan}
             onChange={(e) => setSlotSpan(parseInt(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
             disabled={!isAdmin}
           >
             {Array.from({ length: maxSlotSpan }, (_, i) => i + 1).map((n) => (
@@ -262,7 +266,9 @@ export default function SessionModal({
 
         {/* Color */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Color
+          </label>
           <div className="flex flex-wrap gap-2">
             {PRESET_COLORS.map((c) => (
               <button
@@ -271,7 +277,7 @@ export default function SessionModal({
                 onClick={() => setColor(c)}
                 disabled={!isAdmin}
                 className={`w-8 h-8 rounded-full border-2 ${
-                  color === c ? 'border-gray-800' : 'border-transparent'
+                  color === c ? 'border-gray-800 dark:border-gray-200' : 'border-transparent'
                 } ${!isAdmin ? 'opacity-50' : ''}`}
                 style={{ backgroundColor: c }}
               />
@@ -281,21 +287,23 @@ export default function SessionModal({
 
         {/* Notes */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Internal Notes</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Internal Notes
+          </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             placeholder="Notes visible only to organizers..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
             disabled={!isAdmin}
           />
         </div>
 
         {/* Paper link info */}
         {session.paper_id && session.paper_title && (
-          <div className="p-3 bg-blue-50 rounded-md flex items-center justify-between gap-2">
-            <p className="text-sm text-blue-700 min-w-0">
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-md flex items-center justify-between gap-2">
+            <p className="text-sm text-blue-700 dark:text-blue-300 min-w-0">
               <span className="font-medium">Linked Paper:</span> {session.paper_title}
             </p>
             {isAdmin && (
@@ -305,7 +313,7 @@ export default function SessionModal({
                   onUpdate(session.id, { paper_id: null });
                   onClose();
                 }}
-                className="flex-shrink-0 px-2 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100"
+                className="flex-shrink-0 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded hover:bg-red-100 dark:hover:bg-red-900/50"
               >
                 Unassign
               </button>
@@ -320,7 +328,7 @@ export default function SessionModal({
               <button
                 type="button"
                 onClick={handleDelete}
-                className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100"
+                className="px-4 py-2 text-sm font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-md hover:bg-red-100 dark:hover:bg-red-900/50"
               >
                 Delete Session
               </button>
@@ -329,7 +337,7 @@ export default function SessionModal({
               <button
                 type="button"
                 onClick={() => setShowUnmergeConfirm(true)}
-                className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100"
+                className="px-4 py-2 text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-md hover:bg-amber-100 dark:hover:bg-amber-900/50"
               >
                 Unmerge
               </button>
@@ -339,7 +347,7 @@ export default function SessionModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               {isAdmin ? 'Cancel' : 'Close'}
             </button>

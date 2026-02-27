@@ -198,8 +198,8 @@ export default function CallForPapersPage() {
     <div>
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Call for Papers</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Call for Papers</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Manage call for papers and review submissions
           </p>
         </div>
@@ -216,32 +216,32 @@ export default function CallForPapersPage() {
       {/* Stats */}
       {stats && (
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-500">Total</p>
-            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-500">Draft</p>
-            <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Draft</p>
+            <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.draft}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-500">Open</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Open</p>
             <p className="text-2xl font-bold text-green-600">{stats.open}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-500">Closed</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Closed</p>
             <p className="text-2xl font-bold text-red-600">{stats.closed}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-500">In Review</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">In Review</p>
             <p className="text-2xl font-bold text-yellow-600">{stats.review}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-500">Completed</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Completed</p>
             <p className="text-2xl font-bold text-blue-600">{stats.completed}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-500">Submissions</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Submissions</p>
             <p className="text-2xl font-bold text-purple-600">{stats.total_submissions}</p>
           </div>
         </div>
@@ -255,7 +255,7 @@ export default function CallForPapersPage() {
             placeholder="Search by title..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           />
         </form>
         <select
@@ -264,7 +264,7 @@ export default function CallForPapersPage() {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
         >
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>
@@ -280,44 +280,49 @@ export default function CallForPapersPage() {
         <div
           role="alert"
           aria-live="assertive"
-          className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"
+          className="mt-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded"
         >
           {error}
         </div>
       )}
 
       {/* CFP List */}
-      <div className="mt-6 bg-white shadow rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200" aria-label="Call for Papers list">
-          <thead className="bg-gray-50">
+      <div className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+        <table
+          className="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+          aria-label="Call for Papers list"
+        >
+          <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 Title
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 Dates
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 Submissions
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {cfps.map((cfp) => (
-              <tr key={cfp.id} className="hover:bg-gray-50">
+              <tr key={cfp.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                 <td className="px-6 py-4">
-                  <div className="text-sm font-medium text-gray-900">{cfp.title}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {cfp.title}
+                  </div>
                   {cfp.description && (
                     <RichTextDisplay
                       content={cfp.description}
                       truncate
-                      className="text-sm text-gray-500 max-w-xs"
+                      className="text-sm text-gray-500 dark:text-gray-400 max-w-xs"
                     />
                   )}
                 </td>
@@ -334,19 +339,21 @@ export default function CallForPapersPage() {
                     <option value="completed">Completed</option>
                   </select>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
+                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {cfp.open_date && <div>Opens: {formatDate(cfp.open_date)}</div>}
                   {cfp.close_date && <div>Closes: {formatDate(cfp.close_date)}</div>}
                   {!cfp.open_date && !cfp.close_date && <span>No dates set</span>}
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm font-medium text-gray-900">{cfp.submission_count}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {cfp.submission_count}
+                  </span>
                 </td>
                 {isAdmin && (
                   <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
                     <button
                       onClick={() => openEditModal(cfp)}
-                      className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
+                      className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
                       title="Edit"
                     >
                       <svg
@@ -365,7 +372,7 @@ export default function CallForPapersPage() {
                     </button>
                     <button
                       onClick={() => setDeleteTarget(cfp)}
-                      className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                      className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                       title="Delete"
                     >
                       <svg
@@ -388,7 +395,7 @@ export default function CallForPapersPage() {
             ))}
             {cfps.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                   No Call for Papers found. Create one to get started.
                 </td>
               </tr>
@@ -429,10 +436,12 @@ export default function CallForPapersPage() {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {!editingCfp && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Conference *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Conference *
+              </label>
               <select
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 value={formData.conference_id}
                 onChange={(e) =>
                   setFormData({
@@ -453,18 +462,22 @@ export default function CallForPapersPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Title *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Title *
+            </label>
             <input
               type="text"
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Description
+            </label>
             <RichTextEditor
               value={formData.description}
               onChange={(html) => setFormData({ ...formData, description: html })}
@@ -474,7 +487,9 @@ export default function CallForPapersPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Open Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Open Date
+              </label>
               <input
                 type="datetime-local"
                 value={formData.open_date}
@@ -488,23 +503,25 @@ export default function CallForPapersPage() {
                     ...(adjustClose ? { close_date: newOpen } : {}),
                   });
                 }}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Close Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Close Date
+              </label>
               <input
                 type="datetime-local"
                 value={formData.close_date}
                 min={formData.open_date}
                 onChange={(e) => setFormData({ ...formData, close_date: e.target.value })}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Max Submissions per Speaker
             </label>
             <input
@@ -517,14 +534,14 @@ export default function CallForPapersPage() {
                   max_submissions_per_speaker: e.target.value,
                 })
               }
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               placeholder="Leave empty for unlimited"
             />
           </div>
 
           {/* Required Speaker Profile Fields */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
               Required Speaker Profile Fields
             </h3>
             <div className="flex flex-wrap gap-4">
@@ -546,9 +563,9 @@ export default function CallForPapersPage() {
                         : formData.required_speaker_fields.filter((f) => f !== key);
                       setFormData({ ...formData, required_speaker_fields: fields });
                     }}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                   />
-                  <span className="ml-2 text-sm text-gray-700">{label}</span>
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{label}</span>
                 </label>
               ))}
             </div>
@@ -556,10 +573,12 @@ export default function CallForPapersPage() {
 
           {/* Review Settings */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Review Settings</h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+              Review Settings
+            </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Reviewers per Paper
                 </label>
                 <input
@@ -573,7 +592,7 @@ export default function CallForPapersPage() {
                       reviewers_per_paper: e.target.value,
                     })
                   }
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 />
               </div>
               <div className="flex items-end pb-1">
@@ -587,9 +606,11 @@ export default function CallForPapersPage() {
                         is_anonymous_review: e.target.checked,
                       })
                     }
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                   />
-                  <span className="ml-2 text-sm text-gray-700">Anonymous Review</span>
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    Anonymous Review
+                  </span>
                 </label>
               </div>
             </div>
@@ -599,7 +620,7 @@ export default function CallForPapersPage() {
             <button
               type="button"
               onClick={() => setShowModal(false)}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800"
             >
               Cancel
             </button>

@@ -36,19 +36,19 @@ function VerifyEmailPage() {
   }, [token, companySlug]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="max-w-sm w-full text-center">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
           {status === 'verifying' && (
             <>
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Verifying your email...</p>
+              <p className="text-gray-600 dark:text-gray-400">Verifying your email...</p>
             </>
           )}
 
           {status === 'success' && (
             <>
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
                 <svg
                   className="h-6 w-6 text-green-600"
                   fill="none"
@@ -63,8 +63,10 @@ function VerifyEmailPage() {
                   />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Email Verified</h2>
-              <p className="text-sm text-gray-600 mb-6">{message}</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Email Verified
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{message}</p>
               <Link
                 to={`/${companySlug}/portal/user/login`}
                 className="text-sm text-primary-600 hover:text-primary-700 font-medium"
@@ -76,7 +78,7 @@ function VerifyEmailPage() {
 
           {status === 'error' && (
             <>
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
                 <svg
                   className="h-6 w-6 text-red-600"
                   fill="none"
@@ -91,8 +93,10 @@ function VerifyEmailPage() {
                   />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Verification Failed</h2>
-              <p className="text-sm text-gray-600">{message}</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Verification Failed
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{message}</p>
             </>
           )}
         </div>

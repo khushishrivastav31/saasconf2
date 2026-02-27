@@ -7,6 +7,7 @@ import { usePortalBasePath } from '../../hooks/usePortalBasePath';
 import { parseApiError } from '../../utils/apiError';
 import portalApi from '../../config/portalApi';
 import ConferenceLogo from '../../components/ConferenceLogo';
+import ThemeToggle from '../../components/ThemeToggle';
 import type { PortalLandingData, PortalTenant } from '../../types/portal';
 
 function LoginPage() {
@@ -82,7 +83,10 @@ function LoginPage() {
   // Show admin redirect message
   if (showAdminRedirect) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
         <div className="max-w-sm w-full">
           <div className="text-center mb-8">
             {logoUrl && (
@@ -98,8 +102,8 @@ function LoginPage() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-4">
               <svg
                 className="h-6 w-6 text-blue-600"
                 fill="none"
@@ -114,8 +118,10 @@ function LoginPage() {
                 />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Admin Account Detected</h2>
-            <p className="text-sm text-gray-600 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Admin Account Detected
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
               You are registered as a tenant administrator. Please use the admin portal to access
               your account and manage conferences.
             </p>
@@ -136,7 +142,7 @@ function LoginPage() {
             <button
               type="button"
               onClick={() => setShowAdminRedirect(false)}
-              className="mt-3 text-sm text-gray-500 hover:text-gray-700"
+              className="mt-3 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             >
               Use a different account
             </button>
@@ -147,7 +153,10 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="max-w-sm w-full">
         <div className="text-center mb-8">
           {logoUrl && (
@@ -161,42 +170,48 @@ function LoginPage() {
               />
             </div>
           )}
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {conference?.name || tenant?.name || `${companySlug} User Portal`}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Sign in to access your portal</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Sign in to access your portal
+          </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-4"
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-4"
         >
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-3 py-2 rounded text-sm">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Email
+            </label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Password
+            </label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
             />
           </div>
 
@@ -209,7 +224,7 @@ function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-4">
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
           Don't have an account?{' '}
           <Link
             to={`${basePath}/user/register${cfpAbbreviation ? `?cfp=${cfpAbbreviation}` : ''}`}

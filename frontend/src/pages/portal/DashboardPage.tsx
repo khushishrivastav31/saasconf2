@@ -75,15 +75,17 @@ function DashboardPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             My Papers
             {paperCount > 0 && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                 {paperCount}
               </span>
             )}
           </h2>
-          <p className="text-sm text-gray-500">View and manage your paper submissions.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            View and manage your paper submissions.
+          </p>
         </div>
         <Link
           to={`${basePath}/papers/new`}
@@ -103,7 +105,7 @@ function DashboardPage() {
           {papers.length > 0 && (
             <div className="relative">
               <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -120,13 +122,13 @@ function DashboardPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by title, conference, or session type..."
-                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -146,34 +148,34 @@ function DashboardPage() {
             <div className="space-y-5">
               {groupedByConference.map((group) => (
                 <div key={group.conferenceId || '__none__'}>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     {group.conferenceName}
-                    <span className="ml-1.5 text-xs font-normal text-gray-400">
+                    <span className="ml-1.5 text-xs font-normal text-gray-400 dark:text-gray-500">
                       ({group.papers.length})
                     </span>
                   </h3>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                     {group.papers.map((paper) => (
                       <Link
                         key={paper.id}
                         to={`${basePath}/papers/${paper.id}`}
-                        className="w-full flex flex-wrap items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
+                        className="w-full flex flex-wrap items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                               {paper.title}
                             </p>
                             {!paper.is_main_speaker && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700 flex-shrink-0">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 flex-shrink-0">
                                 Co-speaker
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 truncate">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                             {paper.cfp_title && <span>{paper.cfp_title}</span>}
                             {paper.cospeakers.length > 0 && (
-                              <span className="text-gray-400">
+                              <span className="text-gray-400 dark:text-gray-500">
                                 {paper.cfp_title ? ' · ' : ''}
                                 {paper.cospeakers.length} co-speaker
                                 {paper.cospeakers.length > 1 ? 's' : ''}
@@ -183,7 +185,7 @@ function DashboardPage() {
                               </span>
                             )}
                             {paper.submitted_at && (
-                              <span className="text-gray-400">
+                              <span className="text-gray-400 dark:text-gray-500">
                                 {paper.cfp_title || paper.cospeakers.length > 0 ? ' · ' : ''}
                                 Submitted {formatDate(paper.submitted_at)}
                               </span>
@@ -191,13 +193,13 @@ function DashboardPage() {
                           </p>
                           {!paper.is_main_speaker &&
                             (paper.main_speaker_first_name || paper.main_speaker_last_name) && (
-                              <p className="text-xs text-gray-400 mt-0.5">
+                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                                 Main speaker:{' '}
                                 {`${paper.main_speaker_first_name || ''} ${paper.main_speaker_last_name || ''}`.trim()}
                               </p>
                             )}
                           {paper.session_type_name && (
-                            <span className="inline-flex items-center mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600">
+                            <span className="inline-flex items-center mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
                               {paper.session_type_name}
                             </span>
                           )}
@@ -206,7 +208,7 @@ function DashboardPage() {
                           <PaperStatusLifeline status={paper.status} compact />
                         </div>
                         <svg
-                          className="w-4 h-4 text-gray-300 flex-shrink-0"
+                          className="w-4 h-4 text-gray-300 dark:text-gray-600 flex-shrink-0"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -225,11 +227,11 @@ function DashboardPage() {
               ))}
             </div>
           ) : papers.length > 0 ? (
-            <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
               No papers match "{searchQuery}"
             </div>
           ) : (
-            <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
               No papers yet. Click "+ Submit Paper" to get started.
             </div>
           )}

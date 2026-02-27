@@ -43,13 +43,13 @@ export default function MyCompany() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Company</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Company</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Manage your company information and contact details
         </p>
       </div>
 
-      <div className="bg-white shadow rounded-lg">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div className="p-6">
           <CompanyForm
             tenant={tenant}
@@ -215,10 +215,10 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900">Company Details</h4>
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Company Details</h4>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md">
               <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
@@ -238,7 +238,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
             </span>
           )}
           {saveStatus === 'saved' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-md">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -251,7 +251,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
             </span>
           )}
           {saveStatus === 'error' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-md">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -269,10 +269,12 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
       <div className="space-y-4">
         {/* Logo */}
         <div className="border-b pb-4">
-          <h5 className="text-sm font-medium text-gray-700 mb-3">Company Logo</h5>
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Company Logo
+          </h5>
           <div className="flex items-start gap-4">
             {/* Logo preview */}
-            <div className="min-w-24 max-w-48 h-24 border border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center p-2">
+            <div className="min-w-24 max-w-48 h-24 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-2">
               {tenant.logo_url ? (
                 <img
                   src={`${api.defaults.baseURL}${tenant.logo_url}`}
@@ -406,7 +408,9 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
 
               {logoError && <p className="text-sm text-red-600">{logoError}</p>}
 
-              <p className="text-xs text-gray-500">JPEG, PNG, WebP, or GIF. Max 10MB.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                JPEG, PNG, WebP, or GIF. Max 10MB.
+              </p>
             </div>
           </div>
         </div>
@@ -414,29 +418,35 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
         {/* Basic Info */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Company Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Company Name
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.name}
               onChange={(e) => handleFieldChange('name', e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Website</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Website
+            </label>
             <input
               type="text"
               placeholder="www.example.com"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.website}
               onChange={(e) => handleFieldChange('website', e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">VAT Number</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              VAT Number
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.vat_number}
               onChange={(e) => handleFieldChange('vat_number', e.target.value)}
             />
@@ -450,7 +460,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
             <input
               type="text"
               placeholder="Street Address"
-              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.address}
               onChange={(e) => handleFieldChange('address', e.target.value)}
             />
@@ -458,21 +468,21 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
               <input
                 type="text"
                 placeholder="Postal Code"
-                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.postal_code}
                 onChange={(e) => handleFieldChange('postal_code', e.target.value)}
               />
               <input
                 type="text"
                 placeholder="City"
-                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.city}
                 onChange={(e) => handleFieldChange('city', e.target.value)}
               />
               <input
                 type="text"
                 placeholder="Country"
-                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.country}
                 onChange={(e) => handleFieldChange('country', e.target.value)}
               />
@@ -487,17 +497,20 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
           {formData.contact_persons && formData.contact_persons.length > 0 && (
             <div className="mb-4 space-y-2">
               {formData.contact_persons.map((contact, index) => (
-                <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div
+                  key={index}
+                  className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                >
                   {editingContactIndex === index ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                             First Name *
                           </label>
                           <input
                             type="text"
-                            className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                             value={contact.first_name}
                             onChange={(e) =>
                               updateContact(index, {
@@ -508,12 +521,12 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                             Last Name *
                           </label>
                           <input
                             type="text"
-                            className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                             value={contact.last_name}
                             onChange={(e) =>
                               updateContact(index, {
@@ -526,12 +539,12 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                             Role
                           </label>
                           <input
                             type="text"
-                            className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                             value={contact.role || ''}
                             onChange={(e) =>
                               updateContact(index, {
@@ -542,7 +555,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                             Email
                           </label>
                           <input
@@ -562,7 +575,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                           )}
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                             Phone
                           </label>
                           <input
@@ -600,16 +613,16 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
                             {`${contact.first_name} ${contact.last_name}`.trim()}
                           </span>
                           {contact.role && (
-                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                            <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
                               {contact.role}
                             </span>
                           )}
                         </div>
-                        <div className="mt-1 text-sm text-gray-500 space-x-3">
+                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 space-x-3">
                           {contact.email && <span>{contact.email}</span>}
                           {contact.phone && <span>{contact.phone}</span>}
                         </div>
@@ -668,25 +681,31 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
           )}
 
           {/* Add new contact */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h6 className="text-sm font-medium text-blue-900 mb-3">Add New Contact</h6>
+          <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h6 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-3">
+              Add New Contact
+            </h6>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">First Name *</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  First Name *
+                </label>
                 <input
                   type="text"
                   placeholder="First name"
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                   value={newContact.first_name}
                   onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Last Name *</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  Last Name *
+                </label>
                 <input
                   type="text"
                   placeholder="Last name"
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                   value={newContact.last_name}
                   onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
                 />
@@ -694,17 +713,21 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  Role
+                </label>
                 <input
                   type="text"
                   placeholder="e.g., Manager, Technical"
-                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                   value={newContact.role}
                   onChange={(e) => setNewContact({ ...newContact, role: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  Email
+                </label>
                 <input
                   type="email"
                   placeholder="email@example.com"
@@ -718,7 +741,9 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  Phone
+                </label>
                 <input
                   type="tel"
                   placeholder="+491234545 or 00491234566"
@@ -768,7 +793,9 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
 
         {/* Comments */}
         <div className="border-t pt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Comments / Notes</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Comments / Notes
+          </label>
           <RichTextEditor
             value={formData.comments}
             onChange={(html) => handleFieldChange('comments', html)}

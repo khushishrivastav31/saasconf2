@@ -1,16 +1,16 @@
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from '../hooks/useAuth';
 
 export default function Dashboard() {
   const { user } = useAuth();
 
-  const isSuperAdmin = user?.role === "super_admin";
+  const isSuperAdmin = user?.role === 'super_admin';
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Welcome back, {`${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim() || user?.email}
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Welcome back, {`${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || user?.email}
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <div>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
             Your Modules
           </h2>
           {user?.modules && user.modules.length > 0 ? (
@@ -87,18 +87,18 @@ export default function Dashboard() {
               {user.modules.map((module) => (
                 <div
                   key={module}
-                  className="bg-white overflow-hidden shadow rounded-lg p-6"
+                  className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-6"
                 >
-                  <h3 className="text-lg font-medium text-gray-900 capitalize">
-                    {module.replace("_", " ")}
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 capitalize">
+                    {module.replace('_', ' ')}
                   </h3>
-                  <p className="mt-1 text-sm text-gray-500">Module available</p>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Module available</p>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="bg-white overflow-hidden shadow rounded-lg p-6">
-              <p className="text-gray-500">
+            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-6">
+              <p className="text-gray-500 dark:text-gray-400">
                 No modules assigned to your account yet.
               </p>
             </div>
@@ -123,14 +123,14 @@ function DashboardCard({
   return (
     <a
       href={href}
-      className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+      className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
     >
       <div className="p-6">
         <div className="flex items-center">
           <div className="flex-shrink-0">{icon}</div>
           <div className="ml-4">
-            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-            <p className="mt-1 text-sm text-gray-500">{description}</p>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
           </div>
         </div>
       </div>

@@ -1,23 +1,19 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../config/api";
-import { parseApiError } from "../utils/apiError";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../config/api';
+import { parseApiError } from '../utils/apiError';
 import type {
   ServiceProvider,
   ServiceProviderCreate,
   ServiceProviderUpdate,
   LocationContactPerson,
-} from "../types";
-import AttachmentList from "./AttachmentList";
-import ContactPersonList from "./ContactPersonList";
-import ConfirmDialog from "./ConfirmDialog";
-import RichTextEditor from "./common/RichTextEditor";
+} from '../types';
+import AttachmentList from './AttachmentList';
+import ContactPersonList from './ContactPersonList';
+import ConfirmDialog from './ConfirmDialog';
+import RichTextEditor from './common/RichTextEditor';
 
-export default function ServiceProviderSection({
-  locationId,
-}: {
-  locationId: string;
-}) {
+export default function ServiceProviderSection({ locationId }: { locationId: string }) {
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -25,31 +21,30 @@ export default function ServiceProviderSection({
 
   // Form state for create
   const [createForm, setCreateForm] = useState<ServiceProviderCreate>({
-    company_name: "",
-    service_description: "",
+    company_name: '',
+    service_description: '',
     contact_persons: [],
   });
-  const [createNewContact, setCreateNewContact] =
-    useState<LocationContactPerson>({
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone: "",
-      comment: "",
-    });
+  const [createNewContact, setCreateNewContact] = useState<LocationContactPerson>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
+  });
 
   // Form state for edit
   const [editForm, setEditForm] = useState<ServiceProviderUpdate>({});
   const [editNewContact, setEditNewContact] = useState<LocationContactPerson>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    comment: "",
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["service-providers", locationId],
+    queryKey: ['service-providers', locationId],
     queryFn: async () => {
       const response = await api.get<{
         items: ServiceProvider[];
@@ -63,53 +58,47 @@ export default function ServiceProviderSection({
     mutationFn: async (spData: ServiceProviderCreate) => {
       const response = await api.post<ServiceProvider>(
         `/locations/${locationId}/service-providers`,
-        spData,
+        spData
       );
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["service-providers", locationId],
+        queryKey: ['service-providers', locationId],
       });
       setIsAdding(false);
       setCreateForm({
-        company_name: "",
-        service_description: "",
+        company_name: '',
+        service_description: '',
         contact_persons: [],
       });
-      setCreateNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
       setError(null);
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to create service provider"));
+      setError(parseApiError(err, 'Failed to create service provider'));
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data: spData,
-    }: {
-      id: string;
-      data: ServiceProviderUpdate;
-    }) => {
+    mutationFn: async ({ id, data: spData }: { id: string; data: ServiceProviderUpdate }) => {
       const response = await api.put<ServiceProvider>(
         `/locations/${locationId}/service-providers/${id}`,
-        spData,
+        spData
       );
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["service-providers", locationId],
+        queryKey: ['service-providers', locationId],
       });
       setEditingId(null);
       setEditForm({});
-      setEditNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setEditNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
       setError(null);
     },
     onError: (err: unknown) => {
-      setError(parseApiError(err, "Failed to update service provider"));
+      setError(parseApiError(err, 'Failed to update service provider'));
     },
   });
 
@@ -119,7 +108,7 @@ export default function ServiceProviderSection({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["service-providers", locationId],
+        queryKey: ['service-providers', locationId],
       });
     },
   });
@@ -128,10 +117,7 @@ export default function ServiceProviderSection({
     e.preventDefault();
     const finalData = { ...createForm };
     if (createNewContact.first_name.trim() && createNewContact.last_name.trim()) {
-      finalData.contact_persons = [
-        ...(finalData.contact_persons || []),
-        { ...createNewContact },
-      ];
+      finalData.contact_persons = [...(finalData.contact_persons || []), { ...createNewContact }];
     }
     createMutation.mutate(finalData);
   };
@@ -141,10 +127,7 @@ export default function ServiceProviderSection({
     if (!editingId) return;
     const finalData = { ...editForm };
     if (editNewContact.first_name.trim() && editNewContact.last_name.trim()) {
-      finalData.contact_persons = [
-        ...(finalData.contact_persons || []),
-        { ...editNewContact },
-      ];
+      finalData.contact_persons = [...(finalData.contact_persons || []), { ...editNewContact }];
     }
     updateMutation.mutate({ id: editingId, data: finalData });
   };
@@ -153,10 +136,10 @@ export default function ServiceProviderSection({
     setEditingId(sp.id);
     setEditForm({
       company_name: sp.company_name,
-      service_description: sp.service_description || "",
+      service_description: sp.service_description || '',
       contact_persons: sp.contact_persons || [],
     });
-    setEditNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+    setEditNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     setIsAdding(false);
     setError(null);
   };
@@ -165,20 +148,16 @@ export default function ServiceProviderSection({
     if (createNewContact.first_name.trim() && createNewContact.last_name.trim()) {
       setCreateForm({
         ...createForm,
-        contact_persons: [
-          ...(createForm.contact_persons || []),
-          { ...createNewContact },
-        ],
+        contact_persons: [...(createForm.contact_persons || []), { ...createNewContact }],
       });
-      setCreateNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     }
   };
 
   const removeCreateContact = (index: number) => {
     setCreateForm({
       ...createForm,
-      contact_persons:
-        createForm.contact_persons?.filter((_, i) => i !== index) || [],
+      contact_persons: createForm.contact_persons?.filter((_, i) => i !== index) || [],
     });
   };
 
@@ -186,58 +165,44 @@ export default function ServiceProviderSection({
     if (editNewContact.first_name.trim() && editNewContact.last_name.trim()) {
       setEditForm({
         ...editForm,
-        contact_persons: [
-          ...(editForm.contact_persons || []),
-          { ...editNewContact },
-        ],
+        contact_persons: [...(editForm.contact_persons || []), { ...editNewContact }],
       });
-      setEditNewContact({ first_name: "", last_name: "", email: "", phone: "", comment: "" });
+      setEditNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
     }
   };
 
   const removeEditContact = (index: number) => {
     setEditForm({
       ...editForm,
-      contact_persons:
-        editForm.contact_persons?.filter((_, i) => i !== index) || [],
+      contact_persons: editForm.contact_persons?.filter((_, i) => i !== index) || [],
     });
   };
 
-  const updateCreateContact = (
-    index: number,
-    contact: LocationContactPerson,
-  ) => {
+  const updateCreateContact = (index: number, contact: LocationContactPerson) => {
     setCreateForm({
       ...createForm,
-      contact_persons:
-        createForm.contact_persons?.map((c, i) =>
-          i === index ? contact : c,
-        ) || [],
+      contact_persons: createForm.contact_persons?.map((c, i) => (i === index ? contact : c)) || [],
     });
   };
 
   const updateEditContact = (index: number, contact: LocationContactPerson) => {
     setEditForm({
       ...editForm,
-      contact_persons:
-        editForm.contact_persons?.map((c, i) => (i === index ? contact : c)) ||
-        [],
+      contact_persons: editForm.contact_persons?.map((c, i) => (i === index ? contact : c)) || [],
     });
   };
 
-  const [deleteTarget, setDeleteTarget] = useState<ServiceProvider | null>(
-    null,
-  );
+  const [deleteTarget, setDeleteTarget] = useState<ServiceProvider | null>(null);
 
   const providerCount = data?.items?.length || 0;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-sm font-medium text-gray-900">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
           Service Providers
           {providerCount > 0 && (
-            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
               {providerCount}
             </span>
           )}
@@ -257,7 +222,7 @@ export default function ServiceProviderSection({
       </div>
 
       {error && (
-        <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+        <div className="mb-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md px-3 py-2">
           {error}
         </div>
       )}
@@ -266,20 +231,20 @@ export default function ServiceProviderSection({
       {isAdding && (
         <form
           onSubmit={handleCreateSubmit}
-          className="mb-4 bg-gray-50 border border-gray-200 rounded-lg p-5 space-y-4"
+          className="mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5 space-y-4"
         >
-          <h5 className="text-sm font-medium text-gray-900">
+          <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">
             New Service Provider
           </h5>
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Company Name *
               </label>
               <input
                 type="text"
                 required
-                className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 value={createForm.company_name}
                 onChange={(e) =>
                   setCreateForm({
@@ -290,11 +255,11 @@ export default function ServiceProviderSection({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Service Description
               </label>
               <RichTextEditor
-                value={createForm.service_description || ""}
+                value={createForm.service_description || ''}
                 onChange={(html) =>
                   setCreateForm({
                     ...createForm,
@@ -319,7 +284,7 @@ export default function ServiceProviderSection({
               disabled={createMutation.isPending}
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
             >
-              {createMutation.isPending ? "Creating..." : "Create"}
+              {createMutation.isPending ? 'Creating...' : 'Create'}
             </button>
             <button
               type="button"
@@ -327,19 +292,19 @@ export default function ServiceProviderSection({
                 setIsAdding(false);
                 setError(null);
                 setCreateForm({
-                  company_name: "",
-                  service_description: "",
+                  company_name: '',
+                  service_description: '',
                   contact_persons: [],
                 });
                 setCreateNewContact({
-                  first_name: "",
-                  last_name: "",
-                  email: "",
-                  phone: "",
-                  comment: "",
+                  first_name: '',
+                  last_name: '',
+                  email: '',
+                  phone: '',
+                  comment: '',
                 });
               }}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
             </button>
@@ -349,9 +314,7 @@ export default function ServiceProviderSection({
 
       {/* Provider list */}
       {isLoading ? (
-        <div className="text-sm text-gray-500">
-          Loading service providers...
-        </div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">Loading service providers...</div>
       ) : data?.items && data.items.length > 0 ? (
         <div className="space-y-3">
           {data.items.map((sp) =>
@@ -360,21 +323,21 @@ export default function ServiceProviderSection({
               <form
                 key={sp.id}
                 onSubmit={handleEditSubmit}
-                className="bg-gray-50 border border-gray-200 rounded-lg p-5 space-y-4"
+                className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5 space-y-4"
               >
-                <h5 className="text-sm font-medium text-gray-900">
+                <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   Edit Provider
                 </h5>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Company Name *
                     </label>
                     <input
                       type="text"
                       required
-                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      value={editForm.company_name || ""}
+                      className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                      value={editForm.company_name || ''}
                       onChange={(e) =>
                         setEditForm({
                           ...editForm,
@@ -384,11 +347,11 @@ export default function ServiceProviderSection({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Service Description
                     </label>
                     <RichTextEditor
-                      value={editForm.service_description || ""}
+                      value={editForm.service_description || ''}
                       onChange={(html) =>
                         setEditForm({
                           ...editForm,
@@ -408,10 +371,7 @@ export default function ServiceProviderSection({
                   />
                 </div>
 
-                <AttachmentList
-                  entityType="service_provider"
-                  entityId={sp.id}
-                />
+                <AttachmentList entityType="service_provider" entityId={sp.id} />
 
                 <div className="flex gap-2 pt-1">
                   <button
@@ -419,7 +379,7 @@ export default function ServiceProviderSection({
                     disabled={updateMutation.isPending}
                     className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
                   >
-                    {updateMutation.isPending ? "Saving..." : "Save"}
+                    {updateMutation.isPending ? 'Saving...' : 'Save'}
                   </button>
                   <button
                     type="button"
@@ -427,7 +387,7 @@ export default function ServiceProviderSection({
                       setEditingId(null);
                       setError(null);
                     }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </button>
@@ -437,11 +397,11 @@ export default function ServiceProviderSection({
               /* Display card */
               <div
                 key={sp.id}
-                className="bg-white border border-gray-200 border-l-4 border-l-primary-300 rounded-lg p-4"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-l-4 border-l-primary-300 rounded-lg p-4"
               >
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">
-                    <h5 className="text-sm font-semibold text-gray-900">
+                    <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                       {sp.company_name}
                     </h5>
                     {sp.contact_persons && sp.contact_persons.length > 0 && (
@@ -449,17 +409,19 @@ export default function ServiceProviderSection({
                         {sp.contact_persons.map((cp, idx) => (
                           <span
                             key={idx}
-                            className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 rounded-full px-3 py-1 text-xs"
+                            className="inline-flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full px-3 py-1 text-xs"
                           >
                             <span className="w-4 h-4 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-[10px] font-medium flex-shrink-0">
-                              {(cp.first_name || cp.last_name || "").charAt(0).toUpperCase()}
+                              {(cp.first_name || cp.last_name || '').charAt(0).toUpperCase()}
                             </span>
-                            <span className="font-medium">{`${cp.first_name} ${cp.last_name}`.trim()}</span>
+                            <span className="font-medium">
+                              {`${cp.first_name} ${cp.last_name}`.trim()}
+                            </span>
                             {cp.email && (
-                              <span className="text-gray-500">{cp.email}</span>
+                              <span className="text-gray-500 dark:text-gray-400">{cp.email}</span>
                             )}
                             {cp.phone && (
-                              <span className="text-gray-500">{cp.phone}</span>
+                              <span className="text-gray-500 dark:text-gray-400">{cp.phone}</span>
                             )}
                           </span>
                         ))}
@@ -470,7 +432,7 @@ export default function ServiceProviderSection({
                     <button
                       type="button"
                       onClick={() => startEdit(sp)}
-                      className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
                       title="Edit"
                     >
                       <svg
@@ -490,7 +452,7 @@ export default function ServiceProviderSection({
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(sp)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                       title="Delete"
                     >
                       <svg
@@ -510,17 +472,14 @@ export default function ServiceProviderSection({
                   </div>
                 </div>
 
-                <AttachmentList
-                  entityType="service_provider"
-                  entityId={sp.id}
-                />
+                <AttachmentList entityType="service_provider" entityId={sp.id} />
               </div>
-            ),
+            )
           )}
         </div>
       ) : (
         !isAdding && (
-          <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+          <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
             No service providers yet. Click "+ Add Provider" to get started.
           </div>
         )

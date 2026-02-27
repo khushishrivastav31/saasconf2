@@ -141,8 +141,10 @@ export default function ApplicantActivityLog() {
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Applicant Activity Log</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Applicant Activity Log
+          </h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Track applicant registration, verification, and account events
           </p>
         </div>
@@ -196,16 +198,18 @@ export default function ApplicantActivityLog() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
         <form onSubmit={handleSearch}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Search
+              </label>
               <input
                 type="text"
                 placeholder="Search by email or name..."
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               />
@@ -213,9 +217,11 @@ export default function ApplicantActivityLog() {
 
             {/* Activity Type Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Activity Type</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Activity Type
+              </label>
               <select
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 value={filters.activityType}
                 onChange={(e) => setFilters({ ...filters, activityType: e.target.value })}
               >
@@ -230,10 +236,12 @@ export default function ApplicantActivityLog() {
 
             {/* Start Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                From Date
+              </label>
               <input
                 type="date"
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 value={filters.startDate}
                 onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
               />
@@ -241,10 +249,12 @@ export default function ApplicantActivityLog() {
 
             {/* End Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                To Date
+              </label>
               <input
                 type="date"
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 value={filters.endDate}
                 onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
               />
@@ -275,7 +285,7 @@ export default function ApplicantActivityLog() {
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Clear Filters
               </button>
@@ -286,7 +296,7 @@ export default function ApplicantActivityLog() {
 
       {/* Results Count */}
       {data && (
-        <div className="mb-4 text-sm text-gray-600">
+        <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
           Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, data.total)} of{' '}
           {data.total} applicants
         </div>
@@ -300,7 +310,10 @@ export default function ApplicantActivityLog() {
       ) : (
         <div className="space-y-4">
           {data?.items?.map((group) => (
-            <div key={group.applicant_email} className="bg-white shadow rounded-lg overflow-hidden">
+            <div
+              key={group.applicant_email}
+              className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden"
+            >
               <button
                 type="button"
                 onClick={() =>
@@ -308,7 +321,7 @@ export default function ApplicantActivityLog() {
                     expandedApplicant === group.applicant_email ? null : group.applicant_email
                   )
                 }
-                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50"
+                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
@@ -318,10 +331,12 @@ export default function ApplicantActivityLog() {
                     </span>
                   </div>
                   <div className="text-left">
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {formatApplicantName(group.applicant_first_name, group.applicant_last_name)}
                     </div>
-                    <div className="text-sm text-gray-500">{group.applicant_email}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {group.applicant_email}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
@@ -335,13 +350,13 @@ export default function ApplicantActivityLog() {
                       </span>
                     ))}
                     {group.activities.length > 3 && (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
                         +{group.activities.length - 3}
                       </span>
                     )}
                   </div>
                   <svg
-                    className={`h-5 w-5 text-gray-400 transition-transform ${
+                    className={`h-5 w-5 text-gray-400 dark:text-gray-500 transition-transform ${
                       expandedApplicant === group.applicant_email ? 'rotate-180' : ''
                     }`}
                     fill="none"
@@ -359,8 +374,10 @@ export default function ApplicantActivityLog() {
               </button>
 
               {expandedApplicant === group.applicant_email && (
-                <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Activity Timeline</h4>
+                <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-6 py-4">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+                    Activity Timeline
+                  </h4>
                   <div className="space-y-3">
                     {group.activities.map((activity, index) => (
                       <div key={activity.id} className="flex items-start space-x-3">
@@ -387,13 +404,13 @@ export default function ApplicantActivityLog() {
                               {ACTIVITY_TYPE_LABELS[activity.activity_type] ||
                                 activity.activity_type}
                             </span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
                               {formatDateCol(activity.created_at)}
                             </span>
                           </div>
                         </div>
                         {index < group.activities.length - 1 && (
-                          <div className="absolute left-[1.15rem] top-6 h-full w-px bg-gray-200" />
+                          <div className="absolute left-[1.15rem] top-6 h-full w-px bg-gray-200 dark:bg-gray-700" />
                         )}
                       </div>
                     ))}
@@ -404,7 +421,7 @@ export default function ApplicantActivityLog() {
           ))}
 
           {data?.items.length === 0 && (
-            <div className="bg-white shadow rounded-lg px-6 py-12 text-center text-gray-500">
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg px-6 py-12 text-center text-gray-500 dark:text-gray-400">
               No applicant activity found matching your criteria.
             </div>
           )}
@@ -413,26 +430,26 @@ export default function ApplicantActivityLog() {
 
       {/* Pagination */}
       {data && data.pages > 1 && (
-        <div className="mt-6 bg-white shadow rounded-lg px-4 py-3 flex items-center justify-between sm:px-6">
+        <div className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg px-4 py-3 flex items-center justify-between sm:px-6">
           <div className="flex-1 flex justify-between sm:hidden">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
             >
               Previous
             </button>
             <button
               onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
               disabled={page === data.pages}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
             >
               Next
             </button>
           </div>
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
                 Page <span className="font-medium">{page}</span> of{' '}
                 <span className="font-medium">{data.pages}</span>
               </p>
@@ -445,7 +462,7 @@ export default function ApplicantActivityLog() {
                 <button
                   onClick={() => setPage(1)}
                   disabled={page === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                   <span className="sr-only">First</span>
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -460,7 +477,7 @@ export default function ApplicantActivityLog() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                   <span className="sr-only">Previous</span>
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -475,7 +492,7 @@ export default function ApplicantActivityLog() {
                 <button
                   onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
                   disabled={page === data.pages}
-                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  className="relative inline-flex items-center px-2 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                   <span className="sr-only">Next</span>
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -490,7 +507,7 @@ export default function ApplicantActivityLog() {
                 <button
                   onClick={() => setPage(data.pages)}
                   disabled={page === data.pages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                   <span className="sr-only">Last</span>
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

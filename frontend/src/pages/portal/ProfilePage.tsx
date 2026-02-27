@@ -270,8 +270,8 @@ function ProfilePage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">My Profile</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">My Profile</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {activeTab === 'personal-info'
               ? 'Update your personal information and preferences.'
               : 'View and manage your program committee memberships.'}
@@ -280,14 +280,14 @@ function ProfilePage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('personal-info')}
             className={`py-3 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'personal-info'
                 ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
             Personal Info
@@ -297,7 +297,7 @@ function ProfilePage() {
             className={`py-3 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'program-committee'
                 ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
           >
             Program Committee
@@ -310,22 +310,26 @@ function ProfilePage() {
       ) : (
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-5"
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-5"
         >
           {/* Email (readonly) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Email
+            </label>
             <input
               type="email"
               disabled
               value={applicant.email}
-              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-500"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
             />
           </div>
 
           {/* Picture */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Picture</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Picture
+            </label>
             <div className="flex items-start gap-4">
               <button
                 type="button"
@@ -370,9 +374,9 @@ function ProfilePage() {
                   type="file"
                   accept={ACCEPTED_IMAGE_FORMATS}
                   onChange={handlePictureChange}
-                  className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                  className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:dark:bg-gray-700 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
                 />
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                   JPEG, PNG, WebP, TIFF, or BMP. Min 600x600px (300 DPI).
                 </p>
                 {pictureError && <p className="mt-1 text-xs text-red-600">{pictureError}</p>}
@@ -382,7 +386,9 @@ function ProfilePage() {
 
           {/* Video */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Video</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Video
+            </label>
             <div className="flex items-start gap-4">
               <button
                 type="button"
@@ -441,9 +447,11 @@ function ProfilePage() {
                   type="file"
                   accept={ACCEPTED_VIDEO_FORMATS}
                   onChange={handleVideoChange}
-                  className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                  className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:dark:bg-gray-700 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
                 />
-                <p className="mt-1 text-xs text-gray-400">MP4, MOV, WebM, AVI, or MKV. Max 5MB.</p>
+                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                  MP4, MOV, WebM, AVI, or MKV. Max 5MB.
+                </p>
                 {videoError && <p className="mt-1 text-xs text-red-600">{videoError}</p>}
               </div>
             </div>
@@ -452,7 +460,7 @@ function ProfilePage() {
           {/* Personal info fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 First Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -460,11 +468,11 @@ function ProfilePage() {
                 required
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Last Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -472,15 +480,17 @@ function ProfilePage() {
                 required
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Pronouns</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Pronouns
+              </label>
               <select
                 value={pronouns}
                 onChange={(e) => setPronouns(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">Select pronouns...</option>
                 {pronounOptions.map((opt) => (
@@ -491,42 +501,46 @@ function ProfilePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Phone
+              </label>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Title / Position
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 placeholder="e.g., Senior Engineer"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Company / Organization
               </label>
               <input
                 type="text"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
           </div>
 
           {/* Bio */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Short Bio</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Short Bio
+            </label>
             <RichTextEditor
               value={bio}
               onChange={(html) => setBio(html)}
@@ -537,7 +551,7 @@ function ProfilePage() {
 
           {/* Social Media Links */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Social Media Profiles
             </label>
 
@@ -545,13 +559,13 @@ function ProfilePage() {
               <div className="space-y-2 mb-3">
                 {allEntries.map((platform) => (
                   <div key={platform.key} className="flex items-center gap-2">
-                    <label className="block text-xs text-gray-500 w-24 flex-shrink-0">
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 w-24 flex-shrink-0">
                       {platform.label}
                     </label>
                     <input
                       type="url"
                       placeholder={platform.placeholder}
-                      className="flex-1 border border-gray-300 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                       value={socialLinks[platform.key] || ''}
                       onChange={(e) =>
                         setSocialLinks((prev) => ({
@@ -584,7 +598,7 @@ function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200 mb-3">
+              <div className="text-center py-4 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 mb-3">
                 No social media links added yet.
               </div>
             )}
@@ -597,7 +611,7 @@ function ProfilePage() {
                   setAddPlatform(e.target.value);
                   if (e.target.value !== '__custom__') setCustomPlatformName('');
                 }}
-                className="border border-gray-300 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="border border-gray-300 dark:border-gray-600 rounded-md py-1.5 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">Select platform...</option>
                 {availablePlatforms.map((p) => (
@@ -638,7 +652,7 @@ function ProfilePage() {
           </div>
 
           {/* Accessibility */}
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <div className="flex items-start gap-3">
               <input
                 type="checkbox"
@@ -652,10 +666,10 @@ function ProfilePage() {
                 className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
               />
               <label htmlFor="needs_accessibility" className="flex-1">
-                <span className="block text-sm font-medium text-gray-700">
+                <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   I need accessibility accommodations
                 </span>
-                <span className="block text-xs text-gray-500 mt-0.5">
+                <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   Check if you require accessibility accommodations for the conference.
                 </span>
               </label>
@@ -666,7 +680,7 @@ function ProfilePage() {
                   rows={2}
                   value={accessibilityDetails}
                   onChange={(e) => setAccessibilityDetails(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                   placeholder="e.g., wheelchair access, sign language interpreter, dietary requirements..."
                 />
               </div>
@@ -683,10 +697,10 @@ function ProfilePage() {
               className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             />
             <label htmlFor="agrees_to_recording" className="flex-1">
-              <span className="block text-sm font-medium text-gray-700">
+              <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 I agree to being recorded
               </span>
-              <span className="block text-xs text-gray-500 mt-0.5">
+              <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 I agree that any selected session from me can be recorded and shared publicly.
               </span>
             </label>
@@ -702,17 +716,17 @@ function ProfilePage() {
               className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             />
             <label htmlFor="message_notifications" className="flex-1">
-              <span className="block text-sm font-medium text-gray-700">
+              <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email notifications for new messages
               </span>
-              <span className="block text-xs text-gray-500 mt-0.5">
+              <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 Receive an email when you get a new message on the platform.
               </span>
             </label>
           </div>
 
           {/* Save */}
-          <div className="flex justify-end pt-4 border-t border-gray-200">
+          <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="submit"
               disabled={updateMutation.isPending || !!pictureError || !!videoError}

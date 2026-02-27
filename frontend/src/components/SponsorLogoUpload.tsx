@@ -124,10 +124,10 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
 
   return (
     <div className="border-b pb-4">
-      <h5 className="text-sm font-medium text-gray-700 mb-3">Logo</h5>
+      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Logo</h5>
       <div className="flex items-start gap-4">
         {/* Logo preview */}
-        <div className="min-w-24 max-w-48 h-24 border border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center p-2">
+        <div className="min-w-24 max-w-48 h-24 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-2">
           {isLoading ? (
             <svg className="animate-spin h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">
               <circle
@@ -152,7 +152,7 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
             />
           ) : (
             <svg
-              className="h-12 w-12 text-gray-300"
+              className="h-12 w-12 text-gray-300 dark:text-gray-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -181,7 +181,7 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
             htmlFor={`sponsor-logo-upload-${sponsorId}`}
             className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer ${
               status === 'uploading'
-                ? 'bg-gray-100 text-gray-400 cursor-wait'
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-wait'
                 : 'bg-primary-600 text-white hover:bg-primary-700'
             }`}
           >
@@ -231,8 +231,8 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
               disabled={status === 'deleting'}
               className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
                 status === 'deleting'
-                  ? 'bg-gray-100 text-gray-400 cursor-wait'
-                  : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
+                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-wait'
+                  : 'bg-white dark:bg-gray-800 text-red-600 border border-red-300 hover:bg-red-50'
               }`}
             >
               {status === 'deleting' ? (
@@ -277,7 +277,9 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <p className="text-xs text-gray-500">JPEG, PNG, WebP, GIF, or SVG. Max 10MB.</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            JPEG, PNG, WebP, GIF, or SVG. Max 10MB.
+          </p>
         </div>
       </div>
     </div>

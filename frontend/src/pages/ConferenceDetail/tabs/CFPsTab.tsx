@@ -244,9 +244,9 @@ export default function ConferenceCFPsTab({
     return (
       <div>
         <ErrorBanner message={error} />
-        <div className="text-center py-16 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="text-center py-16 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -258,8 +258,10 @@ export default function ConferenceCFPsTab({
               d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
             />
           </svg>
-          <h3 className="mt-3 text-sm font-medium text-gray-900">No Call for Papers</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="mt-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+            No Call for Papers
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Create a Call for Papers to start collecting session proposals.
           </p>
           {isAdmin && (
@@ -286,20 +288,24 @@ export default function ConferenceCFPsTab({
       {/* Title + Status row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="md:col-span-3">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Title
+          </label>
           <input
             type="text"
             value={form.title}
             onChange={(e) => updateField('title', e.target.value)}
-            className="block w-full h-10 border border-gray-300 rounded-md shadow-sm px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            className="block w-full h-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Status
+          </label>
           <select
             value={form.status}
             onChange={(e) => updateField('status', e.target.value)}
-            className="block w-full h-10 border border-gray-300 rounded-md shadow-sm px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            className="block w-full h-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -313,13 +319,15 @@ export default function ConferenceCFPsTab({
       {/* Public CFP Link */}
       {conference.tenant_slug && conference.abbreviation && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Public CFP Link</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Public CFP Link
+          </label>
           <div className="flex items-center gap-2">
             <input
               type="text"
               readOnly
               value={`${window.location.origin}/${conference.tenant_slug}/portal/${conference.abbreviation}`}
-              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm bg-gray-50 text-gray-600"
+              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400"
             />
             <button
               type="button"
@@ -328,7 +336,7 @@ export default function ConferenceCFPsTab({
                   `${window.location.origin}/${conference.tenant_slug}/portal/${conference.abbreviation}`
                 );
               }}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
               title="Copy to clipboard"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -344,7 +352,7 @@ export default function ConferenceCFPsTab({
               href={`${window.location.origin}/${conference.tenant_slug}/portal/${conference.abbreviation}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
               title="Open in new tab"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -362,7 +370,9 @@ export default function ConferenceCFPsTab({
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Description
+        </label>
         <RichTextEditor
           value={form.description}
           onChange={(html) => updateField('description', html)}
@@ -372,10 +382,12 @@ export default function ConferenceCFPsTab({
 
       {/* Dates section */}
       <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-3">Dates</h3>
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Dates</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Open Date</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Open Date
+            </label>
             <input
               type="datetime-local"
               value={form.open_date}
@@ -386,39 +398,41 @@ export default function ConferenceCFPsTab({
                   updateField('close_date', newOpen);
                 }
               }}
-              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Close Date</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Close Date
+            </label>
             <input
               type="datetime-local"
               value={form.close_date}
               min={form.open_date}
               onChange={(e) => updateField('close_date', e.target.value)}
-              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Notification Date
             </label>
             <input
               type="datetime-local"
               value={form.notification_date}
               onChange={(e) => updateField('notification_date', e.target.value)}
-              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Program Announcement
             </label>
             <input
               type="datetime-local"
               value={form.program_announcement_date}
               onChange={(e) => updateField('program_announcement_date', e.target.value)}
-              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
         </div>
@@ -427,7 +441,7 @@ export default function ConferenceCFPsTab({
       {/* Settings row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
             Max Submissions per Speaker
           </label>
           <input
@@ -436,14 +450,16 @@ export default function ConferenceCFPsTab({
             placeholder="Unlimited"
             value={form.max_submissions_per_speaker}
             onChange={(e) => updateField('max_submissions_per_speaker', e.target.value)}
-            className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
       </div>
 
       {/* Required Speaker Profile Fields */}
       <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-3">Required Speaker Profile Fields</h3>
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+          Required Speaker Profile Fields
+        </h3>
         <div className="flex flex-wrap gap-4">
           {[
             { key: 'bio', label: 'Short Bio' },
@@ -453,7 +469,10 @@ export default function ConferenceCFPsTab({
             { key: 'title', label: 'Title / Position' },
             { key: 'company', label: 'Company / Organization' },
           ].map(({ key, label }) => (
-            <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
+            <label
+              key={key}
+              className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+            >
               <input
                 type="checkbox"
                 checked={form.required_speaker_fields.includes(key)}
@@ -463,7 +482,7 @@ export default function ConferenceCFPsTab({
                     : form.required_speaker_fields.filter((f) => f !== key);
                   updateField('required_speaker_fields', fields);
                 }}
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
               />
               {label}
             </label>
@@ -473,10 +492,12 @@ export default function ConferenceCFPsTab({
 
       {/* Review Settings */}
       <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-3">Review Settings</h3>
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+          Review Settings
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Reviewers per Paper
             </label>
             <input
@@ -485,16 +506,16 @@ export default function ConferenceCFPsTab({
               max="10"
               value={form.reviewers_per_paper}
               onChange={(e) => updateField('reviewers_per_paper', e.target.value)}
-              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div className="flex items-end pb-1">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
                 checked={form.is_anonymous_review}
                 onChange={(e) => updateField('is_anonymous_review', e.target.checked)}
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
               />
               Anonymous Review
             </label>
@@ -504,7 +525,7 @@ export default function ConferenceCFPsTab({
 
       {/* Rich text tabs */}
       <div>
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-6 overflow-x-auto">
             {RICH_TEXT_TABS.map((tab) => (
               <button
@@ -513,7 +534,7 @@ export default function ConferenceCFPsTab({
                 className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeRichTab === tab.key
                     ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 {tab.label}
@@ -533,10 +554,10 @@ export default function ConferenceCFPsTab({
 
       {/* Action buttons */}
       {isAdmin && (
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
+            className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 dark:text-red-300 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/30"
           >
             Delete CFP
           </button>

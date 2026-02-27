@@ -72,7 +72,7 @@ export default function UsersTab({
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900">Users</h4>
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Users</h4>
         <button
           onClick={onAddUser}
           className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-primary-600 hover:bg-primary-700"
@@ -82,35 +82,37 @@ export default function UsersTab({
       </div>
 
       {data && data.items.length > 0 ? (
-        <div className="overflow-hidden border border-gray-200 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Email
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Name
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Pronouns
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Role
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Status
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {data.items.map((user) => (
                 <tr key={user.id}>
-                  <td className="px-4 py-3 text-sm text-gray-900">{user.email}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                    {user.email}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                     <div className="flex items-center gap-2">
                       {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '-'}
                       {user.id === superUserId && (
@@ -120,7 +122,9 @@ export default function UsersTab({
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{user.pronouns || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    {user.pronouns || '-'}
+                  </td>
                   <td className="px-4 py-3 text-sm">
                     <span className="capitalize">{user.role.replace('_', ' ')}</span>
                   </td>
@@ -203,7 +207,7 @@ export default function UsersTab({
           </table>
         </div>
       ) : (
-        <p className="text-gray-500 text-center py-8">No users found.</p>
+        <p className="text-gray-500 dark:text-gray-400 text-center py-8">No users found.</p>
       )}
 
       {editingUser && (
@@ -350,7 +354,7 @@ function EditUserModal({
   return (
     <Modal open={true} onClose={onClose} title="Edit User" size="max-w-md" zIndex="z-[60]">
       <div className="px-6 pb-2 -mt-2 flex justify-between items-center">
-        <p className="text-sm text-gray-500">{user.email}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (
             <span className="text-xs text-gray-500 flex items-center gap-1">
@@ -391,16 +395,18 @@ function EditUserModal({
 
       <div className="px-6 py-4 space-y-4">
         {errorMessage && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-3 text-sm text-red-700 dark:text-red-300">
             {errorMessage}
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Email
+          </label>
           <input
             type="email"
-            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300'}`}
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             onBlur={(e) => setEmailError(validateEmail(e.target.value))}
@@ -409,30 +415,36 @@ function EditUserModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">First Name</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            First Name
+          </label>
           <input
             type="text"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
             value={formData.first_name}
             onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Last Name</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Last Name
+          </label>
           <input
             type="text"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
             value={formData.last_name}
             onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Pronouns</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Pronouns
+          </label>
           <input
             type="text"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
             value={formData.pronouns}
             onChange={(e) => setFormData({ ...formData, pronouns: e.target.value })}
             placeholder="e.g., they/them"
@@ -440,9 +452,9 @@ function EditUserModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Role</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
           <select
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
             value={formData.role}
             onChange={(e) =>
               setFormData({
@@ -457,17 +469,21 @@ function EditUserModal({
         </div>
 
         {isSuperAdmin && (
-          <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Tenant Super User</label>
-              <p className="text-xs text-gray-500">Can delete deactivated conferences</p>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Tenant Super User
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Can delete deactivated conferences
+              </p>
             </div>
             <button
               type="button"
               onClick={handleSuperUserToggle}
               disabled={assignSuperUserMutation.isPending || removeSuperUserMutation.isPending}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 ${
-                isCurrentSuperUser ? 'bg-purple-600' : 'bg-gray-200'
+                isCurrentSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'
               }`}
             >
               <span
@@ -480,12 +496,12 @@ function EditUserModal({
         )}
 
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700">Active</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Active</label>
           <button
             type="button"
             onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-              formData.is_active ? 'bg-primary-600' : 'bg-gray-200'
+              formData.is_active ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'
             }`}
           >
             <span
@@ -496,13 +512,15 @@ function EditUserModal({
           </button>
         </div>
 
-        <div className="border-t border-gray-200 pt-4">
-          <label className="block text-sm font-medium text-gray-700">New Password</label>
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            New Password
+          </label>
           <input
             type="password"
             minLength={8}
             placeholder="Leave empty to keep current password"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
           />
@@ -512,11 +530,11 @@ function EditUserModal({
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end gap-3">
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           Close
         </button>
@@ -607,11 +625,13 @@ function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => 
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Email
+            </label>
             <input
               type="email"
               required
-              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300'}`}
+              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               onBlur={(e) => setEmailError(validateEmail(e.target.value))}
@@ -620,42 +640,50 @@ function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Password
+            </label>
             <input
               type="password"
               required
               minLength={8}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">First Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              First Name
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.first_name}
               onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Last Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Last Name
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.last_name}
               onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Pronouns</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Pronouns
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.pronouns}
               onChange={(e) => setFormData({ ...formData, pronouns: e.target.value })}
               placeholder="e.g., they/them"
@@ -663,9 +691,11 @@ function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Role</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Role
+            </label>
             <select
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.role}
               onChange={(e) =>
                 setFormData({
@@ -680,11 +710,11 @@ function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => 
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

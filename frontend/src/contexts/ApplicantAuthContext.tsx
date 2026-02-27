@@ -1,6 +1,7 @@
-import { createContext, useCallback, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { ThemeContext } from './ThemeContext';
 import portalApi, {
   clearApplicantTokens,
   getApplicantAccessToken,
@@ -30,6 +31,7 @@ export function ApplicantAuthProvider({ children }: { children: React.ReactNode 
   const [applicant, setApplicant] = useState<ApplicantProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
+  const themeCtx = useContext(ThemeContext);
 
   const { companySlug } = useParams<{ companySlug: string }>();
   const slug = companySlug || '';
@@ -38,11 +40,12 @@ export function ApplicantAuthProvider({ children }: { children: React.ReactNode 
     try {
       const response = await portalApi.get<ApplicantProfile>('/portal/me');
       setApplicant(response.data);
+      themeCtx?.syncFromServer(response.data.theme_preference);
     } catch {
       setApplicant(null);
       clearApplicantTokens();
     }
-  }, []);
+  }, [themeCtx]);
 
   const refreshApplicant = useCallback(async () => {
     await fetchApplicant();

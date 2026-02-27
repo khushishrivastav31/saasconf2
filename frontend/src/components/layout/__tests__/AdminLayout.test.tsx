@@ -5,6 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AdminLayout from '../AdminLayout';
 import type { User } from '../../../types';
 
+// Mock ThemeToggle (AdminLayout renders it, but these tests don't test theme)
+vi.mock('../../ThemeToggle', () => ({
+  default: () => <button aria-label="theme-toggle">Theme</button>,
+}));
+
 // Mock react-router
 const mockNavigate = vi.fn();
 const mockLocation = { pathname: '/dashboard' };

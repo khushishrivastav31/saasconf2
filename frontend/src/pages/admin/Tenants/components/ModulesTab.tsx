@@ -51,7 +51,7 @@ export default function ModulesTab({
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900">Assigned Modules</h4>
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Assigned Modules</h4>
         <button
           onClick={onAssignModule}
           className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-primary-600 hover:bg-primary-700"
@@ -63,11 +63,13 @@ export default function ModulesTab({
       {modules && modules.length > 0 ? (
         <div className="space-y-3">
           {modules.map((tm) => (
-            <div key={tm.id} className="bg-gray-50 rounded-lg p-4">
+            <div key={tm.id} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h5 className="font-medium text-gray-900">{tm.module_name}</h5>
+                    <h5 className="font-medium text-gray-900 dark:text-gray-100">
+                      {tm.module_name}
+                    </h5>
                     <span
                       className={`px-2 text-xs font-semibold rounded-full ${
                         tm.is_active_subscription
@@ -78,19 +80,19 @@ export default function ModulesTab({
                       {tm.is_active_subscription ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500">{tm.module_code}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{tm.module_code}</p>
 
                   <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">Start:</span>{' '}
+                      <span className="text-gray-500 dark:text-gray-400">Start:</span>{' '}
                       {tm.start_date ? formatDate(tm.start_date) : 'Not set'}
                     </div>
                     <div>
-                      <span className="text-gray-500">End:</span>{' '}
+                      <span className="text-gray-500 dark:text-gray-400">End:</span>{' '}
                       {tm.end_date ? formatDate(tm.end_date) : 'No expiry'}
                     </div>
                     <div>
-                      <span className="text-gray-500">Price:</span>{' '}
+                      <span className="text-gray-500 dark:text-gray-400">Price:</span>{' '}
                       {tm.price ? `${tm.price} ${tm.currency}` : 'Free'}
                     </div>
                   </div>
@@ -161,7 +163,9 @@ export default function ModulesTab({
           ))}
         </div>
       ) : (
-        <p className="text-gray-500 text-center py-8">No modules assigned yet.</p>
+        <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+          No modules assigned yet.
+        </p>
       )}
 
       {/* Edit Module Modal */}
@@ -310,10 +314,12 @@ function AssignModuleModal({ tenantId, onClose }: { tenantId: string; onClose: (
       <form onSubmit={handleSubmit}>
         <div className="px-6 py-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Module</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Module
+            </label>
             <select
               required
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.module_id}
               onChange={(e) => handleModuleChange(e.target.value)}
             >
@@ -328,19 +334,23 @@ function AssignModuleModal({ tenantId, onClose }: { tenantId: string; onClose: (
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Start Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Start Date
+              </label>
               <input
                 type="date"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.start_date}
                 onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">End Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                End Date
+              </label>
               <input
                 type="date"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.end_date}
                 onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
               />
@@ -349,12 +359,14 @@ function AssignModuleModal({ tenantId, onClose }: { tenantId: string; onClose: (
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Price</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Price
+              </label>
               <input
                 type="number"
                 min="0"
                 step="0.01"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.price || ''}
                 onChange={(e) =>
                   setFormData({
@@ -365,9 +377,11 @@ function AssignModuleModal({ tenantId, onClose }: { tenantId: string; onClose: (
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Currency</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Currency
+              </label>
               <select
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.currency}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
               >
@@ -381,33 +395,35 @@ function AssignModuleModal({ tenantId, onClose }: { tenantId: string; onClose: (
           </div>
 
           {showResourceLimits && (
-            <div className="border-t border-gray-200 pt-4">
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
               <h4 className="text-sm font-medium text-gray-900 mb-3">Resource Limit</h4>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   {getResourceLimitLabel()}
                 </label>
                 <input
                   type="number"
                   min="0"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                   value={getResourceLimitValue() || ''}
                   onChange={(e) =>
                     setResourceLimitValue(e.target.value ? parseInt(e.target.value) : undefined)
                   }
                   placeholder={`Enter maximum number of ${getResourceLimitLabel().toLowerCase().replace('max ', '')}`}
                 />
-                <p className="mt-1 text-xs text-gray-500">Leave empty for unlimited</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Leave empty for unlimited
+                </p>
               </div>
             </div>
           )}
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>
@@ -553,10 +569,10 @@ function EditModuleModal({
       zIndex="z-[60]"
     >
       <div className="px-6 pb-2 -mt-2 flex justify-between items-center">
-        <p className="text-sm text-gray-500">{module.module_code}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{module.module_code}</p>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md">
               <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
@@ -576,7 +592,7 @@ function EditModuleModal({
             </span>
           )}
           {saveStatus === 'saved' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-md">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -589,7 +605,7 @@ function EditModuleModal({
             </span>
           )}
           {saveStatus === 'error' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-md">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -607,12 +623,14 @@ function EditModuleModal({
       <div className="px-6 py-4 space-y-4">
         {/* Enabled Toggle */}
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700">Module Enabled</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Module Enabled
+          </label>
           <button
             type="button"
             onClick={() => handleFieldChange('is_enabled', !formData.is_enabled)}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-              formData.is_enabled ? 'bg-primary-600' : 'bg-gray-200'
+              formData.is_enabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'
             }`}
           >
             <span
@@ -626,19 +644,23 @@ function EditModuleModal({
         {/* Dates */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Start Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Start Date
+            </label>
             <input
               type="date"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.start_date || ''}
               onChange={(e) => handleFieldChange('start_date', e.target.value || undefined)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">End Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              End Date
+            </label>
             <input
               type="date"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.end_date || ''}
               onChange={(e) => handleFieldChange('end_date', e.target.value || undefined)}
             />
@@ -648,12 +670,14 @@ function EditModuleModal({
         {/* Pricing */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Price</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Price
+            </label>
             <input
               type="number"
               min="0"
               step="0.01"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.price ?? ''}
               onChange={(e) =>
                 handleFieldChange('price', e.target.value ? parseFloat(e.target.value) : undefined)
@@ -661,9 +685,11 @@ function EditModuleModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Currency</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Currency
+            </label>
             <select
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.currency || 'EUR'}
               onChange={(e) => handleFieldChange('currency', e.target.value)}
             >
@@ -678,33 +704,35 @@ function EditModuleModal({
 
         {/* Resource Limits */}
         {showResourceLimits && (
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h4 className="text-sm font-medium text-gray-900 mb-3">Resource Limit</h4>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 {getResourceLimitLabel()}
               </label>
               <input
                 type="number"
                 min="0"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={getResourceLimitValue() ?? ''}
                 onChange={(e) =>
                   setResourceLimitValue(e.target.value ? parseInt(e.target.value) : undefined)
                 }
                 placeholder={`Enter maximum number of ${getResourceLimitLabel().toLowerCase().replace('max ', '')}`}
               />
-              <p className="mt-1 text-xs text-gray-500">Leave empty for unlimited</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Leave empty for unlimited
+              </p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end">
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end">
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           Close
         </button>

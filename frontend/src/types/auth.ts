@@ -5,13 +5,14 @@ export interface User {
   first_name: string | null;
   last_name: string | null;
   pronouns: string | null;
-  role: "super_admin" | "tenant_admin" | "user";
+  role: 'super_admin' | 'tenant_admin' | 'user';
   tenant_id: string | null;
   tenant_name: string | null;
   modules: string[];
   is_active: boolean;
   is_tenant_super_user: boolean;
   message_notifications_enabled: boolean;
+  theme_preference: 'light' | 'dark' | null;
   last_login: string | null;
   created_at: string;
 }

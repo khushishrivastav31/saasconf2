@@ -158,11 +158,13 @@ export default function SponsorDetailPanel({
         <SponsorLogoUpload sponsorId={sponsor.id} />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Company Name *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Company Name *
+          </label>
           <input
             type="text"
             required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
             value={formData.company_name}
             onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
           />
@@ -170,9 +172,11 @@ export default function SponsorDetailPanel({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Sponsor Package</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Sponsor Package
+            </label>
             <select
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.sponsor_package_id || ''}
               onChange={(e) => handlePackageChange(e.target.value)}
             >
@@ -195,11 +199,11 @@ export default function SponsorDetailPanel({
                     is_active: e.target.checked,
                   })
                 }
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
               />
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-gray-700 dark:text-gray-300">
                 <span className="font-medium">Visible</span>
-                <span className="text-gray-500 ml-1">(show on website)</span>
+                <span className="text-gray-500 dark:text-gray-400 ml-1">(show on website)</span>
               </span>
             </label>
           </div>
@@ -207,12 +211,14 @@ export default function SponsorDetailPanel({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Price</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Price
+            </label>
             <input
               type="number"
               step="0.01"
               min="0"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.price ?? ''}
               onChange={(e) =>
                 setFormData({
@@ -223,8 +229,10 @@ export default function SponsorDetailPanel({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Currency</label>
-            <div className="mt-1 block w-full border border-gray-200 bg-gray-50 rounded-md py-2 px-3 text-sm text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Currency
+            </label>
+            <div className="mt-1 block w-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-md py-2 px-3 text-sm text-gray-700 dark:text-gray-300">
               {(() => {
                 const pkg = sponsorPackages.find((p) => p.id === formData.sponsor_package_id);
                 const currencyCode = pkg?.currency || defaultCurrency;
@@ -238,10 +246,12 @@ export default function SponsorDetailPanel({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Phone</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Phone
+            </label>
             <input
               type="tel"
-              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${phoneError ? 'border-red-300' : 'border-gray-300'}`}
+              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm ${phoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
               value={formData.phone || ''}
               onChange={(e) => {
                 const value = e.target.value;
@@ -253,11 +263,13 @@ export default function SponsorDetailPanel({
             {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Website</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Website
+            </label>
             <input
               type="text"
               placeholder="example.com"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.website || ''}
               onChange={(e) => setFormData({ ...formData, website: e.target.value })}
               onBlur={(e) => setFormData({ ...formData, website: normalizeUrl(e.target.value) })}
@@ -267,10 +279,12 @@ export default function SponsorDetailPanel({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Address Line 1</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Address Line 1
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.address_line1 || ''}
               onChange={(e) =>
                 setFormData({
@@ -281,10 +295,12 @@ export default function SponsorDetailPanel({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Address Line 2</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Address Line 2
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.address_line2 || ''}
               onChange={(e) =>
                 setFormData({
@@ -298,28 +314,34 @@ export default function SponsorDetailPanel({
 
         <div className="grid grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">City</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              City
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.city || ''}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">State</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              State
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.state || ''}
               onChange={(e) => setFormData({ ...formData, state: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Postal Code</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Postal Code
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.postal_code || ''}
               onChange={(e) =>
                 setFormData({
@@ -330,10 +352,12 @@ export default function SponsorDetailPanel({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Country</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Country
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.country || ''}
               onChange={(e) => setFormData({ ...formData, country: e.target.value })}
             />
@@ -341,18 +365,22 @@ export default function SponsorDetailPanel({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">VAT Number</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            VAT Number
+          </label>
           <input
             type="text"
             placeholder="e.g., DE123456789"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
             value={formData.vat_number || ''}
             onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Comments</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Comments
+          </label>
           <RichTextEditor
             value={formData.comments || ''}
             onChange={(html) => setFormData({ ...formData, comments: html })}

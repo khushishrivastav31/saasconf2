@@ -97,11 +97,11 @@ function ConferenceSocialTab({
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900">Social Media Links</h4>
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Social Media Links</h4>
         {isAdmin && (
           <div className="flex items-center gap-2">
             {saveStatus === 'saving' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md">
                 <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
@@ -121,7 +121,7 @@ function ConferenceSocialTab({
               </span>
             )}
             {saveStatus === 'saved' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-md">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -134,7 +134,7 @@ function ConferenceSocialTab({
               </span>
             )}
             {saveStatus === 'error' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-md">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -155,13 +155,13 @@ function ConferenceSocialTab({
         <div className="space-y-3 mb-4">
           {allEntries.map((platform) => (
             <div key={platform.key} className="flex items-center gap-3">
-              <label className="block text-sm font-medium text-gray-700 w-28 flex-shrink-0">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 w-28 flex-shrink-0">
                 {platform.label}
               </label>
               <input
                 type="text"
                 placeholder={platform.placeholder}
-                className="flex-1 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={socialLinks[platform.key] || ''}
                 onChange={(e) => handleLinkChange(platform.key, e.target.value)}
                 disabled={!isAdmin}
@@ -170,7 +170,7 @@ function ConferenceSocialTab({
                 <button
                   type="button"
                   onClick={() => handleDelete(platform.key)}
-                  className="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                  className="flex-shrink-0 p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                   title={`Remove ${platform.label}`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +187,7 @@ function ConferenceSocialTab({
           ))}
         </div>
       ) : (
-        <div className="text-center py-6 text-sm text-gray-500 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+        <div className="text-center py-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 mb-4">
           No social media links added yet.
         </div>
       )}
@@ -201,7 +201,7 @@ function ConferenceSocialTab({
               setAddPlatform(e.target.value);
               if (e.target.value !== '__custom__') setCustomPlatformName('');
             }}
-            className="border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            className="border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">Select platform...</option>
             {availablePlatforms.map((p) => (
@@ -217,7 +217,7 @@ function ConferenceSocialTab({
               placeholder="Platform name"
               value={customPlatformName}
               onChange={(e) => setCustomPlatformName(e.target.value)}
-              className="border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 w-40"
+              className="border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 w-40"
             />
           )}
           <button

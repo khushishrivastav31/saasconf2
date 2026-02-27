@@ -46,8 +46,8 @@ export default function Tenants() {
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Companies</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Manage tenant companies and their module access
           </p>
         </div>
@@ -64,44 +64,50 @@ export default function Tenants() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
       ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Company
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Slug
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Users
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Modules
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {data?.items?.map((tenant) => (
                 <tr key={tenant.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{tenant.name}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {tenant.name}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{tenant.slug}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{tenant.slug}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{tenant.user_count}</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
+                      {tenant.user_count}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{tenant.module_count}</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
+                      {tenant.module_count}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -271,7 +277,7 @@ function CreateTenantModal({
         <div className="px-6 py-4 space-y-4">
           {/* Error Alert */}
           {showErrors && Object.keys(errors).length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-4">
               <div className="flex">
                 <svg
                   className="h-5 w-5 text-red-400 flex-shrink-0"
@@ -287,10 +293,10 @@ function CreateTenantModal({
                   />
                 </svg>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
+                  <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
                     Please fix the following errors:
                   </h3>
-                  <ul className="mt-2 text-sm text-red-700 list-disc list-inside">
+                  <ul className="mt-2 text-sm text-red-700 dark:text-red-300 list-disc list-inside">
                     {Object.values(errors).map((error, index) => (
                       <li key={index}>{error}</li>
                     ))}
@@ -303,13 +309,15 @@ function CreateTenantModal({
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Company Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
-                  showErrors && errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  showErrors && errors.name
+                    ? 'border-red-300 bg-red-50 dark:bg-red-900/30'
+                    : 'border-gray-300 dark:border-gray-600'
                 }`}
                 value={formData.name}
                 onChange={(e) => {
@@ -327,13 +335,15 @@ function CreateTenantModal({
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Slug <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
-                  showErrors && errors.slug ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  showErrors && errors.slug
+                    ? 'border-red-300 bg-red-50 dark:bg-red-900/30'
+                    : 'border-gray-300 dark:border-gray-600'
                 }`}
                 value={formData.slug}
                 onChange={(e) => {
@@ -352,7 +362,7 @@ function CreateTenantModal({
               {showErrors && errors.slug && (
                 <p className="mt-1 text-sm text-red-600">{errors.slug}</p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Lowercase letters, numbers, and hyphens only. Used in the portal URL.
               </p>
             </div>
@@ -360,20 +370,24 @@ function CreateTenantModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Website</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Website
+              </label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 placeholder="www.example.com"
                 value={formData.website}
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">VAT Number</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                VAT Number
+              </label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.vat_number}
                 onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
               />
@@ -381,24 +395,28 @@ function CreateTenantModal({
           </div>
 
           {/* Address */}
-          <div className="border-t border-gray-200 pt-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Address</h4>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Address</h4>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Street Address</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Street Address
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Postal Code</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Postal Code
+                  </label>
                   <input
                     type="text"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                     value={formData.postal_code}
                     onChange={(e) =>
                       setFormData({
@@ -409,19 +427,23 @@ function CreateTenantModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">City</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    City
+                  </label>
                   <input
                     type="text"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Country</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Country
+                  </label>
                   <input
                     type="text"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                   />
@@ -431,24 +453,29 @@ function CreateTenantModal({
           </div>
 
           {/* Contact Persons */}
-          <div className="border-t border-gray-200 pt-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Contact Persons</h4>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+              Contact Persons
+            </h4>
 
             {/* Existing contacts */}
             {formData.contact_persons && formData.contact_persons.length > 0 && (
               <div className="mb-4 space-y-2">
                 {formData.contact_persons.map((contact, index) => (
-                  <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <div
+                    key={index}
+                    className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                  >
                     {editingContactIndex === index ? (
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                               First Name *
                             </label>
                             <input
                               type="text"
-                              className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                              className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                               value={contact.first_name}
                               onChange={(e) =>
                                 updateContact(index, {
@@ -459,12 +486,12 @@ function CreateTenantModal({
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                               Last Name *
                             </label>
                             <input
                               type="text"
-                              className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                              className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                               value={contact.last_name}
                               onChange={(e) =>
                                 updateContact(index, {
@@ -477,12 +504,12 @@ function CreateTenantModal({
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                               Role
                             </label>
                             <input
                               type="text"
-                              className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                              className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                               value={contact.role || ''}
                               onChange={(e) =>
                                 updateContact(index, {
@@ -493,12 +520,12 @@ function CreateTenantModal({
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                               Email
                             </label>
                             <input
                               type="email"
-                              className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                              className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                               value={contact.email || ''}
                               onChange={(e) =>
                                 updateContact(index, {
@@ -509,13 +536,13 @@ function CreateTenantModal({
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                               Phone
                             </label>
                             <input
                               type="tel"
                               placeholder="+491234545 or 00491234566"
-                              className={`w-full border ${editContactPhoneError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                              className={`w-full border ${editContactPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                               value={contact.phone || ''}
                               onChange={(e) => {
                                 const value = e.target.value;
@@ -539,7 +566,7 @@ function CreateTenantModal({
                               setEditContactPhoneError(null);
                             }}
                             disabled={!!editContactPhoneError}
-                            className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Done
                           </button>
@@ -549,16 +576,16 @@ function CreateTenantModal({
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-900">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
                               {[contact.first_name, contact.last_name].filter(Boolean).join(' ')}
                             </span>
                             {contact.role && (
-                              <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                              <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
                                 {contact.role}
                               </span>
                             )}
                           </div>
-                          <div className="mt-1 text-sm text-gray-500 space-x-3">
+                          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 space-x-3">
                             {contact.email && <span>{contact.email}</span>}
                             {contact.phone && <span>{contact.phone}</span>}
                           </div>
@@ -613,29 +640,31 @@ function CreateTenantModal({
             )}
 
             {/* Add new contact */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h5 className="text-sm font-medium text-blue-900 mb-3">Add New Contact</h5>
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 rounded-lg p-4">
+              <h5 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-3">
+                Add New Contact
+              </h5>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                     First Name *
                   </label>
                   <input
                     type="text"
                     placeholder="First name"
-                    className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                     value={newContact.first_name}
                     onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                     Last Name *
                   </label>
                   <input
                     type="text"
                     placeholder="Last name"
-                    className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                     value={newContact.last_name}
                     onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
                   />
@@ -643,31 +672,37 @@ function CreateTenantModal({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    Role
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g., Manager, Technical"
-                    className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                     value={newContact.role}
                     onChange={(e) => setNewContact({ ...newContact, role: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    Email
+                  </label>
                   <input
                     type="email"
                     placeholder="email@example.com"
-                    className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                     value={newContact.email}
                     onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    Phone
+                  </label>
                   <input
                     type="tel"
                     placeholder="+491234545 or 00491234566"
-                    className={`w-full border ${newContactPhoneError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                    className={`w-full border ${newContactPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                     value={newContact.phone}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -711,8 +746,10 @@ function CreateTenantModal({
           </div>
 
           {/* Comments */}
-          <div className="border-t border-gray-200 pt-4">
-            <label className="block text-sm font-medium text-gray-700">Comments / Notes</label>
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Comments / Notes
+            </label>
             <RichTextEditor
               value={formData.comments}
               onChange={(html) => setFormData({ ...formData, comments: html })}
@@ -721,14 +758,16 @@ function CreateTenantModal({
           </div>
 
           {/* Admin User */}
-          <div className="border-t border-gray-200 pt-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Admin User</h4>
-            <p className="text-xs text-gray-500 mb-3">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+              Admin User
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
               An admin user is required to manage the company.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Admin Email <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -757,7 +796,7 @@ function CreateTenantModal({
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Admin Password <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -784,10 +823,12 @@ function CreateTenantModal({
                 {showErrors && errors.admin_password && (
                   <p className="mt-1 text-sm text-red-600">{errors.admin_password}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Minimum 8 characters
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Admin First Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -813,7 +854,7 @@ function CreateTenantModal({
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Admin Last Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -842,11 +883,11 @@ function CreateTenantModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

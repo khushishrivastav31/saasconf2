@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import type { AxiosInstance } from "axios";
+import { useState, useRef } from 'react';
+import type { AxiosInstance } from 'axios';
 
 export interface StagedAttachment {
   id: string;
@@ -40,9 +40,9 @@ export default function MessageFileAttach({
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append('file', file);
       const resp = await apiClient.post(uploadPath, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       onAttachmentsChange([
         ...attachments,
@@ -55,14 +55,14 @@ export default function MessageFileAttach({
       ]);
     } catch (err: unknown) {
       const msg =
-        err && typeof err === "object" && "response" in err
-          ? (err as { response?: { data?: { detail?: string } } }).response
-              ?.data?.detail || "Upload failed"
-          : "Upload failed";
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
+            'Upload failed'
+          : 'Upload failed';
       setError(msg);
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -74,13 +74,8 @@ export default function MessageFileAttach({
     <div>
       {/* Attach button */}
       <div className="flex items-center gap-2">
-        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 cursor-pointer">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -88,7 +83,7 @@ export default function MessageFileAttach({
               d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
             />
           </svg>
-          {uploading ? "Uploading..." : "Attach file"}
+          {uploading ? 'Uploading...' : 'Attach file'}
           <input
             ref={fileInputRef}
             type="file"
@@ -98,13 +93,11 @@ export default function MessageFileAttach({
           />
         </label>
         {uploading && (
-          <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600 rounded-full animate-spin" />
         )}
       </div>
 
-      {error && (
-        <p className="text-xs text-red-500 mt-1">{error}</p>
-      )}
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
 
       {/* Staged files */}
       {attachments.length > 0 && (
@@ -112,10 +105,10 @@ export default function MessageFileAttach({
           {attachments.map((a) => (
             <div
               key={a.id}
-              className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded"
+              className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5 rounded"
             >
               <svg
-                className="w-4 h-4 flex-shrink-0 text-gray-400"
+                className="w-4 h-4 flex-shrink-0 text-gray-400 dark:text-gray-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -128,21 +121,16 @@ export default function MessageFileAttach({
                 />
               </svg>
               <span className="truncate flex-1">{a.filename}</span>
-              <span className="text-xs text-gray-400 flex-shrink-0">
+              <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
                 {formatFileSize(a.file_size)}
               </span>
               <button
                 type="button"
                 onClick={() => handleRemove(a.id)}
-                className="text-gray-400 hover:text-red-500 flex-shrink-0"
+                className="text-gray-400 dark:text-gray-500 hover:text-red-500 flex-shrink-0"
                 title="Remove"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

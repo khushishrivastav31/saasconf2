@@ -1,40 +1,40 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import portalApi from "../../config/portalApi";
-import RichTextDisplay from "../../components/common/RichTextDisplay";
-import type { PortalNewsListResponse } from "../../types/portal";
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import portalApi from '../../config/portalApi';
+import RichTextDisplay from '../../components/common/RichTextDisplay';
+import type { PortalNewsListResponse } from '../../types/portal';
 
 function formatPublishedDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   }).format(date);
 }
 
 function stripHtml(html: string): string {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  return doc.body.textContent ?? "";
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.body.textContent ?? '';
 }
 
 function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   const truncated = text.slice(0, maxLength);
   // Cut at last space to avoid splitting a word
-  const lastSpace = truncated.lastIndexOf(" ");
-  return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "...";
+  const lastSpace = truncated.lastIndexOf(' ');
+  return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + '...';
 }
 
 export default function NewsPage() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const { data, isLoading } = useQuery({
-    queryKey: ["portal-news"],
+    queryKey: ['portal-news'],
     queryFn: async () => {
-      const res = await portalApi.get<PortalNewsListResponse>("/portal/news");
+      const res = await portalApi.get<PortalNewsListResponse>('/portal/news');
       return res.data;
     },
     refetchInterval: 30000,
@@ -65,8 +65,8 @@ export default function NewsPage() {
   if (articles.length === 0) {
     return (
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">News</h1>
-        <div className="text-center py-12 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">News</h1>
+        <div className="text-center py-12 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
           No news articles yet.
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function NewsPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">News</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">News</h1>
       <div className="space-y-4">
         {articles.map((article) => {
           const isExpanded = expandedIds.has(article.id);
@@ -86,7 +86,7 @@ export default function NewsPage() {
           return (
             <div
               key={article.id}
-              className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden"
+              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden"
             >
               <div className="px-6 py-5">
                 {/* Conference badge */}
@@ -95,22 +95,22 @@ export default function NewsPage() {
                 </span>
 
                 {/* Title */}
-                <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
                   {article.title}
                 </h2>
 
                 {/* Published date */}
-                <p className="text-xs text-gray-400 mb-3">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
                   {formatPublishedDate(article.published_at)}
                 </p>
 
                 {/* Body: preview or full */}
                 {isExpanded ? (
-                  <div className="prose prose-sm max-w-none text-gray-700">
+                  <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">
                     <RichTextDisplay content={article.body_html} />
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                     {preview}
                   </p>
                 )}
@@ -121,7 +121,7 @@ export default function NewsPage() {
                     onClick={() => toggleExpand(article.id)}
                     className="mt-3 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
                   >
-                    {isExpanded ? "Show less" : "Read more"}
+                    {isExpanded ? 'Show less' : 'Read more'}
                   </button>
                 )}
               </div>

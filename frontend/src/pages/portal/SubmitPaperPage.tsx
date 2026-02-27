@@ -49,7 +49,7 @@ function DynamicField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder || ''}
           disabled={disabled}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700"
         />
       );
 
@@ -61,7 +61,7 @@ function DynamicField({
           placeholder={field.placeholder || ''}
           disabled={disabled}
           rows={3}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700"
         />
       );
 
@@ -85,7 +85,9 @@ function DynamicField({
             disabled={disabled}
             className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
-          <span className="text-sm text-gray-700">{field.placeholder || 'Yes'}</span>
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            {field.placeholder || 'Yes'}
+          </span>
         </label>
       );
 
@@ -108,7 +110,7 @@ function DynamicField({
                 disabled={disabled}
                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
-              <span className="text-sm text-gray-700">{opt.label}</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">{opt.label}</span>
             </label>
           ))}
         </div>
@@ -121,7 +123,7 @@ function DynamicField({
           value={String(value ?? '')}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700"
         >
           <option value="">{field.placeholder || 'Select...'}</option>
           {(field.options || []).map((opt) => (
@@ -134,8 +136,10 @@ function DynamicField({
 
     case 'file_upload':
       return (
-        <div className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-          <span className="text-sm text-gray-500">File upload not yet implemented</span>
+        <div className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            File upload not yet implemented
+          </span>
         </div>
       );
 
@@ -382,21 +386,23 @@ function SubmitPaperPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Submit New Paper</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Submit New Paper
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Fill in the details to create a new paper submission.
           </p>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm mb-4">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-3 py-2 rounded text-sm mb-4">
           {error}
         </div>
       )}
 
       {selectedCfpId && missingSpeakerFields.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded text-sm mb-4">
+        <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 px-4 py-3 rounded text-sm mb-4">
           <strong>Missing required profile fields:</strong>{' '}
           {missingSpeakerFields.map((f) => speakerFieldLabels[f] || f).join(', ')}. Please update
           your{' '}
@@ -407,10 +413,12 @@ function SubmitPaperPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-5">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-5">
         {/* Conference Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Conference</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Conference
+          </label>
           <select
             value={selectedConferenceId}
             onChange={(e) => {
@@ -419,7 +427,7 @@ function SubmitPaperPage() {
               setSessionTypeId('');
               setCustomFieldAnswers({});
             }}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           >
             <option value="">Select a conference</option>
             {conferences?.map((conf) => (
@@ -434,20 +442,26 @@ function SubmitPaperPage() {
         {/* CFP Info - auto-selected since each conference has one CFP */}
         {selectedConferenceId && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Call for Papers</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Call for Papers
+            </label>
             {selectedCfp ? (
-              <div className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm">
-                <span className="font-medium text-gray-900">{selectedCfp.title}</span>
+              <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm">
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {selectedCfp.title}
+                </span>
                 {selectedCfp.close_date && (
-                  <span className="text-gray-500 ml-2">
+                  <span className="text-gray-500 dark:text-gray-400 ml-2">
                     (closes {formatDate(selectedCfp.close_date)})
                   </span>
                 )}
               </div>
             ) : availableCfps && availableCfps.length === 0 ? (
-              <p className="text-sm text-gray-500">No open CFPs for this conference.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No open CFPs for this conference.
+              </p>
             ) : (
-              <p className="text-sm text-gray-400">Loading...</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
             )}
           </div>
         )}
@@ -461,7 +475,7 @@ function SubmitPaperPage() {
                 case 'title':
                   return (
                     <div key={field.key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {field.label}
                         {field.is_required && <span className="text-red-500"> *</span>}
                       </label>
@@ -470,7 +484,7 @@ function SubmitPaperPage() {
                         required={field.is_required}
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                         placeholder="Your paper title"
                       />
                     </div>
@@ -480,14 +494,14 @@ function SubmitPaperPage() {
                   if (!conferenceDetail || conferenceDetail.session_types.length === 0) return null;
                   return (
                     <div key={field.key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {field.label}
                         {field.is_required && <span className="text-red-500"> *</span>}
                       </label>
                       <select
                         value={sessionTypeId}
                         onChange={(e) => setSessionTypeId(e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                       >
                         <option value="">Select a session type</option>
                         {conferenceDetail.session_types.map((st) => (
@@ -502,7 +516,7 @@ function SubmitPaperPage() {
                 case 'abstract_short':
                   return (
                     <div key={field.key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {field.label}
                         {field.is_required && <span className="text-red-500"> *</span>}
                       </label>
@@ -519,7 +533,7 @@ function SubmitPaperPage() {
                 case 'abstract_long':
                   return (
                     <div key={field.key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {field.label}
                         {field.is_required && <span className="text-red-500"> *</span>}
                       </label>
@@ -536,14 +550,14 @@ function SubmitPaperPage() {
                 case 'level':
                   return (
                     <div key={field.key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {field.label}
                         {field.is_required && <span className="text-red-500"> *</span>}
                       </label>
                       <select
                         value={level}
                         onChange={(e) => setLevel(e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                       >
                         <option value="">Select level</option>
                         <option value="beginner">Beginner</option>
@@ -557,7 +571,7 @@ function SubmitPaperPage() {
                 case 'learning_objectives':
                   return (
                     <div key={field.key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {field.label}
                         {field.is_required && <span className="text-red-500"> *</span>}
                       </label>
@@ -574,7 +588,7 @@ function SubmitPaperPage() {
                 case 'importance':
                   return (
                     <div key={field.key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {field.label}
                         {field.is_required && <span className="text-red-500"> *</span>}
                       </label>
@@ -601,12 +615,14 @@ function SubmitPaperPage() {
             if (field.type === 'custom' && field.customField) {
               return (
                 <div key={field.customField.id}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {field.label}
                     {field.is_required && <span className="text-red-500"> *</span>}
                   </label>
                   {field.customField.description && (
-                    <p className="text-xs text-gray-500 mb-2">{field.customField.description}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      {field.customField.description}
+                    </p>
                   )}
                   <DynamicField
                     field={field.customField}
@@ -614,7 +630,9 @@ function SubmitPaperPage() {
                     onChange={(val) => handleCustomFieldChange(field.key, val)}
                   />
                   {field.customField.help_text && (
-                    <p className="text-xs text-gray-400 mt-1">{field.customField.help_text}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {field.customField.help_text}
+                    </p>
                   )}
                 </div>
               );
@@ -625,7 +643,7 @@ function SubmitPaperPage() {
 
         {/* Co-speakers */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Co-speakers (max 3)
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
@@ -647,7 +665,7 @@ function SubmitPaperPage() {
               type="button"
               onClick={handleAddCospeaker}
               disabled={cospeakerEmails.length >= 3}
-              className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm disabled:opacity-50"
+              className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
             >
               Add
             </button>
@@ -671,17 +689,17 @@ function SubmitPaperPage() {
               ))}
             </div>
           )}
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             Co-speakers must be registered on this platform. They will receive an invitation.
           </p>
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
             type="button"
             onClick={() => navigate(`${basePath}/dashboard`)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

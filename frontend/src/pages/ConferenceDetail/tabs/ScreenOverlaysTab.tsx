@@ -36,9 +36,9 @@ const ANIMATION_OPTIONS: { value: OverlayAnimationStyle; label: string }[] = [
 ];
 
 const triggerBadgeClass: Record<OverlayTriggerType, string> = {
-  first_registration: 'bg-blue-100 text-blue-800',
+  first_registration: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
   scheduled: 'bg-purple-100 text-purple-800',
-  always: 'bg-green-100 text-green-800',
+  always: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
 };
 
 function emptyForm(): ScreenOverlayCreate {
@@ -205,8 +205,10 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Screen Overlays</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Screen Overlays
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Full-screen overlays shown to portal users on login events.
           </p>
         </div>
@@ -229,8 +231,10 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
 
       {/* Create form */}
       {isAdding && (
-        <div className="mb-6 border border-gray-200 rounded-lg p-4 bg-gray-50">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">New Screen Overlay</h3>
+        <div className="mb-6 border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            New Screen Overlay
+          </h3>
           <OverlayForm
             form={createForm}
             onChange={(updates) => setCreateForm((prev) => ({ ...prev, ...updates }))}
@@ -250,7 +254,7 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
                 setPendingImageFile(null);
                 setError(null);
               }}
-              className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
             </button>
@@ -267,8 +271,10 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
 
       {/* Edit form */}
       {editingId && (
-        <div className="mb-6 border border-blue-200 rounded-lg p-4 bg-blue-50">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Edit Screen Overlay</h3>
+        <div className="mb-6 border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/30">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Edit Screen Overlay
+          </h3>
           <OverlayForm
             form={editForm as ScreenOverlayCreate}
             onChange={(updates) => setEditForm((prev) => ({ ...prev, ...updates }))}
@@ -286,7 +292,7 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
                 setEditingId(null);
                 setError(null);
               }}
-              className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
             </button>
@@ -303,44 +309,44 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
 
       {/* Table */}
       {overlays.length === 0 && !isAdding ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           <p className="text-sm">No screen overlays configured yet.</p>
           {isAdmin && <p className="text-xs mt-1">Click "Add Overlay" to create one.</p>}
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Title
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Trigger
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Animation
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Duration
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Order
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Active
                 </th>
                 {isAdmin && (
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Actions
                   </th>
                 )}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {overlays.map((overlay) => (
-                <tr key={overlay.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-900">
+                <tr key={overlay.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                     <div className="flex items-center gap-2">
                       {overlay.image_url && (
                         <img
@@ -352,7 +358,7 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
                       <div>
                         <div className="font-medium">{overlay.title}</div>
                         {overlay.body_text && (
-                          <div className="text-xs text-gray-500 truncate max-w-xs">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">
                             {stripHtml(overlay.body_text)}
                           </div>
                         )}
@@ -368,16 +374,20 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
                       {overlay.trigger_type.replace('_', ' ')}
                     </span>
                     {overlay.trigger_type === 'scheduled' && overlay.schedule_date && (
-                      <div className="text-xs text-gray-400 mt-0.5">
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                         {new Date(overlay.schedule_date).toLocaleDateString()}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 capitalize">
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 capitalize">
                     {overlay.animation_style}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{overlay.duration_seconds}s</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{overlay.display_order}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    {overlay.duration_seconds}s
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    {overlay.display_order}
+                  </td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() =>
@@ -393,7 +403,7 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
                       } ${isAdmin ? 'cursor-pointer' : 'cursor-default'}`}
                     >
                       <span
-                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white dark:bg-gray-800 transition-transform ${
                           overlay.is_active ? 'translate-x-4.5' : 'translate-x-0.5'
                         }`}
                       />
@@ -404,21 +414,21 @@ function ScreenOverlaysTab({ conference, isAdmin }: { conference: Conference; is
                       <div className="flex justify-end gap-1">
                         <button
                           onClick={() => setPreviewOverlay(overlay)}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 rounded"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 rounded"
                           title="Preview"
                         >
                           <EyeIcon />
                         </button>
                         <button
                           onClick={() => startEditing(overlay)}
-                          className="p-1.5 text-gray-400 hover:text-primary-600 rounded"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-primary-600 rounded"
                           title="Edit"
                         >
                           <EditIcon />
                         </button>
                         <button
                           onClick={() => setDeleteTarget(overlay)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded"
+                          className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 rounded"
                           title="Delete"
                         >
                           <DeleteIcon />
@@ -472,11 +482,13 @@ function OverlayImageUpload({
   const hasImage = !!imageUrl || !!localPreview;
 
   return (
-    <div className="mt-4 border-t border-gray-200 pt-4">
-      <label className="block text-sm font-medium text-gray-700 mb-2">Overlay Image</label>
+    <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Overlay Image
+      </label>
       <div className="flex items-start gap-4">
         {/* Preview */}
-        <div className="w-32 h-24 rounded border border-gray-300 bg-white flex items-center justify-center overflow-hidden shrink-0">
+        <div className="w-32 h-24 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
           {previewSrc ? (
             <img src={previewSrc} alt="Overlay" className="w-full h-full object-contain" />
           ) : (
@@ -522,12 +534,14 @@ function OverlayImageUpload({
               type="button"
               onClick={onDelete}
               disabled={isDeleting}
-              className="px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 disabled:opacity-50"
+              className="px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50"
             >
               {isDeleting ? 'Removing...' : 'Remove Image'}
             </button>
           )}
-          <p className="text-xs text-gray-400">JPEG, PNG, WebP, or GIF. Max 10 MB.</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            JPEG, PNG, WebP, or GIF. Max 10 MB.
+          </p>
         </div>
       </div>
     </div>
@@ -545,22 +559,26 @@ function OverlayForm({
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Title */}
       <div className="md:col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Title
+        </label>
         <input
           type="text"
           value={form.title}
           onChange={(e) => onChange({ title: e.target.value })}
           placeholder="Welcome to {conference_name}!"
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
         />
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
           Use {'{conference_name}'} to insert the conference name.
         </p>
       </div>
 
       {/* Body Text */}
       <div className="md:col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Body Text (optional)</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Body Text (optional)
+        </label>
         <RichTextEditor
           value={form.body_text || ''}
           onChange={(html) => onChange({ body_text: html || undefined })}
@@ -571,11 +589,13 @@ function OverlayForm({
 
       {/* Trigger Type */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Trigger</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Trigger
+        </label>
         <select
           value={form.trigger_type}
           onChange={(e) => onChange({ trigger_type: e.target.value as OverlayTriggerType })}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
         >
           {TRIGGER_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -587,11 +607,13 @@ function OverlayForm({
 
       {/* Animation Style */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Animation</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Animation
+        </label>
         <select
           value={form.animation_style}
           onChange={(e) => onChange({ animation_style: e.target.value as OverlayAnimationStyle })}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
         >
           {ANIMATION_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -603,33 +625,39 @@ function OverlayForm({
 
       {/* Duration */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Duration (seconds)</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Duration (seconds)
+        </label>
         <input
           type="number"
           min={1}
           max={30}
           value={form.duration_seconds}
           onChange={(e) => onChange({ duration_seconds: parseInt(e.target.value) || 5 })}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
         />
       </div>
 
       {/* Display Order */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Display Order
+        </label>
         <input
           type="number"
           min={0}
           value={form.display_order}
           onChange={(e) => onChange({ display_order: parseInt(e.target.value) || 0 })}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
         />
       </div>
 
       {/* Schedule Date (only for scheduled trigger) */}
       {form.trigger_type === 'scheduled' && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Schedule Date</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Schedule Date
+          </label>
           <input
             type="datetime-local"
             value={form.schedule_date ? form.schedule_date.slice(0, 16) : ''}
@@ -638,7 +666,7 @@ function OverlayForm({
                 schedule_date: e.target.value ? new Date(e.target.value).toISOString() : undefined,
               })
             }
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
       )}
@@ -650,9 +678,9 @@ function OverlayForm({
           id="overlay-active"
           checked={form.is_active ?? false}
           onChange={(e) => onChange({ is_active: e.target.checked })}
-          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
         />
-        <label htmlFor="overlay-active" className="text-sm text-gray-700">
+        <label htmlFor="overlay-active" className="text-sm text-gray-700 dark:text-gray-300">
           Active
         </label>
       </div>

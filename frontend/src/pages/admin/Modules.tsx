@@ -46,8 +46,8 @@ export default function Modules() {
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Modules</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Modules</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Manage platform modules that can be assigned to companies
           </p>
         </div>
@@ -60,10 +60,15 @@ export default function Modules() {
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {sortedModules.map((module) => (
-            <div key={module.id} className="bg-white overflow-hidden shadow rounded-lg">
+            <div
+              key={module.id}
+              className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg"
+            >
               <div className="p-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-900">{module.name}</h3>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    {module.name}
+                  </h3>
                   <span
                     className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       module.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -72,11 +77,13 @@ export default function Modules() {
                     {module.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-gray-500">{module.code}</p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{module.code}</p>
                 {module.description && (
-                  <p className="mt-3 text-sm text-gray-600">{module.description}</p>
+                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                    {module.description}
+                  </p>
                 )}
-                <div className="mt-4 flex items-center text-sm text-gray-500">
+                <div className="mt-4 flex items-center text-sm text-gray-500 dark:text-gray-400">
                   <svg
                     className="w-4 h-4 mr-1"
                     fill="none"

@@ -1,9 +1,9 @@
-import { useState, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../config/api";
-import { formatDate } from "../utils/formatDate";
-import ConfirmDialog from "./ConfirmDialog";
-import type { Attachment } from "../types";
+import { useState, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../config/api';
+import { formatDate } from '../utils/formatDate';
+import ConfirmDialog from './ConfirmDialog';
+import type { Attachment } from '../types';
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -18,16 +18,16 @@ export default function AttachmentList({
   entityType: string;
   entityId: string;
 }) {
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Attachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["attachments", entityType, entityId],
+    queryKey: ['attachments', entityType, entityId],
     queryFn: async () => {
       const response = await api.get<{ items: Attachment[]; total: number }>(
-        `/attachments?entity_type=${entityType}&entity_id=${entityId}`,
+        `/attachments?entity_type=${entityType}&entity_id=${entityId}`
       );
       return response.data;
     },
@@ -36,24 +36,24 @@ export default function AttachmentList({
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("entity_type", entityType);
-      formData.append("entity_id", entityId);
+      formData.append('file', file);
+      formData.append('entity_type', entityType);
+      formData.append('entity_id', entityId);
       if (description.trim()) {
-        formData.append("description", description.trim());
+        formData.append('description', description.trim());
       }
-      const response = await api.post<Attachment>("/attachments", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const response = await api.post<Attachment>('/attachments', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["attachments", entityType, entityId],
+        queryKey: ['attachments', entityType, entityId],
       });
-      setDescription("");
+      setDescription('');
       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        fileInputRef.current.value = '';
       }
     },
   });
@@ -64,19 +64,19 @@ export default function AttachmentList({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["attachments", entityType, entityId],
+        queryKey: ['attachments', entityType, entityId],
       });
     },
   });
 
   const handleDownload = async (attachment: Attachment) => {
     const response = await api.get(`/attachments/${attachment.id}/download`, {
-      responseType: "blob",
+      responseType: 'blob',
     });
     const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = url;
-    link.setAttribute("download", attachment.filename);
+    link.setAttribute('download', attachment.filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -91,8 +91,8 @@ export default function AttachmentList({
   };
 
   return (
-    <div className="border-t border-gray-200 pt-4 mt-4">
-      <h4 className="text-sm font-medium text-gray-900 mb-3">Attachments</h4>
+    <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Attachments</h4>
 
       {/* Upload form */}
       <div className="flex items-end gap-2 mb-3">
@@ -100,13 +100,13 @@ export default function AttachmentList({
           <input
             ref={fileInputRef}
             type="file"
-            className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+            className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
           />
         </div>
         <input
           type="text"
           placeholder="Description (optional)"
-          className="border border-gray-300 rounded-md px-2 py-1.5 text-sm w-48"
+          className="border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-sm w-48 dark:bg-gray-800 dark:text-gray-100"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
@@ -116,34 +116,29 @@ export default function AttachmentList({
           disabled={uploadMutation.isPending}
           className="px-3 py-1.5 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
         >
-          {uploadMutation.isPending ? "Uploading..." : "Upload"}
+          {uploadMutation.isPending ? 'Uploading...' : 'Upload'}
         </button>
       </div>
 
       {uploadMutation.isError && (
-        <div className="mb-2 text-sm text-red-600">
-          Upload failed. Please try again.
-        </div>
+        <div className="mb-2 text-sm text-red-600">Upload failed. Please try again.</div>
       )}
 
       {/* Attachment list */}
       {isLoading ? (
-        <div className="text-sm text-gray-500">Loading attachments...</div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">Loading attachments...</div>
       ) : data?.items && data.items.length > 0 ? (
-        <ul className="divide-y divide-gray-100">
+        <ul className="divide-y divide-gray-100 dark:divide-gray-700">
           {data.items.map((attachment) => (
-            <li
-              key={attachment.id}
-              className="flex items-center justify-between py-2"
-            >
+            <li key={attachment.id} className="flex items-center justify-between py-2">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {attachment.filename}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {formatFileSize(attachment.file_size)}
                   {attachment.description && ` - ${attachment.description}`}
-                  {" - "}
+                  {' - '}
                   {formatDate(attachment.created_at)}
                 </p>
               </div>
@@ -151,15 +146,10 @@ export default function AttachmentList({
                 <button
                   type="button"
                   onClick={() => handleDownload(attachment)}
-                  className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
+                  className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
                   title="Download"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -171,15 +161,10 @@ export default function AttachmentList({
                 <button
                   type="button"
                   onClick={() => setDeleteTarget(attachment)}
-                  className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                  className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                   title="Delete"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -193,7 +178,7 @@ export default function AttachmentList({
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-gray-400">No attachments yet.</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500">No attachments yet.</p>
       )}
 
       <ConfirmDialog

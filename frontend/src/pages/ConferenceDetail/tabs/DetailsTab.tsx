@@ -50,14 +50,16 @@ function PortalUrlField({ tenantSlug, path }: { tenantSlug: string; path: string
         type="text"
         readOnly
         value={portalUrl}
-        className="flex-1 border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 text-gray-700 sm:text-sm cursor-text"
+        className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 sm:text-sm cursor-text"
         onClick={(e) => (e.target as HTMLInputElement).select()}
       />
       <button
         type="button"
         onClick={handleCopy}
         className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-          copied ? 'bg-green-100 text-green-700' : 'bg-primary-600 text-white hover:bg-primary-700'
+          copied
+            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+            : 'bg-primary-600 text-white hover:bg-primary-700'
         }`}
       >
         {copied ? (
@@ -90,7 +92,7 @@ function PortalUrlField({ tenantSlug, path }: { tenantSlug: string; path: string
         href={portalUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+        className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
         title="Open in new tab"
       >
         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,11 +267,11 @@ function ConferenceDetailsTab({
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900">Conference Details</h4>
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Conference Details</h4>
         {isAdmin && (
           <div className="flex items-center gap-2">
             {saveStatus === 'saving' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md">
                 <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
@@ -289,7 +291,7 @@ function ConferenceDetailsTab({
               </span>
             )}
             {saveStatus === 'saved' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-md">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -302,7 +304,7 @@ function ConferenceDetailsTab({
               </span>
             )}
             {saveStatus === 'error' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-md">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -321,10 +323,12 @@ function ConferenceDetailsTab({
       <div className="space-y-4">
         {/* Logo */}
         <div className="border-b pb-4">
-          <h5 className="text-sm font-medium text-gray-700 mb-3">Conference Logo</h5>
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Conference Logo
+          </h5>
           <div className="flex items-start gap-4">
             {/* Logo preview - flexible container for various aspect ratios */}
-            <div className="min-w-24 max-w-48 h-24 border border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center p-2">
+            <div className="min-w-24 max-w-48 h-24 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-2">
               <ConferenceLogo logoUrl={conference.logo_url} />
             </div>
 
@@ -343,7 +347,7 @@ function ConferenceDetailsTab({
                   htmlFor="logo-upload"
                   className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer ${
                     logoStatus === 'uploading'
-                      ? 'bg-gray-100 text-gray-400 cursor-wait'
+                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-wait'
                       : 'bg-primary-600 text-white hover:bg-primary-700'
                   }`}
                 >
@@ -393,8 +397,8 @@ function ConferenceDetailsTab({
                     disabled={logoStatus === 'deleting'}
                     className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
                       logoStatus === 'deleting'
-                        ? 'bg-gray-100 text-gray-400 cursor-wait'
-                        : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
+                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-wait'
+                        : 'bg-white dark:bg-gray-800 text-red-600 border border-red-300 hover:bg-red-50 dark:hover:bg-red-900/30'
                     }`}
                   >
                     {logoStatus === 'deleting' ? (
@@ -443,7 +447,9 @@ function ConferenceDetailsTab({
 
                 {logoError && <p className="text-sm text-red-600">{logoError}</p>}
 
-                <p className="text-xs text-gray-500">JPEG, PNG, WebP, or GIF. Max 10MB.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  JPEG, PNG, WebP, or GIF. Max 10MB.
+                </p>
               </div>
             )}
           </div>
@@ -452,20 +458,24 @@ function ConferenceDetailsTab({
         {/* Basic Info */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Conference Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Conference Name
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.name}
               onChange={(e) => handleFieldChange('name', e.target.value)}
               disabled={!isAdmin}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Abbreviation</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Abbreviation
+            </label>
             <input
               type="text"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.abbreviation}
               onChange={(e) => handleFieldChange('abbreviation', e.target.value)}
               disabled={!isAdmin}
@@ -476,10 +486,12 @@ function ConferenceDetailsTab({
         {/* Dates */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Start Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Start Date
+            </label>
             <input
               type="date"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.start_date}
               onChange={(e) => {
                 const newStart = e.target.value;
@@ -500,10 +512,12 @@ function ConferenceDetailsTab({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">End Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              End Date
+            </label>
             <input
               type="date"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.end_date}
               min={formData.start_date}
               onChange={(e) => handleFieldChange('end_date', e.target.value)}
@@ -513,7 +527,9 @@ function ConferenceDetailsTab({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Description
+          </label>
           <RichTextEditor
             value={formData.description || ''}
             onChange={(html) => handleFieldChange('description', html)}
@@ -523,10 +539,12 @@ function ConferenceDetailsTab({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Website</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Website
+          </label>
           <input
             type="text"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             value={formData.website}
             onChange={(e) => handleFieldChange('website', e.target.value)}
             disabled={!isAdmin}
@@ -535,13 +553,17 @@ function ConferenceDetailsTab({
 
         {/* Financial Settings */}
         <div className="border-t pt-4">
-          <h5 className="text-sm font-medium text-gray-700 mb-3">Financial Settings</h5>
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Financial Settings
+          </h5>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Primary Currency</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Primary Currency
+                </label>
                 <select
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.currency}
                   onChange={(e) => handleFieldChange('currency', e.target.value)}
                   disabled={!isAdmin}
@@ -553,17 +575,17 @@ function ConferenceDetailsTab({
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Used for all pricing in this conference.
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Second Currency
-                  <span className="ml-1 text-xs text-gray-400">(optional)</span>
+                  <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">(optional)</span>
                 </label>
                 <select
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.invoice_currency}
                   onChange={(e) => handleFieldChange('invoice_currency', e.target.value)}
                   disabled={!isAdmin}
@@ -575,7 +597,9 @@ function ConferenceDetailsTab({
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-gray-500">Alternative currency for invoices.</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Alternative currency for invoices.
+                </p>
               </div>
             </div>
           </div>
@@ -584,14 +608,16 @@ function ConferenceDetailsTab({
         {/* Portal URLs */}
         {conference.tenant_slug && (
           <div className="border-t pt-4">
-            <h5 className="text-sm font-medium text-gray-700 mb-3">Portal URLs</h5>
+            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Portal URLs
+            </h5>
             <div className="space-y-4">
               {/* General Portal Login */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                   General Portal Login
                 </label>
-                <p className="text-xs text-gray-500 mb-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                   Share this URL for users to login/register to the portal.
                 </p>
                 <PortalUrlField tenantSlug={conference.tenant_slug} path="user/login" />
@@ -600,10 +626,10 @@ function ConferenceDetailsTab({
               {/* Conference-specific Landing Page */}
               {conference.abbreviation && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                     Conference Landing Page
                   </label>
-                  <p className="text-xs text-gray-500 mb-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                     Share this URL for applicants to access the CFP portal for this conference
                     directly.
                   </p>
@@ -619,17 +645,21 @@ function ConferenceDetailsTab({
 
         {/* Contact Emails */}
         <div className="border-t pt-4">
-          <h5 className="text-sm font-medium text-gray-700 mb-3">Contact Emails</h5>
-          <p className="text-xs text-gray-500 mb-3">
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Contact Emails
+          </h5>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
             These emails are used in email templates sent to applicants and attendees.
           </p>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Support Email</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Support Email
+              </label>
               <input
                 type="email"
                 placeholder="support@example.com"
-                className={`mt-1 block w-full border ${emailErrors.support_email ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                className={`mt-1 block w-full border ${emailErrors.support_email ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 value={formData.support_email}
                 onChange={(e) => handleFieldChange('support_email', e.target.value)}
                 onBlur={(e) =>
@@ -645,11 +675,13 @@ function ConferenceDetailsTab({
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Contact Email</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Contact Email
+              </label>
               <input
                 type="email"
                 placeholder="contact@example.com"
-                className={`mt-1 block w-full border ${emailErrors.contact_email ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                className={`mt-1 block w-full border ${emailErrors.contact_email ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 value={formData.contact_email}
                 onChange={(e) => handleFieldChange('contact_email', e.target.value)}
                 onBlur={(e) =>
@@ -669,23 +701,27 @@ function ConferenceDetailsTab({
 
         {/* Location */}
         <div className="border-t pt-4">
-          <h5 className="text-sm font-medium text-gray-700 mb-3">Location</h5>
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Location</h5>
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Venue Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Venue Name
+              </label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.venue_name}
                 onChange={(e) => handleFieldChange('venue_name', e.target.value)}
                 disabled={!isAdmin}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Address</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Address
+              </label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={formData.venue_address}
                 onChange={(e) => handleFieldChange('venue_address', e.target.value)}
                 disabled={!isAdmin}
@@ -693,30 +729,36 @@ function ConferenceDetailsTab({
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Postal Code</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Postal Code
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.postal_code}
                   onChange={(e) => handleFieldChange('postal_code', e.target.value)}
                   disabled={!isAdmin}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">City</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  City
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.city}
                   onChange={(e) => handleFieldChange('city', e.target.value)}
                   disabled={!isAdmin}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">State / Province</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  State / Province
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.state}
                   onChange={(e) => handleFieldChange('state', e.target.value)}
                   disabled={!isAdmin}
@@ -725,9 +767,11 @@ function ConferenceDetailsTab({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Country</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Country
+                </label>
                 <select
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.country}
                   onChange={(e) => {
                     const country = e.target.value;
@@ -757,9 +801,11 @@ function ConferenceDetailsTab({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Timezone</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Timezone
+                </label>
                 <select
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.timezone}
                   onChange={(e) => handleFieldChange('timezone', e.target.value)}
                   disabled={!isAdmin}
@@ -775,9 +821,11 @@ function ConferenceDetailsTab({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Event Type</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Event Type
+                </label>
                 <select
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.venue_type}
                   onChange={(e) => handleFieldChange('venue_type', e.target.value)}
                   disabled={!isAdmin}
@@ -788,14 +836,14 @@ function ConferenceDetailsTab({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Venue URL
-                  <span className="ml-1 text-xs text-gray-400">(optional)</span>
+                  <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">(optional)</span>
                 </label>
                 <input
                   type="text"
                   placeholder="example.com"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.venue_url}
                   onChange={(e) => handleFieldChange('venue_url', e.target.value)}
                   onBlur={(e) => handleFieldChange('venue_url', normalizeUrl(e.target.value))}
@@ -805,13 +853,13 @@ function ConferenceDetailsTab({
             </div>
             {(formData.venue_type === 'virtual' || formData.venue_type === 'hybrid') && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Streaming Platform URL
                 </label>
                 <input
                   type="text"
                   placeholder="example.com"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.virtual_platform_url}
                   onChange={(e) => handleFieldChange('virtual_platform_url', e.target.value)}
                   onBlur={(e) =>

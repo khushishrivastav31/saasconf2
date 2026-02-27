@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from "react";
-import ConfirmDialog from "./ConfirmDialog";
+import { useState, type ReactNode } from 'react';
+import ConfirmDialog from './ConfirmDialog';
 
-export type SaveStatus = "idle" | "saving" | "saved" | "error";
+export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface DetailPanelTab {
   id: string;
@@ -31,7 +31,7 @@ export default function DetailPanelWrapper({
   title,
   subtitle,
   onDelete,
-  deleteTitle = "Delete",
+  deleteTitle = 'Delete',
   deleteMessage,
   saveStatus,
   tabs,
@@ -41,21 +41,19 @@ export default function DetailPanelWrapper({
   showSave = true,
   saveDisabled = false,
 }: DetailPanelWrapperProps) {
-  const [activeTab, setActiveTab] = useState(tabs[0]?.id || "");
+  const [activeTab, setActiveTab] = useState(tabs[0]?.id || '');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const activeTabContent = tabs.find((t) => t.id === activeTab)?.content;
 
   return (
-    <div className="bg-white rounded-lg shadow flex flex-col h-full">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col h-full">
       {/* Header with title and tabs */}
-      <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-            {subtitle && (
-              <p className="text-sm text-gray-500">{subtitle}</p>
-            )}
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+            {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
           </div>
           {headerActions && <div>{headerActions}</div>}
         </div>
@@ -69,8 +67,8 @@ export default function DetailPanelWrapper({
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? "border-primary-600 text-primary-600 bg-primary-50"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? 'border-primary-600 text-primary-600 bg-primary-50'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               {tab.label}
@@ -80,13 +78,11 @@ export default function DetailPanelWrapper({
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-y-auto">
-        {activeTabContent}
-      </div>
+      <div className="flex-1 overflow-y-auto">{activeTabContent}</div>
 
       {/* Footer with action buttons */}
       {isAdmin && (
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center flex-shrink-0">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center flex-shrink-0">
           {onDelete ? (
             <button
               type="button"
@@ -102,34 +98,50 @@ export default function DetailPanelWrapper({
             <button
               type="submit"
               form={formId}
-              disabled={saveStatus === "saving" || saveDisabled}
+              disabled={saveStatus === 'saving' || saveDisabled}
               className={`px-4 py-1.5 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 transition-colors duration-200 ${
-                saveStatus === "saved"
-                  ? "bg-green-600"
-                  : saveStatus === "error"
-                    ? "bg-red-600"
-                    : "bg-primary-600 hover:bg-primary-700"
+                saveStatus === 'saved'
+                  ? 'bg-green-600'
+                  : saveStatus === 'error'
+                    ? 'bg-red-600'
+                    : 'bg-primary-600 hover:bg-primary-700'
               }`}
             >
-              {saveStatus === "saving" ? (
+              {saveStatus === 'saving' ? (
                 <span className="inline-flex items-center gap-1.5">
                   <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                   </svg>
                   Saving...
                 </span>
-              ) : saveStatus === "saved" ? (
+              ) : saveStatus === 'saved' ? (
                 <span className="inline-flex items-center gap-1.5">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   Saved
                 </span>
-              ) : saveStatus === "error" ? (
-                "Save failed"
+              ) : saveStatus === 'error' ? (
+                'Save failed'
               ) : (
-                "Save Changes"
+                'Save Changes'
               )}
             </button>
           )}
@@ -140,7 +152,10 @@ export default function DetailPanelWrapper({
         <ConfirmDialog
           open={showDeleteConfirm}
           title={deleteTitle}
-          message={deleteMessage || `Are you sure you want to delete "${title}"? This action cannot be undone.`}
+          message={
+            deleteMessage ||
+            `Are you sure you want to delete "${title}"? This action cannot be undone.`
+          }
           confirmLabel="Delete"
           onConfirm={() => {
             setShowDeleteConfirm(false);

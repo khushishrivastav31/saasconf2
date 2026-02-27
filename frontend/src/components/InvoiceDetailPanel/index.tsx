@@ -15,11 +15,11 @@ import type {
 } from '../../types';
 
 const STATUS_COLORS: Record<InvoiceStatus, string> = {
-  draft: 'bg-gray-100 text-gray-800',
-  sent: 'bg-blue-100 text-blue-800',
-  paid: 'bg-green-100 text-green-800',
-  overdue: 'bg-red-100 text-red-800',
-  cancelled: 'bg-yellow-100 text-yellow-800',
+  draft: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
+  sent: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+  paid: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+  overdue: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
+  cancelled: 'bg-yellow-100 dark:bg-amber-900/30 text-yellow-800 dark:text-amber-300',
 };
 
 interface InvoiceDetailPanelProps {
@@ -211,18 +211,22 @@ export default function InvoiceDetailPanel({
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow flex flex-col h-full">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow flex flex-col h-full">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="mb-4">
-          <h3 className="text-lg font-medium text-gray-900">{invoice.invoice_number}</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            {invoice.invoice_number}
+          </h3>
           <div className="flex items-center gap-2 mt-1">
             <span
               className={`px-2 py-0.5 text-xs font-semibold rounded-full ${STATUS_COLORS[invoice.status]}`}
             >
               {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
             </span>
-            <span className="text-sm text-gray-500">{invoice.recipient_name}</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {invoice.recipient_name}
+            </span>
           </div>
         </div>
 
@@ -236,7 +240,7 @@ export default function InvoiceDetailPanel({
               className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? 'border-primary-600 text-primary-600 bg-primary-50'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               {tab.label}
@@ -283,7 +287,7 @@ export default function InvoiceDetailPanel({
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center flex-shrink-0">
+      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center flex-shrink-0">
         {onDelete && (
           <button
             type="button"

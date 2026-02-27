@@ -58,7 +58,7 @@ function PortalAttachmentDisplay({
       className={`flex items-center gap-2 text-xs px-2.5 py-1.5 rounded mt-1 ${
         isMe
           ? 'bg-blue-500/30 text-blue-100 hover:bg-blue-500/50'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
       }`}
     >
       <svg
@@ -209,7 +209,7 @@ export default function MessagesPage() {
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Messages</h1>
           <button
             onClick={() => {
               setShowArchived(!showArchived);
@@ -219,7 +219,7 @@ export default function MessagesPage() {
             className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
               showArchived
                 ? 'bg-gray-700 text-white'
-                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
           >
             {showArchived ? 'Showing Archived' : 'Archived'}
@@ -232,7 +232,7 @@ export default function MessagesPage() {
           New Message
         </button>
       </div>
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="flex" style={{ height: 'calc(100vh - 220px)' }}>
           {/* Thread list */}
           <div
@@ -241,20 +241,22 @@ export default function MessagesPage() {
             }`}
           >
             {isLoading ? (
-              <div className="p-8 text-center text-gray-400 text-sm">Loading...</div>
+              <div className="p-8 text-center text-gray-400 dark:text-gray-500 text-sm">
+                Loading...
+              </div>
             ) : threads.length === 0 ? (
-              <div className="p-8 text-center text-gray-500 text-sm">
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
                 {showArchived
                   ? 'No archived messages.'
                   : 'No messages yet. Click "New Message" to start a conversation.'}
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
                 {threads.map((thread) => (
                   <div key={thread.id} className="relative group">
                     <button
                       onClick={() => handleSelectThread(thread.id)}
-                      className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                      className={`w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                         selectedThreadId === thread.id
                           ? 'bg-blue-50 border-l-2 border-l-blue-600'
                           : ''
@@ -268,19 +270,19 @@ export default function MessagesPage() {
                           <span
                             className={`text-sm truncate ${
                               thread.unread
-                                ? 'font-semibold text-gray-900'
-                                : 'font-medium text-gray-800'
+                                ? 'font-semibold text-gray-900 dark:text-gray-100'
+                                : 'font-medium text-gray-800 dark:text-gray-200'
                             }`}
                           >
                             {thread.subject}
                           </span>
                         </div>
-                        <span className="text-xs text-gray-400 flex-shrink-0">
+                        <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
                           {formatRelativeDate(thread.last_message_at)}
                         </span>
                       </div>
                       {thread.last_message_preview && (
-                        <p className="text-xs text-gray-400 truncate">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
                           {thread.last_message_preview}
                         </p>
                       )}
@@ -294,7 +296,7 @@ export default function MessagesPage() {
                           archive: !thread.archived_at,
                         });
                       }}
-                      className="absolute top-2 right-2 p-1 rounded bg-white shadow-sm border border-gray-200 text-gray-400 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-2 right-2 p-1 rounded bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
                       title={thread.archived_at ? 'Unarchive' : 'Archive'}
                     >
                       <svg
@@ -322,13 +324,13 @@ export default function MessagesPage() {
             {selectedThreadId && threadDetail ? (
               <>
                 {/* Header */}
-                <div className="flex items-center gap-3 px-5 py-3 border-b bg-white">
+                <div className="flex items-center gap-3 px-5 py-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800">
                   <button
                     onClick={() => {
                       setSelectedThreadId(null);
                       setSearchParams({});
                     }}
-                    className="text-gray-400 hover:text-gray-600 lg:hidden"
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 lg:hidden"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -340,10 +342,12 @@ export default function MessagesPage() {
                     </svg>
                   </button>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                       {threadDetail.subject}
                     </h3>
-                    <p className="text-xs text-gray-500">Conversation with Organizer</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Conversation with Organizer
+                    </p>
                   </div>
                   {/* Archive button */}
                   <button
@@ -355,8 +359,8 @@ export default function MessagesPage() {
                     }
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
                       isArchived
-                        ? 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100'
-                        : 'text-gray-600 bg-gray-50 border-gray-200 hover:bg-gray-100'
+                        ? 'text-blue-700 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 hover:bg-blue-100'
+                        : 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >
                     <svg
@@ -377,7 +381,7 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50">
+                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50 dark:bg-gray-900">
                   {threadDetail.messages.map((msg) => {
                     const isMe = msg.sender.type === 'applicant' && msg.sender.id === applicant?.id;
                     const readers = isMe ? getSeenInfo(msg.created_at) : [];
@@ -391,18 +395,20 @@ export default function MessagesPage() {
                           className={`max-w-[75%] rounded-lg px-4 py-3 ${
                             isMe
                               ? 'bg-blue-600 text-white'
-                              : 'bg-white border border-gray-200 shadow-sm'
+                              : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm'
                           }`}
                         >
                           <div className="flex items-center gap-2 mb-1">
                             <span
                               className={`text-xs font-medium ${
-                                isMe ? 'text-blue-100' : 'text-gray-700'
+                                isMe ? 'text-blue-100' : 'text-gray-700 dark:text-gray-300'
                               }`}
                             >
                               {isMe ? 'You' : `${msg.sender.first_name} ${msg.sender.last_name}`}
                             </span>
-                            <span className={`text-xs ${isMe ? 'text-blue-200' : 'text-gray-400'}`}>
+                            <span
+                              className={`text-xs ${isMe ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'}`}
+                            >
                               {formatDateTime(msg.created_at)}
                             </span>
                           </div>
@@ -440,7 +446,7 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Reply */}
-                <div className="border-t bg-white px-5 py-3">
+                <div className="border-t dark:border-gray-700 bg-white dark:bg-gray-800 px-5 py-3">
                   <RichTextEditor
                     value={replyHtml}
                     onChange={setReplyHtml}

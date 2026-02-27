@@ -42,6 +42,18 @@ SaaSConf is a **multi-tenant SaaS platform** for conference management. Each ten
 - **Close sidebar on navigate**: All sidebar `<Link>` clicks must call `setSidebarOpen(false)` for mobile UX
 - **Reference implementation**: MessagesPage.tsx has the best responsive pattern (list/detail toggle with `hidden lg:block`)
 
+### Dark Mode Rules
+- **Class-based dark mode** — Tailwind v4 `@custom-variant dark` with `.dark` class on `<html>`
+- **ThemeContext** manages preference state, localStorage persistence, and `<html>` class toggling
+- **FOUC prevention** — `public/theme-init.js` runs before React to apply `.dark` class from localStorage
+- **DB persistence** — `theme_preference` column (nullable varchar(5)) on both `users` and `cfp_applicants`: `'light'`, `'dark'`, or `NULL` (system)
+- **Color mapping** — always add `dark:` counterparts when using gray/white backgrounds and text: `bg-white` → + `dark:bg-gray-800`, `text-gray-900` → + `dark:text-gray-100`, etc.
+- **Semantic colors** — status colors (red, green, blue, amber) use `/30` opacity in dark: `bg-red-50` → + `dark:bg-red-900/30`
+- **Sidebar stays dark** — both layout sidebars use `bg-gray-900` + light text, unchanged in dark mode
+- **Primary colors unchanged** — `bg-primary-600` buttons, focus rings, links work in both themes
+- **Login pages** — ThemeToggle without API persistence (no user logged in yet)
+- **New components must include dark: variants** — every new `.tsx` file must use dark mode classes from the start
+
 ## Registration Module
 
 ### Session Selection
@@ -280,6 +292,27 @@ All nested under `/conferences/{id}/sponsors/{sponsor_id}/contract`:
 - Auth helper: `_make_token(user, modules)` creates JWT tokens; `auth_headers(token)` wraps in Bearer header
 - Rate limiting disabled globally in tests via `RATELIMIT_ENABLED=false` env var
 - 745+ backend tests, all passing
+
+## Development Process
+
+### Steps Documentation
+- **Every feature must be planned before implementation** — use plan mode to document the approach, affected files, and execution order
+- **Document each step** — when implementing multi-file changes, track progress with todo lists and mark tasks complete as they are done
+- **Migration documentation** — every new migration must include a docstring explaining what it does, the `down_revision`, and the `Create Date`
+
+### Testing Requirements
+- **Every new feature must include tests** — both backend (pytest) and frontend (vitest) tests are required
+- **Backend tests**: Add test cases for new API endpoints, schema validation, and business logic in `backend/tests/`
+- **Frontend tests**: Add tests for new hooks, contexts, and components in co-located `__tests__/` directories
+- **Modify existing tests** when behavior changes — if a schema adds a new field, update any test asserting on field counts or response shapes
+- **Run all tests before committing** — `cd backend && pytest` and `cd frontend && npx vitest run`
+- **Never commit with failing tests** — fix the tests first, then commit
+
+### Validation Requirements
+- **Backend validation** — every new field must have appropriate validation in Pydantic schemas (type constraints, allowed values, string lengths)
+- **Frontend validation** — form inputs must validate before submission; use existing validators from `frontend/src/utils/validators.ts`
+- **API input validation** — never trust client input; validate at the API boundary in FastAPI endpoints
+- **Database constraints** — use appropriate column constraints (nullable, string length, check constraints) in migrations
 
 ## Improvement Progress
 

@@ -3,6 +3,11 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Login from '../Login';
 
+// Mock ThemeToggle (Login renders it, but these tests don't test theme)
+vi.mock('../../components/ThemeToggle', () => ({
+  default: () => <button aria-label="theme-toggle">Theme</button>,
+}));
+
 // Mock react-router
 const mockNavigate = vi.fn();
 

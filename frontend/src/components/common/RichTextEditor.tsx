@@ -217,7 +217,7 @@ export default function RichTextEditor({
 
   return (
     <div
-      className={`border border-gray-300 rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-primary-500 focus-within:border-primary-500 ${disabled ? 'opacity-50 bg-gray-100' : 'bg-white'} ${className}`}
+      className={`border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-primary-500 focus-within:border-primary-500 ${disabled ? 'opacity-50 bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'} ${className}`}
     >
       {/* Toolbar */}
       <EditorToolbar
@@ -239,14 +239,14 @@ export default function RichTextEditor({
 
       {/* Character counter */}
       {maxLength != null && (
-        <div className="flex justify-end px-3 py-1 border-t border-gray-200 bg-gray-50">
+        <div className="flex justify-end px-3 py-1 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
           <span
             className={`text-xs ${
               charCount > maxLength
                 ? 'text-red-600 font-medium'
                 : charCount > maxLength * 0.9
                   ? 'text-yellow-600'
-                  : 'text-gray-400'
+                  : 'text-gray-400 dark:text-gray-500'
             }`}
           >
             {charCount} / {maxLength}

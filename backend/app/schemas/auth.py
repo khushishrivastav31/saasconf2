@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class LoginRequest(BaseModel):
@@ -45,11 +45,20 @@ class UserResponse(BaseModel):
     is_active: bool
     is_tenant_super_user: bool = False
     message_notifications_enabled: bool = True
+    theme_preference: str | None = None
     last_login: datetime | None
     created_at: datetime
 
 
 class UserPreferencesUpdate(BaseModel):
-    """Update user preferences (notification settings, etc.)."""
+    """Update user preferences (notification settings, theme, etc.)."""
 
     message_notifications_enabled: bool | None = None
+    theme_preference: str | None = None
+
+    @field_validator("theme_preference")
+    @classmethod
+    def validate_theme(cls, v: str | None) -> str | None:
+        if v is not None and v not in ("light", "dark"):
+            return None
+        return v

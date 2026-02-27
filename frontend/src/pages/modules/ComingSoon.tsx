@@ -1,9 +1,9 @@
 export default function ComingSoon({ moduleName }: { moduleName: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20">
-      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
         <svg
-          className="w-8 h-8 text-gray-400"
+          className="w-8 h-8 text-gray-400 dark:text-gray-500"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -16,8 +16,8 @@ export default function ComingSoon({ moduleName }: { moduleName: string }) {
           />
         </svg>
       </div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">{moduleName}</h2>
-      <p className="text-gray-500 text-sm">This module is coming soon.</p>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{moduleName}</h2>
+      <p className="text-gray-500 dark:text-gray-400 text-sm">This module is coming soon.</p>
     </div>
   );
 }

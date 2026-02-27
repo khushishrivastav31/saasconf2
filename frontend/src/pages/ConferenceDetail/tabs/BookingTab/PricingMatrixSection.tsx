@@ -118,8 +118,10 @@ export default function PricingMatrixSection({
     <>
       <div className="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Booking Options</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Booking Options
+          </h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {days.length > 0
               ? 'Options are created from your conference days. Set pricing per period.'
               : 'Define attendee options and pricing periods for this conference.'}
@@ -129,7 +131,7 @@ export default function PricingMatrixSection({
           <div className="mt-3 sm:mt-0 flex gap-2">
             <button
               onClick={onAddPeriod}
-              className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              className="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               + Period
             </button>
@@ -145,9 +147,9 @@ export default function PricingMatrixSection({
 
       {/* Pricing Matrix Table */}
       {periods.length === 0 && options.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -159,7 +161,9 @@ export default function PricingMatrixSection({
               d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
             />
           </svg>
-          <p className="mt-2 text-sm text-gray-500">No booking options defined yet.</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            No booking options defined yet.
+          </p>
           <p className="text-sm text-gray-400">
             Add periods (columns) and options (rows) to build your pricing matrix.
           </p>

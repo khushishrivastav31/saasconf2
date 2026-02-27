@@ -72,9 +72,9 @@ const MemberListRow = memo(function MemberListRow({
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
+      className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
     >
-      <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
+      <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800">
         {imgSrc ? (
           <img
             src={imgSrc}
@@ -91,22 +91,22 @@ const MemberListRow = memo(function MemberListRow({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-gray-900 truncate">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
             {member.first_name} {member.last_name}
           </p>
           {member.role && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
               {member.role}
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-500 truncate">{member.email}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.email}</p>
         {member.topics && member.topics.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {member.topics.map((t) => (
               <span
                 key={t.id}
-                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-600"
+                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 dark:bg-red-900/30 text-red-600"
               >
                 {t.name}
               </span>
@@ -115,12 +115,12 @@ const MemberListRow = memo(function MemberListRow({
         )}
       </div>
       {member.company && (
-        <span className="hidden sm:block text-xs text-gray-400 flex-shrink-0">
+        <span className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
           {member.company}
         </span>
       )}
       <svg
-        className="w-4 h-4 text-gray-300 flex-shrink-0"
+        className="w-4 h-4 text-gray-300 dark:text-gray-600 flex-shrink-0"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -139,9 +139,9 @@ function ReadOnlyUserInfo({ member }: { member: CommitteeMember }) {
   const imgSrc = useAuthMedia(member.picture_url);
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+    <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md p-4">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
+        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800">
           {imgSrc ? (
             <img
               src={imgSrc}
@@ -157,12 +157,14 @@ function ReadOnlyUserInfo({ member }: { member: CommitteeMember }) {
           )}
         </div>
         <div>
-          <p className="text-sm font-medium text-gray-900">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
             {member.first_name} {member.last_name}
           </p>
-          <p className="text-xs text-gray-500">{member.email}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{member.email}</p>
         </div>
-        {member.company && <span className="text-xs text-gray-400 ml-auto">{member.company}</span>}
+        {member.company && (
+          <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">{member.company}</span>
+        )}
       </div>
     </div>
   );
@@ -323,14 +325,14 @@ function MemberForm({
       {/* Mode toggle — only when creating */}
       {!isEditing && (
         <div>
-          <div className="flex rounded-md border border-gray-300 overflow-hidden w-fit">
+          <div className="flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden w-fit">
             <button
               type="button"
               onClick={() => setFormData((d) => ({ ...d, mode: 'link', applicant_id: null }))}
               className={`px-4 py-2 text-sm font-medium transition-colors ${
                 formData.mode === 'link'
                   ? 'bg-primary-50 text-primary-700 border-r border-primary-200'
-                  : 'bg-white text-gray-600 hover:bg-gray-50 border-r border-gray-300'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border-r border-gray-300 dark:border-gray-600'
               }`}
             >
               Link Existing User
@@ -341,7 +343,7 @@ function MemberForm({
               className={`px-4 py-2 text-sm font-medium transition-colors ${
                 formData.mode === 'create'
                   ? 'bg-primary-50 text-primary-700'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
               Create New User
@@ -353,7 +355,7 @@ function MemberForm({
       {/* Link existing user mode */}
       {!isEditing && formData.mode === 'link' && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Select User <span className="text-red-500">*</span>
           </label>
           <input
@@ -361,9 +363,9 @@ function MemberForm({
             value={applicantSearch}
             onChange={(e) => setApplicantSearch(e.target.value)}
             placeholder="Search by name or email..."
-            className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 mb-2"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 mb-2"
           />
-          <div className="border border-gray-200 rounded-md max-h-48 overflow-y-auto">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-md max-h-48 overflow-y-auto">
             {filteredApplicants.length > 0 ? (
               filteredApplicants.map((a) => (
                 <button
@@ -375,10 +377,10 @@ function MemberForm({
                       applicant_id: d.applicant_id === a.id ? null : a.id,
                     }))
                   }
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-left text-sm transition-colors border-b border-gray-100 last:border-b-0 ${
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left text-sm transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
                     formData.applicant_id === a.id
                       ? 'bg-primary-50 text-primary-900'
-                      : 'hover:bg-gray-50 text-gray-700'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                 >
                   <div className="w-7 h-7 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
@@ -390,7 +392,7 @@ function MemberForm({
                     <p className="font-medium truncate">
                       {a.first_name} {a.last_name}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">{a.email}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{a.email}</p>
                   </div>
                   {formData.applicant_id === a.id && (
                     <svg
@@ -410,7 +412,7 @@ function MemberForm({
                 </button>
               ))
             ) : (
-              <div className="px-3 py-4 text-center text-sm text-gray-400">
+              <div className="px-3 py-4 text-center text-sm text-gray-400 dark:text-gray-500">
                 {applicantSearch ? 'No users match your search.' : 'No users available.'}
               </div>
             )}
@@ -422,43 +424,45 @@ function MemberForm({
       {!isEditing && formData.mode === 'create' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               First Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={formData.first_name}
               onChange={(e) => setFormData((d) => ({ ...d, first_name: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Last Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={formData.last_name}
               onChange={(e) => setFormData((d) => ({ ...d, last_name: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Email <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData((d) => ({ ...d, email: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Phone
+            </label>
             <input
               type="tel"
               value={formData.phone}
@@ -475,14 +479,14 @@ function MemberForm({
             {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Password <span className="text-red-500">*</span>
             </label>
             <input
               type="password"
               value={formData.password}
               onChange={(e) => setFormData((d) => ({ ...d, password: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               required
               minLength={6}
             />
@@ -495,11 +499,13 @@ function MemberForm({
 
       {/* Role */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Role
+        </label>
         <select
           value={formData.role}
           onChange={(e) => setFormData((d) => ({ ...d, role: e.target.value }))}
-          className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
         >
           <option value="">Select a role…</option>
           {availableRoles.map((r) => (
@@ -513,8 +519,12 @@ function MemberForm({
       {/* Topics */}
       {allTopics.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Excluded Topics</label>
-          <p className="text-xs text-gray-500 mb-2">Select topics this member cannot review</p>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Excluded Topics
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            Select topics this member cannot review
+          </p>
           <div className="flex flex-wrap gap-2">
             {allTopics.map((topic) => {
               const checked = formData.topic_ids.includes(topic.id);
@@ -523,8 +533,8 @@ function MemberForm({
                   key={topic.id}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm cursor-pointer transition-colors border ${
                     checked
-                      ? 'bg-red-50 border-red-300 text-red-700'
-                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                      ? 'bg-red-50 dark:bg-red-900/30 border-red-300 text-red-700 dark:text-red-300'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
                   <input
@@ -549,14 +559,14 @@ function MemberForm({
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
         <div>
           {isEditing && onDelete && (
             <button
               type="button"
               onClick={onDelete}
               disabled={isDeleting}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
             >
               <DeleteIcon />
               {isDeleting ? 'Removing...' : 'Remove from Committee'}
@@ -567,7 +577,7 @@ function MemberForm({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>
@@ -753,19 +763,19 @@ export default function CFPProgramCommittee({
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {isAdding
               ? 'Add Committee Member'
               : selectedMember
                 ? `${selectedMember.first_name} ${selectedMember.last_name}`
                 : 'Program Committee'}
             {!isAdding && !selectedMember && memberCount > 0 && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                 {memberCount}
               </span>
             )}
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {isAdding
               ? 'Link an existing user or create a new one.'
               : selectedMember
@@ -818,13 +828,13 @@ export default function CFPProgramCommittee({
           conferenceId={conferenceId}
         />
       ) : members.length > 0 ? (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
           {members.map((m) => (
             <MemberListRow key={m.id} member={m} onClick={() => setSelectedMemberId(m.id)} />
           ))}
         </div>
       ) : (
-        <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+        <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
           No committee members yet. Click "+ Add Member" to get started.
         </div>
       )}

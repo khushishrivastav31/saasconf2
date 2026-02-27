@@ -109,10 +109,14 @@ function InfoPage() {
     return (
       <div>
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">{conference?.name ?? 'Info'}</h2>
-          <p className="text-sm text-gray-500">Conference guidelines and information.</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            {conference?.name ?? 'Info'}
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Conference guidelines and information.
+          </p>
         </div>
-        <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+        <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
           No information available for this conference.
         </div>
       </div>
@@ -122,8 +126,12 @@ function InfoPage() {
   return (
     <div>
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">{conference.name}</h2>
-        <p className="text-sm text-gray-500">Conference guidelines and information.</p>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {conference.name}
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Conference guidelines and information.
+        </p>
       </div>
 
       {/* CFP selector (only if multiple CFPs) */}
@@ -132,7 +140,7 @@ function InfoPage() {
           <select
             value={selectedCfpId}
             onChange={(e) => handleCfpChange(e.target.value)}
-            className="text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           >
             {cfps.map((cfp) => (
               <option key={cfp.id} value={cfp.id}>
@@ -144,7 +152,7 @@ function InfoPage() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav className="-mb-px flex space-x-8 overflow-x-auto">
           {visibleTabs.map((tab) => (
             <button
@@ -153,7 +161,7 @@ function InfoPage() {
               className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               {tab.label}
@@ -163,18 +171,20 @@ function InfoPage() {
       </div>
 
       {/* Tab content */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         {tabContent && tabContent.trim() ? (
           <div
             className="prose prose-sm max-w-none"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(tabContent) }}
           />
         ) : activeTab === 'code_of_conduct' ? (
-          <p className="text-sm text-gray-500 italic">
+          <p className="text-sm text-gray-500 dark:text-gray-400 italic">
             No Code of Conduct has been published yet. Please check back later.
           </p>
         ) : (
-          <p className="text-sm text-gray-400">No content available for this section.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">
+            No content available for this section.
+          </p>
         )}
       </div>
     </div>

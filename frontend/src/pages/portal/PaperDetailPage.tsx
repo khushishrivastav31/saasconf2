@@ -315,7 +315,9 @@ function PaperDetailPage() {
   }
 
   if (!paper) {
-    return <div className="text-center py-12 text-gray-500">Paper not found.</div>;
+    return (
+      <div className="text-center py-12 text-gray-500 dark:text-gray-400">Paper not found.</div>
+    );
   }
 
   const isDraft = paper.status === 'draft';
@@ -325,19 +327,19 @@ function PaperDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {isEditing ? 'Edit Paper' : paper.title}
             {!paper.is_main_speaker && (
-              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700 align-middle">
+              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 align-middle">
                 Co-speaker
               </span>
             )}
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {isEditing ? 'Edit the paper details below.' : 'View paper details.'}
             {!paper.is_main_speaker &&
               (paper.main_speaker_first_name || paper.main_speaker_last_name) && (
-                <span className="ml-2 text-gray-400">
+                <span className="ml-2 text-gray-400 dark:text-gray-500">
                   Main speaker:{' '}
                   {`${paper.main_speaker_first_name || ''} ${paper.main_speaker_last_name || ''}`.trim()}
                 </span>
@@ -390,17 +392,17 @@ function PaperDetailPage() {
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700 mb-4">
+        <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300 mb-4">
           {error}
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         {/* Status lifeline */}
         <div className="mb-6">
           <PaperStatusLifeline status={paper.status} />
           {paper.conference_name && (
-            <p className="text-xs text-gray-500 mt-2">{paper.conference_name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{paper.conference_name}</p>
           )}
         </div>
 
@@ -408,7 +410,7 @@ function PaperDetailPage() {
           <div className="space-y-5">
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Title <span className="text-red-500">*</span>
               </label>
               <input
@@ -416,18 +418,20 @@ function PaperDetailPage() {
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 maxLength={500}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
 
             {/* Session Type */}
             {conferenceDetail && conferenceDetail.session_types.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Session Type</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Session Type
+                </label>
                 <select
                   value={editSessionTypeId}
                   onChange={(e) => setEditSessionTypeId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="">Select session type</option>
                   {conferenceDetail.session_types.map((st) => (
@@ -441,11 +445,13 @@ function PaperDetailPage() {
 
             {/* Level */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Level</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Level
+              </label>
               <select
                 value={editLevel}
                 onChange={(e) => setEditLevel(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">Select level...</option>
                 <option value="beginner">Beginner</option>
@@ -457,7 +463,9 @@ function PaperDetailPage() {
 
             {/* Short Abstract */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Short Abstract</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Short Abstract
+              </label>
               <RichTextEditor
                 value={editAbstractShort}
                 onChange={(html) => setEditAbstractShort(html)}
@@ -469,7 +477,7 @@ function PaperDetailPage() {
 
             {/* Long Abstract */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Detailed Abstract
               </label>
               <RichTextEditor
@@ -483,7 +491,7 @@ function PaperDetailPage() {
 
             {/* Learning Objectives */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Learning Objectives
               </label>
               <RichTextEditor
@@ -497,7 +505,7 @@ function PaperDetailPage() {
 
             {/* Why Important */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Why is this talk important?
               </label>
               <RichTextEditor
@@ -511,7 +519,9 @@ function PaperDetailPage() {
 
             {/* Video */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Video</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Video
+              </label>
               <div className="flex items-start gap-4">
                 <button
                   type="button"
@@ -574,9 +584,9 @@ function PaperDetailPage() {
                     type="file"
                     accept={ACCEPTED_VIDEO_FORMATS}
                     onChange={handleVideoChange}
-                    className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                    className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
                   />
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                     MP4, MOV, WebM, AVI, or MKV. Max 50MB.
                   </p>
                   {videoError && <p className="mt-1 text-xs text-red-600">{videoError}</p>}
@@ -587,8 +597,9 @@ function PaperDetailPage() {
             {/* Co-speakers (only main speaker can manage) */}
             {paper.is_main_speaker && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Co-speakers <span className="text-gray-400 font-normal">(max 3)</span>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Co-speakers{' '}
+                  <span className="text-gray-400 dark:text-gray-500 font-normal">(max 3)</span>
                 </label>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
@@ -601,7 +612,7 @@ function PaperDetailPage() {
                         handleAddCospeaker();
                       }
                     }}
-                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                     placeholder="Co-speaker email"
                     disabled={cospeakerEmails.length >= 3}
                   />
@@ -609,7 +620,7 @@ function PaperDetailPage() {
                     type="button"
                     onClick={handleAddCospeaker}
                     disabled={cospeakerEmails.length >= 3}
-                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm disabled:opacity-50"
+                    className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
                   >
                     Add
                   </button>
@@ -661,18 +672,18 @@ function PaperDetailPage() {
                   </div>
                 )}
                 {cospeakerEmails.length > 0 && (
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                     {cospeakerEmails.length}/3 co-speakers selected
                   </p>
                 )}
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   Co-speakers must be registered on this platform. They will receive an invitation.
                 </p>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
               <div>
                 {paper.is_main_speaker && (
                   <button
@@ -696,7 +707,7 @@ function PaperDetailPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>
@@ -769,15 +780,21 @@ function PaperDetailPage() {
             {/* Read-only fields */}
             {paper.session_type_name && (
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase">Session Type</dt>
-                <dd className="text-sm text-gray-900 mt-0.5">{paper.session_type_name}</dd>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  Session Type
+                </dt>
+                <dd className="text-sm text-gray-900 dark:text-gray-100 mt-0.5">
+                  {paper.session_type_name}
+                </dd>
               </div>
             )}
 
             {paper.level && (
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase">Level</dt>
-                <dd className="text-sm text-gray-900 mt-0.5 capitalize">
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  Level
+                </dt>
+                <dd className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 capitalize">
                   {paper.level.replace('_', ' ')}
                 </dd>
               </div>
@@ -785,9 +802,11 @@ function PaperDetailPage() {
 
             {paper.abstract_short && (
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase">Short Abstract</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  Short Abstract
+                </dt>
                 <dd
-                  className="text-sm text-gray-900 mt-0.5 prose prose-sm max-w-none"
+                  className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: sanitizeHtml(paper.abstract_short),
                   }}
@@ -797,9 +816,11 @@ function PaperDetailPage() {
 
             {paper.abstract_long && (
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase">Detailed Abstract</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  Detailed Abstract
+                </dt>
                 <dd
-                  className="text-sm text-gray-900 mt-0.5 prose prose-sm max-w-none"
+                  className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: sanitizeHtml(paper.abstract_long),
                   }}
@@ -809,9 +830,11 @@ function PaperDetailPage() {
 
             {paper.learning_objectives && (
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase">Learning Objectives</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  Learning Objectives
+                </dt>
                 <dd
-                  className="text-sm text-gray-900 mt-0.5 prose prose-sm max-w-none"
+                  className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: sanitizeHtml(paper.learning_objectives),
                   }}
@@ -821,9 +844,11 @@ function PaperDetailPage() {
 
             {paper.importance && (
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase">Importance</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  Importance
+                </dt>
                 <dd
-                  className="text-sm text-gray-900 mt-0.5 prose prose-sm max-w-none"
+                  className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: sanitizeHtml(paper.importance),
                   }}
@@ -834,7 +859,9 @@ function PaperDetailPage() {
             {/* Video (read-only display) */}
             {videoPreviewSrc && (
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase mb-2">Video</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">
+                  Video
+                </dt>
                 <button
                   type="button"
                   onClick={() =>
@@ -870,7 +897,9 @@ function PaperDetailPage() {
             {/* Co-speakers */}
             {paper.cospeakers.length > 0 && (
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase mb-2">Co-speakers</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">
+                  Co-speakers
+                </dt>
                 <div className="flex flex-wrap gap-2">
                   {paper.cospeakers.map((cs) => (
                     <span
@@ -891,7 +920,7 @@ function PaperDetailPage() {
             )}
 
             {paper.submitted_at && (
-              <div className="pt-4 border-t border-gray-100 text-xs text-gray-400">
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500">
                 Submitted on {formatDate(paper.submitted_at)}
               </div>
             )}
@@ -901,16 +930,23 @@ function PaperDetailPage() {
 
       {/* Reviewer Feedback Section */}
       {feedbackData && feedbackData.items.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Reviewer Feedback</h2>
-          <p className="text-sm text-gray-500 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Reviewer Feedback
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Anonymous feedback from program committee reviewers.
           </p>
           <div className="space-y-4">
             {feedbackData.items.map((feedback, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div
+                key={index}
+                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900"
+              >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Reviewer {index + 1}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Reviewer {index + 1}
+                  </span>
                   {feedback.total_score != null && (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
                       Score: {feedback.total_score.toFixed(1)}
@@ -929,7 +965,7 @@ function PaperDetailPage() {
 
       <button
         onClick={() => navigate(`${basePath}/dashboard`)}
-        className="mt-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+        className="mt-4 inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

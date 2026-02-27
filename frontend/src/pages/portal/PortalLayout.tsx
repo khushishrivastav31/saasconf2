@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
 import portalApi from '../../config/portalApi';
 import ConferenceLogo from '../../components/ConferenceLogo';
+import ThemeToggle from '../../components/ThemeToggle';
 
 const ScreenOverlayDisplay = lazy(() => import('../../components/portal/ScreenOverlayDisplay'));
 import type {
@@ -190,7 +191,7 @@ function PortalLayout() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
       </div>
     );
@@ -265,7 +266,7 @@ function PortalLayout() {
   const conferencesWithCfps = (conferences ?? []).filter((c) => c.cfps.length > 0);
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 bg-gray-900 flex flex-col transform transition-all duration-200 ease-in-out ${
@@ -506,10 +507,10 @@ function PortalLayout() {
       {/* Main content */}
       <div className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
         {/* Header */}
-        <header className="sticky top-0 z-40 bg-white shadow">
+        <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <button
-              className="lg:hidden -ml-2 p-2 text-gray-500 hover:text-gray-700 rounded-md"
+              className="lg:hidden -ml-2 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded-md"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -522,9 +523,12 @@ function PortalLayout() {
               </svg>
             </button>
             <div className="flex items-center gap-4">
+              <ThemeToggle
+                onPersist={(t) => portalApi.put('/portal/me', { theme_preference: t })}
+              />
               <Link
                 to={`${basePath}/messages`}
-                className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                className="relative p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
                 title={unreadCount > 0 ? `${unreadCount} unread message(s)` : 'Messages'}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -542,12 +546,15 @@ function PortalLayout() {
                 )}
               </Link>
               <div className="text-sm">
-                <p className="font-medium text-gray-900">
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {`${applicant.first_name} ${applicant.last_name}`.trim()}
                 </p>
-                <p className="text-gray-500 text-xs">{applicant.email}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">{applicant.email}</p>
               </div>
-              <button onClick={logout} className="text-sm text-gray-500 hover:text-gray-700">
+              <button
+                onClick={logout}
+                className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              >
                 Logout
               </button>
             </div>

@@ -31,16 +31,16 @@ export default function Modal({
       aria-labelledby={titleId}
     >
       <div
-        className={`bg-white rounded-lg shadow-xl ${size} w-full mx-4 max-h-[90vh] overflow-y-auto`}
+        className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl ${size} w-full mx-4 max-h-[90vh] overflow-y-auto`}
       >
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 id={titleId} className="text-lg font-medium text-gray-900">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <h3 id={titleId} className="text-lg font-medium text-gray-900 dark:text-gray-100">
             {title}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 focus:outline-none"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-500 focus:outline-none"
             aria-label="Close dialog"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

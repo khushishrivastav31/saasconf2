@@ -36,6 +36,7 @@ export interface ApplicantProfile {
   accessibility_details: string | null;
   agrees_to_recording: boolean;
   message_notifications_enabled: boolean;
+  theme_preference: 'light' | 'dark' | null;
   picture_url: string | null;
   video_url: string | null;
   created_at: string;
@@ -54,6 +55,7 @@ export interface ApplicantProfileUpdate {
   accessibility_details?: string;
   agrees_to_recording?: boolean;
   message_notifications_enabled?: boolean;
+  theme_preference?: 'light' | 'dark' | null;
 }
 
 // --- Conference / CFP ---

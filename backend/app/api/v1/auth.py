@@ -323,6 +323,7 @@ async def get_current_user_info(
         is_active=user.is_active,
         is_tenant_super_user=is_tenant_super_user,
         message_notifications_enabled=user.message_notifications_enabled,
+        theme_preference=user.theme_preference,
         last_login=user.last_login,
         created_at=user.created_at,
     )
@@ -334,7 +335,7 @@ async def update_user_preferences(
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> UserResponse:
-    """Update current user's preferences (notification settings)."""
+    """Update current user's preferences (notification settings, theme)."""
     result = await db.execute(select(User).where(User.id == current_user.user_id))
     user = result.scalar_one_or_none()
     if not user:
@@ -342,6 +343,9 @@ async def update_user_preferences(
 
     if data.message_notifications_enabled is not None:
         user.message_notifications_enabled = data.message_notifications_enabled
+
+    if "theme_preference" in data.model_fields_set:
+        user.theme_preference = data.theme_preference if data.theme_preference in ("light", "dark") else None
 
     await db.commit()
     await db.refresh(user)

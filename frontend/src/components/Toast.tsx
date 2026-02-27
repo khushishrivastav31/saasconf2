@@ -42,27 +42,27 @@ function ToastMessage({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: 
     { bg: string; border: string; text: string; icon: string }
   > = {
     error: {
-      bg: 'bg-red-50',
+      bg: 'bg-red-50 dark:bg-red-900/30',
       border: 'border-red-300',
-      text: 'text-red-800',
+      text: 'text-red-800 dark:text-red-300',
       icon: 'text-red-500',
     },
     success: {
-      bg: 'bg-green-50',
+      bg: 'bg-green-50 dark:bg-green-900/30',
       border: 'border-green-300',
-      text: 'text-green-800',
+      text: 'text-green-800 dark:text-green-300',
       icon: 'text-green-500',
     },
     warning: {
-      bg: 'bg-amber-50',
+      bg: 'bg-amber-50 dark:bg-amber-900/30',
       border: 'border-amber-300',
-      text: 'text-amber-800',
+      text: 'text-amber-800 dark:text-amber-300',
       icon: 'text-amber-500',
     },
     info: {
-      bg: 'bg-blue-50',
+      bg: 'bg-blue-50 dark:bg-blue-900/30',
       border: 'border-blue-300',
-      text: 'text-blue-800',
+      text: 'text-blue-800 dark:text-blue-300',
       icon: 'text-blue-500',
     },
   };

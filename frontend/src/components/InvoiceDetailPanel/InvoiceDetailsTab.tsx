@@ -1,16 +1,12 @@
-import RichTextEditor from "../common/RichTextEditor";
-import type {
-  InvoiceUpdate,
-  InvoiceStatus,
-  PlatformCurrency,
-} from "../../types";
+import RichTextEditor from '../common/RichTextEditor';
+import type { InvoiceUpdate, InvoiceStatus, PlatformCurrency } from '../../types';
 
 const STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
-  { value: "draft", label: "Draft" },
-  { value: "sent", label: "Sent" },
-  { value: "paid", label: "Paid" },
-  { value: "overdue", label: "Overdue" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: 'draft', label: 'Draft' },
+  { value: 'sent', label: 'Sent' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'cancelled', label: 'Cancelled' },
 ];
 
 interface InvoiceDetailsTabProps {
@@ -32,13 +28,13 @@ export default function InvoiceDetailsTab({
     <div className="px-6 py-5 space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Invoice Number *
           </label>
           <input
             type="text"
             required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
             value={formData.invoice_number}
             onChange={(e) =>
               setFormData({
@@ -49,12 +45,12 @@ export default function InvoiceDetailsTab({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Status
           </label>
           <select
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            value={formData.status || "draft"}
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+            value={formData.status || 'draft'}
             onChange={(e) =>
               setFormData({
                 ...formData,
@@ -73,47 +69,43 @@ export default function InvoiceDetailsTab({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Issue Date
           </label>
           <input
             type="date"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            value={formData.issue_date || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, issue_date: e.target.value })
-            }
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+            value={formData.issue_date || ''}
+            onChange={(e) => setFormData({ ...formData, issue_date: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Due Date
           </label>
           <input
             type="date"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            value={formData.due_date || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, due_date: e.target.value })
-            }
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+            value={formData.due_date || ''}
+            onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
           />
         </div>
       </div>
 
-      <div className="border-t border-gray-200 pt-4">
-        <h4 className="text-sm font-medium text-gray-900 mb-3">
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
           Recipient Information
         </h4>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Recipient Name *
               </label>
               <input
                 type="text"
                 required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
                 value={formData.recipient_name}
                 onChange={(e) =>
                   setFormData({
@@ -124,13 +116,13 @@ export default function InvoiceDetailsTab({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Recipient Email
               </label>
               <input
                 type="email"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.recipient_email || ""}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+                value={formData.recipient_email || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -143,13 +135,13 @@ export default function InvoiceDetailsTab({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Address Line 1
               </label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.recipient_address_line1 || ""}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+                value={formData.recipient_address_line1 || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -159,13 +151,13 @@ export default function InvoiceDetailsTab({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Address Line 2
               </label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.recipient_address_line2 || ""}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+                value={formData.recipient_address_line2 || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -178,13 +170,13 @@ export default function InvoiceDetailsTab({
 
           <div className="grid grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 City
               </label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.recipient_city || ""}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+                value={formData.recipient_city || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -194,13 +186,13 @@ export default function InvoiceDetailsTab({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 State
               </label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.recipient_state || ""}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+                value={formData.recipient_state || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -210,13 +202,13 @@ export default function InvoiceDetailsTab({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Postal Code
               </label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.recipient_postal_code || ""}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+                value={formData.recipient_postal_code || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -226,13 +218,13 @@ export default function InvoiceDetailsTab({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Country
               </label>
               <input
                 type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.recipient_country || ""}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+                value={formData.recipient_country || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -244,14 +236,14 @@ export default function InvoiceDetailsTab({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               VAT Number
             </label>
             <input
               type="text"
               placeholder="e.g., DE123456789"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              value={formData.recipient_vat_number || ""}
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+              value={formData.recipient_vat_number || ''}
               onChange={(e) =>
                 setFormData({
                   ...formData,
@@ -263,30 +255,26 @@ export default function InvoiceDetailsTab({
         </div>
       </div>
 
-      <div className="border-t border-gray-200 pt-4">
-        <h4 className="text-sm font-medium text-gray-900 mb-3">
-          Financial
-        </h4>
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Financial</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Currency
             </label>
             {isCurrencyLocked ? (
               <input
                 type="text"
-                value={conferenceCurrency || ""}
+                value={conferenceCurrency || ''}
                 disabled
                 title="Set by conference"
-                className="mt-1 block w-full border border-gray-300 rounded-md bg-gray-100 shadow-sm py-2 px-3 text-sm text-gray-600"
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 shadow-sm py-2 px-3 text-sm text-gray-600 dark:text-gray-400"
               />
             ) : (
               <select
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                value={formData.currency || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, currency: e.target.value })
-                }
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+                value={formData.currency || ''}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
               >
                 <option value="">-- Select Currency --</option>
                 {currencies.map((c) => (
@@ -310,23 +298,17 @@ export default function InvoiceDetailsTab({
                 }
                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
-              <span className="text-sm font-medium text-gray-700">
-                Active
-              </span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active</span>
             </label>
           </div>
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Notes
-        </label>
+        <label className="block text-sm font-medium text-gray-700">Notes</label>
         <RichTextEditor
-          value={formData.notes || ""}
-          onChange={(html) =>
-            setFormData({ ...formData, notes: html })
-          }
+          value={formData.notes || ''}
+          onChange={(html) => setFormData({ ...formData, notes: html })}
           rows={3}
         />
       </div>

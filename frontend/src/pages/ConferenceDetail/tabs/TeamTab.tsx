@@ -147,14 +147,14 @@ function ConferenceTeamTab({
     <div>
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h4 className="text-sm font-medium text-gray-900">Conference Team</h4>
-          <p className="mt-0.5 text-xs text-gray-500">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Conference Team</h4>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             Team members for this conference. For login access, add users in the Team page.
           </p>
         </div>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md">
               <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
@@ -174,7 +174,7 @@ function ConferenceTeamTab({
             </span>
           )}
           {saveStatus === 'saved' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-md">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -187,7 +187,7 @@ function ConferenceTeamTab({
             </span>
           )}
           {saveStatus === 'error' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-md">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-md">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -207,30 +207,33 @@ function ConferenceTeamTab({
         <div className="mb-4 space-y-2">
           {teamMembers.map((member, index) =>
             editingIndex === index ? (
-              <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div
+                key={index}
+                className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+              >
                 <h5 className="text-sm font-medium text-blue-900 mb-3">Edit Team Member</h5>
 
                 <ErrorBanner message={userError} />
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                       First Name *
                     </label>
                     <input
                       type="text"
-                      className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       value={editForm.first_name}
                       onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                       Last Name *
                     </label>
                     <input
                       type="text"
-                      className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       value={editForm.last_name}
                       onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
                     />
@@ -238,20 +241,24 @@ function ConferenceTeamTab({
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      Role
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g., Conference Chair"
-                      className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       value={editForm.role || ''}
                       onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      Email
+                    </label>
                     <input
                       type="email"
-                      className={`w-full border ${editEmailError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                      className={`w-full border ${editEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                       value={editForm.email || ''}
                       onChange={(e) => {
                         setEditForm({ ...editForm, email: e.target.value });
@@ -266,11 +273,13 @@ function ConferenceTeamTab({
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      Phone
+                    </label>
                     <input
                       type="tel"
                       placeholder="+491234545 or 00491234566"
-                      className={`w-full border ${editPhoneError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                      className={`w-full border ${editPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                       value={editForm.phone || ''}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -289,7 +298,7 @@ function ConferenceTeamTab({
                     <input
                       type="checkbox"
                       id={`edit_member_manager_${index}`}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                       checked={editForm.is_manager}
                       onChange={(e) =>
                         setEditForm({
@@ -300,7 +309,7 @@ function ConferenceTeamTab({
                     />
                     <label
                       htmlFor={`edit_member_manager_${index}`}
-                      className="ml-2 block text-sm text-gray-700"
+                      className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
                     >
                       Conference Manager
                     </label>
@@ -309,7 +318,7 @@ function ConferenceTeamTab({
                     <button
                       type="button"
                       onClick={cancelEditing}
-                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       Cancel
                     </button>
@@ -330,25 +339,28 @@ function ConferenceTeamTab({
                 </div>
               </div>
             ) : (
-              <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <div
+                key={index}
+                className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
                         {[member.first_name, member.last_name].filter(Boolean).join(' ')}
                       </span>
                       {member.role && (
-                        <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                        <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
                           {member.role}
                         </span>
                       )}
                       {member.is_manager && (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
                           Manager
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 text-sm text-gray-500 space-x-3">
+                    <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 space-x-3">
                       {member.email && <span>{member.email}</span>}
                       {member.phone && <span>{member.phone}</span>}
                     </div>
@@ -358,7 +370,7 @@ function ConferenceTeamTab({
                       <button
                         type="button"
                         onClick={() => startEditing(index)}
-                        className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
+                        className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
                         title="Edit"
                       >
                         <EditIcon />
@@ -366,7 +378,7 @@ function ConferenceTeamTab({
                       <button
                         type="button"
                         onClick={() => setRemoveTarget({ index, member })}
-                        className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                        className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                         title="Remove from team"
                       >
                         <DeleteIcon />
@@ -382,26 +394,30 @@ function ConferenceTeamTab({
 
       {/* Add Team Member */}
       {isAdmin && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <h5 className="text-sm font-medium text-blue-900 mb-3">Add Team Member</h5>
 
           {editingIndex === null && <ErrorBanner message={userError} />}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">First Name *</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                First Name *
+              </label>
               <input
                 type="text"
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={newMember.first_name}
                 onChange={(e) => setNewMember({ ...newMember, first_name: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Last Name *</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Last Name *
+              </label>
               <input
                 type="text"
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={newMember.last_name}
                 onChange={(e) => setNewMember({ ...newMember, last_name: e.target.value })}
               />
@@ -409,20 +425,24 @@ function ConferenceTeamTab({
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Role
+              </label>
               <input
                 type="text"
                 placeholder="e.g., Conference Chair"
-                className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 value={newMember.role}
                 onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Email
+              </label>
               <input
                 type="email"
-                className={`w-full border ${newEmailError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                className={`w-full border ${newEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 value={newMember.email}
                 onChange={(e) => {
                   setNewMember({ ...newMember, email: e.target.value });
@@ -435,11 +455,13 @@ function ConferenceTeamTab({
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Phone
+              </label>
               <input
                 type="tel"
                 placeholder="+491234545 or 00491234566"
-                className={`w-full border ${newPhoneError ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                className={`w-full border ${newPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 value={newMember.phone}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -456,11 +478,14 @@ function ConferenceTeamTab({
               <input
                 type="checkbox"
                 id="new_member_manager"
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                 checked={newMember.is_manager}
                 onChange={(e) => setNewMember({ ...newMember, is_manager: e.target.checked })}
               />
-              <label htmlFor="new_member_manager" className="ml-2 block text-sm text-gray-700">
+              <label
+                htmlFor="new_member_manager"
+                className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+              >
                 Conference Manager
               </label>
             </div>

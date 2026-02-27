@@ -1,12 +1,8 @@
-import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import api from "../../config/api";
-import Modal from "../../components/Modal";
-import type {
-  PaginatedResponse,
-  PlatformCurrency,
-  PlatformCurrencyCreate,
-} from "../../types";
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import api from '../../config/api';
+import Modal from '../../components/Modal';
+import type { PaginatedResponse, PlatformCurrency, PlatformCurrencyCreate } from '../../types';
 
 export default function Settings() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -14,11 +10,11 @@ export default function Settings() {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["platform-currencies"],
+    queryKey: ['platform-currencies'],
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
-        "/admin/settings/currencies",
-        { params: { page_size: 100 } },
+        '/admin/settings/currencies',
+        { params: { page_size: 100 } }
       );
       return response.data;
     },
@@ -26,14 +22,11 @@ export default function Settings() {
 
   const createMutation = useMutation({
     mutationFn: async (currencyData: PlatformCurrencyCreate) => {
-      const response = await api.post<PlatformCurrency>(
-        "/admin/settings/currencies",
-        currencyData,
-      );
+      const response = await api.post<PlatformCurrency>('/admin/settings/currencies', currencyData);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["platform-currencies"] });
+      queryClient.invalidateQueries({ queryKey: ['platform-currencies'] });
       setIsCreateModalOpen(false);
     },
   });
@@ -42,12 +35,12 @@ export default function Settings() {
     mutationFn: async ({ id, data: updateData }: { id: string; data: PlatformCurrencyCreate }) => {
       const response = await api.put<PlatformCurrency>(
         `/admin/settings/currencies/${id}`,
-        updateData,
+        updateData
       );
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["platform-currencies"] });
+      queryClient.invalidateQueries({ queryKey: ['platform-currencies'] });
       setEditingCurrency(null);
     },
   });
@@ -57,7 +50,7 @@ export default function Settings() {
       await api.delete(`/admin/settings/currencies/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["platform-currencies"] });
+      queryClient.invalidateQueries({ queryKey: ['platform-currencies'] });
     },
   });
 
@@ -70,8 +63,8 @@ export default function Settings() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Manage platform-wide configuration
         </p>
       </div>
@@ -80,8 +73,8 @@ export default function Settings() {
       <div className="mb-12">
         <div className="sm:flex sm:items-center sm:justify-between mb-4">
           <div>
-            <h2 className="text-lg font-medium text-gray-900">Currencies</h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Currencies</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Global currency definitions available across all conferences
             </p>
           </div>
@@ -98,28 +91,28 @@ export default function Settings() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
           </div>
         ) : (
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Code
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Symbol
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {data?.items?.map((currency) => (
                   <tr key={currency.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -135,11 +128,11 @@ export default function Settings() {
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           currency.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
                         }`}
                       >
-                        {currency.is_active ? "Active" : "Inactive"}
+                        {currency.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
@@ -160,10 +153,7 @@ export default function Settings() {
                 ))}
                 {data?.items.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-8 text-center text-sm text-gray-500"
-                    >
+                    <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
                       No currencies defined yet. Click "Add Currency" to create one.
                     </td>
                   </tr>
@@ -187,8 +177,8 @@ export default function Settings() {
           isLoading={createMutation.isPending}
           error={
             createMutation.error
-              ? (createMutation.error as { response?: { data?: { detail?: string } } })
-                  .response?.data?.detail || "Failed to create currency"
+              ? (createMutation.error as { response?: { data?: { detail?: string } } }).response
+                  ?.data?.detail || 'Failed to create currency'
               : null
           }
         />
@@ -211,8 +201,8 @@ export default function Settings() {
             isLoading={updateMutation.isPending}
             error={
               updateMutation.error
-                ? (updateMutation.error as { response?: { data?: { detail?: string } } })
-                    .response?.data?.detail || "Failed to update currency"
+                ? (updateMutation.error as { response?: { data?: { detail?: string } } }).response
+                    ?.data?.detail || 'Failed to update currency'
                 : null
             }
           />
@@ -235,9 +225,9 @@ function CurrencyForm({
   isLoading: boolean;
   error: string | null;
 }) {
-  const [code, setCode] = useState(currency?.code || "");
-  const [name, setName] = useState(currency?.name || "");
-  const [symbol, setSymbol] = useState(currency?.symbol || "");
+  const [code, setCode] = useState(currency?.code || '');
+  const [name, setName] = useState(currency?.name || '');
+  const [symbol, setSymbol] = useState(currency?.symbol || '');
   const [isActive, setIsActive] = useState(currency?.is_active ?? true);
 
   const isCreateModal = !currency;
@@ -249,9 +239,9 @@ function CurrencyForm({
       setSymbol(currency.symbol);
       setIsActive(currency.is_active);
     } else {
-      setCode("");
-      setName("");
-      setSymbol("");
+      setCode('');
+      setName('');
+      setSymbol('');
       setIsActive(true);
     }
   }, [currency]);
@@ -278,7 +268,7 @@ function CurrencyForm({
         <div>
           <label
             htmlFor="currency-code"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
             Code
           </label>
@@ -290,7 +280,7 @@ function CurrencyForm({
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="USD"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
           />
           <p className="mt-1 text-xs text-gray-500">
             ISO 4217 currency code (1-3 uppercase letters)
@@ -300,7 +290,7 @@ function CurrencyForm({
         <div>
           <label
             htmlFor="currency-name"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
             Name
           </label>
@@ -312,14 +302,14 @@ function CurrencyForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="US Dollar"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
 
         <div>
           <label
             htmlFor="currency-symbol"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
             Symbol
           </label>
@@ -331,7 +321,7 @@ function CurrencyForm({
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
             placeholder="$"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
 
@@ -343,10 +333,7 @@ function CurrencyForm({
             onChange={(e) => setIsActive(e.target.checked)}
             className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
-          <label
-            htmlFor="currency-active"
-            className="ml-2 block text-sm text-gray-700"
-          >
+          <label htmlFor="currency-active" className="ml-2 block text-sm text-gray-700">
             Active
           </label>
         </div>
@@ -365,11 +352,7 @@ function CurrencyForm({
           disabled={isLoading || !code || !name || !symbol}
           className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading
-            ? "Saving..."
-            : isCreateModal
-              ? "Create"
-              : "Save"}
+          {isLoading ? 'Saving...' : isCreateModal ? 'Create' : 'Save'}
         </button>
       </div>
     </form>

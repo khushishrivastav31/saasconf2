@@ -1,7 +1,8 @@
-import { createContext, useCallback, useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import api, { clearTokens, setTokens, getAccessToken } from "../config/api";
-import type { User, LoginRequest, TokenResponse } from "../types";
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import api, { clearTokens, setTokens, getAccessToken } from '../config/api';
+import type { User, LoginRequest, TokenResponse } from '../types';
+import { ThemeContext } from './ThemeContext';
 
 interface AuthContextType {
   user: User | null;
@@ -16,18 +17,20 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const themeCtx = useContext(ThemeContext);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
     try {
-      const response = await api.get<User>("/auth/me");
+      const response = await api.get<User>('/auth/me');
       setUser(response.data);
+      themeCtx?.syncFromServer(response.data.theme_preference);
     } catch {
       setUser(null);
       clearTokens();
     }
-  }, []);
+  }, [themeCtx]);
 
   const refreshUser = useCallback(async () => {
     await fetchUser();
@@ -48,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (credentials: LoginRequest) => {
     // Clear any cached data from previous user session
     queryClient.clear();
-    const response = await api.post<TokenResponse>("/auth/login", credentials);
+    const response = await api.post<TokenResponse>('/auth/login', credentials);
     const { access_token, refresh_token } = response.data;
     setTokens(access_token, refresh_token);
     await fetchUser();
@@ -56,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await api.post("/auth/logout");
+      await api.post('/auth/logout');
     } finally {
       clearTokens();
       setUser(null);
@@ -66,9 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, isLoading, login, logout, refreshUser }}
-    >
+    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

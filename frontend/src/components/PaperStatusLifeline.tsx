@@ -4,11 +4,11 @@ interface PaperStatusLifelineProps {
 }
 
 const LINEAR_STAGES = [
-  { key: "draft", label: "Draft" },
-  { key: "submitted", label: "Submitted" },
-  { key: "in_evaluation", label: "Evaluation" },
-  { key: "evaluated", label: "Reviewed" },
-  { key: "final_consideration", label: "Final Consideration" },
+  { key: 'draft', label: 'Draft' },
+  { key: 'submitted', label: 'Submitted' },
+  { key: 'in_evaluation', label: 'Evaluation' },
+  { key: 'evaluated', label: 'Reviewed' },
+  { key: 'final_consideration', label: 'Final Consideration' },
 ] as const;
 
 const STATUS_INDEX: Record<string, number> = {
@@ -35,60 +35,53 @@ function UnicornIcon({ className }: { className?: string }) {
   );
 }
 
-function getDotColor(
-  stageIdx: number,
-  currentIdx: number,
-  stageKey: string,
-): string {
-  if (stageIdx < currentIdx) return "bg-green-500 border-green-500";
+function getDotColor(stageIdx: number, currentIdx: number, stageKey: string): string {
+  if (stageIdx < currentIdx) return 'bg-green-500 border-green-500';
   if (stageIdx === currentIdx) {
     switch (stageKey) {
-      case "draft":
-        return "bg-gray-500 border-gray-500";
-      case "submitted":
-        return "bg-blue-500 border-blue-500";
-      case "in_evaluation":
-        return "bg-yellow-500 border-yellow-500";
-      case "evaluated":
-        return "bg-purple-500 border-purple-500";
-      case "final_consideration":
-        return "bg-indigo-500 border-indigo-500";
+      case 'draft':
+        return 'bg-gray-500 border-gray-500';
+      case 'submitted':
+        return 'bg-blue-500 border-blue-500';
+      case 'in_evaluation':
+        return 'bg-yellow-500 border-yellow-500';
+      case 'evaluated':
+        return 'bg-purple-500 border-purple-500';
+      case 'final_consideration':
+        return 'bg-indigo-500 border-indigo-500';
       default:
-        return "bg-gray-400 border-gray-400";
+        return 'bg-gray-400 border-gray-400';
     }
   }
-  return "bg-gray-200 border-gray-200";
+  return 'bg-gray-200 dark:bg-gray-700 border-gray-200 dark:border-gray-700';
 }
 
 function getRingColor(stageKey: string): string {
   switch (stageKey) {
-    case "draft":
-      return "#6b7280";
-    case "submitted":
-      return "#3b82f6";
-    case "in_evaluation":
-      return "#eab308";
-    case "evaluated":
-      return "#a855f7";
-    case "final_consideration":
-      return "#6366f1";
+    case 'draft':
+      return '#6b7280';
+    case 'submitted':
+      return '#3b82f6';
+    case 'in_evaluation':
+      return '#eab308';
+    case 'evaluated':
+      return '#a855f7';
+    case 'final_consideration':
+      return '#6366f1';
     default:
-      return "#9ca3af";
+      return '#9ca3af';
   }
 }
 
-export default function PaperStatusLifeline({
-  status,
-  compact = false,
-}: PaperStatusLifelineProps) {
+export default function PaperStatusLifeline({ status, compact = false }: PaperStatusLifelineProps) {
   const currentIndex = STATUS_INDEX[status] ?? -1;
-  const isAccepted = status === "accepted";
-  const isRejected = status === "rejected";
+  const isAccepted = status === 'accepted';
+  const isRejected = status === 'rejected';
   const isFinal = isAccepted || isRejected;
 
   const dotPx = compact ? 8 : 12;
-  const fontSize = compact ? "text-[9px] leading-tight" : "text-xs";
-  const dotClass = compact ? "w-2 h-2" : "w-3 h-3";
+  const fontSize = compact ? 'text-[9px] leading-tight' : 'text-xs';
+  const dotClass = compact ? 'w-2 h-2' : 'w-3 h-3';
 
   return (
     <div className="flex items-start w-full">
@@ -98,22 +91,21 @@ export default function PaperStatusLifeline({
           const isCompleted = idx < currentIndex;
           const isCurrent = idx === currentIndex;
           const dotColor = getDotColor(idx, currentIndex, stage.key);
-          const lineColor = idx < currentIndex ? "bg-green-500" : "bg-gray-200";
+          const lineColor = idx < currentIndex ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700';
           const labelColor =
-            isCompleted || isCurrent ? "text-gray-700" : "text-gray-400";
+            isCompleted || isCurrent
+              ? 'text-gray-700 dark:text-gray-300'
+              : 'text-gray-400 dark:text-gray-500';
 
           return (
-            <div
-              key={stage.key}
-              className="flex-1 flex flex-col items-center min-w-0"
-            >
+            <div key={stage.key} className="flex-1 flex flex-col items-center min-w-0">
               {/* Dot row with lines */}
               <div className="flex items-center w-full">
                 {/* Left half-line */}
                 {idx > 0 ? (
                   <div
                     className={`flex-1 h-0.5 ${
-                      idx <= currentIndex ? "bg-green-500" : "bg-gray-200"
+                      idx <= currentIndex ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
                     }`}
                   />
                 ) : (
@@ -122,14 +114,12 @@ export default function PaperStatusLifeline({
                 {/* Dot */}
                 <div
                   className={`${dotClass} rounded-full border-2 ${dotColor} flex-shrink-0 ${
-                    isCurrent
-                      ? "ring-2 ring-offset-1"
-                      : ""
+                    isCurrent ? 'ring-2 ring-offset-1' : ''
                   }`}
                   style={
                     isCurrent
                       ? ({
-                          "--tw-ring-color": getRingColor(stage.key),
+                          '--tw-ring-color': getRingColor(stage.key),
                         } as React.CSSProperties)
                       : undefined
                   }
@@ -145,7 +135,7 @@ export default function PaperStatusLifeline({
               {(!compact || isCurrent) && (
                 <span
                   className={`${fontSize} font-medium ${labelColor} mt-1 text-center truncate w-full ${
-                    isCurrent ? "font-semibold" : ""
+                    isCurrent ? 'font-semibold' : ''
                   }`}
                 >
                   {stage.label}
@@ -157,65 +147,60 @@ export default function PaperStatusLifeline({
       </div>
 
       {/* Fork: Accepted / Rejected */}
-      <div
-        className="flex flex-col flex-shrink-0"
-        style={{ marginTop: `${dotPx / 2 - 1}px` }}
-      >
+      <div className="flex flex-col flex-shrink-0" style={{ marginTop: `${dotPx / 2 - 1}px` }}>
         {/* Accepted row */}
         <div className="flex items-center">
           <div
-            className={`${compact ? "w-2" : "w-4"} h-0.5 ${
+            className={`${compact ? 'w-2' : 'w-4'} h-0.5 ${
               isFinal
                 ? isAccepted
-                  ? "bg-green-500"
-                  : "bg-gray-200"
-                : "bg-gray-200"
+                  ? 'bg-green-500'
+                  : 'bg-gray-200 dark:bg-gray-700'
+                : 'bg-gray-200 dark:bg-gray-700'
             }`}
           />
           <div
             className={`${dotClass} rounded-full border-2 flex-shrink-0 ${
               isAccepted
-                ? "bg-green-500 border-green-500 ring-2 ring-offset-1 ring-green-500"
-                : "bg-gray-200 border-gray-200"
+                ? 'bg-green-500 border-green-500 ring-2 ring-offset-1 ring-green-500'
+                : 'bg-gray-200 dark:bg-gray-700 border-gray-200 dark:border-gray-700'
             }`}
           />
           {(!compact || isAccepted) && (
             <span
               className={`${fontSize} font-medium whitespace-nowrap flex items-center gap-0.5 ml-1 ${
-                isAccepted ? "text-green-600 font-semibold" : "text-gray-400"
+                isAccepted ? 'text-green-600 font-semibold' : 'text-gray-400 dark:text-gray-500'
               }`}
             >
               Accepted
               {isAccepted && (
-                <UnicornIcon
-                  className={`${compact ? "w-3.5 h-3.5" : "w-5 h-5"} text-green-500`}
-                />
+                <UnicornIcon className={`${compact ? 'w-3.5 h-3.5' : 'w-5 h-5'} text-green-500`} />
               )}
             </span>
           )}
         </div>
         {/* Rejected row */}
-        <div className={`flex items-center ${compact ? "mt-0.5" : "mt-1"}`}>
+        <div className={`flex items-center ${compact ? 'mt-0.5' : 'mt-1'}`}>
           <div
-            className={`${compact ? "w-2" : "w-4"} h-0.5 ${
+            className={`${compact ? 'w-2' : 'w-4'} h-0.5 ${
               isFinal
                 ? isRejected
-                  ? "bg-red-500"
-                  : "bg-gray-200"
-                : "bg-gray-200"
+                  ? 'bg-red-500'
+                  : 'bg-gray-200 dark:bg-gray-700'
+                : 'bg-gray-200 dark:bg-gray-700'
             }`}
           />
           <div
             className={`${dotClass} rounded-full border-2 flex-shrink-0 ${
               isRejected
-                ? "bg-red-500 border-red-500 ring-2 ring-offset-1 ring-red-500"
-                : "bg-gray-200 border-gray-200"
+                ? 'bg-red-500 border-red-500 ring-2 ring-offset-1 ring-red-500'
+                : 'bg-gray-200 dark:bg-gray-700 border-gray-200 dark:border-gray-700'
             }`}
           />
           {(!compact || isRejected) && (
             <span
               className={`${fontSize} font-medium whitespace-nowrap ml-1 ${
-                isRejected ? "text-red-600 font-semibold" : "text-gray-400"
+                isRejected ? 'text-red-600 font-semibold' : 'text-gray-400 dark:text-gray-500'
               }`}
             >
               Rejected

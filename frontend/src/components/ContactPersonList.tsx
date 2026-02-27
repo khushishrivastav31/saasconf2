@@ -14,7 +14,7 @@ interface ContactPersonListProps {
 }
 
 const inputClass =
-  'block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500';
+  'block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-800 dark:text-gray-100';
 
 export default function ContactPersonList({
   contacts,
@@ -72,7 +72,7 @@ export default function ContactPersonList({
     <div>
       {contacts.length > 0 && (
         <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Contact Persons
             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
               {contacts.length}
@@ -80,7 +80,10 @@ export default function ContactPersonList({
           </h4>
           <div className="space-y-2">
             {contacts.map((contact, index) => (
-              <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+              <div
+                key={index}
+                className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3"
+              >
                 {editingIndex === index ? (
                   /* Inline edit form */
                   <div className="space-y-3">
@@ -154,7 +157,7 @@ export default function ContactPersonList({
                       <button
                         type="button"
                         onClick={cancelEditing}
-                        className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
                         Cancel
                       </button>
@@ -170,10 +173,10 @@ export default function ContactPersonList({
                           {(contact.last_name?.charAt(0) || '').toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {[contact.first_name, contact.last_name].filter(Boolean).join(' ')}
                           </p>
-                          <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                             {contact.email && (
                               <span className="flex items-center gap-1">
                                 <svg
@@ -214,7 +217,7 @@ export default function ContactPersonList({
                         </div>
                       </div>
                       {contact.comment && (
-                        <div className="mt-2 ml-11 text-sm text-gray-600 bg-white border border-gray-100 rounded px-3 py-1.5">
+                        <div className="mt-2 ml-11 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded px-3 py-1.5">
                           <RichTextDisplay content={contact.comment} />
                         </div>
                       )}
@@ -224,7 +227,7 @@ export default function ContactPersonList({
                         <button
                           type="button"
                           onClick={() => startEditing(index)}
-                          className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
+                          className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
                           title="Edit contact"
                         >
                           <svg
@@ -245,7 +248,7 @@ export default function ContactPersonList({
                       <button
                         type="button"
                         onClick={() => removeContact(index)}
-                        className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                        className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                         title="Remove contact"
                       >
                         <svg
@@ -271,8 +274,10 @@ export default function ContactPersonList({
         </div>
       )}
 
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">Add New Contact</h4>
+      <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          Add New Contact
+        </h4>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <input

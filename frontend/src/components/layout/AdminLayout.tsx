@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../config/api';
+import ThemeToggle from '../ThemeToggle';
 import type { GlobalUnreadCountResponse } from '../../types/messaging';
 
 const navigation = [{ name: 'Dashboard', href: '/dashboard', icon: HomeIcon }];
@@ -152,7 +153,7 @@ function NotificationBell() {
           navigate(`/modules/conferences/${topConference.conference_id}?section=messaging`);
         }
       }}
-      className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+      className="relative p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
       title={totalUnread > 0 ? `${totalUnread} unread message(s)` : 'No unread messages'}
     >
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,7 +214,7 @@ export default function AdminLayout() {
   const isSuperAdmin = user?.role === 'super_admin';
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 bg-gray-900 flex flex-col transform transition-all duration-200 ease-in-out ${
@@ -448,10 +449,10 @@ export default function AdminLayout() {
       {/* Main content */}
       <div className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
         {/* Header */}
-        <header className="sticky top-0 z-40 bg-white shadow">
+        <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <button
-              className="lg:hidden -ml-2 p-2 text-gray-500"
+              className="lg:hidden -ml-2 p-2 text-gray-500 dark:text-gray-400"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -465,21 +466,24 @@ export default function AdminLayout() {
             </button>
 
             <div ref={userMenuRef} className="relative ml-auto flex items-center gap-4">
+              <ThemeToggle
+                onPersist={(t) => api.patch('/auth/me/preferences', { theme_preference: t })}
+              />
               <NotificationBell />
               <button
                 onClick={() => setUserMenuOpen((v) => !v)}
-                className="flex items-center gap-2 text-sm hover:bg-gray-50 rounded-md px-2 py-1"
+                className="flex items-center gap-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md px-2 py-1"
               >
                 <div className="text-left">
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
                     {`${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.email}
                   </p>
-                  <p className="text-gray-500 text-xs capitalize">
+                  <p className="text-gray-500 dark:text-gray-400 text-xs capitalize">
                     {user?.role?.replace('_', ' ')}
                   </p>
                 </div>
                 <svg
-                  className="w-4 h-4 text-gray-400"
+                  className="w-4 h-4 text-gray-400 dark:text-gray-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -494,19 +498,19 @@ export default function AdminLayout() {
               </button>
 
               {userMenuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">
+                <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                  <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {`${user?.first_name || ''} ${user?.last_name || ''}`.trim()}
                     </p>
-                    <p className="text-xs text-gray-500">{user?.email}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
                   </div>
                   <button
                     onClick={() => {
                       setUserMenuOpen(false);
                       handleLogout();
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Logout
                   </button>
