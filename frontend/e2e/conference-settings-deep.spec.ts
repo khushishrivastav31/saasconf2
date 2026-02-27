@@ -8,13 +8,13 @@ test.describe('Conference Settings Deep Tests', () => {
     if (!conferenceId) test.skip();
   });
 
-  test('should show Volunteer Roles with add button and role list', async ({ page }) => {
+  test('should show Volunteer Tasks with add button and task list', async ({ page }) => {
     const detail = new ConferenceDetailPage(page);
     await detail.goto(conferenceId!);
     await detail.expectLoaded();
 
     await detail.navigateToSection('Settings');
-    await page.getByRole('button', { name: /volunteer roles/i }).click();
+    await page.getByRole('button', { name: /volunteer tasks/i }).click();
     await page.waitForTimeout(500);
 
     const hasAddBtn = await page.getByRole('button', { name: /add|create|new/i }).first().isVisible({ timeout: 5000 }).catch(() => false);
@@ -109,7 +109,7 @@ test.describe('Conference Settings Deep Tests', () => {
 
     await detail.navigateToSection('Settings');
 
-    const tabs = ['Volunteer Roles', 'Committee Roles', 'Session Types', 'Score Scales', 'Paper Form', 'Email Templates'];
+    const tabs = ['Volunteer Tasks', 'Committee Roles', 'Session Types', 'Score Scales', 'Paper Form', 'Email Templates'];
     for (const tab of tabs) {
       const tabBtn = page.getByRole('button', { name: new RegExp(tab, 'i') });
       if (await tabBtn.isVisible({ timeout: 2000 }).catch(() => false)) {

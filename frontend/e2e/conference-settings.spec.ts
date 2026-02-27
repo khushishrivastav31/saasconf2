@@ -16,17 +16,17 @@ test.describe('Conference Settings', () => {
     await detail.navigateToSection('Settings');
 
     // Should show settings sub-tab buttons
-    await expect(page.getByRole('button', { name: /volunteer roles/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: /volunteer tasks/i })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('button', { name: /committee roles/i })).toBeVisible();
   });
 
-  test('should display Volunteer Roles sub-tab', async ({ page }) => {
+  test('should display Volunteer Tasks sub-tab', async ({ page }) => {
     const detail = new ConferenceDetailPage(page);
     await detail.goto(conferenceId!);
     await detail.expectLoaded();
 
     await detail.navigateToSection('Settings');
-    await page.getByRole('button', { name: /volunteer roles/i }).click();
+    await page.getByRole('button', { name: /volunteer tasks/i }).click();
     await page.waitForTimeout(500);
 
     // Should show role list or create button
