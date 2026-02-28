@@ -4,6 +4,7 @@ import { useAuth } from './hooks/useAuth';
 import Login from './pages/Login';
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const SetupPassword = lazy(() => import('./pages/SetupPassword'));
 import AdminLayout from './components/layout/AdminLayout';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
@@ -168,6 +169,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/setup-password" element={<SetupPassword />} />
 
         <Route
           path="/"

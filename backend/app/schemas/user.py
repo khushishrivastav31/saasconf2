@@ -92,10 +92,14 @@ class UserListResponse(BaseModel):
 
 
 class TenantUserCreate(BaseModel):
-    """Schema for tenant admin to create a user within their tenant."""
+    """Schema for tenant admin to create a user within their tenant.
+
+    When password is omitted, the user is created with a random unusable
+    password and receives an invite email to set their own.
+    """
 
     email: EmailStr
-    password: str = Field(..., min_length=8, max_length=128)
+    password: str | None = Field(None, min_length=8, max_length=128)
     first_name: str | None = Field(None, max_length=255)
     last_name: str | None = Field(None, max_length=255)
     pronouns: str | None = Field(None, max_length=100)
@@ -103,7 +107,9 @@ class TenantUserCreate(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def validate_password_strength(cls, v: str) -> str:
+    def validate_password_strength(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters long")
         if not re.search(r"[A-Z]", v):

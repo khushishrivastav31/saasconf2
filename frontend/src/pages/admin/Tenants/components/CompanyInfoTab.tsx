@@ -110,6 +110,7 @@ export default function CompanyInfoTab({
     country: tenant.country || '',
     vat_number: tenant.vat_number || '',
     website: tenant.website || '',
+    email_domain: tenant.email_domain || '',
     contact_persons: tenant.contact_persons || [],
     comments: tenant.comments || '',
   });
@@ -451,6 +452,21 @@ export default function CompanyInfoTab({
               value={formData.vat_number}
               onChange={(e) => handleFieldChange('vat_number', e.target.value)}
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Email Domain
+            </label>
+            <input
+              type="text"
+              placeholder="example.com"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+              value={formData.email_domain}
+              onChange={(e) => handleFieldChange('email_domain', e.target.value)}
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              When set, outgoing emails will be sent from noreply@[domain].
+            </p>
           </div>
         </div>
 

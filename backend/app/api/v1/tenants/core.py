@@ -1,19 +1,26 @@
 """Tenant CRUD endpoints (super admin only)."""
 
+import secrets
+from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
 from sqlalchemy import func, select
 
+from app.config import get_settings
+from app.core.applicant_security import generate_email_verification_token
 from app.core.dependencies import DbSessionDep, SuperAdminDep, get_client_ip
+from app.core.email import send_tenant_user_welcome_email
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.security import hash_password
+from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
 from app.models.module import TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
+from app.models.user_password_reset import UserPasswordReset
 from app.schemas.tenant import (
     TenantCreate,
     TenantListResponse,
@@ -101,6 +108,7 @@ async def create_tenant(
         country=tenant_data.country,
         vat_number=tenant_data.vat_number,
         website=tenant_data.website,
+        email_domain=tenant_data.email_domain,
         contact_persons=[cp.model_dump() for cp in tenant_data.contact_persons] if tenant_data.contact_persons else [],
         comments=tenant_data.comments,
     )
@@ -108,16 +116,32 @@ async def create_tenant(
     await db.flush()  # Get tenant ID
 
     # Optionally create admin user
-    if tenant_data.admin_email and tenant_data.admin_password:
+    admin_user = None
+    if tenant_data.admin_email:
+        if tenant_data.admin_password:
+            pw_hash = hash_password(tenant_data.admin_password)
+        else:
+            pw_hash = hash_password(secrets.token_urlsafe(32))
+
         admin_user = User(
             tenant_id=tenant.id,
             email=tenant_data.admin_email,
-            password_hash=hash_password(tenant_data.admin_password),
+            password_hash=pw_hash,
             first_name=tenant_data.admin_first_name,
             last_name=tenant_data.admin_last_name,
             role=UserRole.TENANT_ADMIN.value,
         )
         db.add(admin_user)
+        await db.flush()
+
+        # Generate invite token (7-day expiry)
+        raw_token, token_hash = generate_email_verification_token()
+        reset = UserPasswordReset(
+            user_id=admin_user.id,
+            token_hash=token_hash,
+            expires_at=utcnow() + timedelta(days=7),
+        )
+        db.add(reset)
 
     # Log action
     audit_log = AuditLog(
@@ -132,8 +156,39 @@ async def create_tenant(
     )
     db.add(audit_log)
 
+    if admin_user:
+        db.add(
+            AuditLog(
+                tenant_id=tenant.id,
+                user_id=current_user.user_id,
+                action=AuditAction.USER_INVITE_SENT,
+                resource_type="user",
+                resource_id=admin_user.id,
+                details={"email": admin_user.email, "role": admin_user.role},
+                ip_address=get_client_ip(request),
+                user_agent=request.headers.get("User-Agent"),
+            )
+        )
+
     await db.commit()
     await db.refresh(tenant)
+
+    # Send invite email after commit (so user exists in DB)
+    if admin_user:
+        settings = get_settings()
+        frontend_base = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
+        from_email = f"noreply@{tenant.email_domain}" if tenant.email_domain else None
+        await send_tenant_user_welcome_email(
+            db,
+            email=admin_user.email,
+            token=raw_token,
+            company_name=tenant.name,
+            user_type="Administrator",
+            first_name=admin_user.first_name or "",
+            last_name=admin_user.last_name or "",
+            base_url=frontend_base,
+            from_email=from_email,
+        )
 
     return _build_tenant_response(
         tenant,

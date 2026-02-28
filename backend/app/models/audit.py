@@ -77,6 +77,7 @@ class AuditAction:
     USER_CREATE = "user.create"
     USER_UPDATE = "user.update"
     USER_DELETE = "user.delete"
+    USER_INVITE_SENT = "user.invite_sent"
     USER_PASSWORD_RESET_REQUESTED = "user.password_reset_requested"
     USER_PASSWORD_RESET_COMPLETED = "user.password_reset_completed"
 

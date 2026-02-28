@@ -58,6 +58,17 @@ export default function Team() {
     onError: (err) => setError(parseApiError(err)),
   });
 
+  const resendInviteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await api.post(`/users/${userId}/resend-invite`);
+    },
+    onSuccess: () => {
+      setSuccessMessage('Invite email has been resent.');
+      setTimeout(() => setSuccessMessage(null), 5000);
+    },
+    onError: (err) => setError(parseApiError(err)),
+  });
+
   const users = data?.items ?? [];
   // Look up editingUser from fresh query data to avoid stale state
   const editingUser = editingUserId ? users.find((u) => u.id === editingUserId) : null;
@@ -201,6 +212,16 @@ export default function Team() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {!user.last_login && user.is_active && (
+                        <button
+                          onClick={() => resendInviteMutation.mutate(user.id)}
+                          disabled={resendInviteMutation.isPending}
+                          className="text-xs text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                          title="Resend invite email"
+                        >
+                          Resend Invite
+                        </button>
+                      )}
                       <button
                         onClick={() => setEditingUserId(user.id)}
                         className="text-gray-400 hover:text-primary-600 p-1 rounded transition-colors"
@@ -276,7 +297,9 @@ export default function Team() {
           onClose={(created?: boolean, memberName?: string) => {
             setShowAddModal(false);
             if (created && memberName) {
-              setSuccessMessage(`Team member "${memberName}" has been created successfully.`);
+              setSuccessMessage(
+                `Team member "${memberName}" has been invited. They will receive an email to set their password.`
+              );
               setTimeout(() => setSuccessMessage(null), 5000);
             }
             // Force refetch to ensure new data is loaded
@@ -333,7 +356,6 @@ function AddMemberModal({
 }) {
   const [formData, setFormData] = useState<TenantUserCreate>({
     email: '',
-    password: '',
     first_name: '',
     last_name: '',
     role: 'user',
@@ -391,21 +413,6 @@ function AddMemberModal({
               onBlur={(e) => setEmailError(validateEmail(e.target.value))}
             />
             {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Password *
-            </label>
-            <input
-              type="password"
-              required
-              minLength={8}
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Minimum 8 characters.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -493,7 +500,7 @@ function AddMemberModal({
             disabled={createMutation.isPending || !!emailError}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
           >
-            {createMutation.isPending ? 'Creating...' : 'Create Member'}
+            {createMutation.isPending ? 'Inviting...' : 'Invite Member'}
           </button>
         </div>
       </form>

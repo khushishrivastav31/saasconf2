@@ -247,6 +247,33 @@ If you have any questions, please don't hesitate to reach out.
 Warm regards,
 The [Conference Name] Team""",
     },
+    # System-level template (no conference context)
+    EmailTemplateType.TENANT_USER_WELCOME: {
+        "subject": "Welcome to [Company Name] — Set up your password",
+        "body_html": """<h2>Welcome to [Company Name]</h2>
+<p>Hi [First Name],</p>
+<p>You have been invited to join <strong>[Company Name]</strong> on SaaSConf as a <strong>[User Type]</strong>.</p>
+<p>To get started, please set up your password by clicking the button below:</p>
+<p><a href="[Verify Link]" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Set up my password</a></p>
+<p>This link will expire in 7 days. If you did not expect this invitation, you can safely ignore this email.</p>
+<p>If you have questions or need help, contact us at [Support Email].</p>
+<p>Warm regards,<br>The [Company Name] Team</p>""",
+        "body_text": """Welcome to [Company Name]
+
+Hi [First Name],
+
+You have been invited to join [Company Name] on SaaSConf as a [User Type].
+
+To get started, please set up your password by visiting:
+[Verify Link]
+
+This link will expire in 7 days. If you did not expect this invitation, you can safely ignore this email.
+
+If you have questions or need help, contact us at [Support Email].
+
+Warm regards,
+The [Company Name] Team""",
+    },
 }
 
 

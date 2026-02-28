@@ -22,6 +22,7 @@ export interface Tenant {
   vat_number: string | null;
   website: string | null;
   logo_url: string | null;
+  email_domain: string | null;
   // Contact persons
   contact_persons: ContactPerson[];
   // Comments
@@ -46,13 +47,13 @@ export interface TenantCreate {
   // Business fields
   vat_number?: string;
   website?: string;
+  email_domain?: string;
   // Contact persons
   contact_persons?: ContactPerson[];
   // Comments
   comments?: string;
   // Admin user
   admin_email?: string;
-  admin_password?: string;
   admin_first_name?: string;
   admin_last_name?: string;
 }
@@ -68,6 +69,7 @@ export interface TenantUpdate {
   country?: string;
   vat_number?: string;
   website?: string;
+  email_domain?: string;
   contact_persons?: ContactPerson[];
   comments?: string;
 }
@@ -142,7 +144,7 @@ export interface TenantUser {
   first_name: string | null;
   last_name: string | null;
   pronouns: string | null;
-  role: "tenant_admin" | "user";
+  role: 'tenant_admin' | 'user';
   is_active: boolean;
   has_all_conference_access: boolean;
   last_login: string | null;
@@ -152,11 +154,10 @@ export interface TenantUser {
 
 export interface TenantUserCreate {
   email: string;
-  password: string;
   first_name?: string;
   last_name?: string;
   pronouns?: string;
-  role?: "tenant_admin" | "user";
+  role?: 'tenant_admin' | 'user';
 }
 
 export interface TenantUserUpdate {
@@ -164,7 +165,7 @@ export interface TenantUserUpdate {
   first_name?: string;
   last_name?: string;
   pronouns?: string;
-  role?: "tenant_admin" | "user";
+  role?: 'tenant_admin' | 'user';
   is_active?: boolean;
   has_all_conference_access?: boolean;
   password?: string;
@@ -175,7 +176,7 @@ export interface UserConferenceAccess {
   id: string;
   user_id: string;
   conference_id: string;
-  access_level: "admin" | "read_only";
+  access_level: 'admin' | 'read_only';
   granted_by: string | null;
   granted_at: string;
 }

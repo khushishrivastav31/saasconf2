@@ -19,6 +19,7 @@ def _build_tenant_response(tenant: Tenant, user_count: int = 0, module_count: in
         vat_number=tenant.vat_number,
         website=tenant.website,
         logo_url=tenant.logo_url,
+        email_domain=tenant.email_domain,
         contact_persons=tenant.contact_persons or [],
         comments=tenant.comments,
         super_user_id=tenant.super_user_id,

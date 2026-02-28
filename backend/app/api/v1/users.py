@@ -1,19 +1,26 @@
 """User management endpoints for tenant admins."""
 
+import secrets
+from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
 from sqlalchemy import func, select
 
+from app.config import get_settings
+from app.core.applicant_security import generate_email_verification_token
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
+from app.core.email import _get_tenant_from_email, send_tenant_user_welcome_email
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.security import hash_password
+from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
 from app.models.settings import PronounOption
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
+from app.models.user_password_reset import UserPasswordReset
 from app.schemas.user import (
     TenantUserCreate,
     TenantUserResponse,
@@ -154,17 +161,31 @@ async def create_tenant_user(
     if existing.scalar_one_or_none():
         raise ValidationError(f"User with email '{user_data.email}' already exists in this tenant")
 
-    # Create user
+    # Create user — use provided password or generate a random unusable one
+    pw_hash = hash_password(user_data.password) if user_data.password else hash_password(secrets.token_urlsafe(32))
+
     user = User(
         tenant_id=target_tenant_id,
         email=user_data.email,
-        password_hash=hash_password(user_data.password),
+        password_hash=pw_hash,
         first_name=user_data.first_name,
         last_name=user_data.last_name,
         pronouns=user_data.pronouns,
         role=user_data.role,
     )
     db.add(user)
+    await db.flush()
+
+    # Generate invite token when no password was provided
+    raw_token = None
+    if not user_data.password:
+        raw_token, token_hash = generate_email_verification_token()
+        reset = UserPasswordReset(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=utcnow() + timedelta(days=7),
+        )
+        db.add(reset)
 
     # Log action
     audit_log = AuditLog(
@@ -179,8 +200,43 @@ async def create_tenant_user(
     )
     db.add(audit_log)
 
+    if raw_token:
+        db.add(
+            AuditLog(
+                tenant_id=target_tenant_id,
+                user_id=current_user.user_id,
+                action=AuditAction.USER_INVITE_SENT,
+                resource_type="user",
+                resource_id=user.id,
+                details={"email": user.email, "role": user.role},
+                ip_address=get_client_ip(request),
+                user_agent=request.headers.get("User-Agent"),
+            )
+        )
+
     await db.commit()
     await db.refresh(user)
+
+    # Send invite email after commit
+    if raw_token:
+        settings = get_settings()
+        frontend_base = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
+        # Look up tenant name and email domain
+        tenant_result = await db.execute(select(Tenant.name).where(Tenant.id == target_tenant_id))
+        tenant_name = tenant_result.scalar_one_or_none() or "SaaSConf"
+        from_email = await _get_tenant_from_email(db, target_tenant_id)
+        user_type = "Administrator" if user.role == UserRole.TENANT_ADMIN.value else "Team Member"
+        await send_tenant_user_welcome_email(
+            db,
+            email=user.email,
+            token=raw_token,
+            company_name=tenant_name,
+            user_type=user_type,
+            first_name=user.first_name or "",
+            last_name=user.last_name or "",
+            base_url=frontend_base,
+            from_email=from_email,
+        )
 
     return TenantUserResponse(
         id=user.id,
@@ -380,3 +436,82 @@ async def deactivate_tenant_user(
     await db.commit()
 
     return {"message": f"User '{user.email}' has been deactivated"}
+
+
+@router.post("/{user_id}/resend-invite")
+async def resend_invite(
+    user_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> dict:
+    """Resend an invite email to a user who has never logged in."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise NotFoundError(f"User with ID '{user_id}' not found")
+
+    if not current_user.is_super_admin and user.tenant_id != current_user.tenant_id:
+        raise NotFoundError(f"User with ID '{user_id}' not found")
+
+    if user.last_login is not None:
+        raise ValidationError("Cannot resend invite — user has already logged in")
+
+    if not user.is_active:
+        raise ValidationError("Cannot resend invite — user is deactivated")
+
+    # Invalidate any previous unused tokens
+    prev_tokens = await db.execute(
+        select(UserPasswordReset).where(
+            UserPasswordReset.user_id == user.id,
+            UserPasswordReset.used_at.is_(None),
+        )
+    )
+    for prev in prev_tokens.scalars().all():
+        prev.used_at = utcnow()
+
+    # Generate new invite token (7-day expiry)
+    raw_token, token_hash = generate_email_verification_token()
+    reset = UserPasswordReset(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=utcnow() + timedelta(days=7),
+    )
+    db.add(reset)
+
+    db.add(
+        AuditLog(
+            tenant_id=user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.USER_INVITE_SENT,
+            resource_type="user",
+            resource_id=user.id,
+            details={"email": user.email, "resend": True},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
+
+    await db.commit()
+
+    # Send invite email
+    settings = get_settings()
+    frontend_base = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
+    from_email = await _get_tenant_from_email(db, user.tenant_id)
+    tenant_result = await db.execute(select(Tenant.name).where(Tenant.id == user.tenant_id))
+    tenant_name = tenant_result.scalar_one_or_none() or "SaaSConf"
+    user_type = "Administrator" if user.role == UserRole.TENANT_ADMIN.value else "Team Member"
+    await send_tenant_user_welcome_email(
+        db,
+        email=user.email,
+        token=raw_token,
+        company_name=tenant_name,
+        user_type=user_type,
+        first_name=user.first_name or "",
+        last_name=user.last_name or "",
+        base_url=frontend_base,
+        from_email=from_email,
+    )
+
+    return {"message": f"Invite email has been resent to {user.email}"}

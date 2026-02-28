@@ -3,7 +3,9 @@
 import os
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test"
+)
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
@@ -16,7 +18,6 @@ from app.models.module import Module
 from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import auth_headers
-
 
 BASE_URL = "/api/v1/admin/tenants"
 
@@ -443,6 +444,76 @@ class TestTenantCRUD:
             headers=auth_headers(super_admin_token),
         )
         assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_create_tenant_with_admin_no_password(
+        self,
+        client: AsyncClient,
+        super_admin_user: User,
+        super_admin_token: str,
+    ) -> None:
+        """Creating a tenant with admin_email but no admin_password succeeds (invite flow)."""
+        slug = f"invite-admin-{uuid.uuid4().hex[:8]}"
+        payload = {
+            "name": "Invite Admin Corp",
+            "slug": slug,
+            "admin_email": f"admin-{uuid.uuid4().hex[:8]}@test.com",
+            "admin_first_name": "Invite",
+            "admin_last_name": "Admin",
+        }
+        response = await client.post(
+            BASE_URL,
+            json=payload,
+            headers=auth_headers(super_admin_token),
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "Invite Admin Corp"
+        assert data["slug"] == slug
+        assert data["user_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_create_tenant_with_email_domain(
+        self,
+        client: AsyncClient,
+        super_admin_user: User,
+        super_admin_token: str,
+    ) -> None:
+        """Creating a tenant with email_domain includes it in the response."""
+        slug = f"domain-{uuid.uuid4().hex[:8]}"
+        payload = {
+            "name": "Domain Corp",
+            "slug": slug,
+            "email_domain": "domaincorp.com",
+        }
+        response = await client.post(
+            BASE_URL,
+            json=payload,
+            headers=auth_headers(super_admin_token),
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["email_domain"] == "domaincorp.com"
+
+    @pytest.mark.asyncio
+    async def test_update_tenant_email_domain(
+        self,
+        client: AsyncClient,
+        tenant: Tenant,
+        super_admin_user: User,
+        super_admin_token: str,
+    ) -> None:
+        """Updating a tenant's email_domain persists and appears in response."""
+        response = await client.put(
+            f"{BASE_URL}/{tenant.id}",
+            json={"email_domain": "updated-domain.com"},
+            headers=auth_headers(super_admin_token),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["email_domain"] == "updated-domain.com"
+        # Slug should remain unchanged
+        assert data["slug"] == tenant.slug
 
 
 # ---------------------------------------------------------------------------

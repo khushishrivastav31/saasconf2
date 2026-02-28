@@ -69,6 +69,7 @@ class TenantCreate(TenantBase):
     # Business fields
     vat_number: str | None = Field(None, max_length=50)
     website: str | None = Field(None, max_length=500)
+    email_domain: str | None = Field(None, max_length=255)
 
     # Contact persons
     contact_persons: list[ContactPerson] = Field(default_factory=list)
@@ -100,6 +101,7 @@ class TenantUpdate(BaseModel):
     # Business fields
     vat_number: str | None = Field(None, max_length=50)
     website: str | None = Field(None, max_length=500)
+    email_domain: str | None = Field(None, max_length=255)
 
     # Contact persons
     contact_persons: list[ContactPerson] | None = None
@@ -141,6 +143,7 @@ class TenantResponse(BaseModel):
     vat_number: str | None
     website: str | None
     logo_url: str | None = None
+    email_domain: str | None = None
 
     # Contact persons
     contact_persons: list[ContactPersonResponse]

@@ -599,7 +599,6 @@ function EditUserModal({
 function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => void }) {
   const [formData, setFormData] = useState<TenantUserCreate>({
     email: '',
-    password: '',
     first_name: '',
     last_name: '',
     pronouns: '',
@@ -639,20 +638,6 @@ function AddUserModal({ tenantId, onClose }: { tenantId: string; onClose: () => 
               onBlur={(e) => setEmailError(validateEmail(e.target.value))}
             />
             {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              minLength={8}
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            />
           </div>
 
           <div>

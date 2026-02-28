@@ -299,6 +299,21 @@ Sidebar tree: **Volunteers** (list) → **Task Assignment** | **Volunteer Assign
 - Uses `resend` library via `asyncio.to_thread()` to avoid blocking the event loop
 - Falls back to console logging when `RESEND_API_KEY` is not set
 - Per-conference email toggle via `conference.settings.email_sending_enabled`
+- **Per-tenant sender**: `send_email()` accepts optional `from_email` override; `_get_tenant_from_email(db, tenant_id)` resolves to `noreply@{email_domain}` when tenant has `email_domain` configured, otherwise falls back to global `RESEND_FROM_EMAIL`
+
+### User Invite Flow
+Invite-based onboarding for new admin and team users. When a user is created without a password, they receive an email with a link to set their own password.
+
+- **Tenant creation** (`POST /tenants`): Super admin provides `admin_email` (required) and optionally `admin_password`. If no password: user created with unusable random hash + 7-day invite token + welcome email sent.
+- **Team member creation** (`POST /users`): Tenant admin provides email, name, role — no password field. User created with unusable hash + invite token + welcome email. If password is provided via API, user is created directly (backward compatible).
+- **Invite token**: Generated via `generate_email_verification_token()` (256-bit entropy), stored as SHA256 hash in `user_password_resets` table with 7-day expiry (vs 1 hour for forgot-password).
+- **Resend invite**: `POST /users/{user_id}/resend-invite` — generates new token, sends fresh email. Only works for users who have never logged in (`last_login is None`). Tenant admin only.
+- **Setup password page**: `/setup-password?token=...` — frontend page where invited users set their password. Reuses `POST /auth/reset-password` endpoint for token validation and password setting.
+- **Email template**: `TENANT_USER_WELCOME` in `DEFAULT_TEMPLATES` — subject "Welcome to [Company Name] — Set up your password", body with "Set up my password" button linking to `[Verify Link]` (resolves to `/setup-password?token=...`).
+- **Per-tenant sender**: When tenant has `email_domain` set, invite emails come from `noreply@{domain}`; otherwise global sender.
+- **Audit action**: `USER_INVITE_SENT` (`user.invite_sent`) logged on invite creation and resend.
+- **Frontend**: Password fields removed from Team.tsx `AddMemberModal`, Tenants/index.tsx create form, and UsersTab.tsx `AddUserModal`. "Resend Invite" button shown for users with `last_login === null && is_active`.
+- **Migration**: `100_tenant_email_domain.py` adds `email_domain` column to `tenants` table.
 
 ### Admin Password Reset Flow
 Token-based password reset for admin users (`super_admin`, `tenant_admin`, `user`). OWASP-compliant.
@@ -344,7 +359,7 @@ Token-based password reset for admin users (`super_admin`, `tenant_admin`, `user
 - Shared fixtures: `tenant`, `conference`, `conferences_module`, `tenant_with_modules`, `super_admin_user`, `tenant_admin_user`, `regular_user`
 - Auth helper: `_make_token(user, modules)` creates JWT tokens; `auth_headers(token)` wraps in Bearer header
 - Rate limiting disabled globally in tests via `RATELIMIT_ENABLED=false` env var
-- 900+ backend tests, all passing
+- 915+ backend tests, all passing
 
 ## Development Process
 

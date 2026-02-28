@@ -176,8 +176,8 @@ function CreateTenantModal({
     website: '',
     contact_persons: [],
     comments: '',
+    email_domain: '',
     admin_email: '',
-    admin_password: '',
     admin_first_name: '',
     admin_last_name: '',
   });
@@ -242,12 +242,6 @@ function CreateTenantModal({
       newErrors.admin_email = 'Admin email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.admin_email)) {
       newErrors.admin_email = 'Please enter a valid email address';
-    }
-
-    if (!formData.admin_password?.trim()) {
-      newErrors.admin_password = 'Admin password is required';
-    } else if (formData.admin_password.length < 8) {
-      newErrors.admin_password = 'Password must be at least 8 characters';
     }
 
     if (!formData.admin_first_name?.trim()) {
@@ -392,6 +386,22 @@ function CreateTenantModal({
                 onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Email Domain
+            </label>
+            <input
+              type="text"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+              placeholder="example.com"
+              value={formData.email_domain}
+              onChange={(e) => setFormData({ ...formData, email_domain: e.target.value })}
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              When set, outgoing emails will be sent from noreply@[domain].
+            </p>
           </div>
 
           {/* Address */}
@@ -796,35 +806,8 @@ function CreateTenantModal({
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Admin Password <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  minLength={8}
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
-                    showErrors && errors.admin_password
-                      ? 'border-red-300 bg-red-50'
-                      : 'border-gray-300'
-                  }`}
-                  value={formData.admin_password}
-                  onChange={(e) => {
-                    setFormData({ ...formData, admin_password: e.target.value });
-                    if (showErrors && errors.admin_password) {
-                      if (e.target.value.trim() && e.target.value.length >= 8) {
-                        setErrors((prev) => {
-                          const { admin_password: _, ...rest } = prev;
-                          return rest;
-                        });
-                      }
-                    }
-                  }}
-                />
-                {showErrors && errors.admin_password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.admin_password}</p>
-                )}
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Minimum 8 characters
+                <p className="mt-1 text-xs text-primary-600 dark:text-primary-400">
+                  An invitation email will be sent to the admin to set their password.
                 </p>
               </div>
               <div>

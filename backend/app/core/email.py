@@ -58,6 +58,7 @@ async def send_email(
     text: str | None = None,
     reply_to: str | None = None,
     attachments: list[dict] | None = None,
+    from_email: str | None = None,
 ) -> bool:
     """
     Send an email using Resend.
@@ -67,6 +68,7 @@ async def send_email(
 
     Args:
         attachments: Optional list of dicts with 'filename' and 'content' (base64-encoded).
+        from_email: Optional override for the sender address (e.g. per-tenant domain).
     """
     settings = get_settings()
     resend = _get_resend()
@@ -75,9 +77,10 @@ async def send_email(
         _log_email(to, subject, text or html)
         return True
 
+    sender = from_email or settings.RESEND_FROM_EMAIL
     try:
         payload: dict = {
-            "from": f"{settings.RESEND_FROM_NAME} <{settings.RESEND_FROM_EMAIL}>",
+            "from": f"{settings.RESEND_FROM_NAME} <{sender}>",
             "to": [to],
             "subject": subject,
             "html": html,
@@ -93,6 +96,17 @@ async def send_email(
     except Exception as e:
         logger.error(f"Failed to send email to {to}: {e}")
         return False
+
+
+async def _get_tenant_from_email(db: AsyncSession, tenant_id: UUID | None) -> str | None:
+    """Get noreply@domain for tenant if email_domain is configured."""
+    if not tenant_id:
+        return None
+    from app.models.tenant import Tenant
+
+    result = await db.execute(select(Tenant.email_domain).where(Tenant.id == tenant_id))
+    domain = result.scalar_one_or_none()
+    return f"noreply@{domain}" if domain else None
 
 
 async def _is_email_enabled_for_conference(db: AsyncSession, conference_id: UUID | None) -> bool:
@@ -294,11 +308,12 @@ async def send_tenant_user_welcome_email(
     first_name: str = "",
     last_name: str = "",
     support_email: str = "",
-    base_url: str = "http://localhost:3001",
+    base_url: str = "http://localhost:3000",
+    from_email: str | None = None,
 ) -> bool:
-    """Send a welcome email to a new tenant user."""
+    """Send a welcome/invite email to a new tenant user with a setup-password link."""
     settings = get_settings()
-    verify_url = f"{base_url}/verify-email?token={token}"
+    setup_url = f"{base_url}/setup-password?token={token}"
 
     context = build_tenant_welcome_context(
         first_name=first_name,
@@ -306,7 +321,7 @@ async def send_tenant_user_welcome_email(
         email=email,
         company_name=company_name,
         user_type=user_type,
-        verify_link=verify_url,
+        verify_link=setup_url,
         support_email=support_email or settings.RESEND_FROM_EMAIL,
     )
 
@@ -316,7 +331,7 @@ async def send_tenant_user_welcome_email(
         context,
     )
 
-    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
+    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text, from_email=from_email)
 
 
 async def send_direct_message_email(
