@@ -9,7 +9,9 @@ import phonenumbers
 _EMAIL_RE = re.compile(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$")
 
 # Website URL must have a valid hostname with a TLD
-_HOSTNAME_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$")
+_HOSTNAME_RE = re.compile(
+    r"^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$"
+)
 
 
 def validate_email(value: str | None) -> str | None:
@@ -68,8 +70,6 @@ def validate_website(value: str | None) -> str | None:
     hostname = parsed.hostname or ""
 
     if not _HOSTNAME_RE.match(hostname):
-        raise ValueError(
-            "Invalid website URL. Provide a valid domain, e.g. example.com or https://example.com"
-        )
+        raise ValueError("Invalid website URL. Provide a valid domain, e.g. example.com or https://example.com")
 
     return url
