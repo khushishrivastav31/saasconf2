@@ -50,6 +50,19 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Forgot password request — send a reset link."""
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Reset password with token."""
+
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
 class UserPreferencesUpdate(BaseModel):
     """Update user preferences (notification settings, theme, etc.)."""
 

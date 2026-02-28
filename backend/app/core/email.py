@@ -254,13 +254,15 @@ async def send_password_reset_email(
     company_name: str = "",
     first_name: str = "",
     last_name: str = "",
-    tenant_slug: str,
+    tenant_slug: str = "",
     support_email: str = "",
     base_url: str = "http://localhost:3002",
+    reset_url: str | None = None,
 ) -> bool:
     """Send a password reset email."""
     settings = get_settings()
-    reset_url = f"{base_url}/{tenant_slug}/portal/user/reset-password?token={token}"
+    if not reset_url:
+        reset_url = f"{base_url}/{tenant_slug}/portal/user/reset-password?token={token}"
 
     context = build_password_reset_context(
         first_name=first_name,

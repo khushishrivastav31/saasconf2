@@ -1,5 +1,7 @@
 """Authentication endpoints."""
 
+import hashlib
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -8,17 +10,20 @@ from slowapi.util import get_remote_address
 from sqlalchemy import func, select
 
 from app.config import get_settings
+from app.core.applicant_security import generate_email_verification_token
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
     get_client_ip,
     get_token_from_header,
 )
+from app.core.email import send_password_reset_email
 from app.core.exceptions import AuthenticationError
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
     hash_token,
     verify_password,
 )
@@ -29,7 +34,16 @@ from app.models.module import TenantModule
 from app.models.tenant import Tenant
 from app.models.token import RefreshToken
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse, UserPreferencesUpdate, UserResponse
+from app.models.user_password_reset import UserPasswordReset
+from app.schemas.auth import (
+    ForgotPasswordRequest,
+    LoginRequest,
+    RefreshRequest,
+    ResetPasswordRequest,
+    TokenResponse,
+    UserPreferencesUpdate,
+    UserResponse,
+)
 
 settings = get_settings()
 router = APIRouter()
@@ -351,3 +365,126 @@ async def update_user_preferences(
     await db.refresh(user)
 
     return await get_current_user_info(current_user, db)
+
+
+@router.post("/forgot-password")
+@limiter.limit("3/minute")
+async def forgot_password(
+    request: Request,
+    data: ForgotPasswordRequest,
+    db: DbSessionDep,
+) -> dict:
+    """Request a password reset email.
+
+    Always returns success to prevent email enumeration.
+    Rate limited to 3 requests per minute.
+    """
+    # Always return the same message regardless of whether user exists
+    success_message = "If an account with this email exists, a password reset link has been sent."
+
+    result = await db.execute(select(User).where(func.lower(User.email) == data.email.strip().lower()))
+    user = result.scalar_one_or_none()
+
+    if not user or not user.is_active:
+        return {"message": success_message}
+
+    # Generate token
+    raw_token, token_hash = generate_email_verification_token()
+
+    # Store reset token (1 hour expiry)
+    reset = UserPasswordReset(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=utcnow() + timedelta(hours=1),
+    )
+    db.add(reset)
+
+    # Build admin reset URL (use first CORS origin as frontend base)
+    frontend_base = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
+    admin_reset_url = f"{frontend_base}/reset-password?token={raw_token}"
+
+    # Get tenant name for email context
+    tenant_name = "SaaSConf"
+    if user.tenant_id:
+        tenant_result = await db.execute(select(Tenant.name).where(Tenant.id == user.tenant_id))
+        row = tenant_result.scalar_one_or_none()
+        if row:
+            tenant_name = row
+
+    # Send email
+    await send_password_reset_email(
+        db,
+        email=user.email,
+        token=raw_token,
+        company_name=tenant_name,
+        first_name=user.first_name or "",
+        last_name=user.last_name or "",
+        reset_url=admin_reset_url,
+    )
+
+    # Audit log
+    db.add(
+        AuditLog(
+            tenant_id=user.tenant_id,
+            user_id=user.id,
+            action=AuditAction.USER_PASSWORD_RESET_REQUESTED,
+            resource_type="user",
+            resource_id=user.id,
+            details={"email": user.email},
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
+
+    await db.commit()
+    return {"message": success_message}
+
+
+@router.post("/reset-password")
+@limiter.limit("5/minute")
+async def reset_password(
+    request: Request,
+    data: ResetPasswordRequest,
+    db: DbSessionDep,
+) -> dict:
+    """Reset password using a valid reset token."""
+    # Hash the provided token to find it in the database
+    token_hash = hashlib.sha256(data.token.encode()).hexdigest()
+
+    result = await db.execute(
+        select(UserPasswordReset).where(
+            UserPasswordReset.token_hash == token_hash,
+            UserPasswordReset.used_at.is_(None),
+        )
+    )
+    reset = result.scalar_one_or_none()
+
+    if not reset or not reset.is_valid:
+        raise AuthenticationError("Invalid or expired reset token")
+
+    # Load user
+    user_result = await db.execute(select(User).where(User.id == reset.user_id))
+    user = user_result.scalar_one_or_none()
+
+    if not user:
+        raise AuthenticationError("Invalid or expired reset token")
+
+    # Update password and mark token as used
+    user.password_hash = hash_password(data.new_password)
+    reset.used_at = utcnow()
+
+    # Audit log
+    db.add(
+        AuditLog(
+            tenant_id=user.tenant_id,
+            user_id=user.id,
+            action=AuditAction.USER_PASSWORD_RESET_COMPLETED,
+            resource_type="user",
+            resource_id=user.id,
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
+
+    await db.commit()
+    return {"message": "Password has been reset successfully. You can now log in."}

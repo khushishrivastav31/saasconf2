@@ -300,6 +300,13 @@ Sidebar tree: **Volunteers** (list) → **Task Assignment** | **Volunteer Assign
 - Falls back to console logging when `RESEND_API_KEY` is not set
 - Per-conference email toggle via `conference.settings.email_sending_enabled`
 
+### Admin Password Reset Flow
+- **Forgot password**: `POST /auth/forgot-password` — rate limited 3/min, always returns success (anti-enumeration). Generates token via `generate_email_verification_token()`, stores SHA256 hash in `user_password_resets` table (1h expiry), sends reset email.
+- **Reset password**: `POST /auth/reset-password` — rate limited 5/min. Validates token hash, updates `password_hash`, marks token as used. One-time use tokens.
+- **Model**: `UserPasswordReset` in `app/models/user_password_reset.py` (mirrors `ApplicantPasswordReset`). Migration: `102_user_password_resets`.
+- **Frontend**: `/forgot-password` (email form) and `/reset-password?token=...` (new password form). Login page has "Forgot password?" link.
+- **Audit actions**: `USER_PASSWORD_RESET_REQUESTED`, `USER_PASSWORD_RESET_COMPLETED`
+
 ### Rate Limiting
 - `slowapi` with `get_remote_address` key function
 - Auth endpoints: `5/minute` (login, register, reset-password), `3/minute` (forgot-password), `10/minute` (refresh, verify-email)
@@ -333,7 +340,7 @@ Sidebar tree: **Volunteers** (list) → **Task Assignment** | **Volunteer Assign
 - Shared fixtures: `tenant`, `conference`, `conferences_module`, `tenant_with_modules`, `super_admin_user`, `tenant_admin_user`, `regular_user`
 - Auth helper: `_make_token(user, modules)` creates JWT tokens; `auth_headers(token)` wraps in Bearer header
 - Rate limiting disabled globally in tests via `RATELIMIT_ENABLED=false` env var
-- 780+ backend tests, all passing
+- 900+ backend tests, all passing
 
 ## Development Process
 

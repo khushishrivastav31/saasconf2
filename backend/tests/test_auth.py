@@ -1,15 +1,18 @@
 """Integration tests for the auth API endpoints."""
 
 import uuid
+from datetime import timedelta
 
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.applicant_security import generate_email_verification_token
 from app.core.security import hash_password
+from app.core.utils import utcnow
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
+from app.models.user_password_reset import UserPasswordReset
 from tests.conftest import auth_headers
-
 
 # ── Login tests ──────────────────────────────────────────────────────────
 
@@ -47,9 +50,7 @@ async def test_login_nonexistent_email(client: AsyncClient) -> None:
     assert response.status_code == 401
 
 
-async def test_login_deactivated_user(
-    client: AsyncClient, db_session: AsyncSession, tenant: Tenant
-) -> None:
+async def test_login_deactivated_user(client: AsyncClient, db_session: AsyncSession, tenant: Tenant) -> None:
     """Login with a deactivated user returns 401."""
     inactive_user = User(
         id=uuid.uuid4(),
@@ -74,9 +75,7 @@ async def test_login_deactivated_user(
 # ── Me tests ─────────────────────────────────────────────────────────────
 
 
-async def test_me_returns_user_info(
-    client: AsyncClient, tenant_admin_user: User, tenant_admin_token: str
-) -> None:
+async def test_me_returns_user_info(client: AsyncClient, tenant_admin_user: User, tenant_admin_token: str) -> None:
     """GET /me returns current user info with a valid token."""
     response = await client.get(
         "/api/v1/auth/me",
@@ -100,9 +99,7 @@ async def test_me_without_token(client: AsyncClient) -> None:
 # ── Logout tests ─────────────────────────────────────────────────────────
 
 
-async def test_logout_success(
-    client: AsyncClient, tenant_admin_token: str
-) -> None:
+async def test_logout_success(client: AsyncClient, tenant_admin_token: str) -> None:
     """POST /logout returns success message with a valid token."""
     response = await client.post(
         "/api/v1/auth/logout",
@@ -116,9 +113,7 @@ async def test_logout_success(
 # ── Refresh tests ────────────────────────────────────────────────────────
 
 
-async def test_refresh_returns_new_tokens(
-    client: AsyncClient, tenant_admin_user: User
-) -> None:
+async def test_refresh_returns_new_tokens(client: AsyncClient, tenant_admin_user: User) -> None:
     """POST /refresh returns new tokens with a valid refresh token."""
     # First, login to obtain a refresh token
     login_response = await client.post(
@@ -142,3 +137,162 @@ async def test_refresh_returns_new_tokens(
     assert data["expires_in"] > 0
     # The new refresh token should differ from the original (rotation)
     assert data["refresh_token"] != refresh_token
+
+
+# ── Forgot Password tests ────────────────────────────────────────────────
+
+
+async def test_forgot_password_existing_user(client: AsyncClient, tenant_admin_user: User) -> None:
+    """POST /forgot-password with existing email returns success message."""
+    response = await client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": tenant_admin_user.email},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "password reset link" in data["message"].lower()
+
+
+async def test_forgot_password_nonexistent_email(client: AsyncClient) -> None:
+    """POST /forgot-password with non-existent email still returns success (no enumeration)."""
+    response = await client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "nobody@nowhere.com"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "password reset link" in data["message"].lower()
+
+
+async def test_forgot_password_invalid_email_format(client: AsyncClient) -> None:
+    """POST /forgot-password with invalid email format returns 422."""
+    response = await client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "not-an-email"},
+    )
+    assert response.status_code == 422
+
+
+async def test_forgot_password_deactivated_user(client: AsyncClient, db_session: AsyncSession, tenant: Tenant) -> None:
+    """POST /forgot-password for deactivated user returns success but sends no email."""
+    inactive_user = User(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        email=f"inactive-fp-{uuid.uuid4().hex[:8]}@test.com",
+        password_hash=hash_password("Password123!"),
+        first_name="Inactive",
+        last_name="User",
+        role=UserRole.USER.value,
+        is_active=False,
+    )
+    db_session.add(inactive_user)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": inactive_user.email},
+    )
+    assert response.status_code == 200
+
+
+# ── Reset Password tests ────────────────────────────────────────────────
+
+
+async def test_reset_password_valid_token(
+    client: AsyncClient, db_session: AsyncSession, tenant_admin_user: User
+) -> None:
+    """POST /reset-password with a valid token changes the password."""
+    # Create a reset token directly
+    raw_token, token_hash = generate_email_verification_token()
+    reset = UserPasswordReset(
+        user_id=tenant_admin_user.id,
+        token_hash=token_hash,
+        expires_at=utcnow() + timedelta(hours=1),
+    )
+    db_session.add(reset)
+    await db_session.commit()
+
+    new_password = "NewSecurePassword456!"
+    response = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "new_password": new_password},
+    )
+    assert response.status_code == 200
+    assert "successfully" in response.json()["message"].lower()
+
+    # Verify the new password works
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": tenant_admin_user.email, "password": new_password},
+    )
+    assert login_response.status_code == 200
+
+
+async def test_reset_password_expired_token(
+    client: AsyncClient, db_session: AsyncSession, tenant_admin_user: User
+) -> None:
+    """POST /reset-password with an expired token returns 401."""
+    raw_token, token_hash = generate_email_verification_token()
+    reset = UserPasswordReset(
+        user_id=tenant_admin_user.id,
+        token_hash=token_hash,
+        expires_at=utcnow() - timedelta(hours=1),  # Already expired
+    )
+    db_session.add(reset)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "new_password": "NewPassword123!"},
+    )
+    assert response.status_code == 401
+
+
+async def test_reset_password_used_token(
+    client: AsyncClient, db_session: AsyncSession, tenant_admin_user: User
+) -> None:
+    """POST /reset-password with an already-used token returns 401."""
+    raw_token, token_hash = generate_email_verification_token()
+    reset = UserPasswordReset(
+        user_id=tenant_admin_user.id,
+        token_hash=token_hash,
+        expires_at=utcnow() + timedelta(hours=1),
+        used_at=utcnow(),  # Already used
+    )
+    db_session.add(reset)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "new_password": "NewPassword123!"},
+    )
+    assert response.status_code == 401
+
+
+async def test_reset_password_invalid_token(client: AsyncClient) -> None:
+    """POST /reset-password with a completely invalid token returns 401."""
+    response = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": "totally-fake-token", "new_password": "NewPassword123!"},
+    )
+    assert response.status_code == 401
+
+
+async def test_reset_password_short_password(
+    client: AsyncClient, db_session: AsyncSession, tenant_admin_user: User
+) -> None:
+    """POST /reset-password with a password shorter than 8 chars returns 422."""
+    raw_token, token_hash = generate_email_verification_token()
+    reset = UserPasswordReset(
+        user_id=tenant_admin_user.id,
+        token_hash=token_hash,
+        expires_at=utcnow() + timedelta(hours=1),
+    )
+    db_session.add(reset)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "new_password": "short"},
+    )
+    assert response.status_code == 422
