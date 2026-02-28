@@ -1,15 +1,15 @@
 """Add email_domain to tenants.
 
-Revision ID: 100
-Revises: 099
+Revision ID: 103_tenant_email_domain
+Revises: 102_user_pw_resets
 Create Date: 2026-02-28
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-revision = "100"
-down_revision = "099"
+revision = "103_tenant_email_domain"
+down_revision = "102_user_pw_resets"
 branch_labels = None
 depends_on = None
 
