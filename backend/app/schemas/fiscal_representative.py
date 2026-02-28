@@ -63,7 +63,7 @@ class FiscalRepresentativeResponse(BaseModel):
     website: str | None = None
     vat_number: str | None = None
     conference_vat_number: str | None = None
-    contact_persons: list[LocationContactPersonResponse] = []
+    contact_persons: list[LocationContactPersonResponse] | None = []
     is_active: bool
     created_at: datetime
     updated_at: datetime
