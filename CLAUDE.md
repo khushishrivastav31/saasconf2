@@ -301,11 +301,15 @@ Sidebar tree: **Volunteers** (list) → **Task Assignment** | **Volunteer Assign
 - Per-conference email toggle via `conference.settings.email_sending_enabled`
 
 ### Admin Password Reset Flow
-- **Forgot password**: `POST /auth/forgot-password` — rate limited 3/min, always returns success (anti-enumeration). Generates token via `generate_email_verification_token()`, stores SHA256 hash in `user_password_resets` table (1h expiry), sends reset email.
-- **Reset password**: `POST /auth/reset-password` — rate limited 5/min. Validates token hash, updates `password_hash`, marks token as used. One-time use tokens.
-- **Model**: `UserPasswordReset` in `app/models/user_password_reset.py` (mirrors `ApplicantPasswordReset`). Migration: `102_user_password_resets`.
-- **Frontend**: `/forgot-password` (email form) and `/reset-password?token=...` (new password form). Login page has "Forgot password?" link.
-- **Audit actions**: `USER_PASSWORD_RESET_REQUESTED`, `USER_PASSWORD_RESET_COMPLETED`
+Token-based password reset for admin users (`super_admin`, `tenant_admin`, `user`). OWASP-compliant.
+
+- **Forgot password**: `POST /auth/forgot-password` — rate limited 3/min, always returns success regardless of email existence (anti-enumeration). Generates token via `generate_email_verification_token()` (`secrets.token_urlsafe(32)`, 256-bit entropy), stores SHA256 hash in `user_password_resets` table (1h expiry), sends reset email via Resend. Invalidates all previous unused tokens for the same user before creating a new one.
+- **Reset password**: `POST /auth/reset-password` — rate limited 5/min. Validates token hash against DB, enforces password complexity (min 8 chars, uppercase, lowercase, digit — same rules as `UserCreate`), updates `password_hash` (Argon2id), marks token as used. On successful reset: invalidates all other pending reset tokens for the user and revokes all active refresh tokens (forces re-login on all devices).
+- **Model**: `UserPasswordReset` in `app/models/user_password_reset.py` (mirrors `ApplicantPasswordReset`). Columns: `user_id` FK, `token_hash` (SHA256, indexed), `expires_at`, `created_at`, `used_at`. Property `is_valid` checks `used_at is None and utcnow() < expires_at`. Migration: `102_user_password_resets`.
+- **Frontend**: `/forgot-password` (email form → success message) and `/reset-password?token=...` (new password + confirm, client-side complexity validation). Login page has "Forgot password?" link. Both pages include dark mode support and ThemeToggle.
+- **Audit actions**: `USER_PASSWORD_RESET_REQUESTED` (on forgot-password, includes email + IP), `USER_PASSWORD_RESET_COMPLETED` (on reset-password, includes IP)
+- **Email**: Uses existing `send_password_reset_email()` with `reset_url` override parameter (admin URL differs from portal URL). Falls back to console logging when `RESEND_API_KEY` is not set.
+- **OWASP compliance**: Anti-enumeration, rate limiting, high-entropy tokens, hashed token storage, one-time use, token expiry, previous token invalidation, password complexity, session revocation on reset, Argon2id hashing, audit logging, HTTPS transport, generic error messages
 
 ### Rate Limiting
 - `slowapi` with `get_remote_address` key function
