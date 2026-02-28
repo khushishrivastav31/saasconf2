@@ -22,6 +22,7 @@ const ComingSoon = lazy(() => import('./pages/modules/ComingSoon'));
 const Team = lazy(() => import('./pages/Team'));
 const MyCompany = lazy(() => import('./pages/MyCompany'));
 const ApplicantActivityLog = lazy(() => import('./pages/ApplicantActivityLog'));
+const Handbook = lazy(() => import('./pages/Handbook'));
 
 // Lazy-loaded CFP module pages
 const CFPLayout = lazy(() => import('./pages/modules/cfp').then((m) => ({ default: m.CFPLayout })));
@@ -244,6 +245,9 @@ function App() {
               </TenantOnlyRoute>
             }
           />
+
+          {/* Handbook (all authenticated users) */}
+          <Route path="handbook" element={<Handbook />} />
 
           {/* Module routes */}
           <Route
