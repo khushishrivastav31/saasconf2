@@ -388,6 +388,16 @@ async def forgot_password(
     if not user or not user.is_active:
         return {"message": success_message}
 
+    # Invalidate any previous unused reset tokens for this user
+    prev_tokens = await db.execute(
+        select(UserPasswordReset).where(
+            UserPasswordReset.user_id == user.id,
+            UserPasswordReset.used_at.is_(None),
+        )
+    )
+    for prev in prev_tokens.scalars().all():
+        prev.used_at = utcnow()
+
     # Generate token
     raw_token, token_hash = generate_email_verification_token()
 
@@ -472,6 +482,27 @@ async def reset_password(
     # Update password and mark token as used
     user.password_hash = hash_password(data.new_password)
     reset.used_at = utcnow()
+
+    # Invalidate all other pending reset tokens for this user
+    other_tokens_result = await db.execute(
+        select(UserPasswordReset).where(
+            UserPasswordReset.user_id == user.id,
+            UserPasswordReset.used_at.is_(None),
+            UserPasswordReset.id != reset.id,
+        )
+    )
+    for other_token in other_tokens_result.scalars().all():
+        other_token.used_at = utcnow()
+
+    # Revoke all active refresh tokens (force re-login everywhere)
+    active_tokens_result = await db.execute(
+        select(RefreshToken).where(
+            RefreshToken.user_id == user.id,
+            RefreshToken.revoked_at.is_(None),
+        )
+    )
+    for rt in active_tokens_result.scalars().all():
+        rt.revoked_at = utcnow()
 
     # Audit log
     db.add(

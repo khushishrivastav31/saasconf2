@@ -27,6 +27,13 @@ export default function ResetPassword() {
       return;
     }
 
+    if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+      setError(
+        'Password must contain at least one uppercase letter, one lowercase letter, and one digit.'
+      );
+      return;
+    }
+
     setIsLoading(true);
 
     try {
