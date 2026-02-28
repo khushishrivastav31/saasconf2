@@ -1,11 +1,15 @@
 """Custom validators for the application."""
 
 import re
+from urllib.parse import urlparse
 
 import phonenumbers
 
 # Simple email regex: local@domain.tld
 _EMAIL_RE = re.compile(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$")
+
+# Website URL must have a valid hostname with a TLD
+_HOSTNAME_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$")
 
 
 def validate_email(value: str | None) -> str | None:
@@ -41,3 +45,31 @@ def validate_phone(value: str | None) -> str | None:
         raise ValueError(
             "Invalid phone number format. Use international format with country code, e.g. +49123456789"
         ) from e
+
+
+def validate_website(value: str | None) -> str | None:
+    """Validate and normalise a website URL.
+
+    Accepts URLs with or without a scheme (e.g. ``example.com`` or
+    ``https://example.com``). Ensures the hostname has a valid TLD.
+
+    Returns the normalised URL (with ``https://`` prepended if missing),
+    or raises ``ValueError`` if the URL is invalid.
+    """
+    if value is None or value.strip() == "":
+        return value
+
+    url = value.strip()
+    # Prepend https:// if no scheme is present
+    if not re.match(r"^https?://", url, re.IGNORECASE):
+        url = f"https://{url}"
+
+    parsed = urlparse(url)
+    hostname = parsed.hostname or ""
+
+    if not _HOSTNAME_RE.match(hostname):
+        raise ValueError(
+            "Invalid website URL. Provide a valid domain, e.g. example.com or https://example.com"
+        )
+
+    return url

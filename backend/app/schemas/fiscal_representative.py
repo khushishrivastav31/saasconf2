@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.core.validators import validate_email, validate_phone
+from app.core.validators import validate_email, validate_phone, validate_website
 from app.schemas.location import LocationContactPerson, LocationContactPersonResponse, validate_vat
 
 
@@ -41,6 +41,11 @@ class FiscalRepresentativeUpsert(BaseModel):
     @classmethod
     def check_phone(cls, v: str | None) -> str | None:
         return validate_phone(v)
+
+    @field_validator("website")
+    @classmethod
+    def check_website(cls, v: str | None) -> str | None:
+        return validate_website(v)
 
 
 class FiscalRepresentativeResponse(BaseModel):

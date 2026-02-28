@@ -162,6 +162,32 @@ export const handbookSections: HandbookSection[] = [
             matters, with name, email, and phone.
           </li>
         </ul>
+        <h3>Field Validation</h3>
+        <p>The following fields are validated both when you type (on blur) and when you save:</p>
+        <ul>
+          <li>
+            <strong>VAT Numbers</strong> &mdash; must follow the EU format: a 2-letter country code
+            followed by 2&ndash;12 alphanumeric characters (e.g. <code>DE123456789</code>,{' '}
+            <code>NL123456789B01</code>). Spaces, hyphens, and dots are stripped automatically.
+          </li>
+          <li>
+            <strong>Email</strong> &mdash; must be a valid email address (e.g.{' '}
+            <code>contact@example.com</code>).
+          </li>
+          <li>
+            <strong>Website</strong> &mdash; must be a valid URL. You can enter just the domain
+            (e.g. <code>example.com</code>) and <code>https://</code> will be prepended
+            automatically.
+          </li>
+          <li>
+            <strong>Phone</strong> &mdash; must use international format with a country code (e.g.{' '}
+            <code>+49123456789</code>).
+          </li>
+        </ul>
+        <p>
+          Invalid fields are highlighted with a red border and an error message appears below the
+          field. You must fix all validation errors before saving.
+        </p>
         <h3>VAT Rate Periods</h3>
         <p>
           VAT rates can change over time. The platform supports defining multiple{' '}

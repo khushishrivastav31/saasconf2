@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.core.validators import validate_email, validate_phone
+from app.core.validators import validate_email, validate_phone, validate_website
 
 # EU VAT format: 2-letter country code followed by 2–12 alphanumeric characters
 _VAT_PATTERN = re.compile(r"^[A-Z]{2}[A-Z0-9]{2,12}$")
@@ -111,6 +111,11 @@ class LocationBase(BaseModel):
     def check_phone(cls, v: str | None) -> str | None:
         return validate_phone(v)
 
+    @field_validator("website")
+    @classmethod
+    def check_website(cls, v: str | None) -> str | None:
+        return validate_website(v)
+
     # Contact persons
     contact_persons: list[LocationContactPerson] = Field(default_factory=list)
 
@@ -181,6 +186,11 @@ class LocationUpdate(BaseModel):
     @classmethod
     def check_phone(cls, v: str | None) -> str | None:
         return validate_phone(v)
+
+    @field_validator("website")
+    @classmethod
+    def check_website(cls, v: str | None) -> str | None:
+        return validate_website(v)
 
 
 class LocationResponse(BaseModel):

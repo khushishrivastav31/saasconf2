@@ -3,6 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { COUNTRY_OPTIONS } from '../../../config/countries';
 import { parseApiError } from '../../../utils/apiError';
+import {
+  validateEmail,
+  validatePhone,
+  validateVat,
+  validateWebsite,
+} from '../../../utils/validators';
 import type {
   FiscalRepresentative,
   FiscalRepresentativeUpsert,
@@ -11,6 +17,15 @@ import type {
   TaxInfo,
   LocationContactPerson,
 } from '../../../types';
+
+interface FieldErrors {
+  email?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  vat_number?: string | null;
+  conference_vat_number?: string | null;
+  [key: string]: string | null | undefined;
+}
 
 interface FiscalRepSectionProps {
   conferenceId: string;
@@ -85,6 +100,47 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
   // --- Fiscal Rep Form State ---
   const [formData, setFormData] = useState<FiscalRepresentativeUpsert | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const validateField = useCallback(
+    (field: string, value: string | null | undefined): string | null => {
+      switch (field) {
+        case 'email':
+          return validateEmail(value);
+        case 'website':
+          return validateWebsite(value);
+        case 'phone':
+          return validatePhone(value);
+        case 'vat_number':
+        case 'conference_vat_number':
+          return validateVat(value);
+        default:
+          return null;
+      }
+    },
+    []
+  );
+
+  const handleFieldBlur = useCallback(
+    (field: string, value: string | null | undefined) => {
+      const err = validateField(field, value);
+      setFieldErrors((prev) => ({ ...prev, [field]: err }));
+    },
+    [validateField]
+  );
+
+  const validateAllFields = useCallback((): boolean => {
+    if (!formData) return false;
+    const errors: FieldErrors = {
+      email: validateField('email', formData.email),
+      website: validateField('website', formData.website),
+      phone: validateField('phone', formData.phone),
+      vat_number: validateField('vat_number', formData.vat_number),
+      conference_vat_number: validateField('conference_vat_number', formData.conference_vat_number),
+    };
+    setFieldErrors(errors);
+    return !Object.values(errors).some(Boolean);
+  }, [formData, validateField]);
 
   // Initialize form when data loads
   const initForm = useCallback(() => {
@@ -109,6 +165,7 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
       setFormData({ ...emptyFiscalRep });
     }
     setShowForm(true);
+    setFieldErrors({});
   }, [fiscalRep]);
 
   // --- Mutations ---
@@ -151,6 +208,10 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
   const handleSaveFiscalRep = () => {
     if (!formData || !formData.company_name.trim()) {
       setError('Company name is required');
+      return;
+    }
+    if (!validateAllFields()) {
+      setError('Please fix the validation errors below before saving.');
       return;
     }
     upsertFiscalRep.mutate(formData);
@@ -476,10 +537,24 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
                   </label>
                   <input
                     type="text"
-                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="+49123456789"
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
+                      fieldErrors.phone
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, phone: e.target.value });
+                      if (fieldErrors.phone) setFieldErrors((prev) => ({ ...prev, phone: null }));
+                    }}
+                    onBlur={(e) => handleFieldBlur('phone', e.target.value)}
                   />
+                  {fieldErrors.phone && (
+                    <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                      {fieldErrors.phone}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -487,10 +562,24 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
                   </label>
                   <input
                     type="email"
-                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="email@example.com"
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
+                      fieldErrors.email
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: null }));
+                    }}
+                    onBlur={(e) => handleFieldBlur('email', e.target.value)}
                   />
+                  {fieldErrors.email && (
+                    <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                      {fieldErrors.email}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -498,10 +587,25 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
                   </label>
                   <input
                     type="text"
-                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="example.com"
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-2.5 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
+                      fieldErrors.website
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                     value={formData.website}
-                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, website: e.target.value });
+                      if (fieldErrors.website)
+                        setFieldErrors((prev) => ({ ...prev, website: null }));
+                    }}
+                    onBlur={(e) => handleFieldBlur('website', e.target.value)}
                   />
+                  {fieldErrors.website && (
+                    <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                      {fieldErrors.website}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -513,10 +617,24 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
                   <input
                     type="text"
                     placeholder="e.g. NL123456789B01"
-                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm font-mono focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-2.5 text-sm font-mono focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
+                      fieldErrors.vat_number
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                     value={formData.vat_number}
-                    onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, vat_number: e.target.value });
+                      if (fieldErrors.vat_number)
+                        setFieldErrors((prev) => ({ ...prev, vat_number: null }));
+                    }}
+                    onBlur={(e) => handleFieldBlur('vat_number', e.target.value)}
                   />
+                  {fieldErrors.vat_number && (
+                    <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                      {fieldErrors.vat_number}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -527,13 +645,25 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
                   </label>
                   <input
                     type="text"
-                    placeholder="VAT number for this conference"
-                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-2.5 text-sm font-mono focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="e.g. DE123456789"
+                    className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-2.5 text-sm font-mono focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
+                      fieldErrors.conference_vat_number
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                     value={formData.conference_vat_number}
-                    onChange={(e) =>
-                      setFormData({ ...formData, conference_vat_number: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setFormData({ ...formData, conference_vat_number: e.target.value });
+                      if (fieldErrors.conference_vat_number)
+                        setFieldErrors((prev) => ({ ...prev, conference_vat_number: null }));
+                    }}
+                    onBlur={(e) => handleFieldBlur('conference_vat_number', e.target.value)}
                   />
+                  {fieldErrors.conference_vat_number && (
+                    <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                      {fieldErrors.conference_vat_number}
+                    </p>
+                  )}
                 </div>
               </div>
 

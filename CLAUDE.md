@@ -361,11 +361,44 @@ Token-based password reset for admin users (`super_admin`, `tenant_admin`, `user
 - **Run all tests before committing** — `cd backend && pytest` and `cd frontend && npx vitest run`
 - **Never commit with failing tests** — fix the tests first, then commit
 
-### Validation Requirements
-- **Backend validation** — every new field must have appropriate validation in Pydantic schemas (type constraints, allowed values, string lengths)
-- **Frontend validation** — form inputs must validate before submission; use existing validators from `frontend/src/utils/validators.ts`
-- **API input validation** — never trust client input; validate at the API boundary in FastAPI endpoints
-- **Database constraints** — use appropriate column constraints (nullable, string length, check constraints) in migrations
+### Validation Standards
+
+**Principle**: All validated fields must have matching validation on **both** backend and frontend. Backend is the source of truth; frontend provides immediate UX feedback.
+
+**Backend validators** (`app/core/validators.py`):
+- `validate_email(value)` — regex-based email format check, returns lowercase trimmed
+- `validate_phone(value)` — `phonenumbers` library, requires international format (+49...), returns E.164
+- `validate_website(value)` — URL validation, auto-prepends `https://` if missing, validates hostname has valid TLD
+- `validate_vat(value)` — in `app/schemas/location.py`, regex `^[A-Z]{2}[A-Z0-9]{2,12}$`, cleans input (uppercase, strips spaces/hyphens/dots)
+
+**Frontend validators** (`frontend/src/utils/validators.ts`):
+- `validateEmail(value)` — same regex as backend, returns error string or null
+- `validatePhone(value)` — `libphonenumber-js` library, same rules as backend
+- `validateWebsite(value)` — same hostname validation as backend, returns error string or null
+- `validateVat(value)` — same regex as backend, returns error string or null
+- `normalizeUrl(value)` — prepends `https://` if no scheme, used before saving
+
+**When adding a new validated field**:
+1. Add a validator function in `app/core/validators.py` (or reuse existing)
+2. Wire it into the Pydantic schema via `@field_validator`
+3. Add a matching validator in `frontend/src/utils/validators.ts`
+4. In the form component: validate `onBlur`, show inline error below the field, show red border on error, clear error on change, validate all fields before submit
+5. Backend tests: test both valid and invalid inputs in the schema/endpoint tests
+
+**Inline field error pattern** (frontend):
+- `FieldErrors` interface with nullable string per field name
+- `validateField(field, value)` dispatcher mapping field names to validators
+- `handleFieldBlur(field, value)` updates `fieldErrors` state on blur
+- `validateAllFields()` checks all fields before submit, returns `false` if any errors
+- Red border: `border-red-500 dark:border-red-500` when error present
+- Error text: `<p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{error}</p>`
+- Clear error on change: `if (fieldErrors.field) setFieldErrors(prev => ({ ...prev, field: null }))`
+
+**General rules**:
+- Backend validation is authoritative — never trust client input
+- Frontend validation is for UX only — always validate at the API boundary
+- Use existing validators from `validators.ts` / `validators.py` — don't write ad-hoc regex in components
+- Database constraints (nullable, max_length, check) are the last line of defence
 
 ## Improvement Progress
 
