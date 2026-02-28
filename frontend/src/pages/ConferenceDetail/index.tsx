@@ -1,6 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
 import { useParams } from 'react-router';
-import Modal from '../../components/Modal';
 import { BackIcon } from './icons';
 import { useConferenceDetail } from './useConferenceDetail';
 import { SelectionProvider, useSelection } from './SelectionContext';
@@ -96,7 +95,6 @@ function ConferenceDetailContent() {
     isLoading,
     isError,
     isAdmin,
-    canDelete,
     handleUpdate,
 
     // Sidebar navigation
@@ -107,17 +105,6 @@ function ConferenceDetailContent() {
     expandedSections,
     setExpandedSections,
     sections,
-
-    // Delete logic
-    showDeleteConfirm,
-    setShowDeleteConfirm,
-    deletePreview,
-    setDeletePreview,
-    deleteLoading,
-    deleteError,
-    setDeleteError,
-    handleDeleteClick,
-    handleConfirmDelete,
 
     // Router helpers
     navigate,
@@ -188,20 +175,6 @@ function ConferenceDetailContent() {
             {conference.status}
           </span>
         </div>
-        {canDelete && (
-          <div className="flex items-center gap-2">
-            {deleteError && !showDeleteConfirm && (
-              <span className="text-sm text-red-600">{deleteError}</span>
-            )}
-            <button
-              onClick={handleDeleteClick}
-              disabled={deleteLoading}
-              className="inline-flex items-center px-3 py-1.5 border border-red-300 dark:border-red-700 text-sm font-medium rounded-md text-red-700 dark:text-red-300 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
-            >
-              {deleteLoading && !showDeleteConfirm ? 'Loading...' : 'Delete'}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Two-column layout */}
@@ -445,145 +418,6 @@ function ConferenceDetailContent() {
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <Modal
-        open={showDeleteConfirm && !!deletePreview}
-        onClose={() => {
-          setShowDeleteConfirm(false);
-          setDeletePreview(null);
-          setDeleteError(null);
-        }}
-        title="Delete Conference"
-        size="max-w-md"
-      >
-        {deletePreview && (
-          <div className="p-6">
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              Are you sure you want to delete <strong>{deletePreview.conference_name}</strong>? This
-              action cannot be undone.
-            </p>
-
-            {/* Items that will be permanently deleted */}
-            {(deletePreview.volunteers.will_delete > 0 ||
-              deletePreview.locations.will_delete > 0 ||
-              deletePreview.cfps.will_delete > 0 ||
-              deletePreview.sponsors.count > 0 ||
-              deletePreview.invoices.count > 0 ||
-              deletePreview.papers.count > 0 ||
-              deletePreview.applicants.orphaned_count > 0) && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm">
-                <p className="font-medium text-red-800 dark:text-red-200 mb-2">
-                  The following will be permanently deleted:
-                </p>
-                <ul className="space-y-1 text-red-700 dark:text-red-300">
-                  {deletePreview.volunteers.will_delete > 0 && (
-                    <li>
-                      {deletePreview.volunteers.will_delete} volunteer
-                      {deletePreview.volunteers.will_delete !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                  {deletePreview.locations.will_delete > 0 && (
-                    <li>
-                      {deletePreview.locations.will_delete} location
-                      {deletePreview.locations.will_delete !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                  {deletePreview.cfps.will_delete > 0 && (
-                    <li>
-                      {deletePreview.cfps.will_delete} call for paper
-                      {deletePreview.cfps.will_delete !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                  {deletePreview.papers.count > 0 && (
-                    <li>
-                      {deletePreview.papers.count} paper
-                      {deletePreview.papers.count !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                  {deletePreview.applicants.orphaned_count > 0 && (
-                    <li>
-                      {deletePreview.applicants.orphaned_count} applicant
-                      {deletePreview.applicants.orphaned_count !== 1 ? 's' : ''}{' '}
-                      <span className="text-red-600">(only have papers in this conference)</span>
-                    </li>
-                  )}
-                  {deletePreview.sponsors.count > 0 && (
-                    <li>
-                      {deletePreview.sponsors.count} sponsor
-                      {deletePreview.sponsors.count !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                  {deletePreview.invoices.count > 0 && (
-                    <li>
-                      {deletePreview.invoices.count} invoice
-                      {deletePreview.invoices.count !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
-
-            {/* Items that will be unlinked (shared with other conferences) */}
-            {(deletePreview.volunteers.will_unlink > 0 ||
-              deletePreview.locations.will_unlink > 0 ||
-              deletePreview.cfps.will_unlink > 0) && (
-              <div className="mb-4 p-3 bg-yellow-50 dark:bg-amber-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md text-sm">
-                <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
-                  The following will be unlinked (shared with other conferences):
-                </p>
-                <ul className="space-y-1 text-yellow-700 dark:text-yellow-300">
-                  {deletePreview.volunteers.will_unlink > 0 && (
-                    <li>
-                      {deletePreview.volunteers.will_unlink} volunteer
-                      {deletePreview.volunteers.will_unlink !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                  {deletePreview.locations.will_unlink > 0 && (
-                    <li>
-                      {deletePreview.locations.will_unlink} location
-                      {deletePreview.locations.will_unlink !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                  {deletePreview.cfps.will_unlink > 0 && (
-                    <li>
-                      {deletePreview.cfps.will_unlink} call for paper
-                      {deletePreview.cfps.will_unlink !== 1 ? 's' : ''}
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
-
-            {deleteError && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
-                {deleteError}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setDeletePreview(null);
-                  setDeleteError(null);
-                }}
-                disabled={deleteLoading}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                disabled={deleteLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 disabled:opacity-50"
-              >
-                {deleteLoading ? 'Deleting...' : 'Delete Conference'}
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

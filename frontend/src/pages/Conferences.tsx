@@ -4,17 +4,72 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 import { parseApiError } from '../utils/apiError';
 import { formatDate } from '../utils/formatDate';
+import { useAuth } from '../hooks/useAuth';
 import { useIsTenantAdmin } from '../hooks/useIsAdmin';
 import CreateConferenceModal from '../components/CreateConferenceModal';
 import ConferenceLogo from '../components/ConferenceLogo';
+import Modal from '../components/Modal';
 import type { Conference, ConferenceCreate, ConferenceStats, PaginatedResponse } from '../types';
+import type { DeletePreview } from './ConferenceDetail/useConferenceDetail';
 
 export default function Conferences() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const isTenantAdmin = useIsTenantAdmin();
+  const canDelete = user?.role === 'super_admin' || user?.is_tenant_super_user;
+
+  // Delete state
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePreview, setDeletePreview] = useState<DeletePreview | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteClick = async (e: React.MouseEvent, conferenceId: string) => {
+    e.stopPropagation();
+    try {
+      setDeleteTargetId(conferenceId);
+      setDeleteLoading(true);
+      setDeleteError(null);
+      const response = await api.get<DeletePreview>(`/conferences/${conferenceId}/delete-preview`);
+      setDeletePreview(response.data);
+      setShowDeleteConfirm(true);
+    } catch {
+      setDeleteError('Failed to load deletion preview');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetId) return;
+    try {
+      setDeleteLoading(true);
+      setDeleteError(null);
+      await api.delete(`/conferences/${deleteTargetId}`);
+      queryClient.invalidateQueries({ queryKey: ['conferences'] });
+      queryClient.invalidateQueries({ queryKey: ['conference-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
+      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
+      queryClient.invalidateQueries({ queryKey: ['all-cfps'] });
+      setShowDeleteConfirm(false);
+      setDeletePreview(null);
+      setDeleteTargetId(null);
+    } catch (error: unknown) {
+      setDeleteError(parseApiError(error, 'Failed to delete conference'));
+      setDeleteLoading(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteConfirm(false);
+    setDeletePreview(null);
+    setDeleteError(null);
+    setDeleteTargetId(null);
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['conferences', statusFilter],
@@ -140,10 +195,10 @@ export default function Conferences() {
           {data.items.map((conference) => (
             <div
               key={conference.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer flex flex-col"
               onClick={() => navigate(`/modules/conferences/${conference.id}`)}
             >
-              <div className="p-6">
+              <div className="p-6 flex flex-col flex-1">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-start gap-3">
                     {conference.logo_url && (
@@ -245,15 +300,43 @@ export default function Conferences() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 mt-3">
-                  {conference.is_published ? (
-                    <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded">
-                      Published
-                    </span>
-                  ) : (
-                    <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
-                      Draft
-                    </span>
+                <div className="flex items-center justify-between mt-auto pt-3">
+                  <div className="flex items-center gap-2">
+                    {conference.is_published ? (
+                      <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded">
+                        Published
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
+                        Draft
+                      </span>
+                    )}
+                  </div>
+                  {canDelete && (
+                    <button
+                      onClick={(e) => handleDeleteClick(e, conference.id)}
+                      disabled={deleteLoading && deleteTargetId === conference.id}
+                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
+                      title="Delete conference"
+                    >
+                      {deleteLoading && deleteTargetId === conference.id ? (
+                        <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600" />
+                      ) : (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      )}
+                    </button>
                   )}
                 </div>
               </div>
@@ -303,6 +386,135 @@ export default function Conferences() {
         isLoading={createMutation.isPending}
         error={createError}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={showDeleteConfirm && !!deletePreview}
+        onClose={closeDeleteModal}
+        title="Delete Conference"
+        size="max-w-md"
+      >
+        {deletePreview && (
+          <div className="p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Are you sure you want to delete <strong>{deletePreview.conference_name}</strong>? This
+              action cannot be undone.
+            </p>
+
+            {(deletePreview.volunteers.will_delete > 0 ||
+              deletePreview.locations.will_delete > 0 ||
+              deletePreview.cfps.will_delete > 0 ||
+              deletePreview.sponsors.count > 0 ||
+              deletePreview.invoices.count > 0 ||
+              deletePreview.papers.count > 0 ||
+              deletePreview.applicants.orphaned_count > 0) && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm">
+                <p className="font-medium text-red-800 dark:text-red-200 mb-2">
+                  The following will be permanently deleted:
+                </p>
+                <ul className="space-y-1 text-red-700 dark:text-red-300">
+                  {deletePreview.volunteers.will_delete > 0 && (
+                    <li>
+                      {deletePreview.volunteers.will_delete} volunteer
+                      {deletePreview.volunteers.will_delete !== 1 ? 's' : ''}
+                    </li>
+                  )}
+                  {deletePreview.locations.will_delete > 0 && (
+                    <li>
+                      {deletePreview.locations.will_delete} location
+                      {deletePreview.locations.will_delete !== 1 ? 's' : ''}
+                    </li>
+                  )}
+                  {deletePreview.cfps.will_delete > 0 && (
+                    <li>
+                      {deletePreview.cfps.will_delete} call for paper
+                      {deletePreview.cfps.will_delete !== 1 ? 's' : ''}
+                    </li>
+                  )}
+                  {deletePreview.papers.count > 0 && (
+                    <li>
+                      {deletePreview.papers.count} paper
+                      {deletePreview.papers.count !== 1 ? 's' : ''}
+                    </li>
+                  )}
+                  {deletePreview.applicants.orphaned_count > 0 && (
+                    <li>
+                      {deletePreview.applicants.orphaned_count} applicant
+                      {deletePreview.applicants.orphaned_count !== 1 ? 's' : ''}{' '}
+                      <span className="text-red-600">(only have papers in this conference)</span>
+                    </li>
+                  )}
+                  {deletePreview.sponsors.count > 0 && (
+                    <li>
+                      {deletePreview.sponsors.count} sponsor
+                      {deletePreview.sponsors.count !== 1 ? 's' : ''}
+                    </li>
+                  )}
+                  {deletePreview.invoices.count > 0 && (
+                    <li>
+                      {deletePreview.invoices.count} invoice
+                      {deletePreview.invoices.count !== 1 ? 's' : ''}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {(deletePreview.volunteers.will_unlink > 0 ||
+              deletePreview.locations.will_unlink > 0 ||
+              deletePreview.cfps.will_unlink > 0) && (
+              <div className="mb-4 p-3 bg-yellow-50 dark:bg-amber-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md text-sm">
+                <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+                  The following will be unlinked (shared with other conferences):
+                </p>
+                <ul className="space-y-1 text-yellow-700 dark:text-yellow-300">
+                  {deletePreview.volunteers.will_unlink > 0 && (
+                    <li>
+                      {deletePreview.volunteers.will_unlink} volunteer
+                      {deletePreview.volunteers.will_unlink !== 1 ? 's' : ''}
+                    </li>
+                  )}
+                  {deletePreview.locations.will_unlink > 0 && (
+                    <li>
+                      {deletePreview.locations.will_unlink} location
+                      {deletePreview.locations.will_unlink !== 1 ? 's' : ''}
+                    </li>
+                  )}
+                  {deletePreview.cfps.will_unlink > 0 && (
+                    <li>
+                      {deletePreview.cfps.will_unlink} call for paper
+                      {deletePreview.cfps.will_unlink !== 1 ? 's' : ''}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {deleteError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={closeDeleteModal}
+                disabled={deleteLoading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete Conference'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

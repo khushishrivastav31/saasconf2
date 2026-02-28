@@ -5,7 +5,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { useConferenceAdmin } from '../../hooks/useConferenceAdmin';
 import api from '../../config/api';
 import type { Conference } from '../../types';
-import { parseApiError } from '../../utils/apiError';
 import { SectionId, SectionDef, coreSections, moduleSections } from './conferenceSections';
 
 // ---------------------------------------------------------------------------
@@ -53,7 +52,6 @@ export interface UseConferenceDetailReturn {
   isLoading: boolean;
   isError: boolean;
   isAdmin: boolean;
-  canDelete: boolean | undefined;
   handleUpdate: () => void;
 
   // Sidebar navigation
@@ -64,17 +62,6 @@ export interface UseConferenceDetailReturn {
   expandedSections: Set<string>;
   setExpandedSections: React.Dispatch<React.SetStateAction<Set<string>>>;
   sections: SectionDef[];
-
-  // Delete logic
-  showDeleteConfirm: boolean;
-  setShowDeleteConfirm: React.Dispatch<React.SetStateAction<boolean>>;
-  deletePreview: DeletePreview | null;
-  setDeletePreview: React.Dispatch<React.SetStateAction<DeletePreview | null>>;
-  deleteLoading: boolean;
-  deleteError: string | null;
-  setDeleteError: React.Dispatch<React.SetStateAction<string | null>>;
-  handleDeleteClick: () => Promise<void>;
-  handleConfirmDelete: () => Promise<void>;
 
   // Router helpers
   navigate: ReturnType<typeof useNavigate>;
@@ -90,9 +77,6 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useConferenceAdmin(conferenceId);
-
-  // Only super admins and tenant super users can delete conferences
-  const canDelete = user?.role === 'super_admin' || user?.is_tenant_super_user;
 
   // -------------------------------------------------------------------------
   // Sidebar navigation — synced with URL ?tab= param
@@ -169,15 +153,6 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
   }, [user?.modules, user?.role]);
 
   // -------------------------------------------------------------------------
-  // Delete logic
-  // -------------------------------------------------------------------------
-
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deletePreview, setDeletePreview] = useState<DeletePreview | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  // -------------------------------------------------------------------------
   // Conference data
   // -------------------------------------------------------------------------
 
@@ -194,37 +169,6 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
     enabled: !!conferenceId,
   });
 
-  const handleDeleteClick = async () => {
-    try {
-      setDeleteLoading(true);
-      setDeleteError(null);
-      const response = await api.get<DeletePreview>(`/conferences/${conferenceId}/delete-preview`);
-      setDeletePreview(response.data);
-      setShowDeleteConfirm(true);
-    } catch {
-      setDeleteError('Failed to load deletion preview');
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    try {
-      setDeleteLoading(true);
-      setDeleteError(null);
-      await api.delete(`/conferences/${conferenceId}`);
-      queryClient.invalidateQueries({ queryKey: ['conferences'] });
-      queryClient.invalidateQueries({ queryKey: ['conference-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
-      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
-      queryClient.invalidateQueries({ queryKey: ['all-cfps'] });
-      navigate('/modules/conferences');
-    } catch (error: unknown) {
-      setDeleteError(parseApiError(error, 'Failed to delete conference'));
-      setDeleteLoading(false);
-    }
-  };
-
   const handleUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['conference', conferenceId] });
   };
@@ -235,7 +179,6 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
     isLoading,
     isError,
     isAdmin,
-    canDelete,
     handleUpdate,
 
     // Sidebar navigation
@@ -246,17 +189,6 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
     expandedSections,
     setExpandedSections,
     sections,
-
-    // Delete logic
-    showDeleteConfirm,
-    setShowDeleteConfirm,
-    deletePreview,
-    setDeletePreview,
-    deleteLoading,
-    deleteError,
-    setDeleteError,
-    handleDeleteClick,
-    handleConfirmDelete,
 
     // Router helpers
     navigate,
