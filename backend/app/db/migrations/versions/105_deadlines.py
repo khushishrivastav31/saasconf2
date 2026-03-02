@@ -63,10 +63,7 @@ def upgrade() -> None:
     op.create_index("idx_deadlines_due_date", "deadlines", ["due_date"])
 
     # Partial index for efficient cron queries (only active deadlines)
-    op.execute(
-        "CREATE INDEX idx_deadlines_active_due "
-        "ON deadlines (is_active, due_date) WHERE is_active = true"
-    )
+    op.execute("CREATE INDEX idx_deadlines_active_due ON deadlines (is_active, due_date) WHERE is_active = true")
 
     # RLS for tenant isolation
     op.execute("ALTER TABLE deadlines ENABLE ROW LEVEL SECURITY")

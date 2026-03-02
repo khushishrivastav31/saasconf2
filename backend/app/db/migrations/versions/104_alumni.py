@@ -56,20 +56,14 @@ def upgrade() -> None:
     )
 
     # Unique constraint: one alumni per email per conference (case-insensitive)
-    op.execute(
-        "CREATE UNIQUE INDEX uq_alumni_conference_email "
-        "ON alumni (conference_id, lower(email))"
-    )
+    op.execute("CREATE UNIQUE INDEX uq_alumni_conference_email ON alumni (conference_id, lower(email))")
 
     # Standard indexes
     op.create_index("idx_alumni_tenant", "alumni", ["tenant_id"])
     op.create_index("idx_alumni_conference", "alumni", ["conference_id"])
 
     # Tenant email lookup index (for cross-conference alumni check)
-    op.execute(
-        "CREATE INDEX idx_alumni_tenant_email "
-        "ON alumni (tenant_id, lower(email))"
-    )
+    op.execute("CREATE INDEX idx_alumni_tenant_email ON alumni (tenant_id, lower(email))")
 
     # RLS for tenant isolation
     op.execute("ALTER TABLE alumni ENABLE ROW LEVEL SECURITY")

@@ -12,19 +12,64 @@ import re
 from typing import Any
 
 EU_COUNTRIES = {
-    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI",
-    "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU",
-    "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE",
+    "AT",
+    "BE",
+    "BG",
+    "HR",
+    "CY",
+    "CZ",
+    "DK",
+    "EE",
+    "FI",
+    "FR",
+    "DE",
+    "GR",
+    "HU",
+    "IE",
+    "IT",
+    "LV",
+    "LT",
+    "LU",
+    "MT",
+    "NL",
+    "PL",
+    "PT",
+    "RO",
+    "SK",
+    "SI",
+    "ES",
+    "SE",
 }
 
 # Country code → VAT prefix mapping
 COUNTRY_VAT_PREFIX: dict[str, str] = {
-    "AT": "AT", "BE": "BE", "BG": "BG", "HR": "HR", "CY": "CY",
-    "CZ": "CZ", "DK": "DK", "EE": "EE", "FI": "FI", "FR": "FR",
-    "DE": "DE", "GR": "EL", "HU": "HU", "IE": "IE", "IT": "IT",
-    "LV": "LV", "LT": "LT", "LU": "LU", "MT": "MT", "NL": "NL",
-    "PL": "PL", "PT": "PT", "RO": "RO", "SK": "SK", "SI": "SI",
-    "ES": "ES", "SE": "SE",
+    "AT": "AT",
+    "BE": "BE",
+    "BG": "BG",
+    "HR": "HR",
+    "CY": "CY",
+    "CZ": "CZ",
+    "DK": "DK",
+    "EE": "EE",
+    "FI": "FI",
+    "FR": "FR",
+    "DE": "DE",
+    "GR": "EL",
+    "HU": "HU",
+    "IE": "IE",
+    "IT": "IT",
+    "LV": "LV",
+    "LT": "LT",
+    "LU": "LU",
+    "MT": "MT",
+    "NL": "NL",
+    "PL": "PL",
+    "PT": "PT",
+    "RO": "RO",
+    "SK": "SK",
+    "SI": "SI",
+    "ES": "ES",
+    "SE": "SE",
 }
 
 # Basic regex patterns per country prefix
@@ -60,14 +105,35 @@ VAT_REGEX: dict[str, str] = {
 
 # Full country name → ISO code mapping (common names)
 COUNTRY_NAME_TO_CODE: dict[str, str] = {
-    "AUSTRIA": "AT", "BELGIUM": "BE", "BULGARIA": "BG", "CROATIA": "HR",
-    "CYPRUS": "CY", "CZECH REPUBLIC": "CZ", "CZECHIA": "CZ",
-    "DENMARK": "DK", "ESTONIA": "EE", "FINLAND": "FI", "FRANCE": "FR",
-    "GERMANY": "DE", "GREECE": "GR", "HUNGARY": "HU", "IRELAND": "IE",
-    "ITALY": "IT", "LATVIA": "LV", "LITHUANIA": "LT", "LUXEMBOURG": "LU",
-    "MALTA": "MT", "NETHERLANDS": "NL", "THE NETHERLANDS": "NL",
-    "POLAND": "PL", "PORTUGAL": "PT", "ROMANIA": "RO",
-    "SLOVAKIA": "SK", "SLOVENIA": "SI", "SPAIN": "ES", "SWEDEN": "SE",
+    "AUSTRIA": "AT",
+    "BELGIUM": "BE",
+    "BULGARIA": "BG",
+    "CROATIA": "HR",
+    "CYPRUS": "CY",
+    "CZECH REPUBLIC": "CZ",
+    "CZECHIA": "CZ",
+    "DENMARK": "DK",
+    "ESTONIA": "EE",
+    "FINLAND": "FI",
+    "FRANCE": "FR",
+    "GERMANY": "DE",
+    "GREECE": "GR",
+    "HUNGARY": "HU",
+    "IRELAND": "IE",
+    "ITALY": "IT",
+    "LATVIA": "LV",
+    "LITHUANIA": "LT",
+    "LUXEMBOURG": "LU",
+    "MALTA": "MT",
+    "NETHERLANDS": "NL",
+    "THE NETHERLANDS": "NL",
+    "POLAND": "PL",
+    "PORTUGAL": "PT",
+    "ROMANIA": "RO",
+    "SLOVAKIA": "SK",
+    "SLOVENIA": "SI",
+    "SPAIN": "ES",
+    "SWEDEN": "SE",
 }
 
 
@@ -139,7 +205,7 @@ async def validate_vat_number(vat_number: str, country: str) -> dict[str, Any]:
     # Resolve country
     country_code = normalize_country(country)
     if not country_code:
-        return {"valid": None, "method": None, "message": f"Country \"{country}\" is not a recognized EU country"}
+        return {"valid": None, "method": None, "message": f'Country "{country}" is not a recognized EU country'}
 
     if country_code not in EU_COUNTRIES:
         return {"valid": None, "method": None, "message": "Country is not in the EU"}
