@@ -388,10 +388,13 @@ test.describe('Conference Deadlines Tab', () => {
     // Delete it to clean up
     await card.getByTitle('Delete').click();
 
-    // Confirm deletion
-    await page.getByRole('button', { name: /delete/i }).last().click();
+    // Confirm deletion in the confirm dialog
+    const confirmDialog = page.getByRole('dialog');
+    await expect(confirmDialog).toBeVisible({ timeout: 5000 });
+    await confirmDialog.getByRole('button', { name: /delete/i }).click();
 
-    // Should be gone
-    await expect(page.getByText(uniqueTitle)).not.toBeVisible({ timeout: 10000 });
+    // Wait for confirm dialog to close, then verify the card is gone
+    await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
+    await expect(card).not.toBeVisible({ timeout: 10000 });
   });
 });
