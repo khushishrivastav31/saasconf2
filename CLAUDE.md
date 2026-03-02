@@ -214,6 +214,45 @@ All nested under `/conferences/{id}/sponsors/{sponsor_id}/contract`:
 - **`SponsorContractTab.tsx`** — tab in SponsorDetailPanel; rich-text editor for contract content, upload, download, send, version history
 - **`SponsorPackagesTab.tsx`** — package-level contract template (default content for new contracts)
 
+## Alumni
+
+### Overview
+Conference-scoped alumni tracking for past attendees. **Core feature** — no module gate required (always visible, like Details/Team/Deadlines). Alumni records can be created manually, imported via CSV, or auto-created from paid registrations.
+
+### Data Model
+- **`alumni`** table — `id`, `tenant_id`, `conference_id`, `email` (String 320, case-insensitive unique per conference), `first_name` (String 255), `last_name` (String 255), `company` (String 255, nullable), `source` (enum: `manual`/`import`/`registration`), `notes` (Text, nullable), `created_at`, `updated_at`
+- **Indexes**: `tenant_id`, `conference_id`, `tenant_id + email` (cross-conference lookup), unique on `lower(email)` per conference
+- **RLS**: tenant isolation policy
+- **Migration**: `104_alumni.py` (revises `103_tenant_email_domain`)
+- **Constants**: `ResourceType.ALUMNI`, `AuditAction.ALUMNI_CREATE/UPDATE/IMPORT/DELETE`
+
+### API Endpoints (`/conferences/{id}/alumni/`)
+No module gate. All write operations require conference admin.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | List alumni (paginated: `page`, `page_size`, `search`) |
+| POST | `/` | Create single alumni (201) |
+| PUT | `/{id}` | Update alumni (partial) |
+| DELETE | `/{id}` | Delete alumni |
+| POST | `/import` | Bulk CSV import (multipart, up to 50k rows) |
+| GET | `/export` | Export to CSV (UTF-8 BOM) |
+| GET | `/check?email=...` | Cross-conference alumni lookup (tenant-wide) |
+
+### Data Propagation
+When email or name is updated on an alumni record, the change **cascades** to linked `Registration` and `CFPApplicant` records matching the old email. This keeps attendee data consistent across modules.
+
+### CSV Import
+- Flexible header mapping: accepts `email`/`e-mail`, `first_name`/`firstname`/`vorname`, etc.
+- Supports UTF-8 BOM, UTF-8, and latin-1 encodings
+- Skips duplicates (case-insensitive email match), returns `{imported, skipped, errors[]}`
+- Missing first/last name defaults to email prefix / `"-"`
+
+### Frontend
+- **Sidebar**: `AlumniIcon` in `coreSections` between Booking Options and Deadlines
+- **AlumniTab** (`tabs/AlumniTab.tsx`) — paginated list (50/page) with debounced search, add/edit/delete modals, CSV import with results display, CSV export, source badges (gray=manual, blue=import, green=registration)
+- Admin-only: add, edit, delete, import, export buttons hidden for non-admin
+
 ## Deadlines
 
 ### Overview

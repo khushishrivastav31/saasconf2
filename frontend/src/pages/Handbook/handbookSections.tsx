@@ -723,6 +723,107 @@ info@company.com,,,Tech Solutions`}
     ),
   },
   {
+    id: 'deadlines',
+    title: 'Deadlines',
+    content: () => (
+      <>
+        <p>
+          The <strong>Deadlines</strong> tab on each conference helps you track important dates and
+          tasks &mdash; sponsor contracts, venue bookings, submission cutoffs, and anything else
+          with a due date.
+        </p>
+        <h3>Creating a Deadline</h3>
+        <p>
+          Click <strong>+ New Deadline</strong> to open the creation form. Each deadline requires:
+        </p>
+        <ul>
+          <li>
+            <strong>Title</strong> &mdash; a short name for the deadline (e.g. &ldquo;Sponsor
+            contract signed&rdquo;, &ldquo;Venue deposit due&rdquo;).
+          </li>
+          <li>
+            <strong>Due Date &amp; Time</strong> &mdash; when the deadline is due. The time is
+            interpreted in the conference&rsquo;s timezone.
+          </li>
+          <li>
+            <strong>Description</strong> (optional) &mdash; additional details or context.
+          </li>
+        </ul>
+        <h3>Deadline Cards</h3>
+        <p>Deadlines are displayed as colour-coded cards sorted by urgency:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Colour</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Overdue</td>
+              <td>Red</td>
+              <td>Past the due date and not yet resolved.</td>
+            </tr>
+            <tr>
+              <td>Due Soon</td>
+              <td>Amber</td>
+              <td>Due within the next 7 days.</td>
+            </tr>
+            <tr>
+              <td>Active</td>
+              <td>Blue</td>
+              <td>Due date is more than 7 days away.</td>
+            </tr>
+            <tr>
+              <td>Resolved</td>
+              <td>Grey</td>
+              <td>Marked as complete. Shown with strikethrough text.</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>Resolving &amp; Reactivating</h3>
+        <p>
+          Click the <strong>checkmark</strong> button on a deadline card to mark it as resolved.
+          Resolved deadlines move to the bottom of the list with reduced opacity. To reactivate a
+          resolved deadline, click <strong>Reactivate</strong>.
+        </p>
+        <h3>Editing &amp; Deleting</h3>
+        <p>
+          Click the <strong>edit</strong> icon to update a deadline&rsquo;s title, description, or
+          due date. Click the <strong>delete</strong> icon to remove a deadline permanently (after
+          confirmation).
+        </p>
+        <h3>Email Reminders</h3>
+        <p>
+          The platform automatically sends email reminders to the conference contact address at
+          three intervals:
+        </p>
+        <ul>
+          <li>
+            <strong>7 days before</strong> &mdash; advance notice.
+          </li>
+          <li>
+            <strong>1 day before</strong> &mdash; final reminder.
+          </li>
+          <li>
+            <strong>On the due date</strong> &mdash; deadline is today.
+          </li>
+        </ul>
+        <p>
+          Each reminder is sent only once. If the due date is changed, reminders are reset for time
+          windows that haven&rsquo;t passed yet.
+        </p>
+        <h3>Toast Warnings</h3>
+        <p>
+          When you open a conference, the system checks for approaching deadlines (due within 7
+          days). If any are found, a toast notification appears in the top-right corner alerting you
+          to the upcoming deadlines.
+        </p>
+      </>
+    ),
+  },
+  {
     id: 'locations',
     title: 'Locations',
     content: () => (
