@@ -2,13 +2,14 @@
 
 import time
 
-from fastapi import APIRouter, Request, UploadFile
+from fastapi import APIRouter, Query, Request, UploadFile
 from sqlalchemy import select
 
 from app.config import get_settings
-from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
+from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.file_validation import sanitize_filename, strip_image_metadata, validate_upload
+from app.core.vat_validation import validate_vat_number
 from app.models.attachment import Attachment
 from app.models.audit import AuditAction, AuditLog
 from app.models.tenant import Tenant
@@ -228,3 +229,17 @@ async def delete_my_company_logo(
     await db.commit()
 
     return {"message": "Logo deleted successfully"}
+
+
+@router.post("/validate-vat")
+async def validate_vat(
+    current_user: CurrentUserDep,
+    vat_number: str = Query(..., min_length=2),
+    country: str = Query(..., min_length=1),
+) -> dict:  # type: ignore[type-arg]
+    """Validate a VAT number using stdnum, regex fallback, and VIES API.
+
+    Standalone endpoint — no conference context required.
+    Accepts both ISO country codes (DE) and full names (Germany).
+    """
+    return await validate_vat_number(vat_number, country)

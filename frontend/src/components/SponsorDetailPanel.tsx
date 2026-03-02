@@ -6,6 +6,8 @@ import SponsorContractTab from './SponsorContractTab';
 import RichTextEditor from './common/RichTextEditor';
 import SponsorLogoUpload from './SponsorLogoUpload';
 import { validatePhone, normalizeUrl } from '../utils/validators';
+import { COUNTRY_OPTIONS } from '../config/countries';
+import VatNumberInput from './common/VatNumberInput';
 import { useSaveStatus } from '../hooks/useSaveStatus';
 import type {
   Sponsor,
@@ -355,27 +357,27 @@ export default function SponsorDetailPanel({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Country
             </label>
-            <input
-              type="text"
+            <select
               className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
               value={formData.country || ''}
               onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-            />
+            >
+              <option value="">Select a country</option>
+              {COUNTRY_OPTIONS.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            VAT Number
-          </label>
-          <input
-            type="text"
-            placeholder="e.g., DE123456789"
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
-            value={formData.vat_number || ''}
-            onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
-          />
-        </div>
+        <VatNumberInput
+          value={formData.vat_number || ''}
+          onChange={(val) => setFormData({ ...formData, vat_number: val })}
+          country={formData.country || undefined}
+          placeholder="e.g., DE123456789"
+        />
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">

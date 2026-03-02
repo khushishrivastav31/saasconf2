@@ -300,3 +300,99 @@ test.describe('Conference Sessions Tab', () => {
     }
   });
 });
+
+test.describe('Conference Deadlines Tab', () => {
+  test.beforeEach(async () => {
+    if (!conferenceId) test.skip();
+  });
+
+  test('should show Deadlines heading with cards or empty state', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Deadlines');
+
+    // Should show deadlines heading
+    await expect(page.getByRole('heading', { name: /deadlines/i })).toBeVisible({ timeout: 10000 });
+
+    // Should show deadline cards, New Deadline button, or empty state
+    const hasCards = await page.locator('.border-l-4').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasAddBtn = await page.getByRole('button', { name: /new deadline/i }).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasEmpty = await page.getByText(/no deadlines yet/i).isVisible({ timeout: 5000 }).catch(() => false);
+
+    expect(hasCards || hasAddBtn || hasEmpty).toBeTruthy();
+  });
+
+  test('should show New Deadline button for admin', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Deadlines');
+
+    const addBtn = page.getByRole('button', { name: /new deadline/i });
+    await expect(addBtn).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should open create modal and show form fields', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Deadlines');
+
+    const addBtn = page.getByRole('button', { name: /new deadline/i });
+    await expect(addBtn).toBeVisible({ timeout: 10000 });
+    await addBtn.click();
+
+    // Modal should appear with form fields
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await expect(dialog.getByText(/title/i).first()).toBeVisible();
+    await expect(dialog.getByText(/description/i).first()).toBeVisible();
+    await expect(dialog.getByText(/due date/i).first()).toBeVisible();
+  });
+
+  test('should create, display, and delete a deadline', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Deadlines');
+
+    // Create
+    const addBtn = page.getByRole('button', { name: /new deadline/i });
+    await expect(addBtn).toBeVisible({ timeout: 10000 });
+    await addBtn.click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    const uniqueTitle = `E2E Deadline ${Date.now()}`;
+    await dialog.getByPlaceholder(/sponsor contract/i).fill(uniqueTitle);
+    await dialog.getByPlaceholder(/optional details/i).fill('E2E test deadline');
+    await dialog.locator('input[type="datetime-local"]').fill('2026-12-31T23:59');
+
+    await dialog.getByRole('button', { name: /create/i }).click();
+
+    // Verify it appears
+    await expect(page.getByText(uniqueTitle)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('E2E test deadline')).toBeVisible();
+
+    // Status badge should show Active or Due soon
+    const hasBadge = await page.getByText(/active|due soon/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+    expect(hasBadge).toBeTruthy();
+
+    // Delete it to clean up
+    // Find the card with our title, then click its delete button
+    const card = page.locator('.border-l-4', { hasText: uniqueTitle });
+    await card.getByTitle('Delete').click();
+
+    // Confirm deletion
+    await page.getByRole('button', { name: /delete/i }).last().click();
+
+    // Should be gone
+    await expect(page.getByText(uniqueTitle)).not.toBeVisible({ timeout: 10000 });
+  });
+});

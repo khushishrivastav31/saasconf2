@@ -1,5 +1,9 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../config/api';
+import { queryKeys } from '../../config/queryKeys';
+import { useToast } from '../../components/Toast';
 import { BackIcon } from './icons';
 import { useConferenceDetail } from './useConferenceDetail';
 import { SelectionProvider, useSelection } from './SelectionContext';
@@ -26,6 +30,8 @@ const SpeakersTab = lazy(() => import('./tabs/SpeakersTab'));
 const MessagingTab = lazy(() => import('./tabs/MessagingTab'));
 const NewsTab = lazy(() => import('./tabs/NewsTab'));
 const RegistrationTab = lazy(() => import('./tabs/RegistrationTab'));
+const AlumniTab = lazy(() => import('./tabs/AlumniTab'));
+const DeadlinesTab = lazy(() => import('./tabs/DeadlinesTab'));
 const CFPTopics = lazy(() => import('../modules/cfp').then((m) => ({ default: m.CFPTopics })));
 const CFPProgramCommittee = lazy(() =>
   import('../modules/cfp').then((m) => ({ default: m.CFPProgramCommittee }))
@@ -89,6 +95,9 @@ function ConferenceDetailContent() {
   const [papersKey, setPapersKey] = useState(0);
   const { setSelectedCommitteeMemberId, setSelectedApplicantId } = useSelection();
 
+  const { showToast } = useToast();
+  const deadlineToastShownRef = useRef(false);
+
   const {
     // Conference data
     conference,
@@ -109,6 +118,51 @@ function ConferenceDetailContent() {
     // Router helpers
     navigate,
   } = useConferenceDetail(conferenceId);
+
+  // Fetch deadlines for approaching-deadline toast warnings
+  const { data: deadlineData } = useQuery({
+    queryKey: queryKeys.deadlines.byConference(conferenceId ?? ''),
+    queryFn: async () => {
+      const response = await api.get<{
+        items: { id: string; title: string; due_date: string; is_active: boolean }[];
+        total: number;
+      }>(`/conferences/${conferenceId}/deadlines`);
+      return response.data;
+    },
+    enabled: !!conferenceId && !!conference,
+    staleTime: 60_000,
+  });
+
+  // Show toast warnings for approaching deadlines (once per mount)
+  useEffect(() => {
+    if (!deadlineData?.items || deadlineToastShownRef.current) return;
+    const now = new Date();
+    const approaching = deadlineData.items.filter((d) => {
+      if (!d.is_active) return false;
+      const due = new Date(d.due_date);
+      const diffDays = (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      return diffDays <= 7;
+    });
+
+    if (approaching.length === 0) return;
+    deadlineToastShownRef.current = true;
+
+    if (approaching.length <= 2) {
+      approaching.forEach((d) => {
+        const due = new Date(d.due_date);
+        const isOverdue = due < now;
+        showToast(
+          `${isOverdue ? 'Overdue' : 'Deadline approaching'}: "${d.title}" is due ${due.toLocaleDateString()}`,
+          'warning'
+        );
+      });
+    } else {
+      showToast(
+        `${approaching.length} deadlines are approaching or overdue. Check the Deadlines tab.`,
+        'warning'
+      );
+    }
+  }, [deadlineData, showToast]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -410,6 +464,12 @@ function ConferenceDetailContent() {
               )}
               {activeSection === 'registration' && conference && (
                 <RegistrationTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'alumni' && conference && (
+                <AlumniTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'deadlines' && conference && (
+                <DeadlinesTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'settings' && (
                 <ConferenceSettingsTab conference={conference} isAdmin={isAdmin} />

@@ -4,6 +4,8 @@ import api from '../config/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 import RichTextEditor from '../components/common/RichTextEditor';
 import { validatePhone, validateEmail } from '../utils/validators';
+import { COUNTRY_OPTIONS } from '../config/countries';
+import VatNumberInput from '../components/common/VatNumberInput';
 import { parseApiError } from '../utils/apiError';
 import { useSaveStatus } from '../hooks/useSaveStatus';
 import type { Tenant, TenantUpdate, ContactPerson } from '../types';
@@ -440,17 +442,11 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
               onChange={(e) => handleFieldChange('website', e.target.value)}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              VAT Number
-            </label>
-            <input
-              type="text"
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-              value={formData.vat_number}
-              onChange={(e) => handleFieldChange('vat_number', e.target.value)}
-            />
-          </div>
+          <VatNumberInput
+            value={formData.vat_number || ''}
+            onChange={(val) => handleFieldChange('vat_number', val)}
+            country={formData.country || undefined}
+          />
         </div>
 
         {/* Address */}
@@ -479,13 +475,18 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
                 value={formData.city}
                 onChange={(e) => handleFieldChange('city', e.target.value)}
               />
-              <input
-                type="text"
-                placeholder="Country"
+              <select
                 className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
                 value={formData.country}
                 onChange={(e) => handleFieldChange('country', e.target.value)}
-              />
+              >
+                <option value="">Select a country</option>
+                {COUNTRY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

@@ -577,6 +577,152 @@ export const handbookSections: HandbookSection[] = [
     ),
   },
   {
+    id: 'alumni',
+    title: 'Alumni',
+    content: () => (
+      <>
+        <p>
+          The <strong>Alumni</strong> tab on each conference tracks past attendees. Knowing who has
+          attended previous conferences helps you recognise returning participants and offer
+          personalised experiences.
+        </p>
+        <h3>How Alumni Records Are Created</h3>
+        <p>Alumni records can be created in three ways:</p>
+        <ul>
+          <li>
+            <strong>Manual entry</strong> &mdash; click <strong>+ Add Alumni</strong> and fill in
+            first name, last name, email, and optionally company and notes.
+          </li>
+          <li>
+            <strong>CSV import</strong> &mdash; bulk import historical attendees from a CSV file
+            (see format below).
+          </li>
+          <li>
+            <strong>Automatic</strong> &mdash; when a registration status changes to{' '}
+            <strong>Paid</strong>, the attendee is automatically added to the alumni list for that
+            conference.
+          </li>
+        </ul>
+        <h3>Editing Alumni</h3>
+        <p>
+          Click the edit icon on any alumni row to update their details. If you change the{' '}
+          <strong>email</strong> or <strong>name</strong>, the linked registration and portal
+          account records are updated automatically to stay in sync.
+        </p>
+        <h3>Alumni Detection</h3>
+        <p>
+          When someone registers on the portal, the system checks if their email matches any alumni
+          record across all of your conferences. If they are a returning attendee, a{' '}
+          <strong>&ldquo;Welcome back!&rdquo;</strong> message is displayed, listing the conferences
+          they previously attended.
+        </p>
+        <h3>CSV Import Format</h3>
+        <p>
+          The CSV file must include a <strong>header row</strong>. Only the <strong>email</strong>{' '}
+          column is required. If first or last name columns are missing, the system uses the email
+          prefix as the first name and &ldquo;-&rdquo; as the last name.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Column</th>
+              <th>Required</th>
+              <th>Accepted Headers</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Email</td>
+              <td>Yes</td>
+              <td>
+                <code>email</code>, <code>e-mail</code>, <code>email_address</code>
+              </td>
+            </tr>
+            <tr>
+              <td>First Name</td>
+              <td>No</td>
+              <td>
+                <code>first_name</code>, <code>firstname</code>, <code>first name</code>,{' '}
+                <code>vorname</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Last Name</td>
+              <td>No</td>
+              <td>
+                <code>last_name</code>, <code>lastname</code>, <code>last name</code>,{' '}
+                <code>nachname</code>, <code>surname</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Company</td>
+              <td>No</td>
+              <td>
+                <code>company</code>, <code>organization</code>, <code>organisation</code>,{' '}
+                <code>firma</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>Example CSV</h3>
+        <pre>
+          {`email,first_name,last_name,company
+john@example.com,John,Doe,Acme Corp
+jane@example.com,Jane,Smith,
+info@company.com,,,Tech Solutions`}
+        </pre>
+        <h3>Import Behaviour</h3>
+        <ul>
+          <li>
+            <strong>Duplicates</strong> &mdash; if an email already exists for this conference, the
+            row is skipped (counted as &ldquo;skipped&rdquo;).
+          </li>
+          <li>
+            <strong>Encoding</strong> &mdash; UTF-8 is recommended. UTF-8 with BOM and Latin-1 are
+            also supported.
+          </li>
+          <li>
+            <strong>Column headers</strong> &mdash; are case-insensitive and whitespace-tolerant.
+            Hyphens, underscores, and spaces are normalised automatically.
+          </li>
+          <li>
+            <strong>Errors</strong> &mdash; rows with missing or invalid emails are reported in the
+            import results dialog (up to 50 errors shown).
+          </li>
+        </ul>
+        <h3>CSV Export</h3>
+        <p>
+          Click <strong>Export CSV</strong> to download all alumni for the current conference as a
+          CSV file. The export includes email, first name, last name, company, source, and date
+          added. The file is UTF-8 encoded with a BOM for Excel compatibility.
+        </p>
+        <h3>Source Badges</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Badge</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Manual</td>
+              <td>Added individually via the &ldquo;+ Add Alumni&rdquo; button.</td>
+            </tr>
+            <tr>
+              <td>Import</td>
+              <td>Added via CSV bulk import.</td>
+            </tr>
+            <tr>
+              <td>Registration</td>
+              <td>Automatically created when a registration was marked as Paid.</td>
+            </tr>
+          </tbody>
+        </table>
+      </>
+    ),
+  },
+  {
     id: 'locations',
     title: 'Locations',
     content: () => (

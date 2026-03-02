@@ -334,6 +334,78 @@ async def send_tenant_user_welcome_email(
     return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text, from_email=from_email)
 
 
+async def send_deadline_reminder(
+    *,
+    to: str,
+    conference_name: str,
+    deadline_title: str,
+    description: str | None,
+    due_date_formatted: str,
+    reminder_type: str,
+) -> bool:
+    """Send a deadline reminder email.
+
+    Args:
+        to: Recipient email address (conference contact email).
+        conference_name: Name of the conference.
+        deadline_title: Title of the deadline.
+        description: Optional description.
+        due_date_formatted: Human-readable due date string.
+        reminder_type: One of "7 days", "1 day", "today".
+    """
+    from html import escape as html_escape
+
+    safe_conf = html_escape(conference_name)
+    safe_title = html_escape(deadline_title)
+    safe_desc = html_escape(description) if description else ""
+
+    if reminder_type == "today":
+        badge_color = "#dc2626"
+        badge_text = "Due today"
+    elif reminder_type == "1 day":
+        badge_color = "#d97706"
+        badge_text = "Due tomorrow"
+    else:
+        badge_color = "#2563eb"
+        badge_text = "Due in 7 days"
+
+    desc_block = ""
+    if safe_desc:
+        desc_block = f"""
+        <p style="color: #374151; margin: 8px 0;">{safe_desc}</p>"""
+
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #111827;">Deadline Reminder</h2>
+        <span style="display: inline-block; padding: 4px 12px; border-radius: 12px;
+                      background-color: {badge_color}; color: white; font-size: 13px;
+                      font-weight: 600; margin-bottom: 12px;">{badge_text}</span>
+        <div style="padding: 16px; background-color: #f9fafb; border-radius: 8px;
+                    border-left: 4px solid {badge_color}; margin: 12px 0;">
+            <h3 style="color: #111827; margin: 0 0 8px 0;">{safe_title}</h3>{desc_block}
+            <p style="color: #6b7280; font-size: 14px; margin: 8px 0 0 0;">
+                Due: {html_escape(due_date_formatted)}
+            </p>
+        </div>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+        <p style="color: #6b7280; font-size: 13px;">
+            This is an automated reminder from {safe_conf}.
+        </p>
+    </div>
+    """
+
+    text = (
+        f"Deadline Reminder - {badge_text}\n\n"
+        f"{deadline_title}\n"
+        f"{description or ''}\n\n"
+        f"Due: {due_date_formatted}\n\n"
+        f"This is an automated reminder from {conference_name}."
+    )
+
+    subject = f"[{conference_name}] Deadline Reminder: {deadline_title} ({badge_text})"
+    return await send_email(to, subject, html, text)
+
+
 async def send_direct_message_email(
     *,
     email: str,

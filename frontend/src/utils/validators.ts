@@ -49,32 +49,9 @@ export function isValidPhone(value: string | null | undefined): boolean {
   return validatePhone(value) === null;
 }
 
-// Same regex as backend (app/schemas/location.py)
-const VAT_RE = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
-
 // Hostname regex: valid domain with TLD (same logic as backend)
 const HOSTNAME_RE =
   /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
-
-/**
- * Validate a VAT number format (EU style: 2-letter country code + 2-12 alphanumeric chars).
- *
- * @param value - The VAT number to validate
- * @returns Error message if invalid, null if valid
- */
-export function validateVat(value: string | null | undefined): string | null {
-  if (!value || value.trim() === '') {
-    return null; // Empty is valid (VAT is optional)
-  }
-  const cleaned = value
-    .trim()
-    .toUpperCase()
-    .replace(/[\s\-.]/g, '');
-  if (!VAT_RE.test(cleaned)) {
-    return 'Invalid VAT number. Expected format: 2-letter country code + 2-12 alphanumeric characters (e.g. DE123456789)';
-  }
-  return null;
-}
 
 /**
  * Validate a website URL. Accepts URLs with or without a scheme.

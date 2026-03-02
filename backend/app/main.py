@@ -371,5 +371,104 @@ async def data_retention_cleanup(
         return JSONResponse(status_code=500, content={"detail": str(e)})
 
 
+@app.post("/ops/send-deadline-reminders")
+async def send_deadline_reminders(
+    request: Request,
+) -> JSONResponse:
+    """Send email reminders for approaching deadlines.
+
+    Called hourly by the deadline-cron container.
+    Checks active deadlines and sends reminders at 7 days, 1 day, and on the due date.
+    """
+    import logging
+    from datetime import UTC, datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    from sqlalchemy import and_, or_, select
+
+    from app.core.email import send_deadline_reminder
+    from app.db.session import async_session_maker
+    from app.models.conference import Conference
+    from app.models.deadline import Deadline
+
+    logger = logging.getLogger("saasconf.ops")
+
+    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD
+    auth_header = request.headers.get("Authorization", "")
+    expected = f"Bearer {settings.SUPER_ADMIN_PASSWORD}"
+    if auth_header != expected:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    now = datetime.now(UTC)
+    sent_count = 0
+    errors = 0
+
+    try:
+        async with async_session_maker() as session:
+            # Query active deadlines that have unsent reminders due
+            result = await session.execute(
+                select(Deadline, Conference)
+                .join(Conference, Deadline.conference_id == Conference.id)
+                .where(
+                    Deadline.is_active.is_(True),
+                    or_(
+                        and_(Deadline.due_date - timedelta(days=7) <= now, Deadline.reminder_7d_sent.is_(False)),
+                        and_(Deadline.due_date - timedelta(days=1) <= now, Deadline.reminder_1d_sent.is_(False)),
+                        and_(Deadline.due_date <= now, Deadline.reminder_due_sent.is_(False)),
+                    ),
+                )
+            )
+            rows = result.all()
+
+            for deadline, conference in rows:
+                # Determine recipient email
+                to_email = conference.contact_email or conference.support_email
+                if not to_email:
+                    continue
+
+                # Check email sending is enabled
+                conf_settings = conference.settings or {}
+                if not conf_settings.get("email_sending_enabled", True):
+                    continue
+
+                # Format due date in conference timezone
+                tz = ZoneInfo(conference.timezone) if conference.timezone else UTC
+                due_local = deadline.due_date.astimezone(tz)
+                due_formatted = due_local.strftime("%B %d, %Y at %H:%M %Z")
+
+                # Send applicable reminders
+                reminders_to_send: list[tuple[str, str]] = []
+                if deadline.due_date <= now and not deadline.reminder_due_sent:
+                    reminders_to_send.append(("today", "reminder_due_sent"))
+                if deadline.due_date - timedelta(days=1) <= now and not deadline.reminder_1d_sent:
+                    reminders_to_send.append(("1 day", "reminder_1d_sent"))
+                if deadline.due_date - timedelta(days=7) <= now and not deadline.reminder_7d_sent:
+                    reminders_to_send.append(("7 days", "reminder_7d_sent"))
+
+                for reminder_type, flag_attr in reminders_to_send:
+                    try:
+                        sent = await send_deadline_reminder(
+                            to=to_email,
+                            conference_name=conference.name or "Conference",
+                            deadline_title=deadline.title,
+                            description=deadline.description,
+                            due_date_formatted=due_formatted,
+                            reminder_type=reminder_type,
+                        )
+                        if sent:
+                            setattr(deadline, flag_attr, True)
+                            sent_count += 1
+                    except Exception as e:
+                        logger.error("Failed to send %s reminder for deadline %s: %s", reminder_type, deadline.id, e)
+                        errors += 1
+
+            await session.commit()
+            logger.info("Deadline reminders sent: %d, errors: %d", sent_count, errors)
+            return JSONResponse(content={"status": "completed", "sent": sent_count, "errors": errors})
+    except Exception as e:
+        logger.error("Deadline reminder job failed: %s", e)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
 # Include API router
 app.include_router(api_router, prefix="/api/v1")

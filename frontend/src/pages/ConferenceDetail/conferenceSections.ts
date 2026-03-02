@@ -1,5 +1,7 @@
 import type React from 'react';
 import {
+  AlumniIcon,
+  DeadlinesIcon,
   InfoIcon,
   UsersIcon,
   ShareIcon,
@@ -43,6 +45,8 @@ export type SectionId =
   | 'team'
   | 'social'
   | 'booking'
+  | 'alumni'
+  | 'deadlines'
   | 'messaging'
   | 'news'
   | 'volunteers'
@@ -92,6 +96,8 @@ export const coreSections: SectionDef[] = [
   { id: 'social', name: 'Social Media', icon: ShareIcon },
   { id: 'booking', name: 'Booking Options', icon: BookingIcon },
   { id: 'messaging', name: 'Messages', icon: MessagingIcon },
+  { id: 'alumni', name: 'Alumni', icon: AlumniIcon },
+  { id: 'deadlines', name: 'Deadlines', icon: DeadlinesIcon },
   { id: 'settings', name: 'Settings', icon: SettingsGearIcon },
 ];
 

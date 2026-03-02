@@ -87,6 +87,17 @@ class AuditAction:
     MODULE_ASSIGN = "module.assign"
     MODULE_REVOKE = "module.revoke"
 
+    # Alumni management
+    ALUMNI_CREATE = "alumni.create"
+    ALUMNI_UPDATE = "alumni.update"
+    ALUMNI_IMPORT = "alumni.import"
+    ALUMNI_DELETE = "alumni.delete"
+
+    # Deadline management
+    DEADLINE_CREATE = "deadline.create"
+    DEADLINE_UPDATE = "deadline.update"
+    DEADLINE_DELETE = "deadline.delete"
+
     # Conference management
     CONFERENCE_CREATE = "conference.create"
     CONFERENCE_UPDATE = "conference.update"

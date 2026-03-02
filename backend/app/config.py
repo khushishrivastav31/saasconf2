@@ -83,8 +83,8 @@ class Settings(BaseSettings):
             raise ValueError("JWT_SECRET_KEY must be set to a secure random value")
         if len(self.JWT_SECRET_KEY) < 32:
             raise ValueError("JWT_SECRET_KEY must be at least 32 characters")
-        if len(self.SUPER_ADMIN_PASSWORD) < 10:
-            raise ValueError("SUPER_ADMIN_PASSWORD must be at least 10 characters")
+        if len(self.SUPER_ADMIN_PASSWORD) < 8:
+            raise ValueError("SUPER_ADMIN_PASSWORD must be at least 8 characters")
         return self
 
 

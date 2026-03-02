@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
@@ -8,6 +8,7 @@ import portalApi from '../../config/portalApi';
 import ConferenceLogo from '../../components/ConferenceLogo';
 import ThemeToggle from '../../components/ThemeToggle';
 import type { PortalLandingData, PortalTenant } from '../../types/portal';
+import type { AlumniCheckResponse } from '../../types/alumni';
 
 function RegisterPage() {
   const { register } = useApplicantAuth();
@@ -24,6 +25,7 @@ function RegisterPage() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alumniInfo, setAlumniInfo] = useState<AlumniCheckResponse | null>(null);
 
   // Fetch tenant info (for logo display)
   const { data: tenantData } = useQuery({
@@ -46,6 +48,25 @@ function RegisterPage() {
     },
     enabled: !!companySlug && !!cfpAbbreviation,
   });
+
+  // Alumni check on email blur (only when we have a conference context)
+  const handleEmailBlur = useCallback(async () => {
+    const conferenceId = conferenceData?.conference?.id;
+    if (!email || !conferenceId) {
+      setAlumniInfo(null);
+      return;
+    }
+    try {
+      const res = await portalApi.get<AlumniCheckResponse>(
+        `/conferences/${conferenceId}/alumni/check`,
+        { params: { email: email.trim() } }
+      );
+      setAlumniInfo(res.data.is_alumni ? res.data : null);
+    } catch {
+      // Silently ignore — alumni check is non-blocking
+      setAlumniInfo(null);
+    }
+  }, [email, conferenceData?.conference?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,9 +216,16 @@ function RegisterPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={handleEmailBlur}
               className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               placeholder="you@example.com"
             />
+            {alumniInfo && alumniInfo.is_alumni && (
+              <div className="mt-2 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-3 py-2 rounded text-sm">
+                Welcome back! You previously attended:{' '}
+                <strong>{alumniInfo.conferences.map((c) => c.conference_name).join(', ')}</strong>
+              </div>
+            )}
           </div>
 
           <div>

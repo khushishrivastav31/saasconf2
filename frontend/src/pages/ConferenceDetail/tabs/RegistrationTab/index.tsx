@@ -1,7 +1,8 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
-import { COUNTRY_OPTIONS, EU_COUNTRY_CODES } from '../../../../config/countries';
+import { COUNTRY_OPTIONS } from '../../../../config/countries';
+import VatNumberInput from '../../../../components/common/VatNumberInput';
 import type {
   Conference,
   Registration,
@@ -375,64 +376,10 @@ function AttendeeFields({
 function BillingFields({
   data,
   onChange,
-  conferenceId,
 }: {
   data: BillingProfileCreate;
   onChange: (d: BillingProfileCreate) => void;
-  conferenceId: string;
 }) {
-  const [vatStatus, setVatStatus] = useState<
-    'idle' | 'checking' | 'valid' | 'invalid' | 'uncertain'
-  >('idle');
-  const [vatMessage, setVatMessage] = useState<string | null>(null);
-
-  // Keep a ref to always have the latest data in async handlers (avoids stale closures)
-  const dataRef = useRef(data);
-  useEffect(() => {
-    dataRef.current = data;
-  }, [data]);
-
-  function canValidateVat(d: BillingProfileCreate) {
-    return !!(d.country && EU_COUNTRY_CODES.has(d.country.toUpperCase()) && d.vat_number);
-  }
-
-  async function validateVat() {
-    const d = dataRef.current;
-    if (!canValidateVat(d) || !d.vat_number || !d.country) return;
-    setVatStatus('checking');
-    setVatMessage(null);
-    try {
-      const response = await api.post(
-        `/conferences/${conferenceId}/registrations/validate-vat`,
-        null,
-        { params: { vat_number: d.vat_number, country: d.country.toUpperCase() } }
-      );
-      const result = response.data;
-      if (result.valid === true) {
-        setVatStatus('valid');
-        onChange({ ...d, vat_validated: true });
-      } else if (result.valid === false) {
-        setVatStatus('invalid');
-        setVatMessage('VAT number could not be verified');
-        onChange({ ...d, vat_validated: false });
-      } else {
-        setVatStatus('uncertain');
-        setVatMessage(result.message || 'Could not verify VAT number online');
-        onChange({ ...d, vat_validated: null });
-      }
-    } catch {
-      setVatStatus('idle');
-      onChange({ ...d, vat_validated: null });
-    }
-  }
-
-  const vatInputClass =
-    vatStatus === 'invalid'
-      ? 'mt-1 block w-full rounded-md border-red-500 ring-1 ring-red-500 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm'
-      : vatStatus === 'valid'
-        ? 'mt-1 block w-full rounded-md border-green-500 ring-1 ring-green-500 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm'
-        : 'mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm';
-
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -513,7 +460,6 @@ function BillingFields({
             value={data.country}
             onChange={(e) => {
               onChange({ ...data, country: e.target.value, vat_validated: null });
-              setVatStatus('idle');
             }}
           >
             <option value="">Select a country</option>
@@ -525,39 +471,12 @@ function BillingFields({
           </select>
         </div>
         <div>
-          <label
-            htmlFor="vat_number"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            VAT Number
-            {vatStatus === 'checking' && (
-              <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">Checking...</span>
-            )}
-            {vatStatus === 'valid' && <span className="ml-2 text-xs text-green-600">Valid</span>}
-            {vatStatus === 'invalid' && <span className="ml-2 text-xs text-red-600">Invalid</span>}
-            {vatStatus === 'uncertain' && (
-              <span className="ml-2 text-xs text-yellow-600">Unverified</span>
-            )}
-          </label>
-          <input
-            id="vat_number"
-            type="text"
-            className={vatInputClass}
+          <VatNumberInput
             value={data.vat_number || ''}
-            onChange={(e) => {
-              onChange({ ...data, vat_number: e.target.value || null, vat_validated: null });
-              setVatStatus('idle');
-              setVatMessage(null);
-            }}
-            onBlur={validateVat}
+            onChange={(val) => onChange({ ...data, vat_number: val || null, vat_validated: null })}
+            onValidationResult={(valid) => onChange({ ...data, vat_validated: valid })}
+            country={data.country}
           />
-          {vatMessage && (
-            <p
-              className={`mt-1 text-xs ${vatStatus === 'invalid' ? 'text-red-600' : 'text-yellow-600'}`}
-            >
-              {vatMessage}
-            </p>
-          )}
         </div>
       </div>
 
@@ -1236,7 +1155,7 @@ export default function RegistrationTab({
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
               Billing Information
             </h4>
-            <BillingFields data={billing} onChange={setBilling} conferenceId={conference.id} />
+            <BillingFields data={billing} onChange={setBilling} />
           </div>
 
           {/* Submit */}

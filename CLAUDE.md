@@ -71,25 +71,39 @@ When registering, if a booking option is linked to a program day that has sessio
 - **Group Registration**: Multiple attendees sharing one billing profile (uses `/registrations/bulk` endpoint)
 
 ### VAT Number Validation
-VAT validation is triggered **on blur** of the VAT number field when:
-- A **company name** is provided
-- The **country** is an EU member state
+
+**Single source of truth** — all VAT validation across the entire application goes through one path:
+
+- **Backend**: `validate_vat_number()` in `app/core/vat_validation.py` — the only validation function. Every endpoint that validates VAT calls this one function.
+- **Frontend**: `useVatValidation` hook (`hooks/useVatValidation.ts`) → `VatNumberInput` component (`components/common/VatNumberInput.tsx`). Every VAT field in the app uses this component.
+- **Endpoint**: `POST /my-company/validate-vat?vat_number=...&country=...` — standalone, no module dependency. All VAT fields use this single endpoint.
+
+**Any new VAT field must use `<VatNumberInput>`** — never create inline VAT validation or call the API directly. This ensures consistent behavior (visual feedback, validation logic, error handling) everywhere.
+
+VAT validation is triggered **on blur** of the VAT number field. The country is resolved from: explicit `country` prop > VAT prefix extraction (first 2 chars) > fallback. Accepts both ISO codes (`DE`) and full country names (`Germany`).
 
 Three-stage validation cascade:
-1. **python-stdnum** (offline, fast) - validates format + checksum
-2. **Regex fallback** - basic format check per country if stdnum fails
-3. **VIES API** (`ec.europa.eu`) - online verification against EU registry if regex passes but stdnum failed
+1. **python-stdnum** (offline, fast) — validates format + checksum
+2. **Regex fallback** — basic format check per country if stdnum fails
+3. **VIES API** (`ec.europa.eu`) — online verification against EU registry if regex passes but stdnum failed
 
 Validation results:
-- **Valid** (green border): stdnum or VIES confirmed the VAT number
-- **Invalid** (red border): validation failed - registration still proceeds but VAT is flagged
-- **Uncertain** (yellow): format OK but VIES unavailable for online verification
+- **Valid** (green border + checkmark): stdnum or VIES confirmed the VAT number
+- **Invalid** (red border + X icon): validation failed — registration still proceeds but VAT is flagged
+- **Uncertain** (yellow border + warning): format OK but VIES unavailable for online verification
 
 The result is persisted on the `billing_profiles.vat_validated` column (`true`/`false`/`null`).
 
-**Endpoint**: `POST /conferences/{id}/registrations/validate-vat?vat_number=...&country=...`
+**Current locations using VatNumberInput**: Registration billing fields, Fiscal Rep section (2 fields), Sponsor detail panel, Sponsor create form, My Company page.
 
 **Dependencies**: `python-stdnum` (added to `requirements.txt`)
+
+### Country Field Rules
+- **Always use a `<select>` dropdown** with `COUNTRY_OPTIONS` from `frontend/src/config/countries.ts` — never a free-text `<input>`
+- **Store ISO codes** (`"DE"`, `"RO"`, `"SE"`) — not full names (`"Germany"`)
+- **Pattern**: `<select value={...}><option value="">Select a country</option>{COUNTRY_OPTIONS.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}</select>`
+- Backend `normalize_country()` in `vat_validation.py` accepts both ISO codes and full names for backward compatibility
+- **Any new form with a country field** must use this dropdown pattern — consistency is required across the entire app
 
 ## Screen Overlays (Settings > Communication)
 
@@ -200,6 +214,42 @@ All nested under `/conferences/{id}/sponsors/{sponsor_id}/contract`:
 - **`SponsorContractTab.tsx`** — tab in SponsorDetailPanel; rich-text editor for contract content, upload, download, send, version history
 - **`SponsorPackagesTab.tsx`** — package-level contract template (default content for new contracts)
 
+## Deadlines
+
+### Overview
+Conference-scoped deadline tracking for contracts, venue bookings, and other time-sensitive tasks. **Core feature** — no module gate required (always visible, like Details/Team/Alumni).
+
+### Data Model
+- **`deadlines`** table — `id`, `tenant_id`, `conference_id`, `title` (String 500), `description` (Text, nullable), `due_date` (DateTime TZ-aware), `is_active` (Boolean, default true), `reminder_7d_sent`, `reminder_1d_sent`, `reminder_due_sent` (Boolean flags), `created_by` (FK users), `created_at`, `updated_at`
+- **Indexes**: `conference_id`, `due_date`, partial `idx_deadlines_active_due WHERE is_active = true`
+- **RLS**: `tenant_isolation_deadlines` policy
+- **Migration**: `105_deadlines.py` (revises `104_alumni`)
+- **Constants**: `ResourceType.DEADLINE`, `AuditAction.DEADLINE_CREATE/UPDATE/DELETE`
+
+### API Endpoints (`/conferences/{id}/deadlines/`)
+No module gate. All write operations require conference admin.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | List deadlines (returns `{items, total}`) |
+| POST | `/` | Create deadline (201) |
+| PUT | `/{id}` | Update deadline (partial update) |
+| PATCH | `/{id}/toggle` | Toggle `is_active` |
+| DELETE | `/{id}` | Delete deadline |
+
+**Due date change logic**: When `due_date` is updated, reminder flags are selectively reset — only flags whose reminder window hasn't passed yet for the new date are reset to `false`.
+
+### Reminder System
+- **Ops endpoint**: `POST /ops/send-deadline-reminders` — queries active deadlines with unsent reminders, sends email to conference contact address, marks flags after send. Respects `email_sending_enabled` setting. Auth via `Authorization: Bearer <SUPER_ADMIN_PASSWORD>`.
+- **Email**: `send_deadline_reminder()` in `app/core/email.py` — HTML template with color-coded badges (red=due today, amber=due tomorrow, blue=due in 7 days).
+- **Cron**: `deadline-cron` container in docker-compose — runs hourly (`sleep 3600`), calls the ops endpoint.
+- **Due dates** formatted in conference timezone using `zoneinfo.ZoneInfo`.
+
+### Frontend
+- **Sidebar**: `DeadlinesIcon` (calendar SVG) in `coreSections` between Alumni and Settings
+- **DeadlinesTab** (`tabs/DeadlinesTab.tsx`) — color-coded cards: overdue (red border + badge), due-soon (amber), active (blue), resolved (gray + strikethrough + opacity). Sorted: overdue → due-soon → active → resolved. CRUD modal, toggle resolve/reactivate, confirm dialog for delete.
+- **Toast warnings** — on ConferenceDetail load, active deadlines due within 7 days trigger toast notifications (once per mount via `useRef` guard). 1-2 approaching: individual toasts; 3+: summary toast.
+
 ## Volunteer Task System
 
 ### Data Model
@@ -278,7 +328,8 @@ Sidebar tree: **Volunteers** (list) → **Task Assignment** | **Volunteer Assign
 - `GET /health` — liveness probe (process running)
 - `GET /health/ready` — readiness probe (checks DB + Redis connectivity, returns 503 if unhealthy)
 - `POST /ops/data-retention-cleanup` — runs DB cleanup functions (expired tokens, old audit logs); auth via `Authorization: Bearer <SUPER_ADMIN_PASSWORD>`
-- Staging: `cleanup-cron` container calls cleanup endpoint nightly
+- `POST /ops/send-deadline-reminders` — sends email reminders for approaching deadlines (7d, 1d, due today); auth via `Authorization: Bearer <SUPER_ADMIN_PASSWORD>`
+- Staging: `cleanup-cron` container calls cleanup endpoint nightly; `deadline-cron` container calls reminder endpoint hourly
 
 ### Deployment
 - CI tags images as `:previous` before rebuilding for rollback capability
@@ -359,7 +410,7 @@ Token-based password reset for admin users (`super_admin`, `tenant_admin`, `user
 - Shared fixtures: `tenant`, `conference`, `conferences_module`, `tenant_with_modules`, `super_admin_user`, `tenant_admin_user`, `regular_user`
 - Auth helper: `_make_token(user, modules)` creates JWT tokens; `auth_headers(token)` wraps in Bearer header
 - Rate limiting disabled globally in tests via `RATELIMIT_ENABLED=false` env var
-- 915+ backend tests, all passing
+- 930+ backend tests, all passing
 
 ## Development Process
 

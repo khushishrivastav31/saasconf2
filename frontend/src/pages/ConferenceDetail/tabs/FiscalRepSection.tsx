@@ -3,12 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { COUNTRY_OPTIONS } from '../../../config/countries';
 import { parseApiError } from '../../../utils/apiError';
-import {
-  validateEmail,
-  validatePhone,
-  validateVat,
-  validateWebsite,
-} from '../../../utils/validators';
+import { validateEmail, validatePhone, validateWebsite } from '../../../utils/validators';
+import VatNumberInput from '../../../components/common/VatNumberInput';
 import type {
   FiscalRepresentative,
   FiscalRepresentativeUpsert,
@@ -111,9 +107,6 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
           return validateWebsite(value);
         case 'phone':
           return validatePhone(value);
-        case 'vat_number':
-        case 'conference_vat_number':
-          return validateVat(value);
         default:
           return null;
       }
@@ -610,61 +603,20 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                    Fiscal Rep VAT Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. NL123456789B01"
-                    className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-2.5 text-sm font-mono focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
-                      fieldErrors.vat_number
-                        ? 'border-red-500 dark:border-red-500'
-                        : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                    value={formData.vat_number}
-                    onChange={(e) => {
-                      setFormData({ ...formData, vat_number: e.target.value });
-                      if (fieldErrors.vat_number)
-                        setFieldErrors((prev) => ({ ...prev, vat_number: null }));
-                    }}
-                    onBlur={(e) => handleFieldBlur('vat_number', e.target.value)}
-                  />
-                  {fieldErrors.vat_number && (
-                    <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
-                      {fieldErrors.vat_number}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                    Conference VAT Number
-                    <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
-                      (for invoices)
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. DE123456789"
-                    className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-2.5 text-sm font-mono focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
-                      fieldErrors.conference_vat_number
-                        ? 'border-red-500 dark:border-red-500'
-                        : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                    value={formData.conference_vat_number}
-                    onChange={(e) => {
-                      setFormData({ ...formData, conference_vat_number: e.target.value });
-                      if (fieldErrors.conference_vat_number)
-                        setFieldErrors((prev) => ({ ...prev, conference_vat_number: null }));
-                    }}
-                    onBlur={(e) => handleFieldBlur('conference_vat_number', e.target.value)}
-                  />
-                  {fieldErrors.conference_vat_number && (
-                    <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
-                      {fieldErrors.conference_vat_number}
-                    </p>
-                  )}
-                </div>
+                <VatNumberInput
+                  id="fiscal_rep_vat_number"
+                  label="Fiscal Rep VAT Number"
+                  placeholder="e.g. NL123456789B01"
+                  value={formData.vat_number || ''}
+                  onChange={(val) => setFormData({ ...formData, vat_number: val })}
+                />
+                <VatNumberInput
+                  id="conference_vat_number"
+                  label="Conference VAT Number"
+                  placeholder="e.g. DE123456789"
+                  value={formData.conference_vat_number || ''}
+                  onChange={(val) => setFormData({ ...formData, conference_vat_number: val })}
+                />
               </div>
 
               {/* Active toggle */}

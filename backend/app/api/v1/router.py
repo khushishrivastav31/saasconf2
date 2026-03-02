@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     admin_settings,
+    alumni,
     applicant_activity,
     attachments,
     audit,
@@ -11,6 +12,7 @@ from app.api.v1 import (
     cfp,
     cfp_portal,
     conferences,
+    deadlines,
     form_schema,
     invoices,
     locations,
@@ -80,6 +82,12 @@ api_router.include_router(
 api_router.include_router(
     service_providers.router, prefix="/locations/{location_id}/service-providers", tags=["Service Providers"]
 )
+
+# Alumni (conference-scoped)
+api_router.include_router(alumni.router, prefix="/conferences/{conference_id}/alumni", tags=["Alumni"])
+
+# Deadlines (conference-scoped)
+api_router.include_router(deadlines.router, prefix="/conferences/{conference_id}/deadlines", tags=["Deadlines"])
 
 # Sponsors (conference-scoped)
 api_router.include_router(sponsors.router, prefix="/conferences/{conference_id}/sponsors", tags=["Sponsors"])

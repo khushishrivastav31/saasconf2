@@ -1,3 +1,4 @@
+export * from './alumni';
 export * from './common';
 export * from './auth';
 export * from './tenant';

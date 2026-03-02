@@ -1,5 +1,6 @@
 """SQLAlchemy models."""
 
+from app.models.alumni import Alumni, AlumniSource
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 from app.models.applicant_token import ApplicantEmailVerification, ApplicantRefreshToken
 from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
@@ -26,6 +27,7 @@ from app.models.cfp_papers import (
 )
 from app.models.conference import Conference
 from app.models.conference_vat_rate import ConferenceVatRate
+from app.models.deadline import Deadline
 from app.models.fiscal_representative import FiscalRepresentative
 from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
 from app.models.invoice import Invoice
@@ -83,6 +85,8 @@ from app.models.volunteer import Volunteer
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 
 __all__ = [
+    "Alumni",
+    "AlumniSource",
     "ApplicantActivityLog",
     "ApplicantActivityType",
     "ApplicantEmailVerification",
@@ -111,6 +115,7 @@ __all__ = [
     "ConferenceVatRate",
     "ConferenceVolunteer",
     "CospeakerInvitationStatus",
+    "Deadline",
     "DiscountCode",
     "DiscountCodeOption",
     "EmailTemplate",

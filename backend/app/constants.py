@@ -25,11 +25,13 @@ class ModuleCode:
 class ResourceType:
     """Resource types used in audit logging."""
 
+    ALUMNI = "alumni"
     ATTACHMENT = "attachment"
     BOOKING_PACKAGE = "booking_package"
     CFP = "cfp"
     CONFERENCE = "conference"
     CONFERENCE_VAT_RATE = "conference_vat_rate"
+    DEADLINE = "deadline"
     DISCOUNT_CODE = "discount_code"
     EMAIL_TEMPLATE = "email_template"
     FISCAL_REPRESENTATIVE = "fiscal_representative"

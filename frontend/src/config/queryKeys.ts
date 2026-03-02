@@ -74,6 +74,11 @@ export const queryKeys = {
       ['bookable-sessions', conferenceId, optionId] as const,
   },
 
+  // ── Deadlines ──────────────────────────────────────────────────
+  deadlines: {
+    byConference: (conferenceId: string) => ['conference-deadlines', conferenceId] as const,
+  },
+
   // ── News ────────────────────────────────────────────────────────
   news: {
     byConference: (conferenceId: string) => ['conference-news', conferenceId] as const,
@@ -181,6 +186,12 @@ export const queryKeys = {
     auditResourceTypes: ['audit-resource-types'] as const,
     conferenceAccess: (conferenceId?: string, userId?: string) =>
       ['conference-access', conferenceId, userId] as const,
+  },
+
+  // ── Alumni ────────────────────────────────────────────────────────
+  alumni: {
+    byConference: (conferenceId: string) => ['conference-alumni', conferenceId] as const,
+    check: (conferenceId: string, email: string) => ['alumni-check', conferenceId, email] as const,
   },
 
   // ── Portal ──────────────────────────────────────────────────────

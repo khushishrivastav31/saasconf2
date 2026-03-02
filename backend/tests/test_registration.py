@@ -1040,3 +1040,213 @@ async def test_unified_invalid_booking_option(
         headers=auth_headers(reg_admin_token),
     )
     assert response.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# VAT Validation endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestVatValidation:
+    """Tests for POST /conferences/{id}/registrations/validate-vat."""
+
+    @pytest.mark.asyncio
+    async def test_validate_vat_valid_german(
+        self,
+        client: AsyncClient,
+        tenant_with_reg_module: Tenant,
+        tenant_admin_user: User,
+        reg_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """Valid German VAT number returns valid=True via stdnum."""
+        response = await client.post(
+            f"{BASE}/{conference.id}/registrations/validate-vat",
+            params={"vat_number": "DE811871775", "country": "DE"},
+            headers=auth_headers(reg_admin_token),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["valid"] is True
+        assert data["method"] == "stdnum"
+        assert data["vat_normalized"] == "DE811871775"
+
+    @pytest.mark.asyncio
+    async def test_validate_vat_invalid_format(
+        self,
+        client: AsyncClient,
+        tenant_with_reg_module: Tenant,
+        tenant_admin_user: User,
+        reg_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """Completely invalid VAT string returns valid=False."""
+        response = await client.post(
+            f"{BASE}/{conference.id}/registrations/validate-vat",
+            params={"vat_number": "INVALID", "country": "DE"},
+            headers=auth_headers(reg_admin_token),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["valid"] is False
+
+    @pytest.mark.asyncio
+    async def test_validate_vat_non_eu_country(
+        self,
+        client: AsyncClient,
+        tenant_with_reg_module: Tenant,
+        tenant_admin_user: User,
+        reg_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """Non-EU country returns valid=None with message."""
+        response = await client.post(
+            f"{BASE}/{conference.id}/registrations/validate-vat",
+            params={"vat_number": "US123456789", "country": "US"},
+            headers=auth_headers(reg_admin_token),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["valid"] is None
+        assert "not" in data["message"].lower() and "EU" in data["message"]
+
+    @pytest.mark.asyncio
+    async def test_validate_vat_missing_params(
+        self,
+        client: AsyncClient,
+        tenant_with_reg_module: Tenant,
+        tenant_admin_user: User,
+        reg_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """Missing vat_number parameter returns 422."""
+        response = await client.post(
+            f"{BASE}/{conference.id}/registrations/validate-vat",
+            params={"country": "DE"},
+            headers=auth_headers(reg_admin_token),
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_validate_vat_auto_prefix(
+        self,
+        client: AsyncClient,
+        tenant_with_reg_module: Tenant,
+        tenant_admin_user: User,
+        reg_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """VAT number without country prefix gets it added automatically."""
+        response = await client.post(
+            f"{BASE}/{conference.id}/registrations/validate-vat",
+            params={"vat_number": "123456789", "country": "DE"},
+            headers=auth_headers(reg_admin_token),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        # Should have prepended "DE"
+        assert data["vat_normalized"] == "DE123456789"
+
+    @pytest.mark.asyncio
+    async def test_validate_vat_unauthenticated(
+        self,
+        client: AsyncClient,
+        tenant_with_reg_module: Tenant,
+        conference: Conference,
+    ) -> None:
+        """Unauthenticated request returns 401."""
+        response = await client.post(
+            f"{BASE}/{conference.id}/registrations/validate-vat",
+            params={"vat_number": "DE123456789", "country": "DE"},
+        )
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_validate_vat_normalizes_input(
+        self,
+        client: AsyncClient,
+        tenant_with_reg_module: Tenant,
+        tenant_admin_user: User,
+        reg_admin_token: str,
+        conference: Conference,
+    ) -> None:
+        """VAT number with spaces and dots is normalized."""
+        response = await client.post(
+            f"{BASE}/{conference.id}/registrations/validate-vat",
+            params={"vat_number": "DE 123.456.789", "country": "DE"},
+            headers=auth_headers(reg_admin_token),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["vat_normalized"] == "DE123456789"
+
+
+class TestStandaloneVatValidation:
+    """Tests for POST /my-company/validate-vat (standalone, no conference required)."""
+
+    @pytest.mark.asyncio
+    async def test_standalone_validate_vat_valid(
+        self,
+        client: AsyncClient,
+        tenant: Tenant,
+        tenant_admin_user: User,
+    ) -> None:
+        """Standalone endpoint validates a valid German VAT."""
+        token = _make_token(tenant_admin_user, modules=[])
+        response = await client.post(
+            "/api/v1/my-company/validate-vat",
+            params={"vat_number": "DE811871775", "country": "DE"},
+            headers=auth_headers(token),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["valid"] is True
+        assert data["method"] == "stdnum"
+
+    @pytest.mark.asyncio
+    async def test_standalone_validate_vat_country_name(
+        self,
+        client: AsyncClient,
+        tenant: Tenant,
+        tenant_admin_user: User,
+    ) -> None:
+        """Standalone endpoint accepts full country names like 'GERMANY'."""
+        token = _make_token(tenant_admin_user, modules=[])
+        response = await client.post(
+            "/api/v1/my-company/validate-vat",
+            params={"vat_number": "DE811871775", "country": "Germany"},
+            headers=auth_headers(token),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["valid"] is True
+
+    @pytest.mark.asyncio
+    async def test_standalone_validate_vat_invalid(
+        self,
+        client: AsyncClient,
+        tenant: Tenant,
+        tenant_admin_user: User,
+    ) -> None:
+        """Standalone endpoint rejects invalid VAT."""
+        token = _make_token(tenant_admin_user, modules=[])
+        response = await client.post(
+            "/api/v1/my-company/validate-vat",
+            params={"vat_number": "DE195661616AAA", "country": "DE"},
+            headers=auth_headers(token),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["valid"] is False
+
+    @pytest.mark.asyncio
+    async def test_standalone_validate_vat_unauthenticated(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Standalone endpoint requires authentication."""
+        response = await client.post(
+            "/api/v1/my-company/validate-vat",
+            params={"vat_number": "DE123456789", "country": "DE"},
+        )
+        assert response.status_code == 401

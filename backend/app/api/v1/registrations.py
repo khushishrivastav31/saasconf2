@@ -781,6 +781,10 @@ async def update_registration(
     for field, value in update_data.items():
         setattr(reg, field, value)
 
+    # Auto-add to alumni when status changes to PAID
+    if "status" in update_data and update_data["status"] == RegistrationStatus.PAID.value:
+        await _auto_add_alumni(db, reg)
+
     await db.commit()
     await db.refresh(reg)
 
@@ -983,147 +987,7 @@ async def update_billing_profile(
 # VAT Validation
 # ---------------------------------------------------------------------------
 
-EU_COUNTRIES = {
-    "AT",
-    "BE",
-    "BG",
-    "HR",
-    "CY",
-    "CZ",
-    "DK",
-    "EE",
-    "FI",
-    "FR",
-    "DE",
-    "GR",
-    "HU",
-    "IE",
-    "IT",
-    "LV",
-    "LT",
-    "LU",
-    "MT",
-    "NL",
-    "PL",
-    "PT",
-    "RO",
-    "SK",
-    "SI",
-    "ES",
-    "SE",
-}
-
-# Country code prefix mapping for VAT numbers
-COUNTRY_VAT_PREFIX = {
-    "AT": "AT",
-    "BE": "BE",
-    "BG": "BG",
-    "HR": "HR",
-    "CY": "CY",
-    "CZ": "CZ",
-    "DK": "DK",
-    "EE": "EE",
-    "FI": "FI",
-    "FR": "FR",
-    "DE": "DE",
-    "GR": "EL",
-    "HU": "HU",
-    "IE": "IE",
-    "IT": "IT",
-    "LV": "LV",
-    "LT": "LT",
-    "LU": "LU",
-    "MT": "MT",
-    "NL": "NL",
-    "PL": "PL",
-    "PT": "PT",
-    "RO": "RO",
-    "SK": "SK",
-    "SI": "SI",
-    "ES": "ES",
-    "SE": "SE",
-}
-
-# Basic regex patterns per country prefix
-VAT_REGEX = {
-    "AT": r"^ATU\d{8}$",
-    "BE": r"^BE[01]\d{9}$",
-    "BG": r"^BG\d{9,10}$",
-    "HR": r"^HR\d{11}$",
-    "CY": r"^CY\d{8}[A-Z]$",
-    "CZ": r"^CZ\d{8,10}$",
-    "DK": r"^DK\d{8}$",
-    "EE": r"^EE\d{9}$",
-    "FI": r"^FI\d{8}$",
-    "FR": r"^FR[A-Z0-9]{2}\d{9}$",
-    "DE": r"^DE\d{9}$",
-    "EL": r"^EL\d{9}$",
-    "HU": r"^HU\d{8}$",
-    "IE": r"^IE\d{7}[A-Z]{1,2}$|^IE\d[A-Z]\d{5}[A-Z]$",
-    "IT": r"^IT\d{11}$",
-    "LV": r"^LV\d{11}$",
-    "LT": r"^LT\d{9,12}$",
-    "LU": r"^LU\d{8}$",
-    "MT": r"^MT\d{8}$",
-    "NL": r"^NL\d{9}B\d{2}$",
-    "PL": r"^PL\d{10}$",
-    "PT": r"^PT\d{9}$",
-    "RO": r"^RO\d{2,10}$",
-    "SK": r"^SK\d{10}$",
-    "SI": r"^SI\d{8}$",
-    "ES": r"^ES[A-Z0-9]\d{7}[A-Z0-9]$",
-    "SE": r"^SE\d{12}$",
-}
-
-
-def _normalize_vat(vat: str) -> str:
-    """Strip whitespace, dots, dashes and uppercase."""
-    return vat.replace(" ", "").replace(".", "").replace("-", "").upper()
-
-
-def _validate_stdnum(vat: str) -> bool | None:
-    """Validate with python-stdnum. Returns True/False or None if not applicable."""
-    try:
-        from stdnum.eu import vat as eu_vat
-
-        return eu_vat.is_valid(vat)
-    except Exception:
-        return None
-
-
-def _validate_regex(vat: str, country: str) -> bool:
-    """Validate VAT format with regex for the given country."""
-    import re
-
-    prefix = COUNTRY_VAT_PREFIX.get(country)
-    if not prefix:
-        return False
-    pattern = VAT_REGEX.get(prefix)
-    if not pattern:
-        return False
-    return bool(re.match(pattern, vat))
-
-
-async def _validate_vies(vat: str) -> bool | None:
-    """Check VAT number against the EU VIES service. Returns True/False or None on error."""
-    import httpx
-
-    # Extract country code (first 2 chars) and number
-    country_code = vat[:2]
-    number = vat[2:]
-
-    url = "https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number"
-    payload = {"countryCode": country_code, "vatNumber": number}
-
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(url, json=payload)
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("valid", False)
-    except Exception:
-        pass
-    return None
+from app.core.vat_validation import validate_vat_number  # noqa: E402
 
 
 @router.post("/validate-vat")
@@ -1135,55 +999,37 @@ async def validate_vat(
     db: DbSessionDep,
     vat_number: str = Query(..., min_length=2),
     country: str = Query(..., min_length=2, max_length=2),
-) -> dict:
+) -> dict:  # type: ignore[type-arg]
     """Validate a VAT number using stdnum, regex fallback, and VIES API."""
     tenant_id = current_user.tenant_id
     await get_conference_for_tenant(db, conference_id, tenant_id)
+    return await validate_vat_number(vat_number, country)
 
-    country_upper = country.upper()
-    if country_upper not in EU_COUNTRIES:
-        return {"valid": None, "method": None, "message": "Country is not in the EU"}
 
-    vat = _normalize_vat(vat_number)
-    # Ensure country prefix is present
-    expected_prefix = COUNTRY_VAT_PREFIX.get(country_upper, country_upper)
-    if not vat.startswith(expected_prefix):
-        vat = expected_prefix + vat
+# ---------------------------------------------------------------------------
+# Auto-add alumni on paid registration
+# ---------------------------------------------------------------------------
 
-    # Stage 1: python-stdnum (format + checksum)
-    stdnum_result = _validate_stdnum(vat)
-    if stdnum_result is True:
-        return {"valid": True, "method": "stdnum", "vat_normalized": vat}
-    if stdnum_result is False:
-        # Stage 2: regex fallback (more lenient)
-        if _validate_regex(vat, country_upper):
-            # Stage 3: VIES API for definitive answer
-            vies_result = await _validate_vies(vat)
-            if vies_result is True:
-                return {"valid": True, "method": "vies", "vat_normalized": vat}
-            if vies_result is False:
-                return {"valid": False, "method": "vies", "vat_normalized": vat}
-            # VIES unavailable — regex passed, report as uncertain
-            return {
-                "valid": None,
-                "method": "regex",
-                "vat_normalized": vat,
-                "message": "Format OK but could not verify online",
-            }
-        return {"valid": False, "method": "stdnum", "vat_normalized": vat}
 
-    # stdnum returned None (error/not applicable) — fall through to regex + VIES
-    if _validate_regex(vat, country_upper):
-        vies_result = await _validate_vies(vat)
-        if vies_result is True:
-            return {"valid": True, "method": "vies", "vat_normalized": vat}
-        if vies_result is False:
-            return {"valid": False, "method": "vies", "vat_normalized": vat}
-        return {
-            "valid": None,
-            "method": "regex",
-            "vat_normalized": vat,
-            "message": "Format OK but could not verify online",
-        }
+async def _auto_add_alumni(db: DbSessionDep, reg: Registration) -> None:  # type: ignore[type-arg]
+    """Add registration to alumni list when payment confirmed (idempotent)."""
+    from app.models.alumni import Alumni, AlumniSource
 
-    return {"valid": False, "method": "regex", "vat_normalized": vat}
+    existing = await db.execute(
+        select(Alumni).where(
+            Alumni.conference_id == reg.conference_id,
+            func.lower(Alumni.email) == reg.email.lower(),
+        )
+    )
+    if existing.scalar_one_or_none():
+        return
+
+    alumni = Alumni(
+        tenant_id=reg.tenant_id,
+        conference_id=reg.conference_id,
+        email=reg.email.lower(),
+        first_name=reg.first_name,
+        last_name=reg.last_name,
+        source=AlumniSource.REGISTRATION.value,
+    )
+    db.add(alumni)

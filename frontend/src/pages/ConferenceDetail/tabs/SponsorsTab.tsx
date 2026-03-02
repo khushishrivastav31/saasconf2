@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { validatePhone, normalizeUrl } from '../../../utils/validators';
+import VatNumberInput from '../../../components/common/VatNumberInput';
+import { COUNTRY_OPTIONS } from '../../../config/countries';
 import type {
   Conference,
   Sponsor,
@@ -535,9 +537,8 @@ function ConferenceSponsorsTab({
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Country
                   </label>
-                  <input
-                    type="text"
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  <select
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                     value={createForm.country || ''}
                     onChange={(e) =>
                       setCreateForm({
@@ -545,28 +546,24 @@ function ConferenceSponsorsTab({
                         country: e.target.value,
                       })
                     }
-                  />
+                  >
+                    <option value="">Select a country</option>
+                    {COUNTRY_OPTIONS.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
               {/* VAT Number */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  VAT Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., DE123456789"
-                  className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={createForm.vat_number || ''}
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      vat_number: e.target.value,
-                    })
-                  }
-                />
-              </div>
+              <VatNumberInput
+                value={createForm.vat_number || ''}
+                onChange={(val) => setCreateForm({ ...createForm, vat_number: val })}
+                country={createForm.country || undefined}
+                placeholder="e.g., DE123456789"
+              />
 
               {/* Comments */}
               <div>
