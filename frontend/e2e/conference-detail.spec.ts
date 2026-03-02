@@ -313,8 +313,8 @@ test.describe('Conference Deadlines Tab', () => {
 
     await detail.navigateToSection('Deadlines');
 
-    // Should show deadlines heading
-    await expect(page.getByRole('heading', { name: /deadlines/i })).toBeVisible({ timeout: 10000 });
+    // Should show deadlines heading (exact match to avoid matching "No deadlines yet" h4)
+    await expect(page.getByRole('heading', { name: 'Deadlines', exact: true })).toBeVisible({ timeout: 10000 });
 
     // Should show deadline cards, New Deadline button, or empty state
     const hasCards = await page.locator('.border-l-4').first().isVisible({ timeout: 5000 }).catch(() => false);
@@ -376,17 +376,16 @@ test.describe('Conference Deadlines Tab', () => {
 
     await dialog.getByRole('button', { name: /create/i }).click();
 
-    // Verify it appears
-    await expect(page.getByText(uniqueTitle)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('E2E test deadline')).toBeVisible();
+    // Verify it appears — scope assertions to the specific card to avoid strict mode violations
+    const card = page.locator('.border-l-4', { hasText: uniqueTitle });
+    await expect(card).toBeVisible({ timeout: 10000 });
+    await expect(card.getByText('E2E test deadline')).toBeVisible();
 
     // Status badge should show Active or Due soon
-    const hasBadge = await page.getByText(/active|due soon/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasBadge = await card.getByText(/active|due soon/i).first().isVisible({ timeout: 3000 }).catch(() => false);
     expect(hasBadge).toBeTruthy();
 
     // Delete it to clean up
-    // Find the card with our title, then click its delete button
-    const card = page.locator('.border-l-4', { hasText: uniqueTitle });
     await card.getByTitle('Delete').click();
 
     // Confirm deletion
