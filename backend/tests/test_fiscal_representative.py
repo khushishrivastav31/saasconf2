@@ -180,11 +180,12 @@ class TestGetFiscalRepresentative:
         tenant_admin_user: User,
         admin_token: str,
     ) -> None:
-        """GET returns 404 when no fiscal representative exists."""
+        """GET returns 200 with null when no fiscal representative exists."""
         url = _fiscal_rep_url(conference.id)
         response = await client.get(url, headers=auth_headers(admin_token))
 
-        assert response.status_code == 404
+        assert response.status_code == 200
+        assert response.json() is None
 
     async def test_get_existing(
         self,
@@ -525,16 +526,17 @@ class TestDeleteFiscalRepresentative:
         admin_token: str,
         sample_fiscal_rep: FiscalRepresentative,
     ) -> None:
-        """After DELETE, GET returns 404."""
+        """After DELETE, GET returns 200 with null."""
         url = _fiscal_rep_url(conference.id)
 
         # Delete
         delete_response = await client.delete(url, headers=auth_headers(admin_token))
         assert delete_response.status_code == 200
 
-        # Verify GET returns 404
+        # Verify GET returns null
         get_response = await client.get(url, headers=auth_headers(admin_token))
-        assert get_response.status_code == 404
+        assert get_response.status_code == 200
+        assert get_response.json() is None
 
     async def test_regular_user_403(
         self,
