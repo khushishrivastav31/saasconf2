@@ -422,14 +422,18 @@ Token-based password reset for admin users (`super_admin`, `tenant_admin`, `user
 - Registration endpoints: `10/minute` (individual, company), `5/minute` (bulk, VAT validation)
 
 ### CSV Exports
+- **Utility**: `app/core/csv_export.py` provides `csv_response()` and `stream_csv_export()`
 - Audit + applicant activity exports stream in **1000-row batches** (async generator → `StreamingResponse`)
 - Conference-scoped exports (invoices, papers) capped at **50k rows**
 - All CSVs include UTF-8 BOM for Excel compatibility
+- Used by: alumni.py, audit.py, applicant_activity.py, conferences/exports.py
 
-### Attachment URL Lookups (`app/api/v1/cfp/shared.py`)
-- Single: `_get_applicant_picture_url()`, `_get_applicant_video_url()`, `_get_paper_video_url()`
-- Batch: `_batch_get_attachment_urls(db, entity_ids, entity_type, tenant_id)` — single query using `ROW_NUMBER() OVER (PARTITION BY entity_id)` to get latest attachment per entity
+### Attachment URL Lookups
+- **Utility**: `app/core/attachment_urls.py` provides batch and single attachment URL resolution
+- `get_latest_attachment_url()` — single entity lookup
+- `batch_get_attachment_urls()` — batch lookup using `ROW_NUMBER() OVER (PARTITION BY entity_id)` window function
 - Use batch version in list endpoints to avoid N+1 queries
+- Used by: cfp/shared.py, cfp_portal/shared.py, program/publish.py
 
 ### Pagination
 - Committee members: `GET /cfp/committee-members?skip=0&limit=100&conference_id=...` (max 500)
@@ -547,22 +551,42 @@ Token-based password reset for admin users (`super_admin`, `tenant_admin`, `user
 
 When modifying existing files, apply the "boy scout rule" — improve patterns incrementally rather than doing big refactors. The codebase is functional and shipping; duplication is maintenance cost, not a blocker.
 
-### Backend: Service Layer Adoption
+### Backend: Completed Refactoring (March 2026)
 
-**Current state**: `app/services/base.py` (BaseService) and `app/services/conference.py` (ConferenceService) exist but most endpoints don't use them. Business logic lives inline in route handlers.
+**Status**: Major DRY refactoring completed. Net reduction: -1,185 lines through pattern extraction and module splitting.
 
-**BaseService provides**: `resolve_conference`, `paginate`, `get_or_404`, `apply_filters`, `require_admin`, `create_audit_log`
+**New Core Utilities**:
+- `app/core/attachment_urls.py` — Batch attachment URL lookups to fix N+1 queries
+  - `get_latest_attachment_url()` — single entity lookup
+  - `batch_get_attachment_urls()` — batch lookup using window functions
+  - Used in: cfp/shared.py, cfp_portal/shared.py, program/publish.py
+- `app/core/csv_export.py` — Streaming CSV exports with UTF-8 BOM
+  - `csv_response()` — in-memory CSV for small exports
+  - `stream_csv_export()` — streaming for large exports (1000-row batches)
+  - Used in: alumni.py, audit.py, applicant_activity.py, conferences/exports.py
 
-**When touching a large route file** (especially registrations.py 1,189 lines, cfp_portal/papers.py 1,148, cfp/papers.py 1,122, cfp/topics.py 1,006, messaging/threads.py 962):
-- Extract repeated tenant/conference guards into service methods
-- Use `BaseService.create_audit_log()` instead of inline `AuditLog(...)` construction (currently repeated in 34 files)
-- Use `BaseService.get_or_404()` instead of inline query + `if not result: raise NotFoundError`
-- Move response builder functions into schemas or a dedicated response module
+**Refactored Modules**:
+- **Registrations** — Split monolithic file (1,189 lines) into focused modules:
+  - `registrations/core.py` (676 lines) — Main CRUD operations
+  - `registrations/billing.py` (90 lines) — Billing profile endpoints
+  - `registrations/items.py` (109 lines) — Add-on item management
+  - `registrations/_helpers.py` (211 lines) — Shared utilities
+  - `registrations/__init__.py` — Router assembly (uses `router.routes.extend()` pattern to avoid FastAPI empty-prefix conflicts)
+- **CFP** — Split papers.py into domain-focused modules:
+  - `cfp/cfp_crud.py` — CFP CRUD operations
+  - `cfp/paper_assignments.py` — Assignment logic
+  - `cfp/paper_cospeakers.py` — Co-speaker management
+  - `cfp/paper_reviews.py` — Review operations
+  - `cfp/submissions.py` — Submission handling
+  - `cfp/__init__.py` — Router assembly with careful ordering (literal paths before catch-all `/{cfp_id}`)
 
-**Duplicated patterns to consolidate on touch** (not proactively):
-- Audit logging: 115 inline occurrences across 34 files → `BaseService.create_audit_log()`
-- Tenant/conference resolution: 156 occurrences across 25 files → `BaseService.resolve_conference()`
-- CRUD with filters + pagination: 10+ files → `BaseService.paginate()` + `apply_filters()`
+**Remaining Large Files** (working correctly, refactor only when modifying):
+- `cfp_portal/papers.py` (1,142 lines)
+- `volunteer_tasks.py` (1,004 lines)
+- `messaging/threads.py` (962 lines)
+- `cfp_portal/messaging.py` (838 lines)
+
+**When touching these files**: Consider extracting shared patterns to utilities or splitting into focused modules following the registrations/CFP pattern above.
 
 ### Frontend: Hook Extraction
 
