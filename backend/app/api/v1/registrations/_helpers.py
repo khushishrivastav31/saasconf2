@@ -7,7 +7,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy import func, select
 
 from app.core.dependencies import DbSessionDep
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import ValidationError
 from app.models.booking import BookingOption
 from app.models.conference import Conference
 from app.models.program import ProgramSession
@@ -34,7 +34,7 @@ async def _validate_booking_option(db, option_id: UUID, conference_id: UUID, ten
             BookingOption.id == option_id,
             BookingOption.conference_id == conference_id,
             BookingOption.tenant_id == tenant_id,
-            BookingOption.is_active == True,  # noqa: E712
+            BookingOption.is_active == True,
         )
     )
     opt = result.scalar_one_or_none()

@@ -4,7 +4,7 @@ import math
 from collections import OrderedDict
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
@@ -110,7 +110,7 @@ async def get_bookable_sessions(
             ProgramSession.conference_id == conference_id,
             ProgramSession.tenant_id == tenant_id,
             ProgramTimeSlot.program_day_id == option.conference_day_id,
-            ProgramSession.separately_bookable == True,  # noqa: E712
+            ProgramSession.separately_bookable == True,
         )
         .order_by(ProgramTimeSlot.sort_order, ProgramTimeSlot.start_time)
     )
