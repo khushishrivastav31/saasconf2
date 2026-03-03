@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import { formatDateTime } from '../../../../utils/formatDate';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import RichTextDisplay from '../../../../components/common/RichTextDisplay';
@@ -107,7 +108,7 @@ export default function ThreadDetail({
 
   // Fetch templates for reply
   const { data: templatesData } = useQuery<MessageTemplateListResponse>({
-    queryKey: ['message-templates', conferenceId],
+    queryKey: queryKeys.messaging.templates(conferenceId),
     queryFn: () => api.get(`/conferences/${conferenceId}/messaging/templates`).then((r) => r.data),
   });
 

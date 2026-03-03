@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import type {
   BookingPeriod,
   BookingPeriodCreate,
@@ -71,7 +72,7 @@ function ConferenceBookingTab({
 
   // Fetch booking matrix
   const { data: matrix, isLoading } = useQuery({
-    queryKey: ['booking-matrix', conferenceId],
+    queryKey: queryKeys.booking.matrix(conferenceId),
     queryFn: async () => {
       const response = await api.get<BookingMatrix>(
         `/conferences/${conferenceId}/settings/booking-matrix`
@@ -101,7 +102,7 @@ function ConferenceBookingTab({
         .post(`/conferences/${conferenceId}/settings/booking-options/sync-from-days`)
         .then((res) => {
           if (res.data.created > 0) {
-            queryClient.invalidateQueries({ queryKey: ['booking-matrix', conferenceId] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.booking.matrix(conferenceId) });
           }
         })
         .catch((err) => setApiError(parseApiError(err)));
@@ -110,7 +111,7 @@ function ConferenceBookingTab({
 
   // Fetch platform currencies for currency selector
   const { data: currencyOptions } = useQuery({
-    queryKey: ['platform-currencies'],
+    queryKey: queryKeys.settings.platformCurrencies,
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
         '/admin/settings/currencies',
@@ -121,16 +122,16 @@ function ConferenceBookingTab({
   });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['booking-matrix', conferenceId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.booking.matrix(conferenceId) });
   };
 
   const invalidateDiscounts = () => {
-    queryClient.invalidateQueries({ queryKey: ['discount-codes', conferenceId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.booking.discountCodes(conferenceId) });
   };
 
   // Fetch discount codes
   const { data: discountCodes } = useQuery({
-    queryKey: ['discount-codes', conferenceId],
+    queryKey: queryKeys.booking.discountCodes(conferenceId),
     queryFn: async () => {
       const response = await api.get<{ items: DiscountCode[]; total: number }>(
         `/conferences/${conferenceId}/settings/discount-codes`,
@@ -209,7 +210,7 @@ function ConferenceBookingTab({
     onSuccess: () => {
       invalidate();
       // Option name syncs to program day name on the backend, so refresh program days too
-      queryClient.invalidateQueries({ queryKey: ['program-days', conferenceId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.program.days(conferenceId) });
       setEditingOptionId(null);
       setApiError('');
     },

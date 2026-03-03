@@ -5,9 +5,9 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
+from app.core.attachment_urls import batch_get_attachment_urls, get_latest_attachment_url
 from app.core.dependencies import DbSessionDep
 from app.models.associations import ConferenceCFP
-from app.models.attachment import Attachment
 from app.models.cfp import (
     CFPApplicant,
     CFPCommitteeMember,
@@ -34,38 +34,12 @@ MODULE_CODE = "cfp"
 
 async def _get_applicant_picture_url(db: DbSessionDep, applicant_id: UUID, tenant_id: UUID) -> str | None:
     """Get the picture download URL for an applicant, if one exists."""
-    result = await db.execute(
-        select(Attachment.id)
-        .where(
-            Attachment.tenant_id == tenant_id,
-            Attachment.entity_type == "applicant_picture",
-            Attachment.entity_id == applicant_id,
-        )
-        .order_by(Attachment.created_at.desc())
-        .limit(1)
-    )
-    attachment_id = result.scalar_one_or_none()
-    if attachment_id:
-        return f"/attachments/{attachment_id}/download"
-    return None
+    return await get_latest_attachment_url(db, applicant_id, "applicant_picture", tenant_id)
 
 
 async def _get_applicant_video_url(db: DbSessionDep, applicant_id: UUID, tenant_id: UUID) -> str | None:
     """Get the video download URL for an applicant, if one exists."""
-    result = await db.execute(
-        select(Attachment.id)
-        .where(
-            Attachment.tenant_id == tenant_id,
-            Attachment.entity_type == "applicant_video",
-            Attachment.entity_id == applicant_id,
-        )
-        .order_by(Attachment.created_at.desc())
-        .limit(1)
-    )
-    attachment_id = result.scalar_one_or_none()
-    if attachment_id:
-        return f"/attachments/{attachment_id}/download"
-    return None
+    return await get_latest_attachment_url(db, applicant_id, "applicant_video", tenant_id)
 
 
 async def _batch_get_attachment_urls(
@@ -78,44 +52,12 @@ async def _batch_get_attachment_urls(
 
     Returns a mapping of entity_id -> download URL.
     """
-    if not entity_ids:
-        return {}
-
-    ranked = (
-        select(
-            Attachment.entity_id,
-            Attachment.id.label("attachment_id"),
-            func.row_number()
-            .over(partition_by=Attachment.entity_id, order_by=Attachment.created_at.desc())
-            .label("rn"),
-        )
-        .where(
-            Attachment.tenant_id == tenant_id,
-            Attachment.entity_type == entity_type,
-            Attachment.entity_id.in_(entity_ids),
-        )
-        .subquery()
-    )
-    result = await db.execute(select(ranked.c.entity_id, ranked.c.attachment_id).where(ranked.c.rn == 1))
-    return {row.entity_id: f"/attachments/{row.attachment_id}/download" for row in result.all()}
+    return await batch_get_attachment_urls(db, entity_ids, entity_type, tenant_id)
 
 
 async def _get_paper_video_url(db: DbSessionDep, paper_id: UUID, tenant_id: UUID) -> str | None:
     """Get the video download URL for a paper."""
-    result = await db.execute(
-        select(Attachment.id)
-        .where(
-            Attachment.tenant_id == tenant_id,
-            Attachment.entity_type == "paper_video",
-            Attachment.entity_id == paper_id,
-        )
-        .order_by(Attachment.created_at.desc())
-        .limit(1)
-    )
-    attachment_id = result.scalar_one_or_none()
-    if attachment_id:
-        return f"/attachments/{attachment_id}/download"
-    return None
+    return await get_latest_attachment_url(db, paper_id, "paper_video", tenant_id)
 
 
 def _compute_display_status(paper_status: str, cfp_status: str) -> str:

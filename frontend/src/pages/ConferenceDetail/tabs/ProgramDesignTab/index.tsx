@@ -11,6 +11,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import type { Conference, SessionType, ProgramSession } from '../../../../types';
 import { parseApiError } from '../../../../utils/apiError';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
@@ -60,7 +61,7 @@ export default function ProgramDesignTab({ conference, isAdmin }: ProgramDesignT
 
   // Fetch session types for session modal
   const { data: sessionTypesData } = useQuery({
-    queryKey: ['program-session-types', conference.id],
+    queryKey: queryKeys.program.sessionTypes(conference.id),
     queryFn: async () => {
       const response = await api.get<{ items: SessionType[]; total: number }>(
         `/conferences/${conference.id}/settings/session-types`
@@ -85,7 +86,7 @@ export default function ProgramDesignTab({ conference, isAdmin }: ProgramDesignT
       .post(`/conferences/${conference.id}/program/days/generate`, {})
       .then((res) => {
         if (res.data.created?.length > 0) {
-          queryClient.invalidateQueries({ queryKey: ['program-days', conference.id] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.program.days(conference.id) });
         }
       })
       .catch((err) => console.error('Failed to auto-generate program days:', err));

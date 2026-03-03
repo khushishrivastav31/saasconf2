@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import type {
   Conference,
   ServiceProvider,
@@ -43,7 +44,7 @@ export default function ConferenceServiceProvidersTab({
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['conference-service-providers', conference.id],
+    queryKey: queryKeys.serviceProviders.byConference(conference.id),
     queryFn: async () => {
       const response = await api.get<{
         items: ServiceProvider[];
@@ -65,7 +66,7 @@ export default function ConferenceServiceProvidersTab({
     },
     onSuccess: (newProvider) => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-service-providers', conference.id],
+        queryKey: queryKeys.serviceProviders.byConference(conference.id),
       });
       setIsAdding(false);
       setCreateForm({
@@ -92,7 +93,7 @@ export default function ConferenceServiceProvidersTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-service-providers', conference.id],
+        queryKey: queryKeys.serviceProviders.byConference(conference.id),
       });
       setError(null);
     },
@@ -107,7 +108,7 @@ export default function ConferenceServiceProvidersTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-service-providers', conference.id],
+        queryKey: queryKeys.serviceProviders.byConference(conference.id),
       });
       setSelectedServiceProviderId(null);
     },

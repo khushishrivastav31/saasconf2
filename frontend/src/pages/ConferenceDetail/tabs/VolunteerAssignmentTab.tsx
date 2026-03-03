@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import type { Conference } from '../../../types';
 import type {
   SessionVolunteerTask,
@@ -273,7 +274,7 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
 
   // Session-task assignments (tasks per session with counts)
   const { data: sessionTasksData } = useQuery({
-    queryKey: ['session-tasks', conference.id],
+    queryKey: queryKeys.volunteers.sessionTasks(conference.id),
     queryFn: async () => {
       const res = await api.get<{ items: SessionTasksBrief[]; total: number }>(
         `/conferences/${conference.id}/volunteer-tasks/session-tasks`
@@ -284,7 +285,7 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
 
   // Volunteer assignment overview (grouped by task, with assigned volunteer details)
   const { data: overviewData } = useQuery({
-    queryKey: ['volunteer-assignments', conference.id],
+    queryKey: queryKeys.volunteers.assignments(conference.id),
     queryFn: async () => {
       const res = await api.get<TaskAssignmentOverviewList>(
         `/conferences/${conference.id}/volunteer-tasks/volunteer-assignments`
@@ -295,7 +296,7 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
 
   // Conference volunteers for sidebar
   const { data: volunteersData } = useQuery({
-    queryKey: ['conference-volunteers-list', conference.id],
+    queryKey: queryKeys.volunteers.conferenceList(conference.id),
     queryFn: async () => {
       const res = await api.get<{ items: Volunteer[]; total: number }>(
         `/volunteers?conference_id=${conference.id}&page_size=100`
@@ -359,10 +360,12 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
       await api.post(`/conferences/${conference.id}/volunteer-tasks/volunteer-assignments`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['session-tasks', conference.id] });
-      queryClient.invalidateQueries({ queryKey: ['volunteer-assignments', conference.id] });
-      queryClient.invalidateQueries({ queryKey: ['volunteer-schedule', conference.id] });
-      queryClient.invalidateQueries({ queryKey: ['volunteer-schedule-unassigned', conference.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.sessionTasks(conference.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.assignments(conference.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.schedule(conference.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.volunteers.scheduleUnassigned(conference.id),
+      });
     },
   });
 
@@ -373,10 +376,12 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['session-tasks', conference.id] });
-      queryClient.invalidateQueries({ queryKey: ['volunteer-assignments', conference.id] });
-      queryClient.invalidateQueries({ queryKey: ['volunteer-schedule', conference.id] });
-      queryClient.invalidateQueries({ queryKey: ['volunteer-schedule-unassigned', conference.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.sessionTasks(conference.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.assignments(conference.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.schedule(conference.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.volunteers.scheduleUnassigned(conference.id),
+      });
     },
   });
 
@@ -388,8 +393,10 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['volunteer-assignments', conference.id] });
-      queryClient.invalidateQueries({ queryKey: ['conference-volunteers-list', conference.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.assignments(conference.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.volunteers.conferenceList(conference.id),
+      });
     },
   });
 

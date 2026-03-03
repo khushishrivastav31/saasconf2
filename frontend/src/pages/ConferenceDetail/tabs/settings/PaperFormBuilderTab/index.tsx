@@ -19,6 +19,7 @@ import {
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import api from '../../../../../config/api';
+import { queryKeys } from '../../../../../config/queryKeys';
 import type {
   Conference,
   PaperFormSchema,
@@ -98,7 +99,7 @@ function PaperFormBuilderTab({
     isError,
     error: queryError,
   } = useQuery({
-    queryKey: ['paper-form-schema', conference.id],
+    queryKey: queryKeys.settings.paperFormSchema(conference.id),
     queryFn: async () => {
       const response = await api.get<PaperFormSchema>(
         `/conferences/${conference.id}/paper-form-schema`
@@ -108,7 +109,7 @@ function PaperFormBuilderTab({
   });
 
   const { data: submissionsData } = useQuery({
-    queryKey: ['paper-form-schema-has-submissions', conference.id],
+    queryKey: queryKeys.settings.paperFormHasSubmissions(conference.id),
     queryFn: async () => {
       const response = await api.get<HasSubmissionsResponse>(
         `/conferences/${conference.id}/paper-form-schema/has-submissions`
@@ -192,7 +193,7 @@ function PaperFormBuilderTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['paper-form-schema', conference.id],
+        queryKey: queryKeys.settings.paperFormSchema(conference.id),
       });
       setSuccessMessage('Form schema updated successfully');
       setError(null);
@@ -212,7 +213,7 @@ function PaperFormBuilderTab({
     },
     onSuccess: (newField) => {
       queryClient.invalidateQueries({
-        queryKey: ['paper-form-schema', conference.id],
+        queryKey: queryKeys.settings.paperFormSchema(conference.id),
       });
       setSuccessMessage('Field created successfully');
       setSelectedFieldId(newField.id);
@@ -233,7 +234,7 @@ function PaperFormBuilderTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['paper-form-schema', conference.id],
+        queryKey: queryKeys.settings.paperFormSchema(conference.id),
       });
       setSuccessMessage('Field updated successfully');
       setError(null);
@@ -249,7 +250,7 @@ function PaperFormBuilderTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['paper-form-schema', conference.id],
+        queryKey: queryKeys.settings.paperFormSchema(conference.id),
       });
       setSuccessMessage('Field deleted successfully');
       setSelectedFieldId(null);
@@ -399,7 +400,7 @@ function PaperFormBuilderTab({
       try {
         await Promise.all(promises);
         queryClient.invalidateQueries({
-          queryKey: ['paper-form-schema', conference.id],
+          queryKey: queryKeys.settings.paperFormSchema(conference.id),
         });
         setSuccessMessage('Field order updated');
       } catch (err) {

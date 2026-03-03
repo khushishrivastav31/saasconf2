@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import type { Conference } from '../../../../types';
 import type {
   RecipientListListResponse,
@@ -34,20 +35,20 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
 
   // Fetch all lists
   const { data, isLoading } = useQuery<RecipientListListResponse>({
-    queryKey: ['recipient-lists', conference.id],
+    queryKey: queryKeys.messaging.recipientLists(conference.id),
     queryFn: () => api.get(basePath).then((r) => r.data),
   });
 
   // Fetch list detail for editing
   const { data: editDetail } = useQuery<RecipientListDetailResponse>({
-    queryKey: ['recipient-list-detail', conference.id, editingListId],
+    queryKey: queryKeys.messaging.recipientListDetail(conference.id, editingListId),
     queryFn: () => api.get(`${basePath}/${editingListId}`).then((r) => r.data),
     enabled: !!editingListId,
   });
 
   // Fetch all applicants for member selection
   const { data: allApplicants } = useQuery({
-    queryKey: ['cfp-applicants-for-messaging', conference.id],
+    queryKey: queryKeys.cfp.applicantsForMessaging(conference.id),
     queryFn: async () => {
       const resp = await api.get(`/cfp/applicants?conference_id=${conference.id}`);
       return resp.data.items as Applicant[];
@@ -60,7 +61,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
       api.post(basePath, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['recipient-lists', conference.id],
+        queryKey: queryKeys.messaging.recipientLists(conference.id),
       });
       closeModal();
     },
@@ -78,7 +79,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
     }) => api.put(`${basePath}/${id}`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['recipient-lists', conference.id],
+        queryKey: queryKeys.messaging.recipientLists(conference.id),
       });
       closeModal();
     },
@@ -88,7 +89,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
     mutationFn: (id: string) => api.delete(`${basePath}/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['recipient-lists', conference.id],
+        queryKey: queryKeys.messaging.recipientLists(conference.id),
       });
       setDeleteConfirm(null);
     },

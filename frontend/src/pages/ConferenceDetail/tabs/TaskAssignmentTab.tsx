@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import type { Conference, VolunteerRole } from '../../../types';
 import type { SessionVolunteerTask, SessionTasksBrief } from '../../../types/volunteer';
 import type { SessionVisualSegment } from './ProgramDesignTab/hooks/useGridPositions';
@@ -176,7 +177,7 @@ export default function TaskAssignmentTab({ conference, isAdmin }: Props) {
 
   // Fetch session-task assignments for the conference
   const { data: sessionTasksData } = useQuery({
-    queryKey: ['session-tasks', conference.id],
+    queryKey: queryKeys.volunteers.sessionTasks(conference.id),
     queryFn: async () => {
       const res = await api.get<{ items: SessionTasksBrief[]; total: number }>(
         `/conferences/${conference.id}/volunteer-tasks/session-tasks`
@@ -187,7 +188,7 @@ export default function TaskAssignmentTab({ conference, isAdmin }: Props) {
 
   // Fetch volunteer roles (task definitions) for the dropdown
   const { data: rolesData } = useQuery({
-    queryKey: ['volunteer-roles', conference.id],
+    queryKey: queryKeys.volunteers.roles(conference.id),
     queryFn: async () => {
       const res = await api.get<{ items: VolunteerRole[]; total: number }>(
         `/conferences/${conference.id}/settings/volunteer-roles`
@@ -243,7 +244,7 @@ export default function TaskAssignmentTab({ conference, isAdmin }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['session-tasks', conference.id],
+        queryKey: queryKeys.volunteers.sessionTasks(conference.id),
       });
       setNewTaskId('');
       setNewRequiredCount(1);
@@ -258,7 +259,7 @@ export default function TaskAssignmentTab({ conference, isAdmin }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['session-tasks', conference.id],
+        queryKey: queryKeys.volunteers.sessionTasks(conference.id),
       });
     },
   });
@@ -269,7 +270,7 @@ export default function TaskAssignmentTab({ conference, isAdmin }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['session-tasks', conference.id],
+        queryKey: queryKeys.volunteers.sessionTasks(conference.id),
       });
     },
   });

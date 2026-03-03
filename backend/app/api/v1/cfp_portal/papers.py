@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.email import send_cospeaker_invitation_email
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
 from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
@@ -274,7 +274,7 @@ async def update_paper(
     paper = await _get_applicant_or_cospeaker_paper(db, paper_id, current.applicant_id, current.tenant_id)
 
     if paper.status != PaperStatus.DRAFT.value:
-        raise HTTPException(status_code=400, detail="Only draft papers can be edited")
+        raise ValidationError("Only draft papers can be edited")
 
     is_main = str(paper.main_speaker_id) == str(current.applicant_id)
 
@@ -285,7 +285,7 @@ async def update_paper(
     # Only main speaker can manage co-speakers
     if data.cospeaker_emails is not None:
         if not is_main:
-            raise HTTPException(status_code=403, detail="Only the main speaker can manage co-speakers")
+            raise AuthorizationError("Only the main speaker can manage co-speakers")
         await _sync_cospeakers(db, paper, data.cospeaker_emails, current)
 
     await db.commit()
@@ -303,7 +303,7 @@ async def submit_paper(
     paper = await _get_applicant_or_cospeaker_paper(db, paper_id, current.applicant_id, current.tenant_id)
 
     if paper.status != PaperStatus.DRAFT.value:
-        raise HTTPException(status_code=400, detail="Only draft papers can be submitted")
+        raise ValidationError("Only draft papers can be submitted")
 
     # --- Validate required fields before submission ---
     cfp_result = await db.execute(select(CallForPapers).where(CallForPapers.id == paper.cfp_id))
@@ -375,7 +375,7 @@ async def unsubmit_paper(
     paper = await _get_applicant_or_cospeaker_paper(db, paper_id, current.applicant_id, current.tenant_id)
 
     if paper.status != PaperStatus.SUBMITTED.value:
-        raise HTTPException(status_code=400, detail="Only submitted papers can be reverted to draft")
+        raise ValidationError("Only submitted papers can be reverted to draft")
 
     paper.status = PaperStatus.DRAFT.value
     paper.submitted_at = None
@@ -394,7 +394,7 @@ async def delete_paper(
     paper = await _get_applicant_paper(db, paper_id, current.applicant_id, current.tenant_id)
 
     if paper.status != PaperStatus.DRAFT.value:
-        raise HTTPException(status_code=400, detail="Only draft papers can be deleted")
+        raise ValidationError("Only draft papers can be deleted")
 
     await db.delete(paper)
     await db.commit()
@@ -495,7 +495,7 @@ async def accept_invitation(
         raise NotFoundError("Invitation not found")
 
     if row.invitation_status != CospeakerInvitationStatus.PENDING.value:
-        raise HTTPException(status_code=400, detail="Invitation has already been responded to")
+        raise ValidationError("Invitation has already been responded to")
 
     row.invitation_status = CospeakerInvitationStatus.ACCEPTED.value
     row.responded_at = utcnow()
@@ -522,7 +522,7 @@ async def decline_invitation(
         raise NotFoundError("Invitation not found")
 
     if row.invitation_status != CospeakerInvitationStatus.PENDING.value:
-        raise HTTPException(status_code=400, detail="Invitation has already been responded to")
+        raise ValidationError("Invitation has already been responded to")
 
     row.invitation_status = CospeakerInvitationStatus.DECLINED.value
     row.responded_at = utcnow()
@@ -547,16 +547,16 @@ async def upload_portal_attachment(
 ) -> dict:
     """Upload an attachment (picture/video) for the current applicant or their paper."""
     if entity_type not in PORTAL_ALLOWED_ENTITY_TYPES:
-        raise HTTPException(status_code=400, detail=f"Invalid entity_type: {entity_type}")
+        raise ValidationError(f"Invalid entity_type: {entity_type}")
 
     # Validate ownership
     if entity_type in ("applicant_picture", "applicant_video"):
         if str(current.applicant_id) != entity_id:
-            raise HTTPException(status_code=403, detail="You can only upload media for your own profile")
+            raise AuthorizationError("You can only upload media for your own profile")
     elif entity_type == "paper_video":
         paper = await _get_applicant_or_cospeaker_paper(db, entity_id, current.applicant_id, current.tenant_id)
         if paper.status != PaperStatus.DRAFT.value:
-            raise HTTPException(status_code=400, detail="Can only upload video for draft papers")
+            raise ValidationError("Can only upload video for draft papers")
 
     file_data = await file.read()
     file_size = len(file_data)
@@ -920,7 +920,7 @@ async def _sync_cospeakers(
     invitation emails to newly added ones.
     """
     if len(cospeaker_emails) > 3:
-        raise HTTPException(status_code=400, detail="Maximum 3 co-speakers allowed")
+        raise ValidationError("Maximum 3 co-speakers allowed")
 
     # Build map of existing co-speakers: applicant_id -> record
     existing_result = await db.execute(select(CFPPaperCospeaker).where(CFPPaperCospeaker.paper_id == paper.id))
@@ -938,16 +938,10 @@ async def _sync_cospeakers(
         )
         applicant = app_result.scalar_one_or_none()
         if not applicant:
-            raise HTTPException(
-                status_code=400,
-                detail=f"No registered applicant found with email: {email}",
-            )
+            raise ValidationError(f"No registered applicant found with email: {email}")
 
         if applicant.id == current.applicant_id:
-            raise HTTPException(
-                status_code=400,
-                detail="You cannot add yourself as a co-speaker",
-            )
+            raise ValidationError("You cannot add yourself as a co-speaker")
 
         new_applicants.append((i, applicant))
 

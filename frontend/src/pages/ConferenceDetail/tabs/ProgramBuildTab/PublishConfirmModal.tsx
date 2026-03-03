@@ -4,6 +4,7 @@ import Modal from '../../../../components/Modal';
 import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 
 interface PaperPreviewItem {
   id: string;
@@ -59,7 +60,7 @@ export default function PublishConfirmModal({
     isLoading: previewLoading,
     error: previewError,
   } = useQuery<PublishPreview>({
-    queryKey: ['program-publish-preview', conferenceId],
+    queryKey: queryKeys.program.publishPreview(conferenceId),
     queryFn: async () => {
       const res = await api.get<PublishPreview>(
         `/conferences/${conferenceId}/program/publish/preview`

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import { validatePhone, normalizeUrl } from '../../../utils/validators';
 import VatNumberInput from '../../../components/common/VatNumberInput';
 import { COUNTRY_OPTIONS } from '../../../config/countries';
@@ -68,7 +69,7 @@ function ConferenceSponsorsTab({
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['conference-sponsors', conference.id],
+    queryKey: queryKeys.sponsors.byConference(conference.id),
     queryFn: async () => {
       const response = await api.get<{
         items: Sponsor[];
@@ -80,7 +81,7 @@ function ConferenceSponsorsTab({
 
   // Sponsor packages for dropdowns
   const { data: sponsorPackagesData } = useQuery({
-    queryKey: ['sponsor-packages', conference.id],
+    queryKey: queryKeys.sponsors.packages(conference.id),
     queryFn: async () => {
       const response = await api.get<{
         items: SponsorPackage[];
@@ -92,7 +93,7 @@ function ConferenceSponsorsTab({
 
   // Platform currencies for dropdowns
   const { data: currenciesData } = useQuery({
-    queryKey: ['platform-currencies'],
+    queryKey: queryKeys.settings.platformCurrencies,
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
         '/admin/settings/currencies',
@@ -114,7 +115,7 @@ function ConferenceSponsorsTab({
     },
     onSuccess: (newSponsor) => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-sponsors', conference.id],
+        queryKey: queryKeys.sponsors.byConference(conference.id),
       });
       setIsAdding(false);
       setCreateForm(emptyCreateForm);
@@ -138,7 +139,7 @@ function ConferenceSponsorsTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-sponsors', conference.id],
+        queryKey: queryKeys.sponsors.byConference(conference.id),
       });
       setError(null);
     },
@@ -153,7 +154,7 @@ function ConferenceSponsorsTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-sponsors', conference.id],
+        queryKey: queryKeys.sponsors.byConference(conference.id),
       });
       setSelectedSponsorId(null);
       setDeleteTarget(null);

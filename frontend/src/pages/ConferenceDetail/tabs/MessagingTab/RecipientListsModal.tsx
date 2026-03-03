@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import type {
   RecipientListListResponse,
   RecipientListDetailResponse,
@@ -37,21 +38,21 @@ export default function RecipientListsModal({
 
   // Fetch all lists
   const { data: listsData, isLoading } = useQuery<RecipientListListResponse>({
-    queryKey: ['recipient-lists', conferenceId],
+    queryKey: queryKeys.messaging.recipientLists(conferenceId),
     queryFn: () => api.get(basePath).then((r) => r.data),
     enabled: open,
   });
 
   // Fetch list detail for editing
   const { data: editDetail } = useQuery<RecipientListDetailResponse>({
-    queryKey: ['recipient-list-detail', conferenceId, editingListId],
+    queryKey: queryKeys.messaging.recipientListDetail(conferenceId, editingListId),
     queryFn: () => api.get(`${basePath}/${editingListId}`).then((r) => r.data),
     enabled: !!editingListId && view === 'edit',
   });
 
   // Fetch all applicants
   const { data: allApplicants } = useQuery({
-    queryKey: ['cfp-applicants-for-messaging', conferenceId],
+    queryKey: queryKeys.cfp.applicantsForMessaging(conferenceId),
     queryFn: async () => {
       const resp = await api.get(`/cfp/applicants?conference_id=${conferenceId}`);
       return resp.data.items as Applicant[];
@@ -64,7 +65,7 @@ export default function RecipientListsModal({
     mutationFn: (payload: { name: string; description: string; applicant_ids: string[] }) =>
       api.post(basePath, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recipient-lists', conferenceId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.messaging.recipientLists(conferenceId) });
       resetForm();
     },
   });
@@ -81,7 +82,7 @@ export default function RecipientListsModal({
       applicant_ids: string[];
     }) => api.put(`${basePath}/${id}`, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recipient-lists', conferenceId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.messaging.recipientLists(conferenceId) });
       resetForm();
     },
   });
@@ -90,7 +91,7 @@ export default function RecipientListsModal({
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`${basePath}/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recipient-lists', conferenceId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.messaging.recipientLists(conferenceId) });
       setDeleteConfirm(null);
     },
   });

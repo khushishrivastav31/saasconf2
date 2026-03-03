@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDraggable } from '@dnd-kit/core';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import type { Paper, ProgramSession, ProgramTimeSlot } from '../../../../types';
 
 interface PaperListResponse {
@@ -194,7 +195,7 @@ export default function PaperSidebar({
   const [showAssigned, setShowAssigned] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['papers', conferenceId, 'all'],
+    queryKey: queryKeys.cfp.papersForDesign(conferenceId, 'all'),
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('conference_id', conferenceId);

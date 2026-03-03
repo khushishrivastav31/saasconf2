@@ -9,6 +9,7 @@ import type {
   EmailTemplateType,
 } from '../../../../types';
 import { EMAIL_TEMPLATE_LABELS } from '../../../../types';
+import { queryKeys } from '../../../../config/queryKeys';
 import { parseApiError } from '../../../../utils/apiError';
 import Modal from '../../../../components/Modal';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
@@ -37,7 +38,7 @@ function EmailTemplatesTab({ conference, isAdmin }: { conference: Conference; is
     isError,
     error: queryError,
   } = useQuery({
-    queryKey: ['email-templates', conference.id],
+    queryKey: queryKeys.settings.emailTemplates(conference.id),
     queryFn: async () => {
       const response = await api.get<EmailTemplateListResponse>(
         `/conferences/${conference.id}/settings/email-templates`
@@ -61,7 +62,7 @@ function EmailTemplatesTab({ conference, isAdmin }: { conference: Conference; is
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-templates', conference.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings.emailTemplates(conference.id) });
       setIsModalOpen(false);
       setEditingTemplate(null);
       setError(null);

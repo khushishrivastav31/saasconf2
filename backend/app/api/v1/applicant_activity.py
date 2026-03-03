@@ -1,7 +1,5 @@
 """Applicant activity log endpoints (tenant admin only)."""
 
-import csv
-import io
 from datetime import datetime
 from uuid import UUID
 
@@ -10,8 +8,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, or_, select
 
+from app.core.csv_export import stream_csv_export
 from app.core.dependencies import DbSessionDep, TenantAdminDep
-from app.core.file_validation import safe_content_disposition
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.utils import utcnow
@@ -286,53 +284,19 @@ async def export_applicant_activities(
 
     filename = f"applicant_activity_{utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
 
-    async def _generate():
-        # BOM + header
-        header_buf = io.StringIO()
-        writer = csv.writer(header_buf)
-        writer.writerow(
-            [
-                "Timestamp",
-                "Email",
-                "First Name",
-                "Last Name",
-                "Activity Type",
-            ]
-        )
-        yield b"\xef\xbb\xbf" + header_buf.getvalue().encode("utf-8")
+    def _map_activity_row(log: ApplicantActivityLog) -> list[str]:
+        return [
+            log.created_at.isoformat(),
+            log.applicant_email,
+            log.applicant_first_name,
+            log.applicant_last_name,
+            log.activity_type,
+        ]
 
-        # Stream rows in batches
-        batch_size = 1000
-        offset = 0
-        while True:
-            batch_query = query.offset(offset).limit(batch_size)
-            result = await db.execute(batch_query)
-            logs = result.scalars().all()
-            if not logs:
-                break
-
-            chunk = io.StringIO()
-            w = csv.writer(chunk)
-            for log in logs:
-                w.writerow(
-                    [
-                        log.created_at.isoformat(),
-                        log.applicant_email,
-                        log.applicant_first_name,
-                        log.applicant_last_name,
-                        log.activity_type,
-                    ]
-                )
-            yield chunk.getvalue().encode("utf-8")
-
-            if len(logs) < batch_size:
-                break
-            offset += batch_size
-
-    return StreamingResponse(
-        _generate(),
-        media_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": safe_content_disposition(filename),
-        },
+    return await stream_csv_export(
+        db=db,
+        query=query,
+        headers=["Timestamp", "Email", "First Name", "Last Name", "Activity Type"],
+        row_mapper=_map_activity_row,
+        filename=filename,
     )

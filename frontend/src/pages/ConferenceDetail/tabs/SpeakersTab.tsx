@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import { formatDate } from '../../../utils/formatDate';
 import type { Conference, ProgramFullGrid } from '../../../types';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
@@ -27,7 +28,7 @@ export default function SpeakersTab({ conference }: SpeakersTabProps) {
   const [expandedSpeaker, setExpandedSpeaker] = useState<string | null>(null);
 
   const { data: gridData, isLoading } = useQuery({
-    queryKey: ['program-full-grid', conference.id],
+    queryKey: queryKeys.program.fullGrid(conference.id),
     queryFn: async () => {
       const response = await api.get<ProgramFullGrid>(`/conferences/${conference.id}/program/grid`);
       return response.data;

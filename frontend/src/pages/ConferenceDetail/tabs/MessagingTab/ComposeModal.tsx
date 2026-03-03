@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import MessageFileAttach, { type StagedAttachment } from '../../../../components/MessageFileAttach';
 import OverlaySelector from '../../../../components/OverlaySelector';
@@ -42,7 +43,7 @@ export default function ComposeModal({
 
   // Fetch applicants for recipient picker
   const { data: allApplicants } = useQuery({
-    queryKey: ['cfp-applicants-for-messaging', conferenceId],
+    queryKey: queryKeys.cfp.applicantsForMessaging(conferenceId),
     queryFn: async () => {
       const resp = await api.get(`/cfp/applicants?conference_id=${conferenceId}`);
       return resp.data.items as Applicant[];

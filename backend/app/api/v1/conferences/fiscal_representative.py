@@ -50,14 +50,14 @@ async def _check_admin(db, current_user, conference_id: UUID) -> None:
 
 @router.get(
     "/{conference_id}/fiscal-representative",
-    response_model=FiscalRepresentativeResponse,
+    response_model=FiscalRepresentativeResponse | None,
     dependencies=[Depends(require_module(MODULE_CODE))],
 )
 async def get_fiscal_representative(
     conference_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
-) -> FiscalRepresentativeResponse:
+) -> FiscalRepresentativeResponse | None:
     """Get the fiscal representative for a conference."""
     await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
@@ -68,7 +68,7 @@ async def get_fiscal_representative(
     )
     fiscal_rep = result.scalar_one_or_none()
     if not fiscal_rep:
-        raise NotFoundError("Fiscal representative not found for this conference")
+        return None
 
     return FiscalRepresentativeResponse.model_validate(fiscal_rep)
 

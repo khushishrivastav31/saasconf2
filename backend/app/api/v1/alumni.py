@@ -11,9 +11,9 @@ from sqlalchemy import func, select
 
 from app.constants import ResourceType
 from app.core.conference_helpers import check_conference_admin
+from app.core.csv_export import csv_response
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip
 from app.core.exceptions import NotFoundError
-from app.core.file_validation import safe_content_disposition
 from app.core.search import unaccent_ilike
 from app.models.alumni import Alumni, AlumniSource
 from app.models.audit import AuditAction, AuditLog
@@ -445,32 +445,21 @@ async def export_alumni_csv(
     )
     alumni_list = result.scalars().all()
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Email", "First Name", "Last Name", "Company", "Source", "Date Added"])
-
-    for a in alumni_list:
-        writer.writerow(
-            [
-                a.email,
-                a.first_name,
-                a.last_name,
-                a.company or "",
-                a.source,
-                a.created_at.strftime("%Y-%m-%d") if a.created_at else "",
-            ]
-        )
-
-    output.seek(0)
-    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
-
     safe_name = (conference.name or "conference").replace(" ", "_")
     filename = f"alumni_{safe_name}.csv"
 
-    return StreamingResponse(
-        iter([csv_bytes]),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": safe_content_disposition(filename)},
+    return csv_response(
+        headers=["Email", "First Name", "Last Name", "Company", "Source", "Date Added"],
+        rows=alumni_list,
+        row_mapper=lambda a: [
+            a.email,
+            a.first_name,
+            a.last_name,
+            a.company or "",
+            a.source,
+            a.created_at.strftime("%Y-%m-%d") if a.created_at else "",
+        ],
+        filename=filename,
     )
 
 

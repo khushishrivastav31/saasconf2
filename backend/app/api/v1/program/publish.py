@@ -1,7 +1,5 @@
 """Program publication endpoints: preview, publish, update, and sessions export."""
 
-import csv
-import io
 import uuid
 from collections import defaultdict
 from datetime import UTC, datetime
@@ -12,9 +10,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
+from app.core.csv_export import csv_response
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
 from app.core.exceptions import ValidationError
-from app.core.file_validation import safe_content_disposition
 from app.models.associations import ConferenceCFP
 from app.models.audit import AuditLog
 from app.models.cfp import (
@@ -687,13 +685,11 @@ async def export_sessions(
     schema = schema_result.scalar_one_or_none()
     if schema:
         fields_result = await db.execute(
-            select(PaperFormField).where(PaperFormField.schema_id == schema.id).order_by(PaperFormField.sort_order)
+            select(PaperFormField).where(PaperFormField.schema_id == schema.id).order_by(PaperFormField.display_order)
         )
         custom_fields = list(fields_result.scalars().all())
 
-    # Build CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
+    # Build CSV header with dynamic custom field columns
     header = [
         "Day",
         "Date",
@@ -713,15 +709,15 @@ async def export_sessions(
         "Importance",
         "Paper Status",
     ]
-    # Add custom field columns
     for cf in custom_fields:
         header.append(cf.label)
-    writer.writerow(header)
 
-    for session in sorted(
+    sorted_sessions = sorted(
         sessions,
         key=lambda s: (slots.get(s.start_slot_id, ProgramTimeSlot()).sort_order if slots.get(s.start_slot_id) else 0,),
-    ):
+    )
+
+    def _map_session_row(session: ProgramSession) -> list[str]:
         slot = slots.get(session.start_slot_id)
         track = tracks.get(session.start_track_id) if session.start_track_id else None
         day = days.get(slot.program_day_id) if slot else None
@@ -755,16 +751,13 @@ async def export_sessions(
             if isinstance(val, list):
                 val = ", ".join(str(v) for v in val)
             row.append(str(val) if val else "")
-        writer.writerow(row)
+        return row
 
-    output.seek(0)
     filename = f"program-sessions-{conference.name.replace(' ', '-').lower()}.csv"
 
-    # Encode as UTF-8 with BOM so Excel opens accented characters correctly
-    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
-
-    return StreamingResponse(
-        iter([csv_bytes]),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": safe_content_disposition(filename)},
+    return csv_response(
+        headers=header,
+        rows=sorted_sessions,
+        row_mapper=_map_session_row,
+        filename=filename,
     )

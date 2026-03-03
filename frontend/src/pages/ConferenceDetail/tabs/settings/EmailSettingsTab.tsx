@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
 import type { Conference } from '../../../../types';
@@ -20,7 +21,7 @@ function EmailSettingsTab({ conference, isAdmin }: { conference: Conference; isA
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['conference', conference.id],
+        queryKey: queryKeys.conferences.detail(conference.id),
       });
       showToast(
         emailSendingEnabled ? 'Email sending disabled' : 'Email sending enabled',

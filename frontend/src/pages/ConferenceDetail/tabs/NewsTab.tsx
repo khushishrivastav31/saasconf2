@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import Modal from '../../../components/Modal';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import RichTextEditor from '../../../components/common/RichTextEditor';
@@ -45,7 +46,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
   // ── Queries ──────────────────────────────────────────────────────────
 
   const { data, isLoading } = useQuery({
-    queryKey: ['conference-news', conferenceId],
+    queryKey: queryKeys.news.byConference(conferenceId),
     queryFn: async () => {
       const response = await api.get<NewsArticleListResponse>(`/conferences/${conferenceId}/news`);
       return response.data;
@@ -64,7 +65,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
       setError(null);
       closeModal();
       queryClient.invalidateQueries({
-        queryKey: ['conference-news', conferenceId],
+        queryKey: queryKeys.news.byConference(conferenceId),
       });
     },
     onError: (err: unknown) => {
@@ -86,7 +87,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
       setError(null);
       closeModal();
       queryClient.invalidateQueries({
-        queryKey: ['conference-news', conferenceId],
+        queryKey: queryKeys.news.byConference(conferenceId),
       });
     },
     onError: (err: unknown) => {
@@ -102,7 +103,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
       setError(null);
       setDeleteTarget(null);
       queryClient.invalidateQueries({
-        queryKey: ['conference-news', conferenceId],
+        queryKey: queryKeys.news.byConference(conferenceId),
       });
     },
     onError: (err: unknown) => {

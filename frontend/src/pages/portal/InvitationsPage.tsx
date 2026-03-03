@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import portalApi from '../../config/portalApi';
+import { queryKeys } from '../../config/queryKeys';
 import { formatDate } from '../../utils/formatDate';
 import type { PortalInvitationListResponse } from '../../types/portal';
 import { INVITATION_STATUS_COLORS } from '../../config/statusColors';
@@ -8,7 +9,7 @@ function InvitationsPage() {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['portal-invitations'],
+    queryKey: queryKeys.portal.invitations,
     queryFn: async () => {
       const res = await portalApi.get<PortalInvitationListResponse>('/portal/invitations');
       return res.data;
@@ -21,8 +22,8 @@ function InvitationsPage() {
       await portalApi.post(`/portal/invitations/${paperId}/accept`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['portal-invitations'] });
-      queryClient.invalidateQueries({ queryKey: ['portal-papers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portal.invitations });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portal.papers });
     },
   });
 
@@ -31,8 +32,8 @@ function InvitationsPage() {
       await portalApi.post(`/portal/invitations/${paperId}/decline`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['portal-invitations'] });
-      queryClient.invalidateQueries({ queryKey: ['portal-papers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portal.invitations });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portal.papers });
     },
   });
 

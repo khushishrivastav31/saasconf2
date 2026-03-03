@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import OverlaySelector from '../../../../components/OverlaySelector';
 import type { Conference } from '../../../../types';
@@ -32,7 +33,7 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
   const subjectRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery<MessageTemplateListResponse>({
-    queryKey: ['message-templates', conference.id],
+    queryKey: queryKeys.messaging.templates(conference.id),
     queryFn: () => api.get(`/conferences/${conference.id}/messaging/templates`).then((r) => r.data),
   });
 
@@ -45,7 +46,7 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
     }) => api.post(`/conferences/${conference.id}/messaging/templates`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['message-templates', conference.id],
+        queryKey: queryKeys.messaging.templates(conference.id),
       });
       closeModal();
     },
@@ -64,7 +65,7 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
     }) => api.put(`/conferences/${conference.id}/messaging/templates/${id}`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['message-templates', conference.id],
+        queryKey: queryKeys.messaging.templates(conference.id),
       });
       closeModal();
     },
@@ -75,7 +76,7 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
       api.delete(`/conferences/${conference.id}/messaging/templates/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['message-templates', conference.id],
+        queryKey: queryKeys.messaging.templates(conference.id),
       });
       setDeleteConfirm(null);
     },

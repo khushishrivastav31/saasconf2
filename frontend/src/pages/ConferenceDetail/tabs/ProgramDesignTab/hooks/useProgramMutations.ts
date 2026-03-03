@@ -1,5 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../../../../../config/api";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../../../../config/api';
+import { queryKeys } from '../../../../../config/queryKeys';
 import type {
   ProgramDay,
   ProgramDayCreate,
@@ -14,18 +15,18 @@ import type {
   ProgramSessionCreate,
   ProgramSessionUpdate,
   ProgramSessionMove,
-} from "../../../../../types";
+} from '../../../../../types';
 
 export function useProgramMutations(conferenceId: string) {
   const queryClient = useQueryClient();
 
   const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: ["program-days", conferenceId] });
-    queryClient.invalidateQueries({ queryKey: ["program-time-slots", conferenceId] });
-    queryClient.invalidateQueries({ queryKey: ["program-tracks", conferenceId] });
-    queryClient.invalidateQueries({ queryKey: ["program-sessions", conferenceId] });
-    queryClient.invalidateQueries({ queryKey: ["program-grid", conferenceId] });
-    queryClient.invalidateQueries({ queryKey: ["program-full-grid", conferenceId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.program.days(conferenceId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.program.timeSlots(conferenceId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.program.tracks(conferenceId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.program.sessions(conferenceId) });
+    queryClient.invalidateQueries({ queryKey: ['program-grid', conferenceId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.program.fullGrid(conferenceId) });
   };
 
   // Day mutations

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Modal from '../../../../components/Modal';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import type {
   BookingOption,
   BookingPeriod,
@@ -113,7 +114,7 @@ export default function BulkDiscountModal({
 
   // Data queries
   const { data: sponsors } = useQuery({
-    queryKey: ['sponsors', conferenceId],
+    queryKey: queryKeys.sponsors.byConference(conferenceId),
     queryFn: async () => {
       const res = await api.get<{ items: Sponsor[] }>(`/conferences/${conferenceId}/sponsors`);
       return res.data.items;
@@ -122,7 +123,7 @@ export default function BulkDiscountModal({
   });
 
   const { data: speakers } = useQuery({
-    queryKey: ['cfp-applicants', conferenceId],
+    queryKey: queryKeys.cfp.applicants(conferenceId),
     queryFn: async () => {
       const res = await api.get<{ items: Applicant[] }>(`/cfp/applicants`, {
         params: { conference_id: conferenceId },
@@ -133,7 +134,7 @@ export default function BulkDiscountModal({
   });
 
   const { data: committee } = useQuery({
-    queryKey: ['committee-members', conferenceId],
+    queryKey: queryKeys.cfp.committeeMembers(conferenceId),
     queryFn: async () => {
       const res = await api.get<{ items: CommitteeMember[] }>(`/cfp/committee-members`, {
         params: { conference_id: conferenceId, limit: 500 },
@@ -144,7 +145,7 @@ export default function BulkDiscountModal({
   });
 
   const { data: recipientLists } = useQuery({
-    queryKey: ['recipient-lists', conferenceId],
+    queryKey: queryKeys.messaging.recipientLists(conferenceId),
     queryFn: async () => {
       const res = await api.get<{ items: RecipientListResponse[] }>(
         `/conferences/${conferenceId}/messaging/recipient-lists`
@@ -155,7 +156,7 @@ export default function BulkDiscountModal({
   });
 
   const { data: recipientListDetail } = useQuery({
-    queryKey: ['recipient-list-detail', conferenceId, selectedListId],
+    queryKey: queryKeys.messaging.recipientListDetail(conferenceId, selectedListId),
     queryFn: async () => {
       const res = await api.get<RecipientListDetailResponse>(
         `/conferences/${conferenceId}/messaging/recipient-lists/${selectedListId}`

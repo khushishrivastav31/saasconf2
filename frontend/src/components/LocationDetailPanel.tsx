@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../config/api';
+import { queryKeys } from '../config/queryKeys';
 import AttachmentList from './AttachmentList';
 import ContactPersonList from './ContactPersonList';
 import DetailPanelWrapper from './DetailPanelWrapper';
@@ -113,7 +114,7 @@ export default function LocationDetailPanel({
   }, [location.id]);
 
   const { data: locationTypesData } = useQuery({
-    queryKey: ['location-types', location.conference_ids?.[0]],
+    queryKey: queryKeys.locations.types(location.conference_ids?.[0] ?? ''),
     queryFn: async () => {
       const response = await api.get<{
         items: TenantLocationType[];

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import type { Conference } from '../../../../types';
 
 interface Props {
@@ -22,7 +23,7 @@ export default function MessagingSettingsTab({ conference, isAdmin }: Props) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conference', conference.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.conferences.detail(conference.id) });
     },
   });
 

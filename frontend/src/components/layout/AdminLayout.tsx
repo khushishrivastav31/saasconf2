@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../config/api';
+import { queryKeys } from '../../config/queryKeys';
 import ThemeToggle from '../ThemeToggle';
 import type { GlobalUnreadCountResponse } from '../../types/messaging';
 
@@ -153,7 +154,7 @@ function BookIcon() {
 function NotificationBell() {
   const navigate = useNavigate();
   const { data } = useQuery<GlobalUnreadCountResponse>({
-    queryKey: ['admin-global-unread'],
+    queryKey: queryKeys.admin.globalUnread,
     queryFn: () => api.get('/messaging/unread-count').then((r) => r.data),
     refetchInterval: 30_000,
     staleTime: 15_000,

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { useConferenceAdmin } from '../../hooks/useConferenceAdmin';
 import api from '../../config/api';
+import { queryKeys } from '../../config/queryKeys';
 import type { Conference } from '../../types';
 import { SectionId, SectionDef, coreSections, moduleSections } from './conferenceSections';
 
@@ -161,7 +162,7 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['conference', conferenceId],
+    queryKey: queryKeys.conferences.detail(conferenceId),
     queryFn: async () => {
       const response = await api.get<Conference>(`/conferences/${conferenceId}`);
       return response.data;
@@ -170,7 +171,7 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
   });
 
   const handleUpdate = () => {
-    queryClient.invalidateQueries({ queryKey: ['conference', conferenceId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.conferences.detail(conferenceId) });
   };
 
   return {

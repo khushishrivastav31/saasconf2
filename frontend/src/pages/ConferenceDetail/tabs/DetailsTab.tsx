@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import { COUNTRY_OPTIONS } from '../../../config/countries';
 import {
   TIMEZONE_OPTIONS,
@@ -143,7 +144,7 @@ function ConferenceDetailsTab({
 
   // Fetch platform currencies for currency selector
   const { data: currencyOptions } = useQuery({
-    queryKey: ['platform-currencies'],
+    queryKey: queryKeys.settings.platformCurrencies,
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
         '/admin/settings/currencies',

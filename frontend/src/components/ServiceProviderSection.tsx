@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
+import { queryKeys } from '../config/queryKeys';
 import { parseApiError } from '../utils/apiError';
 import type {
   ServiceProvider,
@@ -44,7 +45,7 @@ export default function ServiceProviderSection({ locationId }: { locationId: str
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['service-providers', locationId],
+    queryKey: queryKeys.serviceProviders.byLocation(locationId),
     queryFn: async () => {
       const response = await api.get<{
         items: ServiceProvider[];
@@ -64,7 +65,7 @@ export default function ServiceProviderSection({ locationId }: { locationId: str
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['service-providers', locationId],
+        queryKey: queryKeys.serviceProviders.byLocation(locationId),
       });
       setIsAdding(false);
       setCreateForm({
@@ -90,7 +91,7 @@ export default function ServiceProviderSection({ locationId }: { locationId: str
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['service-providers', locationId],
+        queryKey: queryKeys.serviceProviders.byLocation(locationId),
       });
       setEditingId(null);
       setEditForm({});
@@ -108,7 +109,7 @@ export default function ServiceProviderSection({ locationId }: { locationId: str
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['service-providers', locationId],
+        queryKey: queryKeys.serviceProviders.byLocation(locationId),
       });
     },
   });

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import { COUNTRY_OPTIONS } from '../../../../config/countries';
 import VatNumberInput from '../../../../components/common/VatNumberInput';
 import type {
@@ -242,7 +243,7 @@ function AttendeeFields({
   const p = prefix ? `${prefix}-` : '';
 
   const { data: pronounOptions } = useQuery({
-    queryKey: ['pronoun-options', conferenceId],
+    queryKey: queryKeys.settings.pronounOptions(conferenceId),
     queryFn: async () => {
       const res = await api.get<{ id: string; name: string }[]>(
         `/conferences/${conferenceId}/settings/pronouns`
@@ -609,7 +610,7 @@ export default function RegistrationTab({
   // ---- Queries ----
 
   const { data, isLoading } = useQuery({
-    queryKey: ['conference-registrations', conference.id, page, search, statusFilter],
+    queryKey: queryKeys.registrations.byConference(conference.id, page, search, statusFilter),
     queryFn: async () => {
       const params: Record<string, string | number> = { page, page_size: 20 };
       if (search) params.search = search;
@@ -623,7 +624,7 @@ export default function RegistrationTab({
   });
 
   const { data: optionsData } = useQuery({
-    queryKey: ['booking-options', conference.id],
+    queryKey: queryKeys.booking.options(conference.id),
     queryFn: async () => {
       const response = await api.get<{ items: BookingOption[]; total: number }>(
         `/conferences/${conference.id}/settings/booking-options`
@@ -633,7 +634,7 @@ export default function RegistrationTab({
   });
 
   const { data: periodsData } = useQuery({
-    queryKey: ['booking-periods', conference.id],
+    queryKey: queryKeys.booking.periods(conference.id),
     queryFn: async () => {
       const response = await api.get<{ items: BookingPeriod[]; total: number }>(
         `/conferences/${conference.id}/settings/booking-periods`
@@ -657,7 +658,9 @@ export default function RegistrationTab({
       return response.data;
     },
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['conference-registrations', conference.id] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.registrations.byConference(conference.id),
+      });
       resetCreateForm();
       if (res.total_created === 1) {
         const reg = res.registrations[0];
@@ -679,7 +682,9 @@ export default function RegistrationTab({
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conference-registrations', conference.id] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.registrations.byConference(conference.id),
+      });
       setSuccess('Registration updated');
     },
     onError: (err: unknown) => setError(parseApiError(err, 'Failed to update registration')),
@@ -690,7 +695,9 @@ export default function RegistrationTab({
       await api.delete(`/conferences/${conference.id}/registrations/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conference-registrations', conference.id] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.registrations.byConference(conference.id),
+      });
       setDeleteTarget(null);
       setSelectedId(null);
       setSuccess('Registration deleted');
@@ -707,7 +714,9 @@ export default function RegistrationTab({
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conference-registrations', conference.id] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.registrations.byConference(conference.id),
+      });
       setShowAddItem(false);
       setAddItemOptionId('');
       setSuccess('Item added to registration');
@@ -720,7 +729,9 @@ export default function RegistrationTab({
       await api.delete(`/conferences/${conference.id}/registrations/${regId}/items/${itemId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conference-registrations', conference.id] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.registrations.byConference(conference.id),
+      });
       setSuccess('Item removed');
     },
     onError: (err: unknown) => setError(parseApiError(err, 'Failed to remove item')),

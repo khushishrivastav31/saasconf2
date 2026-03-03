@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
@@ -49,8 +50,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
 
   // Thread list
   const { data: threadList, isLoading: loadingThreads } = useQuery({
-    queryKey: [
-      'messaging-threads',
+    queryKey: queryKeys.messaging.threads(
       conferenceId,
       page,
       search,
@@ -58,8 +58,8 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
       filterFlagged,
       filterAttachments,
       filterUnread,
-      filterParticipant,
-    ],
+      filterParticipant
+    ),
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -81,7 +81,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
 
   // Thread detail
   const { data: threadDetail, isLoading: loadingDetail } = useQuery({
-    queryKey: ['messaging-thread', conferenceId, selectedThreadId],
+    queryKey: queryKeys.messaging.thread(conferenceId, selectedThreadId),
     queryFn: async () => {
       const resp = await api.get(`${basePath}/threads/${selectedThreadId}`);
       return resp.data as ThreadDetailResponse;
@@ -91,7 +91,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
 
   // Popup thread detail (for double-click pop-up)
   const { data: popupThreadDetail } = useQuery({
-    queryKey: ['messaging-thread', conferenceId, popupThreadId],
+    queryKey: queryKeys.messaging.thread(conferenceId, popupThreadId),
     queryFn: async () => {
       const resp = await api.get(`${basePath}/threads/${popupThreadId}`);
       return resp.data as ThreadDetailResponse;
@@ -110,10 +110,10 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['messaging-thread', conferenceId, popupThreadId],
+        queryKey: queryKeys.messaging.thread(conferenceId, popupThreadId),
       });
       queryClient.invalidateQueries({
-        queryKey: ['messaging-threads', conferenceId],
+        queryKey: queryKeys.messaging.threads(conferenceId),
       });
     },
     onError: (error) => {
@@ -135,7 +135,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({
-        queryKey: ['messaging-threads', conferenceId],
+        queryKey: queryKeys.messaging.threads(conferenceId),
       });
       setShowCompose(false);
       setComposePrefill(null);
@@ -160,10 +160,10 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['messaging-thread', conferenceId, selectedThreadId],
+        queryKey: queryKeys.messaging.thread(conferenceId, selectedThreadId),
       });
       queryClient.invalidateQueries({
-        queryKey: ['messaging-threads', conferenceId],
+        queryKey: queryKeys.messaging.threads(conferenceId),
       });
     },
     onError: (error) => {
@@ -184,7 +184,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({
-        queryKey: ['messaging-threads', conferenceId],
+        queryKey: queryKeys.messaging.threads(conferenceId),
       });
       setShowBulkCompose(false);
       showToast(`Sent to ${data.threads_created} recipients`, 'success');
@@ -202,7 +202,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['messaging-threads', conferenceId],
+        queryKey: queryKeys.messaging.threads(conferenceId),
       });
     },
   });
@@ -217,10 +217,10 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['messaging-thread', conferenceId, selectedThreadId],
+        queryKey: queryKeys.messaging.thread(conferenceId, selectedThreadId),
       });
       queryClient.invalidateQueries({
-        queryKey: ['messaging-threads', conferenceId],
+        queryKey: queryKeys.messaging.threads(conferenceId),
       });
     },
     onError: (error) => {
@@ -235,10 +235,10 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['messaging-threads', conferenceId],
+        queryKey: queryKeys.messaging.threads(conferenceId),
       });
       queryClient.invalidateQueries({
-        queryKey: ['messaging-thread', conferenceId, selectedThreadId],
+        queryKey: queryKeys.messaging.thread(conferenceId, selectedThreadId),
       });
     },
   });
@@ -250,7 +250,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
       try {
         await api.post(`${basePath}/threads/${threadId}/read`);
         queryClient.invalidateQueries({
-          queryKey: ['messaging-threads', conferenceId],
+          queryKey: queryKeys.messaging.threads(conferenceId),
         });
       } catch {
         // Silent - read tracking is not critical
@@ -482,7 +482,7 @@ export default function MessagingTab({ conference }: MessagingTabProps) {
                   .post(`${basePath}/threads/${threadId}/read`)
                   .catch((err) => console.error('Failed to mark thread as read:', err));
                 queryClient.invalidateQueries({
-                  queryKey: ['messaging-threads', conferenceId],
+                  queryKey: queryKeys.messaging.threads(conferenceId),
                 });
               }}
               onArchive={(threadId, archive) => archiveMutation.mutate({ threadId, archive })}

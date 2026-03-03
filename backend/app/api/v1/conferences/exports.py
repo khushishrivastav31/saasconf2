@@ -1,7 +1,5 @@
 """Conference CSV export endpoints (invoices, papers)."""
 
-import csv
-import io
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -9,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.core.csv_export import csv_response
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -16,7 +15,6 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import AuthorizationError, NotFoundError
-from app.core.file_validation import safe_content_disposition
 from app.models.associations import ConferenceCFP
 from app.models.cfp import CFPPaper
 from app.models.conference import Conference
@@ -59,13 +57,10 @@ async def export_conference_invoices(
     )
     invoices = invoices_result.scalars().all()
 
-    # Create CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
+    filename = f"{conference.abbreviation or conference.name}_invoices.csv".replace(" ", "_")
 
-    # Header row
-    writer.writerow(
-        [
+    return csv_response(
+        headers=[
             "Invoice Number",
             "Status",
             "Issue Date",
@@ -86,44 +81,31 @@ async def export_conference_invoices(
             "Currency",
             "Notes",
             "Created At",
-        ]
-    )
-
-    # Data rows
-    for inv in invoices:
-        writer.writerow(
-            [
-                inv.invoice_number,
-                inv.status,
-                inv.issue_date.isoformat() if inv.issue_date else "",
-                inv.due_date.isoformat() if inv.due_date else "",
-                inv.recipient_name,
-                inv.recipient_email or "",
-                inv.recipient_address_line1 or "",
-                inv.recipient_address_line2 or "",
-                inv.recipient_city or "",
-                inv.recipient_state or "",
-                inv.recipient_postal_code or "",
-                inv.recipient_country or "",
-                inv.recipient_vat_number or "",
-                str(inv.subtotal) if inv.subtotal else "",
-                str(inv.tax_rate) if inv.tax_rate else "",
-                str(inv.tax_amount) if inv.tax_amount else "",
-                str(inv.total) if inv.total else "",
-                inv.currency or "",
-                inv.notes or "",
-                inv.created_at.isoformat() if inv.created_at else "",
-            ]
-        )
-
-    output.seek(0)
-    filename = f"{conference.abbreviation or conference.name}_invoices.csv".replace(" ", "_")
-    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
-
-    return StreamingResponse(
-        iter([csv_bytes]),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": safe_content_disposition(filename)},
+        ],
+        rows=invoices,
+        row_mapper=lambda inv: [
+            inv.invoice_number,
+            inv.status,
+            inv.issue_date.isoformat() if inv.issue_date else "",
+            inv.due_date.isoformat() if inv.due_date else "",
+            inv.recipient_name,
+            inv.recipient_email or "",
+            inv.recipient_address_line1 or "",
+            inv.recipient_address_line2 or "",
+            inv.recipient_city or "",
+            inv.recipient_state or "",
+            inv.recipient_postal_code or "",
+            inv.recipient_country or "",
+            inv.recipient_vat_number or "",
+            str(inv.subtotal) if inv.subtotal else "",
+            str(inv.tax_rate) if inv.tax_rate else "",
+            str(inv.tax_amount) if inv.tax_amount else "",
+            str(inv.total) if inv.total else "",
+            inv.currency or "",
+            inv.notes or "",
+            inv.created_at.isoformat() if inv.created_at else "",
+        ],
+        filename=filename,
     )
 
 
@@ -157,18 +139,31 @@ async def export_conference_papers(
     cfp_ids_result = await db.execute(select(ConferenceCFP.cfp_id).where(ConferenceCFP.conference_id == conference_id))
     cfp_ids = list(cfp_ids_result.scalars().all())
 
+    paper_headers = [
+        "Paper ID",
+        "Title",
+        "Status",
+        "CFP Title",
+        "Speaker First Name",
+        "Speaker Last Name",
+        "Speaker Email",
+        "Speaker Company",
+        "Speaker Title",
+        "Abstract (Short)",
+        "Level",
+        "Learning Objectives",
+        "Submitted At",
+        "Created At",
+    ]
+    filename = f"{conference.abbreviation or conference.name}_papers.csv".replace(" ", "_")
+
     if not cfp_ids:
-        # No CFPs, return empty CSV
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["No papers found for this conference"])
-        output.seek(0)
-        filename = f"{conference.abbreviation or conference.name}_papers.csv".replace(" ", "_")
-        csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={"Content-Disposition": safe_content_disposition(filename)},
+        # No CFPs, return empty CSV with headers only
+        return csv_response(
+            headers=["No papers found for this conference"],
+            rows=[],
+            row_mapper=lambda _: [],
+            filename=filename,
         )
 
     # Get all papers with speaker info (capped at 50k for memory safety)
@@ -182,58 +177,28 @@ async def export_conference_papers(
     )
     papers = papers_result.scalars().all()
 
-    # Create CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # Header row
-    writer.writerow(
-        [
-            "Paper ID",
-            "Title",
-            "Status",
-            "CFP Title",
-            "Speaker First Name",
-            "Speaker Last Name",
-            "Speaker Email",
-            "Speaker Company",
-            "Speaker Title",
-            "Abstract (Short)",
-            "Level",
-            "Learning Objectives",
-            "Submitted At",
-            "Created At",
-        ]
-    )
-
-    # Data rows
-    for paper in papers:
+    def _map_paper_row(paper: CFPPaper) -> list[str]:
         speaker = paper.main_speaker
-        writer.writerow(
-            [
-                str(paper.id),
-                paper.title,
-                paper.status,
-                paper.cfp.title if paper.cfp else "",
-                speaker.first_name if speaker else "",
-                speaker.last_name if speaker else "",
-                speaker.email if speaker else "",
-                speaker.company or "" if speaker else "",
-                speaker.title or "" if speaker else "",
-                paper.abstract_short or "",
-                paper.level or "",
-                paper.learning_objectives or "",
-                paper.submitted_at.isoformat() if paper.submitted_at else "",
-                paper.created_at.isoformat() if paper.created_at else "",
-            ]
-        )
+        return [
+            str(paper.id),
+            paper.title,
+            paper.status,
+            paper.cfp.title if paper.cfp else "",
+            speaker.first_name if speaker else "",
+            speaker.last_name if speaker else "",
+            speaker.email if speaker else "",
+            speaker.company or "" if speaker else "",
+            speaker.title or "" if speaker else "",
+            paper.abstract_short or "",
+            paper.level or "",
+            paper.learning_objectives or "",
+            paper.submitted_at.isoformat() if paper.submitted_at else "",
+            paper.created_at.isoformat() if paper.created_at else "",
+        ]
 
-    output.seek(0)
-    filename = f"{conference.abbreviation or conference.name}_papers.csv".replace(" ", "_")
-    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
-
-    return StreamingResponse(
-        iter([csv_bytes]),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": safe_content_disposition(filename)},
+    return csv_response(
+        headers=paper_headers,
+        rows=papers,
+        row_mapper=_map_paper_row,
+        filename=filename,
     )

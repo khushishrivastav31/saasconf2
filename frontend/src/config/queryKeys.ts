@@ -29,6 +29,12 @@ export const queryKeys = {
     stats: ['volunteer-stats'] as const,
     byConference: (conferenceId: string) => ['conference-volunteers', conferenceId] as const,
     roles: (conferenceId: string) => ['volunteer-roles', conferenceId] as const,
+    sessionTasks: (conferenceId: string) => ['session-tasks', conferenceId] as const,
+    assignments: (conferenceId: string) => ['volunteer-assignments', conferenceId] as const,
+    schedule: (conferenceId: string) => ['volunteer-schedule', conferenceId] as const,
+    scheduleUnassigned: (conferenceId: string) =>
+      ['volunteer-schedule-unassigned', conferenceId] as const,
+    conferenceList: (conferenceId: string) => ['conference-volunteers-list', conferenceId] as const,
   },
 
   // ── Locations ───────────────────────────────────────────────────
@@ -119,6 +125,8 @@ export const queryKeys = {
     committeeMembers: (conferenceId?: string) =>
       ['cfp-committee-members', conferenceId ?? 'all'] as const,
     applicantsForCommittee: ['cfp-applicants-for-committee'] as const,
+    papersForDesign: (conferenceId: string, ...rest: unknown[]) =>
+      ['papers', conferenceId, ...rest] as const,
   },
 
   // ── Assignments & Reviews ───────────────────────────────────────
@@ -220,6 +228,14 @@ export const queryKeys = {
 
   // ── My Company ──────────────────────────────────────────────────
   myCompany: ['my-company'] as const,
+
+  // ── Fiscal ─────────────────────────────────────────────────────
+  fiscal: {
+    taxInfo: (conferenceId: string, country?: string) =>
+      ['tax-info', conferenceId, country] as const,
+    representative: (conferenceId: string) => ['fiscal-representative', conferenceId] as const,
+    vatRates: (conferenceId: string) => ['vat-rates', conferenceId] as const,
+  },
 
   // ── Applicant Activity ──────────────────────────────────────────
   applicantActivity: {

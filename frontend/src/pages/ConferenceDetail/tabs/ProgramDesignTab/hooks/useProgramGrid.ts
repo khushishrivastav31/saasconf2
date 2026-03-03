@@ -1,9 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import api from "../../../../../config/api";
-import type {
-  ProgramDay,
-  ProgramGrid,
-} from "../../../../../types";
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../../../config/api';
+import { queryKeys } from '../../../../../config/queryKeys';
+import type { ProgramDay, ProgramGrid } from '../../../../../types';
 
 interface UseProgramDaysOptions {
   conferenceId: string;
@@ -12,7 +10,7 @@ interface UseProgramDaysOptions {
 
 export function useProgramDays({ conferenceId, enabled = true }: UseProgramDaysOptions) {
   return useQuery({
-    queryKey: ["program-days", conferenceId],
+    queryKey: queryKeys.program.days(conferenceId),
     queryFn: async () => {
       const response = await api.get<{ items: ProgramDay[]; total: number }>(
         `/conferences/${conferenceId}/program/days`
@@ -31,7 +29,7 @@ interface UseProgramGridOptions {
 
 export function useProgramGrid({ conferenceId, dayId, enabled = true }: UseProgramGridOptions) {
   return useQuery({
-    queryKey: ["program-grid", conferenceId, dayId],
+    queryKey: queryKeys.program.grid(conferenceId, dayId ?? undefined),
     queryFn: async () => {
       const response = await api.get<ProgramGrid>(
         `/conferences/${conferenceId}/program/grid/${dayId}`

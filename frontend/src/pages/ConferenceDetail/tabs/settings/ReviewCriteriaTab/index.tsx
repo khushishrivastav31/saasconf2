@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../../config/api';
+import { queryKeys } from '../../../../../config/queryKeys';
 import type {
   Conference,
   ReviewCriterion,
@@ -68,7 +69,7 @@ function ConferenceReviewCriteriaTab({
     isError: isCriteriaError,
     error: criteriaError,
   } = useQuery({
-    queryKey: ['review-criteria', conference.id],
+    queryKey: queryKeys.settings.reviewCriteria(conference.id),
     queryFn: async () => {
       const response = await api.get<{ items: ReviewCriterion[]; total: number }>(
         `/conferences/${conference.id}/settings/review-criteria`
@@ -78,7 +79,7 @@ function ConferenceReviewCriteriaTab({
   });
 
   const { data: scalesData } = useQuery({
-    queryKey: ['score-scales', conference.id],
+    queryKey: queryKeys.settings.scoreScales(conference.id),
     queryFn: async () => {
       const response = await api.get<{ items: ReviewScoreScale[]; total: number }>(
         `/conferences/${conference.id}/settings/score-scales`
@@ -88,7 +89,7 @@ function ConferenceReviewCriteriaTab({
   });
 
   const { data: formSettings } = useQuery({
-    queryKey: ['review-form-settings', conference.id],
+    queryKey: queryKeys.settings.reviewFormSettings(conference.id),
     queryFn: async () => {
       const response = await api.get<ReviewFormSettings>(
         `/conferences/${conference.id}/settings/review-form-settings`
@@ -107,7 +108,7 @@ function ConferenceReviewCriteriaTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['review-form-settings', conference.id],
+        queryKey: queryKeys.settings.reviewFormSettings(conference.id),
       });
     },
     onError: (err: unknown) => {
@@ -127,7 +128,7 @@ function ConferenceReviewCriteriaTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['review-criteria', conference.id],
+        queryKey: queryKeys.settings.reviewCriteria(conference.id),
       });
       setIsCriterionModalOpen(false);
       setError(null);
@@ -147,7 +148,7 @@ function ConferenceReviewCriteriaTab({
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ['review-criteria', conference.id],
+        queryKey: queryKeys.settings.reviewCriteria(conference.id),
       });
       setEditingCriterion(null);
       setIsCriterionModalOpen(false);
@@ -169,7 +170,7 @@ function ConferenceReviewCriteriaTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['review-criteria', conference.id],
+        queryKey: queryKeys.settings.reviewCriteria(conference.id),
       });
       setError(null);
     },
@@ -196,7 +197,7 @@ function ConferenceReviewCriteriaTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['review-criteria', conference.id],
+        queryKey: queryKeys.settings.reviewCriteria(conference.id),
       });
       setIsQuestionModalOpen(false);
       setQuestionCriterionId(null);
@@ -225,7 +226,7 @@ function ConferenceReviewCriteriaTab({
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ['review-criteria', conference.id],
+        queryKey: queryKeys.settings.reviewCriteria(conference.id),
       });
       setEditingQuestion(null);
       setIsQuestionModalOpen(false);
@@ -256,7 +257,7 @@ function ConferenceReviewCriteriaTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['review-criteria', conference.id],
+        queryKey: queryKeys.settings.reviewCriteria(conference.id),
       });
       setError(null);
     },

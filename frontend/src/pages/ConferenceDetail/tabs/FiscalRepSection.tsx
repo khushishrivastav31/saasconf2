@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import { COUNTRY_OPTIONS } from '../../../config/countries';
 import { parseApiError } from '../../../utils/apiError';
 import { validateEmail, validatePhone, validateWebsite } from '../../../utils/validators';
@@ -60,7 +61,7 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
 
   // --- Data queries ---
   const { data: taxInfo, isLoading: taxInfoLoading } = useQuery({
-    queryKey: ['tax-info', conferenceId, conferenceCountry],
+    queryKey: queryKeys.fiscal.taxInfo(conferenceId, conferenceCountry ?? undefined),
     queryFn: async () => {
       const res = await api.get<TaxInfo>(`/conferences/${conferenceId}/tax-info`);
       return res.data;
@@ -68,21 +69,17 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
   });
 
   const { data: fiscalRep } = useQuery({
-    queryKey: ['fiscal-representative', conferenceId],
+    queryKey: queryKeys.fiscal.representative(conferenceId),
     queryFn: async () => {
-      try {
-        const res = await api.get<FiscalRepresentative>(
-          `/conferences/${conferenceId}/fiscal-representative`
-        );
-        return res.data;
-      } catch {
-        return null;
-      }
+      const res = await api.get<FiscalRepresentative | null>(
+        `/conferences/${conferenceId}/fiscal-representative`
+      );
+      return res.data;
     },
   });
 
   const { data: vatRatesData } = useQuery({
-    queryKey: ['vat-rates', conferenceId],
+    queryKey: queryKeys.fiscal.vatRates(conferenceId),
     queryFn: async () => {
       const res = await api.get<{ items: ConferenceVatRate[]; total: number }>(
         `/conferences/${conferenceId}/vat-rates`
@@ -163,9 +160,9 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
 
   // --- Mutations ---
   const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: ['tax-info', conferenceId] });
-    queryClient.invalidateQueries({ queryKey: ['fiscal-representative', conferenceId] });
-    queryClient.invalidateQueries({ queryKey: ['vat-rates', conferenceId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.fiscal.taxInfo(conferenceId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.fiscal.representative(conferenceId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.fiscal.vatRates(conferenceId) });
   };
 
   const upsertFiscalRep = useMutation({

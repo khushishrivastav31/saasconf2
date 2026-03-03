@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import type { Conference, EnrichedSession, EnrichedSessionsResponse } from '../../../../types';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
 import { useToast } from '../../../../components/Toast';
@@ -21,7 +22,7 @@ export default function SessionsTab({ conference, isAdmin }: SessionsTabProps) {
   const { showToast } = useToast();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['sessions-enriched', conference.id],
+    queryKey: queryKeys.sessions.enriched(conference.id),
     queryFn: async () => {
       const response = await api.get<EnrichedSessionsResponse>(
         `/conferences/${conference.id}/program/sessions/enriched`

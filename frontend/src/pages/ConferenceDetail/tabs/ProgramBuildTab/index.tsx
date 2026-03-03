@@ -11,6 +11,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import type { Conference, SessionType, Paper, ProgramSession } from '../../../../types';
 import { parseApiError } from '../../../../utils/apiError';
 import { formatDate } from '../../../../utils/formatDate';
@@ -65,7 +66,7 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
 
   // Fetch session types for session modal
   const { data: sessionTypesData } = useQuery({
-    queryKey: ['session-types', conference.id],
+    queryKey: queryKeys.sessions.types(conference.id),
     queryFn: async () => {
       const response = await api.get<{ items: SessionType[]; total: number }>(
         `/conferences/${conference.id}/settings/session-types`
@@ -183,9 +184,9 @@ export default function ProgramBuildTab({ conference, isAdmin }: ProgramBuildTab
   };
 
   const handlePublished = () => {
-    queryClient.invalidateQueries({ queryKey: ['conference'] });
-    queryClient.invalidateQueries({ queryKey: ['program-grid'] });
-    queryClient.invalidateQueries({ queryKey: ['program-publish-preview'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.conferences.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.program.grid(conference.id) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.program.publishPreview(conference.id) });
   };
 
   // Loading state

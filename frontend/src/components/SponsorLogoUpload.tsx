@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
+import { queryKeys } from '../config/queryKeys';
 import type { Attachment } from '../types';
 
 interface SponsorLogoUploadProps {
@@ -15,7 +16,7 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
   const [logoBlobUrl, setLogoBlobUrl] = useState<string | null>(null);
 
   const { data: logoData, isLoading } = useQuery({
-    queryKey: ['attachments', 'sponsor_logo', sponsorId],
+    queryKey: queryKeys.attachments.list('sponsor_logo', sponsorId),
     queryFn: async () => {
       const response = await api.get<{ items: Attachment[]; total: number }>(
         `/attachments?entity_type=sponsor_logo&entity_id=${sponsorId}`
@@ -79,7 +80,7 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
     onSuccess: () => {
       setStatus('idle');
       queryClient.invalidateQueries({
-        queryKey: ['attachments', 'sponsor_logo', sponsorId],
+        queryKey: queryKeys.attachments.list('sponsor_logo', sponsorId),
       });
     },
     onError: () => {
@@ -102,7 +103,7 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
     onSuccess: () => {
       setStatus('idle');
       queryClient.invalidateQueries({
-        queryKey: ['attachments', 'sponsor_logo', sponsorId],
+        queryKey: queryKeys.attachments.list('sponsor_logo', sponsorId),
       });
     },
     onError: () => {

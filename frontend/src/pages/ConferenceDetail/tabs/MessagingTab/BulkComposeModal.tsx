@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import OverlaySelector from '../../../../components/OverlaySelector';
 import type { BulkRecipientFilter } from '../../../../types';
@@ -63,7 +64,7 @@ export default function BulkComposeModal({
   const [screenOverlayId, setScreenOverlayId] = useState<string | null>(null);
 
   const { data: roles } = useQuery({
-    queryKey: ['committee-roles', conferenceId],
+    queryKey: queryKeys.messaging.committeeRoles(conferenceId),
     queryFn: async () => {
       const resp = await api.get(`/conferences/${conferenceId}/settings/committee-roles`);
       return resp.data.items as CommitteeRole[];
@@ -73,14 +74,14 @@ export default function BulkComposeModal({
 
   // Fetch templates
   const { data: templatesData } = useQuery<MessageTemplateListResponse>({
-    queryKey: ['message-templates', conferenceId],
+    queryKey: queryKeys.messaging.templates(conferenceId),
     queryFn: () => api.get(`/conferences/${conferenceId}/messaging/templates`).then((r) => r.data),
     enabled: open,
   });
 
   // Fetch recipient lists
   const { data: recipientListsData } = useQuery<RecipientListListResponse>({
-    queryKey: ['recipient-lists', conferenceId],
+    queryKey: queryKeys.messaging.recipientLists(conferenceId),
     queryFn: () =>
       api.get(`/conferences/${conferenceId}/messaging/recipient-lists`).then((r) => r.data),
     enabled: open,

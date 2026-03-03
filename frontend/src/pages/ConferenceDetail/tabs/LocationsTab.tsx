@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { normalizeUrl } from '../../../utils/validators';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import type {
   Conference,
   PaginatedResponse,
@@ -78,7 +79,7 @@ export default function ConferenceLocationsTab({
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['conference-locations', conference.id],
+    queryKey: queryKeys.locations.byConference(conference.id),
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<Location>>(
         `/conferences/${conference.id}/locations`
@@ -88,7 +89,7 @@ export default function ConferenceLocationsTab({
   });
 
   const { data: allLocations } = useQuery({
-    queryKey: ['all-locations'],
+    queryKey: queryKeys.locations.allList,
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<Location>>(`/locations?page_size=100`);
       return response.data;
@@ -96,7 +97,7 @@ export default function ConferenceLocationsTab({
   });
 
   const { data: locationTypesData } = useQuery({
-    queryKey: ['location-types', conference.id],
+    queryKey: queryKeys.locations.types(conference.id),
     queryFn: async () => {
       const response = await api.get<{
         items: TenantLocationType[];
@@ -120,9 +121,9 @@ export default function ConferenceLocationsTab({
     onSuccess: () => {
       setLinkError(null);
       queryClient.invalidateQueries({
-        queryKey: ['conference-locations', conference.id],
+        queryKey: queryKeys.locations.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.locations.allList });
     },
     onError: (error: unknown) => {
       setLinkError(parseApiError(error, 'Failed to link location'));
@@ -152,9 +153,9 @@ export default function ConferenceLocationsTab({
         contact_persons: [],
       });
       queryClient.invalidateQueries({
-        queryKey: ['conference-locations', conference.id],
+        queryKey: queryKeys.locations.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.locations.allList });
       setSelectedLocationId(newLocation.id);
     },
     onError: (error: unknown) => {
@@ -169,9 +170,9 @@ export default function ConferenceLocationsTab({
     onSuccess: () => {
       setLinkError(null);
       queryClient.invalidateQueries({
-        queryKey: ['conference-locations', conference.id],
+        queryKey: queryKeys.locations.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.locations.allList });
     },
     onError: (error: unknown) => {
       setLinkError(parseApiError(error, 'Failed to update location'));
@@ -186,9 +187,9 @@ export default function ConferenceLocationsTab({
       setLinkError(null);
       setSelectedLocationId(null);
       queryClient.invalidateQueries({
-        queryKey: ['conference-locations', conference.id],
+        queryKey: queryKeys.locations.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-locations'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.locations.allList });
     },
     onError: (error: unknown) => {
       setLinkError(parseApiError(error, 'Failed to remove location'));

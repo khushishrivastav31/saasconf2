@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import type {
   Conference,
   Invoice,
@@ -80,7 +81,7 @@ export default function ConferenceInvoicesTab({
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['conference-invoices', conference.id],
+    queryKey: queryKeys.invoices.byConference(conference.id),
     queryFn: async () => {
       const response = await api.get<{
         items: Invoice[];
@@ -92,7 +93,7 @@ export default function ConferenceInvoicesTab({
 
   // Platform currencies for dropdowns
   const { data: currenciesData } = useQuery({
-    queryKey: ['platform-currencies'],
+    queryKey: queryKeys.settings.platformCurrencies,
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
         '/admin/settings/currencies',
@@ -114,7 +115,7 @@ export default function ConferenceInvoicesTab({
     },
     onSuccess: (newInvoice) => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-invoices', conference.id],
+        queryKey: queryKeys.invoices.byConference(conference.id),
       });
       setIsAdding(false);
       setCreateForm(emptyCreateForm);
@@ -137,7 +138,7 @@ export default function ConferenceInvoicesTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-invoices', conference.id],
+        queryKey: queryKeys.invoices.byConference(conference.id),
       });
       setError(null);
     },
@@ -152,7 +153,7 @@ export default function ConferenceInvoicesTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-invoices', conference.id],
+        queryKey: queryKeys.invoices.byConference(conference.id),
       });
       setSelectedInvoiceId(null);
       setDeleteTarget(null);

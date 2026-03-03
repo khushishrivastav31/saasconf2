@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import { useSaveStatus } from '../../../hooks/useSaveStatus';
 import type { Conference, CallForPapers, CFPCreate, PaginatedResponse } from '../../../types';
 import { parseApiError } from '../../../utils/apiError';
@@ -122,7 +123,7 @@ export default function ConferenceCFPsTab({
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['conference-cfps', conference.id],
+    queryKey: queryKeys.cfp.byConference(conference.id),
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<CallForPapers>>(
         `/conferences/${conference.id}/cfps`
@@ -148,9 +149,9 @@ export default function ConferenceCFPsTab({
     onSuccess: () => {
       setError(null);
       queryClient.invalidateQueries({
-        queryKey: ['conference-cfps', conference.id],
+        queryKey: queryKeys.cfp.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-cfps'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.cfp.all });
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, 'Failed to create CFP'));
@@ -167,9 +168,9 @@ export default function ConferenceCFPsTab({
       setTimeout(() => setSaveSuccess(false), 2000);
       setSaved();
       queryClient.invalidateQueries({
-        queryKey: ['conference-cfps', conference.id],
+        queryKey: queryKeys.cfp.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-cfps'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.cfp.all });
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, 'Failed to save CFP'));
@@ -187,9 +188,9 @@ export default function ConferenceCFPsTab({
       setShowDeleteConfirm(false);
       setForm(emptyForm());
       queryClient.invalidateQueries({
-        queryKey: ['conference-cfps', conference.id],
+        queryKey: queryKeys.cfp.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-cfps'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.cfp.all });
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, 'Failed to delete CFP'));

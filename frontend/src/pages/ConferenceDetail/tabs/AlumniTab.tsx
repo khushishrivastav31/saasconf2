@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import { parseApiError } from '../../../utils/apiError';
 import type { Conference } from '../../../types';
 import Modal from '../../../components/Modal';
@@ -117,7 +118,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
   // ---------------------------------------------------------------------------
 
   const { data, isLoading } = useQuery({
-    queryKey: ['conference-alumni', conference.id, page, debouncedSearch],
+    queryKey: [...queryKeys.alumni.byConference(conference.id), page, debouncedSearch],
     queryFn: async () => {
       const params: Record<string, string | number> = {
         page,
@@ -141,7 +142,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-alumni', conference.id],
+        queryKey: queryKeys.alumni.byConference(conference.id),
       });
       setIsAddOpen(false);
       setAddForm(EMPTY_FORM);
@@ -163,7 +164,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-alumni', conference.id],
+        queryKey: queryKeys.alumni.byConference(conference.id),
       });
       setEditTarget(null);
       setEditForm(EMPTY_FORM);
@@ -181,7 +182,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-alumni', conference.id],
+        queryKey: queryKeys.alumni.byConference(conference.id),
       });
       setDeleteTarget(null);
       showToast('Alumni deleted.', 'success');
@@ -204,7 +205,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({
-        queryKey: ['conference-alumni', conference.id],
+        queryKey: queryKeys.alumni.byConference(conference.id),
       });
       setImportResult(result);
     },

@@ -10,6 +10,7 @@ import type {
   PlatformCurrency,
   PaginatedResponse,
 } from '../../../../types';
+import { queryKeys } from '../../../../config/queryKeys';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import RichTextDisplay from '../../../../components/common/RichTextDisplay';
 import StatusBadge from '../../../../components/common/StatusBadge';
@@ -45,7 +46,7 @@ function SponsorPackageForm({
 
   // Contract attachment query (only in edit mode)
   const { data: contractData } = useQuery({
-    queryKey: ['attachments', 'sponsor_package_contract', item?.id],
+    queryKey: queryKeys.attachments.list('sponsor_package_contract', item?.id ?? ''),
     queryFn: async () => {
       const res = await api.get<{ items: Attachment[]; total: number }>(
         `/attachments?entity_type=sponsor_package_contract&entity_id=${item!.id}`
@@ -74,7 +75,7 @@ function SponsorPackageForm({
     onSuccess: () => {
       setUploadStatus('idle');
       queryClient.invalidateQueries({
-        queryKey: ['attachments', 'sponsor_package_contract', item?.id],
+        queryKey: queryKeys.attachments.list('sponsor_package_contract', item?.id ?? ''),
       });
     },
     onError: () => {
@@ -94,7 +95,7 @@ function SponsorPackageForm({
     onSuccess: () => {
       setUploadStatus('idle');
       queryClient.invalidateQueries({
-        queryKey: ['attachments', 'sponsor_package_contract', item?.id],
+        queryKey: queryKeys.attachments.list('sponsor_package_contract', item?.id ?? ''),
       });
     },
     onError: () => {
@@ -373,7 +374,7 @@ function ConferenceSponsorPackagesTab({
   isAdmin: boolean;
 }) {
   const { data: currenciesData } = useQuery({
-    queryKey: ['platform-currencies'],
+    queryKey: queryKeys.settings.platformCurrencies,
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<PlatformCurrency>>(
         '/admin/settings/currencies',

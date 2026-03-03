@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import type { Conference } from '../../../types';
 import type {
   VolunteerScheduleListResponse,
@@ -20,7 +21,7 @@ export default function VolunteerScheduleTab({ conference }: Props) {
 
   // Fetch all schedules
   const { data: scheduleData, isLoading } = useQuery({
-    queryKey: ['volunteer-schedule', conference.id],
+    queryKey: queryKeys.volunteers.schedule(conference.id),
     queryFn: async () => {
       const res = await api.get<VolunteerScheduleListResponse>(
         `/conferences/${conference.id}/volunteer-tasks/volunteer-schedule`
@@ -31,7 +32,7 @@ export default function VolunteerScheduleTab({ conference }: Props) {
 
   // Fetch unassigned sessions
   const { data: unassignedData } = useQuery({
-    queryKey: ['volunteer-schedule-unassigned', conference.id],
+    queryKey: queryKeys.volunteers.scheduleUnassigned(conference.id),
     queryFn: async () => {
       const res = await api.get<UnassignedSessionsListResponse>(
         `/conferences/${conference.id}/volunteer-tasks/volunteer-schedule/unassigned`

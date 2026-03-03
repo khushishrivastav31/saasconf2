@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
+import { queryKeys } from '../config/queryKeys';
 import { formatDate } from '../utils/formatDate';
 import ConfirmDialog from './ConfirmDialog';
 import type { Attachment } from '../types';
@@ -24,7 +25,7 @@ export default function AttachmentList({
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['attachments', entityType, entityId],
+    queryKey: queryKeys.attachments.list(entityType, entityId),
     queryFn: async () => {
       const response = await api.get<{ items: Attachment[]; total: number }>(
         `/attachments?entity_type=${entityType}&entity_id=${entityId}`
@@ -49,7 +50,7 @@ export default function AttachmentList({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['attachments', entityType, entityId],
+        queryKey: queryKeys.attachments.list(entityType, entityId),
       });
       setDescription('');
       if (fileInputRef.current) {
@@ -64,7 +65,7 @@ export default function AttachmentList({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['attachments', entityType, entityId],
+        queryKey: queryKeys.attachments.list(entityType, entityId),
       });
     },
   });

@@ -1,7 +1,5 @@
 """Audit log endpoints (super admin only)."""
 
-import csv
-import io
 import json
 from datetime import datetime
 from uuid import UUID
@@ -12,8 +10,8 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import String, func, or_, select
 from sqlalchemy.orm import selectinload
 
+from app.core.csv_export import stream_csv_export
 from app.core.dependencies import DbSessionDep, SuperAdminDep
-from app.core.file_validation import safe_content_disposition
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.utils import utcnow
@@ -256,69 +254,41 @@ async def export_audit_logs(
 
     filename = f"audit_logs_{utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
 
-    async def _generate():
-        # BOM + header
-        header_buf = io.StringIO()
-        writer = csv.writer(header_buf)
-        writer.writerow(
-            [
-                "Timestamp",
-                "Action",
-                "Resource Type",
-                "Resource ID",
-                "User Email",
-                "User Name",
-                "Tenant",
-                "IP Address",
-                "User Agent",
-                "Details",
-            ]
-        )
-        yield b"\xef\xbb\xbf" + header_buf.getvalue().encode("utf-8")
+    def _map_audit_row(log: AuditLog) -> list[str]:
+        user_email = log.user.email if log.user else ""
+        user_name = ""
+        if log.user:
+            names = [log.user.first_name, log.user.last_name]
+            user_name = " ".join(n for n in names if n)
+        tenant_name = log.tenant.name if log.tenant else ""
+        return [
+            log.created_at.isoformat(),
+            log.action,
+            log.resource_type or "",
+            str(log.resource_id) if log.resource_id else "",
+            user_email,
+            user_name,
+            tenant_name,
+            str(log.ip_address) if log.ip_address else "",
+            log.user_agent or "",
+            json.dumps(log.details) if log.details else "",
+        ]
 
-        # Stream rows in batches
-        batch_size = 1000
-        offset = 0
-        while True:
-            batch_query = query.offset(offset).limit(batch_size)
-            result = await db.execute(batch_query)
-            logs = result.scalars().all()
-            if not logs:
-                break
-
-            chunk = io.StringIO()
-            w = csv.writer(chunk)
-            for log in logs:
-                user_email = log.user.email if log.user else ""
-                user_name = ""
-                if log.user:
-                    names = [log.user.first_name, log.user.last_name]
-                    user_name = " ".join(n for n in names if n)
-                tenant_name = log.tenant.name if log.tenant else ""
-                w.writerow(
-                    [
-                        log.created_at.isoformat(),
-                        log.action,
-                        log.resource_type or "",
-                        str(log.resource_id) if log.resource_id else "",
-                        user_email,
-                        user_name,
-                        tenant_name,
-                        str(log.ip_address) if log.ip_address else "",
-                        log.user_agent or "",
-                        json.dumps(log.details) if log.details else "",
-                    ]
-                )
-            yield chunk.getvalue().encode("utf-8")
-
-            if len(logs) < batch_size:
-                break
-            offset += batch_size
-
-    return StreamingResponse(
-        _generate(),
-        media_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": safe_content_disposition(filename),
-        },
+    return await stream_csv_export(
+        db=db,
+        query=query,
+        headers=[
+            "Timestamp",
+            "Action",
+            "Resource Type",
+            "Resource ID",
+            "User Email",
+            "User Name",
+            "Tenant",
+            "IP Address",
+            "User Agent",
+            "Details",
+        ],
+        row_mapper=_map_audit_row,
+        filename=filename,
     )

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import type {
   BookableSessionsResponse,
   BookableSlot,
@@ -103,7 +104,7 @@ export function OptionSessions({
   onChange: (selections: Record<string, string>) => void;
 }) {
   const { data, isLoading } = useQuery({
-    queryKey: ['bookable-sessions', conferenceId, optionId],
+    queryKey: queryKeys.registrations.bookableSessions(conferenceId, optionId),
     queryFn: async () => {
       const response = await api.get<BookableSessionsResponse>(
         `/conferences/${conferenceId}/registrations/bookable-sessions/${optionId}`

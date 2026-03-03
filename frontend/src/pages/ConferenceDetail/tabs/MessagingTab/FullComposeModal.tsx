@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import MessageFileAttach, { type StagedAttachment } from '../../../../components/MessageFileAttach';
 import type { MessageTemplateListResponse } from '../../../../types/messaging';
@@ -60,7 +61,7 @@ export default function FullComposeModal({
 
   // Fetch applicants
   const { data: allApplicants } = useQuery({
-    queryKey: ['cfp-applicants-for-messaging', conferenceId],
+    queryKey: queryKeys.cfp.applicantsForMessaging(conferenceId),
     queryFn: async () => {
       const resp = await api.get(`/cfp/applicants?conference_id=${conferenceId}`);
       return resp.data.items as Applicant[];
@@ -70,7 +71,7 @@ export default function FullComposeModal({
 
   // Fetch templates
   const { data: templatesData } = useQuery<MessageTemplateListResponse>({
-    queryKey: ['message-templates', conferenceId],
+    queryKey: queryKeys.messaging.templates(conferenceId),
     queryFn: () => api.get(`/conferences/${conferenceId}/messaging/templates`).then((r) => r.data),
     enabled: open,
   });

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import portalApi from '../../config/portalApi';
+import { queryKeys } from '../../config/queryKeys';
 import { formatDateTime } from '../../utils/formatDate';
 import type {
   PortalReviewConfig,
@@ -31,7 +32,7 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     isError,
     error,
   } = useQuery<PortalReviewConfig>({
-    queryKey: ['portal-review-config', assignmentId],
+    queryKey: queryKeys.portal.reviewConfig(assignmentId),
     queryFn: async () => {
       const res = await portalApi.get<PortalReviewConfig>(
         `/portal/assignments/${assignmentId}/review-config`
@@ -115,8 +116,8 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     },
     onSuccess: () => {
       setFormError(null);
-      queryClient.invalidateQueries({ queryKey: ['portal-review-config', assignmentId] });
-      queryClient.invalidateQueries({ queryKey: ['portal-assigned-papers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portal.reviewConfig(assignmentId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portal.assignedPapers });
       onReviewSubmitted?.();
     },
     onError: (err: unknown) => {
@@ -131,8 +132,8 @@ export default function ReviewForm({ assignmentId, onReviewSubmitted }: ReviewFo
     },
     onSuccess: () => {
       setFormError(null);
-      queryClient.invalidateQueries({ queryKey: ['portal-review-config', assignmentId] });
-      queryClient.invalidateQueries({ queryKey: ['portal-assigned-papers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portal.reviewConfig(assignmentId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.portal.assignedPapers });
       onReviewSubmitted?.();
     },
     onError: (err: unknown) => {

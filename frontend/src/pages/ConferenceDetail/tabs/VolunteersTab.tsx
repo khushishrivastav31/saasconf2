@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSaveStatus } from '../../../hooks/useSaveStatus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
+import { queryKeys } from '../../../config/queryKeys';
 import { validatePhone, validateEmail } from '../../../utils/validators';
 import type {
   Conference,
@@ -49,7 +50,7 @@ function ConferenceVolunteersTab({
 
   // Fetch linked volunteers
   const { data, isLoading } = useQuery({
-    queryKey: ['conference-volunteers', conference.id],
+    queryKey: queryKeys.volunteers.byConference(conference.id),
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<Volunteer>>(
         `/conferences/${conference.id}/volunteers`
@@ -60,7 +61,7 @@ function ConferenceVolunteersTab({
 
   // Fetch all tenant volunteers for linking
   const { data: allVolunteers } = useQuery({
-    queryKey: ['all-volunteers'],
+    queryKey: queryKeys.volunteers.allList,
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<Volunteer>>(`/volunteers?page_size=100`);
       return response.data;
@@ -76,9 +77,9 @@ function ConferenceVolunteersTab({
     onSuccess: () => {
       setLinkError(null);
       queryClient.invalidateQueries({
-        queryKey: ['conference-volunteers', conference.id],
+        queryKey: queryKeys.volunteers.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.allList });
     },
     onError: (error: unknown) => {
       setLinkError(parseApiError(error, 'Failed to link volunteer'));
@@ -103,9 +104,9 @@ function ConferenceVolunteersTab({
         notes: '',
       });
       queryClient.invalidateQueries({
-        queryKey: ['conference-volunteers', conference.id],
+        queryKey: queryKeys.volunteers.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.allList });
     },
     onError: (error: unknown) => {
       setLinkError(parseApiError(error, 'Failed to create volunteer'));
@@ -121,9 +122,9 @@ function ConferenceVolunteersTab({
       setEditingVolunteer(null);
       setLinkError(null);
       queryClient.invalidateQueries({
-        queryKey: ['conference-volunteers', conference.id],
+        queryKey: queryKeys.volunteers.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.allList });
     },
     onError: (error: unknown) => {
       setSaveError();
@@ -138,9 +139,9 @@ function ConferenceVolunteersTab({
     onSuccess: () => {
       setLinkError(null);
       queryClient.invalidateQueries({
-        queryKey: ['conference-volunteers', conference.id],
+        queryKey: queryKeys.volunteers.byConference(conference.id),
       });
-      queryClient.invalidateQueries({ queryKey: ['all-volunteers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.allList });
     },
     onError: (error: unknown) => {
       setLinkError(parseApiError(error, 'Failed to remove volunteer'));
