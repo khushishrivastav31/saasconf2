@@ -405,7 +405,7 @@ def _strip_table_widths(html: str) -> str:
     html = re.sub(r'(<t[dh][^>]*)\s*style="[^"]*"', r"\1", html)
     # Replace inline style on <table> with width:100%, or add it if none
     html = re.sub(r'(<table[^>]*)\s*style="[^"]*"', r'\1 style="width:100%"', html)
-    html = re.sub(r'<table(?![^>]*style=)', '<table style="width:100%"', html)
+    html = re.sub(r"<table(?![^>]*style=)", '<table style="width:100%"', html)
     return html
 
 
@@ -463,10 +463,7 @@ async def generate_invoice_pdf(
     # Look up template by invoice's template_type, fall back to legacy field
     template_type = getattr(invoice, "template_type", "bank_transfer") or "bank_transfer"
     templates = settings.get("invoice_templates", {})
-    template_html = (
-        templates.get(template_type)
-        or settings.get("invoice_template_html", DEFAULT_INVOICE_TEMPLATE_HTML)
-    )
+    template_html = templates.get(template_type) or settings.get("invoice_template_html", DEFAULT_INVOICE_TEMPLATE_HTML)
 
     company_info = settings.get("invoice_company_info", {})
     page_format = settings.get("invoice_page_format", "A4")
