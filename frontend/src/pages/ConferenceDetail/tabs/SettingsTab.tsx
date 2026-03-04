@@ -407,10 +407,10 @@ function ConferenceSettingsTab({
   isAdmin: boolean;
 }) {
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super_admin';
+  const canAccessRestricted = user?.role === 'super_admin' || user?.role === 'tenant_admin';
 
   const groupedItems = useMemo(() => {
-    const filtered = SETTINGS_NAV_ITEMS.filter((item) => !item.superOnly || isSuperAdmin);
+    const filtered = SETTINGS_NAV_ITEMS.filter((item) => !item.superOnly || canAccessRestricted);
     return filtered.reduce(
       (acc, item) => {
         if (!acc[item.group]) {
@@ -421,7 +421,7 @@ function ConferenceSettingsTab({
       },
       {} as Record<string, SettingsNavItem[]>
     );
-  }, [isSuperAdmin]);
+  }, [canAccessRestricted]);
 
   const [activeTab, setActiveTab] = useState<ConferenceSettingsActiveTab>('volunteer-roles');
   const [isCollapsed, setIsCollapsed] = useState(false);
