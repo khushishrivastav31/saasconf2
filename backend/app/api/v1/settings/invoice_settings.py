@@ -131,7 +131,7 @@ async def update_invoice_settings(
     settings = conference.settings or {}
 
     # Serialize with mode='json' to ensure all nested models are converted to dicts
-    update_data = data.model_dump(exclude_unset=True, mode='json')
+    update_data = data.model_dump(exclude_unset=True, mode="json")
 
     # Merge company_info if provided (partial update)
     if update_data.get("invoice_company_info"):
@@ -153,6 +153,7 @@ async def update_invoice_settings(
 
     # Mark JSONB field as modified for SQLAlchemy change detection
     from sqlalchemy.orm.attributes import flag_modified
+
     flag_modified(conference, "settings")
 
     await db.commit()
@@ -193,6 +194,7 @@ async def preview_invoice_pdf(
     conference = result.scalar_one_or_none()
     if not conference:
         from app.core.exceptions import NotFoundError
+
         raise NotFoundError("Conference not found")
 
     # Merge preview settings with existing

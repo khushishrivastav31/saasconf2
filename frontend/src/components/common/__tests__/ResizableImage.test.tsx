@@ -33,12 +33,14 @@ describe('ResizableImage extension', () => {
     it('parses HTML from img[src] tags', () => {
       const parseRules = ResizableImage.config.parseHTML?.call(ResizableImage);
       expect(parseRules).toBeDefined();
-      expect(parseRules).toHaveLength(1);
-      expect(parseRules![0]).toHaveProperty('tag', 'img[src]');
+      expect(parseRules).toHaveLength(2);
+      expect(parseRules![0]).toHaveProperty('tag', 'div[style] img[src]');
+      expect(parseRules![1]).toHaveProperty('tag', 'img[src]');
     });
 
     it('renders as img tag in HTML output', () => {
       const renderResult = ResizableImage.config.renderHTML?.call(ResizableImage, {
+        node: { attrs: {} },
         HTMLAttributes: { src: 'test.png', alt: 'test' },
       });
       expect(renderResult).toBeDefined();
