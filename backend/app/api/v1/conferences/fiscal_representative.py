@@ -8,7 +8,6 @@ from sqlalchemy import and_, select
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.conference_helpers import get_conference_for_tenant
-from app.core.vat_validation import normalize_country
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -17,6 +16,7 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
+from app.core.vat_validation import normalize_country
 from app.models.audit import AuditLog
 from app.models.conference_vat_rate import ConferenceVatRate
 from app.models.fiscal_representative import FiscalRepresentative

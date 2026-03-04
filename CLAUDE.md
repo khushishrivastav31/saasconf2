@@ -79,12 +79,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Multiple invoice templates feature
-  - 3 template types: bank_transfer, credit_card, credit_note — each with own body HTML, shared footer/page format
-  - Backend: `template_type` column on invoices, `invoice_templates` dict in settings, PDF generation picks template by type
-  - Frontend: template type tabs in InvoiceTemplateTab, "Copy from..." button, template_type dropdown in invoice create/edit
-  - Preview renders the active template tab
-  - Sidebar collapse button: pinned at bottom (admin layout), pinned at top (conference detail)
-  - Handbook updated with multi-template docs
-- **Tests**: 19/19 backend invoice tests passing
-- **Status**: Ready to commit (pending user approval)
+- **Last completed**: Invoice PDF system, financial settings, phone field, sidebar fixes — deployed to staging (commit `8da6a3a`)
+- **Migrations on staging**: 106 (address consolidation), 107 (template_type), 108 (phone field)
+- **Status**: Deployed, monitoring CI/staging

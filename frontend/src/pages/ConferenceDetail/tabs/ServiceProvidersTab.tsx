@@ -110,10 +110,7 @@ export default function ConferenceServiceProvidersTab({
         {isAdmin && !isAdding && (
           <button
             type="button"
-            onClick={() => {
-              setIsAdding(true);
-              setError(null);
-            }}
+            onClick={() => setIsAdding(true)}
             className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 transition-colors"
           >
             + Add Provider
@@ -186,7 +183,6 @@ export default function ConferenceServiceProvidersTab({
               type="button"
               onClick={() => {
                 setIsAdding(false);
-                setError(null);
                 setCreateForm({
                   company_name: '',
                   service_description: '',
