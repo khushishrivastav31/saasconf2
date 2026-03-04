@@ -134,7 +134,7 @@ async def update_invoice_settings(
     update_data = data.model_dump(exclude_unset=True, mode='json')
 
     # Merge company_info if provided (partial update)
-    if "invoice_company_info" in update_data and update_data["invoice_company_info"]:
+    if update_data.get("invoice_company_info"):
         existing_company = settings.get(
             "invoice_company_info",
             DEFAULT_INVOICE_SETTINGS["invoice_company_info"],
@@ -144,7 +144,7 @@ async def update_invoice_settings(
         update_data["invoice_company_info"] = {**existing_company, **new_company}
 
     # When invoice_templates is saved, sync bank_transfer → legacy field
-    if "invoice_templates" in update_data and update_data["invoice_templates"]:
+    if update_data.get("invoice_templates"):
         templates = update_data["invoice_templates"]
         if "bank_transfer" in templates:
             update_data["invoice_template_html"] = templates["bank_transfer"]
@@ -204,7 +204,7 @@ async def preview_invoice_pdf(
         preview_settings["invoice_company_info"] = {**existing, **update_data["invoice_company_info"]}
 
     # Support both legacy single-template and multi-template preview
-    if "invoice_templates" in update_data and update_data["invoice_templates"]:
+    if update_data.get("invoice_templates"):
         preview_settings["invoice_templates"] = update_data["invoice_templates"]
 
     if "invoice_template_html" in update_data:

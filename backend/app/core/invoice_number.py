@@ -5,7 +5,7 @@ with support for daily/yearly counter resets.
 """
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -52,7 +52,7 @@ async def generate_invoice_number(
     last_reset = settings.get("invoice_counter_last_reset")
 
     # 3. Check if counter needs reset
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     should_reset = False
 
     if last_reset is None:
@@ -118,7 +118,7 @@ async def generate_cancellation_number(
     counter = settings.get("cancellation_counter_value", 1)
     last_reset = settings.get("cancellation_counter_last_reset")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     should_reset = False
 
     if last_reset is None:

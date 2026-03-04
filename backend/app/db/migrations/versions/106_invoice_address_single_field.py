@@ -54,7 +54,7 @@ def upgrade() -> None:
         company_info = settings["invoice_company_info"]
 
         # Skip if already has single address field or no address data
-        if "address" in company_info and company_info["address"]:
+        if company_info.get("address"):
             continue
 
         address_line1 = company_info.get("address_line1", "")

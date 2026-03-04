@@ -342,7 +342,7 @@ class BankAccount(BaseModel):
             iban_obj = IBAN(cleaned)
             return str(iban_obj)  # Returns formatted IBAN
         except ValueError as e:
-            raise ValueError(f"Invalid IBAN: {str(e)}")
+            raise ValueError(f"Invalid IBAN: {e!s}") from e
 
     @field_validator("bic")
     @classmethod
@@ -359,7 +359,7 @@ class BankAccount(BaseModel):
             bic_obj = BIC(cleaned)
             return str(bic_obj)
         except ValueError as e:
-            raise ValueError(f"Invalid BIC: {str(e)}")
+            raise ValueError(f"Invalid BIC: {e!s}") from e
 
 
 class InvoiceCompanyInfo(BaseModel):
