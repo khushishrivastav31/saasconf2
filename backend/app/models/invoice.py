@@ -38,6 +38,9 @@ class Invoice(Base):
 
     # Invoice identification
     invoice_number: Mapped[str] = mapped_column(String(50), nullable=False)
+    template_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default="bank_transfer"
+    )  # bank_transfer, credit_card, credit_note
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="draft"
     )  # draft, sent, paid, overdue, cancelled

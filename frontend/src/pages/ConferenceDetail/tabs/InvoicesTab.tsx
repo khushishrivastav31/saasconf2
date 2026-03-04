@@ -8,6 +8,7 @@ import type {
   InvoiceCreate,
   InvoiceUpdate,
   InvoiceStatus,
+  InvoiceTemplateType,
   PlatformCurrency,
   PaginatedResponse,
   LocationContactPerson,
@@ -30,6 +31,18 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
 };
 
+const TEMPLATE_TYPE_OPTIONS: { value: InvoiceTemplateType; label: string }[] = [
+  { value: 'bank_transfer', label: 'Invoice (Bank Transfer)' },
+  { value: 'credit_card', label: 'Invoice (Credit Card)' },
+  { value: 'credit_note', label: 'Credit Note' },
+];
+
+const TEMPLATE_TYPE_LABELS: Record<string, string> = {
+  bank_transfer: 'Bank Transfer',
+  credit_card: 'Credit Card',
+  credit_note: 'Credit Note',
+};
+
 export default function ConferenceInvoicesTab({
   conference,
   isAdmin,
@@ -48,6 +61,7 @@ export default function ConferenceInvoicesTab({
 
   const emptyCreateForm: InvoiceCreate = {
     invoice_number: '',
+    template_type: 'bank_transfer',
     status: 'draft',
     issue_date: '',
     due_date: '',
@@ -193,6 +207,23 @@ export default function ConferenceInvoicesTab({
     });
   };
 
+  const downloadPDF = async (invoiceId: string, invoiceNumber: string) => {
+    try {
+      const res = await api.get(`/conferences/${conference.id}/invoices/${invoiceId}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice_${invoiceNumber}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(parseApiError(err, 'Failed to download PDF'));
+    }
+  };
+
   const invoiceCount = data?.items?.length || 0;
 
   return (
@@ -200,7 +231,7 @@ export default function ConferenceInvoicesTab({
       {/* === DETAIL PANEL VIEW === */}
       {selectedInvoice ? (
         <>
-          <div className="mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <button
               type="button"
               onClick={() => setSelectedInvoiceId(null)}
@@ -208,6 +239,23 @@ export default function ConferenceInvoicesTab({
             >
               <ChevronLeftIcon />
               Back to invoices list
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                downloadPDF(selectedInvoice.id, selectedInvoice.invoice_number || 'unknown')
+              }
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              Download PDF
             </button>
           </div>
 
@@ -267,8 +315,8 @@ export default function ConferenceInvoicesTab({
             >
               <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">New Invoice</h5>
 
-              {/* Invoice Number + Status */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Invoice Number + Template Type + Status */}
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Invoice Number *
@@ -276,7 +324,7 @@ export default function ConferenceInvoicesTab({
                   <input
                     type="text"
                     required
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                     value={createForm.invoice_number}
                     onChange={(e) =>
                       setCreateForm({
@@ -288,10 +336,31 @@ export default function ConferenceInvoicesTab({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Template Type
+                  </label>
+                  <select
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    value={createForm.template_type || 'bank_transfer'}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        template_type: e.target.value as InvoiceTemplateType,
+                      })
+                    }
+                  >
+                    {TEMPLATE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Status
                   </label>
                   <select
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                     value={createForm.status || 'draft'}
                     onChange={(e) =>
                       setCreateForm({
@@ -505,6 +574,9 @@ export default function ConferenceInvoicesTab({
                       Invoice #
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Recipient
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -531,6 +603,9 @@ export default function ConferenceInvoicesTab({
                     <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                         {invoice.invoice_number}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {TEMPLATE_TYPE_LABELS[invoice.template_type] || invoice.template_type}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                         {invoice.recipient_name}

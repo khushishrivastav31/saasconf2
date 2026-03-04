@@ -47,6 +47,7 @@ export default function InvoiceDetailPanel({
   const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
   const [formData, setFormData] = useState<InvoiceUpdate>({
     invoice_number: invoice.invoice_number,
+    template_type: invoice.template_type || 'bank_transfer',
     status: invoice.status,
     issue_date: invoice.issue_date || '',
     due_date: invoice.due_date || '',
@@ -83,6 +84,7 @@ export default function InvoiceDetailPanel({
     setActiveTab('details');
     setFormData({
       invoice_number: invoice.invoice_number,
+      template_type: invoice.template_type || 'bank_transfer',
       status: invoice.status,
       issue_date: invoice.issue_date || '',
       due_date: invoice.due_date || '',

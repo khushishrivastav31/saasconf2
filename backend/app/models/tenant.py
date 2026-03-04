@@ -38,6 +38,7 @@ class Tenant(Base):
     country: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Business fields
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     vat_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     website: Mapped[str | None] = mapped_column(String(500), nullable=True)
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

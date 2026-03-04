@@ -158,6 +158,7 @@ async def create_conference(
         else [],
         settings=conference_data.settings,
         currency=conference_data.currency,
+        phone=conference_data.phone,
     )
     db.add(conference)
     await db.flush()  # Get the conference ID before seeding default settings

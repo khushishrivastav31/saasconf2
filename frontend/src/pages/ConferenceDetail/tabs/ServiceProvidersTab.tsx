@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../../../config/api';
 import { queryKeys } from '../../../config/queryKeys';
 import type {
   Conference,
@@ -9,13 +7,13 @@ import type {
   ServiceProviderUpdate,
   LocationContactPerson,
 } from '../../../types';
-import { parseApiError } from '../../../utils/apiError';
 import ServiceProviderDetailPanel from '../../../components/ServiceProviderDetailPanel';
 import ContactPersonList from '../../../components/ContactPersonList';
 import RichTextEditor from '../../../components/common/RichTextEditor';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { useSelection } from '../SelectionContext';
+import { useConferenceCrud } from '../../../hooks/api';
 
 export default function ConferenceServiceProvidersTab({
   conference,
@@ -25,9 +23,7 @@ export default function ConferenceServiceProvidersTab({
   isAdmin: boolean;
 }) {
   const { selectedServiceProviderId, setSelectedServiceProviderId } = useSelection();
-  const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Form state for create
   const [createForm, setCreateForm] = useState<ServiceProviderCreate>({
@@ -43,76 +39,22 @@ export default function ConferenceServiceProvidersTab({
     comment: '',
   });
 
-  const { data, isLoading } = useQuery({
-    queryKey: queryKeys.serviceProviders.byConference(conference.id),
-    queryFn: async () => {
-      const response = await api.get<{
-        items: ServiceProvider[];
-        total: number;
-      }>(`/conferences/${conference.id}/service-providers`);
-      return response.data;
-    },
-  });
+  const { items, isLoading, createMutation, updateMutation, deleteMutation, error } =
+    useConferenceCrud<ServiceProvider, ServiceProviderCreate, ServiceProviderUpdate>({
+      conferenceId: conference.id,
+      endpoint: 'service-providers',
+      queryKey: queryKeys.serviceProviders.byConference(conference.id),
+      onCreateSuccess: (newProvider) => {
+        setIsAdding(false);
+        setCreateForm({ company_name: '', service_description: '', contact_persons: [] });
+        setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
+        setSelectedServiceProviderId(newProvider.id);
+      },
+      onDeleteSuccess: () => setSelectedServiceProviderId(null),
+    });
 
-  const selectedProvider = data?.items?.find((sp) => sp.id === selectedServiceProviderId);
-
-  const createMutation = useMutation({
-    mutationFn: async (spData: ServiceProviderCreate) => {
-      const response = await api.post<ServiceProvider>(
-        `/conferences/${conference.id}/service-providers`,
-        spData
-      );
-      return response.data;
-    },
-    onSuccess: (newProvider) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.serviceProviders.byConference(conference.id),
-      });
-      setIsAdding(false);
-      setCreateForm({
-        company_name: '',
-        service_description: '',
-        contact_persons: [],
-      });
-      setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
-      setError(null);
-      setSelectedServiceProviderId(newProvider.id);
-    },
-    onError: (err: unknown) => {
-      setError(parseApiError(err, 'Failed to create service provider'));
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data: spData }: { id: string; data: ServiceProviderUpdate }) => {
-      const response = await api.put<ServiceProvider>(
-        `/conferences/${conference.id}/service-providers/${id}`,
-        spData
-      );
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.serviceProviders.byConference(conference.id),
-      });
-      setError(null);
-    },
-    onError: (err: unknown) => {
-      setError(parseApiError(err, 'Failed to update service provider'));
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/conferences/${conference.id}/service-providers/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.serviceProviders.byConference(conference.id),
-      });
-      setSelectedServiceProviderId(null);
-    },
-  });
+  const data = { items };
+  const selectedProvider = items.find((sp) => sp.id === selectedServiceProviderId);
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();

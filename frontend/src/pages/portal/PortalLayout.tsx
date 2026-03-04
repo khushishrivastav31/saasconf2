@@ -2,6 +2,7 @@ import { useState, lazy, Suspense } from 'react';
 import { Navigate, Outlet, Link, useLocation, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
+import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 import portalApi from '../../config/portalApi';
 import ConferenceLogo from '../../components/ConferenceLogo';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -133,6 +134,9 @@ function PortalLayout() {
   const closeMobileSidebar = () => setSidebarOpen(false);
   const { companySlug } = useParams<{ companySlug: string }>();
   const basePath = `/${companySlug}/portal`;
+
+  // Restore scroll position on page refresh
+  useScrollRestoration();
 
   const { data: conferences } = useQuery({
     queryKey: ['portal-conferences'],

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Conference } from '../../../types';
+import { useAuth } from '../../../hooks/useAuth';
 import ConferenceVolunteerRolesTab from './settings/VolunteerRolesTab';
 import ConferenceLocationTypesTab from './settings/LocationTypesTab';
 import ConferenceSponsorPackagesTab from './settings/SponsorPackagesTab';
@@ -15,6 +16,12 @@ import MessagingSettingsTab from './settings/MessagingSettingsTab';
 import MessageTemplatesTab from './settings/MessageTemplatesTab';
 import RecipientListsTab from './settings/RecipientListsTab';
 import ScreenOverlaysTab from './ScreenOverlaysTab';
+import InvoiceNumberTab from './settings/InvoiceNumberTab';
+import InvoiceCompanyDataTab from './settings/InvoiceCompanyDataTab';
+import InvoiceBankAccountsTab from './settings/InvoiceBankAccountsTab';
+import InvoiceTemplateTab from './settings/InvoiceTemplateTab';
+import StripeSetupTab from './settings/StripeSetupTab';
+import FinancialSettingsTab from './settings/FinancialSettingsTab';
 
 type ConferenceSettingsActiveTab =
   | 'volunteer-roles'
@@ -31,13 +38,20 @@ type ConferenceSettingsActiveTab =
   | 'messaging-settings'
   | 'message-templates'
   | 'recipient-lists'
-  | 'screen-overlays';
+  | 'screen-overlays'
+  | 'financial-settings'
+  | 'invoice-number'
+  | 'invoice-company-data'
+  | 'invoice-bank-accounts'
+  | 'invoice-template'
+  | 'stripe-setup';
 
 interface SettingsNavItem {
   key: ConferenceSettingsActiveTab;
   label: string;
   icon: React.ReactNode;
   group: string;
+  superOnly?: boolean;
 }
 
 const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
@@ -282,21 +296,108 @@ const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
       </svg>
     ),
   },
+  // Finance
+  {
+    key: 'financial-settings',
+    label: 'Currency & Tax',
+    group: 'Finance',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    ),
+  },
+  {
+    key: 'invoice-number',
+    label: 'Numbering',
+    group: 'Finance',
+    superOnly: true,
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
+        />
+      </svg>
+    ),
+  },
+  {
+    key: 'invoice-company-data',
+    label: 'Company Data',
+    group: 'Finance',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+        />
+      </svg>
+    ),
+  },
+  {
+    key: 'invoice-bank-accounts',
+    label: 'Bank Accounts',
+    group: 'Finance',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+        />
+      </svg>
+    ),
+  },
+  {
+    key: 'invoice-template',
+    label: 'Invoice Templates',
+    group: 'Finance',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+        />
+      </svg>
+    ),
+  },
+  {
+    key: 'stripe-setup',
+    label: 'Stripe Setup',
+    group: 'Finance',
+    superOnly: true,
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+        />
+      </svg>
+    ),
+  },
 ];
 
-// Group items by their group property
-const groupedItems = SETTINGS_NAV_ITEMS.reduce(
-  (acc, item) => {
-    if (!acc[item.group]) {
-      acc[item.group] = [];
-    }
-    acc[item.group].push(item);
-    return acc;
-  },
-  {} as Record<string, SettingsNavItem[]>
-);
-
-const GROUP_ORDER = ['People & Roles', 'Conference Setup', 'CFP & Reviews', 'Communication'];
+const GROUP_ORDER = [
+  'People & Roles',
+  'Conference Setup',
+  'CFP & Reviews',
+  'Communication',
+  'Finance',
+];
 
 function ConferenceSettingsTab({
   conference,
@@ -305,6 +406,23 @@ function ConferenceSettingsTab({
   conference: Conference;
   isAdmin: boolean;
 }) {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
+
+  const groupedItems = useMemo(() => {
+    const filtered = SETTINGS_NAV_ITEMS.filter((item) => !item.superOnly || isSuperAdmin);
+    return filtered.reduce(
+      (acc, item) => {
+        if (!acc[item.group]) {
+          acc[item.group] = [];
+        }
+        acc[item.group].push(item);
+        return acc;
+      },
+      {} as Record<string, SettingsNavItem[]>
+    );
+  }, [isSuperAdmin]);
+
   const [activeTab, setActiveTab] = useState<ConferenceSettingsActiveTab>('volunteer-roles');
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -340,6 +458,18 @@ function ConferenceSettingsTab({
         return <RecipientListsTab conference={conference} isAdmin={isAdmin} />;
       case 'screen-overlays':
         return <ScreenOverlaysTab conference={conference} isAdmin={isAdmin} />;
+      case 'financial-settings':
+        return <FinancialSettingsTab conference={conference} isAdmin={isAdmin} />;
+      case 'invoice-number':
+        return <InvoiceNumberTab conference={conference} isAdmin={isAdmin} />;
+      case 'invoice-company-data':
+        return <InvoiceCompanyDataTab conference={conference} isAdmin={isAdmin} />;
+      case 'invoice-bank-accounts':
+        return <InvoiceBankAccountsTab conference={conference} isAdmin={isAdmin} />;
+      case 'invoice-template':
+        return <InvoiceTemplateTab conference={conference} isAdmin={isAdmin} />;
+      case 'stripe-setup':
+        return <StripeSetupTab conference={conference} isAdmin={isAdmin} />;
       default:
         return null;
     }

@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import api from '../../../config/api';
-import { queryKeys } from '../../../config/queryKeys';
 import { COUNTRY_OPTIONS } from '../../../config/countries';
 import {
   TIMEZONE_OPTIONS,
@@ -9,17 +8,12 @@ import {
   COUNTRY_DEFAULT_TIMEZONE,
 } from '../../../config/timezones';
 import { useSaveStatus } from '../../../hooks/useSaveStatus';
-import type {
-  Conference,
-  ConferenceUpdate,
-  PlatformCurrency,
-  PaginatedResponse,
-} from '../../../types';
+import type { Conference, ConferenceUpdate } from '../../../types';
 import RichTextEditor from '../../../components/common/RichTextEditor';
 import ConferenceLogo from '../../../components/ConferenceLogo';
 import { parseApiError } from '../../../utils/apiError';
-import { validateEmail, normalizeUrl } from '../../../utils/validators';
-import FiscalRepSection from './FiscalRepSection';
+import { validateEmail, validatePhone, normalizeUrl } from '../../../utils/validators';
+import { useToast } from '../../../components/Toast';
 
 function PortalUrlField({ tenantSlug, path }: { tenantSlug: string; path: string }) {
   const [copied, setCopied] = useState(false);
@@ -126,6 +120,7 @@ function ConferenceDetailsTab({
     website: conference.website || '',
     support_email: conference.support_email || '',
     contact_email: conference.contact_email || '',
+    phone: conference.phone || '',
     start_date: conference.start_date || '',
     end_date: conference.end_date || '',
     venue_name: conference.venue_name || '',
@@ -138,22 +133,9 @@ function ConferenceDetailsTab({
     venue_type: conference.venue_type,
     venue_url: conference.venue_url || '',
     virtual_platform_url: conference.virtual_platform_url || '',
-    currency: conference.currency || '',
-    invoice_currency: conference.invoice_currency || '',
   });
 
-  // Fetch platform currencies for currency selector
-  const { data: currencyOptions } = useQuery({
-    queryKey: queryKeys.settings.platformCurrencies,
-    queryFn: async () => {
-      const response = await api.get<PaginatedResponse<PlatformCurrency>>(
-        '/admin/settings/currencies',
-        { params: { page_size: 100, is_active: true } }
-      );
-      return response.data.items;
-    },
-  });
-
+  const { showToast } = useToast();
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
   const [emailErrors, setEmailErrors] = useState<Record<string, string | null>>({});
   const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
@@ -162,11 +144,8 @@ function ConferenceDetailsTab({
 
   const updateMutation = useMutation({
     mutationFn: async (data: ConferenceUpdate) => {
-      // Convert empty strings to null for currency fields so they get saved as null
       const payload = {
         ...data,
-        currency: data.currency || null,
-        invoice_currency: data.invoice_currency || null,
         venue_url: data.venue_url || null,
       };
       await api.put(`/conferences/${conference.id}`, payload);
@@ -176,8 +155,9 @@ function ConferenceDetailsTab({
       setSaved();
       onUpdate();
     },
-    onError: () => {
+    onError: (err) => {
       setSaveError();
+      showToast(parseApiError(err), 'error');
     },
   });
 
@@ -247,15 +227,18 @@ function ConferenceDetailsTab({
     const newFormData = { ...formData, [field]: value };
     setFormData(newFormData);
 
-    // Clear email error on change if the user is fixing it
+    // Clear validation error on change if the user is fixing it
     if ((field === 'support_email' || field === 'contact_email') && emailErrors[field]) {
       const error = validateEmail(value as string);
       setEmailErrors((prev) => ({ ...prev, [field]: error }));
       if (error) return; // Don't auto-save while email is still invalid
     }
+    if (field === 'phone' && emailErrors.phone) {
+      setEmailErrors((prev) => ({ ...prev, phone: null }));
+    }
 
     // Don't auto-save if any email field has a validation error
-    const hasEmailError = Object.values(emailErrors).some(Boolean);
+    const hasEmailError = emailErrors.support_email || emailErrors.contact_email;
     if (hasEmailError) return;
 
     if (debounceTimeout) clearTimeout(debounceTimeout);
@@ -553,67 +536,6 @@ function ConferenceDetailsTab({
           />
         </div>
 
-        {/* Financial Settings */}
-        <div className="border-t pt-4">
-          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Financial Settings
-          </h5>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Primary Currency
-                </label>
-                <select
-                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                  value={formData.currency}
-                  onChange={(e) => handleFieldChange('currency', e.target.value)}
-                  disabled={!isAdmin}
-                >
-                  <option value="">Select currency...</option>
-                  {(currencyOptions || []).map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.code} — {c.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Used for all pricing in this conference.
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Second Currency
-                  <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">(optional)</span>
-                </label>
-                <select
-                  className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                  value={formData.invoice_currency}
-                  onChange={(e) => handleFieldChange('invoice_currency', e.target.value)}
-                  disabled={!isAdmin}
-                >
-                  <option value="">Same as primary</option>
-                  {(currencyOptions || []).map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.code} — {c.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Alternative currency for invoices.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tax & VAT */}
-        <FiscalRepSection
-          conferenceId={conference.id}
-          conferenceCountry={conference.country}
-          isAdmin={isAdmin}
-        />
-
         {/* Portal URLs */}
         {conference.tenant_slug && (
           <div className="border-t pt-4">
@@ -652,15 +574,15 @@ function ConferenceDetailsTab({
           </div>
         )}
 
-        {/* Contact Emails */}
+        {/* Contact Information */}
         <div className="border-t pt-4">
           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Contact Emails
+            Contact Information
           </h5>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            These emails are used in email templates sent to applicants and attendees.
+            Used in email templates and invoice placeholders ([CONTACT_EMAIL], [PHONE]).
           </p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Support Email
@@ -668,7 +590,7 @@ function ConferenceDetailsTab({
               <input
                 type="email"
                 placeholder="support@example.com"
-                className={`mt-1 block w-full border ${emailErrors.support_email ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                className={`mt-1 block w-full border ${emailErrors.support_email ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                 value={formData.support_email}
                 onChange={(e) => handleFieldChange('support_email', e.target.value)}
                 onBlur={(e) =>
@@ -680,7 +602,9 @@ function ConferenceDetailsTab({
                 disabled={!isAdmin}
               />
               {emailErrors.support_email && (
-                <p className="mt-1 text-xs text-red-600">{emailErrors.support_email}</p>
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                  {emailErrors.support_email}
+                </p>
               )}
             </div>
             <div>
@@ -690,7 +614,7 @@ function ConferenceDetailsTab({
               <input
                 type="email"
                 placeholder="contact@example.com"
-                className={`mt-1 block w-full border ${emailErrors.contact_email ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                className={`mt-1 block w-full border ${emailErrors.contact_email ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                 value={formData.contact_email}
                 onChange={(e) => handleFieldChange('contact_email', e.target.value)}
                 onBlur={(e) =>
@@ -702,7 +626,31 @@ function ConferenceDetailsTab({
                 disabled={!isAdmin}
               />
               {emailErrors.contact_email && (
-                <p className="mt-1 text-xs text-red-600">{emailErrors.contact_email}</p>
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                  {emailErrors.contact_email}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Phone
+              </label>
+              <input
+                type="text"
+                placeholder="+49 123 456789"
+                className={`mt-1 block w-full border ${emailErrors.phone ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
+                value={formData.phone || ''}
+                onChange={(e) => handleFieldChange('phone', e.target.value)}
+                onBlur={(e) =>
+                  setEmailErrors((prev) => ({
+                    ...prev,
+                    phone: validatePhone(e.target.value),
+                  }))
+                }
+                disabled={!isAdmin}
+              />
+              {emailErrors.phone && (
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">{emailErrors.phone}</p>
               )}
             </div>
           </div>

@@ -102,6 +102,21 @@ test.describe('Conference Settings Deep Tests', () => {
     expect(hasTemplates || hasCards || hasList).toBeTruthy();
   });
 
+  test('should show Currency & Tax with currency selectors', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Settings');
+    await page.getByRole('button', { name: /currency & tax/i }).click();
+    await page.waitForTimeout(500);
+
+    const hasPrimary = await page.getByText(/primary currency/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasSecond = await page.getByText(/second currency/i).isVisible({ timeout: 3000 }).catch(() => false);
+
+    expect(hasPrimary || hasSecond).toBeTruthy();
+  });
+
   test('should navigate between all settings sub-tabs without errors', async ({ page }) => {
     const detail = new ConferenceDetailPage(page);
     await detail.goto(conferenceId!);
@@ -109,7 +124,7 @@ test.describe('Conference Settings Deep Tests', () => {
 
     await detail.navigateToSection('Settings');
 
-    const tabs = ['Volunteer Tasks', 'Committee Roles', 'Session Types', 'Score Scales', 'Paper Form', 'Email Templates'];
+    const tabs = ['Volunteer Tasks', 'Committee Roles', 'Session Types', 'Score Scales', 'Paper Form', 'Email Templates', 'Currency & Tax'];
     for (const tab of tabs) {
       const tabBtn = page.getByRole('button', { name: new RegExp(tab, 'i') });
       if (await tabBtn.isVisible({ timeout: 2000 }).catch(() => false)) {

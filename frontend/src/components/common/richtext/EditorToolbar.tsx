@@ -135,11 +135,15 @@ export default function EditorToolbar({
         title="Font Size"
       >
         <option value="">Default</option>
+        <option value="6px">XXX-Small</option>
+        <option value="8px">XX-Small</option>
+        <option value="10px">X-Small</option>
         <option value="12px">Small</option>
         <option value="16px">Normal</option>
         <option value="20px">Large</option>
         <option value="24px">X-Large</option>
         <option value="32px">XX-Large</option>
+        <option value="40px">XXX-Large</option>
       </select>
       <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
 
@@ -488,6 +492,8 @@ export default function EditorToolbar({
       </ToolbarButton>
       {editor.isActive('table') && (
         <>
+          {/* Table Border Color */}
+          <TableBorderColorPicker editor={editor} disabled={disabled} />
           <ToolbarButton
             active={false}
             onClick={() => editor.chain().focus().addColumnAfter().run()}
@@ -861,6 +867,156 @@ function ColorPicker({
                     onChange={(e) => {
                       onChange(e.target.value);
                     }}
+                    className="w-5 h-5 rounded border border-gray-300 dark:border-gray-600 cursor-pointer p-0"
+                  />
+                </label>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Table border color picker — applies border color to ALL cells in the
+// current table so the entire grid gets a uniform border color.
+// ---------------------------------------------------------------------------
+
+const BORDER_COLORS = [
+  { value: '', name: 'Default (gray)' },
+  { value: '#000000', name: 'Black' },
+  { value: '#D1D5DB', name: 'Light Gray' },
+  { value: '#9CA3AF', name: 'Gray' },
+  { value: '#2563EB', name: 'Blue' },
+  { value: '#DC2626', name: 'Red' },
+  { value: '#16A34A', name: 'Green' },
+  { value: '#D97706', name: 'Amber' },
+  { value: '#7C3AED', name: 'Purple' },
+  { value: '#FFFFFF', name: 'White (hidden)' },
+];
+
+function TableBorderColorPicker({ editor, disabled }: { editor: Editor; disabled: boolean }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  // Read current border color from the cell under the cursor
+  const cellAttrs = editor.getAttributes('tableCell');
+  const headerAttrs = editor.getAttributes('tableHeader');
+  const activeColor = cellAttrs.borderColor || headerAttrs.borderColor || '';
+
+  const applyBorderColor = (color: string) => {
+    const { state } = editor.view;
+    const { selection } = state;
+
+    // Walk up from cursor to find the enclosing table
+    const $from = selection.$from;
+    let tableStart: number | null = null;
+    let tableEnd: number | null = null;
+    for (let depth = $from.depth; depth > 0; depth--) {
+      if ($from.node(depth).type.name === 'table') {
+        tableStart = $from.before(depth);
+        tableEnd = $from.after(depth);
+        break;
+      }
+    }
+    if (tableStart === null || tableEnd === null) return;
+
+    // Set borderColor on every cell and header in the table
+    const tr = state.tr;
+    state.doc.nodesBetween(tableStart, tableEnd, (node, pos) => {
+      if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
+        tr.setNodeMarkup(pos, undefined, {
+          ...node.attrs,
+          borderColor: color || null,
+        });
+      }
+    });
+    editor.view.dispatch(tr);
+    setIsOpen(false);
+  };
+
+  const getDropdownStyle = (): React.CSSProperties => {
+    if (!btnRef.current) return { top: 0, left: 0 };
+    const rect = btnRef.current.getBoundingClientRect();
+    return { position: 'fixed', top: rect.bottom + 4, left: rect.left, zIndex: 50 };
+  };
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled}
+        title="Table Border Color"
+        className={`p-1 rounded text-sm leading-none transition-colors ${
+          activeColor
+            ? 'bg-primary-50 text-primary-700'
+            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+        } disabled:opacity-50 disabled:cursor-not-allowed`}
+      >
+        <div className="w-5 h-5 flex flex-col items-center justify-center">
+          <svg
+            className="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <rect x="3" y="3" width="18" height="18" rx="1" />
+            <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+          </svg>
+          <div
+            className="w-4 h-1 rounded-sm mt-0.5"
+            style={{ backgroundColor: activeColor || '#D1D5DB' }}
+          />
+        </div>
+      </button>
+      {isOpen &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            <div
+              style={getDropdownStyle()}
+              className="p-2.5 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+            >
+              <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                Table Border Color
+              </div>
+              <div className="grid grid-cols-5 gap-1">
+                {BORDER_COLORS.map((color) => (
+                  <button
+                    key={color.value || 'default'}
+                    type="button"
+                    onClick={() => applyBorderColor(color.value)}
+                    className={`w-6 h-6 rounded border transition-transform hover:scale-110 ${
+                      activeColor === color.value
+                        ? 'border-primary-500 ring-1 ring-primary-500'
+                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                    }`}
+                    style={{
+                      backgroundColor: color.value || '#D1D5DB',
+                      ...(color.value === '#FFFFFF'
+                        ? {
+                            backgroundImage:
+                              'linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%)',
+                            backgroundSize: '6px 6px',
+                          }
+                        : {}),
+                    }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+              <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
+                <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                  Custom
+                  <input
+                    type="color"
+                    value={activeColor || '#D1D5DB'}
+                    onChange={(e) => applyBorderColor(e.target.value)}
                     className="w-5 h-5 rounded border border-gray-300 dark:border-gray-600 cursor-pointer p-0"
                   />
                 </label>

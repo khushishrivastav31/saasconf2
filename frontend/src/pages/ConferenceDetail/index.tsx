@@ -240,12 +240,13 @@ function ConferenceDetailContent() {
           }`}
         >
           <div
-            className="bg-white dark:bg-gray-800 rounded-lg shadow p-2 sticky top-24 overflow-y-auto"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow p-2 sticky top-24 flex flex-col"
             style={{ maxHeight: 'calc(100vh - 120px)' }}
           >
+            {/* Collapse toggle — pinned at top */}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="w-full flex items-center justify-center p-1.5 mb-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="shrink-0 w-full flex items-center justify-center p-1.5 mb-1 border-b border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-t-md hover:bg-gray-100 dark:hover:bg-gray-700"
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,94 +267,96 @@ function ConferenceDetailContent() {
                 )}
               </svg>
             </button>
-            {sections.map((section) => {
-              const isParentActive =
-                activeSection === section.id ||
-                (section.children?.some((c) => c.id === activeSection) ?? false);
-              return (
-                <div key={section.id}>
-                  <div className="flex items-center">
-                    <button
-                      onClick={() => setActiveSection(section.id)}
-                      title={sidebarCollapsed ? section.name : undefined}
-                      className={`flex-1 flex items-center rounded-md mb-0.5 ${
-                        sidebarCollapsed ? 'justify-center px-2 py-2' : 'px-3 py-2'
-                      } text-sm font-medium ${
-                        isParentActive
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
-                      }`}
-                    >
-                      <section.icon />
-                      {!sidebarCollapsed && <span className="ml-3">{section.name}</span>}
-                    </button>
-                    {section.children && !sidebarCollapsed && (
+            <div className="flex-1 overflow-y-auto">
+              {sections.map((section) => {
+                const isParentActive =
+                  activeSection === section.id ||
+                  (section.children?.some((c) => c.id === activeSection) ?? false);
+                return (
+                  <div key={section.id}>
+                    <div className="flex items-center">
                       <button
-                        onClick={() =>
-                          setExpandedSections((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(section.id)) {
-                              next.delete(section.id);
-                            } else {
-                              next.add(section.id);
-                            }
-                            return next;
-                          })
-                        }
-                        className="p-1 mr-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => setActiveSection(section.id)}
+                        title={sidebarCollapsed ? section.name : undefined}
+                        className={`flex-1 flex items-center rounded-md mb-0.5 ${
+                          sidebarCollapsed ? 'justify-center px-2 py-2' : 'px-3 py-2'
+                        } text-sm font-medium ${
+                          isParentActive
+                            ? 'bg-primary-50 text-primary-700'
+                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                        }`}
                       >
-                        <svg
-                          className={`w-4 h-4 transition-transform ${
-                            expandedSections.has(section.id) ? 'rotate-90' : ''
-                          }`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
+                        <section.icon />
+                        {!sidebarCollapsed && <span className="ml-3">{section.name}</span>}
                       </button>
+                      {section.children && !sidebarCollapsed && (
+                        <button
+                          onClick={() =>
+                            setExpandedSections((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(section.id)) {
+                                next.delete(section.id);
+                              } else {
+                                next.add(section.id);
+                              }
+                              return next;
+                            })
+                          }
+                          className="p-1 mr-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <svg
+                            className={`w-4 h-4 transition-transform ${
+                              expandedSections.has(section.id) ? 'rotate-90' : ''
+                            }`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    {/* Expandable children (e.g. CFP sub-sections) */}
+                    {section.children && expandedSections.has(section.id) && !sidebarCollapsed && (
+                      <div className="ml-4 mb-1 space-y-0.5">
+                        {section.children.map((child) => (
+                          <button
+                            key={child.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveSection(child.id);
+                              if (child.id === 'cfp-program-committee') {
+                                setSelectedCommitteeMemberId(null);
+                              }
+                              if (child.id === 'cfp-applicants') {
+                                setSelectedApplicantId(null);
+                              }
+                              if (child.id === 'cfp-papers') {
+                                setPapersKey((k) => k + 1);
+                              }
+                            }}
+                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
+                              activeSection === child.id
+                                ? 'bg-primary-50 text-primary-700 font-medium'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            <child.icon />
+                            <span className="truncate text-left">{child.name}</span>
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  {/* Expandable children (e.g. CFP sub-sections) */}
-                  {section.children && expandedSections.has(section.id) && !sidebarCollapsed && (
-                    <div className="ml-4 mb-1 space-y-0.5">
-                      {section.children.map((child) => (
-                        <button
-                          key={child.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveSection(child.id);
-                            if (child.id === 'cfp-program-committee') {
-                              setSelectedCommitteeMemberId(null);
-                            }
-                            if (child.id === 'cfp-applicants') {
-                              setSelectedApplicantId(null);
-                            }
-                            if (child.id === 'cfp-papers') {
-                              setPapersKey((k) => k + 1);
-                            }
-                          }}
-                          className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                            activeSection === child.id
-                              ? 'bg-primary-50 text-primary-700 font-medium'
-                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          <child.icon />
-                          <span className="truncate text-left">{child.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </nav>
 

@@ -33,6 +33,9 @@ export default function InvoiceLineItemsTab({
                   Unit Price
                 </th>
                 <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">
+                  Discount
+                </th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">
                   Total
                 </th>
                 <th className="px-3 py-2 w-10"></th>
@@ -55,7 +58,7 @@ export default function InvoiceLineItemsTab({
                       type="number"
                       step="1"
                       min="0"
-                      className="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       value={item.quantity}
                       onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
                     />
@@ -65,9 +68,19 @@ export default function InvoiceLineItemsTab({
                       type="number"
                       step="0.01"
                       min="0"
-                      className="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       value={item.unit_price}
                       onChange={(e) => updateLineItem(index, 'unit_price', e.target.value)}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      value={item.discount ?? 0}
+                      onChange={(e) => updateLineItem(index, 'discount', e.target.value)}
                     />
                   </td>
                   <td className="px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-gray-100">

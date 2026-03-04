@@ -35,9 +35,10 @@ class Conference(Base):
     website: Mapped[str | None] = mapped_column(String(500), nullable=True)
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
-    # Contact emails for templates
+    # Contact info for templates
     support_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Dates
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)

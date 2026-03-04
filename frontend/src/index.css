@@ -47,7 +47,21 @@ body {
 }
 
 .ProseMirror p {
-  @apply my-1;
+  @apply my-0.5;
+}
+
+/* Tight layout for invoice/document editors — zero paragraph spacing.
+   Uses !important to override Tailwind Typography prose margins. */
+.ProseMirror.prose-tight p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  line-height: 1.4;
+}
+.ProseMirror.prose-tight h1,
+.ProseMirror.prose-tight h2,
+.ProseMirror.prose-tight h3 {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
 }
 
 .ProseMirror a {
@@ -105,6 +119,12 @@ body {
   bottom: 0;
   background: rgba(59, 130, 246, 0.15);
   pointer-events: none;
+}
+
+/* Image alignment in table cells — inherit text-align from cell content */
+.ProseMirror td [data-node-view-wrapper],
+.ProseMirror th [data-node-view-wrapper] {
+  display: block;
 }
 
 /* Table resize handle */

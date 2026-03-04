@@ -175,6 +175,10 @@ export const queryKeys = {
     emailTemplates: (conferenceId: string) => ['email-templates', conferenceId] as const,
   },
 
+  // Use this for invoice settings
+  invoiceSettings: (conferenceId: string) => ['invoice-settings', conferenceId] as const,
+  stripeSettings: (conferenceId: string) => ['stripe-settings', conferenceId] as const,
+
   // ── Team & Users ────────────────────────────────────────────────
   team: {
     users: ['team-users'] as const,

@@ -19,6 +19,7 @@ export interface Tenant {
   city: string | null;
   country: string | null;
   // Business fields
+  phone: string | null;
   vat_number: string | null;
   website: string | null;
   logo_url: string | null;
@@ -45,6 +46,7 @@ export interface TenantCreate {
   city?: string;
   country?: string;
   // Business fields
+  phone?: string;
   vat_number?: string;
   website?: string;
   email_domain?: string;
@@ -67,6 +69,7 @@ export interface TenantUpdate {
   postal_code?: string;
   city?: string;
   country?: string;
+  phone?: string;
   vat_number?: string;
   website?: string;
   email_domain?: string;

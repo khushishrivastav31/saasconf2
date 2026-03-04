@@ -1,10 +1,10 @@
-"""Schemas for conference settings: volunteer roles, location types, currencies, sponsor packages, session types, committee roles, and pronoun options."""
+"""Schemas for conference settings: volunteer roles, location types, currencies, sponsor packages, session types, committee roles, pronoun options, and invoice settings."""
 
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # --- Volunteer Role Schemas ---
 
@@ -310,6 +310,160 @@ class PronounOptionListResponse(BaseModel):
 
     items: list[PronounOptionResponse]
     total: int
+
+
+# --- Invoice Settings Schemas ---
+
+
+class BankAccount(BaseModel):
+    """Bank account for invoice payments."""
+
+    bank_name: str = Field(..., min_length=1, max_length=200)
+    iban: str = Field(..., min_length=15, max_length=34)
+    bic: str | None = Field(None, max_length=11)
+    is_default: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("iban")
+    @classmethod
+    def validate_iban(cls, v: str) -> str:
+        """Validate IBAN format and checksum."""
+        if not v:
+            raise ValueError("IBAN is required")
+
+        # Remove spaces and convert to uppercase
+        cleaned = v.replace(" ", "").upper()
+
+        try:
+            # Validate with schwifty library (validates format + checksum)
+            from schwifty import IBAN
+
+            iban_obj = IBAN(cleaned)
+            return str(iban_obj)  # Returns formatted IBAN
+        except ValueError as e:
+            raise ValueError(f"Invalid IBAN: {str(e)}")
+
+    @field_validator("bic")
+    @classmethod
+    def validate_bic(cls, v: str | None) -> str | None:
+        """Validate BIC format if provided."""
+        if not v:
+            return None
+
+        cleaned = v.replace(" ", "").upper()
+
+        try:
+            from schwifty import BIC
+
+            bic_obj = BIC(cleaned)
+            return str(bic_obj)
+        except ValueError as e:
+            raise ValueError(f"Invalid BIC: {str(e)}")
+
+
+class InvoiceCompanyInfo(BaseModel):
+    """Company billing information for invoice headers."""
+
+    name: str | None = None
+    address: str | None = None  # NEW: single field (was address_line1 + address_line2)
+    city: str | None = None
+    postal_code: str | None = None
+    country: str | None = None
+    tax_id: str | None = None
+    phone: str | None = None  # Company phone number for invoices
+    vat_source: str | None = None  # "company" | "fiscal_rep"
+    bank_accounts: list[BankAccount] = []  # Array replaces single bank fields
+
+    # Legacy fields (kept for backward compatibility):
+    address_line1: str | None = None
+    address_line2: str | None = None
+    bank_name: str | None = None
+    iban: str | None = None
+    bic: str | None = None
+
+    footer_text: str | None = None
+    logo_url: str | None = None  # Path to attachment
+
+    @field_validator("vat_source")
+    @classmethod
+    def validate_vat_source(cls, v: str | None) -> str | None:
+        """Validate VAT source selector."""
+        if v and v not in ("company", "fiscal_rep"):
+            raise ValueError("Must be 'company' or 'fiscal_rep'")
+        return v
+
+
+class InvoiceSettingsResponse(BaseModel):
+    """Invoice configuration response schema."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    invoice_number_template: str
+    invoice_counter_reset: str  # "daily" or "yearly"
+    invoice_counter_value: int
+    invoice_template_html: str  # Legacy: bank_transfer template body
+    invoice_templates: dict[str, str] = {}  # {type_key: html_body}
+    invoice_footer_html: str  # Shared footer (position: fixed, bottom: 0)
+    invoice_company_info: InvoiceCompanyInfo
+    invoice_page_format: str  # "A4", "Letter", "Legal", etc.
+    # Cancellation number settings
+    cancellation_number_template: str
+    cancellation_counter_reset: str  # "daily" or "yearly"
+    cancellation_counter_value: int
+
+
+class InvoiceSettingsUpdate(BaseModel):
+    """Invoice configuration update schema."""
+
+    invoice_number_template: str | None = None
+    invoice_counter_reset: str | None = None
+    invoice_counter_value: int | None = None  # Allow manual reset
+    invoice_template_html: str | None = None  # Legacy: bank_transfer body
+    invoice_templates: dict[str, str] | None = None  # {type_key: html_body}
+    invoice_footer_html: str | None = None
+    invoice_company_info: InvoiceCompanyInfo | None = None
+    invoice_page_format: str | None = None  # Page format (A4, Letter, etc.)
+    # Cancellation number settings
+    cancellation_number_template: str | None = None
+    cancellation_counter_reset: str | None = None
+    cancellation_counter_value: int | None = None
+
+    @field_validator("invoice_counter_reset", "cancellation_counter_reset")
+    @classmethod
+    def validate_reset_mode(cls, v: str | None) -> str | None:
+        """Validate counter reset mode."""
+        if v and v not in ("daily", "yearly"):
+            raise ValueError("Must be 'daily' or 'yearly'")
+        return v
+
+    @field_validator("invoice_page_format")
+    @classmethod
+    def validate_page_format(cls, v: str | None) -> str | None:
+        """Validate page format."""
+        allowed = ("A4", "A5", "Letter", "Legal", "B5", "Tabloid")
+        if v and v not in allowed:
+            raise ValueError(f"Must be one of: {', '.join(allowed)}")
+        return v
+
+
+# --- Stripe Settings Schemas ---
+
+
+class StripeSettings(BaseModel):
+    """Stripe API configuration (for updates)."""
+
+    publishable_key: str | None = None
+    secret_key: str | None = None  # Full key when updating
+    is_enabled: bool | None = None
+
+
+class StripeSettingsResponse(BaseModel):
+    """Stripe API configuration (for responses with conditional masking)."""
+
+    publishable_key: str | None = None
+    secret_key: str | None = None  # Masked for non-super-users
+    is_enabled: bool = False
 
 
 # Re-exports for backward compatibility

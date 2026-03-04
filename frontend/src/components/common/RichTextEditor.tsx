@@ -11,6 +11,8 @@ interface RichTextEditorProps {
   className?: string;
   disabled?: boolean;
   maxLength?: number;
+  /** Extra CSS classes for the ProseMirror editor element (e.g. 'prose-tight') */
+  editorClassName?: string;
 }
 
 const EMPTY_BODY = '<p></p>';
@@ -23,6 +25,7 @@ export default function RichTextEditor({
   className = '',
   disabled = false,
   maxLength,
+  editorClassName = '',
 }: RichTextEditorProps) {
   const [charCount, setCharCount] = useState(0);
   const [, setSelectionUpdate] = useState(0); // Force re-render on selection change
@@ -55,7 +58,7 @@ export default function RichTextEditor({
     editable: !disabled,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none',
+        class: `prose prose-sm max-w-none focus:outline-none ${editorClassName}`.trim(),
         style: `min-height: ${rows * 1.5}rem`,
       },
       handleDrop: (_view, event, _slice, moved) => {

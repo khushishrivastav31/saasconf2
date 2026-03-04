@@ -67,6 +67,7 @@ class TenantCreate(TenantBase):
     country: str | None = Field(None, max_length=100)
 
     # Business fields
+    phone: str | None = Field(None, max_length=50)
     vat_number: str | None = Field(None, max_length=50)
     website: str | None = Field(None, max_length=500)
     email_domain: str | None = Field(None, max_length=255)
@@ -82,6 +83,11 @@ class TenantCreate(TenantBase):
     admin_password: str | None = Field(None, min_length=8, max_length=128)
     admin_first_name: str | None = None
     admin_last_name: str | None = None
+
+    @field_validator("phone")
+    @classmethod
+    def check_phone(cls, v: str | None) -> str | None:
+        return validate_phone(v)
 
 
 class TenantUpdate(BaseModel):
@@ -99,6 +105,7 @@ class TenantUpdate(BaseModel):
     country: str | None = Field(None, max_length=100)
 
     # Business fields
+    phone: str | None = Field(None, max_length=50)
     vat_number: str | None = Field(None, max_length=50)
     website: str | None = Field(None, max_length=500)
     email_domain: str | None = Field(None, max_length=255)
@@ -108,6 +115,11 @@ class TenantUpdate(BaseModel):
 
     # Comments
     comments: str | None = None
+
+    @field_validator("phone")
+    @classmethod
+    def check_phone(cls, v: str | None) -> str | None:
+        return validate_phone(v)
 
     @field_validator("slug")
     @classmethod
@@ -140,6 +152,7 @@ class TenantResponse(BaseModel):
     country: str | None
 
     # Business fields
+    phone: str | None = None
     vat_number: str | None
     website: str | None
     logo_url: str | None = None

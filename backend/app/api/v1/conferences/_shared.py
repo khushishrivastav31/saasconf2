@@ -99,6 +99,7 @@ def _build_conference_response(conf: Conference, tenant_slug: str | None = None)
         logo_url=conf.logo_url,
         support_email=conf.support_email,
         contact_email=conf.contact_email,
+        phone=conf.phone,
         start_date=conf.start_date,
         end_date=conf.end_date,
         venue_name=conf.venue_name,

@@ -1,8 +1,10 @@
 """Invoice management endpoints (conference-scoped)."""
 
+import io
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 
@@ -15,6 +17,8 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import AuthorizationError, NotFoundError
+from app.core.invoice_number import generate_invoice_number
+from app.core.invoice_pdf import generate_invoice_pdf
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.models.attachment import Attachment
@@ -39,6 +43,7 @@ def build_invoice_response(invoice: Invoice) -> InvoiceResponse:
         tenant_id=invoice.tenant_id,
         conference_id=invoice.conference_id,
         invoice_number=invoice.invoice_number,
+        template_type=invoice.template_type,
         status=invoice.status,
         issue_date=invoice.issue_date,
         due_date=invoice.due_date,
@@ -136,10 +141,16 @@ async def create_invoice(
 
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
+    # Auto-generate invoice number if not provided
+    invoice_number = invoice_data.invoice_number
+    if not invoice_number:
+        invoice_number = await generate_invoice_number(db, conference_id, current_user.tenant_id)
+
     invoice = Invoice(
         tenant_id=current_user.tenant_id,
         conference_id=conference.id,
-        invoice_number=invoice_data.invoice_number,
+        invoice_number=invoice_number,
+        template_type=invoice_data.template_type,
         status=invoice_data.status,
         issue_date=invoice_data.issue_date,
         due_date=invoice_data.due_date,
@@ -277,6 +288,85 @@ async def update_invoice(
     await db.refresh(invoice)
 
     return build_invoice_response(invoice)
+
+
+@router.get(
+    "/{invoice_id}/pdf",
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def download_invoice_pdf(
+    conference_id: UUID,
+    invoice_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> StreamingResponse:
+    """Generate and download invoice as PDF."""
+    tenant_id = current_user.tenant_id
+
+    # Get invoice
+    result = await db.execute(
+        select(Invoice).where(
+            Invoice.id == invoice_id,
+            Invoice.conference_id == conference_id,
+            Invoice.tenant_id == tenant_id,
+        )
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+
+    # Get conference for template
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+
+    # Generate PDF
+    pdf_bytes = await generate_invoice_pdf(invoice, conference, db)
+
+    # Return as download
+    filename = f"invoice_{invoice.invoice_number}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post(
+    "/{invoice_id}/preview-pdf",
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def preview_invoice_pdf(
+    conference_id: UUID,
+    invoice_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> StreamingResponse:
+    """Preview invoice PDF in browser (inline display)."""
+    tenant_id = current_user.tenant_id
+
+    # Get invoice
+    result = await db.execute(
+        select(Invoice).where(
+            Invoice.id == invoice_id,
+            Invoice.conference_id == conference_id,
+            Invoice.tenant_id == tenant_id,
+        )
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+
+    # Get conference for template
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+
+    # Generate PDF
+    pdf_bytes = await generate_invoice_pdf(invoice, conference, db)
+
+    # Return as inline
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline"},
+    )
 
 
 @router.delete(

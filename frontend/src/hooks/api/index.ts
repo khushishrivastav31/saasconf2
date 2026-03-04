@@ -19,3 +19,6 @@ export {
 
 // Settings hooks
 export { usePlatformCurrencies } from './usePlatformCurrencies';
+
+// Generic CRUD hook
+export { useConferenceCrud } from './useConferenceCrud';

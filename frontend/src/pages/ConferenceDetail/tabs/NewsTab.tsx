@@ -1,18 +1,16 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../../../config/api';
 import { queryKeys } from '../../../config/queryKeys';
 import Modal from '../../../components/Modal';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import RichTextEditor from '../../../components/common/RichTextEditor';
 import RichTextDisplay from '../../../components/common/RichTextDisplay';
-import { parseApiError } from '../../../utils/apiError';
 import { formatDateTime } from '../../../utils/formatDate';
-import type { NewsArticle, NewsArticleListResponse } from '../../../types/news';
+import type { NewsArticle } from '../../../types/news';
 import SendNewsModal from './SendNewsModal';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import OverlaySelector from '../../../components/OverlaySelector';
+import { useConferenceCrud } from '../../../hooks/api';
 
 interface NewsTabProps {
   conference: { id: string; name: string };
@@ -32,10 +30,8 @@ const emptyForm: ArticleFormState = {
 };
 
 export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
-  const queryClient = useQueryClient();
   const conferenceId = conference.id;
 
-  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null);
   const [form, setForm] = useState<ArticleFormState>(emptyForm);
@@ -43,73 +39,27 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
   const [publishTarget, setPublishTarget] = useState<NewsArticle | null>(null);
   const [sendTarget, setSendTarget] = useState<NewsArticle | null>(null);
 
-  // ── Queries ──────────────────────────────────────────────────────────
+  // ── Data + Mutations ───────────────────────────────────────────────
 
-  const { data, isLoading } = useQuery({
+  const {
+    items: articles,
+    isLoading,
+    createMutation,
+    updateMutation,
+    deleteMutation,
+    error,
+    setError,
+  } = useConferenceCrud<
+    NewsArticle,
+    ArticleFormState,
+    Partial<ArticleFormState & { is_published: boolean }>
+  >({
+    conferenceId,
+    endpoint: 'news',
     queryKey: queryKeys.news.byConference(conferenceId),
-    queryFn: async () => {
-      const response = await api.get<NewsArticleListResponse>(`/conferences/${conferenceId}/news`);
-      return response.data;
-    },
-  });
-
-  const articles = data?.items ?? [];
-
-  // ── Mutations ────────────────────────────────────────────────────────
-
-  const createMutation = useMutation({
-    mutationFn: async (payload: ArticleFormState) => {
-      await api.post(`/conferences/${conferenceId}/news`, payload);
-    },
-    onSuccess: () => {
-      setError(null);
-      closeModal();
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.news.byConference(conferenceId),
-      });
-    },
-    onError: (err: unknown) => {
-      setError(parseApiError(err, 'Failed to create article'));
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      payload,
-    }: {
-      id: string;
-      payload: Partial<ArticleFormState & { is_published: boolean }>;
-    }) => {
-      await api.put(`/conferences/${conferenceId}/news/${id}`, payload);
-    },
-    onSuccess: () => {
-      setError(null);
-      closeModal();
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.news.byConference(conferenceId),
-      });
-    },
-    onError: (err: unknown) => {
-      setError(parseApiError(err, 'Failed to update article'));
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/conferences/${conferenceId}/news/${id}`);
-    },
-    onSuccess: () => {
-      setError(null);
-      setDeleteTarget(null);
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.news.byConference(conferenceId),
-      });
-    },
-    onError: (err: unknown) => {
-      setError(parseApiError(err, 'Failed to delete article'));
-      setDeleteTarget(null);
-    },
+    onCreateSuccess: () => closeModal(),
+    onUpdateSuccess: () => closeModal(),
+    onDeleteSuccess: () => setDeleteTarget(null),
   });
 
   // ── Handlers ─────────────────────────────────────────────────────────
@@ -144,7 +94,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
     if (editingArticle) {
       updateMutation.mutate({
         id: editingArticle.id,
-        payload: { title: form.title, body_html: form.body_html },
+        data: { title: form.title, body_html: form.body_html },
       });
     } else {
       createMutation.mutate(form);
@@ -155,7 +105,7 @@ export default function NewsTab({ conference, isAdmin }: NewsTabProps) {
     if (!publishTarget) return;
     updateMutation.mutate({
       id: publishTarget.id,
-      payload: { is_published: !publishTarget.is_published },
+      data: { is_published: !publishTarget.is_published },
     });
     setPublishTarget(null);
   }

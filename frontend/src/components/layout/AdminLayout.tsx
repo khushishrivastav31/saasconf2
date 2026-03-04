@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
+import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 import api from '../../config/api';
 import { queryKeys } from '../../config/queryKeys';
 import ThemeToggle from '../ThemeToggle';
@@ -200,6 +201,9 @@ export default function AdminLayout() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const lastRefreshRef = useRef(0);
 
+  // Restore scroll position on page refresh
+  useScrollRestoration();
+
   // Refresh user data on route changes to pick up module assignment changes
   useEffect(() => {
     const now = Date.now();
@@ -238,7 +242,7 @@ export default function AdminLayout() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}
       >
-        <div className="flex h-16 items-center justify-between bg-gray-900 px-3 flex-shrink-0">
+        <div className="flex h-16 items-center justify-between bg-gray-900 px-3 shrink-0">
           {!sidebarCollapsed && <h1 className="text-xl font-bold text-white ml-1">SaaSConf</h1>}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}

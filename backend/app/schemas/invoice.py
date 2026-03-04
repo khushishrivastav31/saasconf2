@@ -10,6 +10,7 @@ from app.core.validators import validate_email
 from app.schemas.location import LocationContactPerson, validate_vat
 
 VALID_STATUSES = {"draft", "sent", "paid", "overdue", "cancelled"}
+VALID_TEMPLATE_TYPES = {"bank_transfer", "credit_card", "credit_note"}
 
 
 class InvoiceLineItem(BaseModel):
@@ -18,6 +19,7 @@ class InvoiceLineItem(BaseModel):
     description: str = Field(..., min_length=1, max_length=500)
     quantity: Decimal = Field(..., ge=0)
     unit_price: Decimal = Field(..., ge=0)
+    discount: Decimal = Field(default=Decimal("0.00"), ge=0)
     total: Decimal = Field(..., ge=0)
 
 
@@ -25,6 +27,7 @@ class InvoiceCreate(BaseModel):
     """Schema for creating an invoice."""
 
     invoice_number: str = Field(..., min_length=1, max_length=50)
+    template_type: str = Field(default="bank_transfer", max_length=50)
     status: str = Field(default="draft", max_length=20)
     issue_date: date | None = None
     due_date: date | None = None
@@ -46,6 +49,13 @@ class InvoiceCreate(BaseModel):
     notes: str | None = None
     contact_persons: list[LocationContactPerson] = Field(default_factory=list)
     is_active: bool = True
+
+    @field_validator("template_type")
+    @classmethod
+    def check_template_type(cls, v: str) -> str:
+        if v not in VALID_TEMPLATE_TYPES:
+            raise ValueError(f"Template type must be one of: {', '.join(sorted(VALID_TEMPLATE_TYPES))}")
+        return v
 
     @field_validator("status")
     @classmethod
@@ -69,6 +79,7 @@ class InvoiceUpdate(BaseModel):
     """Schema for updating an invoice."""
 
     invoice_number: str | None = Field(None, min_length=1, max_length=50)
+    template_type: str | None = Field(None, max_length=50)
     status: str | None = Field(None, max_length=20)
     issue_date: date | None = None
     due_date: date | None = None
@@ -90,6 +101,13 @@ class InvoiceUpdate(BaseModel):
     notes: str | None = None
     contact_persons: list[LocationContactPerson] | None = None
     is_active: bool | None = None
+
+    @field_validator("template_type")
+    @classmethod
+    def check_template_type(cls, v: str | None) -> str | None:
+        if v is not None and v not in VALID_TEMPLATE_TYPES:
+            raise ValueError(f"Template type must be one of: {', '.join(sorted(VALID_TEMPLATE_TYPES))}")
+        return v
 
     @field_validator("status")
     @classmethod
@@ -118,6 +136,7 @@ class InvoiceResponse(BaseModel):
     tenant_id: UUID
     conference_id: UUID
     invoice_number: str
+    template_type: str = "bank_transfer"
     status: str
     issue_date: date | None = None
     due_date: date | None = None

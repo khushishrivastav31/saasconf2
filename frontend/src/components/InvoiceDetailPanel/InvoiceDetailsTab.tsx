@@ -1,5 +1,10 @@
 import RichTextEditor from '../common/RichTextEditor';
-import type { InvoiceUpdate, InvoiceStatus, PlatformCurrency } from '../../types';
+import type {
+  InvoiceUpdate,
+  InvoiceStatus,
+  InvoiceTemplateType,
+  PlatformCurrency,
+} from '../../types';
 
 const STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
   { value: 'draft', label: 'Draft' },
@@ -7,6 +12,12 @@ const STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
   { value: 'paid', label: 'Paid' },
   { value: 'overdue', label: 'Overdue' },
   { value: 'cancelled', label: 'Cancelled' },
+];
+
+const TEMPLATE_TYPE_OPTIONS: { value: InvoiceTemplateType; label: string }[] = [
+  { value: 'bank_transfer', label: 'Invoice (Bank Transfer)' },
+  { value: 'credit_card', label: 'Invoice (Credit Card)' },
+  { value: 'credit_note', label: 'Credit Note' },
 ];
 
 interface InvoiceDetailsTabProps {
@@ -26,7 +37,7 @@ export default function InvoiceDetailsTab({
   const isCurrencyLocked = !!conferenceCurrency;
   return (
     <div className="px-6 py-5 space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Invoice Number *
@@ -43,6 +54,27 @@ export default function InvoiceDetailsTab({
               })
             }
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Template Type
+          </label>
+          <select
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+            value={formData.template_type || 'bank_transfer'}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                template_type: e.target.value as InvoiceTemplateType,
+              })
+            }
+          >
+            {TEMPLATE_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">

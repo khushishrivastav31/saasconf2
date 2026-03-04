@@ -205,6 +205,40 @@ DEFAULT_SCORE_SCALES = [
     },
 ]
 
+# Default Invoice Settings
+# Used to populate invoice configuration when not explicitly set
+DEFAULT_INVOICE_SETTINGS: dict[str, str | int | dict] = {
+    "invoice_number_template": "[ConferenceSlug]_[YYYY]_[Count]",
+    "invoice_counter_reset": "yearly",  # or "daily"
+    "invoice_counter_value": 1,
+    "invoice_counter_last_reset": None,
+    "invoice_page_format": "A4",  # A4, Letter, Legal, A5, B5, Tabloid
+    "invoice_company_info": {
+        "name": "",
+        "address_line1": "",
+        "address_line2": "",
+        "city": "",
+        "postal_code": "",
+        "country": "",
+        "tax_id": "",
+        "bank_name": "",
+        "iban": "",
+        "bic": "",
+        "footer_text": "",
+        "logo_url": None,
+    },
+    # Footer HTML rendered at the bottom of every PDF page (position: fixed)
+    "invoice_footer_html": "",
+    # Cancellation number settings (separate counter from invoices)
+    "cancellation_number_template": "[ConferenceSlug]_C_[YYYY]_[Count]",
+    "cancellation_counter_reset": "yearly",  # or "daily"
+    "cancellation_counter_value": 1,
+    "cancellation_counter_last_reset": None,
+}
+
+# Note: invoice_template_html is imported from invoice_pdf.py to avoid duplication
+# Access via: from app.core.invoice_pdf import DEFAULT_INVOICE_TEMPLATE_HTML
+
 # Default Review Criteria with questions
 # Note: scale_name references are resolved at runtime to link to the created scales
 DEFAULT_REVIEW_CRITERIA = [

@@ -8,6 +8,7 @@ import { COUNTRY_OPTIONS } from '../config/countries';
 import VatNumberInput from '../components/common/VatNumberInput';
 import { parseApiError } from '../utils/apiError';
 import { useSaveStatus } from '../hooks/useSaveStatus';
+import { useToast } from '../components/Toast';
 import type { Tenant, TenantUpdate, ContactPerson } from '../types';
 
 export default function MyCompany() {
@@ -128,6 +129,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
     postal_code: tenant.postal_code || '',
     city: tenant.city || '',
     country: tenant.country || '',
+    phone: tenant.phone || '',
     vat_number: tenant.vat_number || '',
     website: tenant.website || '',
     contact_persons: tenant.contact_persons || [],
@@ -142,6 +144,7 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
     role: '',
   });
 
+  const { showToast } = useToast();
   const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
 
   const updateMutation = useMutation({
@@ -155,8 +158,9 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
       setSaved();
       onUpdate();
     },
-    onError: () => {
+    onError: (err) => {
       setError();
+      showToast(parseApiError(err), 'error');
     },
   });
 
@@ -173,8 +177,10 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
       clearTimeout(debounceTimeout);
     }
 
+    // Exclude contact_persons from auto-save — they're saved explicitly via add/remove/update
+    const { contact_persons: _, ...payload } = newFormData;
     const timeout = setTimeout(() => {
-      updateMutation.mutate(newFormData);
+      updateMutation.mutate(payload as TenantUpdate);
     }, 500);
     setDebounceTimeout(timeout);
   };
@@ -440,6 +446,18 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
               className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.website}
               onChange={(e) => handleFieldChange('website', e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Phone
+            </label>
+            <input
+              type="text"
+              placeholder="+49 123 456789"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+              value={formData.phone || ''}
+              onChange={(e) => handleFieldChange('phone', e.target.value)}
             />
           </div>
           <VatNumberInput

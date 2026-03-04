@@ -455,3 +455,87 @@ async def test_invalid_currency_length(
         headers=auth_headers(tenant_admin_token),
     )
     assert response.status_code == 422
+
+
+# ── Phone field ────────────────────────────────────────────────────────
+
+
+async def test_update_conference_phone(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+    conference: Conference,
+) -> None:
+    """Tenant admin can set conference phone."""
+    response = await client.put(
+        f"{BASE_URL}/{conference.id}",
+        json={"phone": "+4930123456"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["phone"] == "+4930123456"
+
+
+async def test_update_conference_phone_invalid(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+    conference: Conference,
+) -> None:
+    """Invalid phone number is rejected."""
+    response = await client.put(
+        f"{BASE_URL}/{conference.id}",
+        json={"phone": "123"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 422
+
+
+async def test_update_conference_phone_to_null(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+    conference: Conference,
+) -> None:
+    """Tenant admin can clear conference phone."""
+    # First set a phone
+    await client.put(
+        f"{BASE_URL}/{conference.id}",
+        json={"phone": "+4930123456"},
+        headers=auth_headers(tenant_admin_token),
+    )
+
+    # Then clear it
+    response = await client.put(
+        f"{BASE_URL}/{conference.id}",
+        json={"phone": None},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["phone"] is None
+
+
+async def test_create_conference_with_phone(
+    client: AsyncClient,
+    tenant_with_modules: Tenant,
+    tenant_admin_user: User,
+    tenant_admin_token: str,
+) -> None:
+    """Tenant admin can create a conference with a phone number."""
+    payload = {
+        **CONFERENCE_PAYLOAD,
+        "phone": "+4930123456",
+    }
+    response = await client.post(
+        BASE_URL,
+        json=payload,
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["phone"] == "+4930123456"

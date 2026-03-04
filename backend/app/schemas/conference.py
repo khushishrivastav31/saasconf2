@@ -58,9 +58,10 @@ class ConferenceCreate(ConferenceBase):
     # Logo
     logo_url: str | None = Field(None, max_length=500)
 
-    # Contact emails
+    # Contact info
     support_email: str | None = Field(None, max_length=255)
     contact_email: str | None = Field(None, max_length=255)
+    phone: str | None = Field(None, max_length=50)
 
     # Dates
     start_date: date | None = None
@@ -98,6 +99,11 @@ class ConferenceCreate(ConferenceBase):
     def check_emails(cls, v: str | None) -> str | None:
         return validate_email(v)
 
+    @field_validator("phone")
+    @classmethod
+    def check_phone(cls, v: str | None) -> str | None:
+        return validate_phone(v)
+
     @field_validator("end_date")
     @classmethod
     def validate_end_date(cls, v: date | None, info) -> date | None:
@@ -119,9 +125,10 @@ class ConferenceUpdate(BaseModel):
     website: str | None = Field(None, max_length=500)
     logo_url: str | None = Field(None, max_length=500)
 
-    # Contact emails
+    # Contact info
     support_email: str | None = Field(None, max_length=255)
     contact_email: str | None = Field(None, max_length=255)
+    phone: str | None = Field(None, max_length=50)
 
     # Dates
     start_date: date | None = None
@@ -163,6 +170,11 @@ class ConferenceUpdate(BaseModel):
     def check_emails(cls, v: str | None) -> str | None:
         return validate_email(v)
 
+    @field_validator("phone")
+    @classmethod
+    def check_phone(cls, v: str | None) -> str | None:
+        return validate_phone(v)
+
 
 class ConferenceResponse(BaseModel):
     """Conference response schema."""
@@ -178,9 +190,10 @@ class ConferenceResponse(BaseModel):
     website: str | None
     logo_url: str | None
 
-    # Contact emails
+    # Contact info
     support_email: str | None = None
     contact_email: str | None = None
+    phone: str | None = None
 
     # Dates
     start_date: date | None

@@ -92,4 +92,16 @@ test.describe('Conference Settings', () => {
 
     await expect(detail.contentArea.getByText(/email|template/i).first()).toBeVisible();
   });
+
+  test('should navigate to Currency & Tax sub-tab', async ({ page }) => {
+    const detail = new ConferenceDetailPage(page);
+    await detail.goto(conferenceId!);
+    await detail.expectLoaded();
+
+    await detail.navigateToSection('Settings');
+    await page.getByRole('button', { name: /currency & tax/i }).click();
+    await page.waitForTimeout(500);
+
+    await expect(detail.contentArea.getByText(/currency|tax/i).first()).toBeVisible();
+  });
 });

@@ -13,6 +13,42 @@ import { Table } from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
+
+// Extend TableCell with a borderColor attribute so users can style table borders.
+// The value is persisted as an inline style and carries through to PDF generation.
+const CustomTableCell = TableCell.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      borderColor: {
+        default: null,
+        parseHTML: (element: HTMLElement) =>
+          element.style.borderColor || element.getAttribute('data-border-color') || null,
+        renderHTML: (attributes: Record<string, unknown>) => {
+          if (!attributes.borderColor) return {};
+          return { style: `border-color: ${attributes.borderColor}` };
+        },
+      },
+    };
+  },
+});
+
+const CustomTableHeader = TableHeader.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      borderColor: {
+        default: null,
+        parseHTML: (element: HTMLElement) =>
+          element.style.borderColor || element.getAttribute('data-border-color') || null,
+        renderHTML: (attributes: Record<string, unknown>) => {
+          if (!attributes.borderColor) return {};
+          return { style: `border-color: ${attributes.borderColor}` };
+        },
+      },
+    };
+  },
+});
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Youtube from '@tiptap/extension-youtube';
@@ -82,12 +118,12 @@ export function getEditorExtensions(): Extensions {
       },
     }),
     TableRow,
-    TableCell.configure({
+    CustomTableCell.configure({
       HTMLAttributes: {
         class: 'border border-gray-300 p-2',
       },
     }),
-    TableHeader.configure({
+    CustomTableHeader.configure({
       HTMLAttributes: {
         class: 'border border-gray-300 p-2 bg-gray-100 font-bold',
       },

@@ -21,9 +21,10 @@ export interface Conference {
   description: string | null;
   website: string | null;
   logo_url: string | null;
-  // Contact emails
+  // Contact info
   support_email: string | null;
   contact_email: string | null;
+  phone: string | null;
   // Dates
   start_date: string | null;
   end_date: string | null;
@@ -71,6 +72,7 @@ export interface ConferenceCreate {
   logo_url?: string;
   support_email?: string;
   contact_email?: string;
+  phone?: string;
   start_date?: string;
   end_date?: string;
   venue_name?: string;
@@ -99,6 +101,7 @@ export interface ConferenceUpdate {
   logo_url?: string;
   support_email?: string;
   contact_email?: string;
+  phone?: string;
   start_date?: string;
   end_date?: string;
   venue_name?: string;
@@ -400,14 +403,18 @@ export interface InvoiceLineItem {
   description: string;
   quantity: number;
   unit_price: number;
+  discount?: number;
   total: number;
 }
+
+export type InvoiceTemplateType = 'bank_transfer' | 'credit_card' | 'credit_note';
 
 export interface Invoice {
   id: string;
   tenant_id: string;
   conference_id: string;
   invoice_number: string;
+  template_type: InvoiceTemplateType;
   status: InvoiceStatus;
   issue_date: string | null;
   due_date: string | null;
@@ -435,6 +442,7 @@ export interface Invoice {
 
 export interface InvoiceCreate {
   invoice_number: string;
+  template_type?: InvoiceTemplateType;
   status?: InvoiceStatus;
   issue_date?: string;
   due_date?: string;
@@ -460,6 +468,7 @@ export interface InvoiceCreate {
 
 export interface InvoiceUpdate {
   invoice_number?: string;
+  template_type?: InvoiceTemplateType;
   status?: InvoiceStatus;
   issue_date?: string;
   due_date?: string;

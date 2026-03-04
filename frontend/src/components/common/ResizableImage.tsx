@@ -25,6 +25,32 @@ function ResizableImageView({ node, updateAttributes, selected }: ReactNodeViewP
   const [resizing, setResizing] = useState(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
+  // Track whether we've already auto-captured width for this image
+  const widthCaptured = useRef(false);
+
+  // Auto-capture the rendered width when an image loads without an explicit width.
+  // This ensures the HTML output always includes width="X" so the PDF renderer
+  // can scale images proportionally (matching the editor's visual layout).
+  useEffect(() => {
+    if (node.attrs.width || widthCaptured.current) return;
+    const img = imgRef.current;
+    if (!img) return;
+
+    const capture = () => {
+      const w = img.offsetWidth;
+      if (w > 0) {
+        widthCaptured.current = true;
+        updateAttributes({ width: Math.round(w) });
+      }
+    };
+
+    if (img.complete && img.naturalWidth > 0) {
+      capture();
+    } else {
+      img.addEventListener('load', capture, { once: true });
+      return () => img.removeEventListener('load', capture);
+    }
+  }, [node.attrs.width, updateAttributes]);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -50,7 +76,7 @@ function ResizableImageView({ node, updateAttributes, selected }: ReactNodeViewP
     const onMouseUp = (e: MouseEvent) => {
       setResizing(false);
       const diff = e.clientX - startX.current;
-      const newWidth = Math.max(50, startWidth.current + diff);
+      const newWidth = Math.max(50, Math.round(startWidth.current + diff));
       updateAttributes({ width: newWidth });
     };
 
@@ -64,8 +90,14 @@ function ResizableImageView({ node, updateAttributes, selected }: ReactNodeViewP
 
   const { src, alt, title, width } = node.attrs;
 
+  const textAlign = node.attrs.textAlign as string | undefined;
+
   return (
-    <NodeViewWrapper className="relative inline-block" data-drag-handle>
+    <NodeViewWrapper
+      className="relative"
+      data-drag-handle
+      style={{ textAlign: textAlign || undefined }}
+    >
       <div
         className={`relative inline-block group ${selected ? 'ring-2 ring-primary-500 rounded' : ''}`}
       >
@@ -143,11 +175,35 @@ export const ResizableImage = Node.create({
   },
 
   parseHTML() {
-    return [{ tag: 'img[src]' }];
+    return [
+      {
+        // Image wrapped in alignment div (from our renderHTML)
+        tag: 'div[style] img[src]',
+        getAttrs: (element: HTMLElement) => {
+          const parent = element.parentElement;
+          const align = parent?.style?.textAlign;
+          return { textAlign: align || null };
+        },
+      },
+      { tag: 'img[src]' },
+    ];
   },
 
-  renderHTML({ HTMLAttributes }) {
-    return ['img', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)];
+  renderHTML({ node, HTMLAttributes }) {
+    const textAlign = node.attrs.textAlign as string | undefined;
+    // Strip text-align from img attributes — it only works on block containers
+    const style = HTMLAttributes.style as string | undefined;
+    const cleanStyle = style?.replace(/text-align:\s*[^;]+;?\s*/g, '').trim();
+    const imgAttrs = mergeAttributes(this.options.HTMLAttributes, {
+      ...HTMLAttributes,
+      style: cleanStyle || undefined,
+    });
+
+    // Wrap in a <div> with text-align so alignment carries through to PDF
+    if (textAlign && textAlign !== 'left') {
+      return ['div', { style: `text-align: ${textAlign}` }, ['img', imgAttrs]];
+    }
+    return ['img', imgAttrs];
   },
 
   addNodeView() {

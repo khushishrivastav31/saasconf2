@@ -8,6 +8,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.conference_helpers import get_conference_for_tenant
+from app.core.vat_validation import normalize_country
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
@@ -463,11 +464,12 @@ async def get_tax_info(
     )
     vat_rates = rates_result.scalars().all()
 
-    # Determine representation type
+    # Determine representation type — normalize both to ISO codes for comparison
+    # (tenant may store "DE", conference may store "Germany")
     conference_country = conference.country
-    same_country = (
-        tenant_country and conference_country and tenant_country.strip().lower() == conference_country.strip().lower()
-    )
+    tenant_code = normalize_country(tenant_country) if tenant_country else None
+    conference_code = normalize_country(conference_country) if conference_country else None
+    same_country = bool(tenant_code and conference_code and tenant_code == conference_code)
 
     if same_country:
         representation_type = "self"

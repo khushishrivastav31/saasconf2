@@ -102,8 +102,8 @@ export const handbookSections: HandbookSection[] = [
             <strong>Venue</strong> &mdash; name and address of the venue.
           </li>
           <li>
-            <strong>Currency</strong> &mdash; the currency used for pricing, invoices, and financial
-            reporting. This is set once and affects all monetary fields.
+            <strong>Phone</strong> &mdash; the conference contact phone number (international
+            format).
           </li>
           <li>
             <strong>Logo</strong> &mdash; upload a conference logo displayed on the portal and
@@ -957,6 +957,29 @@ info@company.com,,,Tech Solutions`}
             </tr>
           </tbody>
         </table>
+        <h3>Template Types</h3>
+        <p>
+          Each invoice is assigned a <strong>template type</strong> that determines which PDF
+          template is used when generating the document:
+        </p>
+        <ul>
+          <li>
+            <strong>Invoice (Bank Transfer)</strong> &mdash; standard invoice for bank wire
+            payments. This is the default for new invoices.
+          </li>
+          <li>
+            <strong>Invoice (Credit Card)</strong> &mdash; invoice for credit card payments (e.g.
+            via Stripe).
+          </li>
+          <li>
+            <strong>Credit Note</strong> &mdash; cancellation or refund document.
+          </li>
+        </ul>
+        <p>
+          The template type is selected when creating or editing an invoice. Each type has its own
+          body HTML template (configured in Settings &rarr; Finance &rarr; Invoice Templates) while
+          sharing the same footer, page format, and company information.
+        </p>
         <h3>Invoice Details</h3>
         <ul>
           <li>
@@ -986,6 +1009,284 @@ info@company.com,,,Tech Solutions`}
         <p>
           Invoices can be exported as CSV (up to 50,000 rows). The export includes a UTF-8 BOM for
           compatibility with Excel.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'invoice-settings',
+    title: 'Invoice Settings',
+    content: () => (
+      <>
+        <p>
+          Invoice settings control how invoices are generated, formatted, and branded. Configure
+          these settings in <strong>Settings &rarr; Finance</strong>. The Finance section is
+          organised into six tabs: Currency &amp; Tax, Invoice Number, Company Data, Bank Accounts,
+          Invoice Templates, and Stripe Setup. Note that <strong>Invoice Number</strong> and{' '}
+          <strong>Stripe Setup</strong> are only visible to super-administrators.
+        </p>
+        <h3>Currency &amp; Tax</h3>
+        <p>Configure the conference currencies and tax settings:</p>
+        <ul>
+          <li>
+            <strong>Primary Currency</strong> &mdash; the main currency used for pricing and
+            financial reporting.
+          </li>
+          <li>
+            <strong>Second Currency (Invoice)</strong> &mdash; an optional secondary currency used
+            on invoices.
+          </li>
+          <li>
+            <strong>Fiscal Representative</strong> &mdash; VAT representative details for
+            cross-border tax compliance. See the Fiscal Representative section.
+          </li>
+        </ul>
+        <h3>Invoice Number</h3>
+        <p>
+          Configure the invoice numbering pattern and reset behaviour.{' '}
+          <em>This tab is only visible to super-administrators.</em>
+        </p>
+        <ul>
+          <li>
+            <strong>Number Template</strong> &mdash; define the format using placeholders like{' '}
+            <code>[YYYY]</code> (year), <code>[Count]</code> (sequential number), and literal text
+            (e.g. <code>INV-[YYYY]-[Count]</code> generates <code>INV-2026-001</code>).
+          </li>
+          <li>
+            <strong>Counter Reset</strong> &mdash; choose when the counter resets:{' '}
+            <strong>Never</strong> (continuous), <strong>Yearly</strong> (resets January 1st), or{' '}
+            <strong>Per Conference</strong> (each conference has its own counter).
+          </li>
+          <li>
+            <strong>Current Value</strong> &mdash; the next invoice number that will be assigned.
+          </li>
+        </ul>
+        <h3>Company Data</h3>
+        <p>Enter your company&rsquo;s billing information that appears on invoice headers:</p>
+        <ul>
+          <li>
+            <strong>Company Name</strong> &mdash; your organisation&rsquo;s legal name.
+          </li>
+          <li>
+            <strong>Address</strong> &mdash; full postal address (single field, formatted with line
+            breaks on the PDF).
+          </li>
+          <li>
+            <strong>City, Postal Code, Country</strong> &mdash; for structured address data.
+          </li>
+          <li>
+            <strong>Tax ID / VAT Number</strong> &mdash; your company&rsquo;s tax identifier.
+          </li>
+          <li>
+            <strong>Footer Text</strong> &mdash; optional legal disclaimer or payment instructions
+            displayed at the bottom of invoices.
+          </li>
+        </ul>
+        <p>
+          Click <strong>Auto-populate from My Company</strong> to fill these fields with data from
+          your company profile (see My Company section). This is a one-time copy &mdash; changes to
+          My Company do not automatically update invoice settings.
+        </p>
+        <h3>Bank Accounts</h3>
+        <p>Manage bank accounts that appear on invoices for payment:</p>
+        <ul>
+          <li>
+            <strong>Bank Name</strong> &mdash; the financial institution name.
+          </li>
+          <li>
+            <strong>IBAN</strong> &mdash; International Bank Account Number. Validated client-side
+            and server-side using checksum verification.
+          </li>
+          <li>
+            <strong>BIC / SWIFT</strong> &mdash; Bank Identifier Code (optional but recommended for
+            international payments).
+          </li>
+          <li>
+            <strong>Default Account</strong> &mdash; mark one account as the default. This account
+            appears on generated invoices and PDF previews. If no account is marked default, the
+            first account in the list is used.
+          </li>
+        </ul>
+        <p>
+          Add multiple bank accounts and toggle which one is the default using the{' '}
+          <strong>Set Default</strong> button. Invalid IBANs are highlighted with a red border and
+          error message.
+        </p>
+        <h3>Invoice Templates</h3>
+        <p>
+          Design the PDF layout for each template type using a rich-text editor. Three template tabs
+          are available:
+        </p>
+        <ul>
+          <li>
+            <strong>Invoice (Bank Transfer)</strong> &mdash; template for bank wire payment
+            invoices.
+          </li>
+          <li>
+            <strong>Invoice (Credit Card)</strong> &mdash; template for credit card payment
+            invoices.
+          </li>
+          <li>
+            <strong>Credit Note</strong> &mdash; template for cancellation/refund documents.
+          </li>
+        </ul>
+        <p>
+          Each template has its own body HTML while sharing the footer, page format, and company
+          data. Use the <strong>Copy from&hellip;</strong> button to duplicate one template&rsquo;s
+          content into another. When a template is first set up, empty templates are automatically
+          pre-populated with the Bank Transfer template content as a starting point.
+        </p>
+        <p>The templates support comprehensive placeholder variables for dynamic content:</p>
+        <h4>Company Information</h4>
+        <ul>
+          <li>
+            <code>[COMPANY_NAME]</code> &mdash; company name
+          </li>
+          <li>
+            <code>[COMPANY_ADDRESS]</code> &mdash; formatted address (with line breaks)
+          </li>
+          <li>
+            <code>[COMPANY_CITY]</code>, <code>[COMPANY_POSTAL_CODE]</code>,{' '}
+            <code>[COMPANY_COUNTRY]</code>
+          </li>
+          <li>
+            <code>[COMPANY_VAT]</code> &mdash; always shows the company&rsquo;s VAT number
+          </li>
+          <li>
+            <code>[COMPANY_TAX_ID]</code> &mdash; respects the VAT source selector (see below)
+          </li>
+        </ul>
+        <h4>Fiscal Representative Information</h4>
+        <p>
+          If your conference has a fiscal representative configured (see Fiscal Representative
+          section), use these placeholders:
+        </p>
+        <ul>
+          <li>
+            <code>[FISCAL_REP_NAME]</code> &mdash; fiscal rep company name
+          </li>
+          <li>
+            <code>[FISCAL_REP_ADDRESS]</code> &mdash; formatted address
+          </li>
+          <li>
+            <code>[FISCAL_REP_CITY]</code>, <code>[FISCAL_REP_POSTAL_CODE]</code>,{' '}
+            <code>[FISCAL_REP_COUNTRY]</code>
+          </li>
+          <li>
+            <code>[FISCAL_REP_VAT]</code> &mdash; fiscal rep&rsquo;s VAT number
+          </li>
+          <li>
+            <code>[FISCAL_REP_TAX_ID]</code> &mdash; fiscal rep&rsquo;s national tax ID
+          </li>
+        </ul>
+        <h4>Banking Information</h4>
+        <ul>
+          <li>
+            <code>[BANK_NAME]</code> &mdash; default bank account name
+          </li>
+          <li>
+            <code>[IBAN]</code> &mdash; default bank account IBAN
+          </li>
+          <li>
+            <code>[BIC]</code> &mdash; default bank account BIC
+          </li>
+        </ul>
+        <h4>Invoice Details</h4>
+        <ul>
+          <li>
+            <code>[INVOICE_NUMBER]</code>, <code>[ISSUE_DATE]</code>, <code>[DUE_DATE]</code>
+          </li>
+          <li>
+            <code>[CURRENCY_1]</code> &mdash; primary currency (from conference settings)
+          </li>
+          <li>
+            <code>[CURRENCY_2]</code> &mdash; secondary currency (reserved for multi-currency
+            scenarios)
+          </li>
+        </ul>
+        <h4>Items &amp; Totals</h4>
+        <ul>
+          <li>
+            <code>[ITEMS_TABLE]</code> &mdash; auto-formatted table with columns: Position,
+            Description, Quantity, Unit Cost, Discount, and Line Total
+          </li>
+          <li>
+            <code>[SUBTOTAL]</code>, <code>[TAX_RATE]</code>, <code>[TAX_AMOUNT]</code>,{' '}
+            <code>[TOTAL]</code>
+          </li>
+        </ul>
+        <h4>VAT Source Selector</h4>
+        <p>
+          If a fiscal representative is configured, a dropdown appears at the top of the Invoice
+          Template tab:
+        </p>
+        <ul>
+          <li>
+            <strong>Use Company VAT</strong> &mdash; the <code>[COMPANY_TAX_ID]</code> placeholder
+            shows your company&rsquo;s VAT number.
+          </li>
+          <li>
+            <strong>Use Fiscal Rep VAT</strong> &mdash; the <code>[COMPANY_TAX_ID]</code>{' '}
+            placeholder shows the fiscal representative&rsquo;s VAT number instead.
+          </li>
+        </ul>
+        <p>
+          This allows templates to use <code>[COMPANY_TAX_ID]</code> for backward compatibility
+          while giving you control over which VAT appears in that position.
+        </p>
+        <h4>PDF Preview</h4>
+        <p>
+          Click <strong>Preview PDF</strong> to generate a sample invoice using the currently active
+          template tab. The preview opens in a modal with mock data (sample customer, line items,
+          totals). Switch between template tabs to preview each type individually. Use this to test
+          formatting and placeholder variables before saving.
+        </p>
+        <h3>Stripe Setup</h3>
+        <p>
+          Configure Stripe payment integration for online payments on registrations. Stripe API keys
+          are stored per conference and secured with role-based access control.{' '}
+          <em>This tab is only visible to super-administrators.</em>
+        </p>
+        <h4>Access Control</h4>
+        <p>
+          Only <strong>tenant super users</strong> (the user who created your organisation) can view
+          and edit Stripe settings. Regular admins see a masked version of the secret key (first 3 +
+          last 3 characters) and cannot make changes. This protects sensitive API credentials.
+        </p>
+        <h4>Settings</h4>
+        <ul>
+          <li>
+            <strong>Publishable Key</strong> &mdash; your Stripe public API key (starts with{' '}
+            <code>pk_</code>). Safe to expose in the browser.
+          </li>
+          <li>
+            <strong>Secret Key</strong> &mdash; your Stripe secret API key (starts with{' '}
+            <code>sk_</code>). Never shared with the browser. Stored encrypted in the database.
+          </li>
+          <li>
+            <strong>Enable Stripe Payments</strong> &mdash; toggle to activate Stripe on the
+            conference registration flow.
+          </li>
+        </ul>
+        <p>
+          The secret key field has a show/hide toggle (password input). For tenant super users, the
+          full key is shown. For regular admins, it is masked (e.g. <code>sk_****...****abc</code>
+          ).
+        </p>
+        <h4>Testing vs Production</h4>
+        <ul>
+          <li>
+            <strong>Test keys</strong> (start with <code>pk_test_</code> or <code>sk_test_</code>)
+            are for development and staging. Use these while setting up.
+          </li>
+          <li>
+            <strong>Live keys</strong> (start with <code>pk_live_</code> or <code>sk_live_</code>)
+            are for production. Only enter live keys when ready to accept real payments.
+          </li>
+        </ul>
+        <p>
+          For setup instructions and key generation, visit the <strong>Stripe Dashboard</strong>{' '}
+          (developers section).
         </p>
       </>
     ),
@@ -1267,6 +1568,31 @@ info@company.com,,,Tech Solutions`}
           </li>
           <li>
             <strong>Screen Overlays</strong> &mdash; see the Screen Overlays section.
+          </li>
+        </ul>
+        <h3>Finance</h3>
+        <ul>
+          <li>
+            <strong>Currency &amp; Tax</strong> &mdash; configure the primary and second (invoice)
+            currencies for the conference, and manage the fiscal representative and VAT settings.
+          </li>
+          <li>
+            <strong>Invoice Number</strong> &mdash; numbering template and counter reset rules.{' '}
+            <em>Super-admin only.</em>
+          </li>
+          <li>
+            <strong>Company Data</strong> &mdash; company information printed on invoices.
+          </li>
+          <li>
+            <strong>Bank Accounts</strong> &mdash; bank details for invoice payment instructions.
+          </li>
+          <li>
+            <strong>Invoice Templates</strong> &mdash; rich-text templates with placeholder
+            variables for PDF invoice generation.
+          </li>
+          <li>
+            <strong>Stripe Setup</strong> &mdash; payment gateway keys and configuration.{' '}
+            <em>Super-admin only.</em>
           </li>
         </ul>
       </>
