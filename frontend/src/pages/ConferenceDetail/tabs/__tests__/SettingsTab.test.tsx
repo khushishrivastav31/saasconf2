@@ -97,22 +97,20 @@ describe('SettingsTab', () => {
       expect(screen.getByRole('button', { name: /stripe setup/i })).toBeInTheDocument();
     });
 
-    it('hides Numbering and Stripe Setup for tenant_admin', () => {
+    it('shows all Finance items for tenant_admin', () => {
       mockUseAuth.mockReturnValue({
         user: { id: 'u2', role: 'tenant_admin', modules: [] },
       });
 
       render(<SettingsTab conference={mockConference} isAdmin={true} />);
 
-      // Non-superOnly Finance items should be visible
+      // All Finance nav items should be visible for tenant_admin
       expect(screen.getByRole('button', { name: /currency & tax/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /numbering/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /company data/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /bank accounts/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /invoice templates/i })).toBeInTheDocument();
-
-      // superOnly items should be hidden
-      expect(screen.queryByRole('button', { name: /numbering/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /stripe setup/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /stripe setup/i })).toBeInTheDocument();
     });
 
     it('hides Numbering and Stripe Setup for regular user', () => {
