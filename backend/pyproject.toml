@@ -107,6 +107,8 @@ module = [
     "docx",
     "docx.*",
     "html2docx",
+    "weasyprint",
+    "weasyprint.*",
 ]
 ignore_missing_imports = true
 

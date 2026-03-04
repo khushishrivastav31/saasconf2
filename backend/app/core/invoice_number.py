@@ -76,7 +76,7 @@ async def generate_invoice_number(
 
     # 4. Replace template variables
     number = template
-    number = number.replace("[ConferenceSlug]", conference.slug.upper())
+    number = number.replace("[ConferenceSlug]", (conference.abbreviation or "CONF").upper())
     number = number.replace("[YYYY]", str(now.year))
     number = number.replace("[MM]", str(now.month).zfill(2))
     number = number.replace("[DD]", str(now.day).zfill(2))
@@ -138,7 +138,7 @@ async def generate_cancellation_number(
         counter = 1
 
     number = template
-    number = number.replace("[ConferenceSlug]", conference.slug.upper())
+    number = number.replace("[ConferenceSlug]", (conference.abbreviation or "CONF").upper())
     number = number.replace("[YYYY]", str(now.year))
     number = number.replace("[MM]", str(now.month).zfill(2))
     number = number.replace("[DD]", str(now.day).zfill(2))

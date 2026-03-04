@@ -141,7 +141,7 @@ async def update_invoice_settings(
         )
         new_company = update_data["invoice_company_info"]
         # Merge: keep existing values, override with new ones
-        update_data["invoice_company_info"] = {**existing_company, **new_company}
+        update_data["invoice_company_info"] = {**(existing_company or {}), **new_company}
 
     # When invoice_templates is saved, sync bank_transfer → legacy field
     if update_data.get("invoice_templates"):

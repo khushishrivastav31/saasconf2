@@ -497,14 +497,14 @@ async def generate_invoice_pdf(
     # Logo: fetch tenant logo from attachments and embed as base64
     logo_html = ""
     if conference.tenant:
-        result = await db.execute(
+        logo_result = await db.execute(
             select(Attachment)
             .where(Attachment.entity_type == "tenant_logo")
             .where(Attachment.entity_id == conference.tenant.id)
             .order_by(Attachment.created_at.desc())
             .limit(1)
         )
-        logo_attachment = result.scalar_one_or_none()
+        logo_attachment = logo_result.scalar_one_or_none()
 
         if logo_attachment and logo_attachment.file_data:
             import mimetypes
@@ -685,14 +685,14 @@ async def generate_invoice_pdf_from_data(
     # Logo: fetch tenant logo from attachments and embed as base64
     logo_html = ""
     if conference.tenant:
-        result = await db.execute(
+        logo_result = await db.execute(
             select(Attachment)
             .where(Attachment.entity_type == "tenant_logo")
             .where(Attachment.entity_id == conference.tenant.id)
             .order_by(Attachment.created_at.desc())
             .limit(1)
         )
-        logo_attachment = result.scalar_one_or_none()
+        logo_attachment = logo_result.scalar_one_or_none()
 
         if logo_attachment and logo_attachment.file_data:
             import mimetypes

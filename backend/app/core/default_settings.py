@@ -207,7 +207,7 @@ DEFAULT_SCORE_SCALES = [
 
 # Default Invoice Settings
 # Used to populate invoice configuration when not explicitly set
-DEFAULT_INVOICE_SETTINGS: dict[str, str | int | dict] = {
+DEFAULT_INVOICE_SETTINGS: dict[str, str | int | dict | None] = {
     "invoice_number_template": "[ConferenceSlug]_[YYYY]_[Count]",
     "invoice_counter_reset": "yearly",  # or "daily"
     "invoice_counter_value": 1,
