@@ -35,7 +35,6 @@ export default function InvoiceCompanyDataTab({
   const [taxId, setTaxId] = useState('');
   const [phone, setPhone] = useState('');
   const [footerText, setFooterText] = useState('');
-
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 

@@ -44,6 +44,7 @@ INVOICE_PAYLOAD = {
     "recipient_email": "billing@acme.example.com",
     "recipient_address_line1": "123 Main St",
     "recipient_city": "Berlin",
+    "recipient_postal_code": "10115",
     "recipient_country": "Germany",
     "subtotal": "1000.00",
     "tax_rate": "19.00",
@@ -246,6 +247,10 @@ async def test_create_invoice_minimal(
     payload = {
         "invoice_number": "INV-MIN-001",
         "recipient_name": "Minimal Recipient",
+        "recipient_address_line1": "1 Test St",
+        "recipient_city": "Munich",
+        "recipient_postal_code": "80331",
+        "recipient_country": "Germany",
     }
     response = await client.post(
         url, json=payload, headers=auth_headers(admin_token_invoices),
@@ -341,7 +346,7 @@ async def test_invoice_not_found(
 # ═══════════════════════════════════════════════════════════════════════
 
 
-async def test_update_invoice(
+async def test_update_draft_invoice(
     client: AsyncClient,
     conference: Conference,
     tenant_with_invoices_module: Tenant,
@@ -349,11 +354,10 @@ async def test_update_invoice(
     admin_token_invoices: str,
     sample_invoice: Invoice,
 ) -> None:
-    """Tenant admin can update an invoice."""
+    """Tenant admin can update a draft invoice's fields."""
     url = _invoices_url(conference.id, str(sample_invoice.id))
     payload = {
         "recipient_name": "Updated Recipient",
-        "status": "sent",
         "notes": "Updated notes",
     }
     response = await client.put(
@@ -363,10 +367,8 @@ async def test_update_invoice(
     assert response.status_code == 200
     data = response.json()
     assert data["recipient_name"] == "Updated Recipient"
-    assert data["status"] == "sent"
+    assert data["status"] == "draft"
     assert data["notes"] == "Updated notes"
-    # Unchanged fields
-    assert data["invoice_number"] == "INV-SEED-001"
     assert data["currency"] == "EUR"
     assert data["id"] == str(sample_invoice.id)
 
@@ -555,3 +557,453 @@ async def test_list_invoices_filter_by_status(
     data = response.json()
     assert data["total"] == 1
     assert data["items"][0]["status"] == "sent"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 8. DRAFT INVOICES (no invoice_number)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+async def test_create_invoice_without_number(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+) -> None:
+    """Create an invoice without invoice_number — should return null."""
+    url = _invoices_url(conference.id)
+    payload = {
+        "recipient_name": "Draft Recipient",
+        "recipient_address_line1": "5 Draft Lane",
+        "recipient_city": "Hamburg",
+        "recipient_postal_code": "20095",
+        "recipient_country": "Germany",
+    }
+    response = await client.post(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["invoice_number"] is None
+    assert data["recipient_name"] == "Draft Recipient"
+    assert data["status"] == "draft"
+
+
+async def test_create_invoice_with_recipient_source(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+) -> None:
+    """Create an invoice with recipient source tracking fields."""
+    url = _invoices_url(conference.id)
+    source_id = str(uuid.uuid4())
+    payload = {
+        "recipient_name": "Sponsor Corp",
+        "recipient_address_line1": "100 Sponsor Blvd",
+        "recipient_city": "Frankfurt",
+        "recipient_postal_code": "60311",
+        "recipient_country": "Germany",
+        "recipient_source_type": "sponsor",
+        "recipient_source_id": source_id,
+        "internal_comment": "This is an internal note",
+    }
+    response = await client.post(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["recipient_source_type"] == "sponsor"
+    assert data["recipient_source_id"] == source_id
+    assert data["internal_comment"] == "This is an internal note"
+
+
+async def test_create_invoice_invalid_source_type(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+) -> None:
+    """Create with invalid recipient_source_type should fail."""
+    url = _invoices_url(conference.id)
+    payload = {
+        "recipient_name": "Invalid Source",
+        "recipient_source_type": "unknown_entity",
+    }
+    response = await client.post(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 422
+
+
+async def test_list_invoices_includes_drafts(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    tenant: Tenant,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+) -> None:
+    """Drafts (null invoice_number) appear in the list."""
+    # Create a draft without number
+    inv = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        invoice_number=None,
+        status="draft",
+        recipient_name="Draft Recipient",
+        is_active=True,
+    )
+    db_session.add(inv)
+    await db_session.commit()
+
+    url = _invoices_url(conference.id)
+    response = await client.get(url, headers=auth_headers(admin_token_invoices))
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["invoice_number"] is None
+    assert data["items"][0]["recipient_name"] == "Draft Recipient"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 9. INVOICE LIFECYCLE (Send, Status Transitions, Field Locking)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest_asyncio.fixture()
+async def draft_invoice(
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+) -> Invoice:
+    """Create a draft invoice without invoice_number."""
+    invoice = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        invoice_number=None,
+        status="draft",
+        recipient_name="Draft Corp",
+        recipient_email="draft@example.com",
+        line_items=[
+            {"description": "Item 1", "quantity": "1", "unit_price": "500.00", "total": "500.00"}
+        ],
+        subtotal=500.00,
+        total=500.00,
+        currency="EUR",
+        is_active=True,
+    )
+    db_session.add(invoice)
+    await db_session.commit()
+    await db_session.refresh(invoice)
+    return invoice
+
+
+@pytest_asyncio.fixture()
+async def sent_invoice(
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+) -> Invoice:
+    """Create a sent invoice with an assigned number."""
+    invoice = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        invoice_number="INV-SENT-001",
+        status="sent",
+        recipient_name="Sent Corp",
+        recipient_email="sent@example.com",
+        line_items=[
+            {"description": "Sent item", "quantity": "1", "unit_price": "500.00", "total": "500.00"}
+        ],
+        subtotal=500.00,
+        total=500.00,
+        currency="EUR",
+        is_active=True,
+    )
+    db_session.add(invoice)
+    await db_session.commit()
+    await db_session.refresh(invoice)
+    return invoice
+
+
+async def test_send_invoice_auto_assigns_number(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    draft_invoice: Invoice,
+) -> None:
+    """Changing draft → sent auto-assigns an invoice number."""
+    url = _invoices_url(conference.id, str(draft_invoice.id))
+    payload = {"status": "sent"}
+    response = await client.put(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "sent"
+    assert data["invoice_number"] is not None
+    assert len(data["invoice_number"]) > 0
+
+
+async def test_send_invoice_sets_issue_date(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    tenant: Tenant,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+) -> None:
+    """Sending a draft auto-sets issue_date to today if not already set."""
+    from datetime import date
+
+    inv = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        invoice_number=None,
+        status="draft",
+        recipient_name="No Date Corp",
+        issue_date=None,
+        is_active=True,
+    )
+    db_session.add(inv)
+    await db_session.commit()
+
+    url = _invoices_url(conference.id, str(inv.id))
+    payload = {"status": "sent"}
+    response = await client.put(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["issue_date"] == date.today().isoformat()
+    assert data["invoice_number"] is not None
+
+
+async def test_sent_invoice_only_status_changeable(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sent_invoice: Invoice,
+) -> None:
+    """Non-draft invoices reject field changes (only status allowed)."""
+    url = _invoices_url(conference.id, str(sent_invoice.id))
+    payload = {"recipient_name": "Hacked Name"}
+    response = await client.put(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 400
+    assert "Only status changes" in response.json()["detail"]
+
+
+async def test_valid_status_transition_sent_to_paid(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sent_invoice: Invoice,
+) -> None:
+    """Sent → paid is a valid status transition."""
+    url = _invoices_url(conference.id, str(sent_invoice.id))
+    payload = {"status": "paid"}
+    response = await client.put(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "paid"
+
+
+async def test_invalid_status_transition_draft_to_paid(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    draft_invoice: Invoice,
+) -> None:
+    """Draft → paid is an invalid status transition (must go through sent)."""
+    url = _invoices_url(conference.id, str(draft_invoice.id))
+    payload = {"status": "paid"}
+    response = await client.put(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 400
+    assert "Cannot change status" in response.json()["detail"]
+
+
+async def test_invalid_status_transition_sent_to_draft(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sent_invoice: Invoice,
+) -> None:
+    """Sent → draft is an invalid status transition."""
+    url = _invoices_url(conference.id, str(sent_invoice.id))
+    payload = {"status": "draft"}
+    response = await client.put(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 400
+    assert "Cannot change status" in response.json()["detail"]
+
+
+async def test_terminal_status_no_transition(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    tenant: Tenant,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+) -> None:
+    """Paid/cancelled invoices cannot change status (terminal states)."""
+    inv = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        invoice_number="INV-PAID-001",
+        status="paid",
+        recipient_name="Paid Corp",
+        is_active=True,
+    )
+    db_session.add(inv)
+    await db_session.commit()
+
+    url = _invoices_url(conference.id, str(inv.id))
+    payload = {"status": "sent"}
+    response = await client.put(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 400
+    assert "Cannot change status" in response.json()["detail"]
+
+
+async def test_update_cannot_change_invoice_number_directly(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sample_invoice: Invoice,
+) -> None:
+    """Invoice number cannot be changed directly via update (even on drafts)."""
+    url = _invoices_url(conference.id, str(sample_invoice.id))
+    payload = {
+        "invoice_number": "CHANGED-NUMBER",
+        "recipient_name": "Updated Name",
+    }
+    response = await client.put(
+        url, json=payload, headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    # Number should NOT have changed (stripped by backend)
+    assert data["invoice_number"] == "INV-SEED-001"
+    # But name should update (it's a draft)
+    assert data["recipient_name"] == "Updated Name"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 10. RECIPIENT SEARCH
+# ═══════════════════════════════════════════════════════════════════════
+
+
+async def test_recipient_search_sponsors(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    tenant: Tenant,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+) -> None:
+    """Recipient search finds sponsors by company name."""
+    from app.models.sponsor import Sponsor
+
+    sponsor = Sponsor(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        company_name="Acme Sponsor Corp",
+        address_line1="456 Sponsor Ave",
+        city="Hamburg",
+        country="Germany",
+        vat_number="DE123456789",
+    )
+    db_session.add(sponsor)
+    await db_session.commit()
+
+    url = _invoices_url(conference.id, "recipient-search")
+    response = await client.get(
+        url, params={"q": "Acme"},
+        headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["results"]) >= 1
+    sponsor_result = next(r for r in data["results"] if r["source_type"] == "sponsor")
+    assert sponsor_result["display_name"] == "Acme Sponsor Corp"
+    assert sponsor_result["address_line1"] == "456 Sponsor Ave"
+    assert sponsor_result["vat_number"] == "DE123456789"
+
+
+async def test_recipient_search_empty(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+) -> None:
+    """Recipient search with no matches returns empty results."""
+    url = _invoices_url(conference.id, "recipient-search")
+    response = await client.get(
+        url, params={"q": "zzz_nonexistent_xyz"},
+        headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["results"] == []
+
+
+async def test_recipient_search_requires_query(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+) -> None:
+    """Recipient search requires a query parameter."""
+    url = _invoices_url(conference.id, "recipient-search")
+    response = await client.get(url, headers=auth_headers(admin_token_invoices))
+
+    assert response.status_code == 422

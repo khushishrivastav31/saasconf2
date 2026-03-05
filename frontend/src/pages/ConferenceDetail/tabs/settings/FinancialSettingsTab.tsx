@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import { useSaveStatus } from '../../../../hooks/useSaveStatus';
@@ -13,6 +13,35 @@ import type {
 } from '../../../../types';
 import FiscalRepSection from '../FiscalRepSection';
 
+interface VatRule {
+  attendance_type: string;
+  customer_type: string;
+  customer_location: string;
+  charge_vat: boolean;
+  vat_rate_source: string;
+  reverse_charge: boolean;
+  oss_applicable: boolean;
+  note: string;
+}
+
+const ATTENDANCE_LABELS: Record<string, string> = {
+  in_person: 'In-Person',
+  virtual: 'Virtual',
+  hybrid_onsite: 'Hybrid (On-Site)',
+  hybrid_online: 'Hybrid (Online)',
+};
+const CUSTOMER_TYPE_LABELS: Record<string, string> = { b2b: 'B2B', b2c: 'B2C' };
+const LOCATION_LABELS: Record<string, string> = {
+  domestic: 'Domestic',
+  eu: 'EU',
+  non_eu: 'Non-EU',
+};
+const RATE_SOURCE_OPTIONS = [
+  { value: 'conference', label: 'Conference country' },
+  { value: 'customer', label: "Customer's country" },
+  { value: 'none', label: 'None' },
+];
+
 function FinancialSettingsTab({
   conference,
   isAdmin,
@@ -23,6 +52,9 @@ function FinancialSettingsTab({
   const [formData, setFormData] = useState({
     currency: conference.currency || '',
     invoice_currency: conference.invoice_currency || '',
+    exchange_rate: conference.settings?.invoice_exchange_rate
+      ? String(conference.settings.invoice_exchange_rate)
+      : '',
   });
 
   const { data: currencyOptions } = useQuery({
@@ -43,11 +75,15 @@ function FinancialSettingsTab({
   );
 
   const updateMutation = useMutation({
-    mutationFn: async (data: ConferenceUpdate) => {
-      const payload = {
-        ...data,
-        currency: data.currency || null,
-        invoice_currency: data.invoice_currency || null,
+    mutationFn: async (data: typeof formData) => {
+      const exchangeVal = data.exchange_rate ? parseFloat(data.exchange_rate) : null;
+      const payload: ConferenceUpdate = {
+        currency: data.currency || undefined,
+        invoice_currency: data.invoice_currency || undefined,
+        settings: {
+          ...(conference.settings || {}),
+          invoice_exchange_rate: exchangeVal,
+        },
       };
       await api.put(`/conferences/${conference.id}`, payload);
     },
@@ -59,8 +95,15 @@ function FinancialSettingsTab({
     },
   });
 
-  const handleFieldChange = (field: 'currency' | 'invoice_currency', value: string) => {
-    const newFormData = { ...formData, [field]: value };
+  const handleFieldChange = (
+    field: 'currency' | 'invoice_currency' | 'exchange_rate',
+    value: string
+  ) => {
+    let newFormData = { ...formData, [field]: value };
+    // Clear exchange rate when second currency is removed
+    if (field === 'invoice_currency' && !value) {
+      newFormData = { ...newFormData, exchange_rate: '' };
+    }
     setFormData(newFormData);
 
     if (debounceTimeout) clearTimeout(debounceTimeout);
@@ -181,6 +224,32 @@ function FinancialSettingsTab({
               </p>
             </div>
           </div>
+          {formData.invoice_currency && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Exchange Rate
+              </label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="number"
+                  className="block w-48 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+                  value={formData.exchange_rate}
+                  onChange={(e) => handleFieldChange('exchange_rate', e.target.value)}
+                  disabled={!isAdmin}
+                  placeholder="e.g. 1.08"
+                  step="0.0001"
+                  min="0"
+                />
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  1 {formData.currency || 'EUR'} = {formData.exchange_rate || '?'}{' '}
+                  {formData.invoice_currency}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Used for [SECOND_TOTAL] and [SECOND_SUBTOTAL] placeholders in invoice templates.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Tax & VAT */}
@@ -191,6 +260,209 @@ function FinancialSettingsTab({
             isAdmin={isAdmin}
           />
         </div>
+
+        {/* VAT Decision Rules */}
+        <VatRulesTable conferenceId={conference.id} isAdmin={isAdmin} />
+      </div>
+    </div>
+  );
+}
+
+// ─── VAT Rules Table ─────────────────────────────────────────────────
+
+function VatRulesTable({ conferenceId, isAdmin }: { conferenceId: string; isAdmin: boolean }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [rules, setRules] = useState<VatRule[]>([]);
+  const [vatSaveTimeout, setVatSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const {
+    saveStatus: vatSaveStatus,
+    setSaving: setVatSaving,
+    setSaved: setVatSaved,
+    setError: setVatSaveError,
+  } = useSaveStatus();
+
+  const { data: invoiceSettings, isLoading } = useQuery({
+    queryKey: queryKeys.invoiceSettings(conferenceId),
+    queryFn: async () => {
+      const res = await api.get(`/conferences/${conferenceId}/settings/invoice-settings`);
+      return res.data;
+    },
+  });
+
+  useEffect(() => {
+    if (invoiceSettings?.vat_rules) {
+      setRules(invoiceSettings.vat_rules);
+    }
+  }, [invoiceSettings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (updatedRules: VatRule[]) => {
+      await api.put(`/conferences/${conferenceId}/settings/invoice-settings`, {
+        vat_rules: updatedRules,
+      });
+    },
+    onMutate: () => setVatSaving(),
+    onSuccess: () => {
+      setVatSaved();
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoiceSettings(conferenceId) });
+    },
+    onError: (err) => {
+      setVatSaveError();
+      showToast(parseApiError(err), 'error');
+    },
+  });
+
+  const updateRule = useCallback(
+    (index: number, field: keyof VatRule, value: string | boolean) => {
+      const updated = rules.map((r, i) => (i === index ? { ...r, [field]: value } : r));
+      setRules(updated);
+
+      if (vatSaveTimeout) clearTimeout(vatSaveTimeout);
+      const timeout = setTimeout(() => saveMutation.mutate(updated), 800);
+      setVatSaveTimeout(timeout);
+    },
+    [rules, vatSaveTimeout, saveMutation]
+  );
+
+  if (isLoading) {
+    return <div className="text-gray-500 dark:text-gray-400 text-sm">Loading VAT rules...</div>;
+  }
+
+  // Group rules by attendance type for visual sections
+  const attendanceTypes = ['in_person', 'virtual', 'hybrid_onsite', 'hybrid_online'];
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex justify-between items-center mb-3">
+        <div>
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            VAT Decision Table
+          </h5>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Defines VAT treatment per attendance type, customer type (B2B/B2C), and customer
+            location.
+          </p>
+        </div>
+        {vatSaveStatus === 'saving' && (
+          <span className="text-xs text-gray-500 dark:text-gray-400">Saving...</span>
+        )}
+        {vatSaveStatus === 'saved' && (
+          <span className="text-xs text-green-600 dark:text-green-400">Saved</span>
+        )}
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-200 dark:border-gray-700">
+              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+                Attendance
+              </th>
+              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+                Customer
+              </th>
+              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+                Location
+              </th>
+              <th className="text-center py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+                Charge VAT
+              </th>
+              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+                VAT Rate From
+              </th>
+              <th className="text-center py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+                Reverse Charge
+              </th>
+              <th className="text-center py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+                OSS
+              </th>
+              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+                Note
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {attendanceTypes.map((att) => {
+              const groupRules = rules
+                .map((r, idx) => ({ ...r, _idx: idx }))
+                .filter((r) => r.attendance_type === att);
+              if (groupRules.length === 0) return null;
+
+              return groupRules.map((rule, groupIdx) => (
+                <tr
+                  key={`${rule.attendance_type}-${rule.customer_type}-${rule.customer_location}`}
+                  className={`border-b border-gray-100 dark:border-gray-700/50 ${
+                    groupIdx === 0 ? 'border-t border-gray-200 dark:border-gray-700' : ''
+                  }`}
+                >
+                  <td className="py-1.5 px-2 text-gray-700 dark:text-gray-300">
+                    {groupIdx === 0 ? (
+                      <span className="font-medium">{ATTENDANCE_LABELS[att] || att}</span>
+                    ) : null}
+                  </td>
+                  <td className="py-1.5 px-2 text-gray-700 dark:text-gray-300">
+                    {CUSTOMER_TYPE_LABELS[rule.customer_type] || rule.customer_type}
+                  </td>
+                  <td className="py-1.5 px-2 text-gray-700 dark:text-gray-300">
+                    {LOCATION_LABELS[rule.customer_location] || rule.customer_location}
+                  </td>
+                  <td className="py-1.5 px-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={rule.charge_vat}
+                      onChange={(e) => updateRule(rule._idx, 'charge_vat', e.target.checked)}
+                      disabled={!isAdmin}
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
+                  <td className="py-1.5 px-2">
+                    <select
+                      value={rule.vat_rate_source}
+                      onChange={(e) => updateRule(rule._idx, 'vat_rate_source', e.target.value)}
+                      disabled={!isAdmin}
+                      className="block w-full border border-gray-300 dark:border-gray-600 rounded py-1 px-1.5 text-xs dark:bg-gray-800 dark:text-gray-100 focus:ring-primary-500"
+                    >
+                      {RATE_SOURCE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="py-1.5 px-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={rule.reverse_charge}
+                      onChange={(e) => updateRule(rule._idx, 'reverse_charge', e.target.checked)}
+                      disabled={!isAdmin}
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
+                  <td className="py-1.5 px-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={rule.oss_applicable}
+                      onChange={(e) => updateRule(rule._idx, 'oss_applicable', e.target.checked)}
+                      disabled={!isAdmin}
+                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
+                  <td className="py-1.5 px-2">
+                    <input
+                      type="text"
+                      value={rule.note}
+                      onChange={(e) => updateRule(rule._idx, 'note', e.target.value)}
+                      disabled={!isAdmin}
+                      className="block w-full border border-gray-300 dark:border-gray-600 rounded py-1 px-1.5 text-xs dark:bg-gray-800 dark:text-gray-100 focus:ring-primary-500"
+                      placeholder="Description..."
+                    />
+                  </td>
+                </tr>
+              ));
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

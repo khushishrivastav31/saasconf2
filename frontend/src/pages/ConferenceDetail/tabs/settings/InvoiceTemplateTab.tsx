@@ -38,6 +38,7 @@ export default function InvoiceTemplateTab({
   // Template state — one HTML body per type
   const [templates, setTemplates] = useState<Record<string, string>>({});
   const [vatSource, setVatSource] = useState<string>('company');
+  const [headerHtml, setHeaderHtml] = useState('');
   const [footerHtml, setFooterHtml] = useState('');
   const [pageFormat, setPageFormat] = useState<string>('A4');
 
@@ -79,6 +80,7 @@ export default function InvoiceTemplateTab({
     if (settings) {
       const info = settings.invoice_company_info || {};
       setVatSource(info.vat_source || 'company');
+      setHeaderHtml(settings.invoice_header_html || '');
       setFooterHtml(settings.invoice_footer_html || '');
       setPageFormat(settings.invoice_page_format || 'A4');
 
@@ -106,6 +108,7 @@ export default function InvoiceTemplateTab({
         },
         invoice_templates: templates,
         invoice_template_html: templates.bank_transfer || '',
+        invoice_header_html: headerHtml,
         invoice_footer_html: footerHtml,
         invoice_page_format: pageFormat,
       };
@@ -240,6 +243,8 @@ export default function InvoiceTemplateTab({
         conferenceId={conference.id}
         value={currentHtml}
         onChange={handleTemplateChange}
+        headerValue={headerHtml}
+        onHeaderChange={setHeaderHtml}
         footerValue={footerHtml}
         onFooterChange={setFooterHtml}
         disabled={!isAdmin}

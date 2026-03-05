@@ -585,3 +585,99 @@ async def test_bank_account_bic_validation_invalid(
 
     assert response.status_code == 422
     assert "Invalid BIC" in response.text
+
+
+@pytest.mark.asyncio
+async def test_get_invoice_settings_includes_header_html(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test GET invoice settings returns header_html field with default."""
+    headers = auth_headers(tenant_admin_token)
+
+    response = await client.get(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "invoice_header_html" in data
+    assert data["invoice_header_html"] == ""
+
+
+@pytest.mark.asyncio
+async def test_update_invoice_header_html(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test saving and retrieving header HTML."""
+    headers = auth_headers(tenant_admin_token)
+
+    header_html = "<p>[COMPANY_NAME] - [COMPANY_COUNTRY]</p>"
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+        json={"invoice_header_html": header_html},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["invoice_header_html"] == header_html
+
+
+@pytest.mark.asyncio
+async def test_update_dual_currency_settings(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test saving second currency and exchange rate in company info."""
+    headers = auth_headers(tenant_admin_token)
+
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+        json={
+            "invoice_company_info": {
+                "second_currency": "USD",
+                "exchange_rate": 1.08,
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["invoice_company_info"]["second_currency"] == "USD"
+    assert data["invoice_company_info"]["exchange_rate"] == 1.08
+
+
+@pytest.mark.asyncio
+async def test_preview_with_header(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test PDF preview includes header HTML."""
+    headers = auth_headers(tenant_admin_token)
+
+    response = await client.post(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings/preview",
+        headers=headers,
+        json={
+            "invoice_header_html": "<p>Header: [COMPANY_NAME]</p>",
+            "invoice_company_info": {
+                "name": "Header Test Co",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert len(response.content) > 0

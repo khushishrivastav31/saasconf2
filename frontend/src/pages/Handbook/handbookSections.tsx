@@ -991,7 +991,9 @@ info@company.com,,,Tech Solutions`}
             period from the fiscal representative settings.
           </li>
           <li>
-            <strong>Recipient</strong> &mdash; billing name, address, VAT number, and email.
+            <strong>Recipient</strong> &mdash; billing name, address, VAT number, and email. The
+            address fields (Address Line 1, City, Postal Code, Country) are{' '}
+            <strong>required</strong> when creating an invoice.
           </li>
           <li>
             <strong>Issue &amp; Due Dates</strong> &mdash; when the invoice was issued and when
@@ -1002,7 +1004,9 @@ info@company.com,,,Tech Solutions`}
             information.
           </li>
           <li>
-            <strong>Currency</strong> &mdash; inherited from the conference settings.
+            <strong>Currency</strong> &mdash; inherited from the conference settings. If a second
+            currency and exchange rate are configured (in Settings &rarr; Finance &rarr; Currency
+            &amp; Tax), invoice totals are shown in both currencies on the generated PDF.
           </li>
         </ul>
         <h3>Export</h3>
@@ -1026,7 +1030,7 @@ info@company.com,,,Tech Solutions`}
           <strong>Stripe Setup</strong> are only visible to super-administrators.
         </p>
         <h3>Currency &amp; Tax</h3>
-        <p>Configure the conference currencies and tax settings:</p>
+        <p>Configure the conference currencies, exchange rates, and tax settings:</p>
         <ul>
           <li>
             <strong>Primary Currency</strong> &mdash; the main currency used for pricing and
@@ -1034,13 +1038,107 @@ info@company.com,,,Tech Solutions`}
           </li>
           <li>
             <strong>Second Currency (Invoice)</strong> &mdash; an optional secondary currency used
-            on invoices.
+            on invoices. When selected, an <strong>Exchange Rate</strong> field appears to define
+            the conversion rate (e.g. 1&nbsp;EUR&nbsp;=&nbsp;1.08&nbsp;USD). The exchange rate is
+            used to show dual-currency totals on generated invoices.
           </li>
           <li>
             <strong>Fiscal Representative</strong> &mdash; VAT representative details for
             cross-border tax compliance. See the Fiscal Representative section.
           </li>
+          <li>
+            <strong>VAT Decision Table</strong> &mdash; a configurable matrix of 24 rules that
+            determines VAT treatment for every combination of attendance type, customer type, and
+            customer location. See below for details.
+          </li>
         </ul>
+        <h4>VAT Decision Table</h4>
+        <p>
+          EU VAT rules for conferences depend on three dimensions: <strong>how</strong> the attendee
+          participates, <strong>who</strong> the customer is, and <strong>where</strong> the
+          customer is located relative to the conference country. The decision table is
+          pre-populated with standard EU rules and can be edited if rules change.
+        </p>
+        <p>
+          <strong>Attendance types:</strong> In-Person, Virtual, Hybrid (Onsite), Hybrid (Online).
+        </p>
+        <p>
+          <strong>Customer types:</strong> B2B (business) and B2C (individual consumer).
+        </p>
+        <p>
+          <strong>Customer locations:</strong> Domestic (same country as conference), EU (other EU
+          member state), Non-EU (outside the European Union).
+        </p>
+        <p>Each rule in the table defines:</p>
+        <ul>
+          <li>
+            <strong>Charge VAT</strong> &mdash; whether the organiser includes VAT on the invoice.
+          </li>
+          <li>
+            <strong>VAT Rate Source</strong> &mdash; where to look up the applicable rate:{' '}
+            <em>Conference</em> (event country rate), <em>Customer</em> (customer&rsquo;s country
+            rate), or <em>None</em>.
+          </li>
+          <li>
+            <strong>Reverse Charge</strong> &mdash; whether the customer self-accounts for VAT
+            (common for B2B cross-border services within the EU).
+          </li>
+          <li>
+            <strong>OSS Applicable</strong> &mdash; whether the EU One-Stop Shop mechanism can be
+            used for reporting (common for B2C digital services to other EU countries).
+          </li>
+          <li>
+            <strong>Note</strong> &mdash; a human-readable explanation referencing the relevant EU
+            VAT directive article.
+          </li>
+        </ul>
+        <h4>Default EU Rules (Summary)</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>VAT Treatment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>In-person (all customers)</td>
+              <td>Always charge VAT at conference country rate (Art.&nbsp;53/54)</td>
+            </tr>
+            <tr>
+              <td>Virtual B2B &mdash; domestic</td>
+              <td>Charge local VAT</td>
+            </tr>
+            <tr>
+              <td>Virtual B2B &mdash; EU</td>
+              <td>No VAT charged; reverse charge applies (Art.&nbsp;44)</td>
+            </tr>
+            <tr>
+              <td>Virtual B2B &mdash; non-EU</td>
+              <td>Outside EU scope; no VAT</td>
+            </tr>
+            <tr>
+              <td>Virtual B2C &mdash; domestic</td>
+              <td>Charge local VAT</td>
+            </tr>
+            <tr>
+              <td>Virtual B2C &mdash; EU</td>
+              <td>Charge customer&rsquo;s country VAT rate via OSS (Art.&nbsp;54(1))</td>
+            </tr>
+            <tr>
+              <td>Virtual B2C &mdash; non-EU</td>
+              <td>Outside EU scope; no VAT</td>
+            </tr>
+            <tr>
+              <td>Hybrid onsite</td>
+              <td>Same rules as in-person</td>
+            </tr>
+            <tr>
+              <td>Hybrid online</td>
+              <td>Same rules as virtual</td>
+            </tr>
+          </tbody>
+        </table>
         <h3>Invoice Number</h3>
         <p>
           Configure the invoice numbering pattern and reset behaviour.{' '}
@@ -1574,7 +1672,8 @@ info@company.com,,,Tech Solutions`}
         <ul>
           <li>
             <strong>Currency &amp; Tax</strong> &mdash; configure the primary and second (invoice)
-            currencies for the conference, and manage the fiscal representative and VAT settings.
+            currencies for the conference, set the exchange rate for dual-currency invoices, manage
+            the fiscal representative, and edit the VAT decision table for EU tax compliance rules.
           </li>
           <li>
             <strong>Invoice Number</strong> &mdash; numbering template and counter reset rules.{' '}

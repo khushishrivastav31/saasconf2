@@ -56,6 +56,8 @@ export const queryKeys = {
   // ── Invoices ────────────────────────────────────────────────────
   invoices: {
     byConference: (conferenceId: string) => ['conference-invoices', conferenceId] as const,
+    recipientSearch: (conferenceId: string, q: string) =>
+      ['invoice-recipient-search', conferenceId, q] as const,
   },
 
   // ── Service Providers ───────────────────────────────────────────

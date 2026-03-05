@@ -409,15 +409,24 @@ export interface InvoiceLineItem {
 
 export type InvoiceTemplateType = 'bank_transfer' | 'credit_card' | 'credit_note';
 
+export type RecipientSourceType =
+  | 'sponsor'
+  | 'speaker'
+  | 'committee'
+  | 'volunteer'
+  | 'registration';
+
 export interface Invoice {
   id: string;
   tenant_id: string;
   conference_id: string;
-  invoice_number: string;
+  invoice_number: string | null;
   template_type: InvoiceTemplateType;
   status: InvoiceStatus;
   issue_date: string | null;
   due_date: string | null;
+  recipient_source_type: RecipientSourceType | null;
+  recipient_source_id: string | null;
   recipient_name: string;
   recipient_email: string | null;
   recipient_address_line1: string | null;
@@ -434,6 +443,7 @@ export interface Invoice {
   total: number | null;
   currency: string | null;
   notes: string | null;
+  internal_comment: string | null;
   contact_persons: LocationContactPerson[];
   is_active: boolean;
   created_at: string;
@@ -441,11 +451,13 @@ export interface Invoice {
 }
 
 export interface InvoiceCreate {
-  invoice_number: string;
+  invoice_number?: string;
   template_type?: InvoiceTemplateType;
   status?: InvoiceStatus;
   issue_date?: string;
   due_date?: string;
+  recipient_source_type?: RecipientSourceType;
+  recipient_source_id?: string;
   recipient_name: string;
   recipient_email?: string;
   recipient_address_line1?: string;
@@ -462,6 +474,7 @@ export interface InvoiceCreate {
   total?: number;
   currency?: string;
   notes?: string;
+  internal_comment?: string;
   contact_persons?: LocationContactPerson[];
   is_active?: boolean;
 }
@@ -472,6 +485,8 @@ export interface InvoiceUpdate {
   status?: InvoiceStatus;
   issue_date?: string;
   due_date?: string;
+  recipient_source_type?: RecipientSourceType;
+  recipient_source_id?: string;
   recipient_name?: string;
   recipient_email?: string;
   recipient_address_line1?: string;
@@ -488,8 +503,26 @@ export interface InvoiceUpdate {
   total?: number;
   currency?: string;
   notes?: string;
+  internal_comment?: string;
   contact_persons?: LocationContactPerson[];
   is_active?: boolean;
+}
+
+export interface RecipientSearchResult {
+  id: string;
+  source_type: RecipientSourceType;
+  display_name: string;
+  email: string | null;
+  company: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  vat_number: string | null;
+  phone: string | null;
+  contact_persons: LocationContactPerson[];
 }
 
 // Service Provider types

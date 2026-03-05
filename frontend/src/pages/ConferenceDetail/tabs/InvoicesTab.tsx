@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { queryKeys } from '../../../config/queryKeys';
@@ -7,19 +7,24 @@ import type {
   Invoice,
   InvoiceCreate,
   InvoiceUpdate,
-  InvoiceStatus,
   InvoiceTemplateType,
+  InvoiceLineItem,
   PlatformCurrency,
   PaginatedResponse,
   LocationContactPerson,
+  RecipientSearchResult,
 } from '../../../types';
 import { parseApiError } from '../../../utils/apiError';
 import InvoiceDetailPanel from '../../../components/InvoiceDetailPanel';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import ContactPersonList from '../../../components/ContactPersonList';
+import RecipientPicker from '../../../components/RecipientPicker';
 import RichTextEditor from '../../../components/common/RichTextEditor';
+import VatNumberInput from '../../../components/common/VatNumberInput';
+import AlertDialog from '../../../components/AlertDialog';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { COUNTRY_OPTIONS } from '../../../config/countries';
 import { ChevronLeftIcon, EditIcon, DeleteIcon } from '../icons';
 import { useSelection } from '../SelectionContext';
 
@@ -60,9 +65,7 @@ export default function ConferenceInvoicesTab({
   const isCurrencyLocked = !!conference.currency;
 
   const emptyCreateForm: InvoiceCreate = {
-    invoice_number: '',
     template_type: 'bank_transfer',
-    status: 'draft',
     issue_date: '',
     due_date: '',
     recipient_name: '',
@@ -75,12 +78,13 @@ export default function ConferenceInvoicesTab({
     recipient_country: '',
     recipient_vat_number: '',
     line_items: [],
-    subtotal: undefined,
-    tax_rate: undefined,
-    tax_amount: undefined,
-    total: undefined,
+    subtotal: 0,
+    tax_rate: 0,
+    tax_amount: 0,
+    total: 0,
     currency: conference.currency || '',
     notes: '',
+    internal_comment: '',
     contact_persons: [],
     is_active: true,
   };
@@ -116,6 +120,17 @@ export default function ConferenceInvoicesTab({
       return response.data.items;
     },
   });
+
+  // Tax info for auto-filling tax rate
+  const { data: taxInfo } = useQuery({
+    queryKey: queryKeys.fiscal.taxInfo(conference.id),
+    queryFn: async () => {
+      const res = await api.get(`/conferences/${conference.id}/tax-info`);
+      return res.data as { current_vat_rate: number | null };
+    },
+  });
+
+  const [validationAlert, setValidationAlert] = useState<string | null>(null);
 
   const selectedInvoice = data?.items?.find((inv) => inv.id === selectedInvoiceId);
 
@@ -174,8 +189,115 @@ export default function ConferenceInvoicesTab({
     },
   });
 
+  // --- Line item helpers for create form ---
+  const recalcTotals = useCallback((items: InvoiceLineItem[], taxRate: number) => {
+    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+    const taxAmount = subtotal * (taxRate / 100);
+    return { subtotal, tax_amount: taxAmount, total: subtotal + taxAmount };
+  }, []);
+
+  const addLineItem = () => {
+    const items: InvoiceLineItem[] = [
+      ...(createForm.line_items || []),
+      { description: '', quantity: 1, unit_price: 0, discount: 0, total: 0 },
+    ];
+    setCreateForm({ ...createForm, line_items: items });
+  };
+
+  const removeLineItem = (index: number) => {
+    const items = (createForm.line_items || []).filter((_, i) => i !== index);
+    const totals = recalcTotals(items, createForm.tax_rate || 0);
+    setCreateForm({ ...createForm, line_items: items, ...totals });
+  };
+
+  const updateLineItem = (index: number, field: keyof InvoiceLineItem, value: string | number) => {
+    const items = [...(createForm.line_items || [])];
+    const item = { ...items[index] };
+    const numVal = typeof value === 'string' ? parseFloat(value) || 0 : value;
+
+    if (field === 'description') {
+      item.description = String(value);
+    } else if (field === 'quantity') {
+      item.quantity = numVal;
+    } else if (field === 'unit_price') {
+      item.unit_price = numVal;
+    } else if (field === 'discount') {
+      item.discount = numVal;
+    } else if (field === 'total') {
+      item.total = numVal;
+    }
+
+    // Recalculate line total
+    item.total = item.quantity * item.unit_price - (item.discount || 0);
+    if (item.total < 0) item.total = 0;
+    items[index] = item;
+
+    const totals = recalcTotals(items, createForm.tax_rate || 0);
+    setCreateForm({ ...createForm, line_items: items, ...totals });
+  };
+
+  const handleTaxRateChange = (rate: number) => {
+    const totals = recalcTotals(createForm.line_items || [], rate);
+    setCreateForm({ ...createForm, tax_rate: rate, ...totals });
+  };
+
+  // Auto-fill tax rate from conference VAT rate settings
+  useEffect(() => {
+    if (taxInfo?.current_vat_rate != null && createForm.tax_rate === 0) {
+      handleTaxRateChange(Number(taxInfo.current_vat_rate));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taxInfo?.current_vat_rate]);
+
+  // --- Recipient picker ---
+  const handleRecipientSelect = (result: RecipientSearchResult) => {
+    setCreateForm({
+      ...createForm,
+      recipient_source_type: result.source_type,
+      recipient_source_id: result.id,
+      recipient_name: result.display_name,
+      recipient_email: result.email || '',
+      recipient_address_line1: result.address_line1 || '',
+      recipient_address_line2: result.address_line2 || '',
+      recipient_city: result.city || '',
+      recipient_state: result.state || '',
+      recipient_postal_code: result.postal_code || '',
+      recipient_country: result.country || '',
+      recipient_vat_number: result.vat_number || '',
+      contact_persons: result.contact_persons || [],
+    });
+  };
+
+  const handleManualEntry = () => {
+    setCreateForm({
+      ...createForm,
+      recipient_source_type: undefined,
+      recipient_source_id: undefined,
+    });
+  };
+
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate required fields
+    const missing: string[] = [];
+    if (!createForm.recipient_name?.trim()) missing.push('Recipient Name');
+    if (!createForm.recipient_address_line1?.trim()) missing.push('Address Line 1');
+    if (!createForm.recipient_city?.trim()) missing.push('City');
+    if (!createForm.recipient_postal_code?.trim()) missing.push('Postal Code');
+    if (!createForm.recipient_country?.trim()) missing.push('Country');
+    if (!createForm.currency?.trim() && !conference.currency) missing.push('Currency');
+    if ((createForm.line_items || []).length === 0) missing.push('At least one Line Item');
+    const emptyItems = (createForm.line_items || []).filter((li) => !li.description?.trim());
+    if (emptyItems.length > 0) missing.push('Description for all Line Items');
+
+    if (missing.length > 0) {
+      setValidationAlert(
+        `Please fill in the following required fields:\n\n- ${missing.join('\n- ')}`
+      );
+      return;
+    }
+
     const finalData = { ...createForm };
     if (createNewContact.first_name.trim() && createNewContact.last_name.trim()) {
       finalData.contact_persons = [...(finalData.contact_persons || []), { ...createNewContact }];
@@ -207,7 +329,7 @@ export default function ConferenceInvoicesTab({
     });
   };
 
-  const downloadPDF = async (invoiceId: string, invoiceNumber: string) => {
+  const downloadPDF = async (invoiceId: string, invoiceNumber: string | null) => {
     try {
       const res = await api.get(`/conferences/${conference.id}/invoices/${invoiceId}/pdf`, {
         responseType: 'blob',
@@ -216,7 +338,7 @@ export default function ConferenceInvoicesTab({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `invoice_${invoiceNumber}.pdf`;
+      a.download = `invoice_${invoiceNumber || 'draft'}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -240,23 +362,23 @@ export default function ConferenceInvoicesTab({
               <ChevronLeftIcon />
               Back to invoices list
             </button>
-            <button
-              type="button"
-              onClick={() =>
-                downloadPDF(selectedInvoice.id, selectedInvoice.invoice_number || 'unknown')
-              }
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              Download PDF
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => downloadPDF(selectedInvoice.id, selectedInvoice.invoice_number)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Download PDF
+              </button>
+            </div>
           </div>
 
           <ErrorBanner message={error} />
@@ -313,27 +435,12 @@ export default function ConferenceInvoicesTab({
               onSubmit={handleCreateSubmit}
               className="mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5 space-y-4"
             >
-              <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">New Invoice</h5>
+              <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                New Invoice (Draft)
+              </h5>
 
-              {/* Invoice Number + Template Type + Status */}
+              {/* Template Type + Dates */}
               <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Invoice Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                    value={createForm.invoice_number}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        invoice_number: e.target.value,
-                      })
-                    }
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Template Type
@@ -357,43 +464,13 @@ export default function ConferenceInvoicesTab({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Status
-                  </label>
-                  <select
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                    value={createForm.status || 'draft'}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        status: e.target.value as InvoiceStatus,
-                      })
-                    }
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="sent">Sent</option>
-                    <option value="paid">Paid</option>
-                    <option value="overdue">Overdue</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Issue Date
                   </label>
                   <input
                     type="date"
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                     value={createForm.issue_date || ''}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        issue_date: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setCreateForm({ ...createForm, issue_date: e.target.value })}
                   />
                 </div>
                 <div>
@@ -402,34 +479,33 @@ export default function ConferenceInvoicesTab({
                   </label>
                   <input
                     type="date"
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                     value={createForm.due_date || ''}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        due_date: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setCreateForm({ ...createForm, due_date: e.target.value })}
                   />
                 </div>
               </div>
+
+              {/* Recipient Picker */}
+              <RecipientPicker
+                conferenceId={conference.id}
+                onSelect={handleRecipientSelect}
+                onManualEntry={handleManualEntry}
+              />
 
               {/* Recipient Name + Email */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Recipient Name *
+                    Recipient Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                     value={createForm.recipient_name}
                     onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        recipient_name: e.target.value,
-                      })
+                      setCreateForm({ ...createForm, recipient_name: e.target.value })
                     }
                   />
                 </div>
@@ -439,86 +515,304 @@ export default function ConferenceInvoicesTab({
                   </label>
                   <input
                     type="email"
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                     value={createForm.recipient_email || ''}
                     onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        recipient_email: e.target.value,
-                      })
+                      setCreateForm({ ...createForm, recipient_email: e.target.value })
                     }
                   />
                 </div>
               </div>
 
-              {/* Currency + Active */}
+              {/* Address */}
               <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Address Line 1
+                  </label>
+                  <input
+                    type="text"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    value={createForm.recipient_address_line1 || ''}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, recipient_address_line1: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Address Line 2
+                  </label>
+                  <input
+                    type="text"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    value={createForm.recipient_address_line2 || ''}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, recipient_address_line2: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    value={createForm.recipient_city || ''}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, recipient_city: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Postal Code
+                  </label>
+                  <input
+                    type="text"
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    value={createForm.recipient_postal_code || ''}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, recipient_postal_code: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Country
+                  </label>
+                  <select
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    value={createForm.recipient_country || ''}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, recipient_country: e.target.value })
+                    }
+                  >
+                    <option value="">Select a country</option>
+                    {COUNTRY_OPTIONS.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <VatNumberInput
+                  value={createForm.recipient_vat_number || ''}
+                  onChange={(val) => setCreateForm({ ...createForm, recipient_vat_number: val })}
+                  country={createForm.recipient_country || undefined}
+                />
+              </div>
+
+              {/* Line Items */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Line Items
+                </label>
+                {(createForm.line_items || []).length > 0 && (
+                  <div className="overflow-x-auto mb-2">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead>
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            Description
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-24">
+                            Qty
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">
+                            Unit Price
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">
+                            Discount
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">
+                            Total
+                          </th>
+                          <th className="px-3 py-2 w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {(createForm.line_items || []).map((item, index) => (
+                          <tr key={index}>
+                            <td className="px-3 py-2">
+                              <input
+                                type="text"
+                                className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                                value={item.description}
+                                onChange={(e) =>
+                                  updateLineItem(index, 'description', e.target.value)
+                                }
+                                placeholder="Item description"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                                value={item.quantity}
+                                onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                                value={item.unit_price}
+                                onChange={(e) =>
+                                  updateLineItem(index, 'unit_price', e.target.value)
+                                }
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                                value={item.discount ?? 0}
+                                onChange={(e) => updateLineItem(index, 'discount', e.target.value)}
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {item.total.toFixed(2)}
+                            </td>
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() => removeLineItem(index)}
+                                className="text-gray-400 dark:text-gray-500 hover:text-red-500"
+                                title="Remove"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={addLineItem}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-primary-600 bg-primary-50 rounded-md hover:bg-primary-100 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Add Line Item
+                </button>
+
+                {/* Totals summary */}
+                {(createForm.line_items || []).length > 0 && (
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {(createForm.subtotal ?? 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500 dark:text-gray-400">Tax Rate (%)</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          className="w-20 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          value={createForm.tax_rate ?? ''}
+                          onChange={(e) =>
+                            handleTaxRateChange(e.target.value ? parseFloat(e.target.value) : 0)
+                          }
+                        />
+                      </div>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {(createForm.tax_amount ?? 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm font-semibold border-t border-gray-200 dark:border-gray-700 pt-2">
+                      <span className="text-gray-900 dark:text-gray-100">Total</span>
+                      <span className="text-gray-900 dark:text-gray-100">
+                        {(createForm.total ?? 0).toFixed(2)}{' '}
+                        {createForm.currency || conference.currency || ''}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Currency selector — only shown when conference has no currency set */}
+              {!isCurrencyLocked && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Currency
                   </label>
-                  {isCurrencyLocked ? (
-                    <input
-                      type="text"
-                      value={conference.currency || ''}
-                      disabled
-                      title="Set by conference"
-                      className="block w-full border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 shadow-sm py-2 px-3 text-sm text-gray-600 dark:text-gray-300"
-                    />
-                  ) : (
-                    <select
-                      className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      value={createForm.currency || ''}
-                      onChange={(e) =>
-                        setCreateForm({
-                          ...createForm,
-                          currency: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">-- Select Currency --</option>
-                      {(currenciesData || []).map((c) => (
-                        <option key={c.id} value={c.code}>
-                          {c.code} - {c.name} ({c.symbol})
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  <select
+                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    value={createForm.currency || ''}
+                    onChange={(e) => setCreateForm({ ...createForm, currency: e.target.value })}
+                  >
+                    <option value="">-- Select Currency --</option>
+                    {(currenciesData || []).map((c) => (
+                      <option key={c.id} value={c.code}>
+                        {c.code} - {c.name} ({c.symbol})
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="flex items-end">
-                  <label className="inline-flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={createForm.is_active ?? true}
-                      onChange={(e) =>
-                        setCreateForm({
-                          ...createForm,
-                          is_active: e.target.checked,
-                        })
-                      }
-                      className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Active
-                    </span>
-                  </label>
-                </div>
-              </div>
+              )}
 
-              {/* Notes */}
+              {/* Notes (shown on invoice) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Notes
+                  Notes (shown on invoice)
                 </label>
                 <RichTextEditor
                   value={createForm.notes || ''}
-                  onChange={(html) =>
-                    setCreateForm({
-                      ...createForm,
-                      notes: html,
-                    })
-                  }
+                  onChange={(html) => setCreateForm({ ...createForm, notes: html })}
                   rows={2}
+                />
+              </div>
+
+              {/* Internal Comment */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Internal Comment (not shown on invoice)
+                </label>
+                <textarea
+                  className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                  rows={2}
+                  value={createForm.internal_comment || ''}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, internal_comment: e.target.value })
+                  }
+                  placeholder="Admin-only notes..."
                 />
               </div>
 
@@ -538,7 +832,7 @@ export default function ConferenceInvoicesTab({
                   disabled={createMutation.isPending}
                   className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {createMutation.isPending ? 'Creating...' : 'Create'}
+                  {createMutation.isPending ? 'Creating...' : 'Create Draft'}
                 </button>
                 <button
                   type="button"
@@ -602,7 +896,11 @@ export default function ConferenceInvoicesTab({
                   {data.items.map((invoice) => (
                     <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {invoice.invoice_number}
+                        {invoice.invoice_number || (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 italic">
+                            DRAFT
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                         {TEMPLATE_TYPE_LABELS[invoice.template_type] || invoice.template_type}
@@ -673,12 +971,21 @@ export default function ConferenceInvoicesTab({
       <ConfirmDialog
         open={!!deleteTarget}
         title="Delete Invoice"
-        message={`Are you sure you want to delete invoice "${deleteTarget?.invoice_number}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete invoice "${deleteTarget?.invoice_number || 'DRAFT'}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={() => {
           if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
         }}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Validation alert */}
+      <AlertDialog
+        open={!!validationAlert}
+        title="Missing Required Fields"
+        message={validationAlert || ''}
+        variant="warning"
+        onClose={() => setValidationAlert(null)}
       />
     </div>
   );

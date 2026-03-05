@@ -49,6 +49,8 @@ interface InvoiceTemplateEditorProps {
   conferenceId: string;
   value: string;
   onChange: (value: string) => void;
+  headerValue?: string;
+  onHeaderChange?: (value: string) => void;
   footerValue?: string;
   onFooterChange?: (value: string) => void;
   disabled?: boolean;
@@ -125,8 +127,8 @@ const TEMPLATE_PLACEHOLDERS = [
       { name: '[CREDIT_NOTE_NUMBER]', description: 'Credit note number' },
       { name: '[ISSUE_DATE]', description: 'Invoice issue date' },
       { name: '[DUE_DATE]', description: 'Payment due date' },
+      { name: '[NOTES]', description: 'Invoice notes/remarks' },
       { name: '[CURRENCY_1]', description: 'Primary currency code' },
-      { name: '[CURRENCY_2]', description: 'Secondary currency' },
     ],
   },
   {
@@ -137,6 +139,15 @@ const TEMPLATE_PLACEHOLDERS = [
       { name: '[TAX_RATE]', description: 'Tax percentage' },
       { name: '[TAX_AMOUNT]', description: 'Calculated tax' },
       { name: '[TOTAL]', description: 'Final total' },
+    ],
+  },
+  {
+    category: 'Dual Currency',
+    items: [
+      { name: '[SECOND_CURRENCY]', description: 'Second currency code' },
+      { name: '[SECOND_TOTAL]', description: 'Total in second currency' },
+      { name: '[SECOND_SUBTOTAL]', description: 'Subtotal in second currency' },
+      { name: '[SECOND_TAX_AMOUNT]', description: 'Tax in second currency' },
     ],
   },
 ];
@@ -228,6 +239,8 @@ export default function InvoiceTemplateEditor({
   conferenceId,
   value,
   onChange,
+  headerValue = '',
+  onHeaderChange,
   footerValue = '',
   onFooterChange,
   disabled = false,
@@ -241,9 +254,12 @@ export default function InvoiceTemplateEditor({
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [showPlaceholders, setShowPlaceholders] = useState(false);
   const [showHtml, setShowHtml] = useState(false);
+  const [showHeader, setShowHeader] = useState(false);
+  const [showHeaderHtml, setShowHeaderHtml] = useState(false);
   const [showFooter, setShowFooter] = useState(false);
   const [showFooterHtml, setShowFooterHtml] = useState(false);
   const [formattedHtml, setFormattedHtml] = useState('');
+  const [formattedHeaderHtml, setFormattedHeaderHtml] = useState('');
   const [formattedFooterHtml, setFormattedFooterHtml] = useState('');
 
   // Preview mutation
@@ -254,6 +270,7 @@ export default function InvoiceTemplateEditor({
           vat_source: vatSource || 'company',
         },
         invoice_template_html: value,
+        invoice_header_html: headerValue,
         invoice_footer_html: footerValue,
       };
 
@@ -478,6 +495,91 @@ export default function InvoiceTemplateEditor({
           </div>
         )}
       </div>
+
+      {/* Page Header Editor */}
+      {onHeaderChange && (
+        <div className="mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowHeader(!showHeader)}
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <span>
+              Page Header{' '}
+              <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                — fixed at the top of every PDF page (~3 cm)
+              </span>
+            </span>
+            <svg
+              className={`w-4 h-4 transition-transform ${showHeader ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+          {showHeader && (
+            <div className="border-t border-gray-200 dark:border-gray-700">
+              {/* Header toolbar */}
+              <div className="flex items-center gap-2 px-4 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => {
+                    if (!showHeaderHtml) {
+                      setFormattedHeaderHtml(formatHtml(headerValue));
+                    } else {
+                      onHeaderChange(formattedHeaderHtml);
+                    }
+                    setShowHeaderHtml(!showHeaderHtml);
+                  }}
+                  className={`px-2.5 py-1 text-xs border rounded transition-colors font-mono ${
+                    showHeaderHtml
+                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-primary-300 dark:border-primary-700'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  &lt;/&gt; HTML
+                </button>
+              </div>
+              {/* Header editor area */}
+              <div className="bg-gray-100 dark:bg-gray-900 p-6 flex justify-center overflow-x-auto">
+                {showHeaderHtml ? (
+                  <textarea
+                    value={formattedHeaderHtml}
+                    onChange={(e) => setFormattedHeaderHtml(e.target.value)}
+                    disabled={disabled}
+                    spellCheck={false}
+                    className="w-full min-h-40 px-4 py-3 font-mono text-sm leading-relaxed bg-gray-900 text-gray-100 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:opacity-50"
+                    style={{
+                      maxWidth: `${PAGE_FORMATS.find((f) => f.value === pageFormat)?.width ?? 794}px`,
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="bg-white dark:bg-gray-800 shadow-lg border border-gray-300 dark:border-gray-600"
+                    style={{
+                      width: `${PAGE_FORMATS.find((f) => f.value === pageFormat)?.width ?? 794}px`,
+                    }}
+                  >
+                    <RichTextEditor
+                      value={headerValue}
+                      onChange={onHeaderChange}
+                      disabled={disabled}
+                      rows={4}
+                      editorClassName="prose-tight"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Page Footer Editor */}
       {onFooterChange && (

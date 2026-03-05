@@ -1,18 +1,20 @@
 import RichTextEditor from '../common/RichTextEditor';
+import VatNumberInput from '../common/VatNumberInput';
+import { COUNTRY_OPTIONS } from '../../config/countries';
 import type {
+  Invoice,
   InvoiceUpdate,
   InvoiceStatus,
   InvoiceTemplateType,
   PlatformCurrency,
 } from '../../types';
 
-const STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'sent', label: 'Sent' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
+const VALID_STATUS_TRANSITIONS: Record<string, InvoiceStatus[]> = {
+  sent: ['paid', 'overdue', 'cancelled'],
+  overdue: ['paid', 'cancelled'],
+  paid: [],
+  cancelled: [],
+};
 
 const TEMPLATE_TYPE_OPTIONS: { value: InvoiceTemplateType; label: string }[] = [
   { value: 'bank_transfer', label: 'Invoice (Bank Transfer)' },
@@ -21,39 +23,46 @@ const TEMPLATE_TYPE_OPTIONS: { value: InvoiceTemplateType; label: string }[] = [
 ];
 
 interface InvoiceDetailsTabProps {
+  invoice: Invoice;
   formData: InvoiceUpdate;
   setFormData: (data: InvoiceUpdate) => void;
   currencies: PlatformCurrency[];
   conferenceCurrency?: string | null;
+  readOnly?: boolean;
 }
 
 export default function InvoiceDetailsTab({
+  invoice,
   formData,
   setFormData,
   currencies,
   conferenceCurrency,
+  readOnly = false,
 }: InvoiceDetailsTabProps) {
   // Use conference currency if set
   const isCurrencyLocked = !!conferenceCurrency;
+  const hasNumber = invoice.invoice_number !== null;
+  const isTerminal = invoice.status === 'paid' || invoice.status === 'cancelled';
+  const statusTransitions = VALID_STATUS_TRANSITIONS[invoice.status] || [];
+
   return (
     <div className="px-6 py-5 space-y-4">
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Invoice Number *
+            Invoice Number
           </label>
           <input
             type="text"
-            required
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
-            value={formData.invoice_number}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                invoice_number: e.target.value,
-              })
-            }
+            disabled
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400"
+            value={hasNumber ? (formData.invoice_number ?? '') : 'Not yet assigned'}
           />
+          {!hasNumber && (
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              Assigned when invoice is sent
+            </p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -68,6 +77,7 @@ export default function InvoiceDetailsTab({
                 template_type: e.target.value as InvoiceTemplateType,
               })
             }
+            disabled={readOnly}
           >
             {TEMPLATE_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -80,22 +90,42 @@ export default function InvoiceDetailsTab({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Status
           </label>
-          <select
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
-            value={formData.status || 'draft'}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                status: e.target.value as InvoiceStatus,
-              })
-            }
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
+          {readOnly && statusTransitions.length > 0 ? (
+            <select
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+              value={formData.status || invoice.status}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  status: e.target.value as InvoiceStatus,
+                })
+              }
+            >
+              <option value={invoice.status}>
+                {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
               </option>
-            ))}
-          </select>
+              {statusTransitions.map((s) => (
+                <option key={s} value={s}>
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              disabled
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400"
+              value={
+                (formData.status || invoice.status).charAt(0).toUpperCase() +
+                (formData.status || invoice.status).slice(1)
+              }
+            />
+          )}
+          {isTerminal && (
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              This is a final status
+            </p>
+          )}
         </div>
       </div>
 
@@ -109,6 +139,7 @@ export default function InvoiceDetailsTab({
             className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
             value={formData.issue_date || ''}
             onChange={(e) => setFormData({ ...formData, issue_date: e.target.value })}
+            disabled={readOnly}
           />
         </div>
         <div>
@@ -120,6 +151,7 @@ export default function InvoiceDetailsTab({
             className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
             value={formData.due_date || ''}
             onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+            disabled={readOnly}
           />
         </div>
       </div>
@@ -145,6 +177,7 @@ export default function InvoiceDetailsTab({
                     recipient_name: e.target.value,
                   })
                 }
+                disabled={readOnly}
               />
             </div>
             <div>
@@ -161,6 +194,7 @@ export default function InvoiceDetailsTab({
                     recipient_email: e.target.value,
                   })
                 }
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -180,6 +214,7 @@ export default function InvoiceDetailsTab({
                     recipient_address_line1: e.target.value,
                   })
                 }
+                disabled={readOnly}
               />
             </div>
             <div>
@@ -196,6 +231,7 @@ export default function InvoiceDetailsTab({
                     recipient_address_line2: e.target.value,
                   })
                 }
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -215,22 +251,7 @@ export default function InvoiceDetailsTab({
                     recipient_city: e.target.value,
                   })
                 }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                State
-              </label>
-              <input
-                type="text"
-                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
-                value={formData.recipient_state || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    recipient_state: e.target.value,
-                  })
-                }
+                disabled={readOnly}
               />
             </div>
             <div>
@@ -247,14 +268,14 @@ export default function InvoiceDetailsTab({
                     recipient_postal_code: e.target.value,
                   })
                 }
+                disabled={readOnly}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Country
               </label>
-              <input
-                type="text"
+              <select
                 className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
                 value={formData.recipient_country || ''}
                 onChange={(e) =>
@@ -263,85 +284,78 @@ export default function InvoiceDetailsTab({
                     recipient_country: e.target.value,
                   })
                 }
-              />
+                disabled={readOnly}
+              >
+                <option value="">Select a country</option>
+                {COUNTRY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              VAT Number
-            </label>
-            <input
-              type="text"
-              placeholder="e.g., DE123456789"
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+            <VatNumberInput
               value={formData.recipient_vat_number || ''}
-              onChange={(e) =>
+              onChange={(val) =>
                 setFormData({
                   ...formData,
-                  recipient_vat_number: e.target.value,
+                  recipient_vat_number: val,
                 })
               }
+              country={formData.recipient_country || undefined}
+              disabled={readOnly}
             />
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Financial</h4>
-        <div className="grid grid-cols-2 gap-4">
+      {!isCurrencyLocked && (
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Financial</h4>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Currency
             </label>
-            {isCurrencyLocked ? (
-              <input
-                type="text"
-                value={conferenceCurrency || ''}
-                disabled
-                title="Set by conference"
-                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 shadow-sm py-2 px-3 text-sm text-gray-600 dark:text-gray-300"
-              />
-            ) : (
-              <select
-                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
-                value={formData.currency || ''}
-                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-              >
-                <option value="">-- Select Currency --</option>
-                {currencies.map((c) => (
-                  <option key={c.id} value={c.code}>
-                    {c.code} - {c.name} ({c.symbol})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-          <div className="flex items-end">
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={formData.is_active ?? true}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    is_active: e.target.checked,
-                  })
-                }
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active</span>
-            </label>
+            <select
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+              value={formData.currency || ''}
+              onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+              disabled={readOnly}
+            >
+              <option value="">-- Select Currency --</option>
+              {currencies.map((c) => (
+                <option key={c.id} value={c.code}>
+                  {c.code} - {c.name} ({c.symbol})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-      </div>
+      )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Notes</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Notes (shown on invoice)
+        </label>
         <RichTextEditor
           value={formData.notes || ''}
           onChange={(html) => setFormData({ ...formData, notes: html })}
           rows={3}
+          disabled={readOnly}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Internal Comment (not shown on invoice)
+        </label>
+        <textarea
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+          rows={2}
+          value={formData.internal_comment || ''}
+          onChange={(e) => setFormData({ ...formData, internal_comment: e.target.value })}
+          placeholder="Admin-only notes..."
+          disabled={readOnly}
         />
       </div>
     </div>

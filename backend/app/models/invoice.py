@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Numeric, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -36,8 +36,8 @@ class Invoice(Base):
         UUID(as_uuid=True), ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
     )
 
-    # Invoice identification
-    invoice_number: Mapped[str] = mapped_column(String(50), nullable=False)
+    # Invoice identification (nullable for drafts — number assigned on generate)
+    invoice_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     template_type: Mapped[str] = mapped_column(
         String(50), nullable=False, server_default="bank_transfer"
     )  # bank_transfer, credit_card, credit_note
@@ -48,6 +48,10 @@ class Invoice(Base):
     # Dates
     issue_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    # Recipient source (for auto-fill traceability)
+    recipient_source_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    recipient_source_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     # Recipient information
     recipient_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -68,8 +72,11 @@ class Invoice(Base):
     total: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
 
-    # Notes (rich text)
+    # Notes (rich text — shown on invoice PDF via [NOTES] placeholder)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Internal comment (admin-only, never shown on PDF)
+    internal_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Contact persons (JSONB array)
     contact_persons: Mapped[list | None] = mapped_column(JSONB, nullable=True)
@@ -91,8 +98,15 @@ class Invoice(Base):
     __table_args__ = (
         Index("idx_invoices_tenant", "tenant_id"),
         Index("idx_invoices_conference", "tenant_id", "conference_id"),
-        UniqueConstraint("tenant_id", "invoice_number", name="uq_invoices_tenant_number"),
+        # Partial unique index: enforces uniqueness for assigned numbers, allows multiple NULLs (drafts)
+        Index(
+            "uq_invoices_tenant_number",
+            "tenant_id",
+            "invoice_number",
+            unique=True,
+            postgresql_where=text("invoice_number IS NOT NULL"),
+        ),
     )
 
     def __repr__(self) -> str:
-        return f"<Invoice {self.invoice_number}>"
+        return f"<Invoice {self.invoice_number or 'DRAFT'}>"

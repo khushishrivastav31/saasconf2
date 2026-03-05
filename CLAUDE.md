@@ -79,6 +79,22 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Invoice PDF system, financial settings, phone field, sidebar fixes — deployed to staging (commit `8da6a3a`)
-- **Migrations on staging**: 106 (address consolidation), 107 (template_type), 108 (phone field)
-- **Status**: Deployed, monitoring CI/staging
+- **Last completed**: Invoice template enhancements (6 features)
+  1. **Header support**: `invoice_header_html` setting, `.page-header` CSS (`position: fixed; top: -1.5cm`), body `padding-top: 2.5cm`, applied to both PDF entry points
+  2. **Multi-page**: Header + footer repeat on every page via WeasyPrint's `position: fixed` — no extra work needed
+  3. **Compact items table**: `padding: 2px 6px` and `line-height: 1.2` on all table cells
+  4. **Country ISO codes**: `_normalize_country_to_iso()` helper converts full names → ISO codes for `[COMPANY_COUNTRY]` and `[FISCAL_REP_COUNTRY]`
+  5. **NOTES placeholder**: Added `[NOTES]` to template editor placeholder panel
+  6. **Dual currency**: `second_currency` + `exchange_rate` in company info, new placeholders `[SECOND_CURRENCY]`, `[SECOND_TOTAL]`, `[SECOND_SUBTOTAL]`, `[SECOND_TAX_AMOUNT]`, `[CURRENCY_2]` now outputs second currency
+- **Files modified**:
+  - `backend/app/core/invoice_pdf.py` — header CSS/rendering, compact table, country normalization, dual currency placeholders
+  - `backend/app/schemas/settings.py` — `invoice_header_html`, `second_currency`, `exchange_rate` fields
+  - `backend/app/core/default_settings.py` — `invoice_header_html: ""` default
+  - `backend/app/api/v1/settings/invoice_settings.py` — header in GET + preview
+  - `frontend/src/components/InvoiceTemplateEditor.tsx` — header editor, NOTES + dual currency placeholders
+  - `frontend/src/pages/.../InvoiceTemplateTab.tsx` — header state + save
+  - `frontend/src/pages/.../InvoiceCompanyDataTab.tsx` — second currency + exchange rate fields
+  - `backend/tests/test_invoice_settings.py` — 4 new tests (header, dual currency)
+  - `backend/tests/test_invoice_pdf_helpers.py` — new: 14 unit tests (country normalization, items table)
+- **Tests**: 32 invoice + 23 settings + 14 helpers = 69 backend tests passing, 1222 frontend tests passing
+- **Status**: Ready to commit (pending user approval)

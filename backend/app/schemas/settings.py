@@ -362,6 +362,58 @@ class BankAccount(BaseModel):
             raise ValueError(f"Invalid BIC: {e!s}") from e
 
 
+class VatRule(BaseModel):
+    """Single VAT decision rule for conference invoicing.
+
+    Each rule is uniquely identified by (attendance_type, customer_type, customer_location).
+    """
+
+    attendance_type: str = Field(..., max_length=20)
+    customer_type: str = Field(..., max_length=10)
+    customer_location: str = Field(..., max_length=10)
+    charge_vat: bool = True
+    vat_rate_source: str = Field(default="conference", max_length=20)
+    reverse_charge: bool = False
+    oss_applicable: bool = False
+    note: str = Field(default="", max_length=200)
+
+    @field_validator("attendance_type")
+    @classmethod
+    def check_attendance_type(cls, v: str) -> str:
+        from app.core.default_settings import VALID_ATTENDANCE_TYPES
+
+        if v not in VALID_ATTENDANCE_TYPES:
+            raise ValueError(f"Must be one of: {', '.join(sorted(VALID_ATTENDANCE_TYPES))}")
+        return v
+
+    @field_validator("customer_type")
+    @classmethod
+    def check_customer_type(cls, v: str) -> str:
+        from app.core.default_settings import VALID_CUSTOMER_TYPES
+
+        if v not in VALID_CUSTOMER_TYPES:
+            raise ValueError(f"Must be one of: {', '.join(sorted(VALID_CUSTOMER_TYPES))}")
+        return v
+
+    @field_validator("customer_location")
+    @classmethod
+    def check_customer_location(cls, v: str) -> str:
+        from app.core.default_settings import VALID_CUSTOMER_LOCATIONS
+
+        if v not in VALID_CUSTOMER_LOCATIONS:
+            raise ValueError(f"Must be one of: {', '.join(sorted(VALID_CUSTOMER_LOCATIONS))}")
+        return v
+
+    @field_validator("vat_rate_source")
+    @classmethod
+    def check_vat_rate_source(cls, v: str) -> str:
+        from app.core.default_settings import VALID_VAT_RATE_SOURCES
+
+        if v not in VALID_VAT_RATE_SOURCES:
+            raise ValueError(f"Must be one of: {', '.join(sorted(VALID_VAT_RATE_SOURCES))}")
+        return v
+
+
 class InvoiceCompanyInfo(BaseModel):
     """Company billing information for invoice headers."""
 
@@ -384,6 +436,8 @@ class InvoiceCompanyInfo(BaseModel):
 
     footer_text: str | None = None
     logo_url: str | None = None  # Path to attachment
+    second_currency: str | None = None  # ISO 4217 code (e.g. "USD")
+    exchange_rate: float | None = None  # Rate from primary to second currency
 
     @field_validator("vat_source")
     @classmethod
@@ -405,12 +459,15 @@ class InvoiceSettingsResponse(BaseModel):
     invoice_template_html: str  # Legacy: bank_transfer template body
     invoice_templates: dict[str, str] = {}  # {type_key: html_body}
     invoice_footer_html: str  # Shared footer (position: fixed, bottom: 0)
+    invoice_header_html: str = ""  # Shared header (position: fixed, top: 0)
     invoice_company_info: InvoiceCompanyInfo
     invoice_page_format: str  # "A4", "Letter", "Legal", etc.
     # Cancellation number settings
     cancellation_number_template: str
     cancellation_counter_reset: str  # "daily" or "yearly"
     cancellation_counter_value: int
+    # VAT decision rules
+    vat_rules: list[VatRule] = []
 
 
 class InvoiceSettingsUpdate(BaseModel):
@@ -422,12 +479,15 @@ class InvoiceSettingsUpdate(BaseModel):
     invoice_template_html: str | None = None  # Legacy: bank_transfer body
     invoice_templates: dict[str, str] | None = None  # {type_key: html_body}
     invoice_footer_html: str | None = None
+    invoice_header_html: str | None = None
     invoice_company_info: InvoiceCompanyInfo | None = None
     invoice_page_format: str | None = None  # Page format (A4, Letter, etc.)
     # Cancellation number settings
     cancellation_number_template: str | None = None
     cancellation_counter_reset: str | None = None
     cancellation_counter_value: int | None = None
+    # VAT decision rules
+    vat_rules: list[VatRule] | None = None
 
     @field_validator("invoice_counter_reset", "cancellation_counter_reset")
     @classmethod

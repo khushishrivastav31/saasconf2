@@ -16,6 +16,60 @@ from app.models.conference import Conference
 from app.models.fiscal_representative import FiscalRepresentative
 from app.models.invoice import Invoice
 
+# Mapping of full country names to ISO 3166-1 alpha-2 codes.
+# Matches frontend/src/config/countries.ts COUNTRY_OPTIONS.
+_COUNTRY_NAME_TO_ISO: dict[str, str] = {
+    "albania": "AL", "andorra": "AD", "armenia": "AM", "australia": "AU",
+    "austria": "AT", "azerbaijan": "AZ", "belarus": "BY", "belgium": "BE",
+    "bosnia and herzegovina": "BA", "brazil": "BR", "bulgaria": "BG",
+    "canada": "CA", "china": "CN", "croatia": "HR", "cyprus": "CY",
+    "czechia": "CZ", "denmark": "DK", "estonia": "EE", "finland": "FI",
+    "france": "FR", "georgia": "GE", "germany": "DE", "greece": "GR",
+    "hungary": "HU", "iceland": "IS", "india": "IN", "ireland": "IE",
+    "israel": "IL", "italy": "IT", "japan": "JP", "latvia": "LV",
+    "liechtenstein": "LI", "lithuania": "LT", "luxembourg": "LU",
+    "malta": "MT", "moldova": "MD", "monaco": "MC", "montenegro": "ME",
+    "netherlands": "NL", "new zealand": "NZ", "north macedonia": "MK",
+    "norway": "NO", "poland": "PL", "portugal": "PT", "romania": "RO",
+    "russia": "RU", "serbia": "RS", "slovakia": "SK", "slovenia": "SI",
+    "south korea": "KR", "spain": "ES", "sweden": "SE", "switzerland": "CH",
+    "turkey": "TR", "ukraine": "UA", "united kingdom": "GB",
+    "united states": "US",
+}
+
+
+def _normalize_country_to_iso(value: str) -> str:
+    """Convert a country name to its ISO 3166-1 alpha-2 code.
+
+    If the value is already a 2-letter code, return it uppercased.
+    If it's a known country name, return the corresponding code.
+    Otherwise return the original value unchanged (backward compatible).
+    """
+    if not value:
+        return value
+    stripped = value.strip()
+    if len(stripped) == 2:
+        return stripped.upper()
+    return _COUNTRY_NAME_TO_ISO.get(stripped.lower(), stripped)
+
+
+# Reverse mapping: ISO code → display name (title-cased).
+_ISO_TO_COUNTRY_NAME: dict[str, str] = {
+    code: name.title() for name, code in _COUNTRY_NAME_TO_ISO.items()
+}
+
+
+def _iso_to_country_name(value: str) -> str:
+    """Convert an ISO 3166-1 alpha-2 code to a human-readable country name.
+
+    If the value is a known 2-letter code, return the full name.
+    If it's already a full name or unknown, return as-is.
+    """
+    if not value:
+        return value
+    stripped = value.strip().upper()
+    return _ISO_TO_COUNTRY_NAME.get(stripped, value.strip())
+
 # Default invoice template HTML (can be overridden in conference settings)
 DEFAULT_INVOICE_TEMPLATE_HTML = """
 <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
@@ -254,6 +308,26 @@ EDITOR_MATCHING_CSS = """
         max-height: 60px;
         height: auto;
     }
+    /* Fixed page header — repeats at the top of every PDF page.
+       Mirrors the footer pattern with position:fixed at the top. */
+    .page-header {
+        position: fixed;
+        top: -1.5cm;
+        left: 0;
+        right: 0;
+        border-bottom: 1px solid #d1d5db;
+        padding-bottom: 6px;
+        font-size: 9px;
+        line-height: 1.3;
+    }
+    .page-header th,
+    .page-header td {
+        border: none;
+    }
+    .page-header img {
+        max-height: 60px;
+        height: auto;
+    }
 """
 
 
@@ -377,9 +451,15 @@ def _normalize_table_widths(html: str) -> str:
     # and inline style="width: Xpx".  These override the percentage colgroup
     # and prevent the table from filling the container.  Strip them.
     html = re.sub(r'\s*colwidth="[^"]*"', "", html)
-    # Remove only width-related properties from td/th inline styles
+    # Remove only width-related CSS properties from td/th inline styles,
+    # preserving other properties like text-align and padding.
     html = re.sub(
-        r'(<t[dh][^>]*)\s*style="[^"]*"',
+        r'(<t[dh][^>]*style="[^"]*?);\s*width:\s*[^;"]+',
+        r"\1",
+        html,
+    )
+    html = re.sub(
+        r'(<t[dh][^>]*style=")\s*width:\s*[^;"]+;\s*',
         r"\1",
         html,
     )
@@ -419,6 +499,34 @@ def _preserve_empty_paragraphs(html: str) -> str:
     html = re.sub(r"<p>\s*</p>", "<p>&nbsp;</p>", html)
     html = re.sub(r"<p>\s*<br\s*/?\s*>\s*</p>", "<p>&nbsp;</p>", html)
     return html
+
+
+def _compute_fixed_block_padding(html: str, side: str) -> str:
+    """Compute body padding CSS to reserve space for a fixed header/footer.
+
+    Headers are compact (images capped at ``max-height: 60px``, positioned
+    in the page margin) so they need less padding than footers which can
+    contain multi-row bank-detail tables.
+
+    Args:
+        html: The processed header/footer HTML content
+        side: "top" for header, "bottom" for footer
+
+    Returns:
+        CSS rule string like ``body { padding-bottom: 5cm; }``
+    """
+    has_tables = "<table" in html
+    has_images = "<img" in html
+    is_complex = has_tables or has_images
+
+    # Headers: compact (images max 60px); footers: can be large (bank details, legal text)
+    padding_cm = (
+        ("2cm" if is_complex else "1.5cm")
+        if side == "top"
+        else ("5cm" if is_complex else "3cm")
+    )
+
+    return f"body {{ padding-{side}: {padding_cm}; }}"
 
 
 def _apply_placeholders(html: str, replacements: dict[str, str]) -> str:
@@ -496,11 +604,11 @@ async def generate_invoice_pdf(
 
     # Logo: fetch tenant logo from attachments and embed as base64
     logo_html = ""
-    if conference.tenant:
+    if conference.tenant_id:
         logo_result = await db.execute(
             select(Attachment)
             .where(Attachment.entity_type == "tenant_logo")
-            .where(Attachment.entity_id == conference.tenant.id)
+            .where(Attachment.entity_id == conference.tenant_id)
             .order_by(Attachment.created_at.desc())
             .limit(1)
         )
@@ -524,10 +632,16 @@ async def generate_invoice_pdf(
     else:
         fiscal_rep_address = ""
 
-    # Build replacements dict — applied to both template body AND footer
+    # Build replacements dict — applied to template body, header AND footer
     contact_email = conference.contact_email or conference.support_email or ""
     phone = company_info.get("phone", "") or conference.phone or ""
     primary_currency = invoice.currency or conference.currency or "EUR"
+
+    # Dual currency support — check company_info first, then conference.invoice_currency
+    second_currency = company_info.get("second_currency", "") or getattr(conference, "invoice_currency", "") or ""
+    # Exchange rate: check company_info (legacy), then conference.settings
+    raw_rate = company_info.get("exchange_rate") or settings.get("invoice_exchange_rate")
+    exchange_rate = Decimal(str(raw_rate)) if raw_rate else None
 
     replacements: dict[str, str] = {
         # Company info
@@ -535,7 +649,7 @@ async def generate_invoice_pdf(
         "[COMPANY_ADDRESS]": _format_address(company_info),
         "[COMPANY_CITY]": company_info.get("city", ""),
         "[COMPANY_POSTAL_CODE]": company_info.get("postal_code", ""),
-        "[COMPANY_COUNTRY]": company_info.get("country", ""),
+        "[COMPANY_COUNTRY]": _normalize_country_to_iso(company_info.get("country", "")),
         "[COMPANY_TAX_ID]": legacy_vat_number,
         "[COMPANY_VAT]": company_vat,
         "[COMPANY_LOGO]": logo_html,
@@ -544,7 +658,7 @@ async def generate_invoice_pdf(
         "[FISCAL_REP_ADDRESS]": fiscal_rep_address,
         "[FISCAL_REP_CITY]": (fiscal_rep.city or "") if fiscal_rep else "",
         "[FISCAL_REP_POSTAL_CODE]": (fiscal_rep.postal_code or "") if fiscal_rep else "",
-        "[FISCAL_REP_COUNTRY]": (fiscal_rep.country or "") if fiscal_rep else "",
+        "[FISCAL_REP_COUNTRY]": _normalize_country_to_iso((fiscal_rep.country or "") if fiscal_rep else ""),
         "[FISCAL_REP_VAT]": fiscal_rep_vat,
         "[FISCAL_REP_TAX_ID]": (fiscal_rep.vat_number or "") if fiscal_rep else "",
         # Banking (both underscore and space variants)
@@ -570,7 +684,12 @@ async def generate_invoice_pdf(
         # Currency
         "[CURRENCY]": primary_currency,
         "[CURRENCY_1]": primary_currency,
-        "[CURRENCY_2]": "",
+        "[CURRENCY_2]": second_currency,
+        # Dual currency
+        "[SECOND_CURRENCY]": second_currency,
+        "[SECOND_TOTAL]": f"{(Decimal(str(invoice.total)) * exchange_rate):.2f}" if exchange_rate and invoice.total else "",
+        "[SECOND_SUBTOTAL]": f"{(Decimal(str(invoice.subtotal)) * exchange_rate):.2f}" if exchange_rate and invoice.subtotal else "",
+        "[SECOND_TAX_AMOUNT]": f"{(Decimal(str(invoice.tax_amount)) * exchange_rate):.2f}" if exchange_rate and invoice.tax_amount else "",
         # Contact info (both underscore and space variants)
         "[CONTACT_EMAIL]": contact_email,
         "[CONTACT EMAIL]": contact_email,
@@ -586,7 +705,7 @@ async def generate_invoice_pdf(
     html = _apply_placeholders(html, replacements)
 
     # Items table (special handling — preserves font context from template)
-    items_table_html = _render_items_table(invoice.line_items or [])
+    items_table_html = _render_items_table(invoice.line_items or [], currency=primary_currency)
     html = _replace_items_placeholder(html, items_table_html)
 
     # Normalize TipTap output for PDF
@@ -595,6 +714,21 @@ async def generate_invoice_pdf(
     img_scale = _get_image_scale_factor(page_format)
     content_px = _get_content_width_px(page_format)
     html = _normalize_image_widths(html, scale=img_scale, content_width_px=content_px)
+
+    # Header HTML (fixed at top of every page)
+    header_html = settings.get("invoice_header_html", "")
+    header_block = ""
+    header_padding = ""
+    if header_html and header_html.strip():
+        # Apply the SAME placeholder replacements to header
+        header_html = _apply_placeholders(header_html, replacements)
+        # Normalize same as body
+        header_html = _preserve_empty_paragraphs(header_html)
+        header_html = _normalize_table_widths(header_html)
+        header_html = _normalize_image_widths(header_html, scale=img_scale, content_width_px=content_px)
+        header_block = f'<div class="page-header">{header_html}</div>'
+        # Dynamic padding: complex headers (tables/images) need more space
+        header_padding = _compute_fixed_block_padding(header_html, "top")
 
     # Footer HTML (fixed at bottom of every page)
     footer_html = settings.get("invoice_footer_html", "")
@@ -608,8 +742,8 @@ async def generate_invoice_pdf(
         footer_html = _normalize_table_widths(footer_html)
         footer_html = _normalize_image_widths(footer_html, scale=img_scale, content_width_px=content_px)
         footer_block = f'<div class="page-footer">{footer_html}</div>'
-        # Footer is max ~3cm; add 0.5cm breathing room
-        footer_padding = "body { padding-bottom: 2.5cm; }"
+        # Dynamic padding: complex footers (tables/images) need more space
+        footer_padding = _compute_fixed_block_padding(footer_html, "bottom")
 
     # Wrap in full HTML document for WeasyPrint
     full_html = f"""
@@ -618,10 +752,12 @@ async def generate_invoice_pdf(
     <head>
         <meta charset="utf-8">
         <style>{EDITOR_MATCHING_CSS}
+        {header_padding}
         {footer_padding}
         </style>
     </head>
     <body>
+        {header_block}
         {html}
         {footer_block}
     </body>
@@ -684,11 +820,11 @@ async def generate_invoice_pdf_from_data(
 
     # Logo: fetch tenant logo from attachments and embed as base64
     logo_html = ""
-    if conference.tenant:
+    if conference.tenant_id:
         logo_result = await db.execute(
             select(Attachment)
             .where(Attachment.entity_type == "tenant_logo")
-            .where(Attachment.entity_id == conference.tenant.id)
+            .where(Attachment.entity_id == conference.tenant_id)
             .order_by(Attachment.created_at.desc())
             .limit(1)
         )
@@ -718,11 +854,21 @@ async def generate_invoice_pdf_from_data(
     due_date = invoice_data.get("due_date")
     due_date_str = due_date.strftime("%Y-%m-%d") if due_date else ""
 
-    # Build replacements dict — applied to both template body AND footer
+    # Build replacements dict — applied to template body, header AND footer
     contact_email = conference.contact_email or conference.support_email or ""
     phone = company_info.get("phone", "") or conference.phone or ""
     primary_currency = invoice_data.get("currency") or conference.currency or "EUR"
     invoice_number = invoice_data.get("invoice_number", "")
+
+    # Dual currency support — check company_info first, then conference.invoice_currency
+    second_currency = company_info.get("second_currency", "") or getattr(conference, "invoice_currency", "") or ""
+    # Exchange rate: check company_info (legacy), then conference.settings
+    raw_rate = company_info.get("exchange_rate") or settings.get("invoice_exchange_rate")
+    exchange_rate = Decimal(str(raw_rate)) if raw_rate else None
+
+    subtotal_val = invoice_data.get("subtotal", 0)
+    tax_amount_val = invoice_data.get("tax_amount", 0)
+    total_val = invoice_data.get("total", 0)
 
     replacements: dict[str, str] = {
         # Company info
@@ -730,7 +876,7 @@ async def generate_invoice_pdf_from_data(
         "[COMPANY_ADDRESS]": _format_address(company_info),
         "[COMPANY_CITY]": company_info.get("city", ""),
         "[COMPANY_POSTAL_CODE]": company_info.get("postal_code", ""),
-        "[COMPANY_COUNTRY]": company_info.get("country", ""),
+        "[COMPANY_COUNTRY]": _normalize_country_to_iso(company_info.get("country", "")),
         "[COMPANY_TAX_ID]": legacy_vat_number,
         "[COMPANY_VAT]": company_vat,
         "[COMPANY_LOGO]": logo_html,
@@ -739,7 +885,7 @@ async def generate_invoice_pdf_from_data(
         "[FISCAL_REP_ADDRESS]": fiscal_rep_address,
         "[FISCAL_REP_CITY]": (fiscal_rep.city or "") if fiscal_rep else "",
         "[FISCAL_REP_POSTAL_CODE]": (fiscal_rep.postal_code or "") if fiscal_rep else "",
-        "[FISCAL_REP_COUNTRY]": (fiscal_rep.country or "") if fiscal_rep else "",
+        "[FISCAL_REP_COUNTRY]": _normalize_country_to_iso((fiscal_rep.country or "") if fiscal_rep else ""),
         "[FISCAL_REP_VAT]": fiscal_rep_vat,
         "[FISCAL_REP_TAX_ID]": (fiscal_rep.vat_number or "") if fiscal_rep else "",
         # Banking (both underscore and space variants)
@@ -758,14 +904,19 @@ async def generate_invoice_pdf_from_data(
         "[RECIPIENT_ADDRESS]": _format_recipient_address_from_data(invoice_data),
         "[RECIPIENT_VAT]": invoice_data.get("recipient_vat_number", ""),
         # Financial
-        "[SUBTOTAL]": f"{invoice_data.get('subtotal', 0):.2f}",
+        "[SUBTOTAL]": f"{subtotal_val:.2f}",
         "[TAX_RATE]": f"{invoice_data.get('tax_rate', 0):.2f}",
-        "[TAX_AMOUNT]": f"{invoice_data.get('tax_amount', 0):.2f}",
-        "[TOTAL]": f"{invoice_data.get('total', 0):.2f}",
+        "[TAX_AMOUNT]": f"{tax_amount_val:.2f}",
+        "[TOTAL]": f"{total_val:.2f}",
         # Currency
         "[CURRENCY]": primary_currency,
         "[CURRENCY_1]": primary_currency,
-        "[CURRENCY_2]": "",
+        "[CURRENCY_2]": second_currency,
+        # Dual currency
+        "[SECOND_CURRENCY]": second_currency,
+        "[SECOND_TOTAL]": f"{(Decimal(str(total_val)) * exchange_rate):.2f}" if exchange_rate and total_val else "",
+        "[SECOND_SUBTOTAL]": f"{(Decimal(str(subtotal_val)) * exchange_rate):.2f}" if exchange_rate and subtotal_val else "",
+        "[SECOND_TAX_AMOUNT]": f"{(Decimal(str(tax_amount_val)) * exchange_rate):.2f}" if exchange_rate and tax_amount_val else "",
         # Contact info (both underscore and space variants)
         "[CONTACT_EMAIL]": contact_email,
         "[CONTACT EMAIL]": contact_email,
@@ -781,7 +932,7 @@ async def generate_invoice_pdf_from_data(
     html = _apply_placeholders(html, replacements)
 
     # Items table (special handling — preserves font context from template)
-    items_table_html = _render_items_table(invoice_data.get("line_items", []))
+    items_table_html = _render_items_table(invoice_data.get("line_items", []), currency=primary_currency)
     html = _replace_items_placeholder(html, items_table_html)
 
     # Normalize TipTap output for PDF
@@ -790,6 +941,21 @@ async def generate_invoice_pdf_from_data(
     img_scale = _get_image_scale_factor(page_format)
     content_px = _get_content_width_px(page_format)
     html = _normalize_image_widths(html, scale=img_scale, content_width_px=content_px)
+
+    # Header HTML (fixed at top of every page)
+    header_html = settings.get("invoice_header_html", "")
+    header_block = ""
+    header_padding = ""
+    if header_html and header_html.strip():
+        # Apply the SAME placeholder replacements to header
+        header_html = _apply_placeholders(header_html, replacements)
+        # Normalize same as body
+        header_html = _preserve_empty_paragraphs(header_html)
+        header_html = _normalize_table_widths(header_html)
+        header_html = _normalize_image_widths(header_html, scale=img_scale, content_width_px=content_px)
+        header_block = f'<div class="page-header">{header_html}</div>'
+        # Dynamic padding: complex headers (tables/images) need more space
+        header_padding = _compute_fixed_block_padding(header_html, "top")
 
     # Footer HTML (fixed at bottom of every page)
     footer_html = settings.get("invoice_footer_html", "")
@@ -803,8 +969,8 @@ async def generate_invoice_pdf_from_data(
         footer_html = _normalize_table_widths(footer_html)
         footer_html = _normalize_image_widths(footer_html, scale=img_scale, content_width_px=content_px)
         footer_block = f'<div class="page-footer">{footer_html}</div>'
-        # Footer is max ~3cm; add 0.5cm breathing room
-        footer_padding = "body { padding-bottom: 2.5cm; }"
+        # Dynamic padding: complex footers (tables/images) need more space
+        footer_padding = _compute_fixed_block_padding(footer_html, "bottom")
 
     # Wrap in full HTML document for WeasyPrint
     full_html = f"""
@@ -813,10 +979,12 @@ async def generate_invoice_pdf_from_data(
     <head>
         <meta charset="utf-8">
         <style>{EDITOR_MATCHING_CSS}
+        {header_padding}
         {footer_padding}
         </style>
     </head>
     <body>
+        {header_block}
         {html}
         {footer_block}
     </body>
@@ -875,13 +1043,17 @@ def _replace_items_placeholder(html: str, items_table_html: str) -> str:
             parts.append(f"font-family: {font_family}")
         if font_size:
             parts.append(f"font-size: {font_size}")
-        style_attr = "; ".join(parts)
-        items_table_html = items_table_html.replace("<table>", f'<table style="{style_attr}">', 1)
+        extra_css = "; ".join(parts) + "; "
+        # Merge into existing style attribute if present, otherwise add new one
+        if 'style="' in items_table_html:
+            items_table_html = items_table_html.replace('style="', f'style="{extra_css}', 1)
+        else:
+            items_table_html = items_table_html.replace("<table", f'<table style="{extra_css.rstrip("; ")}"', 1)
 
     return html.replace(placeholder, items_table_html)
 
 
-def _render_items_table(line_items: list) -> str:
+def _render_items_table(line_items: list, currency: str = "EUR") -> str:
     """Render line items as an HTML table matching the TipTap editor style.
 
     Uses minimal inline styles (only text-alignment) so the table inherits
@@ -891,6 +1063,7 @@ def _render_items_table(line_items: list) -> str:
     Args:
         line_items: List of line item dicts with description, quantity,
                     unit_price, discount, total
+        currency: Currency code to display after amounts (e.g. "EUR")
 
     Returns:
         HTML table string
@@ -898,16 +1071,18 @@ def _render_items_table(line_items: list) -> str:
     if not line_items:
         return "<p>No items</p>"
 
-    table = """
-    <table>
+    cell = "padding: 1px 4px;"
+    cur = f" {currency}" if currency else ""
+    table = f"""
+    <table style="line-height: 1.1; border-collapse: collapse;">
       <thead>
         <tr>
-          <th style="text-align: center;">Pos</th>
-          <th style="text-align: left;">Description</th>
-          <th style="text-align: right;">Qty</th>
-          <th style="text-align: right;">Unit Price</th>
-          <th style="text-align: right;">Discount</th>
-          <th style="text-align: right;">Total</th>
+          <th style="text-align: center; {cell}">Pos</th>
+          <th style="text-align: left; {cell}">Description</th>
+          <th style="text-align: right; {cell}">Qty</th>
+          <th style="text-align: right; {cell}">Unit Price</th>
+          <th style="text-align: right; {cell}">Discount</th>
+          <th style="text-align: right; {cell}">Total</th>
         </tr>
       </thead>
       <tbody>
@@ -915,21 +1090,23 @@ def _render_items_table(line_items: list) -> str:
 
     for idx, item in enumerate(line_items, start=1):
         desc = item.get("description", "")
-        qty = item.get("quantity", 1)
+        raw_qty = item.get("quantity", 1)
+        # Display whole numbers without decimals (1 not 1.0)
+        qty_display = str(int(raw_qty)) if isinstance(raw_qty, (int, float)) and raw_qty == int(raw_qty) else str(raw_qty)
         unit_price = Decimal(str(item.get("unit_price", 0)))
         discount = Decimal(str(item.get("discount", 0)))
         total = Decimal(str(item.get("total", 0)))
 
-        discount_display = f"-{discount:.2f}" if discount > 0 else "-"
+        discount_display = f"-{discount:.2f}{cur}" if discount > 0 else "-"
 
         table += f"""
         <tr>
-          <td style="text-align: center;">{idx}</td>
-          <td>{desc}</td>
-          <td style="text-align: right;">{qty}</td>
-          <td style="text-align: right;">{unit_price:.2f}</td>
-          <td style="text-align: right;">{discount_display}</td>
-          <td style="text-align: right;"><strong>{total:.2f}</strong></td>
+          <td style="text-align: center; {cell}">{idx}</td>
+          <td style="{cell}">{desc}</td>
+          <td style="text-align: right; {cell}">{qty_display}</td>
+          <td style="text-align: right; {cell}">{unit_price:.2f}{cur}</td>
+          <td style="text-align: right; {cell}">{discount_display}</td>
+          <td style="text-align: right; {cell}"><strong>{total:.2f}{cur}</strong></td>
         </tr>
         """
 
@@ -979,11 +1156,12 @@ def _format_recipient_address(invoice: Invoice) -> str:
     Returns:
         Formatted address string with <br> tags
     """
+    country = invoice.recipient_country
     parts = [
         invoice.recipient_address_line1,
         invoice.recipient_address_line2,
         f"{invoice.recipient_postal_code or ''} {invoice.recipient_city or ''}".strip(),
-        invoice.recipient_country,
+        _iso_to_country_name(country) if country else None,
     ]
     return "<br>".join(p for p in parts if p)
 
@@ -997,10 +1175,11 @@ def _format_recipient_address_from_data(invoice_data: dict) -> str:
     Returns:
         Formatted address string with <br> tags
     """
+    country = invoice_data.get("recipient_country")
     parts = [
         invoice_data.get("recipient_address_line1"),
         invoice_data.get("recipient_address_line2"),
         f"{invoice_data.get('recipient_postal_code', '')} {invoice_data.get('recipient_city', '')}".strip(),
-        invoice_data.get("recipient_country"),
+        _iso_to_country_name(country) if country else None,
     ]
     return "<br>".join(p for p in parts if p)

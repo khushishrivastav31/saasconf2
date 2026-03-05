@@ -13,7 +13,7 @@ from fastapi import APIRouter
 from sqlalchemy import select
 
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
-from app.core.default_settings import DEFAULT_INVOICE_SETTINGS
+from app.core.default_settings import DEFAULT_INVOICE_SETTINGS, DEFAULT_VAT_RULES
 from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.core.exceptions import ValidationError
 from app.core.invoice_number import validate_invoice_template
@@ -71,6 +71,10 @@ async def get_invoice_settings(
             "invoice_footer_html",
             DEFAULT_INVOICE_SETTINGS.get("invoice_footer_html", ""),
         ),
+        invoice_header_html=settings.get(
+            "invoice_header_html",
+            DEFAULT_INVOICE_SETTINGS.get("invoice_header_html", ""),
+        ),
         invoice_company_info=InvoiceCompanyInfo(**company_info),
         invoice_page_format=settings.get(
             "invoice_page_format",
@@ -88,6 +92,7 @@ async def get_invoice_settings(
             "cancellation_counter_value",
             DEFAULT_INVOICE_SETTINGS["cancellation_counter_value"],
         ),
+        vat_rules=settings.get("vat_rules", DEFAULT_VAT_RULES),
     )
 
 
@@ -214,6 +219,9 @@ async def preview_invoice_pdf(
 
     if "invoice_footer_html" in update_data:
         preview_settings["invoice_footer_html"] = update_data["invoice_footer_html"]
+
+    if "invoice_header_html" in update_data:
+        preview_settings["invoice_header_html"] = update_data["invoice_header_html"]
 
     # Resolve template HTML for the requested type
     templates = preview_settings.get("invoice_templates", {})

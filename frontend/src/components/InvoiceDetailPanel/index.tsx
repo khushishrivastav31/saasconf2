@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import AlertDialog from '../AlertDialog';
 import ConfirmDialog from '../ConfirmDialog';
 import { useSaveStatus } from '../../hooks/useSaveStatus';
 import InvoiceDetailsTab from './InvoiceDetailsTab';
@@ -45,8 +46,15 @@ export default function InvoiceDetailPanel({
     'details'
   );
   const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
+  const [showSendConfirm, setShowSendConfirm] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
+  const isDraft = invoice.status === 'draft';
+  const readOnly = !isDraft;
+  const isTerminal = invoice.status === 'paid' || invoice.status === 'cancelled';
+  const hasStatusTransitions = readOnly && !isTerminal;
   const [formData, setFormData] = useState<InvoiceUpdate>({
-    invoice_number: invoice.invoice_number,
+    invoice_number: invoice.invoice_number ?? undefined,
     template_type: invoice.template_type || 'bank_transfer',
     status: invoice.status,
     issue_date: invoice.issue_date || '',
@@ -67,6 +75,7 @@ export default function InvoiceDetailPanel({
     total: invoice.total ?? undefined,
     currency: invoice.currency || '',
     notes: invoice.notes || '',
+    internal_comment: invoice.internal_comment || '',
     contact_persons: invoice.contact_persons || [],
     is_active: invoice.is_active,
   });
@@ -78,12 +87,13 @@ export default function InvoiceDetailPanel({
     comment: '',
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [validationAlert, setValidationAlert] = useState<string | null>(null);
 
   // Reset form when invoice changes
   useEffect(() => {
     setActiveTab('details');
     setFormData({
-      invoice_number: invoice.invoice_number,
+      invoice_number: invoice.invoice_number ?? undefined,
       template_type: invoice.template_type || 'bank_transfer',
       status: invoice.status,
       issue_date: invoice.issue_date || '',
@@ -104,6 +114,7 @@ export default function InvoiceDetailPanel({
       total: invoice.total ?? undefined,
       currency: invoice.currency || '',
       notes: invoice.notes || '',
+      internal_comment: invoice.internal_comment || '',
       contact_persons: invoice.contact_persons || [],
       is_active: invoice.is_active,
     });
@@ -186,6 +197,35 @@ export default function InvoiceDetailPanel({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (readOnly) {
+      // Non-draft: only send status changes
+      if (formData.status !== invoice.status) {
+        setSaving();
+        try {
+          await onSave({ status: formData.status });
+          setSaved();
+        } catch {
+          setError();
+        }
+      }
+      return;
+    }
+
+    // Validate required fields
+    const missing: string[] = [];
+    if (!formData.recipient_name?.trim()) missing.push('Recipient Name');
+    if (!formData.currency?.trim() && !conferenceCurrency) missing.push('Currency');
+    const emptyItems = (formData.line_items || []).filter((li) => !li.description?.trim());
+    if (emptyItems.length > 0) missing.push('Description for all Line Items');
+
+    if (missing.length > 0) {
+      setValidationAlert(
+        `Please fill in the following required fields:\n\n- ${missing.join('\n- ')}`
+      );
+      return;
+    }
+
     const finalData = { ...formData };
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
       finalData.contact_persons = [...(finalData.contact_persons || []), { ...newContact }];
@@ -196,6 +236,42 @@ export default function InvoiceDetailPanel({
       setSaved();
     } catch {
       setError();
+    }
+  };
+
+  const handleSendInvoice = async () => {
+    // Validate required fields before sending
+    const missing: string[] = [];
+    if (!formData.recipient_name?.trim()) missing.push('Recipient Name');
+    if (!formData.currency?.trim() && !conferenceCurrency) missing.push('Currency');
+    if ((formData.line_items || []).length === 0) missing.push('At least one Line Item');
+    const emptyItems = (formData.line_items || []).filter((li) => !li.description?.trim());
+    if (emptyItems.length > 0) missing.push('Description for all Line Items');
+
+    if (missing.length > 0) {
+      setValidationAlert(
+        `Please fill in the following required fields before sending:\n\n- ${missing.join('\n- ')}`
+      );
+      return;
+    }
+
+    setShowSendConfirm(true);
+  };
+
+  const confirmSendInvoice = async () => {
+    setShowSendConfirm(false);
+    setIsSending(true);
+    try {
+      // First save all draft data, then change status to sent
+      const finalData = { ...formData, status: 'sent' as InvoiceStatus };
+      if (newContact.first_name.trim() && newContact.last_name.trim()) {
+        finalData.contact_persons = [...(finalData.contact_persons || []), { ...newContact }];
+      }
+      await onSave(finalData);
+    } catch {
+      setError();
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -218,7 +294,9 @@ export default function InvoiceDetailPanel({
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="mb-4">
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            {invoice.invoice_number}
+            {invoice.invoice_number || (
+              <span className="text-gray-400 dark:text-gray-500 italic">DRAFT</span>
+            )}
           </h3>
           <div className="flex items-center gap-2 mt-1">
             <span
@@ -256,10 +334,12 @@ export default function InvoiceDetailPanel({
         <form id="invoice-detail-form" onSubmit={handleSubmit}>
           {activeTab === 'details' && (
             <InvoiceDetailsTab
+              invoice={invoice}
               formData={formData}
               setFormData={setFormData}
               currencies={currencies}
               conferenceCurrency={conferenceCurrency}
+              readOnly={readOnly}
             />
           )}
 
@@ -270,6 +350,7 @@ export default function InvoiceDetailPanel({
               addLineItem={addLineItem}
               removeLineItem={removeLineItem}
               handleTaxRateChange={handleTaxRateChange}
+              readOnly={readOnly}
             />
           )}
 
@@ -281,6 +362,7 @@ export default function InvoiceDetailPanel({
               addContact={addContact}
               removeContact={removeContact}
               updateContact={updateContact}
+              readOnly={readOnly}
             />
           )}
         </form>
@@ -289,8 +371,8 @@ export default function InvoiceDetailPanel({
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center flex-shrink-0">
-        {onDelete && (
+      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center shrink-0">
+        {isDraft && onDelete ? (
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
@@ -298,69 +380,94 @@ export default function InvoiceDetailPanel({
           >
             Delete
           </button>
+        ) : (
+          <div />
         )}
-        {!onDelete && <div />}
-        <button
-          type="submit"
-          form="invoice-detail-form"
-          disabled={saveStatus === 'saving'}
-          className={`px-4 py-1.5 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 transition-colors duration-200 ${
-            saveStatus === 'saved'
-              ? 'bg-green-600'
-              : saveStatus === 'error'
-                ? 'bg-red-600'
-                : 'bg-primary-600 hover:bg-primary-700'
-          }`}
-        >
-          {saveStatus === 'saving' ? (
-            <span className="inline-flex items-center gap-1.5">
-              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              Saving...
-            </span>
-          ) : saveStatus === 'saved' ? (
-            <span className="inline-flex items-center gap-1.5">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Saved
-            </span>
-          ) : saveStatus === 'error' ? (
-            'Save failed'
-          ) : (
-            'Save Changes'
+        <div className="flex items-center gap-2">
+          {isDraft && (
+            <>
+              <button
+                type="submit"
+                form="invoice-detail-form"
+                disabled={saveStatus === 'saving'}
+                className={`px-4 py-1.5 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 transition-colors duration-200 ${
+                  saveStatus === 'saved'
+                    ? 'bg-green-600'
+                    : saveStatus === 'error'
+                      ? 'bg-red-600'
+                      : 'bg-primary-600 hover:bg-primary-700'
+                }`}
+              >
+                {saveStatus === 'saving'
+                  ? 'Saving...'
+                  : saveStatus === 'saved'
+                    ? 'Saved'
+                    : saveStatus === 'error'
+                      ? 'Save failed'
+                      : 'Save Draft'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSendInvoice}
+                disabled={isSending}
+                className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md disabled:opacity-50 transition-colors"
+              >
+                {isSending ? 'Sending...' : 'Send Invoice'}
+              </button>
+            </>
           )}
-        </button>
+          {readOnly && hasStatusTransitions && (
+            <button
+              type="submit"
+              form="invoice-detail-form"
+              disabled={saveStatus === 'saving' || formData.status === invoice.status}
+              className={`px-4 py-1.5 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 transition-colors duration-200 ${
+                saveStatus === 'saved'
+                  ? 'bg-green-600'
+                  : saveStatus === 'error'
+                    ? 'bg-red-600'
+                    : 'bg-primary-600 hover:bg-primary-700'
+              }`}
+            >
+              {saveStatus === 'saving'
+                ? 'Updating...'
+                : saveStatus === 'saved'
+                  ? 'Updated'
+                  : saveStatus === 'error'
+                    ? 'Update failed'
+                    : 'Update Status'}
+            </button>
+          )}
+        </div>
       </div>
 
       <ConfirmDialog
         open={showDeleteConfirm}
         title="Delete Invoice"
-        message={`Are you sure you want to delete invoice "${invoice.invoice_number}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete invoice "${invoice.invoice_number || 'DRAFT'}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm={() => {
           setShowDeleteConfirm(false);
           onDelete?.(invoice.id);
         }}
         onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      <AlertDialog
+        open={!!validationAlert}
+        title="Missing Required Fields"
+        message={validationAlert || ''}
+        variant="warning"
+        onClose={() => setValidationAlert(null)}
+      />
+
+      <ConfirmDialog
+        open={showSendConfirm}
+        title="Send Invoice"
+        message="This will assign an invoice number and mark the invoice as sent. After sending, only the status can be changed. This action cannot be undone."
+        confirmLabel="Send Invoice"
+        onConfirm={confirmSendInvoice}
+        onCancel={() => setShowSendConfirm(false)}
       />
     </div>
   );
