@@ -414,12 +414,12 @@ describe('InvoiceDetailPanel', () => {
 
       const select = getInputByLabel(container, 'Status') as HTMLSelectElement;
       expect(select.tagName).toBe('SELECT');
-      // Should have current status + valid transitions (paid, overdue, cancelled)
+      // Should have current status + valid transitions (paid, overdue) — cancelled uses dedicated endpoint
       const options = Array.from(select.options).map((o) => o.value);
       expect(options).toContain('sent');
       expect(options).toContain('paid');
       expect(options).toContain('overdue');
-      expect(options).toContain('cancelled');
+      expect(options).not.toContain('cancelled');
     });
 
     it('updates recipient name field', async () => {

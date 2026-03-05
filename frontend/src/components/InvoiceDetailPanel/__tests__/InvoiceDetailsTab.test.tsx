@@ -174,7 +174,8 @@ describe('InvoiceDetailsTab', () => {
       expect(options).toContain('sent');
       expect(options).toContain('paid');
       expect(options).toContain('overdue');
-      expect(options).toContain('cancelled');
+      // cancelled is no longer a manual status transition — use the cancel endpoint instead
+      expect(options).not.toContain('cancelled');
     });
 
     it('renders issue date field', () => {
