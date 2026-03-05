@@ -468,6 +468,13 @@ class InvoiceSettingsResponse(BaseModel):
     cancellation_counter_value: int
     # VAT decision rules
     vat_rules: list[VatRule] = []
+    # Number format
+    number_format_preset: str = "us_uk"
+    decimal_separator: str = "."
+    thousands_separator: str = ","
+    currency_position: str = "before"
+    # EU member states
+    eu_countries: list[str] = []
 
 
 class InvoiceSettingsUpdate(BaseModel):
@@ -488,6 +495,10 @@ class InvoiceSettingsUpdate(BaseModel):
     cancellation_counter_value: int | None = None
     # VAT decision rules
     vat_rules: list[VatRule] | None = None
+    # Number format preset (resolves to decimal_separator, thousands_separator, currency_position)
+    number_format_preset: str | None = None
+    # EU member states (list of ISO 3166-1 alpha-2 codes)
+    eu_countries: list[str] | None = None
 
     @field_validator("invoice_counter_reset", "cancellation_counter_reset")
     @classmethod
@@ -504,6 +515,28 @@ class InvoiceSettingsUpdate(BaseModel):
         allowed = ("A4", "A5", "Letter", "Legal", "B5", "Tabloid")
         if v and v not in allowed:
             raise ValueError(f"Must be one of: {', '.join(allowed)}")
+        return v
+
+    @field_validator("number_format_preset")
+    @classmethod
+    def validate_number_format_preset(cls, v: str | None) -> str | None:
+        """Validate preset code against known presets."""
+        if v is not None:
+            from app.core.currency_formats import FORMAT_PRESETS
+
+            if v not in FORMAT_PRESETS:
+                allowed = ", ".join(sorted(FORMAT_PRESETS.keys()))
+                raise ValueError(f"Must be one of: {allowed}")
+        return v
+
+    @field_validator("eu_countries")
+    @classmethod
+    def validate_eu_countries(cls, v: list[str] | None) -> list[str] | None:
+        """Validate country codes are 2-letter uppercase ISO codes."""
+        if v is not None:
+            for code in v:
+                if not (len(code) == 2 and code.isalpha() and code.isupper()):
+                    raise ValueError(f"Invalid country code: {code}. Must be 2-letter uppercase ISO code.")
         return v
 
 

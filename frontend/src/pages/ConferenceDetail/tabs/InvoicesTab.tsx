@@ -15,6 +15,7 @@ import type {
   RecipientSearchResult,
 } from '../../../types';
 import { parseApiError } from '../../../utils/apiError';
+import { formatNumber } from '../../../utils/formatCurrency';
 import InvoiceDetailPanel from '../../../components/InvoiceDetailPanel';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import ContactPersonList from '../../../components/ContactPersonList';
@@ -88,6 +89,17 @@ export default function ConferenceInvoicesTab({
     contact_persons: [],
     is_active: true,
   };
+
+  // Number format from conference settings
+  const fmtAmount = useCallback(
+    (value: number | null | undefined) =>
+      formatNumber(value ?? 0, {
+        decimalSeparator: (conference.settings?.decimal_separator as string) || '.',
+        thousandsSeparator: (conference.settings?.thousands_separator as string) || ',',
+        decimalPlaces: 2,
+      }),
+    [conference.settings]
+  );
 
   const [createForm, setCreateForm] = useState<InvoiceCreate>(emptyCreateForm);
   const [createNewContact, setCreateNewContact] = useState<LocationContactPerson>({
@@ -681,7 +693,7 @@ export default function ConferenceInvoicesTab({
                               />
                             </td>
                             <td className="px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {item.total.toFixed(2)}
+                              {fmtAmount(item.total)}
                             </td>
                             <td className="px-3 py-2">
                               <button
@@ -734,7 +746,7 @@ export default function ConferenceInvoicesTab({
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
                       <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {(createForm.subtotal ?? 0).toFixed(2)}
+                        {fmtAmount(createForm.subtotal)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
@@ -753,13 +765,13 @@ export default function ConferenceInvoicesTab({
                         />
                       </div>
                       <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {(createForm.tax_amount ?? 0).toFixed(2)}
+                        {fmtAmount(createForm.tax_amount)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm font-semibold border-t border-gray-200 dark:border-gray-700 pt-2">
                       <span className="text-gray-900 dark:text-gray-100">Total</span>
                       <span className="text-gray-900 dark:text-gray-100">
-                        {(createForm.total ?? 0).toFixed(2)}{' '}
+                        {fmtAmount(createForm.total)}{' '}
                         {createForm.currency || conference.currency || ''}
                       </span>
                     </div>
@@ -926,7 +938,7 @@ export default function ConferenceInvoicesTab({
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-gray-500 dark:text-gray-400">
                         {invoice.total != null
-                          ? `${invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${invoice.currency ? ` ${invoice.currency}` : ''}`
+                          ? `${fmtAmount(invoice.total)}${invoice.currency ? ` ${invoice.currency}` : ''}`
                           : '-'}
                       </td>
                       {isAdmin && (

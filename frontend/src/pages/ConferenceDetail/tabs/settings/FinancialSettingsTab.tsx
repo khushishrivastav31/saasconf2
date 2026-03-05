@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import { useSaveStatus } from '../../../../hooks/useSaveStatus';
 import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
+import { COUNTRY_OPTIONS } from '../../../../config/countries';
 import type {
   Conference,
   ConferenceUpdate,
@@ -23,6 +24,45 @@ interface VatRule {
   oss_applicable: boolean;
   note: string;
 }
+
+const NUMBER_FORMAT_PRESETS = [
+  { code: 'us_uk', label: 'US/UK (1,234.56)', example: '1,234,567.89' },
+  { code: 'european', label: 'European (1.234,56)', example: '1.234.567,89' },
+  { code: 'swiss', label: "Swiss (1'234.56)", example: "1'234'567.89" },
+  { code: 'french', label: 'French (1 234,56)', example: '1 234 567,89' },
+  { code: 'indian', label: 'Indian (1,23,456.78)', example: '1,23,45,67.89' },
+  { code: 'no_separator', label: 'No separator (1234.56)', example: '1234567.89' },
+];
+
+const DEFAULT_EU_COUNTRIES = [
+  'AT',
+  'BE',
+  'BG',
+  'HR',
+  'CY',
+  'CZ',
+  'DK',
+  'EE',
+  'FI',
+  'FR',
+  'DE',
+  'GR',
+  'HU',
+  'IE',
+  'IT',
+  'LV',
+  'LT',
+  'LU',
+  'MT',
+  'NL',
+  'PL',
+  'PT',
+  'RO',
+  'SK',
+  'SI',
+  'ES',
+  'SE',
+];
 
 const ATTENDANCE_LABELS: Record<string, string> = {
   in_person: 'In-Person',
@@ -263,6 +303,12 @@ function FinancialSettingsTab({
 
         {/* VAT Decision Rules */}
         <VatRulesTable conferenceId={conference.id} isAdmin={isAdmin} />
+
+        {/* EU Member States */}
+        <EuCountriesSection conferenceId={conference.id} isAdmin={isAdmin} />
+
+        {/* Number Format */}
+        <NumberFormatSection conferenceId={conference.id} isAdmin={isAdmin} />
       </div>
     </div>
   );
@@ -463,6 +509,214 @@ function VatRulesTable({ conferenceId, isAdmin }: { conferenceId: string; isAdmi
             })}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Number Format Section ──────────────────────────────────────────
+
+function NumberFormatSection({
+  conferenceId,
+  isAdmin,
+}: {
+  conferenceId: string;
+  isAdmin: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [selectedPreset, setSelectedPreset] = useState('us_uk');
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
+
+  const { data: invoiceSettings, isLoading } = useQuery({
+    queryKey: queryKeys.invoiceSettings(conferenceId),
+    queryFn: async () => {
+      const res = await api.get(`/conferences/${conferenceId}/settings/invoice-settings`);
+      return res.data;
+    },
+  });
+
+  useEffect(() => {
+    if (invoiceSettings?.number_format_preset) {
+      setSelectedPreset(invoiceSettings.number_format_preset);
+    }
+  }, [invoiceSettings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (preset: string) => {
+      await api.put(`/conferences/${conferenceId}/settings/invoice-settings`, {
+        number_format_preset: preset,
+      });
+    },
+    onMutate: () => setSaving(),
+    onSuccess: () => {
+      setSaved();
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoiceSettings(conferenceId) });
+    },
+    onError: (err) => {
+      setSaveError();
+      showToast(parseApiError(err), 'error');
+    },
+  });
+
+  const handlePresetChange = (preset: string) => {
+    setSelectedPreset(preset);
+    saveMutation.mutate(preset);
+  };
+
+  const currentExample =
+    NUMBER_FORMAT_PRESETS.find((p) => p.code === selectedPreset)?.example || '1,234,567.89';
+
+  if (isLoading) return null;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex justify-between items-center mb-3">
+        <div>
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Number Format</h5>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Controls how amounts appear on invoices and in the admin interface.
+          </p>
+        </div>
+        {saveStatus === 'saving' && (
+          <span className="text-xs text-gray-500 dark:text-gray-400">Saving...</span>
+        )}
+        {saveStatus === 'saved' && (
+          <span className="text-xs text-green-600 dark:text-green-400">Saved</span>
+        )}
+      </div>
+      <div className="flex items-center gap-4">
+        <select
+          className="block w-64 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+          value={selectedPreset}
+          onChange={(e) => handlePresetChange(e.target.value)}
+          disabled={!isAdmin}
+        >
+          {NUMBER_FORMAT_PRESETS.map((p) => (
+            <option key={p.code} value={p.code}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        <span className="text-sm text-gray-600 dark:text-gray-300">
+          Example: <span className="font-mono font-medium">{currentExample}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── EU Countries Section ───────────────────────────────────────────
+
+function EuCountriesSection({ conferenceId, isAdmin }: { conferenceId: string; isAdmin: boolean }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [countries, setCountries] = useState<string[]>(DEFAULT_EU_COUNTRIES);
+  const [saveTimeout, setSaveTimeoutState] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
+
+  const { data: invoiceSettings, isLoading } = useQuery({
+    queryKey: queryKeys.invoiceSettings(conferenceId),
+    queryFn: async () => {
+      const res = await api.get(`/conferences/${conferenceId}/settings/invoice-settings`);
+      return res.data;
+    },
+  });
+
+  useEffect(() => {
+    if (invoiceSettings?.eu_countries) {
+      setCountries(invoiceSettings.eu_countries);
+    }
+  }, [invoiceSettings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (updatedCountries: string[]) => {
+      await api.put(`/conferences/${conferenceId}/settings/invoice-settings`, {
+        eu_countries: updatedCountries,
+      });
+    },
+    onMutate: () => setSaving(),
+    onSuccess: () => {
+      setSaved();
+      queryClient.invalidateQueries({ queryKey: queryKeys.invoiceSettings(conferenceId) });
+    },
+    onError: (err) => {
+      setSaveError();
+      showToast(parseApiError(err), 'error');
+    },
+  });
+
+  const toggleCountry = useCallback(
+    (code: string) => {
+      const updated = countries.includes(code)
+        ? countries.filter((c) => c !== code)
+        : [...countries, code].sort();
+      setCountries(updated);
+
+      if (saveTimeout) clearTimeout(saveTimeout);
+      const timeout = setTimeout(() => saveMutation.mutate(updated), 800);
+      setSaveTimeoutState(timeout);
+    },
+    [countries, saveTimeout, saveMutation]
+  );
+
+  const resetToDefault = () => {
+    setCountries(DEFAULT_EU_COUNTRIES);
+    saveMutation.mutate(DEFAULT_EU_COUNTRIES);
+  };
+
+  const countrySet = useMemo(() => new Set(countries), [countries]);
+
+  if (isLoading) return null;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex justify-between items-center mb-3">
+        <div>
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            EU Member States
+            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+              {countries.length} of {COUNTRY_OPTIONS.length} selected
+            </span>
+          </h5>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Countries classified as "EU" in the VAT decision table. Adjust if member states change.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {saveStatus === 'saving' && (
+            <span className="text-xs text-gray-500 dark:text-gray-400">Saving...</span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="text-xs text-green-600 dark:text-green-400">Saved</span>
+          )}
+          {isAdmin && (
+            <button
+              onClick={resetToDefault}
+              className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              Reset to default
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-1">
+        {COUNTRY_OPTIONS.map((c) => (
+          <label
+            key={c.code}
+            className="flex items-center gap-1.5 py-1 px-1.5 rounded text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              checked={countrySet.has(c.code)}
+              onChange={() => toggleCountry(c.code)}
+              disabled={!isAdmin}
+              className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="font-mono text-gray-400 dark:text-gray-500">{c.code}</span>
+            <span className="truncate">{c.name}</span>
+          </label>
+        ))}
       </div>
     </div>
   );

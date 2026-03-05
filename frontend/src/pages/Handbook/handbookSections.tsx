@@ -1139,6 +1139,61 @@ info@company.com,,,Tech Solutions`}
             </tr>
           </tbody>
         </table>
+        <h4>Number Format</h4>
+        <p>
+          Choose how monetary amounts are displayed on invoices. Select a preset from the dropdown
+          to automatically configure decimal separators, thousands separators, and currency symbol
+          position. Available presets:
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Preset</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>US / UK</td>
+              <td>1,234,567.89</td>
+            </tr>
+            <tr>
+              <td>European</td>
+              <td>1.234.567,89</td>
+            </tr>
+            <tr>
+              <td>Swiss</td>
+              <td>1&rsquo;234&rsquo;567.89</td>
+            </tr>
+            <tr>
+              <td>French</td>
+              <td>1&nbsp;234&nbsp;567,89</td>
+            </tr>
+            <tr>
+              <td>Indian</td>
+              <td>12,34,567.89</td>
+            </tr>
+            <tr>
+              <td>No separator</td>
+              <td>1234567.89</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          The selected format applies to all monetary values in generated invoice PDFs (subtotals,
+          tax amounts, line item prices, and totals). Tax rate percentages are not affected.
+        </p>
+        <h4>EU Member States</h4>
+        <p>
+          The VAT decision table classifies customers as <em>domestic</em>, <em>EU</em>, or{' '}
+          <em>non-EU</em> based on their country. The EU Members list determines which countries
+          count as &ldquo;EU&rdquo;. It is pre-populated with the current 27 EU member states but
+          can be adjusted if countries join or leave the union.
+        </p>
+        <p>
+          Use the checkbox grid to add or remove countries. A count badge shows how many are
+          selected. Click <strong>Reset to default</strong> to restore the standard 27 members.
+        </p>
         <h3>Invoice Number</h3>
         <p>
           Configure the invoice numbering pattern and reset behaviour.{' '}

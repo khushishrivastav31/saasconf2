@@ -8,7 +8,7 @@ import { parseApiError } from '../../../../utils/apiError';
 import AlertDialog from '../../../../components/AlertDialog';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
-import { CloseIcon } from '../../../ConferenceDetail/icons';
+import { ChevronLeftIcon, CloseIcon } from '../../../ConferenceDetail/icons';
 import { ApplicantForm } from './ApplicantForm';
 import { ApplicantPapers } from './ApplicantPapers';
 import type { ApplicantFormData } from './ApplicantForm';
@@ -338,6 +338,20 @@ export default function CFPApplicants({
 
   return (
     <div>
+      {(isAdding || selectedApplicant) && (
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedApplicantId(null);
+            setIsAdding(false);
+            setError(null);
+          }}
+          className="mb-3 inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+        >
+          <ChevronLeftIcon />
+          Back to users list
+        </button>
+      )}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">

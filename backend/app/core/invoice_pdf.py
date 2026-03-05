@@ -11,6 +11,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency_formats import format_amount
 from app.models.attachment import Attachment
 from app.models.conference import Conference
 from app.models.fiscal_representative import FiscalRepresentative
@@ -712,24 +713,24 @@ async def generate_invoice_pdf(
         "[RECIPIENT_NAME]": invoice.recipient_name or "",
         "[RECIPIENT_ADDRESS]": _format_recipient_address(invoice),
         "[RECIPIENT_VAT]": invoice.recipient_vat_number or "",
-        # Financial
-        "[SUBTOTAL]": f"{invoice.subtotal:.2f}" if invoice.subtotal else "0.00",
+        # Financial (formatted using conference number format settings)
+        "[SUBTOTAL]": format_amount(invoice.subtotal, settings) if invoice.subtotal else format_amount(0, settings),
         "[TAX_RATE]": f"{invoice.tax_rate:.2f}" if invoice.tax_rate else "0.00",
-        "[TAX_AMOUNT]": f"{invoice.tax_amount:.2f}" if invoice.tax_amount else "0.00",
-        "[TOTAL]": f"{invoice.total:.2f}" if invoice.total else "0.00",
+        "[TAX_AMOUNT]": format_amount(invoice.tax_amount, settings) if invoice.tax_amount else format_amount(0, settings),
+        "[TOTAL]": format_amount(invoice.total, settings) if invoice.total else format_amount(0, settings),
         # Currency
         "[CURRENCY]": primary_currency,
         "[CURRENCY_1]": primary_currency,
         "[CURRENCY_2]": second_currency,
         # Dual currency
         "[SECOND_CURRENCY]": second_currency,
-        "[SECOND_TOTAL]": f"{(Decimal(str(invoice.total)) * exchange_rate):.2f}"
+        "[SECOND_TOTAL]": format_amount(Decimal(str(invoice.total)) * exchange_rate, settings)
         if exchange_rate and invoice.total
         else "",
-        "[SECOND_SUBTOTAL]": f"{(Decimal(str(invoice.subtotal)) * exchange_rate):.2f}"
+        "[SECOND_SUBTOTAL]": format_amount(Decimal(str(invoice.subtotal)) * exchange_rate, settings)
         if exchange_rate and invoice.subtotal
         else "",
-        "[SECOND_TAX_AMOUNT]": f"{(Decimal(str(invoice.tax_amount)) * exchange_rate):.2f}"
+        "[SECOND_TAX_AMOUNT]": format_amount(Decimal(str(invoice.tax_amount)) * exchange_rate, settings)
         if exchange_rate and invoice.tax_amount
         else "",
         # Contact info (both underscore and space variants)
@@ -747,7 +748,7 @@ async def generate_invoice_pdf(
     html = _apply_placeholders(html, replacements)
 
     # Items table (special handling — preserves font context from template)
-    items_table_html = _render_items_table(invoice.line_items or [], currency=primary_currency)
+    items_table_html = _render_items_table(invoice.line_items or [], currency=primary_currency, settings=settings)
     html = _replace_items_placeholder(html, items_table_html)
 
     # Normalize TipTap output for PDF
@@ -945,22 +946,24 @@ async def generate_invoice_pdf_from_data(
         "[RECIPIENT_NAME]": invoice_data.get("recipient_name", ""),
         "[RECIPIENT_ADDRESS]": _format_recipient_address_from_data(invoice_data),
         "[RECIPIENT_VAT]": invoice_data.get("recipient_vat_number", ""),
-        # Financial
-        "[SUBTOTAL]": f"{subtotal_val:.2f}",
+        # Financial (formatted using conference number format settings)
+        "[SUBTOTAL]": format_amount(subtotal_val, settings),
         "[TAX_RATE]": f"{invoice_data.get('tax_rate', 0):.2f}",
-        "[TAX_AMOUNT]": f"{tax_amount_val:.2f}",
-        "[TOTAL]": f"{total_val:.2f}",
+        "[TAX_AMOUNT]": format_amount(tax_amount_val, settings),
+        "[TOTAL]": format_amount(total_val, settings),
         # Currency
         "[CURRENCY]": primary_currency,
         "[CURRENCY_1]": primary_currency,
         "[CURRENCY_2]": second_currency,
         # Dual currency
         "[SECOND_CURRENCY]": second_currency,
-        "[SECOND_TOTAL]": f"{(Decimal(str(total_val)) * exchange_rate):.2f}" if exchange_rate and total_val else "",
-        "[SECOND_SUBTOTAL]": f"{(Decimal(str(subtotal_val)) * exchange_rate):.2f}"
+        "[SECOND_TOTAL]": format_amount(Decimal(str(total_val)) * exchange_rate, settings)
+        if exchange_rate and total_val
+        else "",
+        "[SECOND_SUBTOTAL]": format_amount(Decimal(str(subtotal_val)) * exchange_rate, settings)
         if exchange_rate and subtotal_val
         else "",
-        "[SECOND_TAX_AMOUNT]": f"{(Decimal(str(tax_amount_val)) * exchange_rate):.2f}"
+        "[SECOND_TAX_AMOUNT]": format_amount(Decimal(str(tax_amount_val)) * exchange_rate, settings)
         if exchange_rate and tax_amount_val
         else "",
         # Contact info (both underscore and space variants)
@@ -978,7 +981,7 @@ async def generate_invoice_pdf_from_data(
     html = _apply_placeholders(html, replacements)
 
     # Items table (special handling — preserves font context from template)
-    items_table_html = _render_items_table(invoice_data.get("line_items", []), currency=primary_currency)
+    items_table_html = _render_items_table(invoice_data.get("line_items", []), currency=primary_currency, settings=settings)
     html = _replace_items_placeholder(html, items_table_html)
 
     # Normalize TipTap output for PDF
@@ -1099,7 +1102,7 @@ def _replace_items_placeholder(html: str, items_table_html: str) -> str:
     return html.replace(placeholder, items_table_html)
 
 
-def _render_items_table(line_items: list, currency: str = "EUR") -> str:
+def _render_items_table(line_items: list, currency: str = "EUR", settings: dict | None = None) -> str:
     """Render line items as an HTML table matching the TipTap editor style.
 
     Uses minimal inline styles (only text-alignment) so the table inherits
@@ -1110,6 +1113,7 @@ def _render_items_table(line_items: list, currency: str = "EUR") -> str:
         line_items: List of line item dicts with description, quantity,
                     unit_price, discount, total
         currency: Currency code to display after amounts (e.g. "EUR")
+        settings: Conference settings dict for number formatting
 
     Returns:
         HTML table string
@@ -1117,6 +1121,7 @@ def _render_items_table(line_items: list, currency: str = "EUR") -> str:
     if not line_items:
         return "<p>No items</p>"
 
+    fmt_settings = settings or {}
     cell = "padding: 1px 4px;"
     cur = f" {currency}" if currency else ""
     table = f"""
@@ -1145,16 +1150,16 @@ def _render_items_table(line_items: list, currency: str = "EUR") -> str:
         discount = Decimal(str(item.get("discount", 0)))
         total = Decimal(str(item.get("total", 0)))
 
-        discount_display = f"-{discount:.2f}{cur}" if discount > 0 else "-"
+        discount_display = f"-{format_amount(discount, fmt_settings)}{cur}" if discount > 0 else "-"
 
         table += f"""
         <tr>
           <td style="text-align: center; {cell}">{idx}</td>
           <td style="{cell}">{desc}</td>
           <td style="text-align: right; {cell}">{qty_display}</td>
-          <td style="text-align: right; {cell}">{unit_price:.2f}{cur}</td>
+          <td style="text-align: right; {cell}">{format_amount(unit_price, fmt_settings)}{cur}</td>
           <td style="text-align: right; {cell}">{discount_display}</td>
-          <td style="text-align: right; {cell}"><strong>{total:.2f}{cur}</strong></td>
+          <td style="text-align: right; {cell}"><strong>{format_amount(total, fmt_settings)}{cur}</strong></td>
         </tr>
         """
 

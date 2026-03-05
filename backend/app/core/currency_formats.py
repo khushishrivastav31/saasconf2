@@ -3,7 +3,10 @@
 Provides suggested number formatting based on currency code.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
+from decimal import Decimal
 
 
 @dataclass
@@ -133,6 +136,53 @@ def get_suggested_format(currency_code: str | None) -> NumberFormat:
     if not currency_code:
         return DEFAULT_FORMAT
     return CURRENCY_FORMATS.get(currency_code.upper(), DEFAULT_FORMAT)
+
+
+def format_amount(
+    value: float | Decimal | int,
+    settings: dict,
+    decimal_places: int = 2,
+) -> str:
+    """Format a monetary amount using conference number format settings.
+
+    Args:
+        value: The numeric value to format.
+        settings: Conference settings dict (reads decimal_separator, thousands_separator).
+        decimal_places: Number of decimal places (default 2).
+
+    Returns:
+        Formatted string, e.g. "1.234,56" for European format.
+    """
+    decimal_sep = settings.get("decimal_separator", ".")
+    thousands_sep = settings.get("thousands_separator", ",")
+
+    formatted = f"{float(value):.{decimal_places}f}"
+    if "." in formatted:
+        int_part, dec_part = formatted.split(".")
+    else:
+        int_part, dec_part = formatted, ""
+
+    # Handle negative sign
+    negative = int_part.startswith("-")
+    digits = int_part.lstrip("-")
+
+    # Add thousands separators
+    if thousands_sep and len(digits) > 3:
+        groups: list[str] = []
+        while len(digits) > 3:
+            groups.insert(0, digits[-3:])
+            digits = digits[:-3]
+        groups.insert(0, digits)
+        int_part = thousands_sep.join(groups)
+    else:
+        int_part = digits
+
+    if negative:
+        int_part = "-" + int_part
+
+    if decimal_places > 0:
+        return f"{int_part}{decimal_sep}{dec_part}"
+    return int_part
 
 
 def get_format_as_dict(currency_code: str | None) -> dict:

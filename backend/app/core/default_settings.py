@@ -94,6 +94,15 @@ LOCALE_OVERRIDES: dict[str, dict[str, str | int]] = {
     },
 }
 
+# Default EU member states (ISO 3166-1 alpha-2).
+# Used when conference has no custom eu_countries configured.
+DEFAULT_EU_COUNTRIES: list[str] = [
+    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
+    "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
+    "PL", "PT", "RO", "SK", "SI", "ES", "SE",
+]
+
+
 # Map bare language codes to their most common regional variant so that
 # callers can pass either "de" or "de-DE".
 _LANGUAGE_TO_LOCALE: dict[str, str] = {

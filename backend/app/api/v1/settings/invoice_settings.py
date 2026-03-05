@@ -13,7 +13,8 @@ from fastapi import APIRouter
 from sqlalchemy import select
 
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
-from app.core.default_settings import DEFAULT_INVOICE_SETTINGS, DEFAULT_VAT_RULES
+from app.core.currency_formats import get_preset_format
+from app.core.default_settings import DEFAULT_EU_COUNTRIES, DEFAULT_INVOICE_SETTINGS, DEFAULT_VAT_RULES
 from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.core.exceptions import ValidationError
 from app.core.invoice_number import validate_invoice_template
@@ -93,6 +94,13 @@ async def get_invoice_settings(
             DEFAULT_INVOICE_SETTINGS["cancellation_counter_value"],
         ),
         vat_rules=settings.get("vat_rules", DEFAULT_VAT_RULES),
+        # Number format
+        number_format_preset=settings.get("number_format_preset", "us_uk"),
+        decimal_separator=settings.get("decimal_separator", "."),
+        thousands_separator=settings.get("thousands_separator", ","),
+        currency_position=settings.get("currency_position", "before"),
+        # EU countries
+        eu_countries=settings.get("eu_countries", DEFAULT_EU_COUNTRIES),
     )
 
 
@@ -147,6 +155,14 @@ async def update_invoice_settings(
         new_company = update_data["invoice_company_info"]
         # Merge: keep existing values, override with new ones
         update_data["invoice_company_info"] = {**(existing_company or {}), **new_company}
+
+    # Resolve number format preset → individual separator fields
+    if update_data.get("number_format_preset"):
+        fmt = get_preset_format(update_data["number_format_preset"])
+        if fmt:
+            update_data["decimal_separator"] = fmt.decimal_separator
+            update_data["thousands_separator"] = fmt.thousands_separator
+            update_data["currency_position"] = fmt.currency_position
 
     # When invoice_templates is saved, sync bank_transfer → legacy field
     if update_data.get("invoice_templates"):

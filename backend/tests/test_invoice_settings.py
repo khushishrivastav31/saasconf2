@@ -677,3 +677,183 @@ async def test_preview_with_header(
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
     assert len(response.content) > 0
+
+
+# ─── Number Format Preset Tests ─────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_invoice_settings_number_format_defaults(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test GET returns default number format (US/UK)."""
+    headers = auth_headers(tenant_admin_token)
+
+    response = await client.get(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["number_format_preset"] == "us_uk"
+    assert data["decimal_separator"] == "."
+    assert data["thousands_separator"] == ","
+    assert data["currency_position"] == "before"
+
+
+@pytest.mark.asyncio
+async def test_update_number_format_preset_european(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test setting European preset syncs separator fields."""
+    headers = auth_headers(tenant_admin_token)
+
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+        json={"number_format_preset": "european"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["number_format_preset"] == "european"
+    assert data["decimal_separator"] == ","
+    assert data["thousands_separator"] == "."
+    assert data["currency_position"] == "after"
+
+
+@pytest.mark.asyncio
+async def test_update_number_format_preset_french(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test setting French preset."""
+    headers = auth_headers(tenant_admin_token)
+
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+        json={"number_format_preset": "french"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["decimal_separator"] == ","
+    assert data["thousands_separator"] == " "
+    assert data["currency_position"] == "after"
+
+
+@pytest.mark.asyncio
+async def test_update_number_format_preset_invalid(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test invalid preset code is rejected with 422."""
+    headers = auth_headers(tenant_admin_token)
+
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+        json={"number_format_preset": "invalid_preset"},
+    )
+
+    assert response.status_code == 422
+
+
+# ─── EU Countries Tests ─────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_invoice_settings_eu_countries_defaults(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test GET returns default EU countries list (27 members)."""
+    headers = auth_headers(tenant_admin_token)
+
+    response = await client.get(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["eu_countries"]) == 27
+    assert "DE" in data["eu_countries"]
+    assert "FR" in data["eu_countries"]
+    assert "US" not in data["eu_countries"]
+
+
+@pytest.mark.asyncio
+async def test_update_eu_countries(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test saving custom EU countries list."""
+    headers = auth_headers(tenant_admin_token)
+    custom_list = ["DE", "FR", "IT", "ES"]
+
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+        json={"eu_countries": custom_list},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["eu_countries"] == custom_list
+
+
+@pytest.mark.asyncio
+async def test_update_eu_countries_invalid_code(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test invalid country code is rejected with 422."""
+    headers = auth_headers(tenant_admin_token)
+
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+        json={"eu_countries": ["DE", "invalid", "FR"]},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_update_eu_countries_empty_list(
+    client: AsyncClient,
+    tenant_admin_token,
+    conference,
+    tenant_with_modules,
+):
+    """Test saving empty EU countries list."""
+    headers = auth_headers(tenant_admin_token)
+
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/settings/invoice-settings",
+        headers=headers,
+        json={"eu_countries": []},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["eu_countries"] == []

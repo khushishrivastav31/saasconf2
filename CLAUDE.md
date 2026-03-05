@@ -97,4 +97,17 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
   - `backend/tests/test_invoice_settings.py` — 4 new tests (header, dual currency)
   - `backend/tests/test_invoice_pdf_helpers.py` — new: 14 unit tests (country normalization, items table)
 - **Tests**: 32 invoice + 23 settings + 14 helpers = 69 backend tests passing, 1222 frontend tests passing
+
+### Current Work State
+- **Feature**: EU Countries List + Number Format Settings (Settings → Finance → Currency & Tax)
+- **Backend changes**:
+  - `app/core/currency_formats.py` — Added `format_amount()` helper that reads `decimal_separator`/`thousands_separator` from conference settings
+  - `app/core/default_settings.py` — Added `DEFAULT_EU_COUNTRIES` constant (27 current EU members)
+  - `app/schemas/settings.py` — Added `number_format_preset`, `decimal_separator`, `thousands_separator`, `currency_position`, `eu_countries` to InvoiceSettingsResponse + InvoiceSettingsUpdate with validators
+  - `app/api/v1/settings/invoice_settings.py` — GET returns new fields with defaults; PUT resolves preset → individual separator fields via `get_preset_format()`
+  - `app/core/invoice_pdf.py` — All `.2f` currency formatting replaced with `format_amount(value, settings)` in both entry points + items table. `[TAX_RATE]` stays `.2f` (percentage)
+- **Frontend changes**:
+  - `FinancialSettingsTab.tsx` — Added NumberFormatSection (6-preset dropdown with live preview) and EuCountriesSection (multi-select checkbox grid with count badge + reset button)
+  - `InvoicesTab.tsx` — All `.toFixed(2)` and `.toLocaleString()` replaced with `fmtAmount()` helper that reads conference settings
+- **Tests**: 13 currency format + 31 invoice settings (8 new) = 44 tests all passing, ruff clean, TypeScript clean
 - **Status**: Ready to commit (pending user approval)
