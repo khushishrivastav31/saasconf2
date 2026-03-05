@@ -10,8 +10,8 @@ import type {
 } from '../../types';
 
 const VALID_STATUS_TRANSITIONS: Record<string, InvoiceStatus[]> = {
-  sent: ['paid', 'overdue', 'cancelled'],
-  overdue: ['paid', 'cancelled'],
+  sent: ['paid', 'overdue'], // cancelled only via Cancel Invoice button
+  overdue: ['paid'], // cancelled only via Cancel Invoice button
   paid: [],
   cancelled: [],
 };
@@ -128,6 +128,20 @@ export default function InvoiceDetailsTab({
           )}
         </div>
       </div>
+
+      {invoice.template_type === 'credit_note' && invoice.related_invoice_number && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Original Invoice
+          </label>
+          <input
+            type="text"
+            disabled
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400"
+            value={invoice.related_invoice_number}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>

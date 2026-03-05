@@ -141,6 +141,9 @@ function SendContractModal({
       queryClient.invalidateQueries({
         queryKey: ['sponsor-contract', conferenceId, sponsor.id],
       });
+      queryClient.invalidateQueries({
+        queryKey: ['sponsor-contract-versions', conferenceId, sponsor.id],
+      });
       onSendSuccess(`Contract sent to ${recipientList.join(', ')}`);
       onClose();
     },

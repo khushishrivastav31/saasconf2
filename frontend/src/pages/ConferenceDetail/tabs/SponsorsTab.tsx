@@ -22,7 +22,7 @@ import RichTextEditor from '../../../components/common/RichTextEditor';
 import ContactPersonList from '../../../components/ContactPersonList';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
-import { ChevronLeftIcon, EditIcon, DeleteIcon } from '../icons';
+import { ChevronLeftIcon, DeleteIcon, DeactivateIcon } from '../icons';
 import { useSelection } from '../SelectionContext';
 
 function ConferenceSponsorsTab({
@@ -159,6 +159,10 @@ function ConferenceSponsorsTab({
       setSelectedSponsorId(null);
       setDeleteTarget(null);
     },
+    onError: (err: unknown) => {
+      setDeleteTarget(null);
+      setError(parseApiError(err, 'Failed to delete sponsor'));
+    },
   });
 
   const handleCreatePackageChange = (packageId: string) => {
@@ -256,7 +260,16 @@ function ConferenceSponsorsTab({
                 data: sponsorData,
               });
             }}
-            onDelete={(id) => deleteMutation.mutate(id)}
+            onDelete={selectedSponsor.has_invoices ? undefined : (id) => deleteMutation.mutate(id)}
+            onDeactivate={
+              selectedSponsor.has_invoices && selectedSponsor.is_active
+                ? () =>
+                    updateMutation.mutate({
+                      id: selectedSponsor.id,
+                      data: { is_active: false },
+                    })
+                : undefined
+            }
           />
         </>
       ) : (
@@ -656,7 +669,11 @@ function ConferenceSponsorsTab({
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {data.items.map((sponsor) => (
-                    <tr key={sponsor.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr
+                      key={sponsor.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => setSelectedSponsorId(sponsor.id)}
+                    >
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                         {sponsor.company_name}
                       </td>
@@ -683,25 +700,43 @@ function ConferenceSponsorsTab({
                         </span>
                       </td>
                       {isAdmin && (
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedSponsorId(sponsor.id)}
-                              className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
-                              title="Edit"
-                            >
-                              <EditIcon />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDeleteTarget(sponsor)}
-                              disabled={deleteMutation.isPending}
-                              className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
-                              title="Delete"
-                            >
-                              <DeleteIcon />
-                            </button>
+                            {sponsor.has_invoices ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateMutation.mutate({
+                                    id: sponsor.id,
+                                    data: { is_active: false },
+                                  })
+                                }
+                                disabled={updateMutation.isPending || !sponsor.is_active}
+                                className="group relative text-gray-400 dark:text-gray-500 hover:text-amber-500 p-1 rounded transition-colors disabled:opacity-50"
+                                title={
+                                  sponsor.is_active
+                                    ? 'Deactivate (has invoices)'
+                                    : 'Already deactivated'
+                                }
+                              >
+                                <DeactivateIcon />
+                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-medium text-white bg-gray-900 dark:bg-gray-700 rounded shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+                                  {sponsor.is_active
+                                    ? 'Deactivate (has invoices)'
+                                    : 'Already deactivated'}
+                                </span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setDeleteTarget(sponsor)}
+                                disabled={deleteMutation.isPending}
+                                className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
+                                title="Delete"
+                              >
+                                <DeleteIcon />
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}

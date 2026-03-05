@@ -1043,3 +1043,273 @@ async def test_recipient_search_requires_query(
     response = await client.get(url, headers=auth_headers(admin_token_invoices))
 
     assert response.status_code == 422
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# SEND / RESEND
+# ═══════════════════════════════════════════════════════════════════════
+
+
+async def test_send_draft_invoice(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    db_session: AsyncSession,
+) -> None:
+    """POST /send on a draft assigns number, sets status to sent, returns invoice."""
+    # Create a draft without invoice_number (will be assigned on send)
+    create_url = _invoices_url(conference.id)
+    payload = {
+        **INVOICE_PAYLOAD,
+        "invoice_number": None,
+    }
+    create_resp = await client.post(create_url, json=payload, headers=auth_headers(admin_token_invoices))
+    assert create_resp.status_code == 201
+    invoice_id = create_resp.json()["id"]
+
+    # Send the draft
+    send_url = _invoices_url(conference.id, f"{invoice_id}/send")
+    response = await client.post(send_url, headers=auth_headers(admin_token_invoices))
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "sent"
+    assert data["invoice_number"] is not None
+    assert data["issue_date"] is not None
+
+
+async def test_resend_sent_invoice(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sent_invoice: Invoice,
+) -> None:
+    """POST /send on a sent invoice returns 200 (resend)."""
+    url = _invoices_url(conference.id, f"{sent_invoice.id}/send")
+    response = await client.post(url, headers=auth_headers(admin_token_invoices))
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "sent"
+    assert data["invoice_number"] == "INV-SENT-001"
+
+
+async def test_send_rejects_paid_invoice(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    db_session: AsyncSession,
+    tenant: Tenant,
+) -> None:
+    """POST /send rejects invoices with paid status."""
+    invoice = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        invoice_number="INV-PAID-001",
+        status="paid",
+        recipient_name="Paid Corp",
+        recipient_email="paid@example.com",
+        recipient_city="Munich",
+        recipient_country="Germany",
+        line_items=[{"description": "Item", "quantity": "1", "unit_price": "100", "total": "100"}],
+        subtotal=100.00,
+        total=100.00,
+        currency="EUR",
+        is_active=True,
+    )
+    db_session.add(invoice)
+    await db_session.commit()
+
+    url = _invoices_url(conference.id, f"{invoice.id}/send")
+    response = await client.post(url, headers=auth_headers(admin_token_invoices))
+
+    assert response.status_code == 400
+    assert "Cannot send" in response.json()["detail"]
+
+
+async def test_send_rejects_missing_email(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    db_session: AsyncSession,
+    tenant: Tenant,
+) -> None:
+    """POST /send rejects invoices without recipient email."""
+    invoice = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        invoice_number=None,
+        status="draft",
+        recipient_name="No Email Corp",
+        recipient_email=None,
+        recipient_city="Berlin",
+        recipient_country="Germany",
+        line_items=[{"description": "Item", "quantity": "1", "unit_price": "100", "total": "100"}],
+        subtotal=100.00,
+        total=100.00,
+        currency="EUR",
+        is_active=True,
+    )
+    db_session.add(invoice)
+    await db_session.commit()
+
+    url = _invoices_url(conference.id, f"{invoice.id}/send")
+    response = await client.post(url, headers=auth_headers(admin_token_invoices))
+
+    assert response.status_code == 400
+    assert "recipient email" in response.json()["detail"].lower()
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# CANCEL + CREDIT NOTE
+# ═══════════════════════════════════════════════════════════════════════
+
+
+async def test_cancel_invoice_requires_reason(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sent_invoice: Invoice,
+) -> None:
+    """POST /cancel without a reason body returns 422."""
+    url = _invoices_url(conference.id, f"{sent_invoice.id}/cancel")
+    response = await client.post(url, headers=auth_headers(admin_token_invoices))
+
+    assert response.status_code == 422
+
+
+async def test_cancel_invoice_creates_credit_note(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sent_invoice: Invoice,
+) -> None:
+    """POST /cancel with reason creates credit note and cancels invoice."""
+    url = _invoices_url(conference.id, f"{sent_invoice.id}/cancel")
+    response = await client.post(
+        url,
+        json={"reason": "Duplicate invoice"},
+        headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Original is cancelled
+    assert data["cancelled_invoice"]["status"] == "cancelled"
+    assert data["cancelled_invoice"]["id"] == str(sent_invoice.id)
+
+    # Credit note is created
+    cn = data["credit_note"]
+    assert cn["template_type"] == "credit_note"
+    assert cn["status"] == "sent"
+    assert cn["related_invoice_id"] == str(sent_invoice.id)
+    assert cn["invoice_number"] is not None
+
+    # Amounts are negated
+    assert float(cn["total"]) == -float(sent_invoice.total)
+
+
+async def test_cancel_invoice_stores_reason(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sent_invoice: Invoice,
+) -> None:
+    """Cancellation reason is stored as internal_comment on the invoice."""
+    cancel_url = _invoices_url(conference.id, f"{sent_invoice.id}/cancel")
+    await client.post(
+        cancel_url,
+        json={"reason": "Customer requested cancellation"},
+        headers=auth_headers(admin_token_invoices),
+    )
+
+    # Fetch the cancelled invoice and verify internal comment
+    get_url = _invoices_url(conference.id, str(sent_invoice.id))
+    response = await client.get(get_url, headers=auth_headers(admin_token_invoices))
+    assert response.status_code == 200
+    assert response.json()["internal_comment"] == "Customer requested cancellation"
+
+
+async def test_cancel_draft_rejected(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sample_invoice: Invoice,
+) -> None:
+    """Draft invoices cannot be cancelled."""
+    url = _invoices_url(conference.id, f"{sample_invoice.id}/cancel")
+    response = await client.post(
+        url,
+        json={"reason": "Test"},
+        headers=auth_headers(admin_token_invoices),
+    )
+
+    assert response.status_code == 400
+    assert "draft" in response.json()["detail"].lower()
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# DELETE PROTECTION
+# ═══════════════════════════════════════════════════════════════════════
+
+
+async def test_delete_sent_invoice_rejected(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sent_invoice: Invoice,
+) -> None:
+    """Sent invoices cannot be deleted — only drafts can."""
+    url = _invoices_url(conference.id, str(sent_invoice.id))
+    response = await client.delete(url, headers=auth_headers(admin_token_invoices))
+
+    assert response.status_code == 400
+    assert "draft" in response.json()["detail"].lower()
+
+
+async def test_delete_credit_note_rejected(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sent_invoice: Invoice,
+) -> None:
+    """Credit notes cannot be deleted."""
+    # First cancel to create a credit note
+    cancel_url = _invoices_url(conference.id, f"{sent_invoice.id}/cancel")
+    cancel_resp = await client.post(
+        cancel_url,
+        json={"reason": "Test cancellation"},
+        headers=auth_headers(admin_token_invoices),
+    )
+    assert cancel_resp.status_code == 200
+    credit_note_id = cancel_resp.json()["credit_note"]["id"]
+
+    # Try to delete the credit note
+    delete_url = _invoices_url(conference.id, credit_note_id)
+    response = await client.delete(delete_url, headers=auth_headers(admin_token_invoices))
+
+    assert response.status_code == 400
+    assert "credit note" in response.json()["detail"].lower()

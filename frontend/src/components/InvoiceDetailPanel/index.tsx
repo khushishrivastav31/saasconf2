@@ -28,7 +28,12 @@ interface InvoiceDetailPanelProps {
   currencies: PlatformCurrency[];
   conferenceCurrency?: string | null;
   onSave: (data: InvoiceUpdate) => Promise<void>;
+  onSend?: (id: string) => Promise<void>;
   onDelete?: (id: string) => void;
+  onCancel?: (id: string, reason: string) => void;
+  onNavigateToInvoice?: (id: string) => void;
+  /** Credit note linked to this cancelled invoice (for showing "View Credit Note" link) */
+  linkedCreditNote?: Invoice | null;
 }
 
 function emptyLineItem(): InvoiceLineItem {
@@ -40,7 +45,11 @@ export default function InvoiceDetailPanel({
   currencies,
   conferenceCurrency,
   onSave,
+  onSend,
   onDelete,
+  onCancel,
+  onNavigateToInvoice,
+  linkedCreditNote,
 }: InvoiceDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'line_items' | 'contacts' | 'documents'>(
     'details'
@@ -87,7 +96,13 @@ export default function InvoiceDetailPanel({
     comment: '',
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [validationAlert, setValidationAlert] = useState<string | null>(null);
+
+  const isCancellable =
+    (invoice.status === 'sent' || invoice.status === 'overdue') &&
+    invoice.template_type !== 'credit_note';
 
   // Reset form when invoice changes
   useEffect(() => {
@@ -243,6 +258,7 @@ export default function InvoiceDetailPanel({
     // Validate required fields before sending
     const missing: string[] = [];
     if (!formData.recipient_name?.trim()) missing.push('Recipient Name');
+    if (!formData.recipient_email?.trim()) missing.push('Recipient Email');
     if (!formData.currency?.trim() && !conferenceCurrency) missing.push('Currency');
     if ((formData.line_items || []).length === 0) missing.push('At least one Line Item');
     const emptyItems = (formData.line_items || []).filter((li) => !li.description?.trim());
@@ -262,18 +278,25 @@ export default function InvoiceDetailPanel({
     setShowSendConfirm(false);
     setIsSending(true);
     try {
-      // First save all draft data, then change status to sent
-      const finalData = { ...formData, status: 'sent' as InvoiceStatus };
-      if (newContact.first_name.trim() && newContact.last_name.trim()) {
-        finalData.contact_persons = [...(finalData.contact_persons || []), { ...newContact }];
+      // For drafts: save all data first, then send
+      if (isDraft) {
+        const finalData = { ...formData };
+        if (newContact.first_name.trim() && newContact.last_name.trim()) {
+          finalData.contact_persons = [...(finalData.contact_persons || []), { ...newContact }];
+        }
+        await onSave(finalData);
       }
-      await onSave(finalData);
+      // Send/resend via dedicated endpoint
+      await onSend?.(invoice.id);
     } catch {
       setError();
     } finally {
       setIsSending(false);
     }
   };
+
+  const canResend =
+    (invoice.status === 'sent' || invoice.status === 'overdue') && !!invoice.recipient_email;
 
   const tabs = [
     { id: 'details' as const, label: 'Details' },
@@ -308,6 +331,40 @@ export default function InvoiceDetailPanel({
               {invoice.recipient_name}
             </span>
           </div>
+          {/* Credit note → link to original invoice */}
+          {invoice.template_type === 'credit_note' && invoice.related_invoice_id && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Credit note for invoice{' '}
+              {onNavigateToInvoice ? (
+                <button
+                  type="button"
+                  onClick={() => onNavigateToInvoice(invoice.related_invoice_id!)}
+                  className="text-primary-600 hover:text-primary-700 underline"
+                >
+                  {invoice.related_invoice_number}
+                </button>
+              ) : (
+                invoice.related_invoice_number
+              )}
+            </p>
+          )}
+          {/* Cancelled invoice → link to credit note */}
+          {invoice.status === 'cancelled' && linkedCreditNote && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Credit note:{' '}
+              {onNavigateToInvoice ? (
+                <button
+                  type="button"
+                  onClick={() => onNavigateToInvoice(linkedCreditNote.id)}
+                  className="text-primary-600 hover:text-primary-700 underline"
+                >
+                  {linkedCreditNote.invoice_number}
+                </button>
+              ) : (
+                linkedCreditNote.invoice_number
+              )}
+            </p>
+          )}
         </div>
 
         {/* Tab bar */}
@@ -372,17 +429,26 @@ export default function InvoiceDetailPanel({
 
       {/* Footer */}
       <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center shrink-0">
-        {isDraft && onDelete ? (
-          <button
-            type="button"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="px-4 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-300 rounded-md transition-colors"
-          >
-            Delete
-          </button>
-        ) : (
-          <div />
-        )}
+        <div className="flex items-center gap-2">
+          {isDraft && onDelete && invoice.template_type !== 'credit_note' && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-md transition-colors"
+            >
+              Delete
+            </button>
+          )}
+          {isCancellable && onCancel && (
+            <button
+              type="button"
+              onClick={() => setShowCancelConfirm(true)}
+              className="px-4 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-400 hover:text-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-md transition-colors"
+            >
+              Cancel Invoice
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {isDraft && (
             <>
@@ -438,6 +504,16 @@ export default function InvoiceDetailPanel({
                     : 'Update Status'}
             </button>
           )}
+          {canResend && onSend && (
+            <button
+              type="button"
+              onClick={() => setShowSendConfirm(true)}
+              disabled={isSending}
+              className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md disabled:opacity-50 transition-colors"
+            >
+              {isSending ? 'Sending...' : 'Resend'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -463,12 +539,103 @@ export default function InvoiceDetailPanel({
 
       <ConfirmDialog
         open={showSendConfirm}
-        title="Send Invoice"
-        message="This will assign an invoice number and mark the invoice as sent. After sending, only the status can be changed. This action cannot be undone."
-        confirmLabel="Send Invoice"
+        title={isDraft ? 'Send Invoice' : 'Resend Invoice'}
+        message={
+          isDraft
+            ? `This will assign an invoice number, mark the invoice as sent, and email the PDF to ${formData.recipient_email}. After sending, only the status can be changed.`
+            : `This will resend the invoice PDF to ${invoice.recipient_email}.`
+        }
+        confirmLabel={isDraft ? 'Send Invoice' : 'Resend'}
+        variant="warning"
         onConfirm={confirmSendInvoice}
         onCancel={() => setShowSendConfirm(false)}
       />
+
+      {/* Cancel Invoice dialog with reason textarea */}
+      {showCancelConfirm && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => {
+              setShowCancelConfirm(false);
+              setCancelReason('');
+            }}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-yellow-100 dark:bg-yellow-900/30">
+                <svg
+                  className="w-5 h-5 text-yellow-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  Cancel Invoice
+                </h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  This will cancel invoice &quot;{invoice.invoice_number}&quot; and automatically
+                  create a credit note.
+                  {invoice.recipient_email
+                    ? ` The credit note will be sent to ${invoice.recipient_email}.`
+                    : ''}{' '}
+                  This action cannot be undone.
+                </p>
+                <label className="block mt-3">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Reason for cancellation <span className="text-red-500">*</span>
+                  </span>
+                  <textarea
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                    placeholder="e.g. Duplicate invoice, wrong amount, customer requested cancellation..."
+                    autoFocus
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCancelConfirm(false);
+                  setCancelReason('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={!cancelReason.trim()}
+                onClick={() => {
+                  setShowCancelConfirm(false);
+                  onCancel?.(invoice.id, cancelReason.trim());
+                  setCancelReason('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel Invoice &amp; Create Credit Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import ConfirmDialog from '../../../components/ConfirmDialog';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner, ButtonSpinner } from '../../../components/common/LoadingSpinner';
 import { useToast } from '../../../components/Toast';
-import { EditIcon, DeleteIcon, SearchIcon } from '../icons';
+import { DeleteIcon, SearchIcon } from '../icons';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -523,7 +523,8 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
                 return (
                   <tr
                     key={a.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                    onClick={() => openEdit(a)}
                   >
                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap">
                       {a.first_name} {a.last_name}
@@ -545,19 +546,14 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
                       {new Date(a.created_at).toLocaleDateString()}
                     </td>
                     {isAdmin && (
-                      <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => openEdit(a)}
-                          className="text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 p-1 transition-colors"
-                          title="Edit"
-                        >
-                          <EditIcon />
-                        </button>
+                      <td
+                        className="px-4 py-3 text-sm text-right whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(a)}
-                          className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 ml-1 transition-colors"
+                          className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 transition-colors"
                           title="Delete"
                         >
                           <DeleteIcon />

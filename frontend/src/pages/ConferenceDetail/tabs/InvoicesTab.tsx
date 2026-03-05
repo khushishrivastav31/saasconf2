@@ -1,8 +1,17 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 import api from '../../../config/api';
 import { queryKeys } from '../../../config/queryKeys';
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 import type {
+  CancelInvoiceResponse,
   Conference,
   Invoice,
   InvoiceCreate,
@@ -26,8 +35,9 @@ import AlertDialog from '../../../components/AlertDialog';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import { COUNTRY_OPTIONS } from '../../../config/countries';
-import { ChevronLeftIcon, EditIcon, DeleteIcon } from '../icons';
+import { ChevronLeftIcon, CloseIcon, DeleteIcon } from '../icons';
 import { useSelection } from '../SelectionContext';
+import { useToast } from '../../../components/Toast';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
@@ -58,9 +68,27 @@ export default function ConferenceInvoicesTab({
 }) {
   const { selectedInvoiceId, setSelectedInvoiceId } = useSelection();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
+
+  // Search & filter state
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(value);
+    }, 300);
+  }, []);
 
   // Use conference currency if set
   const isCurrencyLocked = !!conference.currency;
@@ -111,12 +139,25 @@ export default function ConferenceInvoicesTab({
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.invoices.byConference(conference.id),
+    queryKey: [
+      ...queryKeys.invoices.byConference(conference.id),
+      debouncedSearch,
+      filterStatus,
+      filterType,
+      filterDateFrom,
+      filterDateTo,
+    ],
     queryFn: async () => {
+      const params: Record<string, string> = { page_size: '100' };
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+      if (filterStatus) params.status = filterStatus;
+      if (filterType) params.template_type = filterType;
+      if (filterDateFrom) params.date_from = filterDateFrom;
+      if (filterDateTo) params.date_to = filterDateTo;
       const response = await api.get<{
         items: Invoice[];
         total: number;
-      }>(`/conferences/${conference.id}/invoices`);
+      }>(`/conferences/${conference.id}/invoices`, { params });
       return response.data;
     },
   });
@@ -198,6 +239,45 @@ export default function ConferenceInvoicesTab({
       });
       setSelectedInvoiceId(null);
       setDeleteTarget(null);
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const response = await api.post<CancelInvoiceResponse>(
+        `/conferences/${conference.id}/invoices/${id}/cancel`,
+        { reason }
+      );
+      return response.data;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invoices.byConference(conference.id),
+      });
+      setSelectedInvoiceId(result.credit_note.id);
+      setError(null);
+    },
+    onError: (err: unknown) => {
+      setError(parseApiError(err, 'Failed to cancel invoice'));
+    },
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const response = await api.post<Invoice>(
+        `/conferences/${conference.id}/invoices/${invoiceId}/send`
+      );
+      return response.data;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invoices.byConference(conference.id),
+      });
+      setError(null);
+      showToast(`Invoice ${result.invoice_number} sent to ${result.recipient_email}`, 'success');
+    },
+    onError: (err: unknown) => {
+      showToast(parseApiError(err, 'Failed to send invoice'), 'error');
     },
   });
 
@@ -358,7 +438,35 @@ export default function ConferenceInvoicesTab({
     }
   };
 
-  const invoiceCount = data?.items?.length || 0;
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
+  const [pdfNumPages, setPdfNumPages] = useState(0);
+
+  const pdfFile = useMemo(() => (pdfBytes ? { data: new Uint8Array(pdfBytes) } : null), [pdfBytes]);
+
+  const viewPDF = async (invoiceId: string) => {
+    try {
+      const res = await api.get(`/conferences/${conference.id}/invoices/${invoiceId}/pdf`, {
+        responseType: 'arraybuffer',
+      });
+      setPdfBytes(new Uint8Array(res.data));
+    } catch (err) {
+      setError(parseApiError(err, 'Failed to view PDF'));
+    }
+  };
+
+  const closePdfViewer = () => {
+    setPdfBytes(null);
+    setPdfNumPages(0);
+  };
+
+  const invoiceCount = data?.total || 0;
+  const hasActiveFilters = !!(
+    debouncedSearch ||
+    filterStatus ||
+    filterType ||
+    filterDateFrom ||
+    filterDateTo
+  );
 
   return (
     <div>
@@ -368,13 +476,41 @@ export default function ConferenceInvoicesTab({
           <div className="mb-4 flex items-center justify-between">
             <button
               type="button"
-              onClick={() => setSelectedInvoiceId(null)}
+              onClick={() => {
+                closePdfViewer();
+                setSelectedInvoiceId(null);
+              }}
               className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
             >
               <ChevronLeftIcon />
               Back to invoices list
             </button>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => (pdfBytes ? closePdfViewer() : viewPDF(selectedInvoice.id))}
+                className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  pdfBytes
+                    ? 'text-white bg-primary-600 hover:bg-primary-700'
+                    : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+                {pdfBytes ? 'Close PDF' : 'View PDF'}
+              </button>
               <button
                 type="button"
                 onClick={() => downloadPDF(selectedInvoice.id, selectedInvoice.invoice_number)}
@@ -395,6 +531,26 @@ export default function ConferenceInvoicesTab({
 
           <ErrorBanner message={error} />
 
+          {pdfBytes && (
+            <div className="mb-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900">
+              <div className="overflow-auto" style={{ maxHeight: '75vh' }}>
+                <Document
+                  file={pdfFile}
+                  onLoadSuccess={({ numPages }) => setPdfNumPages(numPages)}
+                  loading={
+                    <div className="flex items-center justify-center py-12">
+                      <LoadingSpinner />
+                    </div>
+                  }
+                >
+                  {Array.from({ length: pdfNumPages }, (_, i) => (
+                    <Page key={i + 1} pageNumber={i + 1} width={800} className="mx-auto" />
+                  ))}
+                </Document>
+              </div>
+            </div>
+          )}
+
           <InvoiceDetailPanel
             invoice={selectedInvoice}
             currencies={currenciesData || []}
@@ -405,7 +561,21 @@ export default function ConferenceInvoicesTab({
                 data: invoiceData,
               });
             }}
+            onSend={async (id) => {
+              await sendMutation.mutateAsync(id);
+            }}
             onDelete={(id) => deleteMutation.mutate(id)}
+            onCancel={(id, reason) => cancelMutation.mutate({ id, reason })}
+            onNavigateToInvoice={(id) => setSelectedInvoiceId(id)}
+            linkedCreditNote={
+              selectedInvoice.status === 'cancelled'
+                ? (data?.items.find(
+                    (inv) =>
+                      inv.template_type === 'credit_note' &&
+                      inv.related_invoice_id === selectedInvoice.id
+                  ) ?? null)
+                : null
+            }
           />
         </>
       ) : (
@@ -440,6 +610,104 @@ export default function ConferenceInvoicesTab({
           </div>
 
           <ErrorBanner message={error} />
+
+          {/* Search & Filters */}
+          {!isAdding && (
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <div className="relative flex-1 max-w-sm">
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="Search by number or recipient..."
+                  className="w-full pl-10 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearch('');
+                      setDebouncedSearch('');
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+                  >
+                    <CloseIcon />
+                  </button>
+                )}
+              </div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-800 dark:text-gray-100"
+              >
+                <option value="">All Statuses</option>
+                <option value="draft">Draft</option>
+                <option value="sent">Sent</option>
+                <option value="paid">Paid</option>
+                <option value="overdue">Overdue</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-800 dark:text-gray-100"
+              >
+                <option value="">All Types</option>
+                {TEMPLATE_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+                placeholder="From"
+                title="Issue date from"
+                className="border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-800 dark:text-gray-100"
+              />
+              <input
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+                placeholder="To"
+                title="Issue date to"
+                className="border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-800 dark:text-gray-100"
+              />
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setDebouncedSearch('');
+                    setFilterStatus('');
+                    setFilterType('');
+                    setFilterDateFrom('');
+                    setFilterDateTo('');
+                    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                  }}
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 whitespace-nowrap"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Create form */}
           {isAdding && (
@@ -905,74 +1173,173 @@ export default function ConferenceInvoicesTab({
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {data.items.map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {invoice.invoice_number || (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 italic">
-                            DRAFT
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                        {TEMPLATE_TYPE_LABELS[invoice.template_type] || invoice.template_type}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                        {invoice.recipient_name}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                        {invoice.issue_date || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                        {invoice.due_date || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span
-                          className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                            STATUS_COLORS[invoice.status] ||
-                            'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                          }`}
-                        >
-                          {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-500 dark:text-gray-400">
-                        {invoice.total != null
-                          ? `${fmtAmount(invoice.total)}${invoice.currency ? ` ${invoice.currency}` : ''}`
-                          : '-'}
-                      </td>
-                      {isAdmin && (
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedInvoiceId(invoice.id)}
-                              className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
-                              title="Edit"
-                            >
-                              <EditIcon />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDeleteTarget(invoice)}
-                              disabled={deleteMutation.isPending}
-                              className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
-                              title="Delete"
-                            >
-                              <DeleteIcon />
-                            </button>
+                  {(() => {
+                    // Build map: cancelled invoice id → credit note(s)
+                    // Only group as sub-rows when the parent invoice is also in the results
+                    const itemIds = new Set(data.items.map((inv) => inv.id));
+                    const creditNotesByParent = new Map<string, Invoice[]>();
+                    const creditNoteIds = new Set<string>();
+                    for (const inv of data.items) {
+                      if (
+                        inv.template_type === 'credit_note' &&
+                        inv.related_invoice_id &&
+                        itemIds.has(inv.related_invoice_id)
+                      ) {
+                        const list = creditNotesByParent.get(inv.related_invoice_id) || [];
+                        list.push(inv);
+                        creditNotesByParent.set(inv.related_invoice_id, list);
+                        creditNoteIds.add(inv.id);
+                      }
+                    }
+
+                    const renderRow = (invoice: Invoice, isSubRow: boolean) => (
+                      <tr
+                        key={invoice.id}
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                          isSubRow ? 'bg-gray-50/50 dark:bg-gray-750/50' : ''
+                        }`}
+                        onClick={() => setSelectedInvoiceId(invoice.id)}
+                      >
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <div className={isSubRow ? 'pl-6 flex items-center gap-1.5' : ''}>
+                            {isSubRow && (
+                              <svg
+                                className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M9 5l-6 7h18"
+                                  transform="rotate(90 12 12)"
+                                />
+                              </svg>
+                            )}
+                            {invoice.invoice_number || (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 italic">
+                                DRAFT
+                              </span>
+                            )}
                           </div>
                         </td>
-                      )}
-                    </tr>
-                  ))}
+                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          {TEMPLATE_TYPE_LABELS[invoice.template_type] || invoice.template_type}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          {invoice.recipient_name}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          {invoice.issue_date || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          {invoice.due_date || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span
+                            className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                              STATUS_COLORS[invoice.status] ||
+                              'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-500 dark:text-gray-400">
+                          {invoice.total != null
+                            ? `${fmtAmount(invoice.total)}${invoice.currency ? ` ${invoice.currency}` : ''}`
+                            : '-'}
+                        </td>
+                        {isAdmin && (
+                          <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => downloadPDF(invoice.id, invoice.invoice_number)}
+                                className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
+                                title="Download PDF"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                  />
+                                </svg>
+                              </button>
+                              {(invoice.status === 'sent' || invoice.status === 'overdue') &&
+                                invoice.recipient_email && (
+                                  <button
+                                    type="button"
+                                    onClick={() => sendMutation.mutate(invoice.id)}
+                                    disabled={sendMutation.isPending}
+                                    className="text-gray-400 dark:text-gray-500 hover:text-blue-600 p-1 rounded transition-colors disabled:opacity-50"
+                                    title="Resend"
+                                  >
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                      strokeWidth={2}
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                      />
+                                    </svg>
+                                  </button>
+                                )}
+                              {invoice.status === 'draft' &&
+                                invoice.template_type !== 'credit_note' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeleteTarget(invoice)}
+                                    disabled={deleteMutation.isPending}
+                                    className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
+                                    title="Delete"
+                                  >
+                                    <DeleteIcon />
+                                  </button>
+                                )}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+
+                    // Render: main invoices (skip standalone credit notes), then their credit notes as sub-rows
+                    return data.items
+                      .filter((inv) => !creditNoteIds.has(inv.id))
+                      .flatMap((invoice) => {
+                        const rows = [renderRow(invoice, false)];
+                        const creditNotes = creditNotesByParent.get(invoice.id);
+                        if (creditNotes) {
+                          for (const cn of creditNotes) {
+                            rows.push(renderRow(cn, true));
+                          }
+                        }
+                        return rows;
+                      });
+                  })()}
                 </tbody>
               </table>
             </div>
           ) : (
             !isAdding && (
               <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-                No invoices yet. Click "+ Add Invoice" to get started.
+                {hasActiveFilters
+                  ? 'No invoices match the current filters.'
+                  : 'No invoices yet. Click "+ Add Invoice" to get started.'}
               </div>
             )
           )}

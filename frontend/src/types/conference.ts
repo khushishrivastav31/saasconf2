@@ -319,6 +319,7 @@ export interface Sponsor {
   comments: string | null;
   contact_persons: LocationContactPerson[];
   is_active: boolean;
+  has_invoices: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -445,9 +446,16 @@ export interface Invoice {
   notes: string | null;
   internal_comment: string | null;
   contact_persons: LocationContactPerson[];
+  related_invoice_id: string | null;
+  related_invoice_number: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface CancelInvoiceResponse {
+  cancelled_invoice: Invoice;
+  credit_note: Invoice;
 }
 
 export interface InvoiceCreate {

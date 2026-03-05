@@ -1,20 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Document, Page } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+import api from '../config/api';
+import { queryKeys } from '../config/queryKeys';
 import AttachmentList from './AttachmentList';
 import ContactPersonList from './ContactPersonList';
 import DetailPanelWrapper from './DetailPanelWrapper';
 import SponsorContractTab from './SponsorContractTab';
 import RichTextEditor from './common/RichTextEditor';
 import SponsorLogoUpload from './SponsorLogoUpload';
+import { LoadingSpinner } from './common/LoadingSpinner';
 import { validatePhone, normalizeUrl } from '../utils/validators';
 import { COUNTRY_OPTIONS } from '../config/countries';
 import VatNumberInput from './common/VatNumberInput';
 import { useSaveStatus } from '../hooks/useSaveStatus';
+import { useSelection } from '../pages/ConferenceDetail/SelectionContext';
+import { useToast } from './Toast';
+import { parseApiError } from '../utils/apiError';
 import type {
   Sponsor,
   SponsorUpdate,
   SponsorPackage,
   PlatformCurrency,
   LocationContactPerson,
+  Invoice,
 } from '../types';
 
 interface SponsorDetailPanelProps {
@@ -25,6 +36,7 @@ interface SponsorDetailPanelProps {
   conferenceId: string;
   onSave: (data: SponsorUpdate) => Promise<void>;
   onDelete?: (id: string) => void;
+  onDeactivate?: () => void;
 }
 
 export default function SponsorDetailPanel({
@@ -35,6 +47,7 @@ export default function SponsorDetailPanel({
   conferenceId,
   onSave,
   onDelete,
+  onDeactivate,
 }: SponsorDetailPanelProps) {
   const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
   const [formData, setFormData] = useState<SponsorUpdate>({
@@ -420,6 +433,10 @@ export default function SponsorDetailPanel({
     </div>
   );
 
+  const invoicesContent = (
+    <SponsorInvoicesContent conferenceId={conferenceId} sponsorId={sponsor.id} />
+  );
+
   const tabs = [
     { id: 'details', label: 'Details', content: detailsContent },
     {
@@ -429,6 +446,7 @@ export default function SponsorDetailPanel({
     },
     { id: 'contract', label: 'Contract', content: contractContent },
     { id: 'documents', label: 'Documents', content: documentsContent },
+    { id: 'invoices', label: 'Invoices', content: invoicesContent },
   ];
 
   return (
@@ -443,6 +461,315 @@ export default function SponsorDetailPanel({
       onDelete={onDelete ? () => onDelete(sponsor.id) : undefined}
       deleteTitle="Delete Sponsor"
       deleteMessage={`Are you sure you want to delete "${sponsor.company_name}"? This action cannot be undone.`}
+      headerActions={
+        onDeactivate ? (
+          <button
+            type="button"
+            onClick={onDeactivate}
+            className="px-3 py-1.5 text-sm font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30 border border-amber-300 dark:border-amber-600 rounded-md transition-colors"
+          >
+            Deactivate
+          </button>
+        ) : undefined
+      }
     />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sponsor Invoices sub-component
+// ---------------------------------------------------------------------------
+
+const STATUS_COLORS: Record<string, string> = {
+  draft: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
+  sent: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+  paid: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+  overdue: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+  cancelled: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
+};
+
+function SponsorInvoicesContent({
+  conferenceId,
+  sponsorId,
+}: {
+  conferenceId: string;
+  sponsorId: string;
+}) {
+  const { setSelectedInvoiceId } = useSelection();
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [error, setError] = useState<string | null>(null);
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
+  const [pdfNumPages, setPdfNumPages] = useState(0);
+  const [previewInvoiceId, setPreviewInvoiceId] = useState<string | null>(null);
+
+  const pdfFile = useMemo(() => (pdfBytes ? { data: new Uint8Array(pdfBytes) } : null), [pdfBytes]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: [...queryKeys.invoices.byConference(conferenceId), 'sponsor', sponsorId],
+    queryFn: async () => {
+      const response = await api.get<{ items: Invoice[]; total: number }>(
+        `/conferences/${conferenceId}/invoices`,
+        {
+          params: {
+            recipient_source_type: 'sponsor',
+            recipient_source_id: sponsorId,
+            page_size: 100,
+          },
+        }
+      );
+      return response.data;
+    },
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const response = await api.post<Invoice>(
+        `/conferences/${conferenceId}/invoices/${invoiceId}/send`
+      );
+      return response.data;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invoices.byConference(conferenceId),
+      });
+      setError(null);
+      showToast(`Invoice ${result.invoice_number} sent to ${result.recipient_email}`, 'success');
+    },
+    onError: (err: unknown) => {
+      showToast(parseApiError(err, 'Failed to send invoice'), 'error');
+    },
+  });
+
+  const viewPDF = async (invoiceId: string) => {
+    if (previewInvoiceId === invoiceId) {
+      setPdfBytes(null);
+      setPreviewInvoiceId(null);
+      return;
+    }
+    try {
+      const res = await api.get(`/conferences/${conferenceId}/invoices/${invoiceId}/pdf`, {
+        responseType: 'arraybuffer',
+      });
+      setPdfBytes(new Uint8Array(res.data));
+      setPreviewInvoiceId(invoiceId);
+    } catch (err) {
+      setError(parseApiError(err, 'Failed to load PDF'));
+    }
+  };
+
+  const downloadPDF = async (invoiceId: string, invoiceNumber: string | null) => {
+    try {
+      const res = await api.get(`/conferences/${conferenceId}/invoices/${invoiceId}/pdf`, {
+        responseType: 'arraybuffer',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice_${invoiceNumber || 'draft'}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(parseApiError(err, 'Failed to download PDF'));
+    }
+  };
+
+  return (
+    <div className="px-6 py-5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400">Invoices linked to this sponsor.</p>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+          {error}
+        </div>
+      )}
+
+      {isLoading ? (
+        <LoadingSpinner />
+      ) : data?.items && data.items.length > 0 ? (
+        <>
+          <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Invoice #
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Issue Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {data.items.map((invoice) => (
+                  <tr
+                    key={invoice.id}
+                    onClick={() => setSelectedInvoiceId(invoice.id)}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                  >
+                    <td className="px-4 py-3 text-sm font-medium text-primary-600 dark:text-primary-400">
+                      {invoice.invoice_number || (
+                        <span className="text-gray-400 dark:text-gray-500 italic">DRAFT</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                      {invoice.issue_date || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span
+                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                          STATUS_COLORS[invoice.status] ||
+                          'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-500 dark:text-gray-400">
+                      {invoice.total != null
+                        ? `${Number(invoice.total).toFixed(2)}${invoice.currency ? ` ${invoice.currency}` : ''}`
+                        : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => viewPDF(invoice.id)}
+                          className={`p-1 rounded transition-colors ${
+                            previewInvoiceId === invoice.id
+                              ? 'text-primary-600'
+                              : 'text-gray-400 dark:text-gray-500 hover:text-primary-600'
+                          }`}
+                          title={previewInvoiceId === invoice.id ? 'Close Preview' : 'Preview PDF'}
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadPDF(invoice.id, invoice.invoice_number)}
+                          className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
+                          title="Download PDF"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                        </button>
+                        {(invoice.status === 'sent' || invoice.status === 'overdue') &&
+                          invoice.recipient_email && (
+                            <button
+                              type="button"
+                              onClick={() => sendMutation.mutate(invoice.id)}
+                              disabled={sendMutation.isPending}
+                              className="text-gray-400 dark:text-gray-500 hover:text-blue-600 p-1 rounded transition-colors disabled:opacity-50"
+                              title="Resend"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Inline PDF preview */}
+          {pdfBytes && (
+            <div className="mt-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div className="bg-gray-100 dark:bg-gray-900 px-4 py-2 flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  PDF Preview
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPdfBytes(null);
+                    setPreviewInvoiceId(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="bg-gray-200 dark:bg-gray-800 p-4 max-h-[600px] overflow-y-auto">
+                <Document
+                  file={pdfFile}
+                  onLoadSuccess={({ numPages }) => setPdfNumPages(numPages)}
+                  loading={<LoadingSpinner />}
+                >
+                  {Array.from({ length: pdfNumPages }, (_, i) => (
+                    <Page key={i + 1} pageNumber={i + 1} width={600} className="mx-auto mb-2" />
+                  ))}
+                </Document>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+          No invoices linked to this sponsor yet.
+        </div>
+      )}
+    </div>
   );
 }

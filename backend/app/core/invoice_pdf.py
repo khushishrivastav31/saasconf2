@@ -705,8 +705,8 @@ async def generate_invoice_pdf(
         "[BIC]": bic,
         # Footer text
         "[FOOTER_TEXT]": company_info.get("footer_text", ""),
-        # Invoice data
-        "[INVOICE_NUMBER]": invoice.invoice_number or "",
+        # Invoice data (for credit notes, [INVOICE_NUMBER] shows the original invoice's number)
+        "[INVOICE_NUMBER]": invoice.invoice_number or "",  # overridden below for credit notes
         "[ISSUE_DATE]": invoice.issue_date.strftime("%Y-%m-%d") if invoice.issue_date else "",
         "[DUE_DATE]": invoice.due_date.strftime("%Y-%m-%d") if invoice.due_date else "",
         # Recipient
@@ -742,9 +742,24 @@ async def generate_invoice_pdf(
         "[TELEFON]": phone,
         # Credit note
         "[CREDIT_NOTE_NUMBER]": invoice.invoice_number or "",
+        "[ORIGINAL_INVOICE_NUMBER]": "",
+        "[ORIGINAL INVOICE NUMBER]": "",
         # Notes
         "[NOTES]": invoice.notes or "",
     }
+
+    # Resolve original invoice number if this is a credit note
+    if invoice.related_invoice_id:
+        from app.models.invoice import Invoice as InvoiceModel
+
+        orig_result = await db.execute(
+            select(InvoiceModel.invoice_number).where(InvoiceModel.id == invoice.related_invoice_id)
+        )
+        orig_number = orig_result.scalar_one_or_none() or ""
+        replacements["[ORIGINAL_INVOICE_NUMBER]"] = orig_number
+        replacements["[ORIGINAL INVOICE NUMBER]"] = orig_number
+        # For credit notes: [INVOICE_NUMBER] = original invoice, [CREDIT_NOTE_NUMBER] = this credit note
+        replacements["[INVOICE_NUMBER]"] = orig_number
 
     # Apply placeholders to template body
     html = _apply_placeholders(html, replacements)
@@ -975,9 +990,16 @@ async def generate_invoice_pdf_from_data(
         "[TELEFON]": phone,
         # Credit note
         "[CREDIT_NOTE_NUMBER]": invoice_number,
+        "[ORIGINAL_INVOICE_NUMBER]": invoice_data.get("original_invoice_number", ""),
+        "[ORIGINAL INVOICE NUMBER]": invoice_data.get("original_invoice_number", ""),
         # Notes
         "[NOTES]": invoice_data.get("notes", ""),
     }
+
+    # For credit notes: [INVOICE_NUMBER] = original invoice number
+    orig_inv_num = invoice_data.get("original_invoice_number", "")
+    if orig_inv_num:
+        replacements["[INVOICE_NUMBER]"] = orig_inv_num
 
     # Apply placeholders to template body
     html = _apply_placeholders(html, replacements)

@@ -97,6 +97,7 @@ class SponsorResponse(BaseModel):
     comments: str | None = None
     contact_persons: list[LocationContactPerson] = []
     is_active: bool
+    has_invoices: bool = False
     created_at: datetime
     updated_at: datetime
 

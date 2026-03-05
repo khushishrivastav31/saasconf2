@@ -20,7 +20,7 @@ class InvoiceLineItem(BaseModel):
     quantity: float = Field(..., ge=0)
     unit_price: float = Field(..., ge=0)
     discount: float = Field(default=0.0, ge=0)
-    total: float = Field(..., ge=0)
+    total: float = Field(...)  # No ge=0: credit notes have negative totals
 
 
 class InvoiceCreate(BaseModel):
@@ -184,6 +184,8 @@ class InvoiceResponse(BaseModel):
     notes: str | None = None
     internal_comment: str | None = None
     contact_persons: list[LocationContactPerson] = []
+    related_invoice_id: UUID | None = None
+    related_invoice_number: str | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -225,3 +227,16 @@ class RecipientSearchResponse(BaseModel):
     """Response for recipient search endpoint."""
 
     results: list[RecipientSearchResult]
+
+
+class CancelInvoiceRequest(BaseModel):
+    """Request body for cancelling an invoice."""
+
+    reason: str = Field(..., min_length=1, max_length=1000)
+
+
+class CancelInvoiceResponse(BaseModel):
+    """Response from cancelling an invoice."""
+
+    cancelled_invoice: InvoiceResponse
+    credit_note: InvoiceResponse

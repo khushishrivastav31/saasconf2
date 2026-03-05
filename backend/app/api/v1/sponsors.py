@@ -3,14 +3,16 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy import func as sa_func
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.core.search import unaccent_ilike
 from app.models.attachment import Attachment
 from app.models.conference import Conference
+from app.models.invoice import Invoice
 from app.models.settings import SponsorPackage
 from app.models.sponsor import Sponsor
 from app.models.sponsor_contract import SponsorContract
@@ -85,7 +87,11 @@ async def _auto_generate_contract(
     await db.flush()
 
 
-def build_sponsor_response(sponsor: Sponsor, package_name: str | None = None) -> SponsorResponse:
+def build_sponsor_response(
+    sponsor: Sponsor,
+    package_name: str | None = None,
+    has_invoices: bool = False,
+) -> SponsorResponse:
     """Build a SponsorResponse from a Sponsor model."""
     return SponsorResponse(
         id=sponsor.id,
@@ -108,6 +114,7 @@ def build_sponsor_response(sponsor: Sponsor, package_name: str | None = None) ->
         comments=sponsor.comments,
         contact_persons=sponsor.contact_persons or [],
         is_active=sponsor.is_active,
+        has_invoices=has_invoices,
         created_at=sponsor.created_at,
         updated_at=sponsor.updated_at,
     )
@@ -155,10 +162,26 @@ async def list_sponsors(
 
     result = await svc.list_resources(db, query, page, page_size)
 
+    # Batch lookup: which sponsors have linked invoices
+    sponsor_ids = [s.id for s in result.items]
+    sponsors_with_invoices: set[UUID] = set()
+    if sponsor_ids:
+        inv_result = await db.execute(
+            select(Invoice.recipient_source_id)
+            .where(
+                Invoice.tenant_id == current_user.tenant_id,
+                Invoice.recipient_source_type == "sponsor",
+                Invoice.recipient_source_id.in_(sponsor_ids),
+            )
+            .distinct()
+        )
+        sponsors_with_invoices = set(inv_result.scalars().all())
+
     items = [
         build_sponsor_response(
             s,
             s.sponsor_package.name if s.sponsor_package else None,
+            has_invoices=s.id in sponsors_with_invoices,
         )
         for s in result.items
     ]
@@ -280,9 +303,22 @@ async def get_sponsor(
     if not sponsor:
         raise NotFoundError(f"Sponsor with ID '{sponsor_id}' not found")
 
+    # Check if sponsor has linked invoices
+    inv_count = await db.execute(
+        select(sa_func.count())
+        .select_from(Invoice)
+        .where(
+            Invoice.tenant_id == current_user.tenant_id,
+            Invoice.recipient_source_type == "sponsor",
+            Invoice.recipient_source_id == sponsor_id,
+        )
+    )
+    has_invoices = (inv_count.scalar() or 0) > 0
+
     return build_sponsor_response(
         sponsor,
         sponsor.sponsor_package.name if sponsor.sponsor_package else None,
+        has_invoices=has_invoices,
     )
 
 
@@ -349,9 +385,22 @@ async def update_sponsor(
     )
     sponsor = refreshed_result.scalar_one()
 
+    # Check if sponsor has linked invoices
+    inv_count = await db.execute(
+        select(sa_func.count())
+        .select_from(Invoice)
+        .where(
+            Invoice.tenant_id == current_user.tenant_id,
+            Invoice.recipient_source_type == "sponsor",
+            Invoice.recipient_source_id == sponsor_id,
+        )
+    )
+    has_invoices = (inv_count.scalar() or 0) > 0
+
     return build_sponsor_response(
         sponsor,
         sponsor.sponsor_package.name if sponsor.sponsor_package else None,
+        has_invoices=has_invoices,
     )
 
 
@@ -377,6 +426,23 @@ async def delete_sponsor(
         tenant_id=current_user.tenant_id,
         label="Sponsor",
     )
+
+    # Block deletion if sponsor has linked invoices
+    invoice_count_result = await db.execute(
+        select(sa_func.count())
+        .select_from(Invoice)
+        .where(
+            Invoice.tenant_id == current_user.tenant_id,
+            Invoice.recipient_source_type == "sponsor",
+            Invoice.recipient_source_id == sponsor_id,
+        )
+    )
+    invoice_count = invoice_count_result.scalar() or 0
+    if invoice_count > 0:
+        raise ConflictError(
+            f"Cannot delete sponsor '{sponsor.company_name}' because it has "
+            f"{invoice_count} linked invoice(s). Deactivate the sponsor instead."
+        )
 
     company_name = sponsor.company_name
 

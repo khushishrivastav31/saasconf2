@@ -1,5 +1,6 @@
 """Invoice management endpoints (conference-scoped)."""
 
+import base64
 import io
 from datetime import date as date_type
 from decimal import Decimal
@@ -19,8 +20,9 @@ from app.core.dependencies import (
     get_client_ip,
     require_module,
 )
+from app.core.email import send_email
 from app.core.exceptions import AuthorizationError, NotFoundError
-from app.core.invoice_number import generate_invoice_number
+from app.core.invoice_number import generate_cancellation_number, generate_invoice_number
 from app.core.invoice_pdf import generate_invoice_pdf
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
@@ -34,6 +36,8 @@ from app.models.invoice import Invoice
 from app.models.sponsor import Sponsor
 from app.models.volunteer import Volunteer
 from app.schemas.invoice import (
+    CancelInvoiceRequest,
+    CancelInvoiceResponse,
     InvoiceCreate,
     InvoiceListResponse,
     InvoiceResponse,
@@ -47,7 +51,10 @@ router = APIRouter()
 MODULE_CODE = "invoices"
 
 
-def build_invoice_response(invoice: Invoice) -> InvoiceResponse:
+def build_invoice_response(
+    invoice: Invoice,
+    related_invoice_number: str | None = None,
+) -> InvoiceResponse:
     """Build an InvoiceResponse from an Invoice model."""
     return InvoiceResponse(
         id=invoice.id,
@@ -78,10 +85,25 @@ def build_invoice_response(invoice: Invoice) -> InvoiceResponse:
         notes=invoice.notes,
         internal_comment=invoice.internal_comment,
         contact_persons=invoice.contact_persons or [],
+        related_invoice_id=invoice.related_invoice_id,
+        related_invoice_number=related_invoice_number,
         is_active=invoice.is_active,
         created_at=invoice.created_at,
         updated_at=invoice.updated_at,
     )
+
+
+async def _enrich_related_numbers(db: DbSessionDep, invoices: list[InvoiceResponse]) -> list[InvoiceResponse]:
+    """Batch-fetch related invoice numbers to avoid N+1."""
+    related_ids = {inv.related_invoice_id for inv in invoices if inv.related_invoice_id}
+    if not related_ids:
+        return invoices
+    result = await db.execute(select(Invoice.id, Invoice.invoice_number).where(Invoice.id.in_(related_ids)))
+    number_map = {row.id: row.invoice_number for row in result.all()}
+    for inv in invoices:
+        if inv.related_invoice_id:
+            inv.related_invoice_number = number_map.get(inv.related_invoice_id)
+    return invoices
 
 
 async def _require_invoice_admin(
@@ -110,6 +132,11 @@ async def list_invoices(
     search: str | None = None,
     status: str | None = None,
     is_active: bool | None = None,
+    template_type: str | None = None,
+    date_from: date_type | None = None,
+    date_to: date_type | None = None,
+    recipient_source_type: str | None = None,
+    recipient_source_id: UUID | None = None,
 ) -> InvoiceListResponse:
     """List invoices for a conference with pagination and filtering."""
     await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
@@ -133,11 +160,27 @@ async def list_invoices(
     if is_active is not None:
         query = query.where(Invoice.is_active == is_active)
 
+    if template_type is not None:
+        query = query.where(Invoice.template_type == template_type)
+
+    if date_from is not None:
+        query = query.where(Invoice.issue_date >= date_from)
+
+    if date_to is not None:
+        query = query.where(Invoice.issue_date <= date_to)
+
+    if recipient_source_type is not None:
+        query = query.where(Invoice.recipient_source_type == recipient_source_type)
+
+    if recipient_source_id is not None:
+        query = query.where(Invoice.recipient_source_id == recipient_source_id)
+
     query = query.order_by(Invoice.created_at.desc())
 
     result = await paginate(db, query, page, page_size)
 
     items = [build_invoice_response(inv) for inv in result.items]
+    items = await _enrich_related_numbers(db, items)
 
     return InvoiceListResponse(
         items=items,
@@ -406,15 +449,21 @@ async def get_invoice(
     if not invoice:
         raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
 
-    return build_invoice_response(invoice)
+    # Resolve related invoice number if present
+    related_number: str | None = None
+    if invoice.related_invoice_id:
+        rel_result = await db.execute(select(Invoice.invoice_number).where(Invoice.id == invoice.related_invoice_id))
+        related_number = rel_result.scalar_one_or_none()
+
+    return build_invoice_response(invoice, related_invoice_number=related_number)
 
 
 # Valid status transitions — draft can only become sent (which assigns a number);
 # after that only status changes are allowed.
 VALID_STATUS_TRANSITIONS: dict[str, set[str]] = {
     "draft": {"sent"},
-    "sent": {"paid", "overdue", "cancelled"},
-    "overdue": {"paid", "cancelled"},
+    "sent": {"paid", "overdue"},  # cancelled only via POST /{id}/cancel
+    "overdue": {"paid"},  # cancelled only via POST /{id}/cancel
     "paid": set(),  # terminal
     "cancelled": set(),  # terminal
 }
@@ -539,6 +588,7 @@ async def download_invoice_pdf(
     invoice_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
+    inline: bool = False,
 ) -> StreamingResponse:
     """Generate and download invoice as PDF."""
     tenant_id = current_user.tenant_id
@@ -561,12 +611,12 @@ async def download_invoice_pdf(
     # Generate PDF
     pdf_bytes = await generate_invoice_pdf(invoice, conference, db)
 
-    # Return as download
     filename = f"invoice_{invoice.invoice_number or 'draft'}.pdf"
+    disposition = "inline" if inline else "attachment"
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
     )
 
 
@@ -634,6 +684,20 @@ async def delete_invoice(
     if not invoice:
         raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
 
+    # Credit notes can never be deleted
+    if invoice.template_type == "credit_note":
+        raise HTTPException(
+            status_code=400,
+            detail="Credit notes cannot be deleted.",
+        )
+
+    # Only draft invoices can be deleted
+    if invoice.status != "draft":
+        raise HTTPException(
+            status_code=400,
+            detail="Only draft invoices can be deleted. Use the cancel endpoint for sent/overdue invoices.",
+        )
+
     invoice_number = invoice.invoice_number or "DRAFT"
 
     # Delete associated attachments
@@ -664,3 +728,250 @@ async def delete_invoice(
     await db.commit()
 
     return {"message": f"Invoice '{invoice_number}' deleted successfully"}
+
+
+@router.post(
+    "/{invoice_id}/cancel",
+    response_model=CancelInvoiceResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def cancel_invoice(
+    conference_id: UUID,
+    invoice_id: UUID,
+    body: CancelInvoiceRequest,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+) -> CancelInvoiceResponse:
+    """Cancel an invoice and create a linked credit note.
+
+    Only sent or overdue invoices can be cancelled. Creates a credit note
+    with negated line items and sends it to the recipient.
+    """
+    await _require_invoice_admin(db, current_user, conference_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+
+    result = await db.execute(
+        select(Invoice).where(
+            Invoice.id == invoice_id,
+            Invoice.conference_id == conference_id,
+            Invoice.tenant_id == current_user.tenant_id,
+        )
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+
+    # Only sent or overdue invoices can be cancelled
+    if invoice.status not in ("sent", "overdue"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel an invoice with status '{invoice.status}'. "
+            "Only sent or overdue invoices can be cancelled.",
+        )
+
+    # Cannot cancel a credit note
+    if invoice.template_type == "credit_note":
+        raise HTTPException(status_code=400, detail="Cannot cancel a credit note.")
+
+    # 1. Cancel the original invoice
+    invoice.status = "cancelled"
+    invoice.internal_comment = body.reason
+
+    # 2. Generate cancellation number
+    cancellation_number = await generate_cancellation_number(db, conference_id, current_user.tenant_id)
+
+    # 3. Build negated line items
+    credit_line_items = []
+    for li in invoice.line_items or []:
+        credit_li = dict(li)
+        credit_li["total"] = -abs(float(li.get("total", 0)))
+        credit_line_items.append(credit_li)
+
+    # 4. Create credit note
+    credit_note = Invoice(
+        tenant_id=current_user.tenant_id,
+        conference_id=conference_id,
+        invoice_number=cancellation_number,
+        template_type="credit_note",
+        status="sent",
+        issue_date=date_type.today(),
+        due_date=None,
+        related_invoice_id=invoice.id,
+        recipient_source_type=invoice.recipient_source_type,
+        recipient_source_id=invoice.recipient_source_id,
+        recipient_name=invoice.recipient_name,
+        recipient_email=invoice.recipient_email,
+        recipient_address_line1=invoice.recipient_address_line1,
+        recipient_address_line2=invoice.recipient_address_line2,
+        recipient_city=invoice.recipient_city,
+        recipient_state=invoice.recipient_state,
+        recipient_postal_code=invoice.recipient_postal_code,
+        recipient_country=invoice.recipient_country,
+        recipient_vat_number=invoice.recipient_vat_number,
+        line_items=credit_line_items,
+        subtotal=-abs(float(invoice.subtotal)) if invoice.subtotal else None,
+        tax_rate=invoice.tax_rate,
+        tax_amount=-abs(float(invoice.tax_amount)) if invoice.tax_amount else None,
+        total=-abs(float(invoice.total)) if invoice.total else None,
+        currency=invoice.currency,
+        notes=f"Credit note for invoice {invoice.invoice_number}",
+        contact_persons=invoice.contact_persons,
+    )
+    db.add(credit_note)
+
+    # 5. Audit logs
+    cancel_audit = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.cancelled",
+        resource_type="invoice",
+        resource_id=invoice.id,
+        details={
+            "invoice_number": invoice.invoice_number,
+            "credit_note_number": cancellation_number,
+            "reason": body.reason,
+        },
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    credit_audit = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.credit_note_created",
+        resource_type="invoice",
+        resource_id=credit_note.id,
+        details={
+            "credit_note_number": cancellation_number,
+            "original_invoice_number": invoice.invoice_number,
+            "original_invoice_id": str(invoice.id),
+        },
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(cancel_audit)
+    db.add(credit_audit)
+
+    await db.commit()
+    await db.refresh(invoice)
+    await db.refresh(credit_note)
+
+    # 6. Send credit note PDF to recipient (best-effort)
+    if credit_note.recipient_email:
+        try:
+            pdf_bytes = await generate_invoice_pdf(credit_note, conference, db)
+            attachment = {
+                "filename": f"credit_note_{credit_note.invoice_number}.pdf",
+                "content": base64.b64encode(pdf_bytes).decode("ascii"),
+            }
+            await send_email(
+                to=credit_note.recipient_email,
+                subject=f"Credit Note {credit_note.invoice_number}",
+                html=(
+                    f"<p>Please find attached the credit note {credit_note.invoice_number} "
+                    f"for invoice {invoice.invoice_number}.</p>"
+                ),
+                attachments=[attachment],
+            )
+        except Exception:
+            pass  # Best-effort — credit note is saved regardless
+
+    return CancelInvoiceResponse(
+        cancelled_invoice=build_invoice_response(invoice, related_invoice_number=None),
+        credit_note=build_invoice_response(credit_note, related_invoice_number=invoice.invoice_number),
+    )
+
+
+@router.post(
+    "/{invoice_id}/send",
+    response_model=InvoiceResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def send_invoice(
+    conference_id: UUID,
+    invoice_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+) -> InvoiceResponse:
+    """Send (or resend) an invoice PDF via email.
+
+    For draft invoices: assigns number, sets status to 'sent', emails PDF.
+    For sent/overdue invoices: re-emails the PDF.
+    """
+    await _require_invoice_admin(db, current_user, conference_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+
+    result = await db.execute(
+        select(Invoice).where(
+            Invoice.id == invoice_id,
+            Invoice.conference_id == conference_id,
+            Invoice.tenant_id == current_user.tenant_id,
+        )
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+
+    # Only draft, sent, or overdue can be sent/resent
+    if invoice.status not in ("draft", "sent", "overdue"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot send an invoice with status '{invoice.status}'.",
+        )
+
+    if not invoice.recipient_email:
+        raise HTTPException(status_code=400, detail="Invoice has no recipient email address.")
+
+    # Validate required fields for draft
+    is_first_send = invoice.status == "draft"
+    if is_first_send:
+        if not invoice.recipient_name:
+            raise HTTPException(status_code=400, detail="Recipient name is required.")
+        if not (invoice.line_items and len(invoice.line_items) > 0):
+            raise HTTPException(status_code=400, detail="At least one line item is required.")
+        # Assign number and transition
+        invoice.invoice_number = await generate_invoice_number(db, conference_id, current_user.tenant_id)
+        invoice.status = "sent"
+        if invoice.issue_date is None:
+            invoice.issue_date = date_type.today()
+
+    # Generate PDF and send email
+    pdf_bytes = await generate_invoice_pdf(invoice, conference, db)
+    is_credit_note = invoice.template_type == "credit_note"
+    doc_label = "Credit Note" if is_credit_note else "Invoice"
+    attachment = {
+        "filename": f"{'credit_note' if is_credit_note else 'invoice'}_{invoice.invoice_number}.pdf",
+        "content": base64.b64encode(pdf_bytes).decode("ascii"),
+    }
+    email_sent = await send_email(
+        to=invoice.recipient_email,
+        subject=f"{doc_label} {invoice.invoice_number}",
+        html=f"<p>Please find attached {doc_label.lower()} {invoice.invoice_number}.</p>",
+        attachments=[attachment],
+    )
+
+    if not email_sent:
+        raise HTTPException(status_code=500, detail="Failed to send email. Please try again.")
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.sent" if is_first_send else "invoice.resent",
+        resource_type="invoice",
+        resource_id=invoice.id,
+        details={
+            "invoice_number": invoice.invoice_number,
+            "recipient_email": invoice.recipient_email,
+            "is_resend": not is_first_send,
+        },
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(invoice)
+
+    return build_invoice_response(invoice)

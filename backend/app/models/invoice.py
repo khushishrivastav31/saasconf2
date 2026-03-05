@@ -78,6 +78,11 @@ class Invoice(Base):
     # Internal comment (admin-only, never shown on PDF)
     internal_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Related invoice (self-FK for credit notes linking to original invoice)
+    related_invoice_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True
+    )
+
     # Contact persons (JSONB array)
     contact_persons: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
@@ -93,11 +98,15 @@ class Invoice(Base):
     # Relationships
     tenant: Mapped["Tenant"] = relationship("Tenant")
     conference: Mapped["Conference"] = relationship("Conference")
+    related_invoice: Mapped["Invoice | None"] = relationship(
+        "Invoice", remote_side="Invoice.id", foreign_keys=[related_invoice_id]
+    )
 
     # Indexes and constraints
     __table_args__ = (
         Index("idx_invoices_tenant", "tenant_id"),
         Index("idx_invoices_conference", "tenant_id", "conference_id"),
+        Index("idx_invoices_related", "related_invoice_id"),
         # Partial unique index: enforces uniqueness for assigned numbers, allows multiple NULLs (drafts)
         Index(
             "uq_invoices_tenant_number",

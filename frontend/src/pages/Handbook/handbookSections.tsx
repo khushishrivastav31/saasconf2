@@ -935,7 +935,9 @@ info@company.com,,,Tech Solutions`}
               <td>
                 <code>Sent</code>
               </td>
-              <td>Invoice delivered to the recipient. Editing is restricted.</td>
+              <td>
+                Invoice delivered to the recipient via email. Editing is restricted; can be resent.
+              </td>
             </tr>
             <tr>
               <td>
@@ -947,13 +949,15 @@ info@company.com,,,Tech Solutions`}
               <td>
                 <code>Overdue</code>
               </td>
-              <td>Past due date without payment.</td>
+              <td>Past due date without payment. Can be resent or cancelled.</td>
             </tr>
             <tr>
               <td>
                 <code>Cancelled</code>
               </td>
-              <td>Invoice voided &mdash; no longer payable.</td>
+              <td>
+                Invoice voided via cancellation. A linked credit note is automatically created.
+              </td>
             </tr>
           </tbody>
         </table>
@@ -980,6 +984,51 @@ info@company.com,,,Tech Solutions`}
           body HTML template (configured in Settings &rarr; Finance &rarr; Invoice Templates) while
           sharing the same footer, page format, and company information.
         </p>
+        <h3>Sending &amp; Resending</h3>
+        <p>
+          When an invoice is sent, the system generates a PDF from the configured template and
+          emails it to the recipient. A <strong>recipient email</strong> is required before sending.
+        </p>
+        <ul>
+          <li>
+            <strong>Draft &rarr; Send</strong> &mdash; assigns an invoice number, sets the status to
+            &ldquo;Sent&rdquo;, sets the issue date to today, and emails the PDF. After sending, the
+            invoice can no longer be edited &mdash; only the status can be changed.
+          </li>
+          <li>
+            <strong>Resend</strong> &mdash; for invoices that are already sent or overdue, the PDF
+            can be re-emailed to the recipient. Use the <em>Resend</em> button in the detail panel
+            or the envelope icon in the invoice list.
+          </li>
+        </ul>
+        <h3>Cancellation &amp; Credit Notes</h3>
+        <p>
+          Only <strong>draft</strong> invoices can be deleted. Sent and overdue invoices must be{' '}
+          <strong>cancelled</strong> instead, which automatically creates a linked{' '}
+          <strong>credit note</strong>.
+        </p>
+        <ul>
+          <li>
+            Click <strong>Cancel Invoice</strong> on a sent or overdue invoice. You must provide a
+            cancellation reason (stored as internal comment on the cancelled invoice).
+          </li>
+          <li>
+            The system creates a credit note with negated line-item amounts, assigns a cancellation
+            number, and emails the credit note PDF to the recipient.
+          </li>
+          <li>
+            Credit notes appear as <strong>indented sub-rows</strong> directly under their parent
+            cancelled invoice in the list, making the relationship visually clear.
+          </li>
+          <li>
+            In the detail panel, clickable links allow navigating between a cancelled invoice and
+            its credit note (and vice versa).
+          </li>
+          <li>
+            Credit notes <strong>cannot be deleted</strong>. They can be resent like any other sent
+            invoice.
+          </li>
+        </ul>
         <h3>Invoice Details</h3>
         <ul>
           <li>
@@ -1009,6 +1058,12 @@ info@company.com,,,Tech Solutions`}
             &amp; Tax), invoice totals are shown in both currencies on the generated PDF.
           </li>
         </ul>
+        <h3>Sponsor Invoices</h3>
+        <p>
+          The <strong>Invoices</strong> tab on each sponsor shows all invoices linked to that
+          sponsor. From there you can preview the PDF inline, download it, or resend it &mdash;
+          without navigating to the main Invoices section.
+        </p>
         <h3>Export</h3>
         <p>
           Invoices can be exported as CSV (up to 50,000 rows). The export includes a UTF-8 BOM for

@@ -571,8 +571,11 @@ async def send_contract(
 
     # Update contract tracking
     if sent_count > 0:
+        # Snapshot current version before modifying status/send history
+        await _snapshot_version(db, contract)
+
         contract.last_sent_at = now
-        sent_history = contract.sent_to or []
+        sent_history = list(contract.sent_to or [])  # Copy BEFORE mutating — SQLAlchemy compares old vs new
         for recipient in recipients:
             if recipient not in failed:
                 sent_history.append(
