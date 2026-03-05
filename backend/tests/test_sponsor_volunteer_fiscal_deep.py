@@ -43,7 +43,6 @@ from app.models.volunteer import Volunteer
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 from tests.conftest import auth_headers
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -143,9 +142,7 @@ async def sponsor_package(db_session: AsyncSession, tenant: Tenant, conference: 
 
 
 @pytest_asyncio.fixture()
-async def package_template_txt(
-    db_session: AsyncSession, tenant: Tenant, sponsor_package: SponsorPackage
-) -> Attachment:
+async def package_template_txt(db_session: AsyncSession, tenant: Tenant, sponsor_package: SponsorPackage) -> Attachment:
     content = b"Contract for {{company_name}}"
     att = Attachment(
         id=uuid.uuid4(),
@@ -1232,9 +1229,7 @@ class TestVolunteerAssignmentOverviewWithVolunteers:
         tenant_admin_user: User,
         admin_token: str,
     ) -> None:
-        resp = await client.get(
-            _vol_url(conference.id, "/volunteer-assignments"), headers=auth_headers(admin_token)
-        )
+        resp = await client.get(_vol_url(conference.id, "/volunteer-assignments"), headers=auth_headers(admin_token))
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["items"]) == 1

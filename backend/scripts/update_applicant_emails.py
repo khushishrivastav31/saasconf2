@@ -15,7 +15,6 @@ from sqlalchemy.orm import sessionmaker
 from app.config import get_settings
 from app.models.cfp import CFPApplicant
 
-
 TENANT_ID = "7913849b-71a9-48a6-946b-f0d0af8490e7"
 
 
@@ -34,9 +33,7 @@ async def main() -> None:
     async_session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async with async_session_factory() as db:
-        result = await db.execute(
-            select(CFPApplicant).where(CFPApplicant.tenant_id == TENANT_ID)
-        )
+        result = await db.execute(select(CFPApplicant).where(CFPApplicant.tenant_id == TENANT_ID))
         applicants = result.scalars().all()
 
         # Build emails and handle duplicates

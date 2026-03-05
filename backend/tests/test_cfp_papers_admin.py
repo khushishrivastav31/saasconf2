@@ -22,14 +22,13 @@ from app.core.security import hash_password
 from app.models.associations import ConferenceCFP
 from app.models.cfp import CallForPapers, CFPCommitteeMember
 from app.models.cfp_applicants import CFPApplicant
-from app.models.cfp_papers import CFPPaper, CFPPaperAssignment, CFPPaperCospeaker, PaperStatus
+from app.models.cfp_papers import CFPPaper, CFPPaperCospeaker, PaperStatus
 from app.models.conference import Conference
 from app.models.messaging import Message, MessageParticipant, MessageThread
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import _make_token, auth_headers
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -143,9 +142,7 @@ async def cfp(db_session: AsyncSession, tenant: Tenant, conference: Conference) 
 
 
 @pytest_asyncio.fixture()
-async def paper(
-    db_session: AsyncSession, tenant: Tenant, cfp: CallForPapers, applicant: CFPApplicant
-) -> CFPPaper:
+async def paper(db_session: AsyncSession, tenant: Tenant, cfp: CallForPapers, applicant: CFPApplicant) -> CFPPaper:
     """Create a draft paper."""
     p = CFPPaper(
         id=uuid.uuid4(),
@@ -586,22 +583,16 @@ class TestAdminCFPPapers:
         assignment_id = assign_resp.json()["id"]
 
         # 4. Get paper assignments
-        paper_assignments_resp = await client.get(
-            f"/api/v1/cfp/papers/{paper_id}/assignments", headers=headers
-        )
+        paper_assignments_resp = await client.get(f"/api/v1/cfp/papers/{paper_id}/assignments", headers=headers)
         assert paper_assignments_resp.status_code == 200
         assert paper_assignments_resp.json()["total"] == 1
 
         # 5. Delete assignment
-        del_assign_resp = await client.delete(
-            f"/api/v1/cfp/paper-assignments/{assignment_id}", headers=headers
-        )
+        del_assign_resp = await client.delete(f"/api/v1/cfp/paper-assignments/{assignment_id}", headers=headers)
         assert del_assign_resp.status_code == 200
 
         # 6. Unsubmit paper (back to draft) - may fail if assigning changed status
-        unsubmit_resp = await client.post(
-            f"/api/v1/cfp/papers/{paper_id}/unsubmit", headers=headers
-        )
+        unsubmit_resp = await client.post(f"/api/v1/cfp/papers/{paper_id}/unsubmit", headers=headers)
         assert unsubmit_resp.status_code in (200, 400)
         if unsubmit_resp.status_code == 200:
             assert unsubmit_resp.json()["status"] == "draft"
@@ -671,9 +662,7 @@ class TestAdminCFPPapers:
     ) -> None:
         """DELETE /paper-assignments/{random_id} returns 404."""
         headers = _admin_headers(tenant_admin_user)
-        resp = await client.delete(
-            f"/api/v1/cfp/paper-assignments/{uuid.uuid4()}", headers=headers
-        )
+        resp = await client.delete(f"/api/v1/cfp/paper-assignments/{uuid.uuid4()}", headers=headers)
         assert resp.status_code == 404
 
     # -- Paper reviews (admin view) --
@@ -847,9 +836,7 @@ class TestAdminMessagingThreads:
     # -- Auth --
 
     @pytest.mark.asyncio
-    async def test_list_threads_unauthenticated(
-        self, client: AsyncClient, conference: Conference
-    ) -> None:
+    async def test_list_threads_unauthenticated(self, client: AsyncClient, conference: Conference) -> None:
         """GET /threads without token returns 401."""
         resp = await client.get(self._url(conference.id, "/threads"))
         assert resp.status_code == 401

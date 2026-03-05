@@ -14,6 +14,7 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
@@ -107,9 +108,7 @@ def reg_admin_token(tenant_admin_user: User) -> str:
 
 
 @pytest_asyncio.fixture()
-async def main_booking_option(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> BookingOption:
+async def main_booking_option(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> BookingOption:
     """Create a test booking option for registration (the main ticket option)."""
     opt = BookingOption(
         id=uuid.uuid4(),
@@ -125,9 +124,7 @@ async def main_booking_option(
 
 
 @pytest_asyncio.fixture()
-async def addon_booking_option(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> BookingOption:
+async def addon_booking_option(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> BookingOption:
     """Create a test booking option for add-on items."""
     opt = BookingOption(
         id=uuid.uuid4(),
@@ -150,24 +147,20 @@ class TestAttendeeDataValidation:
     """Tests for AttendeeData schema validation."""
 
     def test_valid_attendee(self):
-        a = AttendeeData(
-            first_name="John", last_name="Doe", email="john@example.com"
-        )
+        a = AttendeeData(first_name="John", last_name="Doe", email="john@example.com")
         assert a.first_name == "John"
         assert a.email == "john@example.com"
 
     def test_email_lowercased(self):
-        a = AttendeeData(
-            first_name="John", last_name="Doe", email="JOHN@Example.COM"
-        )
+        a = AttendeeData(first_name="John", last_name="Doe", email="JOHN@Example.COM")
         assert a.email == "john@example.com"
 
     def test_missing_first_name_raises(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             AttendeeData(first_name="", last_name="Doe", email="john@example.com")
 
     def test_invalid_email_raises(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             AttendeeData(first_name="John", last_name="Doe", email="not-an-email")
 
     def test_pronouns_optional(self):
@@ -175,9 +168,7 @@ class TestAttendeeDataValidation:
         assert a.pronouns is None
 
     def test_pronouns_stored(self):
-        a = AttendeeData(
-            first_name="John", last_name="Doe", email="john@example.com", pronouns="he/him"
-        )
+        a = AttendeeData(first_name="John", last_name="Doe", email="john@example.com", pronouns="he/him")
         assert a.pronouns == "he/him"
 
 
@@ -192,7 +183,7 @@ class TestBillingProfileValidation:
     def test_missing_street_raises(self):
         payload = {**BILLING_PAYLOAD}
         del payload["street"]
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             BillingProfileCreate(**payload)
 
     def test_company_name_optional(self):
@@ -208,7 +199,7 @@ class TestBillingProfileValidation:
     def test_missing_contact_last_name_raises(self):
         payload = {**BILLING_PAYLOAD}
         del payload["contact_last_name"]
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             BillingProfileCreate(**payload)
 
 
@@ -237,7 +228,7 @@ class TestBulkRegistrationValidation:
             )
 
     def test_empty_attendees_list_raises(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             BulkRegistrationCreate(
                 billing=BillingProfileCreate(**BILLING_PAYLOAD),
                 attendees=[],
@@ -257,7 +248,7 @@ class TestRegistrationUpdateValidation:
         assert u.status == "paid"
 
     def test_status_enum_invalid_raises(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             RegistrationUpdate(status="invalid_status")
 
 

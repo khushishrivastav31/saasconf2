@@ -15,7 +15,7 @@ Covers:
 """
 
 import uuid
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 
 import pytest
 import pytest_asyncio
@@ -26,9 +26,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import create_access_token, hash_password
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
+    CallForPapers,
     CFPApplicant,
     CFPPaper,
-    CallForPapers,
     CFPStatus,
     PaperStatus,
 )
@@ -39,7 +39,6 @@ from app.models.settings import SessionType
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from tests.conftest import auth_headers
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -196,9 +195,7 @@ async def modules(db_session: AsyncSession, tenant: Tenant) -> list[Module]:
         mods.append(m)
     await db_session.flush()
     for m in mods:
-        db_session.add(
-            TenantModule(id=uuid.uuid4(), tenant_id=tenant.id, module_id=m.id, is_enabled=True)
-        )
+        db_session.add(TenantModule(id=uuid.uuid4(), tenant_id=tenant.id, module_id=m.id, is_enabled=True))
     await db_session.commit()
     return mods
 
@@ -221,9 +218,7 @@ def no_module_token(admin_user: User) -> str:
 
 
 @pytest_asyncio.fixture()
-async def program_day(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> ProgramDay:
+async def program_day(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> ProgramDay:
     """Create a single program day."""
     day = ProgramDay(
         id=uuid.uuid4(),
@@ -239,16 +234,16 @@ async def program_day(
 
 
 @pytest_asyncio.fixture()
-async def program_slots(
-    db_session: AsyncSession, tenant: Tenant, program_day: ProgramDay
-) -> list[ProgramTimeSlot]:
+async def program_slots(db_session: AsyncSession, tenant: Tenant, program_day: ProgramDay) -> list[ProgramTimeSlot]:
     """Create 3 time slots for the program day."""
     slots = []
-    for i, (st, et) in enumerate([
-        (time(9, 0), time(9, 30)),
-        (time(9, 30), time(10, 0)),
-        (time(10, 0), time(10, 30)),
-    ]):
+    for i, (st, et) in enumerate(
+        [
+            (time(9, 0), time(9, 30)),
+            (time(9, 30), time(10, 0)),
+            (time(10, 0), time(10, 30)),
+        ]
+    ):
         s = ProgramTimeSlot(
             id=uuid.uuid4(),
             tenant_id=tenant.id,
@@ -282,9 +277,7 @@ async def program_track(
 
 
 @pytest_asyncio.fixture()
-async def session_type(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> SessionType:
+async def session_type(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> SessionType:
     """Create a session type for the conference."""
     st = SessionType(
         id=uuid.uuid4(),
@@ -381,7 +374,7 @@ async def papers(
             main_speaker_id=speaker.id,
             title=title,
             status=PaperStatus.SUBMITTED.value,
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(UTC),
         )
         db_session.add(p)
         result.append(p)
@@ -1374,9 +1367,7 @@ class TestPublish:
             _publish_url(conference.id),
             headers=auth_headers(admin_token),
         )
-        result = await db_session.execute(
-            select(CallForPapers.status).where(CallForPapers.id == cfp_id)
-        )
+        result = await db_session.execute(select(CallForPapers.status).where(CallForPapers.id == cfp_id))
         assert result.scalar_one() == CFPStatus.COMPLETED.value
 
     @pytest.mark.asyncio

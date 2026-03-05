@@ -1,20 +1,21 @@
 """Tests for file upload validation utilities."""
 
 import pytest
-from app.core.file_validation import sanitize_filename, validate_upload
+
 from app.core.exceptions import ValidationError
+from app.core.file_validation import sanitize_filename, validate_upload
 
 # Minimal valid JPEG (SOI marker + minimal data)
-JPEG_MAGIC = b'\xff\xd8\xff\xe0' + b'\x00' * 20
+JPEG_MAGIC = b"\xff\xd8\xff\xe0" + b"\x00" * 20
 
 # Minimal valid PNG (PNG signature)
-PNG_MAGIC = b'\x89PNG\r\n\x1a\n' + b'\x00' * 20
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n" + b"\x00" * 20
 
 # Minimal valid PDF
-PDF_MAGIC = b'%PDF-1.4' + b'\x00' * 20
+PDF_MAGIC = b"%PDF-1.4" + b"\x00" * 20
 
 # EXE/PE magic bytes
-EXE_MAGIC = b'MZ' + b'\x00' * 50
+EXE_MAGIC = b"MZ" + b"\x00" * 50
 
 
 class TestSanitizeFilename:

@@ -14,7 +14,7 @@ Covers:
 
 import os
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 os.environ.setdefault(
     "DATABASE_URL",
@@ -31,17 +31,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.applicant_security import (
     create_applicant_access_token,
-    create_applicant_refresh_token,
     generate_email_verification_token,
 )
-from app.core.security import hash_password, hash_token
-from app.models.applicant_token import ApplicantEmailVerification, ApplicantPasswordReset, ApplicantRefreshToken
+from app.core.security import hash_password
+from app.models.applicant_token import ApplicantPasswordReset
 from app.models.cfp import CFPApplicant
 from app.models.conference import Conference
 from app.models.messaging import Message, MessageParticipant, MessageThread
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
-from app.models.user import User, UserRole
+from app.models.user import User
 from tests.conftest import auth_headers
 
 PORTAL_BASE = "/api/v1/portal"
@@ -112,7 +111,7 @@ async def verified_applicant(db_session: AsyncSession, tenant: Tenant) -> CFPApp
         last_name="Speaker",
         email=f"jane-{uuid.uuid4().hex[:8]}@example.com",
         password_hash=hash_password("Password123!"),
-        email_verified_at=datetime.now(timezone.utc),
+        email_verified_at=datetime.now(UTC),
     )
     db_session.add(a)
     await db_session.commit()
@@ -165,7 +164,7 @@ async def other_tenant_applicant(db_session: AsyncSession, second_tenant: Tenant
         last_name="Applicant",
         email=f"other-{uuid.uuid4().hex[:8]}@example.com",
         password_hash=hash_password("Password123!"),
-        email_verified_at=datetime.now(timezone.utc),
+        email_verified_at=datetime.now(UTC),
     )
     db_session.add(a)
     await db_session.commit()
@@ -198,7 +197,7 @@ async def thread_with_message(
             thread_id=thread.id,
             participant_type="user",
             participant_id=tenant_admin_user.id,
-            last_read_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+            last_read_at=datetime.now(UTC) + timedelta(minutes=5),
         )
     )
     # Applicant participant (unread)
@@ -514,7 +513,7 @@ class TestPortalForgotResetPassword:
         reset = ApplicantPasswordReset(
             applicant_id=verified_applicant.id,
             token_hash=token_hash_val,
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
         )
         db_session.add(reset)
         await db_session.commit()
@@ -1097,7 +1096,7 @@ class TestPortalArchiveUnarchive:
     ):
         """Unarchiving a thread clears archived_at."""
         # First archive
-        thread_with_message.archived_at = datetime.now(timezone.utc)
+        thread_with_message.archived_at = datetime.now(UTC)
         await db_session.commit()
 
         response = await client.post(
@@ -1281,9 +1280,7 @@ class TestPortalCrossTenantIsolation:
     ):
         """Applicant from a different tenant cannot view threads from another tenant."""
         # Create a token for the other-tenant applicant
-        other_token = create_applicant_access_token(
-            other_tenant_applicant.id, second_tenant.id
-        )
+        other_token = create_applicant_access_token(other_tenant_applicant.id, second_tenant.id)
 
         response = await client.get(
             f"{PORTAL_BASE}/messages/{thread_with_message.id}",
@@ -1302,9 +1299,7 @@ class TestPortalCrossTenantIsolation:
         verified_applicant: CFPApplicant,
     ):
         """Applicant from a different tenant cannot reply to threads from another tenant."""
-        other_token = create_applicant_access_token(
-            other_tenant_applicant.id, second_tenant.id
-        )
+        other_token = create_applicant_access_token(other_tenant_applicant.id, second_tenant.id)
 
         response = await client.post(
             f"{PORTAL_BASE}/messages/{thread_with_message.id}/reply",
@@ -1324,9 +1319,7 @@ class TestPortalCrossTenantIsolation:
         verified_applicant: CFPApplicant,
     ):
         """Applicant from a different tenant cannot archive threads from another tenant."""
-        other_token = create_applicant_access_token(
-            other_tenant_applicant.id, second_tenant.id
-        )
+        other_token = create_applicant_access_token(other_tenant_applicant.id, second_tenant.id)
 
         response = await client.post(
             f"{PORTAL_BASE}/messages/{thread_with_message.id}/archive",
@@ -1345,9 +1338,7 @@ class TestPortalCrossTenantIsolation:
         verified_applicant: CFPApplicant,
     ):
         """Threads from another tenant do not appear in the applicant's list."""
-        other_token = create_applicant_access_token(
-            other_tenant_applicant.id, second_tenant.id
-        )
+        other_token = create_applicant_access_token(other_tenant_applicant.id, second_tenant.id)
 
         response = await client.get(
             f"{PORTAL_BASE}/messages",

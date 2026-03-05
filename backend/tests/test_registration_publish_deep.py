@@ -9,7 +9,7 @@ Exercises uncovered code paths in:
 
 import os
 import uuid
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 
 os.environ.setdefault(
     "DATABASE_URL",
@@ -36,7 +36,7 @@ from app.models.module import Module, TenantModule
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
 from app.models.settings import SessionType
 from app.models.tenant import Tenant
-from app.models.user import User, UserRole
+from app.models.user import User
 from tests.conftest import auth_headers
 
 # ---------------------------------------------------------------------------
@@ -108,9 +108,7 @@ async def tenant_with_all(
     cfp_module: Module,
 ) -> Tenant:
     for mod in [conferences_module, reg_module, program_module, cfp_module]:
-        db_session.add(
-            TenantModule(id=uuid.uuid4(), tenant_id=tenant.id, module_id=mod.id, is_enabled=True)
-        )
+        db_session.add(TenantModule(id=uuid.uuid4(), tenant_id=tenant.id, module_id=mod.id, is_enabled=True))
     await db_session.commit()
     return tenant
 
@@ -164,15 +162,15 @@ async def program_day(db_session: AsyncSession, tenant: Tenant, conference: Conf
 
 
 @pytest_asyncio.fixture()
-async def program_slots(
-    db_session: AsyncSession, tenant: Tenant, program_day: ProgramDay
-) -> list[ProgramTimeSlot]:
+async def program_slots(db_session: AsyncSession, tenant: Tenant, program_day: ProgramDay) -> list[ProgramTimeSlot]:
     slots = []
-    for i, (st, et) in enumerate([
-        (time(9, 0), time(10, 0)),
-        (time(10, 0), time(11, 0)),
-        (time(11, 0), time(12, 0)),
-    ]):
+    for i, (st, et) in enumerate(
+        [
+            (time(9, 0), time(10, 0)),
+            (time(10, 0), time(11, 0)),
+            (time(11, 0), time(12, 0)),
+        ]
+    ):
         s = ProgramTimeSlot(
             id=uuid.uuid4(),
             tenant_id=tenant.id,
@@ -205,9 +203,7 @@ async def program_track(
 
 
 @pytest_asyncio.fixture()
-async def session_type(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> SessionType:
+async def session_type(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> SessionType:
     st = SessionType(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -274,6 +270,7 @@ async def bookable_session(
 
 # CFP fixtures for publish tests
 
+
 @pytest_asyncio.fixture()
 async def cfp(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> CallForPapers:
     c = CallForPapers(
@@ -327,7 +324,7 @@ async def papers_with_cospeaker(
         learning_objectives="Learn AI",
         importance="Very important",
         status=PaperStatus.SUBMITTED.value,
-        submitted_at=datetime.now(timezone.utc),
+        submitted_at=datetime.now(UTC),
         custom_field_answers={"experience": "5 years", "tags": ["ai", "ml"]},
     )
     p2 = CFPPaper(
@@ -338,7 +335,7 @@ async def papers_with_cospeaker(
         title="Cloud Myths",
         abstract_short="Cloud abstract",
         status=PaperStatus.SUBMITTED.value,
-        submitted_at=datetime.now(timezone.utc),
+        submitted_at=datetime.now(UTC),
     )
     db_session.add(p1)
     db_session.add(p2)
@@ -1425,7 +1422,7 @@ class TestTutorialItemWithSession:
     ) -> None:
         """Adding a tutorial item with a specific session ID when program is published."""
         # Mark conference as published
-        conference.program_published_at = datetime.now(timezone.utc)
+        conference.program_published_at = datetime.now(UTC)
         db_session.add(conference)
         await db_session.commit()
 
@@ -1488,7 +1485,7 @@ class TestTutorialItemWithSession:
         db_session.add(non_bookable)
 
         # Mark conference as published
-        conference.program_published_at = datetime.now(timezone.utc)
+        conference.program_published_at = datetime.now(UTC)
         db_session.add(conference)
         await db_session.commit()
 

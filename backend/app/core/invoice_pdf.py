@@ -19,21 +19,62 @@ from app.models.invoice import Invoice
 # Mapping of full country names to ISO 3166-1 alpha-2 codes.
 # Matches frontend/src/config/countries.ts COUNTRY_OPTIONS.
 _COUNTRY_NAME_TO_ISO: dict[str, str] = {
-    "albania": "AL", "andorra": "AD", "armenia": "AM", "australia": "AU",
-    "austria": "AT", "azerbaijan": "AZ", "belarus": "BY", "belgium": "BE",
-    "bosnia and herzegovina": "BA", "brazil": "BR", "bulgaria": "BG",
-    "canada": "CA", "china": "CN", "croatia": "HR", "cyprus": "CY",
-    "czechia": "CZ", "denmark": "DK", "estonia": "EE", "finland": "FI",
-    "france": "FR", "georgia": "GE", "germany": "DE", "greece": "GR",
-    "hungary": "HU", "iceland": "IS", "india": "IN", "ireland": "IE",
-    "israel": "IL", "italy": "IT", "japan": "JP", "latvia": "LV",
-    "liechtenstein": "LI", "lithuania": "LT", "luxembourg": "LU",
-    "malta": "MT", "moldova": "MD", "monaco": "MC", "montenegro": "ME",
-    "netherlands": "NL", "new zealand": "NZ", "north macedonia": "MK",
-    "norway": "NO", "poland": "PL", "portugal": "PT", "romania": "RO",
-    "russia": "RU", "serbia": "RS", "slovakia": "SK", "slovenia": "SI",
-    "south korea": "KR", "spain": "ES", "sweden": "SE", "switzerland": "CH",
-    "turkey": "TR", "ukraine": "UA", "united kingdom": "GB",
+    "albania": "AL",
+    "andorra": "AD",
+    "armenia": "AM",
+    "australia": "AU",
+    "austria": "AT",
+    "azerbaijan": "AZ",
+    "belarus": "BY",
+    "belgium": "BE",
+    "bosnia and herzegovina": "BA",
+    "brazil": "BR",
+    "bulgaria": "BG",
+    "canada": "CA",
+    "china": "CN",
+    "croatia": "HR",
+    "cyprus": "CY",
+    "czechia": "CZ",
+    "denmark": "DK",
+    "estonia": "EE",
+    "finland": "FI",
+    "france": "FR",
+    "georgia": "GE",
+    "germany": "DE",
+    "greece": "GR",
+    "hungary": "HU",
+    "iceland": "IS",
+    "india": "IN",
+    "ireland": "IE",
+    "israel": "IL",
+    "italy": "IT",
+    "japan": "JP",
+    "latvia": "LV",
+    "liechtenstein": "LI",
+    "lithuania": "LT",
+    "luxembourg": "LU",
+    "malta": "MT",
+    "moldova": "MD",
+    "monaco": "MC",
+    "montenegro": "ME",
+    "netherlands": "NL",
+    "new zealand": "NZ",
+    "north macedonia": "MK",
+    "norway": "NO",
+    "poland": "PL",
+    "portugal": "PT",
+    "romania": "RO",
+    "russia": "RU",
+    "serbia": "RS",
+    "slovakia": "SK",
+    "slovenia": "SI",
+    "south korea": "KR",
+    "spain": "ES",
+    "sweden": "SE",
+    "switzerland": "CH",
+    "turkey": "TR",
+    "ukraine": "UA",
+    "united kingdom": "GB",
     "united states": "US",
 }
 
@@ -54,9 +95,7 @@ def _normalize_country_to_iso(value: str) -> str:
 
 
 # Reverse mapping: ISO code → display name (title-cased).
-_ISO_TO_COUNTRY_NAME: dict[str, str] = {
-    code: name.title() for name, code in _COUNTRY_NAME_TO_ISO.items()
-}
+_ISO_TO_COUNTRY_NAME: dict[str, str] = {code: name.title() for name, code in _COUNTRY_NAME_TO_ISO.items()}
 
 
 def _iso_to_country_name(value: str) -> str:
@@ -69,6 +108,7 @@ def _iso_to_country_name(value: str) -> str:
         return value
     stripped = value.strip().upper()
     return _ISO_TO_COUNTRY_NAME.get(stripped, value.strip())
+
 
 # Default invoice template HTML (can be overridden in conference settings)
 DEFAULT_INVOICE_TEMPLATE_HTML = """
@@ -520,11 +560,7 @@ def _compute_fixed_block_padding(html: str, side: str) -> str:
     is_complex = has_tables or has_images
 
     # Headers: compact (images max 60px); footers: can be large (bank details, legal text)
-    padding_cm = (
-        ("2cm" if is_complex else "1.5cm")
-        if side == "top"
-        else ("5cm" if is_complex else "3cm")
-    )
+    padding_cm = ("2cm" if is_complex else "1.5cm") if side == "top" else ("5cm" if is_complex else "3cm")
 
     return f"body {{ padding-{side}: {padding_cm}; }}"
 
@@ -687,9 +723,15 @@ async def generate_invoice_pdf(
         "[CURRENCY_2]": second_currency,
         # Dual currency
         "[SECOND_CURRENCY]": second_currency,
-        "[SECOND_TOTAL]": f"{(Decimal(str(invoice.total)) * exchange_rate):.2f}" if exchange_rate and invoice.total else "",
-        "[SECOND_SUBTOTAL]": f"{(Decimal(str(invoice.subtotal)) * exchange_rate):.2f}" if exchange_rate and invoice.subtotal else "",
-        "[SECOND_TAX_AMOUNT]": f"{(Decimal(str(invoice.tax_amount)) * exchange_rate):.2f}" if exchange_rate and invoice.tax_amount else "",
+        "[SECOND_TOTAL]": f"{(Decimal(str(invoice.total)) * exchange_rate):.2f}"
+        if exchange_rate and invoice.total
+        else "",
+        "[SECOND_SUBTOTAL]": f"{(Decimal(str(invoice.subtotal)) * exchange_rate):.2f}"
+        if exchange_rate and invoice.subtotal
+        else "",
+        "[SECOND_TAX_AMOUNT]": f"{(Decimal(str(invoice.tax_amount)) * exchange_rate):.2f}"
+        if exchange_rate and invoice.tax_amount
+        else "",
         # Contact info (both underscore and space variants)
         "[CONTACT_EMAIL]": contact_email,
         "[CONTACT EMAIL]": contact_email,
@@ -915,8 +957,12 @@ async def generate_invoice_pdf_from_data(
         # Dual currency
         "[SECOND_CURRENCY]": second_currency,
         "[SECOND_TOTAL]": f"{(Decimal(str(total_val)) * exchange_rate):.2f}" if exchange_rate and total_val else "",
-        "[SECOND_SUBTOTAL]": f"{(Decimal(str(subtotal_val)) * exchange_rate):.2f}" if exchange_rate and subtotal_val else "",
-        "[SECOND_TAX_AMOUNT]": f"{(Decimal(str(tax_amount_val)) * exchange_rate):.2f}" if exchange_rate and tax_amount_val else "",
+        "[SECOND_SUBTOTAL]": f"{(Decimal(str(subtotal_val)) * exchange_rate):.2f}"
+        if exchange_rate and subtotal_val
+        else "",
+        "[SECOND_TAX_AMOUNT]": f"{(Decimal(str(tax_amount_val)) * exchange_rate):.2f}"
+        if exchange_rate and tax_amount_val
+        else "",
         # Contact info (both underscore and space variants)
         "[CONTACT_EMAIL]": contact_email,
         "[CONTACT EMAIL]": contact_email,
@@ -1092,7 +1138,9 @@ def _render_items_table(line_items: list, currency: str = "EUR") -> str:
         desc = item.get("description", "")
         raw_qty = item.get("quantity", 1)
         # Display whole numbers without decimals (1 not 1.0)
-        qty_display = str(int(raw_qty)) if isinstance(raw_qty, (int, float)) and raw_qty == int(raw_qty) else str(raw_qty)
+        qty_display = (
+            str(int(raw_qty)) if isinstance(raw_qty, (int, float)) and raw_qty == int(raw_qty) else str(raw_qty)
+        )
         unit_price = Decimal(str(item.get("unit_price", 0)))
         discount = Decimal(str(item.get("discount", 0)))
         total = Decimal(str(item.get("total", 0)))

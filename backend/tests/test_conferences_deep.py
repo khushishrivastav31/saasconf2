@@ -53,9 +53,7 @@ async def conferences_module(db_session: AsyncSession) -> Module:
 
 
 @pytest_asyncio.fixture()
-async def tenant_with_modules(
-    db_session: AsyncSession, tenant: Tenant, conferences_module: Module
-) -> Tenant:
+async def tenant_with_modules(db_session: AsyncSession, tenant: Tenant, conferences_module: Module) -> Tenant:
     tm = TenantModule(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -164,9 +162,7 @@ async def cfp(db_session: AsyncSession, tenant: Tenant) -> CallForPapers:
 
 
 @pytest_asyncio.fixture()
-async def alumni_record(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> Alumni:
+async def alumni_record(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> Alumni:
     a = Alumni(
         tenant_id=tenant.id,
         conference_id=conference.id,

@@ -43,7 +43,7 @@ from app.models.location import Location
 from app.models.module import Module, TenantModule
 from app.models.settings import TenantLocationType
 from app.models.tenant import Tenant
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.models.user_password_reset import UserPasswordReset
 from tests.conftest import _make_token, auth_headers
 
@@ -93,9 +93,7 @@ async def locations_module(db_session: AsyncSession, tenant: Tenant) -> Module:
 
 
 @pytest_asyncio.fixture()
-async def venue_location_type(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> TenantLocationType:
+async def venue_location_type(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> TenantLocationType:
     lt = TenantLocationType(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -110,9 +108,7 @@ async def venue_location_type(
 
 
 @pytest_asyncio.fixture()
-async def room_location_type(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> TenantLocationType:
+async def room_location_type(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> TenantLocationType:
     lt = TenantLocationType(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -264,9 +260,7 @@ class TestAuthDeep:
         assert me_resp.json()["last_login"] is not None
 
     @pytest.mark.asyncio
-    async def test_login_super_admin_no_tenant(
-        self, client: AsyncClient, super_admin_user: User
-    ) -> None:
+    async def test_login_super_admin_no_tenant(self, client: AsyncClient, super_admin_user: User) -> None:
         """Super admin (no tenant) can log in successfully."""
         resp = await client.post(
             f"{AUTH_URL}/login",
@@ -340,9 +334,7 @@ class TestAuthDeep:
         assert refresh_resp.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_me_super_admin(
-        self, client: AsyncClient, super_admin_user: User, super_admin_token: str
-    ) -> None:
+    async def test_me_super_admin(self, client: AsyncClient, super_admin_user: User, super_admin_token: str) -> None:
         """Super admin /me returns correct role and no tenant."""
         resp = await client.get(f"{AUTH_URL}/me", headers=auth_headers(super_admin_token))
         assert resp.status_code == 200
@@ -380,9 +372,7 @@ class TestAuthDeep:
         assert resp.json()["theme_preference"] is None
 
     @pytest.mark.asyncio
-    async def test_forgot_password_creates_reset_token(
-        self, client: AsyncClient, tenant_admin_user: User
-    ) -> None:
+    async def test_forgot_password_creates_reset_token(self, client: AsyncClient, tenant_admin_user: User) -> None:
         """Forgot password for existing user returns success message."""
         resp = await client.post(
             f"{AUTH_URL}/forgot-password",
@@ -440,9 +430,7 @@ class TestPortalAuthDeep:
     """Deep coverage for /api/v1/portal/ auth endpoints."""
 
     @pytest.mark.asyncio
-    async def test_portal_register_success(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_portal_register_success(self, client: AsyncClient, tenant: Tenant) -> None:
         """Register a new applicant returns success."""
         email = f"newportal-{uuid.uuid4().hex[:8]}@test.com"
         reg_resp = await client.post(
@@ -511,9 +499,7 @@ class TestPortalAuthDeep:
         assert data["first_name"] == "Portal"
 
     @pytest.mark.asyncio
-    async def test_portal_update_profile(
-        self, client: AsyncClient, tenant: Tenant, applicant: CFPApplicant
-    ) -> None:
+    async def test_portal_update_profile(self, client: AsyncClient, tenant: Tenant, applicant: CFPApplicant) -> None:
         """PUT /portal/me updates applicant profile fields."""
         token = create_applicant_access_token(applicant_id=applicant.id, tenant_id=tenant.id)
 
@@ -534,9 +520,7 @@ class TestPortalAuthDeep:
         assert data["bio"] == "A short bio"
 
     @pytest.mark.asyncio
-    async def test_portal_refresh_token(
-        self, client: AsyncClient, tenant: Tenant, applicant: CFPApplicant
-    ) -> None:
+    async def test_portal_refresh_token(self, client: AsyncClient, tenant: Tenant, applicant: CFPApplicant) -> None:
         """Portal refresh rotates tokens."""
         login_resp = await client.post(
             f"{PORTAL_URL}/{tenant.slug}/login",
@@ -554,9 +538,7 @@ class TestPortalAuthDeep:
         assert "access_token" in data
 
     @pytest.mark.asyncio
-    async def test_portal_forgot_password(
-        self, client: AsyncClient, tenant: Tenant, applicant: CFPApplicant
-    ) -> None:
+    async def test_portal_forgot_password(self, client: AsyncClient, tenant: Tenant, applicant: CFPApplicant) -> None:
         """Portal forgot password always returns success."""
         resp = await client.post(
             f"{PORTAL_URL}/{tenant.slug}/forgot-password",
@@ -566,9 +548,7 @@ class TestPortalAuthDeep:
         assert "password reset link" in resp.json()["message"].lower()
 
     @pytest.mark.asyncio
-    async def test_portal_forgot_password_nonexistent_email(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_portal_forgot_password_nonexistent_email(self, client: AsyncClient, tenant: Tenant) -> None:
         """Non-existent email still returns 200 to prevent enumeration."""
         resp = await client.post(
             f"{PORTAL_URL}/{tenant.slug}/forgot-password",
@@ -645,9 +625,7 @@ class TestPortalAuthDeep:
         assert "verified" in resp.json()["message"].lower()
 
     @pytest.mark.asyncio
-    async def test_portal_get_tenant_info(
-        self, client: AsyncClient, tenant: Tenant
-    ) -> None:
+    async def test_portal_get_tenant_info(self, client: AsyncClient, tenant: Tenant) -> None:
         """GET /portal/tenant/{slug} returns basic tenant info."""
         resp = await client.get(f"{PORTAL_URL}/tenant/{tenant.slug}")
         assert resp.status_code == 200
@@ -816,7 +794,7 @@ class TestUsersDeep:
         # Create two users
         email1 = f"emailchk1-{uuid.uuid4().hex[:8]}@test.com"
         email2 = f"emailchk2-{uuid.uuid4().hex[:8]}@test.com"
-        r1 = await client.post(
+        await client.post(
             USERS_URL,
             json={"email": email1, "password": DEFAULT_PASSWORD, "first_name": "A", "last_name": "B", "role": "user"},
             headers=auth_headers(tenant_admin_token),
@@ -1083,7 +1061,7 @@ class TestLocationsDeep:
         code1 = f"CODE1-{uuid.uuid4().hex[:4]}"
         code2 = f"CODE2-{uuid.uuid4().hex[:4]}"
 
-        r1 = await client.post(
+        await client.post(
             LOCATIONS_URL,
             json={"name": "Loc1", "code": code1, "location_type": "venue", "conference_id": str(conference.id)},
             headers=auth_headers(token),
@@ -1297,9 +1275,7 @@ class TestFiscalRepDeep:
             ],
             "is_active": True,
         }
-        resp = await client.put(
-            _fiscal_rep_url(conference.id), json=payload, headers=auth_headers(admin_token)
-        )
+        resp = await client.put(_fiscal_rep_url(conference.id), json=payload, headers=auth_headers(admin_token))
         assert resp.status_code == 200
         data = resp.json()
         assert data["company_name"] == "FiscalTest GmbH"
@@ -1340,9 +1316,7 @@ class TestFiscalRepDeep:
             "email": "updated@fiscal.com",
             "contact_persons": [{"first_name": "NewPerson", "last_name": "Test"}],
         }
-        resp = await client.put(
-            _fiscal_rep_url(conference.id), json=payload, headers=auth_headers(admin_token)
-        )
+        resp = await client.put(_fiscal_rep_url(conference.id), json=payload, headers=auth_headers(admin_token))
         assert resp.status_code == 200
         data = resp.json()
         assert data["company_name"] == "Updated GmbH"
@@ -1425,9 +1399,7 @@ class TestFiscalRepDeep:
             "end_date": "2026-12-31",
             "description": "Standard rate",
         }
-        create_resp = await client.post(
-            _vat_rates_url(conference.id), json=payload, headers=auth_headers(admin_token)
-        )
+        create_resp = await client.post(_vat_rates_url(conference.id), json=payload, headers=auth_headers(admin_token))
         assert create_resp.status_code == 201
         rate_data = create_resp.json()
         assert Decimal(str(rate_data["rate"])) == Decimal("19.0")

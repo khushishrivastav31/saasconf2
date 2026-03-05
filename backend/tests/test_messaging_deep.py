@@ -16,7 +16,7 @@ Targets specific uncovered code paths:
 
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 os.environ.setdefault(
     "DATABASE_URL",
@@ -35,7 +35,7 @@ from app.core.applicant_security import create_applicant_access_token
 from app.core.security import hash_password
 from app.models.associations import ConferenceCFP
 from app.models.attachment import Attachment
-from app.models.cfp import CFPApplicant, CallForPapers
+from app.models.cfp import CallForPapers, CFPApplicant
 from app.models.cfp_papers import CFPPaper, PaperStatus
 from app.models.conference import Conference
 from app.models.messaging import Message, MessageParticipant, MessageThread
@@ -43,7 +43,6 @@ from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from tests.conftest import _make_token, auth_headers
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -89,7 +88,7 @@ async def applicant_a(db_session: AsyncSession, tenant: Tenant) -> CFPApplicant:
         last_name="Wonderland",
         email=f"alice-{uuid.uuid4().hex[:8]}@example.com",
         password_hash=hash_password("Password123!"),
-        email_verified_at=datetime.now(timezone.utc),
+        email_verified_at=datetime.now(UTC),
     )
     db_session.add(a)
     await db_session.commit()
@@ -105,7 +104,7 @@ async def applicant_b(db_session: AsyncSession, tenant: Tenant) -> CFPApplicant:
         last_name="Builder",
         email=f"bob-{uuid.uuid4().hex[:8]}@example.com",
         password_hash=hash_password("Password123!"),
-        email_verified_at=datetime.now(timezone.utc),
+        email_verified_at=datetime.now(UTC),
     )
     db_session.add(a)
     await db_session.commit()
@@ -538,9 +537,7 @@ class TestAdminBulkThreadCreation:
     ) -> None:
         """Template variable [Paper Title] is substituted with the applicant's paper title."""
         # Create a CFP and paper for the applicant
-        cfp = CallForPapers(
-            id=uuid.uuid4(), tenant_id=tenant.id, title="TestCFP", status="open"
-        )
+        cfp = CallForPapers(id=uuid.uuid4(), tenant_id=tenant.id, title="TestCFP", status="open")
         db_session.add(cfp)
         await db_session.flush()
         db_session.add(ConferenceCFP(id=uuid.uuid4(), conference_id=conference.id, cfp_id=cfp.id))

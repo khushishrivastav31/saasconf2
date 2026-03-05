@@ -2,7 +2,6 @@
 
 import os
 import uuid
-from decimal import Decimal
 
 os.environ.setdefault(
     "DATABASE_URL",

@@ -10,7 +10,9 @@ Covers:
 import os
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test"
+)
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
@@ -29,7 +31,6 @@ from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import _make_token, auth_headers
-
 
 # ---------------------------------------------------------------------------
 # URL helpers
@@ -410,12 +411,16 @@ class TestDiscountCodes:
         headers = auth_headers(reg_admin_token)
         payload = _discount_payload(code="DUPE1")
         resp1 = await client.post(
-            _discount_url(conference.id), json=payload, headers=headers,
+            _discount_url(conference.id),
+            json=payload,
+            headers=headers,
         )
         assert resp1.status_code == 200
 
         resp2 = await client.post(
-            _discount_url(conference.id), json=payload, headers=headers,
+            _discount_url(conference.id),
+            json=payload,
+            headers=headers,
         )
         assert resp2.status_code == 400
         assert "already exists" in resp2.json()["detail"]
@@ -625,7 +630,12 @@ class TestDiscountCodes:
             "entries": [
                 {"first_name": "Alice", "last_name": "Smith", "company_name": "Acme", "email": "alice@acme.com"},
                 {"first_name": "Bob", "last_name": "Jones", "company_name": "Globex", "email": "bob@globex.com"},
-                {"first_name": "Charlie", "last_name": "Brown", "company_name": "Initech", "email": "charlie@initech.com"},
+                {
+                    "first_name": "Charlie",
+                    "last_name": "Brown",
+                    "company_name": "Initech",
+                    "email": "charlie@initech.com",
+                },
             ],
             "counter_start": 1,
             "counter_padding": 3,
@@ -1080,7 +1090,7 @@ class TestFormSchema:
         await client.get(_schema_url(conference.id), headers=headers)
 
         # Create two fields
-        r1 = await client.post(
+        await client.post(
             _schema_url(conference.id, "fields"),
             json={"field_key": "key_alpha", "field_type": "text", "label": "Alpha", "display_order": 0},
             headers=headers,

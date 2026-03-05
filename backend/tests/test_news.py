@@ -10,7 +10,7 @@ Covers:
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest_asyncio
@@ -21,11 +21,11 @@ from app.core.applicant_security import create_applicant_access_token
 from app.core.security import create_access_token, hash_password
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
+    CallForPapers,
     CFPApplicant,
     CFPCommitteeMember,
     CFPPaper,
     CFPPaperAssignment,
-    CallForPapers,
     PaperStatus,
 )
 from app.models.conference import Conference
@@ -35,7 +35,6 @@ from app.models.review import PaperReview, ReviewStatus
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from tests.conftest import auth_headers
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -189,7 +188,7 @@ async def published_article(
         title="Published Article Title",
         body_html="<p>This is a published article body.</p>",
         is_published=True,
-        published_at=datetime.now(timezone.utc),
+        published_at=datetime.now(UTC),
         created_by=tenant_admin_user.id,
     )
     db_session.add(article)
@@ -357,9 +356,7 @@ class TestCreateArticle:
             "title": "Conference Update",
             "body_html": "<p>We have exciting news!</p>",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(news_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(news_admin_token))
 
         assert response.status_code == 201
         data = response.json()
@@ -389,9 +386,7 @@ class TestCreateArticle:
             "title": "",
             "body_html": "<p>Some body.</p>",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(news_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(news_admin_token))
 
         assert response.status_code == 422
 
@@ -502,9 +497,7 @@ class TestUpdateArticle:
         """Update just the title."""
         url = _news_url(conference.id, str(draft_article.id))
         payload = {"title": "Updated Title"}
-        response = await client.put(
-            url, json=payload, headers=auth_headers(news_admin_token)
-        )
+        response = await client.put(url, json=payload, headers=auth_headers(news_admin_token))
 
         assert response.status_code == 200
         data = response.json()
@@ -524,9 +517,7 @@ class TestUpdateArticle:
         """Update just the body."""
         url = _news_url(conference.id, str(draft_article.id))
         payload = {"body_html": "<p>New body content.</p>"}
-        response = await client.put(
-            url, json=payload, headers=auth_headers(news_admin_token)
-        )
+        response = await client.put(url, json=payload, headers=auth_headers(news_admin_token))
 
         assert response.status_code == 200
         data = response.json()
@@ -546,9 +537,7 @@ class TestUpdateArticle:
         """Setting is_published=True sets published_at."""
         url = _news_url(conference.id, str(draft_article.id))
         payload = {"is_published": True}
-        response = await client.put(
-            url, json=payload, headers=auth_headers(news_admin_token)
-        )
+        response = await client.put(url, json=payload, headers=auth_headers(news_admin_token))
 
         assert response.status_code == 200
         data = response.json()
@@ -567,9 +556,7 @@ class TestUpdateArticle:
         """Setting is_published=False clears published_at."""
         url = _news_url(conference.id, str(published_article.id))
         payload = {"is_published": False}
-        response = await client.put(
-            url, json=payload, headers=auth_headers(news_admin_token)
-        )
+        response = await client.put(url, json=payload, headers=auth_headers(news_admin_token))
 
         assert response.status_code == 200
         data = response.json()
@@ -689,9 +676,7 @@ class TestSendArticle:
             new_callable=AsyncMock,
             return_value=True,
         ):
-            response = await client.post(
-                url, json=payload, headers=auth_headers(news_admin_token)
-            )
+            response = await client.post(url, json=payload, headers=auth_headers(news_admin_token))
 
         assert response.status_code == 200
         data = response.json()
@@ -711,9 +696,7 @@ class TestSendArticle:
         url = _news_url(conference.id, f"{draft_article.id}/send")
         payload = {"applicant_ids": [str(applicant.id)]}
 
-        response = await client.post(
-            url, json=payload, headers=auth_headers(news_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(news_admin_token))
 
         assert response.status_code == 404
 
@@ -751,9 +734,7 @@ class TestPortalListNews:
         assert str(published_article.id) in ids
 
         # Verify portal response fields
-        article_data = next(
-            item for item in data["items"] if item["id"] == str(published_article.id)
-        )
+        article_data = next(item for item in data["items"] if item["id"] == str(published_article.id))
         assert article_data["title"] == published_article.title
         assert article_data["body_html"] == published_article.body_html
         assert article_data["conference_id"] == str(conference.id)
@@ -916,7 +897,7 @@ class TestPendingAssignmentCount:
             paper_id=cfp_with_paper.id,
             committee_member_id=committee_member.id,
             status=ReviewStatus.SUBMITTED.value,
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(UTC),
         )
         db_session.add(review)
         await db_session.commit()

@@ -25,7 +25,6 @@ from app.models.volunteer import Volunteer
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 from tests.conftest import auth_headers
 
-
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
@@ -537,9 +536,7 @@ class TestAuthEdgeCases:
         tenant_with_vol_module: Tenant,
     ):
         """Regular users should be able to read unassigned sessions."""
-        resp = await client.get(
-            _url(conference.id, "/volunteer-schedule/unassigned"), headers=auth_headers(user_token)
-        )
+        resp = await client.get(_url(conference.id, "/volunteer-schedule/unassigned"), headers=auth_headers(user_token))
         assert resp.status_code == 200
 
     @pytest.mark.asyncio
@@ -992,9 +989,7 @@ class TestBoundaryAndValidation:
             "volunteer_task_id": str(vol_role.id),
             "required_count": 1,
         }
-        resp = await client.post(
-            _url(conference.id, "/session-tasks"), json=payload, headers=auth_headers(admin_token)
-        )
+        resp = await client.post(_url(conference.id, "/session-tasks"), json=payload, headers=auth_headers(admin_token))
         assert resp.status_code == 200
         assert resp.json()["required_count"] == 1
 
@@ -1014,9 +1009,7 @@ class TestBoundaryAndValidation:
             "volunteer_task_id": str(vol_role.id),
             "required_count": 50,
         }
-        resp = await client.post(
-            _url(conference.id, "/session-tasks"), json=payload, headers=auth_headers(admin_token)
-        )
+        resp = await client.post(_url(conference.id, "/session-tasks"), json=payload, headers=auth_headers(admin_token))
         assert resp.status_code == 200
         assert resp.json()["required_count"] == 50
 
@@ -1036,9 +1029,7 @@ class TestBoundaryAndValidation:
             "volunteer_task_id": str(vol_role.id),
             "required_count": 0,
         }
-        resp = await client.post(
-            _url(conference.id, "/session-tasks"), json=payload, headers=auth_headers(admin_token)
-        )
+        resp = await client.post(_url(conference.id, "/session-tasks"), json=payload, headers=auth_headers(admin_token))
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
@@ -1057,9 +1048,7 @@ class TestBoundaryAndValidation:
             "volunteer_task_id": str(vol_role.id),
             "required_count": 51,
         }
-        resp = await client.post(
-            _url(conference.id, "/session-tasks"), json=payload, headers=auth_headers(admin_token)
-        )
+        resp = await client.post(_url(conference.id, "/session-tasks"), json=payload, headers=auth_headers(admin_token))
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
@@ -1240,9 +1229,7 @@ class TestCrossConferenceIsolation:
         db_session.add(conf_b)
         await db_session.commit()
 
-        resp = await client.get(
-            _url(conf_b.id, "/volunteer-schedule/unassigned"), headers=auth_headers(admin_token)
-        )
+        resp = await client.get(_url(conf_b.id, "/volunteer-schedule/unassigned"), headers=auth_headers(admin_token))
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
 

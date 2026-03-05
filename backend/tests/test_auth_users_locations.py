@@ -65,9 +65,7 @@ async def locations_module(db_session: AsyncSession, tenant: Tenant) -> Module:
 
 
 @pytest_asyncio.fixture()
-async def venue_location_type(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> TenantLocationType:
+async def venue_location_type(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> TenantLocationType:
     """Create a 'venue' location type for the tenant."""
     lt = TenantLocationType(
         id=uuid.uuid4(),
@@ -83,9 +81,7 @@ async def venue_location_type(
 
 
 @pytest_asyncio.fixture()
-async def room_location_type(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> TenantLocationType:
+async def room_location_type(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> TenantLocationType:
     """Create a 'room' location type for the tenant."""
     lt = TenantLocationType(
         id=uuid.uuid4(),
@@ -124,9 +120,7 @@ async def sample_venue(
     )
     db_session.add(venue)
     await db_session.flush()
-    db_session.add(
-        ConferenceLocation(conference_id=conference.id, location_id=venue.id)
-    )
+    db_session.add(ConferenceLocation(conference_id=conference.id, location_id=venue.id))
     await db_session.commit()
     return venue
 
@@ -153,9 +147,7 @@ async def sample_room(
     )
     db_session.add(room)
     await db_session.flush()
-    db_session.add(
-        ConferenceLocation(conference_id=conference.id, location_id=room.id)
-    )
+    db_session.add(ConferenceLocation(conference_id=conference.id, location_id=room.id))
     await db_session.commit()
     return room
 
@@ -171,9 +163,7 @@ class TestAuth:
     # -- Login --
 
     @pytest.mark.asyncio
-    async def test_login_valid_credentials(
-        self, client: AsyncClient, tenant_admin_user: User
-    ) -> None:
+    async def test_login_valid_credentials(self, client: AsyncClient, tenant_admin_user: User) -> None:
         """Login with correct email/password returns access + refresh tokens."""
         resp = await client.post(
             f"{AUTH_URL}/login",
@@ -187,9 +177,7 @@ class TestAuth:
         assert data["expires_in"] > 0
 
     @pytest.mark.asyncio
-    async def test_login_wrong_password(
-        self, client: AsyncClient, tenant_admin_user: User
-    ) -> None:
+    async def test_login_wrong_password(self, client: AsyncClient, tenant_admin_user: User) -> None:
         """Wrong password returns 401."""
         resp = await client.post(
             f"{AUTH_URL}/login",
@@ -207,9 +195,7 @@ class TestAuth:
         assert resp.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_login_deactivated_user(
-        self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant
-    ) -> None:
+    async def test_login_deactivated_user(self, client: AsyncClient, db_session: AsyncSession, tenant: Tenant) -> None:
         """Deactivated user cannot log in (401)."""
         user = User(
             id=uuid.uuid4(),
@@ -231,9 +217,7 @@ class TestAuth:
         assert resp.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_login_deactivated_tenant(
-        self, client: AsyncClient, db_session: AsyncSession
-    ) -> None:
+    async def test_login_deactivated_tenant(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """User in a deactivated tenant cannot log in."""
         t = Tenant(
             id=uuid.uuid4(),
@@ -263,9 +247,7 @@ class TestAuth:
         assert resp.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_login_case_insensitive_email(
-        self, client: AsyncClient, tenant_admin_user: User
-    ) -> None:
+    async def test_login_case_insensitive_email(self, client: AsyncClient, tenant_admin_user: User) -> None:
         """Email lookup is case-insensitive."""
         resp = await client.post(
             f"{AUTH_URL}/login",
@@ -287,9 +269,7 @@ class TestAuth:
         tenant_admin_token: str,
     ) -> None:
         """GET /me returns the authenticated user's profile."""
-        resp = await client.get(
-            f"{AUTH_URL}/me", headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.get(f"{AUTH_URL}/me", headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 200
         data = resp.json()
         assert data["email"] == tenant_admin_user.email
@@ -305,9 +285,7 @@ class TestAuth:
     @pytest.mark.asyncio
     async def test_me_with_invalid_token(self, client: AsyncClient) -> None:
         """GET /me with a garbage token returns 401."""
-        resp = await client.get(
-            f"{AUTH_URL}/me", headers={"Authorization": "Bearer garbage.token.here"}
-        )
+        resp = await client.get(f"{AUTH_URL}/me", headers={"Authorization": "Bearer garbage.token.here"})
         assert resp.status_code == 401
 
     @pytest.mark.asyncio
@@ -319,9 +297,7 @@ class TestAuth:
         tenant_admin_token: str,
     ) -> None:
         """GET /me returns the tenant's enabled modules."""
-        resp = await client.get(
-            f"{AUTH_URL}/me", headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.get(f"{AUTH_URL}/me", headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 200
         assert "conferences" in resp.json()["modules"]
 
@@ -362,13 +338,9 @@ class TestAuth:
     # -- Logout --
 
     @pytest.mark.asyncio
-    async def test_logout_success(
-        self, client: AsyncClient, tenant_admin_token: str
-    ) -> None:
+    async def test_logout_success(self, client: AsyncClient, tenant_admin_token: str) -> None:
         """POST /logout revokes tokens and returns success."""
-        resp = await client.post(
-            f"{AUTH_URL}/logout", headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.post(f"{AUTH_URL}/logout", headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 200
         assert resp.json()["message"] == "Successfully logged out"
 
@@ -381,9 +353,7 @@ class TestAuth:
     # -- Refresh --
 
     @pytest.mark.asyncio
-    async def test_refresh_rotates_tokens(
-        self, client: AsyncClient, tenant_admin_user: User
-    ) -> None:
+    async def test_refresh_rotates_tokens(self, client: AsyncClient, tenant_admin_user: User) -> None:
         """POST /refresh issues new tokens and rotates the refresh token."""
         login_resp = await client.post(
             f"{AUTH_URL}/login",
@@ -392,9 +362,7 @@ class TestAuth:
         assert login_resp.status_code == 200
         old_refresh = login_resp.json()["refresh_token"]
 
-        refresh_resp = await client.post(
-            f"{AUTH_URL}/refresh", json={"refresh_token": old_refresh}
-        )
+        refresh_resp = await client.post(f"{AUTH_URL}/refresh", json={"refresh_token": old_refresh})
         assert refresh_resp.status_code == 200
         data = refresh_resp.json()
         assert "access_token" in data
@@ -403,17 +371,13 @@ class TestAuth:
     @pytest.mark.asyncio
     async def test_refresh_with_invalid_token(self, client: AsyncClient) -> None:
         """POST /refresh with a bogus token returns 401."""
-        resp = await client.post(
-            f"{AUTH_URL}/refresh", json={"refresh_token": "bogus-token"}
-        )
+        resp = await client.post(f"{AUTH_URL}/refresh", json={"refresh_token": "bogus-token"})
         assert resp.status_code == 401
 
     # -- Forgot password --
 
     @pytest.mark.asyncio
-    async def test_forgot_password_existing_email(
-        self, client: AsyncClient, tenant_admin_user: User
-    ) -> None:
+    async def test_forgot_password_existing_email(self, client: AsyncClient, tenant_admin_user: User) -> None:
         """Always returns 200 with the same message regardless of existence."""
         resp = await client.post(
             f"{AUTH_URL}/forgot-password",
@@ -423,9 +387,7 @@ class TestAuth:
         assert "password reset link" in resp.json()["message"].lower()
 
     @pytest.mark.asyncio
-    async def test_forgot_password_nonexistent_email(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_forgot_password_nonexistent_email(self, client: AsyncClient) -> None:
         """Non-existent email still returns 200 to prevent enumeration."""
         resp = await client.post(
             f"{AUTH_URL}/forgot-password",
@@ -435,9 +397,7 @@ class TestAuth:
         assert "password reset link" in resp.json()["message"].lower()
 
     @pytest.mark.asyncio
-    async def test_forgot_password_invalid_email_format(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_forgot_password_invalid_email_format(self, client: AsyncClient) -> None:
         """Invalid email format returns 422."""
         resp = await client.post(
             f"{AUTH_URL}/forgot-password",
@@ -681,9 +641,7 @@ class TestUsers:
             "last_name": "User",
             "role": "user",
         }
-        resp = await client.post(
-            USERS_URL, json=payload, headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.post(USERS_URL, json=payload, headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 201
         data = resp.json()
         assert data["email"] == payload["email"]
@@ -707,9 +665,7 @@ class TestUsers:
             "last_name": "Person",
             "role": "user",
         }
-        resp = await client.post(
-            USERS_URL, json=payload, headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.post(USERS_URL, json=payload, headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 201
         data = resp.json()
         assert data["last_login"] is None
@@ -731,14 +687,10 @@ class TestUsers:
             "last_name": "User",
             "role": "user",
         }
-        resp1 = await client.post(
-            USERS_URL, json=payload, headers=auth_headers(tenant_admin_token)
-        )
+        resp1 = await client.post(USERS_URL, json=payload, headers=auth_headers(tenant_admin_token))
         assert resp1.status_code == 201
 
-        resp2 = await client.post(
-            USERS_URL, json=payload, headers=auth_headers(tenant_admin_token)
-        )
+        resp2 = await client.post(USERS_URL, json=payload, headers=auth_headers(tenant_admin_token))
         assert resp2.status_code == 400
 
     @pytest.mark.asyncio
@@ -757,9 +709,7 @@ class TestUsers:
             "last_name": "SA",
             "role": "super_admin",
         }
-        resp = await client.post(
-            USERS_URL, json=payload, headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.post(USERS_URL, json=payload, headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 403
 
     @pytest.mark.asyncio
@@ -778,9 +728,7 @@ class TestUsers:
             "last_name": "Admin",
             "role": "tenant_admin",
         }
-        resp = await client.post(
-            USERS_URL, json=payload, headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.post(USERS_URL, json=payload, headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 201
         assert resp.json()["role"] == "tenant_admin"
 
@@ -800,9 +748,7 @@ class TestUsers:
             "last_name": "User",
             "role": "user",
         }
-        resp = await client.post(
-            USERS_URL, json=payload, headers=auth_headers(regular_user_token)
-        )
+        resp = await client.post(USERS_URL, json=payload, headers=auth_headers(regular_user_token))
         assert resp.status_code == 403
 
     # -- Get --
@@ -830,9 +776,7 @@ class TestUsers:
         assert create_resp.status_code == 201
         uid = create_resp.json()["id"]
 
-        resp = await client.get(
-            f"{USERS_URL}/{uid}", headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.get(f"{USERS_URL}/{uid}", headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 200
         assert resp.json()["id"] == uid
 
@@ -846,9 +790,7 @@ class TestUsers:
     ) -> None:
         """Getting a non-existent user returns 404."""
         fake_id = uuid.uuid4()
-        resp = await client.get(
-            f"{USERS_URL}/{fake_id}", headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.get(f"{USERS_URL}/{fake_id}", headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 404
 
     # -- Update --
@@ -968,16 +910,12 @@ class TestUsers:
         )
         uid = create_resp.json()["id"]
 
-        resp = await client.delete(
-            f"{USERS_URL}/{uid}", headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.delete(f"{USERS_URL}/{uid}", headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 200
         assert "deactivated" in resp.json()["message"].lower()
 
         # User still exists but is inactive
-        get_resp = await client.get(
-            f"{USERS_URL}/{uid}", headers=auth_headers(tenant_admin_token)
-        )
+        get_resp = await client.get(f"{USERS_URL}/{uid}", headers=auth_headers(tenant_admin_token))
         assert get_resp.status_code == 200
         assert get_resp.json()["is_active"] is False
 
@@ -1012,9 +950,7 @@ class TestUsers:
         assert "permanently deleted" in resp.json()["message"].lower()
 
         # User no longer exists
-        get_resp = await client.get(
-            f"{USERS_URL}/{uid}", headers=auth_headers(tenant_admin_token)
-        )
+        get_resp = await client.get(f"{USERS_URL}/{uid}", headers=auth_headers(tenant_admin_token))
         assert get_resp.status_code == 404
 
     @pytest.mark.asyncio
@@ -1245,9 +1181,7 @@ class TestLocations:
             "country": "Germany",
             "conference_id": str(conference.id),
         }
-        resp = await client.post(
-            LOCATIONS_URL, json=payload, headers=auth_headers(token)
-        )
+        resp = await client.post(LOCATIONS_URL, json=payload, headers=auth_headers(token))
         assert resp.status_code == 201
         data = resp.json()
         assert data["name"] == "New Venue"
@@ -1275,9 +1209,7 @@ class TestLocations:
             "capacity": 30,
             "conference_id": str(conference.id),
         }
-        resp = await client.post(
-            LOCATIONS_URL, json=payload, headers=auth_headers(token)
-        )
+        resp = await client.post(LOCATIONS_URL, json=payload, headers=auth_headers(token))
         assert resp.status_code == 201
         data = resp.json()
         assert data["parent_id"] == str(sample_venue.id)
@@ -1299,9 +1231,7 @@ class TestLocations:
             "location_type": "spaceship",
             "conference_id": str(conference.id),
         }
-        resp = await client.post(
-            LOCATIONS_URL, json=payload, headers=auth_headers(token)
-        )
+        resp = await client.post(LOCATIONS_URL, json=payload, headers=auth_headers(token))
         assert resp.status_code == 400
 
     # -- Get --
@@ -1316,9 +1246,7 @@ class TestLocations:
     ) -> None:
         """Fetching a location by ID returns it with children_count."""
         token = _make_token(tenant_admin_user, modules=["locations"])
-        resp = await client.get(
-            f"{LOCATIONS_URL}/{sample_venue.id}", headers=auth_headers(token)
-        )
+        resp = await client.get(f"{LOCATIONS_URL}/{sample_venue.id}", headers=auth_headers(token))
         assert resp.status_code == 200
         data = resp.json()
         assert data["id"] == str(sample_venue.id)
@@ -1334,9 +1262,7 @@ class TestLocations:
     ) -> None:
         """Non-existent location returns 404."""
         token = _make_token(tenant_admin_user, modules=["locations"])
-        resp = await client.get(
-            f"{LOCATIONS_URL}/{uuid.uuid4()}", headers=auth_headers(token)
-        )
+        resp = await client.get(f"{LOCATIONS_URL}/{uuid.uuid4()}", headers=auth_headers(token))
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
@@ -1350,9 +1276,7 @@ class TestLocations:
     ) -> None:
         """Venue with a child room shows children_count >= 1."""
         token = _make_token(tenant_admin_user, modules=["locations"])
-        resp = await client.get(
-            f"{LOCATIONS_URL}/{sample_venue.id}", headers=auth_headers(token)
-        )
+        resp = await client.get(f"{LOCATIONS_URL}/{sample_venue.id}", headers=auth_headers(token))
         assert resp.status_code == 200
         assert resp.json()["children_count"] >= 1
 
@@ -1415,22 +1339,16 @@ class TestLocations:
             "location_type": "venue",
             "conference_id": str(conference.id),
         }
-        create_resp = await client.post(
-            LOCATIONS_URL, json=payload, headers=auth_headers(token)
-        )
+        create_resp = await client.post(LOCATIONS_URL, json=payload, headers=auth_headers(token))
         assert create_resp.status_code == 201
         loc_id = create_resp.json()["id"]
 
-        del_resp = await client.delete(
-            f"{LOCATIONS_URL}/{loc_id}", headers=auth_headers(token)
-        )
+        del_resp = await client.delete(f"{LOCATIONS_URL}/{loc_id}", headers=auth_headers(token))
         assert del_resp.status_code == 200
         assert "deleted" in del_resp.json()["message"].lower()
 
         # Verify gone
-        get_resp = await client.get(
-            f"{LOCATIONS_URL}/{loc_id}", headers=auth_headers(token)
-        )
+        get_resp = await client.get(f"{LOCATIONS_URL}/{loc_id}", headers=auth_headers(token))
         assert get_resp.status_code == 404
 
     @pytest.mark.asyncio
@@ -1443,9 +1361,7 @@ class TestLocations:
     ) -> None:
         """Deleting a non-existent location returns 404."""
         token = _make_token(tenant_admin_user, modules=["locations"])
-        resp = await client.delete(
-            f"{LOCATIONS_URL}/{uuid.uuid4()}", headers=auth_headers(token)
-        )
+        resp = await client.delete(f"{LOCATIONS_URL}/{uuid.uuid4()}", headers=auth_headers(token))
         assert resp.status_code == 404
 
     # -- Tree --
@@ -1461,18 +1377,14 @@ class TestLocations:
     ) -> None:
         """GET /tree returns a nested tree with venue containing the room."""
         token = _make_token(tenant_admin_user, modules=["locations"])
-        resp = await client.get(
-            f"{LOCATIONS_URL}/tree", headers=auth_headers(token)
-        )
+        resp = await client.get(f"{LOCATIONS_URL}/tree", headers=auth_headers(token))
         assert resp.status_code == 200
         tree = resp.json()
         assert isinstance(tree, list)
         assert len(tree) >= 1
 
         # Find the venue in the tree
-        venue_node = next(
-            (n for n in tree if n["id"] == str(sample_venue.id)), None
-        )
+        venue_node = next((n for n in tree if n["id"] == str(sample_venue.id)), None)
         assert venue_node is not None
         assert venue_node["name"] == sample_venue.name
         assert len(venue_node["children"]) >= 1
@@ -1496,9 +1408,7 @@ class TestLocations:
     ) -> None:
         """GET /tree on an empty tenant returns an empty list."""
         token = _make_token(tenant_admin_user, modules=["locations"])
-        resp = await client.get(
-            f"{LOCATIONS_URL}/tree", headers=auth_headers(token)
-        )
+        resp = await client.get(f"{LOCATIONS_URL}/tree", headers=auth_headers(token))
         assert resp.status_code == 200
         assert resp.json() == []
 
@@ -1515,9 +1425,7 @@ class TestLocations:
     ) -> None:
         """GET /stats returns aggregate counts and capacity."""
         token = _make_token(tenant_admin_user, modules=["locations"])
-        resp = await client.get(
-            f"{LOCATIONS_URL}/stats", headers=auth_headers(token)
-        )
+        resp = await client.get(f"{LOCATIONS_URL}/stats", headers=auth_headers(token))
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] >= 2
@@ -1538,14 +1446,10 @@ class TestLocations:
         resp_list = await client.get(LOCATIONS_URL, headers=auth_headers(token))
         assert resp_list.status_code == 403
 
-        resp_tree = await client.get(
-            f"{LOCATIONS_URL}/tree", headers=auth_headers(token)
-        )
+        resp_tree = await client.get(f"{LOCATIONS_URL}/tree", headers=auth_headers(token))
         assert resp_tree.status_code == 403
 
-        resp_stats = await client.get(
-            f"{LOCATIONS_URL}/stats", headers=auth_headers(token)
-        )
+        resp_stats = await client.get(f"{LOCATIONS_URL}/stats", headers=auth_headers(token))
         assert resp_stats.status_code == 403
 
     # -- Unlink (multi-conference) --
@@ -1570,9 +1474,7 @@ class TestLocations:
             "location_type": "venue",
             "conference_id": str(conference.id),
         }
-        create_resp = await client.post(
-            LOCATIONS_URL, json=payload, headers=auth_headers(token)
-        )
+        create_resp = await client.post(LOCATIONS_URL, json=payload, headers=auth_headers(token))
         assert create_resp.status_code == 201
         loc_id = create_resp.json()["id"]
 
@@ -1586,11 +1488,7 @@ class TestLocations:
         )
         db_session.add(conf2)
         await db_session.flush()
-        db_session.add(
-            ConferenceLocation(
-                conference_id=conf2.id, location_id=uuid.UUID(loc_id)
-            )
-        )
+        db_session.add(ConferenceLocation(conference_id=conf2.id, location_id=uuid.UUID(loc_id)))
         await db_session.commit()
 
         # Unlink from first conference
@@ -1603,9 +1501,7 @@ class TestLocations:
         assert "unlinked" in resp.json()["message"].lower()
 
         # Location still accessible (linked to conf2)
-        get_resp = await client.get(
-            f"{LOCATIONS_URL}/{loc_id}", headers=auth_headers(token)
-        )
+        get_resp = await client.get(f"{LOCATIONS_URL}/{loc_id}", headers=auth_headers(token))
         assert get_resp.status_code == 200
         assert str(conf2.id) in get_resp.json()["conference_ids"]
         assert str(conference.id) not in get_resp.json()["conference_ids"]

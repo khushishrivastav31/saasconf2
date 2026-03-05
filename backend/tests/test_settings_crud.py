@@ -8,7 +8,9 @@ pattern), and review form settings (singleton pattern).
 import os
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test"
+)
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
@@ -19,13 +21,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.conference import Conference
 from app.models.tenant import Tenant
-from app.models.user import User
 from tests.conftest import auth_headers
-
 
 # ---------------------------------------------------------------------------
 # URL helpers
 # ---------------------------------------------------------------------------
+
 
 def _url(conference_id: uuid.UUID, resource: str) -> str:
     """Build a settings endpoint URL."""
@@ -172,14 +173,10 @@ class TestVolunteerRoles:
     ) -> None:
         """PUT with the name of another role returns 400."""
         url = _url(conference.id, "volunteer-roles")
-        resp_a = await client.post(
-            url, json={"name": "Role A"}, headers=auth_headers(tenant_admin_token)
-        )
+        resp_a = await client.post(url, json={"name": "Role A"}, headers=auth_headers(tenant_admin_token))
         assert resp_a.status_code == 200
 
-        resp_b = await client.post(
-            url, json={"name": "Role B"}, headers=auth_headers(tenant_admin_token)
-        )
+        resp_b = await client.post(url, json={"name": "Role B"}, headers=auth_headers(tenant_admin_token))
         assert resp_b.status_code == 200
         role_b_id = resp_b.json()["id"]
 
@@ -204,9 +201,7 @@ class TestVolunteerRoles:
     ) -> None:
         """PUT with the role's own current name does not trigger a uniqueness error."""
         url = _url(conference.id, "volunteer-roles")
-        create_resp = await client.post(
-            url, json={"name": "Usher"}, headers=auth_headers(tenant_admin_token)
-        )
+        create_resp = await client.post(url, json={"name": "Usher"}, headers=auth_headers(tenant_admin_token))
         assert create_resp.status_code == 200
         role_id = create_resp.json()["id"]
 
@@ -230,15 +225,11 @@ class TestVolunteerRoles:
     ) -> None:
         """DELETE removes the role and it disappears from the list."""
         url = _url(conference.id, "volunteer-roles")
-        create_resp = await client.post(
-            url, json={"name": "AV Support"}, headers=auth_headers(tenant_admin_token)
-        )
+        create_resp = await client.post(url, json={"name": "AV Support"}, headers=auth_headers(tenant_admin_token))
         assert create_resp.status_code == 200
         role_id = create_resp.json()["id"]
 
-        delete_resp = await client.delete(
-            f"{url}/{role_id}", headers=auth_headers(tenant_admin_token)
-        )
+        delete_resp = await client.delete(f"{url}/{role_id}", headers=auth_headers(tenant_admin_token))
         assert delete_resp.status_code == 200
         assert "deleted successfully" in delete_resp.json()["message"]
 
@@ -260,9 +251,7 @@ class TestVolunteerRoles:
         """DELETE with a random UUID returns 404."""
         url = _url(conference.id, "volunteer-roles")
         fake_id = uuid.uuid4()
-        resp = await client.delete(
-            f"{url}/{fake_id}", headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.delete(f"{url}/{fake_id}", headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 404
 
     # -- Unauthenticated list -------------------------------------------
@@ -294,9 +283,7 @@ class TestVolunteerRoles:
         url = _url(conference.id, "volunteer-roles")
 
         # Seed a role as admin
-        create_resp = await client.post(
-            url, json={"name": "Greeter"}, headers=auth_headers(tenant_admin_token)
-        )
+        create_resp = await client.post(url, json={"name": "Greeter"}, headers=auth_headers(tenant_admin_token))
         assert create_resp.status_code == 200
 
         # Regular user lists
@@ -338,9 +325,7 @@ class TestVolunteerRoles:
         url = _url(conference.id, "volunteer-roles")
 
         # Create a role in the main conference
-        resp = await client.post(
-            url, json={"name": "Usher"}, headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.post(url, json={"name": "Usher"}, headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 200
 
         # Create a second conference under the same tenant
@@ -802,9 +787,7 @@ class TestScoreScales:
         """DELETE with a random UUID returns 404."""
         url = _url(conference.id, "score-scales")
         fake_id = uuid.uuid4()
-        resp = await client.delete(
-            f"{url}/{fake_id}", headers=auth_headers(tenant_admin_token)
-        )
+        resp = await client.delete(f"{url}/{fake_id}", headers=auth_headers(tenant_admin_token))
         assert resp.status_code == 404
 
 
@@ -943,16 +926,12 @@ class TestEmailTemplates:
         )
 
         # Delete (reset)
-        delete_resp = await client.delete(
-            f"{url}/applicant_verification", headers=headers
-        )
+        delete_resp = await client.delete(f"{url}/applicant_verification", headers=headers)
         assert delete_resp.status_code == 200
         assert "reset to default" in delete_resp.json()["message"]
 
         # Verify the default is returned
-        get_resp = await client.get(
-            f"{url}/applicant_verification", headers=headers
-        )
+        get_resp = await client.get(f"{url}/applicant_verification", headers=headers)
         assert get_resp.status_code == 200
         data = get_resp.json()
         assert data["id"] is None  # Back to unsaved default

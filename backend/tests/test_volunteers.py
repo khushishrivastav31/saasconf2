@@ -16,7 +16,6 @@ from app.models.user import User
 from app.models.volunteer import Volunteer, VolunteerStatus
 from tests.conftest import auth_headers
 
-
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
@@ -524,13 +523,15 @@ async def test_delete_volunteer_verify_gone(
 
     # Delete
     delete_response = await client.delete(
-        url, headers=auth_headers(admin_token_volunteers),
+        url,
+        headers=auth_headers(admin_token_volunteers),
     )
     assert delete_response.status_code == 200
 
     # Verify GET returns 404
     get_response = await client.get(
-        url, headers=auth_headers(admin_token_volunteers),
+        url,
+        headers=auth_headers(admin_token_volunteers),
     )
     assert get_response.status_code == 404
 

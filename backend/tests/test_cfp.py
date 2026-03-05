@@ -17,21 +17,20 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
+from app.models.associations import ConferenceCFP
 from app.models.cfp import (
+    CallForPapers,
     CFPApplicant,
     CFPCommitteeMember,
     CFPPaper,
     CFPTopic,
-    CallForPapers,
     PaperStatus,
 )
-from app.models.associations import ConferenceCFP
 from app.models.conference import Conference
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User
-from tests.conftest import auth_headers, _make_token
-
+from tests.conftest import _make_token, auth_headers
 
 # ── URLs ──────────────────────────────────────────────────────────────
 

@@ -13,7 +13,7 @@ Covers models, schemas, and all admin messaging API endpoints:
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, hash_password
 from app.models.associations import ConferenceCFP
-from app.models.cfp import CFPApplicant, CFPCommitteeMember, CFPPaper, CallForPapers
+from app.models.cfp import CallForPapers, CFPApplicant, CFPCommitteeMember, CFPPaper
 from app.models.conference import Conference
 from app.models.messaging import (
     Message,
@@ -32,11 +32,10 @@ from app.models.messaging import (
     MessageThread,
     RecipientList,
     RecipientListMember,
-    ThreadFlag,
 )
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.schemas.messaging import (
     AdminBulkSend,
     AdminCreateThread,
@@ -47,20 +46,16 @@ from app.schemas.messaging import (
     MessageAttachmentInfo,
     MessageResponse,
     MessageTemplateCreate,
-    MessageTemplateResponse,
     MessageTemplateUpdate,
     ParticipantInfo,
     RecipientListCreate,
-    RecipientListResponse,
     ReplyCreate,
     SenderInfo,
     ThreadDetailResponse,
     ThreadListItem,
-    ThreadListResponse,
     UnreadCountResponse,
 )
 from tests.conftest import auth_headers
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -162,7 +157,7 @@ async def thread_with_message(
 ) -> MessageThread:
     """Create a thread with one message, two participants (admin + applicant)."""
     # Use a future timestamp to ensure last_read_at > message.created_at
-    future = datetime.now(timezone.utc) + timedelta(minutes=5)
+    future = datetime.now(UTC) + timedelta(minutes=5)
     thread = MessageThread(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -377,7 +372,7 @@ class TestMessageParticipantModel:
         tenant_admin_user: User,
     ) -> None:
         """last_read_at can be set on a participant."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         thread = MessageThread(
             id=uuid.uuid4(),
             tenant_id=tenant.id,
@@ -591,7 +586,7 @@ class TestThreadListItemSchema:
     """Tests for ThreadListItem schema."""
 
     def test_valid_thread_list_item(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         sender = SenderInfo(
             id=uuid.uuid4(),
             type="user",
@@ -616,7 +611,7 @@ class TestThreadListItemSchema:
         assert item.other_participants == []
 
     def test_thread_list_item_with_bulk_id(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         bulk = uuid.uuid4()
         sender = SenderInfo(
             id=uuid.uuid4(),
@@ -643,7 +638,7 @@ class TestThreadDetailResponseSchema:
     """Tests for ThreadDetailResponse schema."""
 
     def test_valid_thread_detail(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         participant = ParticipantInfo(
             id=uuid.uuid4(),
             type="user",
@@ -771,7 +766,7 @@ class TestCreateThreadResponseSchema:
     """Tests for CreateThreadResponse schema."""
 
     def test_valid_response(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         detail = ThreadDetailResponse(
             id=uuid.uuid4(),
             subject="New thread",
@@ -931,9 +926,7 @@ class TestCreateThread:
             "subject": "Welcome to the conference!",
             "body_html": "<p>We are glad to have you.</p>",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         data = response.json()
@@ -959,9 +952,7 @@ class TestCreateThread:
             "subject": "Group announcement",
             "body_html": "<p>Hello everyone!</p>",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         data = response.json()
@@ -983,9 +974,7 @@ class TestCreateThread:
             "subject": "No one home",
             "body_html": "<p>Hello?</p>",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 404
 
@@ -1005,9 +994,7 @@ class TestCreateThread:
             "subject": "",
             "body_html": "<p>Content</p>",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 422
 
@@ -1027,9 +1014,7 @@ class TestCreateThread:
             "subject": "Valid subject",
             "body_html": "",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 422
 
@@ -1156,9 +1141,7 @@ class TestReplyToThread:
         """Admin can reply to an existing thread."""
         url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/reply")
         payload = {"body_html": "<p>Thanks for reaching out!</p>"}
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         data = response.json()
@@ -1178,9 +1161,7 @@ class TestReplyToThread:
     ) -> None:
         """After reply, thread detail shows two messages."""
         # Reply
-        reply_url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}/reply"
-        )
+        reply_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/reply")
         await client.post(
             reply_url,
             json={"body_html": "<p>Reply message</p>"},
@@ -1188,12 +1169,8 @@ class TestReplyToThread:
         )
 
         # Verify
-        detail_url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}"
-        )
-        response = await client.get(
-            detail_url, headers=auth_headers(messaging_admin_token)
-        )
+        detail_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}")
+        response = await client.get(detail_url, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 200
         assert len(response.json()["messages"]) == 2
 
@@ -1209,9 +1186,7 @@ class TestReplyToThread:
         fake_id = uuid.uuid4()
         url = _messaging_url(conference.id, f"threads/{fake_id}/reply")
         payload = {"body_html": "<p>Hello?</p>"}
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 404
 
@@ -1228,9 +1203,7 @@ class TestReplyToThread:
         """Empty body in reply is rejected with 422."""
         url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/reply")
         payload = {"body_html": ""}
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 422
 
@@ -1250,9 +1223,7 @@ class TestMarkThreadRead:
     ) -> None:
         """Admin can mark a thread as read."""
         url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/read")
-        response = await client.post(
-            url, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 200
         data = response.json()
@@ -1269,9 +1240,7 @@ class TestMarkThreadRead:
         """Marking read on a thread where user is not a participant returns ok (no-op)."""
         fake_id = uuid.uuid4()
         url = _messaging_url(conference.id, f"threads/{fake_id}/read")
-        response = await client.post(
-            url, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, headers=auth_headers(messaging_admin_token))
 
         # The endpoint simply does nothing if participant not found, returns ok
         assert response.status_code == 200
@@ -1332,9 +1301,7 @@ class TestMarkThreadRead:
 
         # Verify it shows as unread in listing
         list_url = _messaging_url(conference.id, "threads")
-        response = await client.get(
-            list_url, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.get(list_url, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 200
         items = response.json()["items"]
         unread_thread = next(i for i in items if i["id"] == str(thread.id))
@@ -1342,15 +1309,11 @@ class TestMarkThreadRead:
 
         # Mark as read
         read_url = _messaging_url(conference.id, f"threads/{thread.id}/read")
-        response = await client.post(
-            read_url, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(read_url, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 200
 
         # Verify it is now marked as read
-        response = await client.get(
-            list_url, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.get(list_url, headers=auth_headers(messaging_admin_token))
         items = response.json()["items"]
         read_thread = next(i for i in items if i["id"] == str(thread.id))
         assert read_thread["unread"] is False
@@ -1478,9 +1441,7 @@ class TestBulkSend:
                 "applicant_ids": [str(applicant.id), str(second_applicant.id)],
             },
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         data = response.json()
@@ -1504,9 +1465,7 @@ class TestBulkSend:
                 "applicant_ids": [str(uuid.uuid4())],
             },
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         assert response.json()["threads_created"] == 0
@@ -1529,9 +1488,7 @@ class TestBulkSend:
                 "applicant_ids": [str(applicant.id)],
             },
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 201
         bulk_id = response.json()["bulk_id"]
 
@@ -1562,9 +1519,7 @@ class TestBulkSend:
             "body_html": "<p>Body</p>",
             "recipients": {"all_applicants": True},
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 422
 
     async def test_bulk_send_requires_auth(
@@ -1628,9 +1583,7 @@ class TestBulkThreadsList:
 
         # List bulk threads
         list_url = _messaging_url(conference.id, "bulk-threads")
-        response = await client.get(
-            list_url, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.get(list_url, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 200
         data = response.json()
@@ -1678,24 +1631,18 @@ class TestEndToEndFlow:
 
         # 3. Get thread detail -- should have 2 messages
         detail_url = _messaging_url(conference.id, f"threads/{thread_id}")
-        detail_resp = await client.get(
-            detail_url, headers=auth_headers(messaging_admin_token)
-        )
+        detail_resp = await client.get(detail_url, headers=auth_headers(messaging_admin_token))
         assert detail_resp.status_code == 200
         assert len(detail_resp.json()["messages"]) == 2
 
         # 4. Mark as read
         read_url = _messaging_url(conference.id, f"threads/{thread_id}/read")
-        read_resp = await client.post(
-            read_url, headers=auth_headers(messaging_admin_token)
-        )
+        read_resp = await client.post(read_url, headers=auth_headers(messaging_admin_token))
         assert read_resp.status_code == 200
 
         # 5. Verify unread count is 0
         unread_url = _messaging_url(conference.id, "unread-count")
-        unread_resp = await client.get(
-            unread_url, headers=auth_headers(messaging_admin_token)
-        )
+        unread_resp = await client.get(unread_url, headers=auth_headers(messaging_admin_token))
         assert unread_resp.status_code == 200
         assert unread_resp.json()["unread_count"] == 0
 
@@ -1723,9 +1670,7 @@ class TestEndToEndFlow:
         thread_id = create_resp.json()["first_thread"]["id"]
 
         list_url = _messaging_url(conference.id, "threads")
-        list_resp = await client.get(
-            list_url, headers=auth_headers(messaging_admin_token)
-        )
+        list_resp = await client.get(list_url, headers=auth_headers(messaging_admin_token))
         assert list_resp.status_code == 200
         thread_ids = [item["id"] for item in list_resp.json()["items"]]
         assert thread_id in thread_ids
@@ -1754,11 +1699,13 @@ async def cfp_with_paper(
     await db_session.flush()
 
     # Link CFP to conference
-    db_session.add(ConferenceCFP(
-        id=uuid.uuid4(),
-        conference_id=conference.id,
-        cfp_id=cfp.id,
-    ))
+    db_session.add(
+        ConferenceCFP(
+            id=uuid.uuid4(),
+            conference_id=conference.id,
+            cfp_id=cfp.id,
+        )
+    )
 
     paper = CFPPaper(
         id=uuid.uuid4(),
@@ -1831,12 +1778,20 @@ async def recipient_list_with_members(
     db_session.add(rl)
     await db_session.flush()
 
-    db_session.add(RecipientListMember(
-        id=uuid.uuid4(), list_id=rl.id, applicant_id=applicant.id,
-    ))
-    db_session.add(RecipientListMember(
-        id=uuid.uuid4(), list_id=rl.id, applicant_id=second_applicant.id,
-    ))
+    db_session.add(
+        RecipientListMember(
+            id=uuid.uuid4(),
+            list_id=rl.id,
+            applicant_id=applicant.id,
+        )
+    )
+    db_session.add(
+        RecipientListMember(
+            id=uuid.uuid4(),
+            list_id=rl.id,
+            applicant_id=second_applicant.id,
+        )
+    )
     await db_session.commit()
     return rl
 
@@ -1878,13 +1833,15 @@ class TestListTemplates:
     ) -> None:
         """Returns templates when they exist."""
         # Seed a template
-        db_session.add(MessageTemplate(
-            id=uuid.uuid4(),
-            tenant_id=tenant.id,
-            name="Welcome",
-            subject="Welcome [First Name]!",
-            body_html="<p>Hello [First Name]</p>",
-        ))
+        db_session.add(
+            MessageTemplate(
+                id=uuid.uuid4(),
+                tenant_id=tenant.id,
+                name="Welcome",
+                subject="Welcome [First Name]!",
+                body_html="<p>Hello [First Name]</p>",
+            )
+        )
         await db_session.commit()
 
         url = _messaging_url(conference.id, "templates")
@@ -1923,9 +1880,7 @@ class TestCreateTemplate:
             "subject": "Your paper has been accepted!",
             "body_html": "<p>Congrats [First Name]!</p>",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         data = response.json()
@@ -1950,15 +1905,11 @@ class TestCreateTemplate:
             "body_html": "<p>Body</p>",
         }
         # Create first
-        resp1 = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        resp1 = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert resp1.status_code == 201
 
         # Duplicate
-        resp2 = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        resp2 = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert resp2.status_code == 400
 
     async def test_create_template_empty_name_rejected(
@@ -1971,9 +1922,7 @@ class TestCreateTemplate:
     ) -> None:
         url = _messaging_url(conference.id, "templates")
         payload = {"name": "", "subject": "Subj", "body_html": "<p>Body</p>"}
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 422
 
 
@@ -2083,16 +2032,12 @@ class TestDeleteTemplate:
 
         # Delete
         delete_url = _messaging_url(conference.id, f"templates/{template_id}")
-        response = await client.delete(
-            delete_url, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.delete(delete_url, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 204
 
         # Verify gone
         list_url = _messaging_url(conference.id, "templates")
-        list_resp = await client.get(
-            list_url, headers=auth_headers(messaging_admin_token)
-        )
+        list_resp = await client.get(list_url, headers=auth_headers(messaging_admin_token))
         assert list_resp.json()["total"] == 0
 
     async def test_delete_template_not_found(
@@ -2105,9 +2050,7 @@ class TestDeleteTemplate:
     ) -> None:
         fake_id = uuid.uuid4()
         url = _messaging_url(conference.id, f"templates/{fake_id}")
-        response = await client.delete(
-            url, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.delete(url, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 404
 
 
@@ -2174,9 +2117,7 @@ class TestCreateRecipientList:
             "description": "Selected keynote presenters",
             "applicant_ids": [str(applicant.id)],
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         data = response.json()
@@ -2198,14 +2139,10 @@ class TestCreateRecipientList:
             "name": "Dup List",
             "applicant_ids": [str(applicant.id)],
         }
-        resp1 = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        resp1 = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert resp1.status_code == 201
 
-        resp2 = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        resp2 = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert resp2.status_code == 400
 
     async def test_create_recipient_list_invalid_applicants(
@@ -2221,9 +2158,7 @@ class TestCreateRecipientList:
             "name": "Ghost List",
             "applicant_ids": [str(uuid.uuid4())],
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 404
 
 
@@ -2241,9 +2176,7 @@ class TestGetRecipientListDetail:
         second_applicant: CFPApplicant,
         recipient_list_with_members: RecipientList,
     ) -> None:
-        url = _messaging_url(
-            conference.id, f"recipient-lists/{recipient_list_with_members.id}"
-        )
+        url = _messaging_url(conference.id, f"recipient-lists/{recipient_list_with_members.id}")
         response = await client.get(url, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 200
@@ -2279,9 +2212,7 @@ class TestUpdateRecipientList:
         second_applicant: CFPApplicant,
         recipient_list_with_members: RecipientList,
     ) -> None:
-        url = _messaging_url(
-            conference.id, f"recipient-lists/{recipient_list_with_members.id}"
-        )
+        url = _messaging_url(conference.id, f"recipient-lists/{recipient_list_with_members.id}")
         response = await client.put(
             url,
             json={"name": "Updated VIPs"},
@@ -2303,9 +2234,7 @@ class TestUpdateRecipientList:
         recipient_list_with_members: RecipientList,
     ) -> None:
         """Update members to only include one applicant."""
-        url = _messaging_url(
-            conference.id, f"recipient-lists/{recipient_list_with_members.id}"
-        )
+        url = _messaging_url(conference.id, f"recipient-lists/{recipient_list_with_members.id}")
         response = await client.put(
             url,
             json={"applicant_ids": [str(applicant.id)]},
@@ -2330,18 +2259,12 @@ class TestDeleteRecipientList:
         second_applicant: CFPApplicant,
         recipient_list_with_members: RecipientList,
     ) -> None:
-        url = _messaging_url(
-            conference.id, f"recipient-lists/{recipient_list_with_members.id}"
-        )
-        response = await client.delete(
-            url, headers=auth_headers(messaging_admin_token)
-        )
+        url = _messaging_url(conference.id, f"recipient-lists/{recipient_list_with_members.id}")
+        response = await client.delete(url, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 204
 
         # Verify deleted
-        get_resp = await client.get(
-            url, headers=auth_headers(messaging_admin_token)
-        )
+        get_resp = await client.get(url, headers=auth_headers(messaging_admin_token))
         assert get_resp.status_code == 404
 
 
@@ -2403,9 +2326,7 @@ class TestToggleThreadFlag:
         await client.post(flag_url, headers=auth_headers(messaging_admin_token))
 
         list_url = _messaging_url(conference.id, "threads")
-        response = await client.get(
-            list_url, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.get(list_url, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 200
         item = response.json()["items"][0]
@@ -2480,16 +2401,12 @@ class TestArchiveThread:
         thread_with_message: MessageThread,
     ) -> None:
         """Archived threads are hidden from the default (non-archived) list."""
-        archive_url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}/archive"
-        )
+        archive_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/archive")
         await client.post(archive_url, headers=auth_headers(messaging_admin_token))
 
         list_url = _messaging_url(conference.id, "threads")
         # Default list (archived=false)
-        response = await client.get(
-            list_url, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.get(list_url, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 200
         assert response.json()["total"] == 0
 
@@ -2513,26 +2430,18 @@ class TestArchiveThread:
         thread_with_message: MessageThread,
     ) -> None:
         # Archive first
-        archive_url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}/archive"
-        )
+        archive_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/archive")
         await client.post(archive_url, headers=auth_headers(messaging_admin_token))
 
         # Unarchive
-        unarchive_url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}/unarchive"
-        )
-        response = await client.post(
-            unarchive_url, headers=auth_headers(messaging_admin_token)
-        )
+        unarchive_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/unarchive")
+        response = await client.post(unarchive_url, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 200
         assert response.json()["ok"] is True
 
         # Verify back in default list
         list_url = _messaging_url(conference.id, "threads")
-        resp = await client.get(
-            list_url, headers=auth_headers(messaging_admin_token)
-        )
+        resp = await client.get(list_url, headers=auth_headers(messaging_admin_token))
         assert resp.json()["total"] == 1
 
     async def test_archive_nonexistent_thread(
@@ -2564,9 +2473,7 @@ class TestInternalNotes:
     ) -> None:
         url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/note")
         payload = {"body_html": "<p>Internal: needs follow-up.</p>"}
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         data = response.json()
@@ -2584,21 +2491,15 @@ class TestInternalNotes:
         applicant: CFPApplicant,
         thread_with_message: MessageThread,
     ) -> None:
-        note_url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}/note"
-        )
+        note_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/note")
         await client.post(
             note_url,
             json={"body_html": "<p>Note for team</p>"},
             headers=auth_headers(messaging_admin_token),
         )
 
-        detail_url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}"
-        )
-        response = await client.get(
-            detail_url, headers=auth_headers(messaging_admin_token)
-        )
+        detail_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}")
+        response = await client.get(detail_url, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 200
         messages = response.json()["messages"]
@@ -2655,9 +2556,7 @@ class TestExportThread:
         applicant: CFPApplicant,
         thread_with_message: MessageThread,
     ) -> None:
-        url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}/export"
-        )
+        url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/export")
         response = await client.get(
             url,
             params={"format": "text"},
@@ -2681,9 +2580,7 @@ class TestExportThread:
         applicant: CFPApplicant,
         thread_with_message: MessageThread,
     ) -> None:
-        url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}/export"
-        )
+        url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/export")
         response = await client.get(
             url,
             params={"format": "html"},
@@ -2707,18 +2604,14 @@ class TestExportThread:
         thread_with_message: MessageThread,
     ) -> None:
         """Internal notes are labeled in export."""
-        note_url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}/note"
-        )
+        note_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/note")
         await client.post(
             note_url,
             json={"body_html": "<p>Secret note</p>"},
             headers=auth_headers(messaging_admin_token),
         )
 
-        export_url = _messaging_url(
-            conference.id, f"threads/{thread_with_message.id}/export"
-        )
+        export_url = _messaging_url(conference.id, f"threads/{thread_with_message.id}/export")
         response = await client.get(
             export_url,
             params={"format": "text"},
@@ -2769,9 +2662,7 @@ class TestBulkSendAllApplicants:
             "body_html": "<p>Hello everyone</p>",
             "recipients": {"all_applicants": True},
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         data = response.json()
@@ -2792,9 +2683,7 @@ class TestBulkSendAllApplicants:
             "body_html": "<p>Body</p>",
             "recipients": {"all_applicants": True},
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 404
 
 
@@ -2820,9 +2709,7 @@ class TestBulkSendByPaperStatus:
             "body_html": "<p>Thanks for submitting</p>",
             "recipients": {"paper_status": "submitted"},
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         assert response.json()["threads_created"] == 1
@@ -2846,9 +2733,7 @@ class TestBulkSendByPaperStatus:
             "body_html": "<p>Your paper was accepted</p>",
             "recipients": {"paper_status": "accepted"},
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         assert response.json()["threads_created"] == 1
@@ -2870,9 +2755,7 @@ class TestBulkSendByPaperStatus:
             "body_html": "<p>Sorry</p>",
             "recipients": {"paper_status": "rejected"},
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 404
 
 
@@ -2895,9 +2778,7 @@ class TestBulkSendByCommitteeRole:
             "body_html": "<p>New papers assigned</p>",
             "recipients": {"committee_role": "reviewer"},
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         assert response.json()["threads_created"] == 1
@@ -2916,9 +2797,7 @@ class TestBulkSendByCommitteeRole:
             "body_html": "<p>Hello chairs</p>",
             "recipients": {"committee_role": "chair"},
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 404
 
 
@@ -2944,9 +2823,7 @@ class TestBulkSendByRecipientList:
                 "recipient_list_id": str(recipient_list_with_members.id),
             },
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         assert response.json()["threads_created"] == 2
@@ -2976,9 +2853,7 @@ class TestBulkSendByRecipientList:
             "body_html": "<p>Ghost</p>",
             "recipients": {"recipient_list_id": str(empty_list.id)},
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
         assert response.status_code == 404
 
 
@@ -3006,9 +2881,7 @@ class TestTemplateVariableSubstitution:
             "subject": "Hello [First Name] [Last Name]!",
             "body_html": "<p>Dear [First Name], your email is [Email].</p>",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         thread = response.json()["first_thread"]
@@ -3032,9 +2905,7 @@ class TestTemplateVariableSubstitution:
             "subject": "Welcome to [Conference Name]",
             "body_html": "<p>See you at [Conference Name]!</p>",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         thread = response.json()["first_thread"]
@@ -3057,9 +2928,7 @@ class TestTemplateVariableSubstitution:
             "subject": "About your paper: [Paper Title]",
             "body_html": "<p>Your paper [Paper Title] is great.</p>",
         }
-        response = await client.post(
-            url, json=payload, headers=auth_headers(messaging_admin_token)
-        )
+        response = await client.post(url, json=payload, headers=auth_headers(messaging_admin_token))
 
         assert response.status_code == 201
         thread = response.json()["first_thread"]
@@ -3121,9 +2990,7 @@ class TestMessageTemplateUpdateSchema:
         assert data.body_html is None
 
     def test_full_update(self) -> None:
-        data = MessageTemplateUpdate(
-            name="N", subject="S", body_html="<p>B</p>"
-        )
+        data = MessageTemplateUpdate(name="N", subject="S", body_html="<p>B</p>")
         assert data.name == "N"
         assert data.subject == "S"
 

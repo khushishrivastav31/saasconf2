@@ -292,9 +292,7 @@ async def search_recipients(
             ConferenceCFP.conference_id == conference_id,
             CFPApplicant.tenant_id == tenant_id,
             or_(
-                unaccent_ilike(
-                    sa_func.concat(CFPApplicant.first_name, " ", CFPApplicant.last_name), q
-                ),
+                unaccent_ilike(sa_func.concat(CFPApplicant.first_name, " ", CFPApplicant.last_name), q),
                 unaccent_ilike(CFPApplicant.email, q),
                 unaccent_ilike(sa_func.coalesce(CFPApplicant.company, ""), q),
             ),
@@ -325,9 +323,7 @@ async def search_recipients(
             CFPCommitteeMember.conference_id == conference_id,
             CFPApplicant.tenant_id == tenant_id,
             or_(
-                unaccent_ilike(
-                    sa_func.concat(CFPApplicant.first_name, " ", CFPApplicant.last_name), q
-                ),
+                unaccent_ilike(sa_func.concat(CFPApplicant.first_name, " ", CFPApplicant.last_name), q),
                 unaccent_ilike(CFPApplicant.email, q),
                 unaccent_ilike(sa_func.coalesce(CFPApplicant.company, ""), q),
             ),
@@ -358,9 +354,7 @@ async def search_recipients(
             ConferenceVolunteer.conference_id == conference_id,
             Volunteer.tenant_id == tenant_id,
             or_(
-                unaccent_ilike(
-                    sa_func.concat(Volunteer.first_name, " ", Volunteer.last_name), q
-                ),
+                unaccent_ilike(sa_func.concat(Volunteer.first_name, " ", Volunteer.last_name), q),
                 unaccent_ilike(Volunteer.email, q),
             ),
         )
@@ -421,7 +415,7 @@ VALID_STATUS_TRANSITIONS: dict[str, set[str]] = {
     "draft": {"sent"},
     "sent": {"paid", "overdue", "cancelled"},
     "overdue": {"paid", "cancelled"},
-    "paid": set(),       # terminal
+    "paid": set(),  # terminal
     "cancelled": set(),  # terminal
 }
 
@@ -469,7 +463,7 @@ async def update_invoice(
             raise HTTPException(
                 status_code=400,
                 detail=f"Cannot change status from '{current_status}' to '{new_status}'. "
-                       f"Allowed transitions: {', '.join(sorted(allowed)) or 'none (terminal state)'}",
+                f"Allowed transitions: {', '.join(sorted(allowed)) or 'none (terminal state)'}",
             )
 
     # --- Field locking: non-draft invoices only allow status changes ---
@@ -491,9 +485,7 @@ async def update_invoice(
             if hasattr(li, "model_dump"):
                 serialized_items.append(li.model_dump(mode="json"))
             elif isinstance(li, dict):
-                serialized_items.append(
-                    {k: float(v) if isinstance(v, Decimal) else v for k, v in li.items()}
-                )
+                serialized_items.append({k: float(v) if isinstance(v, Decimal) else v for k, v in li.items()})
             else:
                 serialized_items.append(li)
         update_data["line_items"] = serialized_items

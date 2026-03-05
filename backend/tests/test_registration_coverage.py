@@ -115,9 +115,7 @@ def reg_admin_token(tenant_admin_user: User) -> str:
 
 
 @pytest_asyncio.fixture()
-async def main_booking_option(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> BookingOption:
+async def main_booking_option(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> BookingOption:
     opt = BookingOption(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -132,9 +130,7 @@ async def main_booking_option(
 
 
 @pytest_asyncio.fixture()
-async def addon_booking_option(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> BookingOption:
+async def addon_booking_option(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> BookingOption:
     opt = BookingOption(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -148,9 +144,7 @@ async def addon_booking_option(
 
 
 @pytest_asyncio.fixture()
-async def second_booking_option(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> BookingOption:
+async def second_booking_option(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> BookingOption:
     """A second booking option for testing booking option changes."""
     opt = BookingOption(
         id=uuid.uuid4(),
@@ -165,9 +159,7 @@ async def second_booking_option(
 
 
 @pytest_asyncio.fixture()
-async def inactive_booking_option(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> BookingOption:
+async def inactive_booking_option(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> BookingOption:
     """An inactive booking option that should be rejected."""
     opt = BookingOption(
         id=uuid.uuid4(),
@@ -285,8 +277,12 @@ class TestListPagination:
         # Create 3 registrations
         for i in range(3):
             await _create_registration(
-                client, conference.id, reg_admin_token, main_booking_option.id,
-                first_name=f"Page{i}", email=f"page{i}@test.com",
+                client,
+                conference.id,
+                reg_admin_token,
+                main_booking_option.id,
+                first_name=f"Page{i}",
+                email=f"page{i}@test.com",
             )
 
         resp = await client.get(
@@ -314,8 +310,12 @@ class TestListPagination:
         """Custom page_size=2 with 5 registrations yields 3 pages."""
         for i in range(5):
             await _create_registration(
-                client, conference.id, reg_admin_token, main_booking_option.id,
-                first_name=f"Paged{i}", email=f"paged{i}@test.com",
+                client,
+                conference.id,
+                reg_admin_token,
+                main_booking_option.id,
+                first_name=f"Paged{i}",
+                email=f"paged{i}@test.com",
             )
 
         resp = await client.get(
@@ -343,8 +343,12 @@ class TestListPagination:
         """Page 2 with page_size=2 returns the next set of items."""
         for i in range(5):
             await _create_registration(
-                client, conference.id, reg_admin_token, main_booking_option.id,
-                first_name=f"P2_{i}", email=f"p2_{i}@test.com",
+                client,
+                conference.id,
+                reg_admin_token,
+                main_booking_option.id,
+                first_name=f"P2_{i}",
+                email=f"p2_{i}@test.com",
             )
 
         resp = await client.get(
@@ -370,8 +374,12 @@ class TestListPagination:
         """Last page returns remaining items (less than page_size)."""
         for i in range(5):
             await _create_registration(
-                client, conference.id, reg_admin_token, main_booking_option.id,
-                first_name=f"Last{i}", email=f"last{i}@test.com",
+                client,
+                conference.id,
+                reg_admin_token,
+                main_booking_option.id,
+                first_name=f"Last{i}",
+                email=f"last{i}@test.com",
             )
 
         resp = await client.get(
@@ -396,7 +404,10 @@ class TestListPagination:
     ) -> None:
         """Requesting a page beyond the last page returns empty items."""
         await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="beyond@test.com",
         )
 
@@ -431,8 +442,12 @@ class TestUpdateRegistration:
     ) -> None:
         """Update just the first name."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
-            first_name="Original", email="update-name@test.com",
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
+            first_name="Original",
+            email="update-name@test.com",
         )
         resp = await client.put(
             f"{BASE}/{conference.id}/registrations/{reg['id']}",
@@ -456,7 +471,10 @@ class TestUpdateRegistration:
     ) -> None:
         """Update the email address of a registration."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="old-email@test.com",
         )
         resp = await client.put(
@@ -479,11 +497,17 @@ class TestUpdateRegistration:
     ) -> None:
         """Cannot update email to one already registered for this conference."""
         await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="taken@test.com",
         )
         reg2 = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="changeme@test.com",
         )
         resp = await client.put(
@@ -506,7 +530,10 @@ class TestUpdateRegistration:
     ) -> None:
         """Update the booking option of a registration."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="change-option@test.com",
         )
         assert reg["booking_option_name"] == "Full Conference"
@@ -532,7 +559,10 @@ class TestUpdateRegistration:
     ) -> None:
         """Updating booking option to a non-existent one returns 400."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="bad-option-update@test.com",
         )
         resp = await client.put(
@@ -554,7 +584,10 @@ class TestUpdateRegistration:
     ) -> None:
         """Update notes field on a registration."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="notes@test.com",
         )
         resp = await client.put(
@@ -577,8 +610,13 @@ class TestUpdateRegistration:
     ) -> None:
         """Update multiple fields at once."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
-            first_name="Multi", last_name="User", email="multi-update@test.com",
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
+            first_name="Multi",
+            last_name="User",
+            email="multi-update@test.com",
         )
         resp = await client.put(
             f"{BASE}/{conference.id}/registrations/{reg['id']}",
@@ -718,7 +756,10 @@ class TestNotFound:
         main_booking_option: BookingOption,
     ) -> None:
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="item-404@test.com",
         )
         resp = await client.delete(
@@ -853,7 +894,10 @@ class TestCrossTenantIsolation:
     ) -> None:
         """Other tenant admin cannot see registrations belonging to first tenant."""
         await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="tenant-a@test.com",
         )
 
@@ -883,7 +927,10 @@ class TestCrossTenantIsolation:
     ) -> None:
         """Other tenant admin cannot get a specific registration from another tenant."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="isolation@test.com",
         )
 
@@ -1022,7 +1069,10 @@ class TestBillingProfile:
     ) -> None:
         """Update multiple billing fields at once."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="billing-multi@test.com",
         )
         resp = await client.put(
@@ -1055,7 +1105,10 @@ class TestBillingProfile:
     ) -> None:
         """Can set vat_validated on billing profile."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="vat-val@test.com",
         )
         resp = await client.put(
@@ -1078,7 +1131,10 @@ class TestBillingProfile:
     ) -> None:
         """Can update procurement_code on billing profile."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="procurement@test.com",
         )
         resp = await client.put(
@@ -1115,7 +1171,10 @@ class TestRegistrationItems:
     ) -> None:
         """Adding a booking_option item without booking_option_id returns 400."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="item-no-id@test.com",
         )
         resp = await client.post(
@@ -1137,7 +1196,10 @@ class TestRegistrationItems:
     ) -> None:
         """Adding a tutorial item when program is not published creates pending item."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="tutorial-pending@test.com",
         )
         resp = await client.post(
@@ -1164,7 +1226,10 @@ class TestRegistrationItems:
     ) -> None:
         """Adding multiple items to a registration."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="multi-items@test.com",
         )
         # Add first item
@@ -1206,7 +1271,10 @@ class TestRegistrationItems:
     ) -> None:
         """Adding an item referencing a non-existent booking option returns 400."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="bad-item@test.com",
         )
         resp = await client.post(
@@ -1232,7 +1300,10 @@ class TestRegistrationItems:
     ) -> None:
         """Adding an item with notes stores them."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="item-notes@test.com",
         )
         resp = await client.post(
@@ -1268,7 +1339,10 @@ class TestEmailCaseInsensitivity:
     ) -> None:
         """Emails are lowercased when stored."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="UPPER@CASE.COM",
         )
         assert reg["email"] == "upper@case.com"
@@ -1285,7 +1359,10 @@ class TestEmailCaseInsensitivity:
     ) -> None:
         """Duplicate check is case-insensitive."""
         await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="unique@test.com",
         )
         # Try same email with different case
@@ -1363,8 +1440,13 @@ class TestAlumniAutoCreation:
     ) -> None:
         """Setting status to 'paid' auto-creates an Alumni record."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
-            first_name="Alumni", last_name="Creator", email="alumni@test.com",
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
+            first_name="Alumni",
+            last_name="Creator",
+            email="alumni@test.com",
         )
 
         # Set to paid
@@ -1402,8 +1484,13 @@ class TestAlumniAutoCreation:
     ) -> None:
         """Setting status to 'paid' twice does not create duplicate alumni."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
-            first_name="Idem", last_name="Potent", email="idempotent@test.com",
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
+            first_name="Idem",
+            last_name="Potent",
+            email="idempotent@test.com",
         )
 
         # Set to paid twice
@@ -1559,8 +1646,13 @@ class TestDeleteRegistration:
     ) -> None:
         """Delete returns a success message with the registrant's name."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
-            first_name="ToDelete", last_name="Person", email="to-delete@test.com",
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
+            first_name="ToDelete",
+            last_name="Person",
+            email="to-delete@test.com",
         )
         resp = await client.delete(
             f"{BASE}/{conference.id}/registrations/{reg['id']}",
@@ -1582,7 +1674,10 @@ class TestDeleteRegistration:
     ) -> None:
         """Deleting a registration with items succeeds (cascade)."""
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="cascade-delete@test.com",
         )
         # Add an item
@@ -1628,7 +1723,10 @@ class TestStatusTransitions:
         main_booking_option: BookingOption,
     ) -> None:
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="invoiced@test.com",
         )
         resp = await client.put(
@@ -1650,7 +1748,10 @@ class TestStatusTransitions:
         main_booking_option: BookingOption,
     ) -> None:
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="cancelled@test.com",
         )
         resp = await client.put(
@@ -1672,7 +1773,10 @@ class TestStatusTransitions:
         main_booking_option: BookingOption,
     ) -> None:
         reg = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
             email="bad-status@test.com",
         )
         resp = await client.put(
@@ -1703,8 +1807,13 @@ class TestSearchEdgeCases:
     ) -> None:
         """Search by last name works."""
         await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
-            first_name="Jane", last_name="Uniquelastname", email="jane-search@test.com",
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
+            first_name="Jane",
+            last_name="Uniquelastname",
+            email="jane-search@test.com",
         )
         resp = await client.get(
             f"{BASE}/{conference.id}/registrations",
@@ -1727,8 +1836,12 @@ class TestSearchEdgeCases:
     ) -> None:
         """Search is case-insensitive."""
         await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
-            first_name="CaseTest", email="casetest@test.com",
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
+            first_name="CaseTest",
+            email="casetest@test.com",
         )
         resp = await client.get(
             f"{BASE}/{conference.id}/registrations",
@@ -1769,12 +1882,20 @@ class TestSearchEdgeCases:
     ) -> None:
         """Search combined with status filter narrows results."""
         reg1 = await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
-            first_name="Combo", email="combo1@test.com",
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
+            first_name="Combo",
+            email="combo1@test.com",
         )
         await _create_registration(
-            client, conference.id, reg_admin_token, main_booking_option.id,
-            first_name="Combo", email="combo2@test.com",
+            client,
+            conference.id,
+            reg_admin_token,
+            main_booking_option.id,
+            first_name="Combo",
+            email="combo2@test.com",
         )
 
         # Set one to paid

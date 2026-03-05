@@ -24,7 +24,6 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import auth_headers
 
-
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
@@ -206,7 +205,8 @@ class TestListSponsors:
 
         # Request page 1, page_size 2
         response = await client.get(
-            url, params={"page": 1, "page_size": 2},
+            url,
+            params={"page": 1, "page_size": 2},
             headers=auth_headers(admin_token_sponsors),
         )
         assert response.status_code == 200
@@ -219,7 +219,8 @@ class TestListSponsors:
 
         # Request page 2, page_size 2
         response = await client.get(
-            url, params={"page": 2, "page_size": 2},
+            url,
+            params={"page": 2, "page_size": 2},
             headers=auth_headers(admin_token_sponsors),
         )
         assert response.status_code == 200
@@ -255,7 +256,8 @@ class TestListSponsors:
 
         # Search for "Alpha"
         response = await client.get(
-            url, params={"search": "Alpha"},
+            url,
+            params={"search": "Alpha"},
             headers=auth_headers(admin_token_sponsors),
         )
         assert response.status_code == 200
@@ -296,7 +298,8 @@ class TestListSponsors:
 
         # Filter active only
         response = await client.get(
-            url, params={"is_active": True},
+            url,
+            params={"is_active": True},
             headers=auth_headers(admin_token_sponsors),
         )
         assert response.status_code == 200
@@ -306,7 +309,8 @@ class TestListSponsors:
 
         # Filter inactive only
         response = await client.get(
-            url, params={"is_active": False},
+            url,
+            params={"is_active": False},
             headers=auth_headers(admin_token_sponsors),
         )
         assert response.status_code == 200
@@ -349,7 +353,9 @@ class TestCreateSponsor:
         url = _sponsors_url(conference.id)
         payload = {"company_name": "Minimal Sponsor Inc"}
         response = await client.post(
-            url, json=payload, headers=auth_headers(admin_token_sponsors),
+            url,
+            json=payload,
+            headers=auth_headers(admin_token_sponsors),
         )
 
         assert response.status_code == 201
@@ -401,7 +407,9 @@ class TestCreateSponsor:
             "is_active": True,
         }
         response = await client.post(
-            url, json=payload, headers=auth_headers(admin_token_sponsors),
+            url,
+            json=payload,
+            headers=auth_headers(admin_token_sponsors),
         )
 
         assert response.status_code == 201
@@ -448,7 +456,9 @@ class TestCreateSponsor:
         url = _sponsors_url(conference.id)
         payload = {"company_name": "Forbidden Corp"}
         response = await client.post(
-            url, json=payload, headers=auth_headers(user_token_sponsors),
+            url,
+            json=payload,
+            headers=auth_headers(user_token_sponsors),
         )
 
         assert response.status_code == 403
@@ -465,7 +475,9 @@ class TestCreateSponsor:
         url = _sponsors_url(conference.id)
         payload = {"website": "https://no-name.example.com"}
         response = await client.post(
-            url, json=payload, headers=auth_headers(admin_token_sponsors),
+            url,
+            json=payload,
+            headers=auth_headers(admin_token_sponsors),
         )
 
         assert response.status_code == 422
@@ -548,7 +560,9 @@ class TestUpdateSponsor:
         url = _sponsors_url(conference.id, str(sample_sponsor.id))
         payload = {"company_name": "Acme Corp Renamed"}
         response = await client.put(
-            url, json=payload, headers=auth_headers(admin_token_sponsors),
+            url,
+            json=payload,
+            headers=auth_headers(admin_token_sponsors),
         )
 
         assert response.status_code == 200
@@ -579,7 +593,9 @@ class TestUpdateSponsor:
             "is_active": False,
         }
         response = await client.put(
-            url, json=payload, headers=auth_headers(admin_token_sponsors),
+            url,
+            json=payload,
+            headers=auth_headers(admin_token_sponsors),
         )
 
         assert response.status_code == 200
@@ -606,7 +622,9 @@ class TestUpdateSponsor:
         url = _sponsors_url(conference.id, str(fake_sponsor_id))
         payload = {"company_name": "Ghost Corp"}
         response = await client.put(
-            url, json=payload, headers=auth_headers(admin_token_sponsors),
+            url,
+            json=payload,
+            headers=auth_headers(admin_token_sponsors),
         )
 
         assert response.status_code == 404
@@ -667,12 +685,14 @@ class TestDeleteSponsor:
 
         # Delete
         delete_response = await client.delete(
-            url, headers=auth_headers(admin_token_sponsors),
+            url,
+            headers=auth_headers(admin_token_sponsors),
         )
         assert delete_response.status_code == 200
 
         # Verify GET returns 404
         get_response = await client.get(
-            url, headers=auth_headers(admin_token_sponsors),
+            url,
+            headers=auth_headers(admin_token_sponsors),
         )
         assert get_response.status_code == 404

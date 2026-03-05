@@ -9,7 +9,6 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import auth_headers
 
-
 BASE_URL = "/api/v1/conferences"
 
 CONFERENCE_PAYLOAD = {

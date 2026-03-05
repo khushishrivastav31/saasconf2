@@ -9,7 +9,7 @@ Targets uncovered happy-path lines in:
 """
 
 import uuid
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 
 import pytest
 import pytest_asyncio
@@ -118,9 +118,7 @@ async def prog_day(db_session: AsyncSession, prog_conference: Conference, prog_t
 
 
 @pytest_asyncio.fixture()
-async def prog_slot(
-    db_session: AsyncSession, prog_day: ProgramDay, prog_tenant: Tenant
-) -> ProgramTimeSlot:
+async def prog_slot(db_session: AsyncSession, prog_day: ProgramDay, prog_tenant: Tenant) -> ProgramTimeSlot:
     s = ProgramTimeSlot(
         id=uuid.uuid4(),
         tenant_id=prog_tenant.id,
@@ -135,9 +133,7 @@ async def prog_slot(
 
 
 @pytest_asyncio.fixture()
-async def prog_slot2(
-    db_session: AsyncSession, prog_day: ProgramDay, prog_tenant: Tenant
-) -> ProgramTimeSlot:
+async def prog_slot2(db_session: AsyncSession, prog_day: ProgramDay, prog_tenant: Tenant) -> ProgramTimeSlot:
     s = ProgramTimeSlot(
         id=uuid.uuid4(),
         tenant_id=prog_tenant.id,
@@ -169,9 +165,7 @@ async def prog_track(
 
 
 @pytest_asyncio.fixture()
-async def prog_session_type(
-    db_session: AsyncSession, prog_conference: Conference, prog_tenant: Tenant
-) -> SessionType:
+async def prog_session_type(db_session: AsyncSession, prog_conference: Conference, prog_tenant: Tenant) -> SessionType:
     st = SessionType(
         id=uuid.uuid4(),
         tenant_id=prog_tenant.id,
@@ -258,9 +252,7 @@ async def prog_applicant2(db_session: AsyncSession, prog_tenant: Tenant) -> CFPA
 
 
 @pytest_asyncio.fixture()
-async def prog_cfp(
-    db_session: AsyncSession, prog_tenant: Tenant, prog_conference: Conference
-) -> CallForPapers:
+async def prog_cfp(db_session: AsyncSession, prog_tenant: Tenant, prog_conference: Conference) -> CallForPapers:
     cfp = CallForPapers(
         id=uuid.uuid4(),
         tenant_id=prog_tenant.id,
@@ -331,9 +323,7 @@ async def prog_paper2(
 
 
 @pytest.mark.asyncio
-async def test_list_days_empty(
-    client: AsyncClient, prog_conference: Conference, prog_headers: dict, prog_modules
-):
+async def test_list_days_empty(client: AsyncClient, prog_conference: Conference, prog_headers: dict, prog_modules):
     url = f"{BASE}/{prog_conference.id}/program/days"
     resp = await client.get(url, headers=prog_headers)
     assert resp.status_code == 200
@@ -343,9 +333,7 @@ async def test_list_days_empty(
 
 
 @pytest.mark.asyncio
-async def test_create_day(
-    client: AsyncClient, prog_conference: Conference, prog_headers: dict, prog_modules
-):
+async def test_create_day(client: AsyncClient, prog_conference: Conference, prog_headers: dict, prog_modules):
     url = f"{BASE}/{prog_conference.id}/program/days"
     resp = await client.post(url, json={"date": "2026-06-01", "name": "Day 1", "sort_order": 0}, headers=prog_headers)
     assert resp.status_code == 201
@@ -409,9 +397,7 @@ async def test_delete_day(
 
 
 @pytest.mark.asyncio
-async def test_generate_days(
-    client: AsyncClient, prog_conference: Conference, prog_headers: dict, prog_modules
-):
+async def test_generate_days(client: AsyncClient, prog_conference: Conference, prog_headers: dict, prog_modules):
     url = f"{BASE}/{prog_conference.id}/program/days/generate"
     resp = await client.post(
         url,
@@ -626,9 +612,7 @@ async def test_delete_slot_with_sessions_fails(
 
 
 @pytest.mark.asyncio
-async def test_list_tracks_empty(
-    client: AsyncClient, prog_conference: Conference, prog_headers: dict, prog_modules
-):
+async def test_list_tracks_empty(client: AsyncClient, prog_conference: Conference, prog_headers: dict, prog_modules):
     url = f"{BASE}/{prog_conference.id}/program/tracks"
     resp = await client.get(url, headers=prog_headers)
     assert resp.status_code == 200
@@ -827,9 +811,7 @@ async def test_delete_track(
 
 
 @pytest.mark.asyncio
-async def test_list_sessions_empty(
-    client: AsyncClient, prog_conference: Conference, prog_headers: dict, prog_modules
-):
+async def test_list_sessions_empty(client: AsyncClient, prog_conference: Conference, prog_headers: dict, prog_modules):
     url = f"{BASE}/{prog_conference.id}/program/sessions"
     resp = await client.get(url, headers=prog_headers)
     assert resp.status_code == 200
@@ -1351,7 +1333,7 @@ async def test_publish_preview_update_mode(
 ):
     # Mark conference as already published and paper1 as accepted
     conf = await db_session.get(Conference, prog_conference.id)
-    conf.program_published_at = datetime.now(timezone.utc)
+    conf.program_published_at = datetime.now(UTC)
     prog_paper_obj = await db_session.get(CFPPaper, prog_paper.id)
     prog_paper_obj.status = PaperStatus.ACCEPTED.value
     prog_paper2_obj = await db_session.get(CFPPaper, prog_paper2.id)
@@ -1399,7 +1381,7 @@ async def test_update_program(
 ):
     # First publish
     conf = await db_session.get(Conference, prog_conference.id)
-    conf.program_published_at = datetime.now(timezone.utc)
+    conf.program_published_at = datetime.now(UTC)
     paper1 = await db_session.get(CFPPaper, prog_paper.id)
     paper1.status = PaperStatus.REJECTED.value
     paper2 = await db_session.get(CFPPaper, prog_paper2.id)
@@ -1445,7 +1427,7 @@ async def test_update_program_no_changes(
 ):
     # Already published, statuses match sessions
     conf = await db_session.get(Conference, prog_conference.id)
-    conf.program_published_at = datetime.now(timezone.utc)
+    conf.program_published_at = datetime.now(UTC)
     paper1 = await db_session.get(CFPPaper, prog_paper.id)
     paper1.status = PaperStatus.ACCEPTED.value
     paper2 = await db_session.get(CFPPaper, prog_paper2.id)

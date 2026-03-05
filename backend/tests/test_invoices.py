@@ -15,7 +15,6 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import auth_headers
 
-
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
@@ -212,7 +211,9 @@ async def test_create_invoice_success(
     """Tenant admin can create an invoice and receives 201."""
     url = _invoices_url(conference.id)
     response = await client.post(
-        url, json=INVOICE_PAYLOAD, headers=auth_headers(admin_token_invoices),
+        url,
+        json=INVOICE_PAYLOAD,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 201
@@ -253,7 +254,9 @@ async def test_create_invoice_minimal(
         "recipient_country": "Germany",
     }
     response = await client.post(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 201
@@ -276,7 +279,9 @@ async def test_create_invoice_forbidden_for_regular_user(
     """Regular user (non-admin) cannot create an invoice and gets 403."""
     url = _invoices_url(conference.id)
     response = await client.post(
-        url, json=INVOICE_PAYLOAD, headers=auth_headers(user_token_invoices),
+        url,
+        json=INVOICE_PAYLOAD,
+        headers=auth_headers(user_token_invoices),
     )
 
     assert response.status_code == 403
@@ -361,7 +366,9 @@ async def test_update_draft_invoice(
         "notes": "Updated notes",
     }
     response = await client.put(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 200
@@ -385,7 +392,9 @@ async def test_update_invoice_not_found(
     url = _invoices_url(conference.id, str(fake_id))
     payload = {"recipient_name": "Ghost Recipient"}
     response = await client.put(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 404
@@ -403,7 +412,9 @@ async def test_update_invoice_forbidden_for_regular_user(
     url = _invoices_url(conference.id, str(sample_invoice.id))
     payload = {"recipient_name": "Forbidden Update"}
     response = await client.put(
-        url, json=payload, headers=auth_headers(user_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(user_token_invoices),
     )
 
     assert response.status_code == 403
@@ -445,13 +456,15 @@ async def test_delete_invoice_verify_gone(
 
     # Delete
     delete_response = await client.delete(
-        url, headers=auth_headers(admin_token_invoices),
+        url,
+        headers=auth_headers(admin_token_invoices),
     )
     assert delete_response.status_code == 200
 
     # Verify GET returns 404
     get_response = await client.get(
-        url, headers=auth_headers(admin_token_invoices),
+        url,
+        headers=auth_headers(admin_token_invoices),
     )
     assert get_response.status_code == 404
 
@@ -482,7 +495,8 @@ async def test_delete_invoice_forbidden_for_regular_user(
     """Regular user cannot delete an invoice and gets 403."""
     url = _invoices_url(conference.id, str(sample_invoice.id))
     response = await client.delete(
-        url, headers=auth_headers(user_token_invoices),
+        url,
+        headers=auth_headers(user_token_invoices),
     )
 
     assert response.status_code == 403
@@ -540,7 +554,8 @@ async def test_list_invoices_filter_by_status(
 
     # Filter by draft
     response = await client.get(
-        url, params={"status": "draft"},
+        url,
+        params={"status": "draft"},
         headers=auth_headers(admin_token_invoices),
     )
     assert response.status_code == 200
@@ -550,7 +565,8 @@ async def test_list_invoices_filter_by_status(
 
     # Filter by sent
     response = await client.get(
-        url, params={"status": "sent"},
+        url,
+        params={"status": "sent"},
         headers=auth_headers(admin_token_invoices),
     )
     assert response.status_code == 200
@@ -581,7 +597,9 @@ async def test_create_invoice_without_number(
         "recipient_country": "Germany",
     }
     response = await client.post(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 201
@@ -612,7 +630,9 @@ async def test_create_invoice_with_recipient_source(
         "internal_comment": "This is an internal note",
     }
     response = await client.post(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 201
@@ -636,7 +656,9 @@ async def test_create_invoice_invalid_source_type(
         "recipient_source_type": "unknown_entity",
     }
     response = await client.post(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 422
@@ -695,9 +717,7 @@ async def draft_invoice(
         status="draft",
         recipient_name="Draft Corp",
         recipient_email="draft@example.com",
-        line_items=[
-            {"description": "Item 1", "quantity": "1", "unit_price": "500.00", "total": "500.00"}
-        ],
+        line_items=[{"description": "Item 1", "quantity": "1", "unit_price": "500.00", "total": "500.00"}],
         subtotal=500.00,
         total=500.00,
         currency="EUR",
@@ -724,9 +744,7 @@ async def sent_invoice(
         status="sent",
         recipient_name="Sent Corp",
         recipient_email="sent@example.com",
-        line_items=[
-            {"description": "Sent item", "quantity": "1", "unit_price": "500.00", "total": "500.00"}
-        ],
+        line_items=[{"description": "Sent item", "quantity": "1", "unit_price": "500.00", "total": "500.00"}],
         subtotal=500.00,
         total=500.00,
         currency="EUR",
@@ -750,7 +768,9 @@ async def test_send_invoice_auto_assigns_number(
     url = _invoices_url(conference.id, str(draft_invoice.id))
     payload = {"status": "sent"}
     response = await client.put(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 200
@@ -788,7 +808,9 @@ async def test_send_invoice_sets_issue_date(
     url = _invoices_url(conference.id, str(inv.id))
     payload = {"status": "sent"}
     response = await client.put(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 200
@@ -809,7 +831,9 @@ async def test_sent_invoice_only_status_changeable(
     url = _invoices_url(conference.id, str(sent_invoice.id))
     payload = {"recipient_name": "Hacked Name"}
     response = await client.put(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 400
@@ -828,7 +852,9 @@ async def test_valid_status_transition_sent_to_paid(
     url = _invoices_url(conference.id, str(sent_invoice.id))
     payload = {"status": "paid"}
     response = await client.put(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 200
@@ -847,7 +873,9 @@ async def test_invalid_status_transition_draft_to_paid(
     url = _invoices_url(conference.id, str(draft_invoice.id))
     payload = {"status": "paid"}
     response = await client.put(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 400
@@ -866,7 +894,9 @@ async def test_invalid_status_transition_sent_to_draft(
     url = _invoices_url(conference.id, str(sent_invoice.id))
     payload = {"status": "draft"}
     response = await client.put(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 400
@@ -898,7 +928,9 @@ async def test_terminal_status_no_transition(
     url = _invoices_url(conference.id, str(inv.id))
     payload = {"status": "sent"}
     response = await client.put(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 400
@@ -920,7 +952,9 @@ async def test_update_cannot_change_invoice_number_directly(
         "recipient_name": "Updated Name",
     }
     response = await client.put(
-        url, json=payload, headers=auth_headers(admin_token_invoices),
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices),
     )
 
     assert response.status_code == 200
@@ -963,7 +997,8 @@ async def test_recipient_search_sponsors(
 
     url = _invoices_url(conference.id, "recipient-search")
     response = await client.get(
-        url, params={"q": "Acme"},
+        url,
+        params={"q": "Acme"},
         headers=auth_headers(admin_token_invoices),
     )
 
@@ -986,7 +1021,8 @@ async def test_recipient_search_empty(
     """Recipient search with no matches returns empty results."""
     url = _invoices_url(conference.id, "recipient-search")
     response = await client.get(
-        url, params={"q": "zzz_nonexistent_xyz"},
+        url,
+        params={"q": "zzz_nonexistent_xyz"},
         headers=auth_headers(admin_token_invoices),
     )
 

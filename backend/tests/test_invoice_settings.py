@@ -320,16 +320,12 @@ async def test_update_invoice_settings_with_bank_accounts(
     assert len(data["invoice_company_info"]["bank_accounts"]) == 2
 
     # Verify default flag persists
-    default_account = next(
-        (acc for acc in data["invoice_company_info"]["bank_accounts"] if acc["is_default"]), None
-    )
+    default_account = next((acc for acc in data["invoice_company_info"]["bank_accounts"] if acc["is_default"]), None)
     assert default_account is not None
     assert default_account["bank_name"] == "Deutsche Bank"
 
     # Verify non-default account saved
-    non_default = next(
-        (acc for acc in data["invoice_company_info"]["bank_accounts"] if not acc["is_default"]), None
-    )
+    non_default = next((acc for acc in data["invoice_company_info"]["bank_accounts"] if not acc["is_default"]), None)
     assert non_default is not None
     assert non_default["bank_name"] == "Sparkasse"
 

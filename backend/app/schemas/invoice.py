@@ -75,9 +75,7 @@ class InvoiceCreate(BaseModel):
     @classmethod
     def check_source_type(cls, v: str | None) -> str | None:
         if v is not None and v not in VALID_RECIPIENT_SOURCE_TYPES:
-            raise ValueError(
-                f"Recipient source type must be one of: {', '.join(sorted(VALID_RECIPIENT_SOURCE_TYPES))}"
-            )
+            raise ValueError(f"Recipient source type must be one of: {', '.join(sorted(VALID_RECIPIENT_SOURCE_TYPES))}")
         return v
 
     @field_validator("recipient_email")
@@ -139,9 +137,7 @@ class InvoiceUpdate(BaseModel):
     @classmethod
     def check_source_type(cls, v: str | None) -> str | None:
         if v is not None and v not in VALID_RECIPIENT_SOURCE_TYPES:
-            raise ValueError(
-                f"Recipient source type must be one of: {', '.join(sorted(VALID_RECIPIENT_SOURCE_TYPES))}"
-            )
+            raise ValueError(f"Recipient source type must be one of: {', '.join(sorted(VALID_RECIPIENT_SOURCE_TYPES))}")
         return v
 
     @field_validator("recipient_email")

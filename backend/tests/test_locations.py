@@ -13,16 +13,13 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import _make_token, auth_headers
 
-
 BASE_URL = "/api/v1/locations"
 
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
-async def _setup_locations_module(
-    db_session: AsyncSession, tenant: Tenant
-) -> None:
+async def _setup_locations_module(db_session: AsyncSession, tenant: Tenant) -> None:
     """Create the 'locations' module and enable it for the tenant."""
     mod = Module(
         id=uuid.uuid4(),
@@ -43,9 +40,7 @@ async def _setup_locations_module(
     await db_session.commit()
 
 
-async def _setup_location_type(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> TenantLocationType:
+async def _setup_location_type(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> TenantLocationType:
     """Create a valid 'venue' location type for the tenant."""
     lt = TenantLocationType(
         id=uuid.uuid4(),
@@ -151,9 +146,7 @@ async def test_get_location_by_id(
 
     # Create the location first
     payload = _location_payload(conference.id)
-    create_resp = await client.post(
-        BASE_URL, json=payload, headers=auth_headers(token)
-    )
+    create_resp = await client.post(BASE_URL, json=payload, headers=auth_headers(token))
     assert create_resp.status_code == 201
     location_id = create_resp.json()["id"]
 
@@ -186,9 +179,7 @@ async def test_update_location(
 
     # Create
     payload = _location_payload(conference.id)
-    create_resp = await client.post(
-        BASE_URL, json=payload, headers=auth_headers(token)
-    )
+    create_resp = await client.post(BASE_URL, json=payload, headers=auth_headers(token))
     assert create_resp.status_code == 201
     location_id = create_resp.json()["id"]
 
@@ -223,9 +214,7 @@ async def test_delete_location(
 
     # Create
     payload = _location_payload(conference.id)
-    create_resp = await client.post(
-        BASE_URL, json=payload, headers=auth_headers(token)
-    )
+    create_resp = await client.post(BASE_URL, json=payload, headers=auth_headers(token))
     assert create_resp.status_code == 201
     location_id = create_resp.json()["id"]
 
@@ -283,9 +272,7 @@ async def test_link_location_to_conference(
     token = _make_token(tenant_admin_user, modules=["locations"])
 
     payload = _location_payload(conference.id)
-    create_resp = await client.post(
-        BASE_URL, json=payload, headers=auth_headers(token)
-    )
+    create_resp = await client.post(BASE_URL, json=payload, headers=auth_headers(token))
     assert create_resp.status_code == 201
     data = create_resp.json()
     # The conference_ids should contain the conference we passed
@@ -315,9 +302,7 @@ async def test_unlink_location_from_conference(
 
     # Create location linked to first conference
     payload = _location_payload(conference.id)
-    create_resp = await client.post(
-        BASE_URL, json=payload, headers=auth_headers(token)
-    )
+    create_resp = await client.post(BASE_URL, json=payload, headers=auth_headers(token))
     assert create_resp.status_code == 201
     location_id = create_resp.json()["id"]
 

@@ -12,7 +12,6 @@ os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
@@ -21,7 +20,6 @@ from app.models.conference import Conference
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.user_conference_access import ConferenceAccessLevel, UserConferenceAccess
-
 
 # ---------------------------------------------------------------------------
 # get_conference_for_tenant
@@ -41,18 +39,14 @@ class TestGetConferenceForTenant:
         assert result.tenant_id == tenant.id
 
     @pytest.mark.asyncio
-    async def test_raises_not_found_for_wrong_tenant(
-        self, db_session: AsyncSession, conference: Conference
-    ):
+    async def test_raises_not_found_for_wrong_tenant(self, db_session: AsyncSession, conference: Conference):
         """Raises NotFoundError when tenant_id doesn't match."""
         wrong_tenant_id = uuid.uuid4()
         with pytest.raises(NotFoundError, match="Conference not found"):
             await get_conference_for_tenant(db_session, conference.id, wrong_tenant_id)
 
     @pytest.mark.asyncio
-    async def test_raises_not_found_for_nonexistent_conference(
-        self, db_session: AsyncSession, tenant: Tenant
-    ):
+    async def test_raises_not_found_for_nonexistent_conference(self, db_session: AsyncSession, tenant: Tenant):
         """Raises NotFoundError when conference doesn't exist."""
         fake_id = uuid.uuid4()
         with pytest.raises(NotFoundError, match="Conference not found"):
@@ -62,9 +56,7 @@ class TestGetConferenceForTenant:
     async def test_tenant_isolation(self, db_session: AsyncSession, conference: Conference):
         """Conference belonging to tenant A is invisible to tenant B."""
         # Create a second tenant
-        other_tenant = Tenant(
-            id=uuid.uuid4(), name="Other Corp", slug=f"other-{uuid.uuid4().hex[:8]}", is_active=True
-        )
+        other_tenant = Tenant(id=uuid.uuid4(), name="Other Corp", slug=f"other-{uuid.uuid4().hex[:8]}", is_active=True)
         db_session.add(other_tenant)
         await db_session.commit()
 
@@ -81,10 +73,9 @@ class TestCheckConferenceAdmin:
     """Tests for check_conference_admin()."""
 
     @pytest.mark.asyncio
-    async def test_super_admin_passes(
-        self, db_session: AsyncSession, conference: Conference, super_admin_user: User
-    ):
+    async def test_super_admin_passes(self, db_session: AsyncSession, conference: Conference, super_admin_user: User):
         """Super admins always pass the check."""
+
         # Create a mock-like object matching the CurrentUserDep attrs
         class FakeUser:
             user_id = super_admin_user.id
@@ -96,10 +87,9 @@ class TestCheckConferenceAdmin:
         await check_conference_admin(conference.id, FakeUser(), db_session)
 
     @pytest.mark.asyncio
-    async def test_tenant_admin_passes(
-        self, db_session: AsyncSession, conference: Conference, tenant_admin_user: User
-    ):
+    async def test_tenant_admin_passes(self, db_session: AsyncSession, conference: Conference, tenant_admin_user: User):
         """Tenant admins always pass the check."""
+
         class FakeUser:
             user_id = tenant_admin_user.id
             tenant_id = tenant_admin_user.tenant_id
@@ -113,6 +103,7 @@ class TestCheckConferenceAdmin:
         self, db_session: AsyncSession, conference: Conference, regular_user: User
     ):
         """Regular user without UserConferenceAccess raises AuthorizationError."""
+
         class FakeUser:
             user_id = regular_user.id
             tenant_id = regular_user.tenant_id

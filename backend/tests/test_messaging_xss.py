@@ -10,9 +10,7 @@ os.environ.setdefault(
     "DATABASE_URL",
     "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test",
 )
-os.environ.setdefault(
-    "JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars"
-)
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
@@ -71,63 +69,49 @@ class TestSubstituteTemplateVariablesXSS:
     def test_script_tag_in_first_name(self):
         """Script tags in first_name are HTML-escaped."""
         text = "Hello [First Name]!"
-        result = substitute_template_variables(
-            text, first_name='<script>alert("xss")</script>'
-        )
+        result = substitute_template_variables(text, first_name='<script>alert("xss")</script>')
         assert "<script>" not in result
         assert "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;" in result
 
     def test_script_tag_in_last_name(self):
         """Script tags in last_name are HTML-escaped."""
         text = "Name: [Last Name]"
-        result = substitute_template_variables(
-            text, last_name="<script>document.cookie</script>"
-        )
+        result = substitute_template_variables(text, last_name="<script>document.cookie</script>")
         assert "<script>" not in result
         assert "&lt;script&gt;" in result
 
     def test_img_onerror_in_email(self):
         """img onerror XSS payload in email is escaped."""
         text = "Contact: [Email]"
-        result = substitute_template_variables(
-            text, email='"><img src=x onerror=alert(1)>'
-        )
+        result = substitute_template_variables(text, email='"><img src=x onerror=alert(1)>')
         assert "<img" not in result
         assert "&lt;img" in result
 
     def test_svg_onload_in_conference_name(self):
         """SVG onload XSS payload in conference_name is escaped."""
         text = "Conference: [Conference Name]"
-        result = substitute_template_variables(
-            text, conference_name="<svg onload=alert(document.cookie)>"
-        )
+        result = substitute_template_variables(text, conference_name="<svg onload=alert(document.cookie)>")
         assert "<svg" not in result
         assert "&lt;svg" in result
 
     def test_script_in_paper_title(self):
         """Script injection in paper_title is escaped."""
         text = "Paper: [Paper Title]"
-        result = substitute_template_variables(
-            text, paper_title='My Paper<script>alert(1)</script>'
-        )
+        result = substitute_template_variables(text, paper_title="My Paper<script>alert(1)</script>")
         assert "<script>" not in result
         assert "My Paper&lt;script&gt;" in result
 
     def test_script_in_paper_list(self):
         """Script injection in paper_list is escaped."""
         text = "Papers: [Paper List]"
-        result = substitute_template_variables(
-            text, paper_list='<script>fetch("https://evil.com")</script>'
-        )
+        result = substitute_template_variables(text, paper_list='<script>fetch("https://evil.com")</script>')
         assert "<script>" not in result
         assert "&lt;script&gt;" in result
 
     def test_html_entities_escaped(self):
         """Ampersands, angle brackets, and quotes are all escaped."""
         text = "Name: [First Name]"
-        result = substitute_template_variables(
-            text, first_name='A & B <C> "D"'
-        )
+        result = substitute_template_variables(text, first_name='A & B <C> "D"')
         assert "&amp;" in result
         assert "&lt;C&gt;" in result
         assert "&quot;D&quot;" in result
@@ -151,17 +135,15 @@ class TestSubstituteTemplateVariablesXSS:
     def test_event_handler_attribute_escaped(self):
         """Event handler injection via attributes is escaped."""
         text = "Speaker: [First Name]"
-        result = substitute_template_variables(
-            text, first_name='" onmouseover="alert(1)" data-x="'
-        )
+        result = substitute_template_variables(text, first_name='" onmouseover="alert(1)" data-x="')
         assert 'onmouseover="alert(1)"' not in result
         assert "&quot;" in result
 
     def test_template_body_html_preserved(self):
         """HTML in the template body itself is NOT escaped (only values are)."""
-        text = '<p>Hello <strong>[First Name]</strong></p>'
+        text = "<p>Hello <strong>[First Name]</strong></p>"
         result = substitute_template_variables(text, first_name="Alice")
-        assert "<p>Hello <strong>Alice</strong></p>" == result
+        assert result == "<p>Hello <strong>Alice</strong></p>"
 
     def test_unicode_in_values_preserved(self):
         """Unicode characters pass through correctly."""
@@ -172,9 +154,7 @@ class TestSubstituteTemplateVariablesXSS:
     def test_xss_payload_with_placeholder_syntax(self):
         """XSS payload disguised as placeholder syntax is still escaped."""
         text = "Name: [First Name]"
-        result = substitute_template_variables(
-            text, first_name='<script>[Email]</script>'
-        )
+        result = substitute_template_variables(text, first_name="<script>[Email]</script>")
         # The script tags must be escaped regardless of placeholder-like content
         assert "<script>" not in result
         assert "&lt;script&gt;" in result

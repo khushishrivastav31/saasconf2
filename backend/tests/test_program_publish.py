@@ -10,7 +10,7 @@ Covers:
 """
 
 import uuid
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 
 import pytest
 import pytest_asyncio
@@ -21,10 +21,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import create_access_token, hash_password
 from app.models.associations import ConferenceCFP
 from app.models.cfp import (
+    CallForPapers,
     CFPApplicant,
     CFPPaper,
     CFPPaperCospeaker,
-    CallForPapers,
     CFPStatus,
     PaperStatus,
 )
@@ -32,11 +32,9 @@ from app.models.conference import Conference
 from app.models.messaging import Message, MessageParticipant, MessageThread
 from app.models.module import Module, TenantModule
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
-from app.models.settings import SessionType
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from tests.conftest import auth_headers
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -178,7 +176,7 @@ async def papers(
             main_speaker_id=speaker.id,
             title=title,
             status=PaperStatus.SUBMITTED.value,
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(UTC),
         )
         db_session.add(p)
         result.append(p)
@@ -187,9 +185,7 @@ async def papers(
 
 
 @pytest_asyncio.fixture()
-async def program_grid(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> dict:
+async def program_grid(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> dict:
     """Create a minimal program grid: 1 day, 2 slots, 2 tracks."""
     day = ProgramDay(
         id=uuid.uuid4(),
@@ -203,23 +199,39 @@ async def program_grid(
     await db_session.flush()
 
     slot1 = ProgramTimeSlot(
-        id=uuid.uuid4(), tenant_id=tenant.id, program_day_id=day.id,
-        start_time=time(9, 0), end_time=time(10, 0), sort_order=0,
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        program_day_id=day.id,
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+        sort_order=0,
     )
     slot2 = ProgramTimeSlot(
-        id=uuid.uuid4(), tenant_id=tenant.id, program_day_id=day.id,
-        start_time=time(10, 0), end_time=time(11, 0), sort_order=1,
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        program_day_id=day.id,
+        start_time=time(10, 0),
+        end_time=time(11, 0),
+        sort_order=1,
     )
     db_session.add_all([slot1, slot2])
     await db_session.flush()
 
     track1 = ProgramTrack(
-        id=uuid.uuid4(), tenant_id=tenant.id, conference_id=conference.id,
-        program_day_id=day.id, name="Room A", sort_order=0,
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        program_day_id=day.id,
+        name="Room A",
+        sort_order=0,
     )
     track2 = ProgramTrack(
-        id=uuid.uuid4(), tenant_id=tenant.id, conference_id=conference.id,
-        program_day_id=day.id, name="Room B", sort_order=1,
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        program_day_id=day.id,
+        name="Room B",
+        sort_order=1,
     )
     db_session.add_all([track1, track2])
     await db_session.commit()
@@ -229,8 +241,11 @@ async def program_grid(
 
 @pytest_asyncio.fixture()
 async def sessions_with_papers(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference,
-    program_grid: dict, papers: list[CFPPaper],
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+    program_grid: dict,
+    papers: list[CFPPaper],
 ) -> list[ProgramSession]:
     """Create 2 sessions, assigning papers[0] and papers[2] (Alice's Paper1 and Bob's Paper3).
     Papers[1] and papers[3] remain unassigned (will be rejected)."""
@@ -238,14 +253,26 @@ async def sessions_with_papers(
     tracks = program_grid["tracks"]
 
     s1 = ProgramSession(
-        id=uuid.uuid4(), tenant_id=tenant.id, conference_id=conference.id,
-        start_slot_id=slots[0].id, start_track_id=tracks[0].id,
-        title=papers[0].title, paper_id=papers[0].id, slot_span=1, track_span=1,
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        start_slot_id=slots[0].id,
+        start_track_id=tracks[0].id,
+        title=papers[0].title,
+        paper_id=papers[0].id,
+        slot_span=1,
+        track_span=1,
     )
     s2 = ProgramSession(
-        id=uuid.uuid4(), tenant_id=tenant.id, conference_id=conference.id,
-        start_slot_id=slots[0].id, start_track_id=tracks[1].id,
-        title=papers[2].title, paper_id=papers[2].id, slot_span=1, track_span=1,
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        start_slot_id=slots[0].id,
+        start_track_id=tracks[1].id,
+        title=papers[2].title,
+        paper_id=papers[2].id,
+        slot_span=1,
+        track_span=1,
     )
     db_session.add_all([s1, s2])
     await db_session.commit()
@@ -260,8 +287,13 @@ class TestPublishPreview:
 
     @pytest.mark.asyncio
     async def test_preview_returns_correct_counts(
-        self, client: AsyncClient, conference: Conference,
-        admin_token: str, modules, sessions_with_papers, papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
     ):
         resp = await client.get(
             f"/api/v1/conferences/{conference.id}/program/publish/preview",
@@ -275,8 +307,13 @@ class TestPublishPreview:
 
     @pytest.mark.asyncio
     async def test_preview_lists_correct_papers(
-        self, client: AsyncClient, conference: Conference,
-        admin_token: str, modules, sessions_with_papers, papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
     ):
         resp = await client.get(
             f"/api/v1/conferences/{conference.id}/program/publish/preview",
@@ -292,11 +329,17 @@ class TestPublishPreview:
 
     @pytest.mark.asyncio
     async def test_preview_shows_already_published(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
     ):
         # Mark as previously published
-        conference.program_published_at = datetime.now(timezone.utc)
+        conference.program_published_at = datetime.now(UTC)
         await db_session.commit()
 
         resp = await client.get(
@@ -307,8 +350,14 @@ class TestPublishPreview:
 
     @pytest.mark.asyncio
     async def test_preview_speakers_to_notify_includes_all_unique(
-        self, client: AsyncClient, conference: Conference,
-        admin_token: str, modules, sessions_with_papers, papers, speakers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
+        speakers,
     ):
         resp = await client.get(
             f"/api/v1/conferences/{conference.id}/program/publish/preview",
@@ -327,8 +376,14 @@ class TestPublishProgram:
 
     @pytest.mark.asyncio
     async def test_publish_updates_paper_statuses(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
     ):
         # Capture IDs before API call (avoids lazy-load after expire)
         accepted_ids = {papers[0].id, papers[2].id}
@@ -345,9 +400,7 @@ class TestPublishProgram:
 
         # Verify paper statuses in DB with fresh queries
         for pid in all_ids:
-            result = await db_session.execute(
-                select(CFPPaper.status).where(CFPPaper.id == pid)
-            )
+            result = await db_session.execute(select(CFPPaper.status).where(CFPPaper.id == pid))
             status = result.scalar_one()
             if pid in accepted_ids:
                 assert status == PaperStatus.ACCEPTED.value
@@ -356,23 +409,34 @@ class TestPublishProgram:
 
     @pytest.mark.asyncio
     async def test_publish_sets_cfp_completed(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers, cfp: CallForPapers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
+        cfp: CallForPapers,
     ):
         cfp_id = cfp.id
         await client.post(
             f"/api/v1/conferences/{conference.id}/program/publish",
             headers=auth_headers(admin_token),
         )
-        result = await db_session.execute(
-            select(CallForPapers.status).where(CallForPapers.id == cfp_id)
-        )
+        result = await db_session.execute(select(CallForPapers.status).where(CallForPapers.id == cfp_id))
         assert result.scalar_one() == CFPStatus.COMPLETED.value
 
     @pytest.mark.asyncio
     async def test_publish_sets_program_published_at(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
     ):
         conf_id = conference.id
         resp = await client.post(
@@ -382,15 +446,20 @@ class TestPublishProgram:
         data = resp.json()
         assert data["published_at"] is not None
 
-        result = await db_session.execute(
-            select(Conference.program_published_at).where(Conference.id == conf_id)
-        )
+        result = await db_session.execute(select(Conference.program_published_at).where(Conference.id == conf_id))
         assert result.scalar_one() is not None
 
     @pytest.mark.asyncio
     async def test_publish_sends_consolidated_notifications(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers, speakers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
+        speakers,
     ):
         resp = await client.post(
             f"/api/v1/conferences/{conference.id}/program/publish",
@@ -411,8 +480,15 @@ class TestPublishProgram:
 
     @pytest.mark.asyncio
     async def test_publish_speaker_with_mixed_results_gets_two_messages(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers, speakers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
+        speakers,
     ):
         """Alice has Paper1 (accepted) and Paper2 (rejected) - should get 2 threads."""
         alice = speakers[0]
@@ -433,8 +509,15 @@ class TestPublishProgram:
 
     @pytest.mark.asyncio
     async def test_publish_single_result_speaker_gets_one_message(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers, speakers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
+        speakers,
     ):
         """Bob has only Paper3 (accepted) - should get 1 thread."""
         bob = speakers[1]
@@ -454,8 +537,15 @@ class TestPublishProgram:
 
     @pytest.mark.asyncio
     async def test_publish_notification_body_contains_paper_titles(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers, speakers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
+        speakers,
     ):
         alice = speakers[0]
         await client.post(
@@ -472,9 +562,7 @@ class TestPublishProgram:
         )
         thread_ids = [row[0] for row in result.all()]
 
-        msg_result = await db_session.execute(
-            select(Message.body_html).where(Message.thread_id.in_(thread_ids))
-        )
+        msg_result = await db_session.execute(select(Message.body_html).where(Message.thread_id.in_(thread_ids)))
         bodies = [row[0] for row in msg_result.all()]
         all_body_text = " ".join(bodies)
 
@@ -484,8 +572,12 @@ class TestPublishProgram:
 
     @pytest.mark.asyncio
     async def test_publish_no_papers_returns_error(
-        self, client: AsyncClient, conference: Conference,
-        admin_token: str, modules, program_grid,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        admin_token: str,
+        modules,
+        program_grid,
     ):
         """Publish with no papers should return validation error."""
         resp = await client.post(
@@ -503,18 +595,27 @@ class TestPublishWithCospeakers:
 
     @pytest.mark.asyncio
     async def test_cospeaker_receives_notification(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers, speakers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
+        speakers,
     ):
         """Add Carol as co-speaker on Paper1 (Alice's accepted paper).
         Carol should get an acceptance notification for Paper1."""
         carol = speakers[2]
         # Add Carol as co-speaker on Paper1
-        db_session.add(CFPPaperCospeaker(
-            paper_id=papers[0].id,
-            applicant_id=carol.id,
-            sort_order=0,
-        ))
+        db_session.add(
+            CFPPaperCospeaker(
+                paper_id=papers[0].id,
+                applicant_id=carol.id,
+                sort_order=0,
+            )
+        )
         await db_session.commit()
 
         await client.post(
@@ -541,8 +642,13 @@ class TestUpdateProgram:
 
     @pytest.mark.asyncio
     async def test_update_requires_previous_publish(
-        self, client: AsyncClient, conference: Conference,
-        admin_token: str, modules, sessions_with_papers, papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
     ):
         resp = await client.post(
             f"/api/v1/conferences/{conference.id}/program/update",
@@ -553,8 +659,14 @@ class TestUpdateProgram:
 
     @pytest.mark.asyncio
     async def test_update_no_changes_sends_zero_notifications(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
     ):
         """Publish, then immediately update with no changes."""
         # First publish
@@ -564,9 +676,7 @@ class TestUpdateProgram:
         )
 
         # Count threads after publish
-        result = await db_session.execute(
-            select(MessageThread).where(MessageThread.conference_id == conference.id)
-        )
+        result = await db_session.execute(select(MessageThread).where(MessageThread.conference_id == conference.id))
         threads_after_publish = len(result.scalars().all())
 
         # Update with no changes
@@ -579,16 +689,22 @@ class TestUpdateProgram:
         assert data["notifications_sent"] == 0
 
         # Thread count should not increase
-        result = await db_session.execute(
-            select(MessageThread).where(MessageThread.conference_id == conference.id)
-        )
+        result = await db_session.execute(select(MessageThread).where(MessageThread.conference_id == conference.id))
         threads_after_update = len(result.scalars().all())
         assert threads_after_update == threads_after_publish
 
     @pytest.mark.asyncio
     async def test_update_newly_added_paper_gets_acceptance(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers, program_grid, tenant,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
+        program_grid,
+        tenant,
     ):
         """After publish, add Paper2 (Alice's rejected paper) to a session,
         then update -> Alice should get a new acceptance notification."""
@@ -602,9 +718,15 @@ class TestUpdateProgram:
         slots = program_grid["slots"]
         tracks = program_grid["tracks"]
         new_session = ProgramSession(
-            id=uuid.uuid4(), tenant_id=tenant.id, conference_id=conference.id,
-            start_slot_id=slots[1].id, start_track_id=tracks[0].id,
-            title=papers[1].title, paper_id=papers[1].id, slot_span=1, track_span=1,
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conference.id,
+            start_slot_id=slots[1].id,
+            start_track_id=tracks[0].id,
+            title=papers[1].title,
+            paper_id=papers[1].id,
+            slot_span=1,
+            track_span=1,
         )
         db_session.add(new_session)
         await db_session.commit()
@@ -621,8 +743,14 @@ class TestUpdateProgram:
 
     @pytest.mark.asyncio
     async def test_update_removed_paper_gets_rejection(
-        self, client: AsyncClient, conference: Conference, db_session: AsyncSession,
-        admin_token: str, modules, sessions_with_papers, papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        db_session: AsyncSession,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
     ):
         """After publish, remove Paper3 (Bob's accepted paper) from session,
         then update -> Bob should get a rejection notification."""
@@ -633,9 +761,7 @@ class TestUpdateProgram:
         )
 
         # Remove Paper3 from its session
-        result = await db_session.execute(
-            select(ProgramSession).where(ProgramSession.paper_id == papers[2].id)
-        )
+        result = await db_session.execute(select(ProgramSession).where(ProgramSession.paper_id == papers[2].id))
         session = result.scalar_one()
         session.paper_id = None
         session.title = "Empty Session"
@@ -659,8 +785,12 @@ class TestSessionsExport:
 
     @pytest.mark.asyncio
     async def test_export_returns_csv(
-        self, client: AsyncClient, conference: Conference,
-        admin_token: str, modules, sessions_with_papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
     ):
         resp = await client.get(
             f"/api/v1/conferences/{conference.id}/program/sessions/export",
@@ -671,8 +801,12 @@ class TestSessionsExport:
 
     @pytest.mark.asyncio
     async def test_export_contains_header_row(
-        self, client: AsyncClient, conference: Conference,
-        admin_token: str, modules, sessions_with_papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
     ):
         resp = await client.get(
             f"/api/v1/conferences/{conference.id}/program/sessions/export",
@@ -685,8 +819,13 @@ class TestSessionsExport:
 
     @pytest.mark.asyncio
     async def test_export_contains_session_data(
-        self, client: AsyncClient, conference: Conference,
-        admin_token: str, modules, sessions_with_papers, papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
+        papers,
     ):
         resp = await client.get(
             f"/api/v1/conferences/{conference.id}/program/sessions/export",
@@ -699,8 +838,12 @@ class TestSessionsExport:
 
     @pytest.mark.asyncio
     async def test_export_has_content_disposition(
-        self, client: AsyncClient, conference: Conference,
-        admin_token: str, modules, sessions_with_papers,
+        self,
+        client: AsyncClient,
+        conference: Conference,
+        admin_token: str,
+        modules,
+        sessions_with_papers,
     ):
         resp = await client.get(
             f"/api/v1/conferences/{conference.id}/program/sessions/export",

@@ -20,7 +20,6 @@ from app.models.volunteer import Volunteer
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 from tests.conftest import auth_headers
 
-
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
@@ -42,7 +41,9 @@ def _url(conference_id: uuid.UUID, path: str = "") -> str:
 
 @pytest_asyncio.fixture()
 async def volunteers_module(db_session: AsyncSession) -> Module:
-    m = Module(id=uuid.uuid4(), name="Volunteers", code="volunteers", description="Volunteer management", is_active=True)
+    m = Module(
+        id=uuid.uuid4(), name="Volunteers", code="volunteers", description="Volunteer management", is_active=True
+    )
     db_session.add(m)
     await db_session.commit()
     return m
@@ -99,7 +100,9 @@ async def time_slot(db_session: AsyncSession, tenant: Tenant, program_day: Progr
 
 
 @pytest_asyncio.fixture()
-async def track(db_session: AsyncSession, tenant: Tenant, conference: Conference, program_day: ProgramDay) -> ProgramTrack:
+async def track(
+    db_session: AsyncSession, tenant: Tenant, conference: Conference, program_day: ProgramDay
+) -> ProgramTrack:
     t = ProgramTrack(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -708,7 +711,12 @@ class TestVolunteerColor:
         tenant_with_vol_module: Tenant,
     ):
         v = Volunteer(
-            id=uuid.uuid4(), tenant_id=tenant.id, email="nope@test.com", first_name="X", last_name="Y", status="approved"
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            email="nope@test.com",
+            first_name="X",
+            last_name="Y",
+            status="approved",
         )
         db_session.add(v)
         await db_session.commit()
@@ -920,9 +928,7 @@ class TestPdfExport:
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):
-        resp = await client.get(
-            _url(conference.id, "/volunteer-schedules-pdf"), headers=auth_headers(admin_token)
-        )
+        resp = await client.get(_url(conference.id, "/volunteer-schedules-pdf"), headers=auth_headers(admin_token))
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "application/zip"
         # ZIP magic bytes

@@ -5,9 +5,8 @@ import uuid
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.cfp import CFPApplicant, CFPPaper, CallForPapers
+from app.models.cfp import CallForPapers, CFPApplicant, CFPPaper
 from app.models.conference import Conference
-from app.models.settings import SessionType, SponsorPackage
 from app.models.sponsor import Sponsor
 from app.models.tenant import Tenant
 from app.models.user import User

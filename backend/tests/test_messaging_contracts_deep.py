@@ -47,7 +47,6 @@ from app.models.volunteer import Volunteer
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 from tests.conftest import _make_token, auth_headers
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -144,7 +143,7 @@ async def applicant(db_session: AsyncSession, tenant: Tenant) -> CFPApplicant:
         last_name="Wonderland",
         email=f"alice-{uuid.uuid4().hex[:8]}@example.com",
         password_hash=hash_password("Password123!"),
-        email_verified_at=datetime.datetime.now(datetime.timezone.utc),
+        email_verified_at=datetime.datetime.now(datetime.UTC),
     )
     db_session.add(a)
     await db_session.commit()
@@ -160,7 +159,7 @@ async def applicant2(db_session: AsyncSession, tenant: Tenant) -> CFPApplicant:
         last_name="Builder",
         email=f"bob-{uuid.uuid4().hex[:8]}@example.com",
         password_hash=hash_password("Password123!"),
-        email_verified_at=datetime.datetime.now(datetime.timezone.utc),
+        email_verified_at=datetime.datetime.now(datetime.UTC),
     )
     db_session.add(a)
     await db_session.commit()

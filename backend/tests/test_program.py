@@ -20,9 +20,8 @@ from app.models.cfp import CallForPapers, CFPApplicant, CFPPaper
 from app.models.conference import Conference
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
-from app.models.user import User, UserRole
+from app.models.user import User
 from tests.conftest import auth_headers
-
 
 # ── Fixtures ───────────────────────────────────────────────────────────
 
@@ -244,8 +243,13 @@ async def test_create_slot_with_is_session_free(
     """Create a slot with is_session_free=True and verify it is returned."""
     day = await _seed_day(client, conference.id, program_module_token)
     slot = await _seed_slot(
-        client, conference.id, uuid.UUID(day["id"]), program_module_token,
-        start="12:00:00", end="13:00:00", is_session_free=True,
+        client,
+        conference.id,
+        uuid.UUID(day["id"]),
+        program_module_token,
+        start="12:00:00",
+        end="13:00:00",
+        is_session_free=True,
     )
     assert slot["is_session_free"] is True
 
@@ -261,7 +265,10 @@ async def test_create_slot_default_is_session_free_false(
     """Create a normal slot and verify is_session_free defaults to False."""
     day = await _seed_day(client, conference.id, program_module_token)
     slot = await _seed_slot(
-        client, conference.id, uuid.UUID(day["id"]), program_module_token,
+        client,
+        conference.id,
+        uuid.UUID(day["id"]),
+        program_module_token,
     )
     assert slot["is_session_free"] is False
 
@@ -277,7 +284,10 @@ async def test_update_slot_is_session_free(
     """Toggle is_session_free via update."""
     day = await _seed_day(client, conference.id, program_module_token)
     slot = await _seed_slot(
-        client, conference.id, uuid.UUID(day["id"]), program_module_token,
+        client,
+        conference.id,
+        uuid.UUID(day["id"]),
+        program_module_token,
     )
     assert slot["is_session_free"] is False
 
@@ -311,7 +321,10 @@ async def test_delete_slot(
     """Delete a time slot."""
     day = await _seed_day(client, conference.id, program_module_token)
     slot = await _seed_slot(
-        client, conference.id, uuid.UUID(day["id"]), program_module_token,
+        client,
+        conference.id,
+        uuid.UUID(day["id"]),
+        program_module_token,
     )
     resp = await client.delete(
         _slot_url(conference.id, uuid.UUID(slot["id"])),
@@ -334,8 +347,11 @@ async def test_create_and_list_tracks(
     """Create a track and list it."""
     day = await _seed_day(client, conference.id, program_module_token)
     track = await _seed_track(
-        client, conference.id, program_module_token,
-        name="Main Hall", day_id=uuid.UUID(day["id"]),
+        client,
+        conference.id,
+        program_module_token,
+        name="Main Hall",
+        day_id=uuid.UUID(day["id"]),
     )
     assert track["name"] == "Main Hall"
 
@@ -358,7 +374,9 @@ async def test_update_track(
     """Update a track's name."""
     day = await _seed_day(client, conference.id, program_module_token)
     track = await _seed_track(
-        client, conference.id, program_module_token,
+        client,
+        conference.id,
+        program_module_token,
         day_id=uuid.UUID(day["id"]),
     )
     resp = await client.put(
@@ -381,7 +399,9 @@ async def test_delete_track(
     """Delete a track."""
     day = await _seed_day(client, conference.id, program_module_token)
     track = await _seed_track(
-        client, conference.id, program_module_token,
+        client,
+        conference.id,
+        program_module_token,
         day_id=uuid.UUID(day["id"]),
     )
     resp = await client.delete(
@@ -675,12 +695,22 @@ async def test_grid_returns_is_session_free_and_allow_in_session_free(
 
     # Create one regular slot and one session-free (break) slot
     slot_regular = await _seed_slot(
-        client, conference.id, day_id, program_module_token,
-        start="09:00:00", end="09:30:00", is_session_free=False,
+        client,
+        conference.id,
+        day_id,
+        program_module_token,
+        start="09:00:00",
+        end="09:30:00",
+        is_session_free=False,
     )
     slot_break = await _seed_slot(
-        client, conference.id, day_id, program_module_token,
-        start="10:00:00", end="10:30:00", is_session_free=True,
+        client,
+        conference.id,
+        day_id,
+        program_module_token,
+        start="10:00:00",
+        end="10:30:00",
+        is_session_free=True,
     )
     track = await _seed_track(client, conference.id, program_module_token, day_id=day_id)
 

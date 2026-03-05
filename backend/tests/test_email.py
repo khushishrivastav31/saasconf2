@@ -6,9 +6,7 @@ os.environ.setdefault(
     "DATABASE_URL",
     "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test",
 )
-os.environ.setdefault(
-    "JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars"
-)
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
@@ -25,12 +23,11 @@ from app.core.email import (
 )
 from app.core.email_templates import (
     RenderedEmail,
-    replace_placeholders,
-    build_verification_context,
     build_cospeaker_context,
     build_password_reset_context,
+    build_verification_context,
+    replace_placeholders,
 )
-
 
 # ---------------------------------------------------------------------------
 # _get_resend tests
@@ -60,7 +57,8 @@ class TestGetResend:
 
             with patch.dict("sys.modules", {"resend": MagicMock()}):
                 import sys
-                mock_resend = sys.modules["resend"]
+
+                sys.modules["resend"]
 
                 with patch("app.core.email._resend_client", None):
                     # This will import resend and set the api_key
@@ -127,14 +125,13 @@ class TestSendEmail:
 
         email_module._resend_client = None
 
-        with caplog.at_level(logging.INFO):
-            with patch("app.core.email._get_resend", return_value=None):
-                result = await send_email(
-                    to="test@example.com",
-                    subject="Test Email",
-                    html="<p>Hello</p>",
-                    text="Hello",
-                )
+        with caplog.at_level(logging.INFO), patch("app.core.email._get_resend", return_value=None):
+            result = await send_email(
+                to="test@example.com",
+                subject="Test Email",
+                html="<p>Hello</p>",
+                text="Hello",
+            )
 
         assert result is True
         assert "To: test@example.com" in caplog.text
@@ -171,17 +168,19 @@ class TestSendEmail:
         mock_resend = MagicMock()
         mock_resend.Emails.send.return_value = {"id": "email-123"}
 
-        with patch("app.core.email._get_resend", return_value=mock_resend):
-            with patch("app.core.email.get_settings") as mock_settings:
-                mock_settings.return_value.RESEND_FROM_NAME = "SaaSConf"
-                mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@saasconf.com"
+        with (
+            patch("app.core.email._get_resend", return_value=mock_resend),
+            patch("app.core.email.get_settings") as mock_settings,
+        ):
+            mock_settings.return_value.RESEND_FROM_NAME = "SaaSConf"
+            mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@saasconf.com"
 
-                result = await send_email(
-                    to="recipient@example.com",
-                    subject="Test Subject",
-                    html="<p>Test HTML</p>",
-                    text="Test text",
-                )
+            result = await send_email(
+                to="recipient@example.com",
+                subject="Test Subject",
+                html="<p>Test HTML</p>",
+                text="Test text",
+            )
 
         assert result is True
         mock_resend.Emails.send.assert_called_once()
@@ -195,16 +194,18 @@ class TestSendEmail:
         mock_resend = MagicMock()
         mock_resend.Emails.send.side_effect = Exception("API error")
 
-        with patch("app.core.email._get_resend", return_value=mock_resend):
-            with patch("app.core.email.get_settings") as mock_settings:
-                mock_settings.return_value.RESEND_FROM_NAME = "SaaSConf"
-                mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@saasconf.com"
+        with (
+            patch("app.core.email._get_resend", return_value=mock_resend),
+            patch("app.core.email.get_settings") as mock_settings,
+        ):
+            mock_settings.return_value.RESEND_FROM_NAME = "SaaSConf"
+            mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@saasconf.com"
 
-                result = await send_email(
-                    to="recipient@example.com",
-                    subject="Test",
-                    html="<p>Test</p>",
-                )
+            result = await send_email(
+                to="recipient@example.com",
+                subject="Test",
+                html="<p>Test</p>",
+            )
 
         assert result is False
 
@@ -226,11 +227,14 @@ class TestReplacePlaceholders:
     def test_replace_multiple_placeholders(self):
         """Replaces multiple placeholders."""
         text = "[First Name] [Last Name] from [Company Name]"
-        result = replace_placeholders(text, {
-            "First Name": "Jane",
-            "Last Name": "Doe",
-            "Company Name": "Acme Corp",
-        })
+        result = replace_placeholders(
+            text,
+            {
+                "First Name": "Jane",
+                "Last Name": "Doe",
+                "Company Name": "Acme Corp",
+            },
+        )
         assert result == "Jane Doe from Acme Corp"
 
     def test_replace_same_placeholder_multiple_times(self):
@@ -335,19 +339,21 @@ class TestSendVerificationEmail:
             body_text="Click to verify",
         )
 
-        with patch("app.core.email.render_email", return_value=mock_rendered):
-            with patch("app.core.email.send_email", return_value=True) as mock_send:
-                with patch("app.core.email.get_settings") as mock_settings:
-                    mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@test.com"
+        with (
+            patch("app.core.email.render_email", return_value=mock_rendered),
+            patch("app.core.email.send_email", return_value=True) as mock_send,
+            patch("app.core.email.get_settings") as mock_settings,
+        ):
+            mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@test.com"
 
-                    result = await send_verification_email(
-                        mock_db,
-                        email="user@example.com",
-                        token="token123",
-                        tenant_slug="testconf",
-                        first_name="John",
-                        last_name="Doe",
-                    )
+            result = await send_verification_email(
+                mock_db,
+                email="user@example.com",
+                token="token123",
+                tenant_slug="testconf",
+                first_name="John",
+                last_name="Doe",
+            )
 
         assert result is True
         mock_send.assert_called_once()
@@ -380,7 +386,7 @@ class TestReplacePlaceholdersXSS:
         text = "Speaker: [Name]"
         result = replace_placeholders(
             text,
-            {"Name": '<img src=x onerror=alert(1)>'},
+            {"Name": "<img src=x onerror=alert(1)>"},
             is_html=True,
         )
         assert "<img" not in result
@@ -403,7 +409,7 @@ class TestReplacePlaceholdersXSS:
         text = "Title: [Paper Title]"
         result = replace_placeholders(
             text,
-            {"Paper Title": '<script>alert(1)</script>'},
+            {"Paper Title": "<script>alert(1)</script>"},
             is_html=False,
         )
         assert "<script>alert(1)</script>" in result
@@ -441,21 +447,23 @@ class TestSendCospeakerInvitationEmail:
             body_text="Jane invited you",
         )
 
-        with patch("app.core.email._is_email_enabled_for_conference", return_value=True):
-            with patch("app.core.email.render_email", return_value=mock_rendered):
-                with patch("app.core.email.send_email", return_value=True) as mock_send:
-                    with patch("app.core.email.get_settings") as mock_settings:
-                        mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@test.com"
+        with (
+            patch("app.core.email._is_email_enabled_for_conference", return_value=True),
+            patch("app.core.email.render_email", return_value=mock_rendered),
+            patch("app.core.email.send_email", return_value=True) as mock_send,
+            patch("app.core.email.get_settings") as mock_settings,
+        ):
+            mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@test.com"
 
-                        result = await send_cospeaker_invitation_email(
-                            mock_db,
-                            email="cospeaker@example.com",
-                            paper_title="Machine Learning 101",
-                            conference_id=uuid4(),
-                            conference_name="TechConf",
-                            main_speaker_name="Jane Smith",
-                            tenant_slug="techconf",
-                        )
+            result = await send_cospeaker_invitation_email(
+                mock_db,
+                email="cospeaker@example.com",
+                paper_title="Machine Learning 101",
+                conference_id=uuid4(),
+                conference_name="TechConf",
+                main_speaker_name="Jane Smith",
+                tenant_slug="techconf",
+            )
 
         assert result is True
         mock_send.assert_called_once()
@@ -476,18 +484,20 @@ class TestSendPasswordResetEmail:
             body_text="Click to reset",
         )
 
-        with patch("app.core.email.render_email", return_value=mock_rendered):
-            with patch("app.core.email.send_email", return_value=True) as mock_send:
-                with patch("app.core.email.get_settings") as mock_settings:
-                    mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@test.com"
+        with (
+            patch("app.core.email.render_email", return_value=mock_rendered),
+            patch("app.core.email.send_email", return_value=True) as mock_send,
+            patch("app.core.email.get_settings") as mock_settings,
+        ):
+            mock_settings.return_value.RESEND_FROM_EMAIL = "noreply@test.com"
 
-                    result = await send_password_reset_email(
-                        mock_db,
-                        email="user@example.com",
-                        token="reset-token",
-                        conference_id=uuid4(),
-                        tenant_slug="testconf",
-                    )
+            result = await send_password_reset_email(
+                mock_db,
+                email="user@example.com",
+                token="reset-token",
+                conference_id=uuid4(),
+                tenant_slug="testconf",
+            )
 
         assert result is True
         mock_send.assert_called_once()
@@ -632,7 +642,7 @@ class TestSendDirectMessageEmailXSS:
                 first_name="Alice",
                 subject="Test",
                 body_html="<p>safe body</p>",
-                conference_name='<img src=x onerror=alert(1)>',
+                conference_name="<img src=x onerror=alert(1)>",
                 sender_name="Admin",
             )
 
@@ -652,7 +662,7 @@ class TestSendDirectMessageEmailXSS:
                 subject="Test",
                 body_html="<p>safe body</p>",
                 conference_name="Conf",
-                sender_name='<svg onload=alert(document.cookie)>',
+                sender_name="<svg onload=alert(document.cookie)>",
             )
 
         html_body = mock_send.call_args[0][2]
@@ -738,18 +748,20 @@ class TestSendNewMessageNotification:
             body_text="You have a new message",
         )
 
-        with patch("app.core.email._is_email_enabled_for_conference", return_value=True):
-            with patch("app.core.email.render_email", return_value=mock_rendered):
-                with patch("app.core.email.send_email", return_value=True) as mock_send:
-                    result = await send_new_message_notification(
-                        mock_db,
-                        email="applicant@example.com",
-                        first_name="Alice",
-                        conference_id=uuid4(),
-                        conference_name="PyCon",
-                        message_subject="Paper Review",
-                        messages_link="https://portal.example.com/messages/123",
-                    )
+        with (
+            patch("app.core.email._is_email_enabled_for_conference", return_value=True),
+            patch("app.core.email.render_email", return_value=mock_rendered),
+            patch("app.core.email.send_email", return_value=True) as mock_send,
+        ):
+            result = await send_new_message_notification(
+                mock_db,
+                email="applicant@example.com",
+                first_name="Alice",
+                conference_id=uuid4(),
+                conference_name="PyCon",
+                message_subject="Paper Review",
+                messages_link="https://portal.example.com/messages/123",
+            )
 
         assert result is True
         mock_send.assert_called_once()
@@ -782,18 +794,20 @@ class TestSendNewMessageNotification:
         mock_db = AsyncMock()
         conf_id = uuid4()
 
-        with patch("app.core.email._is_email_enabled_for_conference", return_value=True):
-            with patch("app.core.email.render_email", return_value=RenderedEmail("s", "<p>h</p>", "t")) as mock_render:
-                with patch("app.core.email.send_email", return_value=True):
-                    await send_new_message_notification(
-                        mock_db,
-                        email="a@example.com",
-                        first_name="Bob",
-                        conference_id=conf_id,
-                        conference_name="TestConf",
-                        message_subject="Review Update",
-                        messages_link="https://example.com/msg",
-                    )
+        with (
+            patch("app.core.email._is_email_enabled_for_conference", return_value=True),
+            patch("app.core.email.render_email", return_value=RenderedEmail("s", "<p>h</p>", "t")) as mock_render,
+            patch("app.core.email.send_email", return_value=True),
+        ):
+            await send_new_message_notification(
+                mock_db,
+                email="a@example.com",
+                first_name="Bob",
+                conference_id=conf_id,
+                conference_name="TestConf",
+                message_subject="Review Update",
+                messages_link="https://example.com/msg",
+            )
 
         context = mock_render.call_args[0][2]
         assert context["First Name"] == "Bob"

@@ -6,20 +6,16 @@ os.environ.setdefault(
     "DATABASE_URL",
     "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test",
 )
-os.environ.setdefault(
-    "JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars"
-)
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from app.core.utils import utcnow
-
-import pytest
 import jwt
+import pytest
 
 from app.config import get_settings
 from app.core.applicant_security import (
@@ -29,6 +25,7 @@ from app.core.applicant_security import (
     generate_email_verification_token,
 )
 from app.core.exceptions import AuthenticationError
+from app.core.utils import utcnow
 
 settings = get_settings()
 
@@ -59,9 +56,7 @@ class TestCreateApplicantAccessToken:
         tenant_id = uuid4()
 
         token = create_applicant_access_token(applicant_id, tenant_id)
-        payload = jwt.decode(
-            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         assert payload["sub"] == str(applicant_id)
         assert payload["tenant_id"] == str(tenant_id)
@@ -74,15 +69,13 @@ class TestCreateApplicantAccessToken:
 
         before = utcnow()
         token = create_applicant_access_token(applicant_id, tenant_id)
-        payload = jwt.decode(
-            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         assert "exp" in payload
         assert "iat" in payload
 
         # Verify expiry is roughly ACCESS_TOKEN_EXPIRE_MINUTES from now
-        exp_dt = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+        exp_dt = datetime.fromtimestamp(payload["exp"], tz=UTC)
         expected = before + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         assert abs((exp_dt - expected).total_seconds()) < 5
 
@@ -125,9 +118,7 @@ class TestCreateApplicantRefreshToken:
         applicant_id = uuid4()
         raw_token, _, _ = create_applicant_refresh_token(applicant_id)
 
-        payload = jwt.decode(
-            raw_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(raw_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         assert payload["sub"] == str(applicant_id)
         assert payload["type"] == "applicant_refresh"
 
@@ -150,9 +141,7 @@ class TestCreateApplicantRefreshToken:
     def test_contains_jti(self):
         """Token contains a jti claim."""
         raw_token, _, _ = create_applicant_refresh_token(uuid4())
-        payload = jwt.decode(
-            raw_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(raw_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         assert "jti" in payload
         assert len(payload["jti"]) > 0
@@ -163,12 +152,8 @@ class TestCreateApplicantRefreshToken:
         raw1, _, _ = create_applicant_refresh_token(applicant_id)
         raw2, _, _ = create_applicant_refresh_token(applicant_id)
 
-        payload1 = jwt.decode(
-            raw1, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
-        payload2 = jwt.decode(
-            raw2, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload1 = jwt.decode(raw1, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload2 = jwt.decode(raw2, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         assert payload1["jti"] != payload2["jti"]
 
@@ -236,9 +221,7 @@ class TestDecodeApplicantToken:
             "iat": utcnow() - timedelta(minutes=30),
             "type": "applicant_access",
         }
-        token = jwt.encode(
-            payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
-        )
+        token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
         with pytest.raises(AuthenticationError, match="Invalid or expired token"):
             decode_applicant_token(token)
@@ -309,12 +292,9 @@ class TestGenerateEmailVerificationToken:
         for _ in range(10):
             raw_token, _ = generate_email_verification_token()
             for ch in raw_token:
-                assert ch in (
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    "abcdefghijklmnopqrstuvwxyz"
-                    "0123456789"
-                    "-_"
-                ), f"Unexpected character {ch!r}"
+                assert ch in ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"), (
+                    f"Unexpected character {ch!r}"
+                )
 
     def test_token_hash_matches_sha256(self):
         """Token hash is SHA256 of raw token."""
@@ -388,12 +368,8 @@ class TestApplicantSecurityIntegration:
         applicant_token = create_applicant_access_token(user_id, tenant_id)
 
         # Decode both to check types
-        user_payload = jwt.decode(
-            user_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
-        applicant_payload = jwt.decode(
-            applicant_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
+        user_payload = jwt.decode(user_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        applicant_payload = jwt.decode(applicant_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         assert user_payload["type"] == "access"
         assert applicant_payload["type"] == "applicant_access"
@@ -412,7 +388,7 @@ class TestApplicantSecurityIntegration:
         assert access_payload["tenant_id"] == str(tenant_id)
 
         # Create refresh token
-        refresh_token, token_hash, expire = create_applicant_refresh_token(applicant_id)
+        refresh_token, token_hash, _expire = create_applicant_refresh_token(applicant_id)
 
         # Verify refresh token
         refresh_payload = decode_applicant_token(refresh_token, token_type="applicant_refresh")

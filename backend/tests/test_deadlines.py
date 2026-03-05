@@ -1,7 +1,7 @@
 """Tests for deadline management endpoints."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
@@ -41,7 +41,7 @@ async def _seed_deadline(
         conference_id=conference.id,
         title=title,
         description=description,
-        due_date=due_date or (datetime.now(timezone.utc) + timedelta(days=14)),
+        due_date=due_date or (datetime.now(UTC) + timedelta(days=14)),
         is_active=is_active,
         created_by=user.id,
     )
@@ -109,7 +109,7 @@ class TestCreateDeadline:
         conference: Conference,
         tenant_admin_token: str,
     ):
-        due = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+        due = (datetime.now(UTC) + timedelta(days=30)).isoformat()
         resp = await client.post(
             _url(conference.id),
             headers=auth_headers(tenant_admin_token),
@@ -130,7 +130,7 @@ class TestCreateDeadline:
         conference: Conference,
         tenant_admin_token: str,
     ):
-        due = (datetime.now(timezone.utc) + timedelta(days=10)).isoformat()
+        due = (datetime.now(UTC) + timedelta(days=10)).isoformat()
         resp = await client.post(
             _url(conference.id),
             headers=auth_headers(tenant_admin_token),
@@ -147,7 +147,7 @@ class TestCreateDeadline:
         conference: Conference,
         tenant_admin_token: str,
     ):
-        due = (datetime.now(timezone.utc) + timedelta(days=10)).isoformat()
+        due = (datetime.now(UTC) + timedelta(days=10)).isoformat()
         resp = await client.post(
             _url(conference.id),
             headers=auth_headers(tenant_admin_token),
@@ -174,7 +174,7 @@ class TestCreateDeadline:
         conference: Conference,
         regular_user_token: str,
     ):
-        due = (datetime.now(timezone.utc) + timedelta(days=10)).isoformat()
+        due = (datetime.now(UTC) + timedelta(days=10)).isoformat()
         resp = await client.post(
             _url(conference.id),
             headers=auth_headers(regular_user_token),
@@ -221,7 +221,7 @@ class TestUpdateDeadline:
             tenant_id=tenant.id,
             conference_id=conference.id,
             title="Reminder Test",
-            due_date=datetime.now(timezone.utc) - timedelta(days=1),
+            due_date=datetime.now(UTC) - timedelta(days=1),
             is_active=True,
             reminder_7d_sent=True,
             reminder_1d_sent=True,
@@ -232,7 +232,7 @@ class TestUpdateDeadline:
         await db_session.commit()
 
         # Push due date far into the future
-        new_due = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+        new_due = (datetime.now(UTC) + timedelta(days=30)).isoformat()
         resp = await client.put(
             _url(conference.id, deadline.id),
             headers=auth_headers(tenant_admin_token),
@@ -292,7 +292,11 @@ class TestToggleDeadline:
         tenant_admin_token: str,
     ):
         deadline = await _seed_deadline(
-            db_session, tenant, conference, tenant_admin_user, is_active=False,
+            db_session,
+            tenant,
+            conference,
+            tenant_admin_user,
+            is_active=False,
         )
 
         resp = await client.patch(

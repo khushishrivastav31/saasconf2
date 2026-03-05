@@ -44,7 +44,6 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import _make_token, auth_headers
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -154,9 +153,7 @@ async def cfp(db_session: AsyncSession, tenant: Tenant, conference: Conference) 
 
 
 @pytest_asyncio.fixture()
-async def session_type(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> SessionType:
+async def session_type(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> SessionType:
     st = SessionType(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
@@ -1401,9 +1398,7 @@ class TestCFPCRUDDeep:
         assert resp1.json()["total"] >= 1
 
         # Filter by conference_id
-        resp2 = await client.get(
-            f"/api/v1/cfp/?conference_id={conference.id}", headers=headers
-        )
+        resp2 = await client.get(f"/api/v1/cfp/?conference_id={conference.id}", headers=headers)
         assert resp2.status_code == 200
         assert resp2.json()["total"] >= 1
 

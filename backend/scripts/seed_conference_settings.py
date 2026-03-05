@@ -75,9 +75,24 @@ DEFAULT_REVIEW_CRITERIA = [
         "description": "Evaluate the quality and depth of the proposed content",
         "display_order": 1,
         "questions": [
-            {"text": "Is the topic relevant to the conference theme?", "help_text": "Consider how well the topic aligns with the conference tracks and audience interests.", "scale_name": "1-5 Rating", "display_order": 1},
-            {"text": "Is the content original or does it bring a fresh perspective?", "help_text": "Look for unique insights, new approaches, or innovative ideas.", "scale_name": "1-5 Rating", "display_order": 2},
-            {"text": "Is the abstract clear and well-structured?", "help_text": "The abstract should clearly communicate what attendees will learn.", "scale_name": "1-5 Rating", "display_order": 3},
+            {
+                "text": "Is the topic relevant to the conference theme?",
+                "help_text": "Consider how well the topic aligns with the conference tracks and audience interests.",
+                "scale_name": "1-5 Rating",
+                "display_order": 1,
+            },
+            {
+                "text": "Is the content original or does it bring a fresh perspective?",
+                "help_text": "Look for unique insights, new approaches, or innovative ideas.",
+                "scale_name": "1-5 Rating",
+                "display_order": 2,
+            },
+            {
+                "text": "Is the abstract clear and well-structured?",
+                "help_text": "The abstract should clearly communicate what attendees will learn.",
+                "scale_name": "1-5 Rating",
+                "display_order": 3,
+            },
         ],
     },
     {
@@ -85,8 +100,18 @@ DEFAULT_REVIEW_CRITERIA = [
         "description": "Assess the speaker's ability to deliver this content",
         "display_order": 2,
         "questions": [
-            {"text": "Does the speaker have relevant experience with this topic?", "help_text": "Consider their background, previous talks, and expertise.", "scale_name": "1-5 Rating", "display_order": 1},
-            {"text": "Has the speaker demonstrated good presentation skills?", "help_text": "Look at videos, previous conference feedback, or speaking history.", "scale_name": "1-5 Rating", "display_order": 2},
+            {
+                "text": "Does the speaker have relevant experience with this topic?",
+                "help_text": "Consider their background, previous talks, and expertise.",
+                "scale_name": "1-5 Rating",
+                "display_order": 1,
+            },
+            {
+                "text": "Has the speaker demonstrated good presentation skills?",
+                "help_text": "Look at videos, previous conference feedback, or speaking history.",
+                "scale_name": "1-5 Rating",
+                "display_order": 2,
+            },
         ],
     },
     {
@@ -94,7 +119,12 @@ DEFAULT_REVIEW_CRITERIA = [
         "description": "Your final assessment of this submission",
         "display_order": 3,
         "questions": [
-            {"text": "Would you recommend accepting this submission?", "help_text": "Consider all factors: content quality, speaker ability, audience value.", "scale_name": "Accept/Reject", "display_order": 1},
+            {
+                "text": "Would you recommend accepting this submission?",
+                "help_text": "Consider all factors: content quality, speaker ability, audience value.",
+                "scale_name": "Accept/Reject",
+                "display_order": 1,
+            },
         ],
     },
 ]
@@ -134,48 +164,97 @@ async def main():
         added = 0
         for role in DEFAULT_VOLUNTEER_ROLES:
             if role["name"] not in existing_names:
-                db.add(VolunteerRole(tenant_id=tenant_id, conference_id=conference_id, name=role["name"], description=role["description"]))
+                db.add(
+                    VolunteerRole(
+                        tenant_id=tenant_id,
+                        conference_id=conference_id,
+                        name=role["name"],
+                        description=role["description"],
+                    )
+                )
                 added += 1
         print(f"Volunteer Roles: {added} added, {len(existing_names)} already existed")
 
         # Committee Roles
-        existing = await db.execute(select(CFPCommitteeRole.name).where(CFPCommitteeRole.conference_id == conference_id))
+        existing = await db.execute(
+            select(CFPCommitteeRole.name).where(CFPCommitteeRole.conference_id == conference_id)
+        )
         existing_names = {r[0] for r in existing.fetchall()}
         added = 0
         for role in DEFAULT_COMMITTEE_ROLES:
             if role["name"] not in existing_names:
-                db.add(CFPCommitteeRole(tenant_id=tenant_id, conference_id=conference_id, name=role["name"], description=role["description"]))
+                db.add(
+                    CFPCommitteeRole(
+                        tenant_id=tenant_id,
+                        conference_id=conference_id,
+                        name=role["name"],
+                        description=role["description"],
+                    )
+                )
                 added += 1
         print(f"Committee Roles: {added} added, {len(existing_names)} already existed")
 
         # Score Scales
-        existing = await db.execute(select(ReviewScoreScale.name, ReviewScoreScale.id).where(ReviewScoreScale.conference_id == conference_id))
+        existing = await db.execute(
+            select(ReviewScoreScale.name, ReviewScoreScale.id).where(ReviewScoreScale.conference_id == conference_id)
+        )
         existing_scales = {r[0]: r[1] for r in existing.fetchall()}
         scale_by_name = dict(existing_scales)
         added = 0
         for scale_data in DEFAULT_SCORE_SCALES:
             if scale_data["name"] not in existing_scales:
-                scale = ReviewScoreScale(tenant_id=tenant_id, conference_id=conference_id, name=scale_data["name"], scale_type=scale_data["scale_type"])
+                scale = ReviewScoreScale(
+                    tenant_id=tenant_id,
+                    conference_id=conference_id,
+                    name=scale_data["name"],
+                    scale_type=scale_data["scale_type"],
+                )
                 db.add(scale)
                 await db.flush()
                 scale_by_name[scale_data["name"]] = scale.id
                 for opt in scale_data["options"]:
-                    db.add(ReviewScaleOption(scale_id=scale.id, label=opt["label"], numeric_value=opt.get("numeric_value"), is_unsure=opt.get("is_unsure", False), display_order=opt["display_order"]))
+                    db.add(
+                        ReviewScaleOption(
+                            scale_id=scale.id,
+                            label=opt["label"],
+                            numeric_value=opt.get("numeric_value"),
+                            is_unsure=opt.get("is_unsure", False),
+                            display_order=opt["display_order"],
+                        )
+                    )
                 added += 1
         print(f"Score Scales: {added} added, {len(existing_scales)} already existed")
 
         # Review Criteria
-        existing = await db.execute(select(ReviewCriterion.title, ReviewCriterion.id).where(ReviewCriterion.conference_id == conference_id))
+        existing = await db.execute(
+            select(ReviewCriterion.title, ReviewCriterion.id).where(ReviewCriterion.conference_id == conference_id)
+        )
         existing_criteria = {r[0]: r[1] for r in existing.fetchall()}
         added = 0
         for crit_data in DEFAULT_REVIEW_CRITERIA:
             if crit_data["title"] not in existing_criteria:
-                crit = ReviewCriterion(tenant_id=tenant_id, conference_id=conference_id, title=crit_data["title"], description=crit_data["description"], display_order=crit_data["display_order"])
+                crit = ReviewCriterion(
+                    tenant_id=tenant_id,
+                    conference_id=conference_id,
+                    title=crit_data["title"],
+                    description=crit_data["description"],
+                    display_order=crit_data["display_order"],
+                )
                 db.add(crit)
                 await db.flush()
                 for q in crit_data["questions"]:
                     scale_id = scale_by_name.get(q.get("scale_name"))
-                    db.add(ReviewQuestion(criterion_id=crit.id, tenant_id=tenant_id, conference_id=conference_id, text=q["text"], help_text=q.get("help_text"), score_scale_id=scale_id, display_order=q["display_order"]))
+                    db.add(
+                        ReviewQuestion(
+                            criterion_id=crit.id,
+                            tenant_id=tenant_id,
+                            conference_id=conference_id,
+                            text=q["text"],
+                            help_text=q.get("help_text"),
+                            score_scale_id=scale_id,
+                            display_order=q["display_order"],
+                        )
+                    )
                 added += 1
         print(f"Review Criteria: {added} added, {len(existing_criteria)} already existed")
 

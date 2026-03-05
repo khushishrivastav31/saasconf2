@@ -31,7 +31,6 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import auth_headers
 
-
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
@@ -477,9 +476,7 @@ class TestGenerateContract:
     ) -> None:
         """Regenerating with force=true overwrites the contract and bumps the version."""
         url = _contract_url(conference.id, sample_sponsor.id, "generate")
-        response = await client.post(
-            url, params={"force": "true"}, headers=auth_headers(admin_token)
-        )
+        response = await client.post(url, params={"force": "true"}, headers=auth_headers(admin_token))
 
         assert response.status_code == 201
         data = response.json()
@@ -1204,9 +1201,7 @@ class TestContractAuth:
             else:
                 continue
 
-            assert response.status_code == 401, (
-                f"{method} {url} returned {response.status_code}, expected 401"
-            )
+            assert response.status_code == 401, f"{method} {url} returned {response.status_code}, expected 401"
 
 
 # ═══════════════════════════════════════════════════════════════════════

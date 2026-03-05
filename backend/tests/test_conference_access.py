@@ -12,13 +12,12 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import check_conference_admin_access
+from app.core.security import create_access_token, hash_password
 from app.models.conference import Conference
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.models.user_conference_access import ConferenceAccessLevel, UserConferenceAccess
-from app.core.security import hash_password, create_access_token
 from tests.conftest import auth_headers
-
 
 BASE_URL = "/api/v1/user-conference-access"
 

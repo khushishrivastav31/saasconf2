@@ -15,7 +15,7 @@ import csv
 import re
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from html import unescape
 from pathlib import Path
 
@@ -138,7 +138,7 @@ async def main() -> None:
     async_session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     # Read CSV
-    with open(CSV_PATH, "r", encoding="utf-8") as f:
+    with open(CSV_PATH, encoding="utf-8") as f:
         reader = csv.DictReader(f, delimiter=";")
         rows = list(reader)
 
@@ -147,6 +147,7 @@ async def main() -> None:
     async with async_session_factory() as db:
         # Find conference — prefer one with program days; fall back to first
         from app.models.program import ProgramDay
+
         result = await db.execute(
             select(Conference)
             .outerjoin(ProgramDay, ProgramDay.conference_id == Conference.id)
@@ -193,9 +194,7 @@ async def main() -> None:
             print(f"Created CFP: {cfp.title} (ID: {cfp.id})")
 
         # ── Create session types ──────────────────────────────────────
-        result = await db.execute(
-            select(SessionType).where(SessionType.conference_id == conference_id)
-        )
+        result = await db.execute(select(SessionType).where(SessionType.conference_id == conference_id))
         existing_types = {st.slug: st for st in result.scalars().all()}
 
         session_type_by_csv_name: dict[str, SessionType] = {}
@@ -229,9 +228,7 @@ async def main() -> None:
         applicants_created_count = 0
 
         # Track existing applicant emails before we start
-        result = await db.execute(
-            select(CFPApplicant.email).where(CFPApplicant.tenant_id == tenant_id)
-        )
+        result = await db.execute(select(CFPApplicant.email).where(CFPApplicant.tenant_id == tenant_id))
         existing_emails = {r[0] for r in result.fetchall()}
 
         for row in rows:
@@ -292,7 +289,7 @@ async def main() -> None:
                 level=level,
                 learning_objectives=learning_objectives or None,
                 status="accepted",
-                submitted_at=datetime.now(timezone.utc),
+                submitted_at=datetime.now(UTC),
             )
             db.add(paper)
             await db.flush()
@@ -338,11 +335,11 @@ async def main() -> None:
 
         await db.commit()
 
-        print(f"\nDone!")
+        print("\nDone!")
         print(f"  Applicants (speakers) created: {applicants_created_count}")
         print(f"  Papers created: {papers_created}")
         print(f"  Co-speaker links created: {cospeakers_created}")
-        print(f"  All papers set to status: accepted")
+        print("  All papers set to status: accepted")
         print(f"  Default password for all speakers: {DEFAULT_PASSWORD}")
 
 

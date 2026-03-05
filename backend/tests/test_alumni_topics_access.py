@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.alumni import Alumni, AlumniSource
 from app.models.associations import ConferenceCFP
-from app.models.cfp import CFPTopic, CallForPapers
+from app.models.cfp import CallForPapers, CFPTopic
 from app.models.conference import Conference
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
@@ -440,7 +440,9 @@ class TestAlumniCSVImport:
     ) -> None:
         """Import a valid CSV with two rows."""
         url = f"{ALUMNI_URL.format(cid=conference.id)}/import"
-        csv_content = "email,first_name,last_name,company\nbob@test.com,Bob,Builder,BuildCo\ncarl@test.com,Carl,Sagan,NASA\n"
+        csv_content = (
+            "email,first_name,last_name,company\nbob@test.com,Bob,Builder,BuildCo\ncarl@test.com,Carl,Sagan,NASA\n"
+        )
         resp = await client.post(
             url,
             files={"file": ("alumni.csv", csv_content.encode(), "text/csv")},

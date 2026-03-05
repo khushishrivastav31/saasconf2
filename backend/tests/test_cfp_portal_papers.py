@@ -14,36 +14,36 @@ Covers the applicant-facing portal API surface:
 import os
 import uuid
 
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+asyncpg://saasconf:saasconf_dev_password@localhost:5432/saasconf_test"
+)
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-32-chars")
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
+
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from unittest.mock import AsyncMock, patch
 
 from app.core.applicant_security import create_applicant_access_token
 from app.core.security import hash_password
+from app.models.associations import ConferenceCFP
 from app.models.cfp import (
+    CallForPapers,
     CFPApplicant,
     CFPCommitteeMember,
     CFPPaper,
     CFPPaperAssignment,
-    CFPPaperCospeaker,
     CFPTopic,
-    CallForPapers,
-    CospeakerInvitationStatus,
     PaperStatus,
 )
-from app.models.associations import ConferenceCFP
 from app.models.conference import Conference
 from app.models.review import (
     PaperReview,
     ReviewCriterion,
-    ReviewFormSettings,
     ReviewQuestion,
     ReviewScaleOption,
     ReviewScoreScale,
@@ -103,9 +103,7 @@ def second_applicant_token(second_applicant: CFPApplicant, tenant: Tenant) -> st
 
 
 @pytest_asyncio.fixture()
-async def cfp(
-    db_session: AsyncSession, tenant: Tenant, conference: Conference
-) -> CallForPapers:
+async def cfp(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> CallForPapers:
     """Create a CFP linked to the test conference."""
     cfp_obj = CallForPapers(
         id=uuid.uuid4(),
