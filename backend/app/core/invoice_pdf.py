@@ -716,7 +716,9 @@ async def generate_invoice_pdf(
         # Financial (formatted using conference number format settings)
         "[SUBTOTAL]": format_amount(invoice.subtotal, settings) if invoice.subtotal else format_amount(0, settings),
         "[TAX_RATE]": f"{invoice.tax_rate:.2f}" if invoice.tax_rate else "0.00",
-        "[TAX_AMOUNT]": format_amount(invoice.tax_amount, settings) if invoice.tax_amount else format_amount(0, settings),
+        "[TAX_AMOUNT]": format_amount(invoice.tax_amount, settings)
+        if invoice.tax_amount
+        else format_amount(0, settings),
         "[TOTAL]": format_amount(invoice.total, settings) if invoice.total else format_amount(0, settings),
         # Currency
         "[CURRENCY]": primary_currency,
@@ -981,7 +983,9 @@ async def generate_invoice_pdf_from_data(
     html = _apply_placeholders(html, replacements)
 
     # Items table (special handling — preserves font context from template)
-    items_table_html = _render_items_table(invoice_data.get("line_items", []), currency=primary_currency, settings=settings)
+    items_table_html = _render_items_table(
+        invoice_data.get("line_items", []), currency=primary_currency, settings=settings
+    )
     html = _replace_items_placeholder(html, items_table_html)
 
     # Normalize TipTap output for PDF
