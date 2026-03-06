@@ -80,15 +80,19 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Tenant handbook updates for VAT rate management
-- **Changes**:
-  - Removed outdated "VAT Rate Periods" section (manual conference rates no longer exist)
-  - Updated "Currency & Tax" section with new features:
-    - Conference Tax Rate (auto-pulled from country rates)
-    - Country VAT/Tax Rates management (tenant-specific CRUD)
-    - EU Countries List configuration
-    - Dual currency support details with placeholder examples
-  - Updated "Invoice Details" section to describe automatic VAT calculation
-  - Updated Finance settings overview with comprehensive tax management features
-- **Files modified**: `frontend/src/pages/Handbook/handbookSections.tsx`
-- **Status**: ✅ Committed and pushed to main (514245e)
+- **Last completed**: VAT calculation test fixes
+- **Issue**: Backend tests failing after handbook update due to test fixture issues
+- **Fixes applied**:
+  1. Added `vat_auto_calculated` field to `build_invoice_response()` (was in model/schema but missing from API response)
+  2. Fixed test fixtures: added required `BillingProfile` for Registration objects (billing_profile_id NOT NULL)
+  3. Added missing invoice address fields (recipient_address_line1, recipient_city, recipient_postal_code)
+  4. Used tenant-specific VAT rates instead of global (tenant_id = tenant.id)
+  5. Removed `vat_rules: None` from test conference.settings (now uses DEFAULT_VAT_RULES)
+  6. Fixed tax field assertions to compare floats not strings (API returns 20.0 not "20.00")
+  7. Cleaned up unused imports in test_vat_calculation.py
+- **Files modified**:
+  - `backend/app/api/v1/invoices.py` — Added vat_auto_calculated to build_invoice_response
+  - `backend/tests/test_invoices.py` — Fixed 4 VAT test fixtures
+  - `backend/tests/test_vat_calculation.py` — Removed unused imports
+- **Tests**: 47 invoice + 31 invoice_settings = 78 tests passing, ruff clean, mypy clean
+- **Status**: ✅ Committed (6b3fdd1) and pushed to main
