@@ -80,32 +80,28 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: VAT rate management cleanup + dual currency support
-- **Feature 1** (Migration 115): Tenant-specific country VAT/tax rates with full CRUD operations
-  - Each tenant manages their own country rates (VAT, GST, Sales Tax, etc.)
-  - Location: Conference → Settings → Financial Settings → "Country VAT/Tax Rates"
-  - Full CRUD in `EuVatRatesReference.tsx`
-- **Feature 2** (Migration 116): Removed manual Conference VAT Rate management
-  - Conference tax rate now **auto-pulls** from Country VAT/Tax Rates based on conference country
-  - No manual add/edit/delete for conference rates
-  - Read-only display: "Current tax rate for [Country]: X.XX%" (green) or warning if country not in list (yellow)
-  - Simplified `VatRatesSection.tsx` to read-only, removed `conference_vat_rates` table
-- **Feature 3**: Dual currency support for invoices
-  - Added `second_currency` and `exchange_rate` fields to `InvoiceCompanyInfo` schema
-  - Added UI in `InvoiceCompanyDataTab.tsx` for second currency (ISO code) and exchange rate
-  - Displays totals in second currency alongside primary currency on invoices
-- **Backend changes**:
-  - Migration 115: Added `tenant_id` to `vat_rates_by_country` table
-  - Migration 116: Dropped `conference_vat_rates` table + RLS policy
-  - Removed: `app/models/conference_vat_rate.py`, `app/schemas/conference_vat_rate.py`
-  - Updated: `app/api/v1/conferences/fiscal_representative.py` (tax-info endpoint + VAT calculation both use `or_()` to fall back to global rates when tenant-specific rate not found)
-  - Updated: `app/core/vat_calculation.py` (removed ConferenceVatRate import, added fallback to global rates for both conference and customer country lookups)
-  - Updated: `app/schemas/fiscal_representative.py` (added TaxInfoResponse without vat_rates array)
-  - Updated: `app/schemas/settings.py` (added second_currency and exchange_rate to InvoiceCompanyInfo)
-- **Frontend changes**:
-  - `EuVatRatesReference.tsx`: Full CRUD for country rates (2-char ISO code, country name, standard rate 0-100%)
-  - `VatRatesSection.tsx`: Rewritten to read-only display
-  - `InvoiceCompanyDataTab.tsx`: Added dual currency fields
-  - `types/conference.ts`: Removed ConferenceVatRate interfaces, simplified TaxInfo
-- **Testing**: ✅ Ruff clean (344 files), ESLint clean, 1222 frontend tests passing
-- **Status**: ✅ Complete, backend restarted, ready to test and commit (pending user approval)
+- **Last completed**: Second currency save fix and VAT rate global fallback
+- **Fix 1**: Second currency field not clearing when selecting "Same as primary"
+  - Root cause: Frontend sent `undefined` instead of `null`, backend ignored undefined values
+  - Added `queryClient.invalidateQueries()` to refetch conference data after save
+  - Added `useEffect` with ref to sync form state when server data changes
+  - Updated `ConferenceUpdate` type to allow `invoice_currency: string | null`
+- **Fix 2**: VAT rate display showing 0% for global rates (e.g., Germany)
+  - Added `or_()` clause in `fiscal_representative.py` tax-info endpoint for global rate fallback
+  - Added global rate fallback in `vat_calculation.py` for both conference and customer country lookups
+  - Updated preview VAT endpoint to use `VatRateByCountry` instead of deleted `ConferenceVatRate`
+- **Fix 3**: VAT calculation type errors in tests
+  - Handle `None` conference.settings with `(settings or {}).get()`
+  - Add `None` guard in `get_vat_rule()` function
+  - Convert `invoice.subtotal` (float) to Decimal before calculations
+  - Handle `None` subtotal values
+- **Fix 4**: Mypy errors
+  - Remove duplicate `second_currency`/`exchange_rate` fields in `settings.py`
+  - Update preview VAT endpoint to use `VatRateByCountry` table
+  - Add `attendance_type` field to `BookingOptionResponse` in `booking_matrix.py`
+- **Files modified**:
+  - Backend: `fiscal_representative.py`, `vat_calculation.py`, `vat_rules.py`, `invoices.py`, `booking_matrix.py`, `settings.py`
+  - Frontend: `FinancialSettingsTab.tsx`, `conference.ts`
+- **Tests**: 74 passed (invoice), 31 passed (invoice settings), 1222 passed (frontend)
+- **Linters**: ✅ Ruff clean, mypy clean, TypeScript clean
+- **Status**: ✅ Committed and pushed to main (e219759)
