@@ -188,29 +188,6 @@ export const handbookSections: HandbookSection[] = [
           Invalid fields are highlighted with a red border and an error message appears below the
           field. You must fix all validation errors before saving.
         </p>
-        <h3>VAT Rate Periods</h3>
-        <p>
-          VAT rates can change over time. The platform supports defining multiple{' '}
-          <strong>VAT rate periods</strong> with date ranges:
-        </p>
-        <ul>
-          <li>
-            Each period has a <strong>start date</strong>, an optional <strong>end date</strong>,
-            and a <strong>VAT rate</strong> (percentage).
-          </li>
-          <li>The system validates that periods do not overlap.</li>
-          <li>
-            The currently active rate (based on today&rsquo;s date) is used for new invoices and
-            registrations.
-          </li>
-          <li>
-            If no period covers the current date, the system warns you that no VAT rate is active.
-          </li>
-        </ul>
-        <p>
-          This ensures accurate tax calculation even when rates change mid-conference or between
-          years.
-        </p>
       </>
     ),
   },
@@ -1089,8 +1066,12 @@ info@company.com,,,Tech Solutions`}
             add-on, etc.) with quantity, unit price, and tax rate.
           </li>
           <li>
-            <strong>Tax Calculation</strong> &mdash; VAT is calculated based on the active VAT rate
-            period from the fiscal representative settings.
+            <strong>Tax Calculation</strong> &mdash; VAT is automatically calculated when creating
+            an invoice based on the VAT decision table rules. The system considers the
+            recipient&rsquo;s country, whether they provided a VAT number (B2B vs B2C), and the
+            attendance type (from the linked registration). The appropriate tax rate is pulled from
+            your Country VAT/Tax Rates list, and reverse charge or OSS text is automatically added
+            to the invoice notes when applicable.
           </li>
           <li>
             <strong>Recipient</strong> &mdash; billing name, address, VAT number, and email. The
@@ -1142,13 +1123,34 @@ info@company.com,,,Tech Solutions`}
         <ul>
           <li>
             <strong>Primary Currency</strong> &mdash; the main currency used for pricing and
-            financial reporting.
+            financial reporting. This is the currency shown on invoices, registration forms, and
+            financial reports.
           </li>
           <li>
             <strong>Second Currency (Invoice)</strong> &mdash; an optional secondary currency used
-            on invoices. When selected, an <strong>Exchange Rate</strong> field appears to define
-            the conversion rate (e.g. 1&nbsp;EUR&nbsp;=&nbsp;1.08&nbsp;USD). The exchange rate is
-            used to show dual-currency totals on generated invoices.
+            for dual-currency invoices. When selected, an <strong>Exchange Rate</strong> field
+            appears to define the conversion rate (e.g. 1&nbsp;EUR&nbsp;=&nbsp;1.08&nbsp;USD). When
+            configured, invoice totals are shown in both currencies on the generated PDF using
+            placeholders like <code>[SECOND_TOTAL]</code> and <code>[SECOND_SUBTOTAL]</code>.
+          </li>
+          <li>
+            <strong>Conference Tax Rate</strong> &mdash; displays the current tax/VAT rate for the
+            conference country. This rate is automatically pulled from your Country VAT/Tax Rates
+            list (see below) based on the conference country. If the conference country is not in
+            your rates list, a warning is displayed prompting you to add it.
+          </li>
+          <li>
+            <strong>Country VAT/Tax Rates</strong> &mdash; manage your organization&rsquo;s
+            country-specific tax rates (VAT, GST, Sales Tax, etc.). Each entry contains a 2-letter
+            ISO country code, country name, and standard rate (0-100%). You can add, edit, or delete
+            rates as needed. These rates are used for automatic VAT calculation on invoices based on
+            the VAT decision table rules.
+          </li>
+          <li>
+            <strong>EU Countries List</strong> &mdash; configure which countries are considered part
+            of the European Union for VAT purposes. This list is used by the VAT decision table to
+            classify customers as domestic, EU, or non-EU. The list is pre-populated with current EU
+            member states and can be customized.
           </li>
           <li>
             <strong>Fiscal Representative</strong> &mdash; VAT representative details for
@@ -1909,8 +1911,10 @@ info@company.com,,,Tech Solutions`}
         <ul>
           <li>
             <strong>Currency &amp; Tax</strong> &mdash; configure the primary and second (invoice)
-            currencies for the conference, set the exchange rate for dual-currency invoices, manage
-            the fiscal representative, and edit the VAT decision table for EU tax compliance rules.
+            currencies for the conference, set the exchange rate for dual-currency invoices, view
+            the conference tax rate (auto-pulled from country rates), manage Country VAT/Tax Rates,
+            configure the EU countries list, manage the fiscal representative, and edit the VAT
+            decision table for EU tax compliance rules.
           </li>
           <li>
             <strong>Invoice Number</strong> &mdash; numbering template and counter reset rules.{' '}
