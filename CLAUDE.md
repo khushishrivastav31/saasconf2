@@ -80,19 +80,19 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Cancel Invoice + Credit Note Feature (from plan)
-- **What was done**: Verified full implementation and fixed test failures
-- **Implementation status**:
-  - Part A (Bug Fix): ✓ Sponsor contract send history persisting correctly (line 578 in sponsor_contracts.py)
-  - Part B (Cancel Invoice): ✓ Fully implemented
-    - Migration 110: `related_invoice_id` column with self-FK
-    - Backend: Cancel endpoint, credit note creation, delete protection, Stripe refund support
-    - Frontend: Cancel button, credit note grouping, related invoice display
-- **Files modified in this session**:
-  - `frontend/src/components/InvoiceDetailPanel/__tests__/InvoiceDetailsTab.test.tsx` — Fixed 8 test failures (added asterisks to required field labels: Address Line 1 *, City *, Postal Code *, Country *)
-  - `backend/app/api/v1/stripe_webhooks.py` — Fixed 3 B904 linting errors (added `from e` to raise statements)
-- **Tests**: All passing
-  - Backend: 93 tests (42 invoice + 31 settings + 14 helpers + 6 cancel tests)
-  - Frontend: 42 InvoiceDetailsTab tests passing
-- **Linting**: ✓ All ruff checks passing, TypeScript clean
-- **Status**: Cancel invoice feature complete and verified, all tests passing, ready for next task
+- **Last completed**: Handbook documentation for Stripe payment flow and refund workflow
+- **Summary of session work**:
+  1. **Invoice refactoring** (Phases 1 & 2): Extracted 345 lines into 5 helper modules
+  2. **Cancel invoice + credit note feature**: Full implementation with Stripe refund support
+  3. **Stripe webhook integration**: Payment status automation via webhook events
+  4. **Test fixes**: Updated InvoiceDetailsTab tests for required field labels
+  5. **Handbook updates**: Documented complete Stripe payment flow, webhook setup, and refund workflow
+- **Commits pushed to main**:
+  - `19a7d85` — Stripe payment integration with manual refund workflow and event audit logging
+  - `7d707fd` — Invoice refactoring, cancellation, and Stripe webhook integration
+  - `ae310bc` — Handbook documentation for Stripe payment flow, webhooks, and refunds
+- **Handbook changes**:
+  - **Invoices section**: Payment links, convert to credit card, automatic refunds on cancellation, manual refund button, event logging
+  - **Stripe Setup section**: Webhook secret field, webhook configuration guide (step-by-step), complete payment flow (invoice → link → payment → webhook → status update), test vs live mode for webhooks
+- **Tests**: All 93 backend tests passing, TypeScript clean
+- **Status**: Ready for next task
