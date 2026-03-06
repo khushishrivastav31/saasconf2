@@ -108,7 +108,7 @@ class Invoice(Base):
         "Invoice", remote_side="Invoice.id", foreign_keys=[related_invoice_id]
     )
     events: Mapped[list["InvoiceEvent"]] = relationship(
-        "InvoiceEvent", back_populates="invoice", cascade="all, delete-orphan", order_by="InvoiceEvent.created_at"
+        "InvoiceEvent", back_populates="invoice", cascade="all, delete-orphan"
     )
 
     # Indexes and constraints

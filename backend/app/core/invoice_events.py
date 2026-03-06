@@ -5,6 +5,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import CurrentUser
 from app.models.invoice_event import InvoiceEvent, InvoiceEventType  # noqa: F401
 from app.models.user import User
 
@@ -15,7 +16,7 @@ async def log_invoice_event(
     tenant_id: UUID,
     event_type: str,
     status: str,
-    user: User | None = None,
+    user: User | CurrentUser | None = None,
     stripe_object_id: str | None = None,
     stripe_object_type: str | None = None,
     stripe_idempotency_key: str | None = None,
@@ -32,7 +33,7 @@ async def log_invoice_event(
         tenant_id: Tenant UUID
         event_type: Event type (payment_link_created, refund_succeeded, etc.)
         status: Event status (succeeded, failed, pending, cancelled)
-        user: User who triggered the event (None for webhooks)
+        user: User or CurrentUser who triggered the event (None for webhooks)
         stripe_object_id: Stripe object ID (pi_xxx, re_xxx, ch_xxx)
         stripe_object_type: Stripe object type (payment_intent, refund, charge)
         stripe_idempotency_key: Idempotency key used for Stripe call
@@ -44,6 +45,22 @@ async def log_invoice_event(
     Returns:
         Created InvoiceEvent
     """
+    # Extract user_id and email from either User or CurrentUser object
+    if user:
+        if isinstance(user, CurrentUser):
+            user_id = user.user_id
+            # CurrentUser doesn't have email, fetch from DB
+            from sqlalchemy import select
+
+            result = await db.execute(select(User.email).where(User.id == user.user_id))
+            user_email = result.scalar_one_or_none()
+        else:  # User object
+            user_id = user.id
+            user_email = user.email
+    else:
+        user_id = None
+        user_email = None
+
     event = InvoiceEvent(
         tenant_id=tenant_id,
         invoice_id=invoice_id,
@@ -54,10 +71,10 @@ async def log_invoice_event(
         amount=amount,
         currency=currency,
         status=status,
-        metadata=metadata or {},
+        event_metadata=metadata or {},
         error_message=error_message,
-        user_id=user.user_id if user else None,
-        user_email=user.email if user else None,
+        user_id=user_id,
+        user_email=user_email,
     )
 
     db.add(event)

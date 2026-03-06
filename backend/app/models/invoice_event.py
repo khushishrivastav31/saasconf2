@@ -56,7 +56,7 @@ class InvoiceEvent(Base):
 
     # Status and metadata
     status: Mapped[str] = mapped_column(String(50), nullable=False)  # succeeded, failed, pending, cancelled
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # Flexible additional data
+    event_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)  # Flexible additional data
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # User who triggered (nullable for webhook events)
@@ -95,3 +95,6 @@ class InvoiceEventType:
     INVOICE_SENT = "invoice_sent"
     INVOICE_CANCELLED = "invoice_cancelled"
     STATUS_CHANGED = "status_changed"
+    CONVERTED_TO_CREDIT_CARD = "converted_to_credit_card"
+    MANUAL_PAYMENT_RECORDED = "manual_payment_recorded"
+    INVOICE_REOPENED = "invoice_reopened"

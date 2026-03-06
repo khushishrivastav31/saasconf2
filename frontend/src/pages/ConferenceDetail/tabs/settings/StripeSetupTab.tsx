@@ -11,6 +11,7 @@ import type { Conference } from '../../../../types';
 interface StripeSettings {
   publishable_key: string | null;
   secret_key: string | null;
+  webhook_secret: string | null;
   is_enabled: boolean;
 }
 
@@ -27,8 +28,11 @@ export default function StripeSetupTab({
 
   const [publishableKey, setPublishableKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
   const [isEnabled, setIsEnabled] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
+  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+  const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -50,9 +54,19 @@ export default function StripeSetupTab({
     if (settings) {
       setPublishableKey(settings.publishable_key || '');
       setSecretKey(settings.secret_key || ''); // Masked for non-super-users
+      setWebhookSecret(settings.webhook_secret || ''); // Masked for non-super-users
       setIsEnabled(settings.is_enabled);
     }
   }, [settings]);
+
+  // Webhook URL for Stripe dashboard
+  const webhookUrl = `${window.location.origin}/api/v1/stripe/webhook`;
+
+  const copyWebhookUrl = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopiedWebhookUrl(true);
+    setTimeout(() => setCopiedWebhookUrl(false), 2000);
+  };
 
   // Save mutation
   const saveMutation = useMutation({
@@ -60,6 +74,7 @@ export default function StripeSetupTab({
       const payload = {
         publishable_key: publishableKey || null,
         secret_key: secretKey || null,
+        webhook_secret: webhookSecret || null,
         is_enabled: isEnabled,
       };
 
@@ -174,6 +189,62 @@ export default function StripeSetupTab({
           </p>
         </div>
 
+        {/* Webhook URL (read-only, for copying to Stripe dashboard) */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Webhook URL
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={webhookUrl}
+              readOnly
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 font-mono text-sm"
+            />
+            <button
+              type="button"
+              onClick={copyWebhookUrl}
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
+            >
+              {copiedWebhookUrl ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Configure this URL in your Stripe Dashboard → Webhooks
+          </p>
+        </div>
+
+        {/* Webhook Secret */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Webhook Signing Secret
+          </label>
+          <div className="relative">
+            <input
+              type={showWebhookSecret ? 'text' : 'password'}
+              value={webhookSecret}
+              onChange={(e) => setWebhookSecret(e.target.value)}
+              disabled={!canEdit}
+              placeholder={canEdit ? 'whsec_...' : '***'}
+              className="w-full px-3 py-2 pr-24 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed font-mono text-sm"
+            />
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setShowWebhookSecret(!showWebhookSecret)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              >
+                {showWebhookSecret ? 'Hide' : 'Show'}
+              </button>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {canEdit
+              ? 'Signing secret from Stripe Dashboard (whsec_...). Used to verify webhook authenticity.'
+              : 'Webhook secret is masked for security.'}
+          </p>
+        </div>
+
         {/* Save Button */}
         {canEdit && (
           <div className="flex justify-end pt-4">
@@ -191,15 +262,25 @@ export default function StripeSetupTab({
       {/* Documentation */}
       <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-          How to get your Stripe API keys
+          How to set up Stripe
         </h3>
-        <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+        <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-4">
           <li>Log in to your Stripe Dashboard</li>
           <li>Navigate to Developers → API keys</li>
-          <li>Copy your Publishable key and Secret key</li>
-          <li>For testing, use keys starting with pk_test_ and sk_test_</li>
-          <li>For production, use keys starting with pk_live_ and sk_live_</li>
+          <li>Copy your Publishable key and Secret key and paste them above</li>
+          <li>Navigate to Developers → Webhooks</li>
+          <li>Click "Add endpoint" and paste the Webhook URL from above</li>
+          <li>
+            Select these events: payment_intent.succeeded, payment_intent.payment_failed,
+            charge.succeeded
+          </li>
+          <li>After creating the webhook, reveal and copy the "Signing secret" (whsec_...)</li>
+          <li>Paste the signing secret above and save</li>
         </ol>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          For testing, use keys starting with pk_test_ and sk_test_. For production, use pk_live_
+          and sk_live_.
+        </p>
       </div>
     </div>
   );

@@ -165,7 +165,7 @@ class InvoiceEventResponse(BaseModel):
     amount: float | None = None
     currency: str | None = None
     status: str
-    metadata: dict | None = None
+    event_metadata: dict | None = None
     error_message: str | None = None
     user_id: UUID | None = None
     user_email: str | None = None
@@ -267,3 +267,23 @@ class CancelInvoiceResponse(BaseModel):
 
     cancelled_invoice: InvoiceResponse
     credit_note: InvoiceResponse
+
+
+class ConvertToCreditCardResponse(BaseModel):
+    """Response from converting bank transfer to credit card."""
+
+    invoice: InvoiceResponse
+    payment_link_url: str
+
+
+class MarkPaidRequest(BaseModel):
+    """Request body for manually marking bank transfer as paid."""
+
+    payment_date: date = Field(..., description="Date when payment was received")
+    comment: str = Field(..., min_length=1, max_length=2000, description="Comment about the payment")
+
+
+class ReopenInvoiceRequest(BaseModel):
+    """Request body for reopening a paid/cancelled invoice."""
+
+    comment: str = Field(..., min_length=1, max_length=2000, description="Reason for reopening the invoice")

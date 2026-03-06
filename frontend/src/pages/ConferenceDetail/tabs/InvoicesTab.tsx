@@ -13,6 +13,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 import type {
   CancelInvoiceResponse,
   Conference,
+  ConvertToCreditCardResponse,
   Invoice,
   InvoiceCreate,
   InvoiceUpdate,
@@ -259,6 +260,135 @@ export default function ConferenceInvoicesTab({
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, 'Failed to cancel invoice'));
+    },
+  });
+
+  const refundMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.post<Invoice>(
+        `/conferences/${conference.id}/invoices/${id}/refund`
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invoices.byConference(conference.id),
+      });
+      setError(null);
+    },
+    onError: (err: unknown) => {
+      setError(parseApiError(err, 'Failed to refund payment'));
+    },
+  });
+
+  const convertToCreditCardMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.post<ConvertToCreditCardResponse>(
+        `/conferences/${conference.id}/invoices/${id}/convert-to-credit-card`
+      );
+      return response.data;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invoices.byConference(conference.id),
+      });
+      showToast(
+        `Invoice converted to credit card. Payment link: ${result.payment_link_url}`,
+        'success'
+      );
+      setError(null);
+    },
+    onError: (err: unknown) => {
+      setError(parseApiError(err, 'Failed to convert invoice to credit card'));
+    },
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: async ({
+      id,
+      payment_date,
+      comment,
+    }: {
+      id: string;
+      payment_date: string;
+      comment: string;
+    }) => {
+      const response = await api.post<Invoice>(
+        `/conferences/${conference.id}/invoices/${id}/mark-paid`,
+        { payment_date, comment }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invoices.byConference(conference.id),
+      });
+      showToast('Invoice marked as paid', 'success');
+      setError(null);
+    },
+    onError: (err: unknown) => {
+      setError(parseApiError(err, 'Failed to mark invoice as paid'));
+    },
+  });
+
+  const reopenMutation = useMutation({
+    mutationFn: async ({ id, comment }: { id: string; comment: string }) => {
+      const response = await api.post<Invoice>(
+        `/conferences/${conference.id}/invoices/${id}/reopen`,
+        { comment }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invoices.byConference(conference.id),
+      });
+      showToast('Invoice reopened', 'success');
+      setError(null);
+    },
+    onError: (err: unknown) => {
+      setError(parseApiError(err, 'Failed to reopen invoice'));
+    },
+  });
+
+  const syncPaymentMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post<{
+        message: string;
+        total_checked: number;
+        updated_to_paid: number;
+        payment_failures_logged: number;
+        errors: Array<{ invoice_id: string; invoice_number: string; error: string }>;
+      }>(`/conferences/${conference.id}/invoices/sync-stripe-payments`);
+      return response.data;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invoices.byConference(conference.id),
+      });
+
+      if (result.updated_to_paid > 0) {
+        showToast(
+          `${result.updated_to_paid} invoice(s) updated to paid. ${result.total_checked} total checked.`,
+          'success'
+        );
+      } else if (result.total_checked > 0) {
+        showToast(`Checked ${result.total_checked} invoice(s). No status changes.`, 'info');
+      } else {
+        showToast('No pending credit card invoices to sync', 'info');
+      }
+
+      if (result.errors.length > 0) {
+        setError(`${result.errors.length} invoice(s) failed to sync. Check console for details.`);
+        console.error('Sync errors:', result.errors);
+      } else {
+        setError(null);
+      }
+    },
+    onError: (err: unknown) => {
+      const errorMsg = parseApiError(err, 'Failed to sync payment status');
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     },
   });
 
@@ -566,6 +696,16 @@ export default function ConferenceInvoicesTab({
             }}
             onDelete={(id) => deleteMutation.mutate(id)}
             onCancel={(id, reason) => cancelMutation.mutate({ id, reason })}
+            onRefund={async (id) => {
+              await refundMutation.mutateAsync(id);
+            }}
+            onConvertToCreditCard={async (id) => {
+              await convertToCreditCardMutation.mutateAsync(id);
+            }}
+            onMarkPaid={(id, payment_date, comment) =>
+              markPaidMutation.mutate({ id, payment_date, comment })
+            }
+            onReopen={(id, comment) => reopenMutation.mutate({ id, comment })}
             onNavigateToInvoice={(id) => setSelectedInvoiceId(id)}
             linkedCreditNote={
               selectedInvoice.status === 'cancelled'
@@ -596,16 +736,29 @@ export default function ConferenceInvoicesTab({
               </p>
             </div>
             {isAdmin && !isAdding && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAdding(true);
-                  setError(null);
-                }}
-                className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 transition-colors"
-              >
-                + Add Invoice
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await syncPaymentMutation.mutateAsync();
+                  }}
+                  disabled={syncPaymentMutation.isPending}
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Check Stripe for payment status updates on all pending credit card invoices"
+                >
+                  {syncPaymentMutation.isPending ? 'Syncing...' : '⟳ Sync Stripe Payments'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAdding(true);
+                    setError(null);
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 transition-colors"
+                >
+                  + Add Invoice
+                </button>
+              </div>
             )}
           </div>
 

@@ -1,17 +1,21 @@
 """Invoice management endpoints (conference-scoped)."""
 
-import base64
+import asyncio
+import contextlib
 import io
 import logging
 from datetime import date as date_type
 from decimal import Decimal
 from uuid import UUID
 
+import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func as sa_func
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import or_, select
+from sqlalchemy.orm import selectinload
 
 from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import (
@@ -21,14 +25,23 @@ from app.core.dependencies import (
     get_client_ip,
     require_module,
 )
-from app.core.email import send_email
 from app.core.exceptions import AuthorizationError, NotFoundError
+from app.core.invoice_audit import create_invoice_audit_log
+from app.core.invoice_email import send_invoice_email
 from app.core.invoice_events import InvoiceEventType, log_invoice_event
 from app.core.invoice_number import generate_cancellation_number, generate_invoice_number
+from app.core.invoice_operations import create_credit_note_for_invoice
 from app.core.invoice_pdf import generate_invoice_pdf
+from app.core.invoice_queries import get_invoice_with_events, refresh_invoice_with_events
+from app.core.invoice_validation import validate_recipient_fields
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
-from app.core.stripe_helper import refund_payment
+from app.core.stripe_helper import (
+    create_payment_link,
+    deactivate_payment_link_for_invoice,
+    find_payment_intent_for_invoice,
+    refund_payment,
+)
 from app.models.associations import ConferenceCFP, ConferenceVolunteer
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
@@ -41,12 +54,16 @@ from app.models.volunteer import Volunteer
 from app.schemas.invoice import (
     CancelInvoiceRequest,
     CancelInvoiceResponse,
+    ConvertToCreditCardResponse,
     InvoiceCreate,
+    InvoiceEventResponse,
     InvoiceListResponse,
     InvoiceResponse,
     InvoiceUpdate,
+    MarkPaidRequest,
     RecipientSearchResponse,
     RecipientSearchResult,
+    ReopenInvoiceRequest,
 )
 
 router = APIRouter()
@@ -60,6 +77,35 @@ def build_invoice_response(
     related_invoice_number: str | None = None,
 ) -> InvoiceResponse:
     """Build an InvoiceResponse from an Invoice model."""
+    # Explicitly convert events to avoid lazy loading
+    events_data = []
+    # Check if events relationship has been loaded using SQLAlchemy inspection
+    insp = sa_inspect(invoice)
+    if "events" in insp.unloaded:
+        # Events not loaded, skip them
+        pass
+    else:
+        # Events were loaded (either eagerly or previously accessed)
+        for event in invoice.events or []:
+            events_data.append(
+                InvoiceEventResponse(
+                    id=event.id,
+                    invoice_id=event.invoice_id,
+                    event_type=event.event_type,
+                    stripe_object_id=event.stripe_object_id,
+                    stripe_object_type=event.stripe_object_type,
+                    stripe_idempotency_key=event.stripe_idempotency_key,
+                    amount=float(event.amount) if event.amount else None,
+                    currency=event.currency,
+                    status=event.status,
+                    event_metadata=event.event_metadata,
+                    error_message=event.error_message,
+                    user_id=event.user_id,
+                    user_email=event.user_email,
+                    created_at=event.created_at,
+                )
+            )
+
     return InvoiceResponse(
         id=invoice.id,
         tenant_id=invoice.tenant_id,
@@ -94,7 +140,7 @@ def build_invoice_response(
         stripe_payment_intent_id=invoice.stripe_payment_intent_id,
         stripe_charge_id=invoice.stripe_charge_id,
         stripe_payment_link_url=invoice.stripe_payment_link_url,
-        events=invoice.events if hasattr(invoice, "events") else [],
+        events=events_data,
         is_active=invoice.is_active,
         created_at=invoice.created_at,
         updated_at=invoice.updated_at,
@@ -149,9 +195,13 @@ async def list_invoices(
     """List invoices for a conference with pagination and filtering."""
     await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
-    query = select(Invoice).where(
-        Invoice.conference_id == conference_id,
-        Invoice.tenant_id == current_user.tenant_id,
+    query = (
+        select(Invoice)
+        .where(
+            Invoice.conference_id == conference_id,
+            Invoice.tenant_id == current_user.tenant_id,
+        )
+        .options(selectinload(Invoice.events))
     )
 
     if search:
@@ -220,6 +270,9 @@ async def create_invoice(
     await _require_invoice_admin(db, current_user, conference_id)
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
+    # Validate required recipient fields
+    validate_recipient_fields(invoice_data)
+
     invoice = Invoice(
         tenant_id=current_user.tenant_id,
         conference_id=conference.id,
@@ -254,23 +307,20 @@ async def create_invoice(
     )
     db.add(invoice)
 
-    audit_log = AuditLog(
+    audit_log = create_invoice_audit_log(
         tenant_id=current_user.tenant_id,
         user_id=current_user.user_id,
         action="invoice.create",
-        resource_type="invoice",
-        resource_id=invoice.id,
-        details={
-            "invoice_number": invoice.invoice_number or "DRAFT",
-            "conference_id": str(conference.id),
-        },
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
+        invoice=invoice,
+        details={"conference_id": str(conference.id)},
+        request=request,
     )
     db.add(audit_log)
 
     await db.commit()
-    await db.refresh(invoice)
+
+    # Re-query invoice with events to avoid lazy loading issues after commit
+    invoice = await refresh_invoice_with_events(db, invoice.id)
 
     return build_invoice_response(invoice)
 
@@ -446,16 +496,7 @@ async def get_invoice(
     db: DbSessionDep,
 ) -> InvoiceResponse:
     """Get a single invoice."""
-    result = await db.execute(
-        select(Invoice).where(
-            Invoice.id == invoice_id,
-            Invoice.conference_id == conference_id,
-            Invoice.tenant_id == current_user.tenant_id,
-        )
-    )
-    invoice = result.scalar_one_or_none()
-    if not invoice:
-        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
 
     # Resolve related invoice number if present
     related_number: str | None = None
@@ -498,16 +539,7 @@ async def update_invoice(
     """
     await _require_invoice_admin(db, current_user, conference_id)
 
-    result = await db.execute(
-        select(Invoice).where(
-            Invoice.id == invoice_id,
-            Invoice.conference_id == conference_id,
-            Invoice.tenant_id == current_user.tenant_id,
-        )
-    )
-    invoice = result.scalar_one_or_none()
-    if not invoice:
-        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
 
     update_data = invoice_data.model_dump(exclude_unset=True)
     current_status = invoice.status
@@ -563,26 +595,30 @@ async def update_invoice(
     for field, value in update_data.items():
         setattr(invoice, field, value)
 
+    # Validate required fields only when transitioning from draft to sent
+    if new_status == "sent" and current_status == "draft":
+        validate_recipient_fields(invoice)
+
     audit_action = "invoice.update"
     audit_details: dict[str, object] = {"updated_fields": list(update_data.keys())}
     if new_status == "sent" and current_status == "draft":
         audit_action = "invoice.sent"
         audit_details["invoice_number"] = update_data["invoice_number"]
 
-    audit_log = AuditLog(
+    audit_log = create_invoice_audit_log(
         tenant_id=current_user.tenant_id,
         user_id=current_user.user_id,
         action=audit_action,
-        resource_type="invoice",
-        resource_id=invoice_id,
+        invoice=invoice,
         details=audit_details,
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
+        request=request,
     )
     db.add(audit_log)
 
     await db.commit()
-    await db.refresh(invoice)
+
+    # Re-query invoice with events to avoid lazy loading issues after commit
+    invoice = await refresh_invoice_with_events(db, invoice.id)
 
     return build_invoice_response(invoice)
 
@@ -603,11 +639,13 @@ async def download_invoice_pdf(
 
     # Get invoice
     result = await db.execute(
-        select(Invoice).where(
+        select(Invoice)
+        .where(
             Invoice.id == invoice_id,
             Invoice.conference_id == conference_id,
             Invoice.tenant_id == tenant_id,
         )
+        .options(selectinload(Invoice.events))
     )
     invoice = result.scalar_one_or_none()
     if not invoice:
@@ -643,11 +681,13 @@ async def preview_invoice_pdf(
 
     # Get invoice
     result = await db.execute(
-        select(Invoice).where(
+        select(Invoice)
+        .where(
             Invoice.id == invoice_id,
             Invoice.conference_id == conference_id,
             Invoice.tenant_id == tenant_id,
         )
+        .options(selectinload(Invoice.events))
     )
     invoice = result.scalar_one_or_none()
     if not invoice:
@@ -681,16 +721,7 @@ async def delete_invoice(
     """Delete an invoice and its attachments."""
     await _require_invoice_admin(db, current_user, conference_id)
 
-    result = await db.execute(
-        select(Invoice).where(
-            Invoice.id == invoice_id,
-            Invoice.conference_id == conference_id,
-            Invoice.tenant_id == current_user.tenant_id,
-        )
-    )
-    invoice = result.scalar_one_or_none()
-    if not invoice:
-        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
 
     # Credit notes can never be deleted
     if invoice.template_type == "credit_note":
@@ -717,18 +748,13 @@ async def delete_invoice(
         )
     )
 
-    audit_log = AuditLog(
+    audit_log = create_invoice_audit_log(
         tenant_id=current_user.tenant_id,
         user_id=current_user.user_id,
         action="invoice.delete",
-        resource_type="invoice",
-        resource_id=invoice_id,
-        details={
-            "invoice_number": invoice_number,
-            "conference_id": str(conference_id),
-        },
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
+        invoice=invoice,
+        details={"conference_id": str(conference_id)},
+        request=request,
     )
     db.add(audit_log)
 
@@ -759,28 +785,43 @@ async def cancel_invoice(
     await _require_invoice_admin(db, current_user, conference_id)
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
-    result = await db.execute(
-        select(Invoice).where(
-            Invoice.id == invoice_id,
-            Invoice.conference_id == conference_id,
-            Invoice.tenant_id == current_user.tenant_id,
-        )
-    )
-    invoice = result.scalar_one_or_none()
-    if not invoice:
-        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
 
-    # Only sent or overdue invoices can be cancelled
-    if invoice.status not in ("sent", "overdue"):
+    # Only sent, overdue, or paid invoices can be cancelled
+    if invoice.status not in ("sent", "overdue", "paid"):
         raise HTTPException(
             status_code=400,
             detail=f"Cannot cancel an invoice with status '{invoice.status}'. "
-            "Only sent or overdue invoices can be cancelled.",
+            "Only sent, overdue, or paid invoices can be cancelled.",
         )
 
     # Cannot cancel a credit note
     if invoice.template_type == "credit_note":
         raise HTTPException(status_code=400, detail="Cannot cancel a credit note.")
+
+    # Deactivate Stripe payment link if this is a credit card invoice
+    await deactivate_payment_link_for_invoice(invoice, conference)
+
+    # If invoice is paid and has Stripe payment, issue a refund first
+    refund_result = None
+    if invoice.status == "paid" and invoice.template_type == "credit_card" and invoice.stripe_payment_intent_id:
+        try:
+            refund_result = await refund_payment(
+                db=db,
+                conference=conference,
+                invoice=invoice,
+                current_user=current_user,
+                amount=None,  # Full refund
+                reason="requested_by_customer",
+            )
+            logger.info(
+                f"Issued Stripe refund {refund_result['refund_id']} for cancelled invoice {invoice.invoice_number}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to issue Stripe refund for invoice {invoice.invoice_number}: {e}")
+            raise HTTPException(
+                status_code=500, detail=f"Failed to issue Stripe refund: {e!s}. Invoice not cancelled."
+            ) from e
 
     # 1. Cancel the original invoice
     original_status = invoice.status
@@ -804,49 +845,17 @@ async def cancel_invoice(
         },
     )
 
-    # 2. Generate cancellation number
+    # 2. Generate cancellation number and create credit note
     cancellation_number = await generate_cancellation_number(db, conference_id, current_user.tenant_id)
-
-    # 3. Build negated line items
-    credit_line_items = []
-    for li in invoice.line_items or []:
-        credit_li = dict(li)
-        credit_li["total"] = -abs(float(li.get("total", 0)))
-        credit_line_items.append(credit_li)
-
-    # 4. Create credit note
-    credit_note = Invoice(
+    credit_note = create_credit_note_for_invoice(
+        invoice=invoice,
+        credit_note_number=cancellation_number,
         tenant_id=current_user.tenant_id,
         conference_id=conference_id,
-        invoice_number=cancellation_number,
-        template_type="credit_note",
-        status="sent",
-        issue_date=date_type.today(),
-        due_date=None,
-        related_invoice_id=invoice.id,
-        recipient_source_type=invoice.recipient_source_type,
-        recipient_source_id=invoice.recipient_source_id,
-        recipient_name=invoice.recipient_name,
-        recipient_email=invoice.recipient_email,
-        recipient_address_line1=invoice.recipient_address_line1,
-        recipient_address_line2=invoice.recipient_address_line2,
-        recipient_city=invoice.recipient_city,
-        recipient_state=invoice.recipient_state,
-        recipient_postal_code=invoice.recipient_postal_code,
-        recipient_country=invoice.recipient_country,
-        recipient_vat_number=invoice.recipient_vat_number,
-        line_items=credit_line_items,
-        subtotal=-abs(float(invoice.subtotal)) if invoice.subtotal else None,
-        tax_rate=invoice.tax_rate,
-        tax_amount=-abs(float(invoice.tax_amount)) if invoice.tax_amount else None,
-        total=-abs(float(invoice.total)) if invoice.total else None,
-        currency=invoice.currency,
-        notes=f"Credit note for invoice {invoice.invoice_number}",
-        contact_persons=invoice.contact_persons,
     )
     db.add(credit_note)
 
-    # 5. Audit logs
+    # 3. Audit logs
     cancel_audit = AuditLog(
         tenant_id=current_user.tenant_id,
         user_id=current_user.user_id,
@@ -879,28 +888,23 @@ async def cancel_invoice(
     db.add(credit_audit)
 
     await db.commit()
-    await db.refresh(invoice)
-    await db.refresh(credit_note)
 
-    # 6. Send credit note PDF to recipient (best-effort)
+    # Re-query both invoices with events to avoid lazy loading issues after commit
+    invoice = await refresh_invoice_with_events(db, invoice.id)
+    credit_note = await refresh_invoice_with_events(db, credit_note.id)
+
+    # 4. Send credit note PDF to recipient (best-effort)
     if credit_note.recipient_email:
-        try:
-            pdf_bytes = await generate_invoice_pdf(credit_note, conference, db)
-            attachment = {
-                "filename": f"credit_note_{credit_note.invoice_number}.pdf",
-                "content": base64.b64encode(pdf_bytes).decode("ascii"),
-            }
-            await send_email(
-                to=credit_note.recipient_email,
-                subject=f"Credit Note {credit_note.invoice_number}",
-                html=(
-                    f"<p>Please find attached the credit note {credit_note.invoice_number} "
-                    f"for invoice {invoice.invoice_number}.</p>"
+        with contextlib.suppress(Exception):
+            await send_invoice_email(
+                db=db,
+                invoice=credit_note,
+                conference=conference,
+                custom_message=(
+                    f"Please find attached the credit note {credit_note.invoice_number} "
+                    f"for invoice {invoice.invoice_number}."
                 ),
-                attachments=[attachment],
             )
-        except Exception:
-            pass  # Best-effort — credit note is saved regardless
 
     return CancelInvoiceResponse(
         cancelled_invoice=build_invoice_response(invoice, related_invoice_number=None),
@@ -928,16 +932,7 @@ async def send_invoice(
     await _require_invoice_admin(db, current_user, conference_id)
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
-    result = await db.execute(
-        select(Invoice).where(
-            Invoice.id == invoice_id,
-            Invoice.conference_id == conference_id,
-            Invoice.tenant_id == current_user.tenant_id,
-        )
-    )
-    invoice = result.scalar_one_or_none()
-    if not invoice:
-        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+    invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
 
     # Only draft, sent, or overdue can be sent/resent
     if invoice.status not in ("draft", "sent", "overdue"):
@@ -962,43 +957,75 @@ async def send_invoice(
         if invoice.issue_date is None:
             invoice.issue_date = date_type.today()
 
+    # Create Stripe payment link for credit card invoices (before sending email)
+    payment_link_url = None
+    if invoice.template_type == "credit_card":
+        if is_first_send:
+            # First send: create new payment link
+            try:
+                # Add 10 second timeout for Stripe API call
+                payment_intent_id, payment_link_url = await asyncio.wait_for(
+                    create_payment_link(db, conference, invoice, current_user), timeout=10.0
+                )
+                invoice.stripe_payment_intent_id = payment_intent_id
+                invoice.stripe_payment_link_url = payment_link_url
+            except TimeoutError:
+                logger.warning(f"Stripe payment link creation timed out for invoice {invoice.id}")
+                # Continue with email send even if payment link creation fails
+            except Exception as e:
+                logger.warning(f"Failed to create Stripe payment link for invoice {invoice.id}: {e}")
+                # Continue with email send even if payment link creation fails
+        else:
+            # Resend: use existing payment link if available
+            payment_link_url = invoice.stripe_payment_link_url
+
     # Generate PDF and send email
-    pdf_bytes = await generate_invoice_pdf(invoice, conference, db)
-    is_credit_note = invoice.template_type == "credit_note"
-    doc_label = "Credit Note" if is_credit_note else "Invoice"
-    attachment = {
-        "filename": f"{'credit_note' if is_credit_note else 'invoice'}_{invoice.invoice_number}.pdf",
-        "content": base64.b64encode(pdf_bytes).decode("ascii"),
-    }
-    email_sent = await send_email(
-        to=invoice.recipient_email,
-        subject=f"{doc_label} {invoice.invoice_number}",
-        html=f"<p>Please find attached {doc_label.lower()} {invoice.invoice_number}.</p>",
-        attachments=[attachment],
+    email_sent = await send_invoice_email(
+        db=db,
+        invoice=invoice,
+        conference=conference,
+        payment_link_url=payment_link_url,
     )
 
     if not email_sent:
         raise HTTPException(status_code=500, detail="Failed to send email. Please try again.")
 
-    # Audit log
-    audit_log = AuditLog(
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.user_id,
-        action="invoice.sent" if is_first_send else "invoice.resent",
-        resource_type="invoice",
-        resource_id=invoice.id,
-        details={
+    # Log invoice sent event
+    await log_invoice_event(
+        db=db,
+        invoice_id=invoice.id,
+        tenant_id=invoice.tenant_id,
+        event_type=InvoiceEventType.INVOICE_SENT,
+        status="succeeded",
+        user=current_user,
+        amount=invoice.total,
+        currency=invoice.currency,
+        metadata={
             "invoice_number": invoice.invoice_number,
             "recipient_email": invoice.recipient_email,
             "is_resend": not is_first_send,
+            "has_payment_link": payment_link_url is not None,
         },
-        ip_address=get_client_ip(request),
-        user_agent=request.headers.get("User-Agent"),
+    )
+
+    # Audit log
+    audit_log = create_invoice_audit_log(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.sent" if is_first_send else "invoice.resent",
+        invoice=invoice,
+        details={
+            "recipient_email": invoice.recipient_email,
+            "is_resend": not is_first_send,
+        },
+        request=request,
     )
     db.add(audit_log)
 
     await db.commit()
-    await db.refresh(invoice)
+
+    # Refresh with events eagerly loaded
+    invoice = await refresh_invoice_with_events(db, invoice_id)
 
     return build_invoice_response(invoice)
 
@@ -1023,8 +1050,6 @@ async def refund_stripe_payment(
     - Has stripe_payment_intent_id
     - Not already refunded
     """
-    from sqlalchemy.orm import selectinload
-
     await _require_invoice_admin(db, current_user, conference_id)
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
@@ -1100,6 +1125,681 @@ async def refund_stripe_payment(
     db.add(audit_log)
 
     await db.commit()
-    await db.refresh(invoice)
+
+    # Re-query invoice with events to avoid lazy loading issues after commit
+    invoice = await refresh_invoice_with_events(db, invoice.id)
+
+    return build_invoice_response(invoice)
+
+
+@router.post("/sync-stripe-payments", response_model=dict)
+async def sync_all_stripe_payments(
+    conference_id: UUID,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> dict:
+    """
+    Bulk sync payment status for all pending credit card invoices.
+
+    Checks all credit card invoices with payment intents that are sent/overdue,
+    fetches their status from Stripe, and updates accordingly.
+
+    Returns summary of sync operation with counts.
+    """
+    # Get conference
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+
+    # Check Stripe is enabled
+    stripe_settings = conference.settings.get("stripe", {})
+    if not stripe_settings.get("is_enabled"):
+        raise HTTPException(status_code=400, detail="Stripe is not enabled for this conference")
+
+    secret_key = stripe_settings.get("secret_key")
+    if not secret_key:
+        raise HTTPException(status_code=400, detail="Stripe secret key not configured")
+
+    # Find all credit card invoices that need syncing
+    # Include invoices with or without payment_intent_id (payment links create intent on payment)
+    result = await db.execute(
+        select(Invoice)
+        .where(
+            Invoice.conference_id == conference_id,
+            Invoice.template_type == "credit_card",
+            Invoice.status.in_(["sent", "overdue"]),  # Only sync pending invoices
+        )
+        .options(selectinload(Invoice.events))
+    )
+    invoices = result.scalars().all()
+
+    logger.info(f"[SYNC] Found {len(invoices)} credit card invoices to sync for conference {conference_id}")
+    for inv in invoices:
+        logger.info(
+            f"[SYNC] Invoice {inv.invoice_number} (ID: {inv.id}) - "
+            f"Status: {inv.status}, Payment Intent: {inv.stripe_payment_intent_id or 'None (payment link)'}"
+        )
+
+    if not invoices:
+        return {
+            "message": "No pending credit card invoices to sync",
+            "total_checked": 0,
+            "updated_to_paid": 0,
+            "payment_failures_logged": 0,
+            "errors": [],
+        }
+
+    # Initialize Stripe
+    stripe.api_key = secret_key
+
+    # Track results
+    total_checked = len(invoices)
+    updated_to_paid = 0
+    payment_failures_logged = 0
+    errors = []
+
+    # Sync each invoice
+    for invoice in invoices:
+        try:
+            logger.info(f"[SYNC] Processing invoice {invoice.invoice_number} (ID: {invoice.id})")
+
+            # Find payment intent using 3-tier discovery strategy
+            payment_intent = await find_payment_intent_for_invoice(
+                invoice=invoice,
+                stripe_client=stripe,
+                logger_prefix="[SYNC] ",
+            )
+
+            # Skip if no payment intent found (customer hasn't paid yet)
+            if not payment_intent:
+                logger.info(f"[SYNC] No payment intent found for invoice {invoice.invoice_number} - skipping")
+                continue
+
+            old_status = invoice.status
+
+            if payment_intent.status == "succeeded" and invoice.status != "paid":
+                logger.info(
+                    f"[SYNC] Updating invoice {invoice.invoice_number} status from {old_status} to paid "
+                    f"(payment intent {payment_intent.id} succeeded)"
+                )
+                invoice.status = "paid"
+                updated_to_paid += 1
+
+                # Capture charge_id if available
+                if payment_intent.latest_charge and not invoice.stripe_charge_id:
+                    invoice.stripe_charge_id = payment_intent.latest_charge
+                    logger.info(f"[SYNC] Captured charge_id: {payment_intent.latest_charge}")
+
+                # Log payment succeeded event
+                await log_invoice_event(
+                    db=db,
+                    invoice_id=invoice.id,
+                    tenant_id=invoice.tenant_id,
+                    event_type=InvoiceEventType.PAYMENT_SUCCEEDED,
+                    status="succeeded",
+                    user=current_user,
+                    stripe_object_id=payment_intent.id,
+                    stripe_object_type="payment_intent",
+                    amount=float(payment_intent.amount) / 100,
+                    currency=payment_intent.currency.upper(),
+                    metadata={
+                        "payment_method": payment_intent.payment_method,
+                        "sync_source": "bulk",
+                        "previous_invoice_status": old_status,
+                    },
+                )
+
+                # Log audit
+                audit = AuditLog(
+                    tenant_id=current_user.tenant_id,
+                    user_id=current_user.user_id,
+                    action="invoice.payment_synced",
+                    resource_type="invoice",
+                    resource_id=invoice.id,
+                    details={
+                        "invoice_number": invoice.invoice_number,
+                        "old_status": old_status,
+                        "new_status": "paid",
+                        "stripe_payment_intent_id": invoice.stripe_payment_intent_id,
+                        "sync_type": "bulk",
+                    },
+                    ip_address=None,
+                )
+                db.add(audit)
+
+            elif payment_intent.status in ("canceled", "failed"):
+                logger.info(
+                    f"[SYNC] Payment intent {payment_intent.id} for invoice {invoice.invoice_number} "
+                    f"has status: {payment_intent.status}"
+                )
+                # Log failure if not already logged
+                existing_failure = any(
+                    e.event_type == InvoiceEventType.PAYMENT_FAILED and e.stripe_object_id == payment_intent.id
+                    for e in invoice.events
+                )
+
+                if not existing_failure:
+                    logger.info(f"[SYNC] Logging payment failure for invoice {invoice.invoice_number}")
+                    payment_failures_logged += 1
+                    await log_invoice_event(
+                        db=db,
+                        invoice_id=invoice.id,
+                        tenant_id=invoice.tenant_id,
+                        event_type=InvoiceEventType.PAYMENT_FAILED,
+                        status="failed",
+                        user=current_user,
+                        stripe_object_id=payment_intent.id,
+                        stripe_object_type="payment_intent",
+                        amount=float(payment_intent.amount) / 100,
+                        currency=payment_intent.currency.upper(),
+                        error_message=payment_intent.last_payment_error.get("message")
+                        if payment_intent.last_payment_error
+                        else f"Payment {payment_intent.status}",
+                        metadata={
+                            "sync_source": "bulk",
+                            "payment_intent_status": payment_intent.status,
+                        },
+                    )
+            else:
+                logger.info(
+                    f"[SYNC] Invoice {invoice.invoice_number} payment intent {payment_intent.id} "
+                    f"has status {payment_intent.status} - no action needed"
+                )
+
+        except stripe.error.StripeError as e:
+            logger.error(f"[SYNC] Failed to sync invoice {invoice.id}: {e}")
+            errors.append({"invoice_id": str(invoice.id), "invoice_number": invoice.invoice_number, "error": str(e)})
+
+    logger.info(
+        f"[SYNC] Committing changes: {updated_to_paid} invoices updated to paid, "
+        f"{payment_failures_logged} failures logged, {len(errors)} errors"
+    )
+    await db.commit()
+    logger.info("[SYNC] Database commit successful")
+
+    return {
+        "message": f"Synced {total_checked} invoice(s)",
+        "total_checked": total_checked,
+        "updated_to_paid": updated_to_paid,
+        "payment_failures_logged": payment_failures_logged,
+        "errors": errors,
+    }
+
+
+@router.get("/{invoice_id}/debug-stripe-search")
+async def debug_stripe_search(
+    conference_id: UUID,
+    invoice_id: UUID,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> dict:
+    """Debug endpoint to see what Stripe search returns for an invoice."""
+    # Get conference
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+
+    # Get invoice
+    result = await db.execute(select(Invoice).where(Invoice.id == invoice_id, Invoice.conference_id == conference_id))
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise NotFoundError("Invoice not found")
+
+    # Check Stripe is enabled
+    stripe_settings = conference.settings.get("stripe", {})
+    if not stripe_settings.get("is_enabled"):
+        raise HTTPException(status_code=400, detail="Stripe is not enabled")
+
+    secret_key = stripe_settings.get("secret_key")
+    if not secret_key:
+        raise HTTPException(status_code=400, detail="Stripe secret key not configured")
+
+    stripe.api_key = secret_key
+
+    # Search for payment intents
+    search_query = f'metadata["invoice_id"]:"{invoice.id}"'
+    search_results = stripe.PaymentIntent.search(query=search_query, limit=10)
+
+    return {
+        "invoice_id": str(invoice.id),
+        "invoice_number": invoice.invoice_number,
+        "stored_payment_intent_id": invoice.stripe_payment_intent_id,
+        "search_query": search_query,
+        "results_found": len(search_results.data),
+        "payment_intents": [
+            {
+                "id": pi.id,
+                "status": pi.status,
+                "amount": pi.amount / 100,
+                "currency": pi.currency,
+                "metadata": dict(pi.metadata),
+                "created": pi.created,
+            }
+            for pi in search_results.data
+        ],
+    }
+
+
+@router.post("/{invoice_id}/sync-stripe-payment", response_model=InvoiceResponse)
+async def sync_stripe_payment(
+    conference_id: UUID,
+    invoice_id: UUID,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> InvoiceResponse:
+    """
+    Manually sync payment status from Stripe for a single invoice.
+
+    Fetches the current PaymentIntent status from Stripe and updates
+    the invoice accordingly. Useful when webhooks aren't configured or fail.
+
+    Returns updated invoice with new events.
+    """
+    # Get conference
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+
+    # Get invoice with events
+    result = await db.execute(
+        select(Invoice)
+        .where(Invoice.id == invoice_id, Invoice.conference_id == conference_id)
+        .options(selectinload(Invoice.events))
+    )
+    invoice = result.scalar_one_or_none()
+
+    if not invoice:
+        raise NotFoundError("Invoice not found")
+
+    # Check Stripe is enabled
+    stripe_settings = conference.settings.get("stripe", {})
+    if not stripe_settings.get("is_enabled"):
+        raise HTTPException(status_code=400, detail="Stripe is not enabled for this conference")
+
+    secret_key = stripe_settings.get("secret_key")
+    if not secret_key:
+        raise HTTPException(status_code=400, detail="Stripe secret key not configured")
+
+    # Fetch PaymentIntent from Stripe
+    stripe.api_key = secret_key
+
+    # Find payment intent using 3-tier discovery strategy
+    payment_intent = await find_payment_intent_for_invoice(
+        invoice=invoice,
+        stripe_client=stripe,
+        logger_prefix="",
+    )
+
+    # If still no payment intent found, return error
+    if not payment_intent:
+        raise HTTPException(
+            status_code=404,
+            detail="No payment intent found for this invoice. Customer may not have paid yet.",
+        )
+
+    # Update invoice based on PaymentIntent status
+    old_status = invoice.status
+
+    if payment_intent.status == "succeeded" and invoice.status != "paid":
+        invoice.status = "paid"
+
+        # Capture charge_id if available
+        if payment_intent.latest_charge and not invoice.stripe_charge_id:
+            invoice.stripe_charge_id = payment_intent.latest_charge
+
+        # Log payment succeeded event
+        await log_invoice_event(
+            db=db,
+            invoice_id=invoice.id,
+            tenant_id=invoice.tenant_id,
+            event_type=InvoiceEventType.PAYMENT_SUCCEEDED,
+            status="succeeded",
+            user=current_user,
+            stripe_object_id=payment_intent.id,
+            stripe_object_type="payment_intent",
+            amount=float(payment_intent.amount) / 100,
+            currency=payment_intent.currency.upper(),
+            metadata={
+                "payment_method": payment_intent.payment_method,
+                "sync_source": "manual",
+                "previous_invoice_status": old_status,
+            },
+        )
+
+        # Log audit
+        audit = AuditLog(
+            tenant_id=current_user.tenant_id,
+            user_id=current_user.user_id,
+            action="invoice.payment_synced",
+            resource_type="invoice",
+            resource_id=invoice.id,
+            details={
+                "invoice_number": invoice.invoice_number,
+                "old_status": old_status,
+                "new_status": "paid",
+                "stripe_payment_intent_id": invoice.stripe_payment_intent_id,
+            },
+            ip_address=None,
+        )
+        db.add(audit)
+
+    elif payment_intent.status in ("requires_payment_method", "requires_confirmation", "requires_action"):
+        # Payment still pending - no update needed
+        pass
+
+    elif payment_intent.status in ("canceled", "failed"):
+        # Log failure if not already logged
+        existing_failure = any(
+            e.event_type == InvoiceEventType.PAYMENT_FAILED and e.stripe_object_id == payment_intent.id
+            for e in invoice.events
+        )
+
+        if not existing_failure:
+            await log_invoice_event(
+                db=db,
+                invoice_id=invoice.id,
+                tenant_id=invoice.tenant_id,
+                event_type=InvoiceEventType.PAYMENT_FAILED,
+                status="failed",
+                user=current_user,
+                stripe_object_id=payment_intent.id,
+                stripe_object_type="payment_intent",
+                amount=float(payment_intent.amount) / 100,
+                currency=payment_intent.currency.upper(),
+                error_message=payment_intent.last_payment_error.get("message")
+                if payment_intent.last_payment_error
+                else f"Payment {payment_intent.status}",
+                metadata={
+                    "sync_source": "manual",
+                    "payment_intent_status": payment_intent.status,
+                },
+            )
+
+    await db.commit()
+
+    # Re-query invoice with events to avoid lazy loading issues after commit
+    invoice = await refresh_invoice_with_events(db, invoice.id)
+
+    return build_invoice_response(invoice)
+
+
+@router.post("/{invoice_id}/convert-to-credit-card", response_model=ConvertToCreditCardResponse)
+async def convert_to_credit_card(
+    conference_id: UUID,
+    invoice_id: UUID,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> dict:
+    """
+    Convert a bank transfer invoice to credit card and generate Stripe payment link.
+
+    Only allowed for bank_transfer invoices with status sent/overdue.
+    Updates template_type to credit_card and creates a Stripe payment link.
+    """
+    # Get conference and check admin access
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin_access(db, current_user.user_id, conference_id)
+
+    # Get invoice
+    result = await db.execute(
+        select(Invoice)
+        .where(Invoice.id == invoice_id, Invoice.conference_id == conference_id)
+        .options(selectinload(Invoice.events))
+    )
+    invoice = result.scalar_one_or_none()
+
+    if not invoice:
+        raise NotFoundError("Invoice not found")
+
+    # Validate
+    if invoice.template_type != "bank_transfer":
+        raise HTTPException(status_code=400, detail="Only bank transfer invoices can be converted to credit card")
+
+    if invoice.status not in ("sent", "overdue"):
+        raise HTTPException(
+            status_code=400, detail="Can only convert sent or overdue invoices (not draft, paid, or cancelled)"
+        )
+
+    # Convert to credit card
+    old_template_type = invoice.template_type
+    invoice.template_type = "credit_card"
+
+    # Create Stripe payment link
+    try:
+        payment_intent_id, payment_link_url = await create_payment_link(
+            db=db,
+            conference=conference,
+            invoice=invoice,
+            current_user=current_user,
+        )
+
+        # Payment intent will be created when customer pays, not upfront
+        # The sync will find it via metadata search
+        invoice.stripe_payment_intent_id = payment_intent_id  # Will be None
+        invoice.stripe_payment_link_url = payment_link_url
+
+    except Exception as e:
+        logger.error(f"Failed to create Stripe payment link for invoice {invoice_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create payment link: {e!s}") from e
+
+    # Log conversion event
+    await log_invoice_event(
+        db=db,
+        invoice_id=invoice.id,
+        tenant_id=invoice.tenant_id,
+        event_type=InvoiceEventType.CONVERTED_TO_CREDIT_CARD,
+        status="succeeded",
+        user=current_user,
+        metadata={
+            "old_template_type": old_template_type,
+            "new_template_type": "credit_card",
+            "payment_link_url": payment_link_url,
+        },
+    )
+
+    # Audit log
+    audit = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.converted_to_credit_card",
+        resource_type="invoice",
+        resource_id=invoice.id,
+        details={
+            "invoice_number": invoice.invoice_number,
+            "old_template_type": old_template_type,
+            "payment_link_url": payment_link_url,
+        },
+        ip_address=None,
+    )
+    db.add(audit)
+
+    await db.commit()
+
+    # Re-query invoice with events to avoid lazy loading issues after commit
+    invoice = await refresh_invoice_with_events(db, invoice.id)
+
+    # Send email to customer with payment link (best-effort)
+    if invoice.recipient_email and payment_link_url:
+        try:
+            email_sent = await send_invoice_email(
+                db=db,
+                invoice=invoice,
+                conference=conference,
+                payment_link_url=payment_link_url,
+                custom_subject=f"Payment Link for Invoice {invoice.invoice_number}",
+                custom_message=(
+                    f"<p>Your invoice {invoice.invoice_number} can now be paid online.</p>"
+                    f"<p>Please find the invoice attached, or use the button below to pay by credit card:</p>"
+                ),
+            )
+            if email_sent:
+                logger.info(
+                    f"Sent payment link email to {invoice.recipient_email} for invoice {invoice.invoice_number}"
+                )
+        except Exception as e:
+            # Log but don't fail - conversion already succeeded
+            logger.warning(f"Failed to send payment link email for invoice {invoice.invoice_number}: {e}")
+
+    return {
+        "invoice": build_invoice_response(invoice),
+        "payment_link_url": payment_link_url,
+    }
+
+
+@router.post("/{invoice_id}/mark-paid", response_model=InvoiceResponse)
+async def mark_invoice_paid(
+    conference_id: UUID,
+    invoice_id: UUID,
+    request_data: MarkPaidRequest,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> InvoiceResponse:
+    """
+    Manually mark a bank transfer invoice as paid with payment date and comment.
+
+    Only allowed for bank_transfer invoices with status sent/overdue.
+    Changes status to paid and logs the manual payment event.
+    """
+    # Get conference and check admin access
+    _ = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin_access(db, current_user.user_id, conference_id)
+
+    # Get invoice
+    result = await db.execute(
+        select(Invoice)
+        .where(Invoice.id == invoice_id, Invoice.conference_id == conference_id)
+        .options(selectinload(Invoice.events))
+    )
+    invoice = result.scalar_one_or_none()
+
+    if not invoice:
+        raise NotFoundError("Invoice not found")
+
+    # Validate
+    if invoice.template_type != "bank_transfer":
+        raise HTTPException(status_code=400, detail="Only bank transfer invoices can be marked as paid manually")
+
+    if invoice.status not in ("sent", "overdue"):
+        raise HTTPException(status_code=400, detail="Can only mark sent or overdue invoices as paid")
+
+    # Update status
+    old_status = invoice.status
+    invoice.status = "paid"
+
+    # Log manual payment event
+    await log_invoice_event(
+        db=db,
+        invoice_id=invoice.id,
+        tenant_id=invoice.tenant_id,
+        event_type=InvoiceEventType.MANUAL_PAYMENT_RECORDED,
+        status="succeeded",
+        user=current_user,
+        amount=invoice.total,
+        currency=invoice.currency,
+        metadata={
+            "payment_date": request_data.payment_date.isoformat(),
+            "comment": request_data.comment,
+            "old_status": old_status,
+        },
+    )
+
+    # Audit log
+    audit = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.marked_paid",
+        resource_type="invoice",
+        resource_id=invoice.id,
+        details={
+            "invoice_number": invoice.invoice_number,
+            "payment_date": request_data.payment_date.isoformat(),
+            "comment": request_data.comment,
+            "old_status": old_status,
+        },
+        ip_address=None,
+    )
+    db.add(audit)
+
+    await db.commit()
+
+    # Re-query invoice with events to avoid lazy loading issues after commit
+    invoice = await refresh_invoice_with_events(db, invoice.id)
+
+    return build_invoice_response(invoice)
+
+
+@router.post("/{invoice_id}/reopen", response_model=InvoiceResponse)
+async def reopen_invoice(
+    conference_id: UUID,
+    invoice_id: UUID,
+    request_data: ReopenInvoiceRequest,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> InvoiceResponse:
+    """
+    Reopen a paid, cancelled, or overdue invoice back to 'sent' status.
+
+    Requires a comment explaining the reason for reopening.
+    Logs the reopen event for audit trail.
+    """
+    # Get conference and check admin access
+    _ = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    await check_conference_admin_access(db, current_user.user_id, conference_id)
+
+    # Get invoice
+    result = await db.execute(
+        select(Invoice)
+        .where(Invoice.id == invoice_id, Invoice.conference_id == conference_id)
+        .options(selectinload(Invoice.events))
+    )
+    invoice = result.scalar_one_or_none()
+
+    if not invoice:
+        raise NotFoundError("Invoice not found")
+
+    # Validate - can reopen from any non-draft status
+    if invoice.status == "draft":
+        raise HTTPException(status_code=400, detail="Cannot reopen a draft invoice")
+
+    if invoice.status == "sent":
+        raise HTTPException(status_code=400, detail="Invoice is already in 'sent' status")
+
+    # Update status
+    old_status = invoice.status
+    invoice.status = "sent"
+
+    # Note: If reopening a cancelled credit card invoice, the old payment link was deactivated.
+    # The admin should convert it to credit card again if a new payment link is needed,
+    # or manually mark it as paid when payment is received.
+
+    # Log reopen event
+    await log_invoice_event(
+        db=db,
+        invoice_id=invoice.id,
+        tenant_id=invoice.tenant_id,
+        event_type=InvoiceEventType.INVOICE_REOPENED,
+        status="succeeded",
+        user=current_user,
+        metadata={
+            "old_status": old_status,
+            "new_status": "sent",
+            "comment": request_data.comment,
+        },
+    )
+
+    # Audit log
+    audit = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.reopened",
+        resource_type="invoice",
+        resource_id=invoice.id,
+        details={
+            "invoice_number": invoice.invoice_number,
+            "old_status": old_status,
+            "comment": request_data.comment,
+        },
+        ip_address=None,
+    )
+    db.add(audit)
+
+    await db.commit()
+
+    # Re-query invoice with events to avoid lazy loading issues after commit
+    invoice = await refresh_invoice_with_events(db, invoice.id)
 
     return build_invoice_response(invoice)

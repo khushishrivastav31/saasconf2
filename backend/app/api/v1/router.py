@@ -26,6 +26,7 @@ from app.api.v1 import (
     settings,
     sponsor_contracts,
     sponsors,
+    stripe_webhooks,
     tenant_company,
     tenants,
     user_conference_access,
@@ -136,3 +137,6 @@ api_router.include_router(attachments.router, prefix="/attachments", tags=["Atta
 
 # CFP Applicant Portal (public + applicant-auth endpoints)
 api_router.include_router(cfp_portal.router, tags=["CFP Portal"])
+
+# Stripe webhooks (public endpoint, signature verified)
+api_router.include_router(stripe_webhooks.router, tags=["Stripe"])

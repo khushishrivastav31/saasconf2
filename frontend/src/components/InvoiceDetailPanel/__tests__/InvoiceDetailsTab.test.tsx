@@ -213,7 +213,7 @@ describe('InvoiceDetailsTab', () => {
 
     it('renders address line 1 field', () => {
       const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
-      const input = getInputByLabel(container, 'Address Line 1');
+      const input = getInputByLabel(container, 'Address Line 1 *');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('123 Main St');
     });
@@ -227,21 +227,21 @@ describe('InvoiceDetailsTab', () => {
 
     it('renders city field', () => {
       const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
-      const input = getInputByLabel(container, 'City');
+      const input = getInputByLabel(container, 'City *');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('New York');
     });
 
     it('renders postal code field', () => {
       const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
-      const input = getInputByLabel(container, 'Postal Code');
+      const input = getInputByLabel(container, 'Postal Code *');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('10001');
     });
 
     it('renders country as dropdown', () => {
       const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
-      const input = getInputByLabel(container, 'Country') as HTMLSelectElement;
+      const input = getInputByLabel(container, 'Country *') as HTMLSelectElement;
       expect(input).toBeInTheDocument();
       expect(input.tagName).toBe('SELECT');
       expect(input).toHaveValue('US');
@@ -383,7 +383,7 @@ describe('InvoiceDetailsTab', () => {
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
-      const input = getInputByLabel(container, 'Address Line 1');
+      const input = getInputByLabel(container, 'Address Line 1 *');
       await user.type(input, 'X');
 
       expect(setFormData).toHaveBeenCalled();
@@ -413,7 +413,7 @@ describe('InvoiceDetailsTab', () => {
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
-      const input = getInputByLabel(container, 'City');
+      const input = getInputByLabel(container, 'City *');
       await user.type(input, 'X');
 
       expect(setFormData).toHaveBeenCalled();
@@ -428,7 +428,7 @@ describe('InvoiceDetailsTab', () => {
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
-      const input = getInputByLabel(container, 'Postal Code');
+      const input = getInputByLabel(container, 'Postal Code *');
       await user.type(input, 'X');
 
       expect(setFormData).toHaveBeenCalled();
@@ -443,7 +443,7 @@ describe('InvoiceDetailsTab', () => {
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
-      const select = getInputByLabel(container, 'Country');
+      const select = getInputByLabel(container, 'Country *');
       await user.selectOptions(select, 'DE');
 
       expect(setFormData).toHaveBeenCalledWith(

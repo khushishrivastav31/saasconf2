@@ -417,6 +417,23 @@ export type RecipientSourceType =
   | 'volunteer'
   | 'registration';
 
+export interface InvoiceEvent {
+  id: string;
+  invoice_id: string;
+  event_type: string;
+  stripe_object_id: string | null;
+  stripe_object_type: string | null;
+  stripe_idempotency_key: string | null;
+  amount: number | null;
+  currency: string | null;
+  status: string;
+  event_metadata: Record<string, unknown> | null;
+  error_message: string | null;
+  user_id: string | null;
+  user_email: string | null;
+  created_at: string;
+}
+
 export interface Invoice {
   id: string;
   tenant_id: string;
@@ -448,6 +465,10 @@ export interface Invoice {
   contact_persons: LocationContactPerson[];
   related_invoice_id: string | null;
   related_invoice_number: string | null;
+  stripe_payment_intent_id: string | null;
+  stripe_charge_id: string | null;
+  stripe_payment_link_url: string | null;
+  events: InvoiceEvent[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -456,6 +477,20 @@ export interface Invoice {
 export interface CancelInvoiceResponse {
   cancelled_invoice: Invoice;
   credit_note: Invoice;
+}
+
+export interface ConvertToCreditCardResponse {
+  invoice: Invoice;
+  payment_link_url: string;
+}
+
+export interface MarkPaidRequest {
+  payment_date: string;
+  comment: string;
+}
+
+export interface ReopenInvoiceRequest {
+  comment: string;
 }
 
 export interface InvoiceCreate {

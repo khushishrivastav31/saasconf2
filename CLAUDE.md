@@ -80,35 +80,19 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Invoice template enhancements (6 features)
-  1. **Header support**: `invoice_header_html` setting, `.page-header` CSS (`position: fixed; top: -1.5cm`), body `padding-top: 2.5cm`, applied to both PDF entry points
-  2. **Multi-page**: Header + footer repeat on every page via WeasyPrint's `position: fixed` — no extra work needed
-  3. **Compact items table**: `padding: 2px 6px` and `line-height: 1.2` on all table cells
-  4. **Country ISO codes**: `_normalize_country_to_iso()` helper converts full names → ISO codes for `[COMPANY_COUNTRY]` and `[FISCAL_REP_COUNTRY]`
-  5. **NOTES placeholder**: Added `[NOTES]` to template editor placeholder panel
-  6. **Dual currency**: `second_currency` + `exchange_rate` in company info, new placeholders `[SECOND_CURRENCY]`, `[SECOND_TOTAL]`, `[SECOND_SUBTOTAL]`, `[SECOND_TAX_AMOUNT]`, `[CURRENCY_2]` now outputs second currency
-- **Files modified**:
-  - `backend/app/core/invoice_pdf.py` — header CSS/rendering, compact table, country normalization, dual currency placeholders
-  - `backend/app/schemas/settings.py` — `invoice_header_html`, `second_currency`, `exchange_rate` fields
-  - `backend/app/core/default_settings.py` — `invoice_header_html: ""` default
-  - `backend/app/api/v1/settings/invoice_settings.py` — header in GET + preview
-  - `frontend/src/components/InvoiceTemplateEditor.tsx` — header editor, NOTES + dual currency placeholders
-  - `frontend/src/pages/.../InvoiceTemplateTab.tsx` — header state + save
-  - `frontend/src/pages/.../InvoiceCompanyDataTab.tsx` — second currency + exchange rate fields
-  - `backend/tests/test_invoice_settings.py` — 4 new tests (header, dual currency)
-  - `backend/tests/test_invoice_pdf_helpers.py` — new: 14 unit tests (country normalization, items table)
-- **Tests**: 32 invoice + 23 settings + 14 helpers = 69 backend tests passing, 1222 frontend tests passing
-
-### Current Work State
-- **Feature**: EU Countries List + Number Format Settings (Settings → Finance → Currency & Tax)
-- **Backend changes**:
-  - `app/core/currency_formats.py` — Added `format_amount()` helper that reads `decimal_separator`/`thousands_separator` from conference settings
-  - `app/core/default_settings.py` — Added `DEFAULT_EU_COUNTRIES` constant (27 current EU members)
-  - `app/schemas/settings.py` — Added `number_format_preset`, `decimal_separator`, `thousands_separator`, `currency_position`, `eu_countries` to InvoiceSettingsResponse + InvoiceSettingsUpdate with validators
-  - `app/api/v1/settings/invoice_settings.py` — GET returns new fields with defaults; PUT resolves preset → individual separator fields via `get_preset_format()`
-  - `app/core/invoice_pdf.py` — All `.2f` currency formatting replaced with `format_amount(value, settings)` in both entry points + items table. `[TAX_RATE]` stays `.2f` (percentage)
-- **Frontend changes**:
-  - `FinancialSettingsTab.tsx` — Added NumberFormatSection (6-preset dropdown with live preview) and EuCountriesSection (multi-select checkbox grid with count badge + reset button)
-  - `InvoicesTab.tsx` — All `.toFixed(2)` and `.toLocaleString()` replaced with `fmtAmount()` helper that reads conference settings
-- **Tests**: 13 currency format + 31 invoice settings (8 new) = 44 tests all passing, ruff clean, TypeScript clean
-- **Status**: Ready to commit (pending user approval)
+- **Last completed**: Cancel Invoice + Credit Note Feature (from plan)
+- **What was done**: Verified full implementation and fixed test failures
+- **Implementation status**:
+  - Part A (Bug Fix): ✓ Sponsor contract send history persisting correctly (line 578 in sponsor_contracts.py)
+  - Part B (Cancel Invoice): ✓ Fully implemented
+    - Migration 110: `related_invoice_id` column with self-FK
+    - Backend: Cancel endpoint, credit note creation, delete protection, Stripe refund support
+    - Frontend: Cancel button, credit note grouping, related invoice display
+- **Files modified in this session**:
+  - `frontend/src/components/InvoiceDetailPanel/__tests__/InvoiceDetailsTab.test.tsx` — Fixed 8 test failures (added asterisks to required field labels: Address Line 1 *, City *, Postal Code *, Country *)
+  - `backend/app/api/v1/stripe_webhooks.py` — Fixed 3 B904 linting errors (added `from e` to raise statements)
+- **Tests**: All passing
+  - Backend: 93 tests (42 invoice + 31 settings + 14 helpers + 6 cancel tests)
+  - Frontend: 42 InvoiceDetailsTab tests passing
+- **Linting**: ✓ All ruff checks passing, TypeScript clean
+- **Status**: Cancel invoice feature complete and verified, all tests passing, ready for next task

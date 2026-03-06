@@ -143,6 +143,30 @@ export default function InvoiceDetailsTab({
         </div>
       )}
 
+      {invoice.template_type === 'credit_card' && invoice.stripe_payment_link_url && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Payment Link
+          </label>
+          <div className="mt-1 flex gap-2">
+            <input
+              type="text"
+              disabled
+              className="flex-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-mono text-xs"
+              value={invoice.stripe_payment_link_url}
+            />
+            <a
+              href={invoice.stripe_payment_link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors whitespace-nowrap"
+            >
+              Open Link
+            </a>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -216,10 +240,11 @@ export default function InvoiceDetailsTab({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Address Line 1
+                Address Line 1 *
               </label>
               <input
                 type="text"
+                required
                 className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
                 value={formData.recipient_address_line1 || ''}
                 onChange={(e) =>
@@ -253,10 +278,11 @@ export default function InvoiceDetailsTab({
           <div className="grid grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                City
+                City *
               </label>
               <input
                 type="text"
+                required
                 className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
                 value={formData.recipient_city || ''}
                 onChange={(e) =>
@@ -270,10 +296,11 @@ export default function InvoiceDetailsTab({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Postal Code
+                Postal Code *
               </label>
               <input
                 type="text"
+                required
                 className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
                 value={formData.recipient_postal_code || ''}
                 onChange={(e) =>
@@ -287,9 +314,10 @@ export default function InvoiceDetailsTab({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Country
+                Country *
               </label>
               <select
+                required
                 className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
                 value={formData.recipient_country || ''}
                 onChange={(e) =>
@@ -372,6 +400,126 @@ export default function InvoiceDetailsTab({
           disabled={readOnly}
         />
       </div>
+
+      {/* Event Timeline - Show payment/refund history */}
+      {invoice.events && Array.isArray(invoice.events) && invoice.events.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+            Payment & Refund History
+          </h4>
+          <div className="space-y-3">
+            {invoice.events.map((event) => {
+              const isError = event.status === 'failed';
+              const isSuccess = event.status === 'succeeded';
+              const isPending = event.status === 'pending';
+
+              return (
+                <div
+                  key={event.id}
+                  className="flex gap-3 text-sm border border-gray-200 dark:border-gray-700 rounded-md p-3 bg-gray-50 dark:bg-gray-900"
+                >
+                  {/* Icon */}
+                  <div className="shrink-0 mt-0.5">
+                    {isError && (
+                      <svg
+                        className="w-5 h-5 text-red-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    )}
+                    {isSuccess && (
+                      <svg
+                        className="w-5 h-5 text-green-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    )}
+                    {isPending && (
+                      <svg
+                        className="w-5 h-5 text-yellow-500 animate-spin"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p
+                        className={`font-medium ${
+                          isError
+                            ? 'text-red-700 dark:text-red-400'
+                            : isSuccess
+                              ? 'text-green-700 dark:text-green-400'
+                              : 'text-gray-900 dark:text-gray-100'
+                        }`}
+                      >
+                        {event.event_type
+                          .split('_')
+                          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(' ')}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {new Date(event.created_at).toLocaleDateString()} at{' '}
+                        {new Date(event.created_at).toLocaleTimeString()}
+                      </p>
+                    </div>
+
+                    {event.amount && event.currency && (
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                        Amount: {event.currency} {event.amount.toFixed(2)}
+                      </p>
+                    )}
+
+                    {event.user_email && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        By: {event.user_email}
+                      </p>
+                    )}
+
+                    {event.stripe_object_id && (
+                      <p className="text-xs font-mono text-gray-500 dark:text-gray-400 mt-1">
+                        Stripe ID: {event.stripe_object_id}
+                      </p>
+                    )}
+
+                    {event.error_message && (
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        Error: {event.error_message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

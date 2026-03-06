@@ -31,6 +31,10 @@ interface InvoiceDetailPanelProps {
   onSend?: (id: string) => Promise<void>;
   onDelete?: (id: string) => void;
   onCancel?: (id: string, reason: string) => void;
+  onRefund?: (id: string) => Promise<void>;
+  onConvertToCreditCard?: (id: string) => Promise<void>;
+  onMarkPaid?: (id: string, payment_date: string, comment: string) => void;
+  onReopen?: (id: string, comment: string) => void;
   onNavigateToInvoice?: (id: string) => void;
   /** Credit note linked to this cancelled invoice (for showing "View Credit Note" link) */
   linkedCreditNote?: Invoice | null;
@@ -48,6 +52,10 @@ export default function InvoiceDetailPanel({
   onSend,
   onDelete,
   onCancel,
+  onRefund,
+  onConvertToCreditCard,
+  onMarkPaid,
+  onReopen,
   onNavigateToInvoice,
   linkedCreditNote,
 }: InvoiceDetailPanelProps) {
@@ -97,11 +105,43 @@ export default function InvoiceDetailPanel({
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showRefundConfirm, setShowRefundConfirm] = useState(false);
+  const [isRefunding, setIsRefunding] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+  const [showMarkPaidDialog, setShowMarkPaidDialog] = useState(false);
+  const [paymentDate, setPaymentDate] = useState('');
+  const [paymentComment, setPaymentComment] = useState('');
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
+  const [reopenComment, setReopenComment] = useState('');
   const [validationAlert, setValidationAlert] = useState<string | null>(null);
 
   const isCancellable =
-    (invoice.status === 'sent' || invoice.status === 'overdue') &&
+    (invoice.status === 'sent' || invoice.status === 'overdue' || invoice.status === 'paid') &&
+    invoice.template_type !== 'credit_note';
+
+  // Determine if refund button should be shown
+  const canRefund =
+    invoice.status === 'cancelled' &&
+    invoice.template_type === 'credit_card' &&
+    !!invoice.stripe_payment_intent_id &&
+    !invoice.events.some((e) => e.event_type === 'refund_succeeded');
+
+  // Determine if convert to credit card button should be shown
+  const canConvertToCreditCard =
+    invoice.template_type === 'bank_transfer' &&
+    (invoice.status === 'sent' || invoice.status === 'overdue');
+
+  // Determine if mark paid button should be shown
+  const canMarkPaid =
+    invoice.template_type === 'bank_transfer' &&
+    (invoice.status === 'sent' || invoice.status === 'overdue');
+
+  // Determine if reopen button should be shown
+  const canReopen =
+    invoice.status !== 'draft' &&
+    invoice.status !== 'sent' &&
     invoice.template_type !== 'credit_note';
 
   // Reset form when invoice changes
@@ -298,6 +338,16 @@ export default function InvoiceDetailPanel({
   const canResend =
     (invoice.status === 'sent' || invoice.status === 'overdue') && !!invoice.recipient_email;
 
+  const handleRefund = async () => {
+    setShowRefundConfirm(false);
+    setIsRefunding(true);
+    try {
+      await onRefund?.(invoice.id);
+    } finally {
+      setIsRefunding(false);
+    }
+  };
+
   const tabs = [
     { id: 'details' as const, label: 'Details' },
     {
@@ -448,6 +498,44 @@ export default function InvoiceDetailPanel({
               Cancel Invoice
             </button>
           )}
+          {canRefund && onRefund && (
+            <button
+              type="button"
+              onClick={() => setShowRefundConfirm(true)}
+              disabled={isRefunding}
+              className="px-4 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-md transition-colors disabled:opacity-50"
+            >
+              {isRefunding ? 'Refunding...' : 'Refund to Stripe'}
+            </button>
+          )}
+          {canConvertToCreditCard && onConvertToCreditCard && (
+            <button
+              type="button"
+              onClick={() => setShowConvertDialog(true)}
+              disabled={isConverting}
+              className="px-4 py-1.5 text-sm font-medium text-purple-700 dark:text-purple-400 hover:text-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 border border-purple-300 dark:border-purple-700 rounded-md transition-colors disabled:opacity-50"
+            >
+              {isConverting ? 'Converting...' : 'Convert to Credit Card'}
+            </button>
+          )}
+          {canMarkPaid && onMarkPaid && (
+            <button
+              type="button"
+              onClick={() => setShowMarkPaidDialog(true)}
+              className="px-4 py-1.5 text-sm font-medium text-green-700 dark:text-green-400 hover:text-green-800 hover:bg-green-50 dark:hover:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-md transition-colors"
+            >
+              Mark as Paid
+            </button>
+          )}
+          {canReopen && onReopen && (
+            <button
+              type="button"
+              onClick={() => setShowReopenDialog(true)}
+              className="px-4 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-md transition-colors"
+            >
+              Reopen
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {isDraft && (
@@ -589,6 +677,11 @@ export default function InvoiceDetailPanel({
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   This will cancel invoice &quot;{invoice.invoice_number}&quot; and automatically
                   create a credit note.
+                  {invoice.status === 'paid' && invoice.template_type === 'credit_card' && (
+                    <strong className="block mt-1 text-amber-600 dark:text-amber-400">
+                      A full refund will be issued to the customer via Stripe.
+                    </strong>
+                  )}
                   {invoice.recipient_email
                     ? ` The credit note will be sent to ${invoice.recipient_email}.`
                     : ''}{' '}
@@ -630,7 +723,208 @@ export default function InvoiceDetailPanel({
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancel Invoice &amp; Create Credit Note
+                {invoice.status === 'paid' && invoice.template_type === 'credit_card'
+                  ? 'Cancel, Refund & Create Credit Note'
+                  : 'Cancel Invoice & Create Credit Note'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Refund to Stripe confirmation dialog */}
+      <ConfirmDialog
+        open={showRefundConfirm}
+        title="Refund to Stripe"
+        message={`This will issue a refund to the customer's credit card via Stripe for the full amount of ${invoice.currency} ${invoice.total?.toFixed(2)}. This action cannot be undone.`}
+        confirmLabel="Refund to Stripe"
+        variant="warning"
+        onConfirm={handleRefund}
+        onCancel={() => setShowRefundConfirm(false)}
+      />
+
+      {/* Convert to Credit Card confirmation dialog */}
+      <ConfirmDialog
+        open={showConvertDialog}
+        title="Convert to Credit Card"
+        message={`This will convert this bank transfer invoice to a credit card invoice and generate a Stripe payment link. The invoice will remain in '${invoice.status}' status until the customer pays.`}
+        confirmLabel="Convert & Generate Link"
+        variant="warning"
+        onConfirm={async () => {
+          setShowConvertDialog(false);
+          setIsConverting(true);
+          try {
+            await onConvertToCreditCard?.(invoice.id);
+          } finally {
+            setIsConverting(false);
+          }
+        }}
+        onCancel={() => setShowConvertDialog(false)}
+      />
+
+      {/* Mark as Paid dialog */}
+      {showMarkPaidDialog && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center"
+          onClick={() => setShowMarkPaidDialog(false)}
+        >
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-green-600 dark:text-green-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  Mark Invoice as Paid
+                </h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Record that payment has been received for invoice &quot;{invoice.invoice_number}
+                  &quot; via bank transfer.
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Payment Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Comment <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={paymentComment}
+                  onChange={(e) => setPaymentComment(e.target.value)}
+                  rows={3}
+                  placeholder="E.g., Payment received via wire transfer, reference #12345"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100 resize-none"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMarkPaidDialog(false);
+                  setPaymentDate('');
+                  setPaymentComment('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!paymentDate || !paymentComment.trim()}
+                onClick={() => {
+                  setShowMarkPaidDialog(false);
+                  onMarkPaid?.(invoice.id, paymentDate, paymentComment.trim());
+                  setPaymentDate('');
+                  setPaymentComment('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Mark as Paid
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reopen Invoice dialog */}
+      {showReopenDialog && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center"
+          onClick={() => setShowReopenDialog(false)}
+        >
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-blue-600 dark:text-blue-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  Reopen Invoice
+                </h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  This will change the status of invoice &quot;{invoice.invoice_number}&quot; from{' '}
+                  <strong>{invoice.status}</strong> back to <strong>sent</strong>.
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Reason for reopening <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={reopenComment}
+                onChange={(e) => setReopenComment(e.target.value)}
+                rows={3}
+                placeholder="E.g., Payment was disputed, incorrect amount, customer requested changes..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100 resize-none"
+              />
+            </div>
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReopenDialog(false);
+                  setReopenComment('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!reopenComment.trim()}
+                onClick={() => {
+                  setShowReopenDialog(false);
+                  onReopen?.(invoice.id, reopenComment.trim());
+                  setReopenComment('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reopen Invoice
               </button>
             </div>
           </div>

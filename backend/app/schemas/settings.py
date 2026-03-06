@@ -548,6 +548,7 @@ class StripeSettings(BaseModel):
 
     publishable_key: str | None = None
     secret_key: str | None = None  # Full key when updating
+    webhook_secret: str | None = None  # Webhook signing secret
     is_enabled: bool | None = None
 
 
@@ -556,6 +557,7 @@ class StripeSettingsResponse(BaseModel):
 
     publishable_key: str | None = None
     secret_key: str | None = None  # Masked for non-super-users
+    webhook_secret: str | None = None  # Masked for non-super-users
     is_enabled: bool = False
 
 

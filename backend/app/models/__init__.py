@@ -31,6 +31,7 @@ from app.models.deadline import Deadline
 from app.models.fiscal_representative import FiscalRepresentative
 from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
 from app.models.invoice import Invoice
+from app.models.invoice_event import InvoiceEvent
 from app.models.location import Location
 from app.models.messaging import (
     Message,
@@ -121,6 +122,7 @@ __all__ = [
     "EmailTemplate",
     "FiscalRepresentative",
     "Invoice",
+    "InvoiceEvent",
     "Location",
     "Message",
     "MessageParticipant",
