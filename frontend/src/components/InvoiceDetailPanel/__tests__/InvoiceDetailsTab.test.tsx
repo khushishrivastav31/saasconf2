@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import InvoiceDetailsTab from '../InvoiceDetailsTab';
 import type { Invoice, InvoiceUpdate, PlatformCurrency } from '../../../types';
 
@@ -23,6 +24,31 @@ vi.mock('../../common/RichTextEditor', () => ({
     />
   ),
 }));
+
+// Mock API module
+vi.mock('../../../config/api', () => ({
+  default: {
+    get: vi.fn(() =>
+      Promise.resolve({
+        data: {
+          zugferd_settings: { enabled: false },
+        },
+      })
+    ),
+  },
+}));
+
+// Helper to render with QueryClient
+function renderWithQueryClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 
 const mockInvoice: Invoice = {
   id: 'inv-1',
@@ -132,7 +158,7 @@ describe('InvoiceDetailsTab', () => {
 
   describe('rendering', () => {
     it('renders invoice number field as read-only', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Invoice Number');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('INV-2024-001');
@@ -142,7 +168,7 @@ describe('InvoiceDetailsTab', () => {
     it("shows 'Not yet assigned' when invoice has no number", () => {
       const draftInvoice = { ...mockInvoice, invoice_number: null };
       const draftFormData = { ...mockFormData, invoice_number: undefined };
-      render(
+      renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} invoice={draftInvoice} formData={draftFormData} />
       );
       expect(screen.getByDisplayValue('Not yet assigned')).toBeInTheDocument();
@@ -150,7 +176,7 @@ describe('InvoiceDetailsTab', () => {
     });
 
     it('renders status as read-only text for draft invoices', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const statusInput = getInputByLabel(container, 'Status');
       expect(statusInput).toBeInTheDocument();
       expect(statusInput).toBeDisabled();
@@ -160,7 +186,7 @@ describe('InvoiceDetailsTab', () => {
     it('renders status dropdown with valid transitions for sent invoices', () => {
       const sentInvoice = { ...mockInvoice, status: 'sent' as const };
       const sentFormData = { ...mockFormData, status: 'sent' };
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab
           {...defaultProps}
           invoice={sentInvoice}
@@ -179,68 +205,68 @@ describe('InvoiceDetailsTab', () => {
     });
 
     it('renders issue date field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Issue Date');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('2024-01-15');
     });
 
     it('renders due date field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Due Date');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('2024-02-15');
     });
 
     it('renders Recipient Information section', () => {
-      render(<InvoiceDetailsTab {...defaultProps} />);
+      renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       expect(screen.getByText('Recipient Information')).toBeInTheDocument();
     });
 
     it('renders recipient name field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Recipient Name *');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('Acme Corp');
     });
 
     it('renders recipient email field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Recipient Email');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('billing@acme.com');
     });
 
     it('renders address line 1 field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Address Line 1 *');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('123 Main St');
     });
 
     it('renders address line 2 field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Address Line 2');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('Suite 100');
     });
 
     it('renders city field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'City *');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('New York');
     });
 
     it('renders postal code field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Postal Code *');
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue('10001');
     });
 
     it('renders country as dropdown', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Country *') as HTMLSelectElement;
       expect(input).toBeInTheDocument();
       expect(input.tagName).toBe('SELECT');
@@ -248,19 +274,19 @@ describe('InvoiceDetailsTab', () => {
     });
 
     it('renders VAT number field with VatNumberInput', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const vatInput = getInputByLabel(container, 'VAT Number');
       expect(vatInput).toBeInTheDocument();
       expect(vatInput).toHaveValue('US123456789');
     });
 
     it('renders Financial section', () => {
-      render(<InvoiceDetailsTab {...defaultProps} />);
+      renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       expect(screen.getByText('Financial')).toBeInTheDocument();
     });
 
     it('renders currency dropdown with all options', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const currencySelect = getInputByLabel(container, 'Currency') as HTMLSelectElement;
       expect(currencySelect).toBeInTheDocument();
       expect(currencySelect).toHaveValue('USD');
@@ -272,20 +298,20 @@ describe('InvoiceDetailsTab', () => {
     });
 
     it('renders Notes field with RichTextEditor', () => {
-      render(<InvoiceDetailsTab {...defaultProps} />);
+      renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       expect(screen.getByText('Notes (shown on invoice)')).toBeInTheDocument();
       expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument();
     });
 
     it('renders Internal Comment field', () => {
-      render(<InvoiceDetailsTab {...defaultProps} />);
+      renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       expect(screen.getByText('Internal Comment (not shown on invoice)')).toBeInTheDocument();
     });
   });
 
   describe('form interactions - status', () => {
     it('status is not editable for draft invoices', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const statusInput = getInputByLabel(container, 'Status');
       expect(statusInput).toBeDisabled();
     });
@@ -295,7 +321,7 @@ describe('InvoiceDetailsTab', () => {
       const setFormData = vi.fn();
       const sentInvoice = { ...mockInvoice, status: 'sent' as const };
       const sentFormData = { ...mockFormData, status: 'sent' };
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab
           {...defaultProps}
           invoice={sentInvoice}
@@ -315,7 +341,7 @@ describe('InvoiceDetailsTab', () => {
   describe('form interactions - dates', () => {
     it('calls setFormData when issue date changes', () => {
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -331,7 +357,7 @@ describe('InvoiceDetailsTab', () => {
 
     it('calls setFormData when due date changes', () => {
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -347,7 +373,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when recipient name changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -364,7 +390,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when recipient email changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -379,7 +405,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when address line 1 changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -394,7 +420,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when address line 2 changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -409,7 +435,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when city changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -424,7 +450,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when postal code changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -439,7 +465,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when country changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -454,7 +480,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when VAT number changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -471,7 +497,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when currency changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -486,7 +512,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when notes changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      render(<InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />);
+      renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />);
 
       const editor = screen.getByTestId('rich-text-editor');
       await user.type(editor, 'X');
@@ -500,7 +526,7 @@ describe('InvoiceDetailsTab', () => {
     it('calls setFormData when internal comment changes', async () => {
       const user = userEvent.setup();
       const setFormData = vi.fn();
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} setFormData={setFormData} />
       );
 
@@ -520,7 +546,7 @@ describe('InvoiceDetailsTab', () => {
         recipient_name: '',
       };
       const draftInvoice = { ...mockInvoice, invoice_number: null };
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} invoice={draftInvoice} formData={emptyFormData} />
       );
 
@@ -534,7 +560,7 @@ describe('InvoiceDetailsTab', () => {
         invoice_number: 'INV-001',
         recipient_name: 'Test',
       };
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <InvoiceDetailsTab {...defaultProps} formData={minimalFormData} />
       );
 
@@ -547,31 +573,31 @@ describe('InvoiceDetailsTab', () => {
 
   describe('required fields', () => {
     it('renders invoice number as disabled', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Invoice Number');
       expect(input).toBeDisabled();
     });
 
     it('marks recipient name as required', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Recipient Name *');
       expect(input).toBeRequired();
     });
 
     it('has email type for recipient email field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Recipient Email');
       expect(input).toHaveAttribute('type', 'email');
     });
 
     it('has date type for issue date field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Issue Date');
       expect(input).toHaveAttribute('type', 'date');
     });
 
     it('has date type for due date field', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} />);
+      const { container } = renderWithQueryClient(<InvoiceDetailsTab {...defaultProps} />);
       const input = getInputByLabel(container, 'Due Date');
       expect(input).toHaveAttribute('type', 'date');
     });
@@ -579,7 +605,9 @@ describe('InvoiceDetailsTab', () => {
 
   describe('empty currencies list', () => {
     it('renders currency dropdown with only placeholder when no currencies', () => {
-      const { container } = render(<InvoiceDetailsTab {...defaultProps} currencies={[]} />);
+      const { container } = renderWithQueryClient(
+        <InvoiceDetailsTab {...defaultProps} currencies={[]} />
+      );
       const currencySelect = getInputByLabel(container, 'Currency');
       const options = currencySelect.querySelectorAll('option');
       expect(options).toHaveLength(1);
