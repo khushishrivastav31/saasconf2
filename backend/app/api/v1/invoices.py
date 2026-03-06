@@ -42,6 +42,7 @@ from app.core.stripe_helper import (
     find_payment_intent_for_invoice,
     refund_payment,
 )
+from app.core.vat_calculation import calculate_vat_for_invoice
 from app.models.associations import ConferenceCFP, ConferenceVolunteer
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
@@ -65,6 +66,7 @@ from app.schemas.invoice import (
     RecipientSearchResult,
     ReopenInvoiceRequest,
 )
+from app.schemas.vat_rate import VatPreviewRequest, VatPreviewResponse
 
 router = APIRouter()
 
@@ -305,6 +307,22 @@ async def create_invoice(
         ),
         is_active=invoice_data.is_active,
     )
+
+    # Auto-calculate VAT based on recipient country, customer type, and attendance type
+    rate, tax_amount, notes_text = await calculate_vat_for_invoice(invoice, conference, db)
+    invoice.tax_rate = rate
+    invoice.tax_amount = tax_amount
+    subtotal_decimal = Decimal(str(invoice.subtotal)) if invoice.subtotal is not None else Decimal("0.00")
+    invoice.total = subtotal_decimal + tax_amount
+    invoice.vat_auto_calculated = True
+
+    # Append reverse charge/OSS notes if applicable
+    if notes_text:
+        if invoice.notes:
+            invoice.notes = f"{invoice.notes}\n\n{notes_text}"
+        else:
+            invoice.notes = notes_text
+
     db.add(invoice)
 
     audit_log = create_invoice_audit_log(
@@ -316,6 +334,21 @@ async def create_invoice(
         request=request,
     )
     db.add(audit_log)
+
+    # Audit log for VAT auto-calculation
+    vat_audit_log = create_invoice_audit_log(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.vat_calculated",
+        invoice=invoice,
+        details={
+            "tax_rate": str(rate),
+            "tax_amount": str(tax_amount),
+            "auto_calculated": True,
+        },
+        request=request,
+    )
+    db.add(vat_audit_log)
 
     await db.commit()
 
@@ -481,6 +514,147 @@ async def search_recipients(
     return RecipientSearchResponse(results=results[:50])
 
 
+@router.post(
+    "/preview-vat",
+    response_model=VatPreviewResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def preview_vat_calculation(
+    conference_id: UUID,
+    request_data: VatPreviewRequest,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> VatPreviewResponse:
+    """
+    Preview VAT calculation without persisting.
+
+    Returns calculated VAT rate, amount, total, and the applied rule based on:
+    - Recipient country (domestic/EU/non-EU)
+    - Customer type (B2B if VAT number provided, B2C otherwise)
+    - Attendance type (inferred or overridden)
+
+    Used by invoice form for live VAT calculation preview.
+    """
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+
+    # Create temporary invoice object (not persisted)
+    temp_invoice = Invoice(
+        tenant_id=current_user.tenant_id,
+        conference_id=conference.id,
+        recipient_country=request_data.recipient_country,
+        recipient_vat_number=request_data.recipient_vat_number,
+        subtotal=request_data.subtotal,
+        issue_date=(date_type.fromisoformat(request_data.issue_date) if request_data.issue_date else date_type.today()),
+        recipient_source_type=None,  # No registration linkage in preview
+    )
+
+    # If attendance_type_override provided, use it directly
+    # Otherwise, calculate_vat_for_invoice will default to "in_person"
+    if request_data.attendance_type_override:
+        # Manually calculate for the override scenario
+        from app.core.default_settings import DEFAULT_EU_COUNTRIES, DEFAULT_VAT_RULES
+        from app.core.vat_calculation import classify_customer_location, classify_customer_type
+        from app.core.vat_rules import get_vat_rule
+
+        customer_type = classify_customer_type(request_data.recipient_vat_number)
+        eu_countries = conference.settings.get("eu_countries", DEFAULT_EU_COUNTRIES)
+        customer_location = classify_customer_location(
+            request_data.recipient_country,
+            conference.country or "",
+            eu_countries,
+        )
+        vat_rules = conference.settings.get("vat_rules", DEFAULT_VAT_RULES)
+        rule = get_vat_rule(
+            vat_rules,
+            request_data.attendance_type_override,
+            customer_type,
+            customer_location,
+        )
+
+        if not rule:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No VAT rule found for {request_data.attendance_type_override}/{customer_type}/{customer_location}",
+            )
+
+        # Calculate rate based on rule (simplified version of calculate_vat_for_invoice logic)
+        rate = Decimal("0.00")
+        if rule.get("charge_vat"):
+            if rule.get("vat_rate_source") == "conference":
+                from app.models.vat_rate_by_country import VatRateByCountry
+
+                conference_country_iso = (conference.country or "").strip().upper()
+                stmt = select(VatRateByCountry.standard_rate).where(
+                    or_(
+                        VatRateByCountry.tenant_id == current_user.tenant_id,
+                        VatRateByCountry.tenant_id.is_(None),  # Global rates fallback
+                    ),
+                    VatRateByCountry.country_code == conference_country_iso,
+                )
+                result = await db.execute(stmt)
+                fetched_rate = result.scalar_one_or_none()
+                rate = fetched_rate if fetched_rate is not None else Decimal("0.00")
+            elif rule.get("vat_rate_source") == "customer":
+                from app.models.vat_rate_by_country import VatRateByCountry
+
+                recipient_iso = request_data.recipient_country.strip().upper()
+                stmt = select(VatRateByCountry.standard_rate).where(
+                    or_(
+                        VatRateByCountry.tenant_id == current_user.tenant_id,
+                        VatRateByCountry.tenant_id.is_(None),  # Global rates fallback
+                    ),
+                    VatRateByCountry.country_code == recipient_iso,
+                )
+                result = await db.execute(stmt)
+                fetched_rate = result.scalar_one_or_none()
+                rate = fetched_rate if fetched_rate is not None else Decimal("0.00")
+
+        tax_amount = (request_data.subtotal * rate / Decimal("100")).quantize(Decimal("0.01"))
+
+        notes_text = None
+        if rule.get("reverse_charge"):
+            notes_text = (
+                "VAT Reverse Charge: In accordance with Article 196 of the VAT Directive 2006/112/EC, "
+                "the customer is liable for VAT in their country of establishment."
+            )
+        elif rule.get("oss_applicable"):
+            notes_text = (
+                f"VAT charged under the EU One-Stop Shop (OSS) scheme at the rate applicable in your country ({rate}%)."
+            )
+    else:
+        # Use standard calculation
+        rate, tax_amount, notes_text = await calculate_vat_for_invoice(temp_invoice, conference, db)
+
+        # Re-lookup rule for response
+        from app.core.default_settings import DEFAULT_EU_COUNTRIES, DEFAULT_VAT_RULES
+        from app.core.vat_calculation import classify_customer_location, classify_customer_type
+        from app.core.vat_rules import get_vat_rule
+
+        customer_type = classify_customer_type(request_data.recipient_vat_number)
+        eu_countries = conference.settings.get("eu_countries", DEFAULT_EU_COUNTRIES)
+        customer_location = classify_customer_location(
+            request_data.recipient_country,
+            conference.country or "",
+            eu_countries,
+        )
+        vat_rules = conference.settings.get("vat_rules", DEFAULT_VAT_RULES)
+        rule = get_vat_rule(vat_rules, "in_person", customer_type, customer_location)
+
+        if not rule:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No VAT rule found for in_person/{customer_type}/{customer_location}",
+            )
+
+    return VatPreviewResponse(
+        tax_rate=rate,
+        tax_amount=tax_amount,
+        total=request_data.subtotal + tax_amount,
+        rule_applied=rule,
+        notes_text=notes_text,
+    )
+
+
 # --- Dynamic path routes (/{invoice_id}) ---
 
 
@@ -563,6 +737,12 @@ async def update_invoice(
                 status_code=400,
                 detail="Only status changes are allowed on sent/finalized invoices.",
             )
+
+    # --- VAT manual override handling ---
+    # If manual tax changes are made on a draft invoice, mark as not auto-calculated
+    if current_status == "draft":
+        if "tax_rate" in update_data or "tax_amount" in update_data:
+            update_data["vat_auto_calculated"] = False
 
     # Prevent changing invoice_number directly
     update_data.pop("invoice_number", None)

@@ -119,7 +119,7 @@ export interface ConferenceUpdate {
   team_members?: TeamMember[];
   settings?: Record<string, unknown>;
   currency?: string;
-  invoice_currency?: string;
+  invoice_currency?: string | null; // Allow null to clear the field
   is_active?: boolean;
   is_published?: boolean;
 }
@@ -460,6 +460,7 @@ export interface Invoice {
   tax_amount: number | null;
   total: number | null;
   currency: string | null;
+  vat_auto_calculated: boolean;
   notes: string | null;
   internal_comment: string | null;
   contact_persons: LocationContactPerson[];
@@ -549,6 +550,41 @@ export interface InvoiceUpdate {
   internal_comment?: string;
   contact_persons?: LocationContactPerson[];
   is_active?: boolean;
+}
+
+export interface VatPreviewRequest {
+  recipient_country: string;
+  recipient_vat_number?: string | null;
+  subtotal: number;
+  attendance_type_override?: string | null;
+  issue_date?: string | null;
+}
+
+export interface VatPreviewResponse {
+  tax_rate: number;
+  tax_amount: number;
+  total: number;
+  rule_applied: Record<string, unknown>;
+  notes_text: string | null;
+}
+
+export interface VatRateByCountry {
+  id: string;
+  country_code: string;
+  country_name: string;
+  standard_rate: number;
+  updated_at: string;
+}
+
+export interface VatRateByCountryCreate {
+  country_code: string;
+  country_name: string;
+  standard_rate: number;
+}
+
+export interface VatRateByCountryUpdate {
+  country_name?: string;
+  standard_rate?: number;
 }
 
 export interface RecipientSearchResult {
@@ -738,33 +774,6 @@ export interface FiscalRepresentativeUpsert {
   is_active?: boolean;
 }
 
-// Conference VAT Rate types
-export interface ConferenceVatRate {
-  id: string;
-  tenant_id: string;
-  conference_id: string;
-  rate: number;
-  start_date: string;
-  end_date: string;
-  description: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ConferenceVatRateCreate {
-  rate: number;
-  start_date: string;
-  end_date: string;
-  description?: string;
-}
-
-export interface ConferenceVatRateUpdate {
-  rate?: number;
-  start_date?: string;
-  end_date?: string;
-  description?: string;
-}
-
 export interface TaxInfo {
   representation_type: 'self' | 'fiscal_representative';
   tenant_country: string | null;
@@ -778,7 +787,6 @@ export interface TaxInfo {
     conference_vat_number: string | null;
     is_active: boolean;
   } | null;
-  vat_rates: ConferenceVatRate[];
 }
 
 export interface SuggestedNumberFormat {

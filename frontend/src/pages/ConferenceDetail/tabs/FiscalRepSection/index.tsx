@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
-import type { FiscalRepresentative, ConferenceVatRate, TaxInfo } from '../../../../types';
+import type { FiscalRepresentative, TaxInfo } from '../../../../types';
 import TaxInfoSection from './TaxInfoSection';
 import FiscalRepForm from './FiscalRepForm';
 import VatRatesSection from './VatRatesSection';
@@ -36,22 +36,9 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
     },
   });
 
-  const { data: vatRatesData } = useQuery({
-    queryKey: queryKeys.fiscal.vatRates(conferenceId),
-    queryFn: async () => {
-      const res = await api.get<{ items: ConferenceVatRate[]; total: number }>(
-        `/conferences/${conferenceId}/vat-rates`
-      );
-      return res.data;
-    },
-  });
-
-  const vatRates = vatRatesData?.items || [];
-
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.fiscal.taxInfo(conferenceId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.fiscal.representative(conferenceId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.fiscal.vatRates(conferenceId) });
   };
 
   if (taxInfoLoading) {
@@ -94,14 +81,7 @@ function FiscalRepSection({ conferenceId, conferenceCountry, isAdmin }: FiscalRe
         />
       )}
 
-      <VatRatesSection
-        conferenceId={conferenceId}
-        vatRates={vatRates}
-        taxInfo={taxInfo}
-        isAdmin={isAdmin}
-        setError={setError}
-        invalidateAll={invalidateAll}
-      />
+      <VatRatesSection conferenceCountry={conferenceCountry} taxInfo={taxInfo} />
     </div>
   );
 }

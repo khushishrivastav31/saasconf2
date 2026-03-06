@@ -476,6 +476,19 @@ export default function PricingMatrixSection({
                             </div>
                           );
                         })()}
+
+                      {/* Attendance Type badge */}
+                      <div className="mt-1.5">
+                        {opt.attendance_type ? (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                            {opt.attendance_type.replace('_', ' ')}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-500 italic">
+                            No attendance type set
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   {periods.map((period) => {

@@ -202,6 +202,7 @@ class InvoiceResponse(BaseModel):
     tax_amount: float | None = None
     total: float | None = None
     currency: str | None = None
+    vat_auto_calculated: bool = False
     notes: str | None = None
     internal_comment: str | None = None
     contact_persons: list[LocationContactPerson] = []

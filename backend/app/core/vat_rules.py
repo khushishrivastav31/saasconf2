@@ -7,7 +7,7 @@ from __future__ import annotations
 
 
 def get_vat_rule(
-    rules: list[dict],
+    rules: list[dict] | None,
     attendance_type: str,
     customer_type: str,
     customer_location: str,
@@ -23,6 +23,9 @@ def get_vat_rule(
     Returns:
         The matching rule dict, or None if no match found.
     """
+    if not rules:
+        return None
+
     for rule in rules:
         if (
             rule.get("attendance_type") == attendance_type

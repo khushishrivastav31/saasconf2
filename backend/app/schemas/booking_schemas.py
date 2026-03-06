@@ -77,6 +77,7 @@ class BookingOptionCreate(BaseModel):
     conference_day_id: UUID | None = None
     sort_order: int = 0
     is_active: bool = True
+    attendance_type: str | None = Field(None, description="in_person, virtual, hybrid_onsite, or hybrid_online")
 
 
 class BookingOptionUpdate(BaseModel):
@@ -87,6 +88,7 @@ class BookingOptionUpdate(BaseModel):
     conference_day_id: UUID | None = None
     sort_order: int | None = None
     is_active: bool | None = None
+    attendance_type: str | None = Field(None, description="in_person, virtual, hybrid_onsite, or hybrid_online")
 
 
 class BookingOptionResponse(BaseModel):
@@ -102,6 +104,7 @@ class BookingOptionResponse(BaseModel):
     conference_day_id: UUID | None
     sort_order: int
     is_active: bool
+    attendance_type: str | None
     created_at: datetime
     updated_at: datetime
 

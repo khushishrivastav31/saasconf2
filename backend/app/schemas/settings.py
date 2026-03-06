@@ -426,6 +426,8 @@ class InvoiceCompanyInfo(BaseModel):
     phone: str | None = None  # Company phone number for invoices
     vat_source: str | None = None  # "company" | "fiscal_rep"
     bank_accounts: list[BankAccount] = []  # Array replaces single bank fields
+    second_currency: str | None = None  # ISO 4217 code (e.g. "USD")
+    exchange_rate: float | None = None  # Rate from primary to second currency
 
     # Legacy fields (kept for backward compatibility):
     address_line1: str | None = None
@@ -436,8 +438,6 @@ class InvoiceCompanyInfo(BaseModel):
 
     footer_text: str | None = None
     logo_url: str | None = None  # Path to attachment
-    second_currency: str | None = None  # ISO 4217 code (e.g. "USD")
-    exchange_rate: float | None = None  # Rate from primary to second currency
 
     @field_validator("vat_source")
     @classmethod

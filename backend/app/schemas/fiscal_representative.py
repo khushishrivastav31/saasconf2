@@ -1,6 +1,7 @@
 """Fiscal Representative schemas."""
 
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -72,3 +73,14 @@ class FiscalRepresentativeResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class TaxInfoResponse(BaseModel):
+    """Combined tax information response schema."""
+
+    representation_type: str  # "self" or "fiscal_representative"
+    tenant_country: str | None
+    conference_country: str | None
+    effective_vat_number: str | None
+    current_vat_rate: Decimal | None
+    fiscal_representative: dict | None

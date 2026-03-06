@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -97,6 +97,41 @@ function FinancialSettingsTab({
       : '',
   });
 
+  // Track previous conference values to sync formData when server data changes
+  const prevConferenceRef = useRef({
+    currency: conference.currency,
+    invoice_currency: conference.invoice_currency,
+    exchange_rate: conference.settings?.invoice_exchange_rate,
+  });
+
+  // Sync formData with conference prop when conference data changes from server
+  useEffect(() => {
+    const prev = prevConferenceRef.current;
+    const curr = {
+      currency: conference.currency,
+      invoice_currency: conference.invoice_currency,
+      exchange_rate: conference.settings?.invoice_exchange_rate,
+    };
+
+    // Only update if conference values actually changed
+    if (
+      prev.currency !== curr.currency ||
+      prev.invoice_currency !== curr.invoice_currency ||
+      prev.exchange_rate !== curr.exchange_rate
+    ) {
+      setFormData({
+        currency: curr.currency || '',
+        invoice_currency: curr.invoice_currency || '',
+        exchange_rate: curr.exchange_rate ? String(curr.exchange_rate) : '',
+      });
+      prevConferenceRef.current = curr;
+    }
+  }, [
+    conference.currency,
+    conference.invoice_currency,
+    conference.settings?.invoice_exchange_rate,
+  ]);
+
   const { data: currencyOptions } = useQuery({
     queryKey: queryKeys.settings.platformCurrencies,
     queryFn: async () => {
@@ -108,6 +143,7 @@ function FinancialSettingsTab({
     },
   });
 
+  const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
   const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
@@ -119,16 +155,20 @@ function FinancialSettingsTab({
       const exchangeVal = data.exchange_rate ? parseFloat(data.exchange_rate) : null;
       const payload: ConferenceUpdate = {
         currency: data.currency || undefined,
-        invoice_currency: data.invoice_currency || undefined,
+        invoice_currency: data.invoice_currency || null, // Send null to clear field
         settings: {
           ...(conference.settings || {}),
           invoice_exchange_rate: exchangeVal,
         },
       };
-      await api.put(`/conferences/${conference.id}`, payload);
+      const response = await api.put(`/conferences/${conference.id}`, payload);
+      return response.data;
     },
     onMutate: () => setSaving(),
-    onSuccess: () => setSaved(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.conferences.detail(conference.id) });
+      setSaved();
+    },
     onError: (err) => {
       setSaveError();
       showToast(parseApiError(err), 'error');

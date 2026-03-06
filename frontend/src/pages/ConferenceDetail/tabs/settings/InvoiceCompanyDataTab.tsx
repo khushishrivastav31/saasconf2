@@ -35,6 +35,8 @@ export default function InvoiceCompanyDataTab({
   const [taxId, setTaxId] = useState('');
   const [phone, setPhone] = useState('');
   const [footerText, setFooterText] = useState('');
+  const [secondCurrency, setSecondCurrency] = useState('');
+  const [exchangeRate, setExchangeRate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -68,6 +70,8 @@ export default function InvoiceCompanyDataTab({
       setTaxId(info.tax_id || '');
       setPhone(info.phone || '');
       setFooterText(info.footer_text || '');
+      setSecondCurrency(info.second_currency || '');
+      setExchangeRate(info.exchange_rate ? String(info.exchange_rate) : '');
     }
   }, [settings]);
 
@@ -98,6 +102,8 @@ export default function InvoiceCompanyDataTab({
           tax_id: taxId,
           phone: phone,
           footer_text: footerText,
+          second_currency: secondCurrency || null,
+          exchange_rate: exchangeRate ? parseFloat(exchangeRate) : null,
         },
       };
 
@@ -244,6 +250,57 @@ export default function InvoiceCompanyDataTab({
             placeholder="e.g., +49 30 1234567"
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
           />
+        </div>
+
+        {/* Dual Currency Section */}
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Optional: Dual Currency Display
+          </h3>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+            Display invoice totals in a second currency alongside the primary currency.
+          </p>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Second Currency */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Second Currency
+              </label>
+              <input
+                type="text"
+                value={secondCurrency}
+                onChange={(e) => setSecondCurrency(e.target.value.toUpperCase())}
+                disabled={!isAdmin}
+                placeholder="e.g., USD"
+                maxLength={3}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed uppercase"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                ISO 4217 code (3 letters)
+              </p>
+            </div>
+
+            {/* Exchange Rate */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Exchange Rate
+              </label>
+              <input
+                type="number"
+                value={exchangeRate}
+                onChange={(e) => setExchangeRate(e.target.value)}
+                disabled={!isAdmin}
+                placeholder="e.g., 1.08"
+                step="0.0001"
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Rate from primary to second currency
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Footer Text */}

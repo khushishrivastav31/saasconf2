@@ -26,7 +26,6 @@ from app.models.cfp_papers import (
     PaperStatus,
 )
 from app.models.conference import Conference
-from app.models.conference_vat_rate import ConferenceVatRate
 from app.models.deadline import Deadline
 from app.models.fiscal_representative import FiscalRepresentative
 from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
@@ -113,7 +112,6 @@ __all__ = [
     "ConferenceCurrency",
     "ConferenceLocation",
     "ConferencePaperFormSchema",
-    "ConferenceVatRate",
     "ConferenceVolunteer",
     "CospeakerInvitationStatus",
     "Deadline",

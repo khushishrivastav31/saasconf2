@@ -2,11 +2,17 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../config/api';
 import Modal from '../../components/Modal';
-import type { PaginatedResponse, PlatformCurrency, PlatformCurrencyCreate } from '../../types';
+import type {
+  PaginatedResponse,
+  PlatformCurrency,
+  PlatformCurrencyCreate,
+  VatRateByCountry,
+} from '../../types';
 
 export default function Settings() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingCurrency, setEditingCurrency] = useState<PlatformCurrency | null>(null);
+  const [editingVatRate, setEditingVatRate] = useState<VatRateByCountry | null>(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -59,6 +65,34 @@ export default function Settings() {
       deleteMutation.mutate(currency.id);
     }
   };
+
+  // VAT Rates queries and mutations
+  const { data: vatRates, isLoading: isLoadingVatRates } = useQuery({
+    queryKey: ['vat-rates'],
+    queryFn: async () => {
+      const response = await api.get<VatRateByCountry[]>('/vat-rates');
+      return response.data;
+    },
+  });
+
+  const updateVatRateMutation = useMutation({
+    mutationFn: async ({
+      country_code,
+      standard_rate,
+    }: {
+      country_code: string;
+      standard_rate: number;
+    }) => {
+      const response = await api.put<VatRateByCountry>(`/vat-rates/${country_code}`, {
+        standard_rate,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vat-rates'] });
+      setEditingVatRate(null);
+    },
+  });
 
   return (
     <div>
@@ -167,6 +201,84 @@ export default function Settings() {
         )}
       </div>
 
+      {/* VAT Rates Section */}
+      <div className="mb-12">
+        <div className="sm:flex sm:items-center sm:justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">EU VAT Rates</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Standard VAT rates for EU countries (used for automatic invoice VAT calculation)
+            </p>
+          </div>
+        </div>
+
+        {isLoadingVatRates ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Country
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Code
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Standard Rate (%)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Last Updated
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {vatRates?.map((rate) => (
+                  <tr key={rate.country_code}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {rate.country_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {rate.country_code}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {Number(rate.standard_rate).toFixed(2)}%
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(rate.updated_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => setEditingVatRate(rate)}
+                        className="text-primary-600 hover:text-primary-900"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {vatRates?.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      No VAT rates configured.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Create Modal */}
       <Modal
         open={isCreateModalOpen}
@@ -206,6 +318,34 @@ export default function Settings() {
               updateMutation.error
                 ? (updateMutation.error as { response?: { data?: { detail?: string } } }).response
                     ?.data?.detail || 'Failed to update currency'
+                : null
+            }
+          />
+        )}
+      </Modal>
+
+      {/* Edit VAT Rate Modal */}
+      <Modal
+        open={!!editingVatRate}
+        onClose={() => setEditingVatRate(null)}
+        title={`Edit VAT Rate - ${editingVatRate?.country_name}`}
+        size="max-w-md"
+      >
+        {editingVatRate && (
+          <VatRateForm
+            vatRate={editingVatRate}
+            onSubmit={(standard_rate) =>
+              updateVatRateMutation.mutate({
+                country_code: editingVatRate.country_code,
+                standard_rate,
+              })
+            }
+            onCancel={() => setEditingVatRate(null)}
+            isLoading={updateVatRateMutation.isPending}
+            error={
+              updateVatRateMutation.error
+                ? (updateVatRateMutation.error as { response?: { data?: { detail?: string } } })
+                    .response?.data?.detail || 'Failed to update VAT rate'
                 : null
             }
           />
@@ -359,6 +499,97 @@ function CurrencyForm({
           className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Saving...' : isCreateModal ? 'Create' : 'Save'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function VatRateForm({
+  vatRate,
+  onSubmit,
+  onCancel,
+  isLoading,
+  error,
+}: {
+  vatRate: VatRateByCountry;
+  onSubmit: (standard_rate: number) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+  error: string | null;
+}) {
+  const [standardRate, setStandardRate] = useState(vatRate.standard_rate.toString());
+
+  useEffect(() => {
+    setStandardRate(vatRate.standard_rate.toString());
+  }, [vatRate]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const rate = parseFloat(standardRate);
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      return;
+    }
+    onSubmit(rate);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="p-6 space-y-4">
+        {error && (
+          <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4">
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Country
+          </label>
+          <p className="text-sm text-gray-900 dark:text-gray-100">
+            {vatRate.country_name} ({vatRate.country_code})
+          </p>
+        </div>
+
+        <div>
+          <label
+            htmlFor="vat-rate"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Standard VAT Rate (%)
+          </label>
+          <input
+            id="vat-rate"
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            required
+            value={standardRate}
+            onChange={(e) => setStandardRate(e.target.value)}
+            placeholder="20.00"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+          />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Changes affect future invoices only. Existing invoices are not recalculated.
+          </p>
+        </div>
+      </div>
+
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3 rounded-b-lg">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isLoading || !standardRate}
+          className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? 'Saving...' : 'Save'}
         </button>
       </div>
     </form>

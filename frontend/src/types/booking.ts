@@ -43,6 +43,7 @@ export interface BookingOption {
   conference_day_id: string | null;
   sort_order: number;
   is_active: boolean;
+  attendance_type: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -53,6 +54,7 @@ export interface BookingOptionCreate {
   conference_day_id?: string | null;
   sort_order?: number;
   is_active?: boolean;
+  attendance_type?: string | null;
 }
 
 export interface BookingOptionUpdate {
@@ -61,6 +63,7 @@ export interface BookingOptionUpdate {
   conference_day_id?: string | null;
   sort_order?: number;
   is_active?: boolean;
+  attendance_type?: string | null;
 }
 
 // Booking Package types (bundles of options)

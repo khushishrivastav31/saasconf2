@@ -80,25 +80,32 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Mypy type checking fixes for Stripe integration
-- **Summary of session work**:
-  1. **Invoice refactoring** (Phases 1 & 2): Extracted 345 lines into 5 helper modules
-  2. **Cancel invoice + credit note feature**: Full implementation with Stripe refund support
-  3. **Stripe webhook integration**: Payment status automation via webhook events
-  4. **Test fixes**: Updated InvoiceDetailsTab tests for required field labels
-  5. **Handbook updates**: Documented complete Stripe payment flow, webhook setup, and refund workflow
-  6. **Mypy fixes**: Resolved all type annotation errors in stripe_helper.py (20 errors → 0)
-- **Commits pushed to main**:
-  - `19a7d85` — Stripe payment integration with manual refund workflow and event audit logging
-  - `7d707fd` — Invoice refactoring, cancellation, and Stripe webhook integration
-  - `ae310bc` — Handbook documentation for Stripe payment flow, webhooks, and refunds
-  - `8bd3644` — Session state update in CLAUDE.md
-  - `613f3c0` — Mypy type annotations and ignores for stripe_helper.py
-- **Type checking fixes**:
-  - Fixed `get_stripe_client()` return type (added type: ignore for returning module)
-  - Fixed `create_payment_link()` return type: `tuple[str | None, str]` (payment_intent_id can be None)
-  - Added explicit type annotation to refund_params: `dict[str, object]`
-  - Handle `refund.status` being None with fallback
-  - Added type: ignore comments for Stripe API attribute access
-- **Tests**: All 93 backend tests passing (92 passed + 1 setup error in batch run, but passes individually), mypy clean, ruff clean, TypeScript clean
-- **Status**: All CI checks should now pass, ready for next task
+- **Last completed**: VAT rate management cleanup + dual currency support
+- **Feature 1** (Migration 115): Tenant-specific country VAT/tax rates with full CRUD operations
+  - Each tenant manages their own country rates (VAT, GST, Sales Tax, etc.)
+  - Location: Conference → Settings → Financial Settings → "Country VAT/Tax Rates"
+  - Full CRUD in `EuVatRatesReference.tsx`
+- **Feature 2** (Migration 116): Removed manual Conference VAT Rate management
+  - Conference tax rate now **auto-pulls** from Country VAT/Tax Rates based on conference country
+  - No manual add/edit/delete for conference rates
+  - Read-only display: "Current tax rate for [Country]: X.XX%" (green) or warning if country not in list (yellow)
+  - Simplified `VatRatesSection.tsx` to read-only, removed `conference_vat_rates` table
+- **Feature 3**: Dual currency support for invoices
+  - Added `second_currency` and `exchange_rate` fields to `InvoiceCompanyInfo` schema
+  - Added UI in `InvoiceCompanyDataTab.tsx` for second currency (ISO code) and exchange rate
+  - Displays totals in second currency alongside primary currency on invoices
+- **Backend changes**:
+  - Migration 115: Added `tenant_id` to `vat_rates_by_country` table
+  - Migration 116: Dropped `conference_vat_rates` table + RLS policy
+  - Removed: `app/models/conference_vat_rate.py`, `app/schemas/conference_vat_rate.py`
+  - Updated: `app/api/v1/conferences/fiscal_representative.py` (tax-info endpoint + VAT calculation both use `or_()` to fall back to global rates when tenant-specific rate not found)
+  - Updated: `app/core/vat_calculation.py` (removed ConferenceVatRate import, added fallback to global rates for both conference and customer country lookups)
+  - Updated: `app/schemas/fiscal_representative.py` (added TaxInfoResponse without vat_rates array)
+  - Updated: `app/schemas/settings.py` (added second_currency and exchange_rate to InvoiceCompanyInfo)
+- **Frontend changes**:
+  - `EuVatRatesReference.tsx`: Full CRUD for country rates (2-char ISO code, country name, standard rate 0-100%)
+  - `VatRatesSection.tsx`: Rewritten to read-only display
+  - `InvoiceCompanyDataTab.tsx`: Added dual currency fields
+  - `types/conference.ts`: Removed ConferenceVatRate interfaces, simplified TaxInfo
+- **Testing**: ✅ Ruff clean (344 files), ESLint clean, 1222 frontend tests passing
+- **Status**: ✅ Complete, backend restarted, ready to test and commit (pending user approval)

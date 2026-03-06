@@ -31,6 +31,7 @@ from app.api.v1 import (
     tenants,
     user_conference_access,
     users,
+    vat_rates,
     volunteer_tasks,
     volunteers,
 )
@@ -107,6 +108,9 @@ api_router.include_router(
 
 # Invoices (conference-scoped)
 api_router.include_router(invoices.router, prefix="/conferences/{conference_id}/invoices", tags=["Invoices"])
+
+# VAT rates (global, public for reads, superadmin for updates)
+api_router.include_router(vat_rates.router, tags=["VAT Rates"])
 
 # Program design (conference-scoped)
 api_router.include_router(program.router, prefix="/conferences/{conference_id}/program", tags=["Program"])

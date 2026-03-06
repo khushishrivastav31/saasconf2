@@ -22,6 +22,7 @@ export default function AddOptionModal({
 }: AddOptionModalProps) {
   const [name, setName] = useState('');
   const [conferenceDayId, setConferenceDayId] = useState('');
+  const [attendanceType, setAttendanceType] = useState('');
 
   const usedDayIds = new Set(
     options.filter((o) => o.conference_day_id).map((o) => o.conference_day_id!)
@@ -35,16 +36,19 @@ export default function AddOptionModal({
     onSubmit({
       name: name.trim(),
       conference_day_id: conferenceDayId || null,
+      attendance_type: attendanceType || null,
       sort_order: existingCount,
     });
 
     setName('');
     setConferenceDayId('');
+    setAttendanceType('');
   };
 
   const handleClose = () => {
     setName('');
     setConferenceDayId('');
+    setAttendanceType('');
     onClose();
   };
 
@@ -99,6 +103,30 @@ export default function AddOptionModal({
               </p>
             </div>
           )}
+
+          <div>
+            <label
+              htmlFor="attendance-type"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Attendance Type
+            </label>
+            <select
+              id="attendance-type"
+              value={attendanceType}
+              onChange={(e) => setAttendanceType(e.target.value)}
+              className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="">Select type...</option>
+              <option value="in_person">In Person</option>
+              <option value="virtual">Virtual</option>
+              <option value="hybrid_onsite">Hybrid (Onsite)</option>
+              <option value="hybrid_online">Hybrid (Online)</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Used for automatic VAT calculation in invoices.
+            </p>
+          </div>
         </div>
         <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
           <button

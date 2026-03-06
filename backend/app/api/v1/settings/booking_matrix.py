@@ -97,6 +97,7 @@ async def get_booking_matrix(
             conference_day_id=o.conference_day_id,
             sort_order=o.sort_order,
             is_active=o.is_active,
+            attendance_type=o.attendance_type,
             created_at=o.created_at,
             updated_at=o.updated_at,
         )

@@ -138,6 +138,9 @@ export default function ConferenceInvoicesTab({
     phone: '',
     comment: '',
   });
+  const [autoCalculateVat, setAutoCalculateVat] = useState(true);
+  const [isLoadingVatPreview, setIsLoadingVatPreview] = useState(false);
+  const vatPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -463,13 +466,78 @@ export default function ConferenceInvoicesTab({
     setCreateForm({ ...createForm, tax_rate: rate, ...totals });
   };
 
-  // Auto-fill tax rate from conference VAT rate settings
+  // VAT auto-calculation preview
+  const previewVat = useCallback(async () => {
+    if (!autoCalculateVat) return;
+    if (!createForm.recipient_country?.trim()) return;
+    if (!createForm.subtotal || createForm.subtotal <= 0) return;
+
+    setIsLoadingVatPreview(true);
+    try {
+      const response = await api.post(`/conferences/${conference.id}/invoices/preview-vat`, {
+        recipient_country: createForm.recipient_country,
+        recipient_vat_number: createForm.recipient_vat_number || null,
+        subtotal: createForm.subtotal,
+        issue_date: createForm.issue_date || null,
+      });
+
+      const { tax_rate, tax_amount, total, notes_text } = response.data;
+
+      // Update tax fields
+      setCreateForm((prev) => ({
+        ...prev,
+        tax_rate,
+        tax_amount,
+        total,
+        // Append notes_text if provided and not already present
+        notes:
+          notes_text && !prev.notes?.includes(notes_text)
+            ? prev.notes
+              ? `${prev.notes}\n\n${notes_text}`
+              : notes_text
+            : prev.notes,
+      }));
+    } catch (err) {
+      console.error('VAT preview failed:', err);
+      // Silently fail - user can enter manually
+    } finally {
+      setIsLoadingVatPreview(false);
+    }
+  }, [
+    autoCalculateVat,
+    createForm.recipient_country,
+    createForm.recipient_vat_number,
+    createForm.subtotal,
+    createForm.issue_date,
+    conference.id,
+  ]);
+
+  // Debounced VAT preview on relevant field changes
   useEffect(() => {
-    if (taxInfo?.current_vat_rate != null && createForm.tax_rate === 0) {
+    if (!autoCalculateVat) return;
+
+    if (vatPreviewTimerRef.current) {
+      clearTimeout(vatPreviewTimerRef.current);
+    }
+
+    vatPreviewTimerRef.current = setTimeout(() => {
+      previewVat();
+    }, 500);
+
+    return () => {
+      if (vatPreviewTimerRef.current) {
+        clearTimeout(vatPreviewTimerRef.current);
+      }
+    };
+  }, [autoCalculateVat, previewVat]);
+
+  // Auto-fill tax rate from conference VAT rate settings (only when not auto-calculating)
+  useEffect(() => {
+    if (!autoCalculateVat && taxInfo?.current_vat_rate != null && createForm.tax_rate === 0) {
       handleTaxRateChange(Number(taxInfo.current_vat_rate));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taxInfo?.current_vat_rate]);
+  }, [taxInfo?.current_vat_rate, autoCalculateVat]);
 
   // --- Recipient picker ---
   const handleRecipientSelect = (result: RecipientSearchResult) => {
@@ -1170,6 +1238,71 @@ export default function ConferenceInvoicesTab({
                         {fmtAmount(createForm.subtotal)}
                       </span>
                     </div>
+
+                    {/* Auto-calculate VAT toggle */}
+                    <div className="flex items-center gap-2 py-1">
+                      <input
+                        type="checkbox"
+                        id="auto-calculate-vat"
+                        checked={autoCalculateVat}
+                        onChange={(e) => {
+                          setAutoCalculateVat(e.target.checked);
+                          if (!e.target.checked) {
+                            setIsLoadingVatPreview(false);
+                          }
+                        }}
+                        className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                      />
+                      <label
+                        htmlFor="auto-calculate-vat"
+                        className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                      >
+                        Auto-calculate VAT
+                      </label>
+                      {isLoadingVatPreview && (
+                        <svg
+                          className="animate-spin h-4 w-4 text-primary-600"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                      )}
+                    </div>
+
+                    {autoCalculateVat && (
+                      <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-700 dark:text-blue-300">
+                        <p className="font-medium mb-1">Automatic VAT Calculation</p>
+                        <ul className="list-disc list-inside space-y-0.5 ml-1">
+                          <li>
+                            <strong>In-person/Hybrid (onsite):</strong> Uses Conference VAT Rates
+                          </li>
+                          <li>
+                            <strong>Virtual B2C (EU):</strong> Uses EU Country VAT Rates (OSS)
+                          </li>
+                          <li>
+                            <strong>Virtual B2B (EU):</strong> 0% with Reverse Charge notice
+                          </li>
+                        </ul>
+                        <p className="mt-1 text-xs italic">
+                          Based on customer location, VAT number, and booking attendance type.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="flex justify-between items-center text-sm">
                       <div className="flex items-center gap-2">
                         <span className="text-gray-500 dark:text-gray-400">Tax Rate (%)</span>
@@ -1178,11 +1311,18 @@ export default function ConferenceInvoicesTab({
                           step="0.01"
                           min="0"
                           max="100"
-                          className="w-20 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          disabled={autoCalculateVat}
+                          className={`w-20 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1 px-2 text-sm text-right focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${
+                            autoCalculateVat
+                              ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-900'
+                              : ''
+                          }`}
                           value={createForm.tax_rate ?? ''}
-                          onChange={(e) =>
-                            handleTaxRateChange(e.target.value ? parseFloat(e.target.value) : 0)
-                          }
+                          onChange={(e) => {
+                            if (!autoCalculateVat) {
+                              handleTaxRateChange(e.target.value ? parseFloat(e.target.value) : 0);
+                            }
+                          }}
                         />
                       </div>
                       <span className="font-medium text-gray-900 dark:text-gray-100">
