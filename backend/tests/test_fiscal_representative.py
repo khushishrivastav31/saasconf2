@@ -118,21 +118,10 @@ async def sample_vat_rate(
     tenant: Tenant,
     conference: Conference,
 ):  # -> ConferenceVatRate:  # Type annotation removed - model deleted
-    """Create a sample VAT rate period in the database."""
-    today = date.today()
-    rate = None  # ConferenceVatRate(
-        id=uuid.uuid4(),
-        tenant_id=tenant.id,
-        conference_id=conference.id,
-        rate=Decimal("21.00"),
-        start_date=today - timedelta(days=30),
-        end_date=today + timedelta(days=30),
-        description="Standard VAT rate",
-    )
-    db_session.add(rate)
-    await db_session.commit()
-    await db_session.refresh(rate)
-    return rate
+    """Create a sample VAT rate period in the database (DEPRECATED - model deleted)."""
+    # ConferenceVatRate model was deleted - this fixture no longer works
+    # Tests using this fixture are skipped via pytestmark
+    return None
 
 
 @pytest_asyncio.fixture()
