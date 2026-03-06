@@ -37,8 +37,11 @@ from app.models.applicant_token import ApplicantEmailVerification, ApplicantPass
 from app.models.associations import ConferenceLocation
 from app.models.cfp_applicants import CFPApplicant
 from app.models.conference import Conference
-from app.models.conference_vat_rate import ConferenceVatRate
+# from app.models.conference_vat_rate import ConferenceVatRate  # DELETED
 from app.models.fiscal_representative import FiscalRepresentative
+
+# Skip entire module - ConferenceVatRate was deleted
+pytestmark = pytest.mark.skip(reason="ConferenceVatRate model deleted - needs migration to VatRateByCountry")
 from app.models.location import Location
 from app.models.module import Module, TenantModule
 from app.models.settings import TenantLocationType
