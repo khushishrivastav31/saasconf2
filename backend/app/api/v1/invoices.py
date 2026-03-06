@@ -2,6 +2,7 @@
 
 import base64
 import io
+import logging
 from datetime import date as date_type
 from decimal import Decimal
 from uuid import UUID
@@ -22,10 +23,12 @@ from app.core.dependencies import (
 )
 from app.core.email import send_email
 from app.core.exceptions import AuthorizationError, NotFoundError
+from app.core.invoice_events import InvoiceEventType, log_invoice_event
 from app.core.invoice_number import generate_cancellation_number, generate_invoice_number
 from app.core.invoice_pdf import generate_invoice_pdf
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
+from app.core.stripe_helper import refund_payment
 from app.models.associations import ConferenceCFP, ConferenceVolunteer
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
@@ -49,6 +52,7 @@ from app.schemas.invoice import (
 router = APIRouter()
 
 MODULE_CODE = "invoices"
+logger = logging.getLogger(__name__)
 
 
 def build_invoice_response(
@@ -87,6 +91,10 @@ def build_invoice_response(
         contact_persons=invoice.contact_persons or [],
         related_invoice_id=invoice.related_invoice_id,
         related_invoice_number=related_invoice_number,
+        stripe_payment_intent_id=invoice.stripe_payment_intent_id,
+        stripe_charge_id=invoice.stripe_charge_id,
+        stripe_payment_link_url=invoice.stripe_payment_link_url,
+        events=invoice.events if hasattr(invoice, "events") else [],
         is_active=invoice.is_active,
         created_at=invoice.created_at,
         updated_at=invoice.updated_at,
@@ -775,8 +783,26 @@ async def cancel_invoice(
         raise HTTPException(status_code=400, detail="Cannot cancel a credit note.")
 
     # 1. Cancel the original invoice
+    original_status = invoice.status
     invoice.status = "cancelled"
     invoice.internal_comment = body.reason
+
+    # 1a. Log cancellation event
+    await log_invoice_event(
+        db=db,
+        invoice_id=invoice.id,
+        tenant_id=invoice.tenant_id,
+        event_type=InvoiceEventType.INVOICE_CANCELLED,
+        status="succeeded",
+        user=current_user,
+        amount=invoice.total,
+        currency=invoice.currency,
+        metadata={
+            "invoice_number": invoice.invoice_number,
+            "cancellation_reason": body.reason,
+            "previous_status": original_status,
+        },
+    )
 
     # 2. Generate cancellation number
     cancellation_number = await generate_cancellation_number(db, conference_id, current_user.tenant_id)
@@ -965,6 +991,108 @@ async def send_invoice(
             "invoice_number": invoice.invoice_number,
             "recipient_email": invoice.recipient_email,
             "is_resend": not is_first_send,
+        },
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(invoice)
+
+    return build_invoice_response(invoice)
+
+
+@router.post(
+    "/{invoice_id}/refund",
+    response_model=InvoiceResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def refund_stripe_payment(
+    conference_id: UUID,
+    invoice_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+) -> InvoiceResponse:
+    """Trigger Stripe refund for a cancelled credit card invoice.
+
+    Only works for:
+    - Cancelled invoices
+    - credit_card template type
+    - Has stripe_payment_intent_id
+    - Not already refunded
+    """
+    from sqlalchemy.orm import selectinload
+
+    await _require_invoice_admin(db, current_user, conference_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+
+    # Fetch invoice with events relationship
+    result = await db.execute(
+        select(Invoice)
+        .options(selectinload(Invoice.events))
+        .where(
+            Invoice.id == invoice_id,
+            Invoice.conference_id == conference_id,
+            Invoice.tenant_id == current_user.tenant_id,
+        )
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+
+    # Validation: only cancelled invoices
+    if invoice.status != "cancelled":
+        raise HTTPException(
+            status_code=400,
+            detail="Only cancelled invoices can be refunded. Cancel the invoice first.",
+        )
+
+    # Validation: only credit card invoices
+    if invoice.template_type != "credit_card":
+        raise HTTPException(
+            status_code=400,
+            detail="Only credit card invoices can be refunded via Stripe.",
+        )
+
+    # Validation: must have Stripe payment intent
+    if not invoice.stripe_payment_intent_id:
+        raise HTTPException(
+            status_code=400,
+            detail="No Stripe payment to refund. This invoice was not paid via Stripe.",
+        )
+
+    # Validation: check if already refunded
+    refund_succeeded_events = [e for e in invoice.events if e.event_type == InvoiceEventType.REFUND_SUCCEEDED]
+    if refund_succeeded_events:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invoice already refunded on {refund_succeeded_events[0].created_at}.",
+        )
+
+    # Trigger Stripe refund
+    refund_result = await refund_payment(
+        db=db,
+        conference=conference,
+        invoice=invoice,
+        current_user=current_user,
+        amount=None,  # Full refund
+        reason="requested_by_customer",
+    )
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.refunded",
+        resource_type="invoice",
+        resource_id=invoice.id,
+        details={
+            "invoice_number": invoice.invoice_number,
+            "refund_id": refund_result["refund_id"],
+            "amount": float(refund_result["amount"]),
+            "currency": refund_result["currency"],
         },
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),

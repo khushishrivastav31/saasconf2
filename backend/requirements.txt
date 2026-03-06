@@ -46,6 +46,9 @@ nh3==0.2.21
 # Email
 resend==2.7.0
 
+# Payment processing
+stripe==14.4.0
+
 # Document processing
 mammoth==1.11.0
 fpdf2==2.8.3

@@ -13,6 +13,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.conference import Conference
+    from app.models.invoice_event import InvoiceEvent
     from app.models.tenant import Tenant
 
 
@@ -83,6 +84,11 @@ class Invoice(Base):
         UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True
     )
 
+    # Stripe payment tracking (for credit_card template type)
+    stripe_payment_intent_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_charge_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_payment_link_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     # Contact persons (JSONB array)
     contact_persons: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
@@ -101,12 +107,16 @@ class Invoice(Base):
     related_invoice: Mapped["Invoice | None"] = relationship(
         "Invoice", remote_side="Invoice.id", foreign_keys=[related_invoice_id]
     )
+    events: Mapped[list["InvoiceEvent"]] = relationship(
+        "InvoiceEvent", back_populates="invoice", cascade="all, delete-orphan", order_by="InvoiceEvent.created_at"
+    )
 
     # Indexes and constraints
     __table_args__ = (
         Index("idx_invoices_tenant", "tenant_id"),
         Index("idx_invoices_conference", "tenant_id", "conference_id"),
         Index("idx_invoices_related", "related_invoice_id"),
+        Index("idx_invoices_stripe_intent", "stripe_payment_intent_id"),
         # Partial unique index: enforces uniqueness for assigned numbers, allows multiple NULLs (drafts)
         Index(
             "uq_invoices_tenant_number",

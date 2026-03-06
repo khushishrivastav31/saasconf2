@@ -151,6 +151,27 @@ class InvoiceUpdate(BaseModel):
         return validate_vat(v)
 
 
+class InvoiceEventResponse(BaseModel):
+    """Invoice event response schema (audit log for payments/refunds)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    invoice_id: UUID
+    event_type: str
+    stripe_object_id: str | None = None
+    stripe_object_type: str | None = None
+    stripe_idempotency_key: str | None = None
+    amount: float | None = None
+    currency: str | None = None
+    status: str
+    metadata: dict | None = None
+    error_message: str | None = None
+    user_id: UUID | None = None
+    user_email: str | None = None
+    created_at: datetime
+
+
 class InvoiceResponse(BaseModel):
     """Invoice response schema."""
 
@@ -186,6 +207,12 @@ class InvoiceResponse(BaseModel):
     contact_persons: list[LocationContactPerson] = []
     related_invoice_id: UUID | None = None
     related_invoice_number: str | None = None
+    # Stripe payment tracking (for credit_card template type)
+    stripe_payment_intent_id: str | None = None
+    stripe_charge_id: str | None = None
+    stripe_payment_link_url: str | None = None
+    # Payment/refund events (audit trail)
+    events: list[InvoiceEventResponse] = []
     is_active: bool
     created_at: datetime
     updated_at: datetime
