@@ -14,7 +14,7 @@ from app.core.vat_calculation import (
 )
 from app.models.booking import BookingOption
 from app.models.invoice import Invoice
-from app.models.registration import Registration
+from app.models.registration import BillingProfile, Registration
 from app.models.vat_rate_by_country import VatRateByCountry
 
 
@@ -70,11 +70,28 @@ async def test_infer_attendance_type_from_registration(db_session, conference, t
     )
     db_session.add(booking_option)
 
+    # Create billing profile for registration
+    billing_profile = BillingProfile(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        street="123 Main St",
+        postal_code="75001",
+        city="Paris",
+        country="FR",
+        contact_first_name="John",
+        contact_last_name="Doe",
+        contact_phone="+33123456789",
+        contact_email="john@example.com",
+    )
+    db_session.add(billing_profile)
+
     # Create registration linked to booking option
     registration = Registration(
         id=uuid.uuid4(),
         conference_id=conference.id,
         tenant_id=tenant.id,
+        billing_profile_id=billing_profile.id,
         booking_option_id=booking_option.id,
         first_name="John",
         last_name="Doe",
@@ -131,7 +148,7 @@ async def test_calculate_vat_virtual_b2b_eu_reverse_charge(db_session, conferenc
     """Virtual B2B EU → Reverse Charge (0% VAT, notes text)."""
     # Setup: DE conference, FR customer, B2B (has VAT number), virtual
     conference.country = "DE"
-    conference.settings = {"eu_countries": ["DE", "FR", "IT"], "vat_rules": None}  # use defaults
+    conference.settings = {"eu_countries": ["DE", "FR", "IT"]}  # use default vat_rules
 
     # Create booking option with virtual attendance
     booking_option = BookingOption(
@@ -144,11 +161,28 @@ async def test_calculate_vat_virtual_b2b_eu_reverse_charge(db_session, conferenc
     )
     db_session.add(booking_option)
 
+    # Create billing profile for registration
+    billing_profile = BillingProfile(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        street="123 Rue de la Paix",
+        postal_code="75001",
+        city="Paris",
+        country="FR",
+        contact_first_name="Jean",
+        contact_last_name="Dupont",
+        contact_phone="+33123456789",
+        contact_email="jean@example.fr",
+    )
+    db_session.add(billing_profile)
+
     # Create registration
     registration = Registration(
         id=uuid.uuid4(),
         conference_id=conference.id,
         tenant_id=tenant.id,
+        billing_profile_id=billing_profile.id,
         booking_option_id=booking_option.id,
         first_name="Jean",
         last_name="Dupont",
@@ -192,7 +226,7 @@ async def test_calculate_vat_virtual_b2c_eu_oss(db_session, conference, tenant):
     """Virtual B2C EU → OSS (customer country rate, notes text)."""
     # Setup: DE conference, FR customer, B2C (no VAT number), virtual
     conference.country = "DE"
-    conference.settings = {"eu_countries": ["DE", "FR", "IT"], "vat_rules": None}
+    conference.settings = {"eu_countries": ["DE", "FR", "IT"]}  # use default vat_rules
 
     # Seed FR VAT rate
     fr_vat_rate = VatRateByCountry(
@@ -215,11 +249,28 @@ async def test_calculate_vat_virtual_b2c_eu_oss(db_session, conference, tenant):
     )
     db_session.add(booking_option)
 
+    # Create billing profile for registration
+    billing_profile = BillingProfile(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        street="5 Rue de la Sorbonne",
+        postal_code="75005",
+        city="Paris",
+        country="FR",
+        contact_first_name="Marie",
+        contact_last_name="Curie",
+        contact_phone="+33123456789",
+        contact_email="marie@example.fr",
+    )
+    db_session.add(billing_profile)
+
     # Create registration
     registration = Registration(
         id=uuid.uuid4(),
         conference_id=conference.id,
         tenant_id=tenant.id,
+        billing_profile_id=billing_profile.id,
         booking_option_id=booking_option.id,
         first_name="Marie",
         last_name="Curie",
@@ -334,7 +385,7 @@ async def test_calculate_vat_missing_conference_rate(db_session, conference, ten
     """Missing conference VAT rate → 0% with warning."""
     # Setup: DE conference, DE customer, in_person, no ConferenceVatRate
     conference.country = "DE"
-    conference.settings = {"eu_countries": ["DE", "FR"], "vat_rules": None}
+    conference.settings = {"eu_countries": ["DE", "FR"]}  # use default vat_rules
 
     # Create booking option with in_person attendance
     booking_option = BookingOption(
@@ -392,7 +443,7 @@ async def test_calculate_vat_missing_customer_country_rate(db_session, conferenc
     """Missing customer country VAT rate → 0% with warning."""
     # Setup: DE conference, FR customer, B2C, virtual, but FR not in vat_rates_by_country
     conference.country = "DE"
-    conference.settings = {"eu_countries": ["DE", "FR"], "vat_rules": None}
+    conference.settings = {"eu_countries": ["DE", "FR"]}  # use default vat_rules
 
     # Create booking option with virtual attendance
     booking_option = BookingOption(
@@ -405,11 +456,28 @@ async def test_calculate_vat_missing_customer_country_rate(db_session, conferenc
     )
     db_session.add(booking_option)
 
+    # Create billing profile for registration
+    billing_profile = BillingProfile(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        street="10 Rue Pierre Curie",
+        postal_code="75005",
+        city="Paris",
+        country="FR",
+        contact_first_name="Marie",
+        contact_last_name="Curie",
+        contact_phone="+33123456789",
+        contact_email="marie@example.fr",
+    )
+    db_session.add(billing_profile)
+
     # Create registration
     registration = Registration(
         id=uuid.uuid4(),
         conference_id=conference.id,
         tenant_id=tenant.id,
+        billing_profile_id=billing_profile.id,
         booking_option_id=booking_option.id,
         first_name="Marie",
         last_name="Curie",
@@ -453,7 +521,7 @@ async def test_calculate_vat_no_attendance_type_defaults_to_in_person(db_session
     """No attendance type → defaults to in_person."""
     # Setup: DE conference, US customer, no registration linkage
     conference.country = "DE"
-    conference.settings = {"eu_countries": ["DE", "FR"], "vat_rules": None}
+    conference.settings = {"eu_countries": ["DE", "FR"]}  # use default vat_rules
 
     # Create invoice without registration linkage
     invoice = Invoice(
