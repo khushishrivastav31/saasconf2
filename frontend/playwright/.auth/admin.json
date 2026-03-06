@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "https://staging.sonrisa.ventures",
+      "localStorage": [
+        {
+          "name": "refresh_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODM4Zjc1NC1mY2RiLTQ4MGUtODBiZC0xYWVkNzdmMjIxMGMiLCJleHAiOjE3NzI2MTA3MjksImlhdCI6MTc3MjAwNTkyOSwidHlwZSI6InJlZnJlc2giLCJqdGkiOiJacTNxeHNOdERwQ0d4bzRvZ1VIWTlPRHlNTGhqY1dkSDRDRlQ3clhzb0VRIn0.SIWk2UWFuYf6Z8k-1jhExdHFDYTcqFEfC66_dJAb7VY"
+        },
+        {
+          "name": "access_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODM4Zjc1NC1mY2RiLTQ4MGUtODBiZC0xYWVkNzdmMjIxMGMiLCJ0ZW5hbnRfaWQiOiI3NmM5OTg1MC1jMzc5LTQ2OWYtODQ3Yi0yM2U0ZWRjMTdlY2UiLCJyb2xlIjoidGVuYW50X2FkbWluIiwibW9kdWxlcyI6WyJpbnZvaWNlcyIsInByb2dyYW0iLCJzZXJ2aWNlX3Byb3ZpZGVycyIsImNvbmZlcmVuY2VzIiwibG9jYXRpb25zIiwic3BvbnNvcnMiLCJjZnAiLCJzZXNzaW9ucyIsInNwZWFrZXJzIiwiYXR0ZW5kZWVzIiwiYW5hbHl0aWNzIiwidm9sdW50ZWVycyIsInJlZ2lzdHJhdGlvbiIsIm5ld3MiXSwiaXNfdGVuYW50X3N1cGVyX3VzZXIiOmZhbHNlLCJleHAiOjE3NzIwMDY4MjksImlhdCI6MTc3MjAwNTkyOSwidHlwZSI6ImFjY2VzcyIsImp0aSI6ImtscGQ2QWpZVWJxNTJFSmU5VXJLQVEifQ.gbmqqqfzpqMB6aZfYMjnZxeLaNsf4a0_wiqxzQ0hG44"
+        }
+      ]
+    }
+  ]
+}

@@ -142,6 +142,7 @@ def build_invoice_response(
         stripe_payment_intent_id=invoice.stripe_payment_intent_id,
         stripe_charge_id=invoice.stripe_charge_id,
         stripe_payment_link_url=invoice.stripe_payment_link_url,
+        vat_auto_calculated=invoice.vat_auto_calculated,
         events=events_data,
         is_active=invoice.is_active,
         created_at=invoice.created_at,

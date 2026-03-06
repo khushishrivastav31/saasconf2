@@ -5,7 +5,6 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import select
 
 from app.core.vat_calculation import (
     calculate_vat_for_invoice,
@@ -14,7 +13,6 @@ from app.core.vat_calculation import (
     infer_attendance_type_from_registration,
 )
 from app.models.booking import BookingOption
-from app.models.conference import Conference
 from app.models.conference_vat_rate import ConferenceVatRate
 from app.models.invoice import Invoice
 from app.models.registration import Registration
@@ -543,7 +541,7 @@ async def test_calculate_vat_rounding(db_session, conference, tenant):
     await db_session.commit()
 
     # Calculate VAT
-    rate, tax_amount, notes_text = await calculate_vat_for_invoice(invoice, conference, db_session)
+    rate, tax_amount, _ = await calculate_vat_for_invoice(invoice, conference, db_session)
 
     # Assertions: 1000.33 * 0.19 = 190.0627 → 190.06
     assert rate == Decimal("19.00")

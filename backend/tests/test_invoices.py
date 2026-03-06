@@ -1339,16 +1339,17 @@ async def test_create_invoice_auto_calculates_vat(
     from decimal import Decimal
 
     from app.models.booking import BookingOption
-    from app.models.registration import Registration
+    from app.models.registration import BillingProfile, Registration
     from app.models.vat_rate_by_country import VatRateByCountry
 
     # Setup: DE conference, FR customer B2C, virtual → OSS (FR rate: 20%)
     conference.country = "DE"
-    conference.settings = {"eu_countries": ["DE", "FR", "IT"], "vat_rules": None}
+    conference.settings = {"eu_countries": ["DE", "FR", "IT"]}  # Use DEFAULT_VAT_RULES
 
-    # Seed FR VAT rate
+    # Seed FR VAT rate (global rate, tenant_id=None)
     fr_vat_rate = VatRateByCountry(
         id=uuid.uuid4(),
+        tenant_id=None,  # Global rate
         country_code="FR",
         country_name="France",
         standard_rate=Decimal("20.00"),
@@ -1366,11 +1367,28 @@ async def test_create_invoice_auto_calculates_vat(
     )
     db_session.add(booking_option)
 
+    # Create billing profile
+    billing_profile = BillingProfile(
+        id=uuid.uuid4(),
+        tenant_id=tenant_with_invoices_module.id,
+        conference_id=conference.id,
+        street="123 Rue Example",
+        postal_code="75001",
+        city="Paris",
+        country="FR",
+        contact_first_name="Marie",
+        contact_last_name="Curie",
+        contact_phone="+33123456789",
+        contact_email="marie@example.fr",
+    )
+    db_session.add(billing_profile)
+
     # Create registration
     registration = Registration(
         id=uuid.uuid4(),
         conference_id=conference.id,
         tenant_id=tenant_with_invoices_module.id,
+        billing_profile_id=billing_profile.id,
         booking_option_id=booking_option.id,
         first_name="Marie",
         last_name="Curie",
@@ -1388,6 +1406,9 @@ async def test_create_invoice_auto_calculates_vat(
         "recipient_source_id": str(registration.id),
         "recipient_name": "Marie Curie",
         "recipient_email": "marie@example.fr",
+        "recipient_address_line1": "123 Rue Example",
+        "recipient_city": "Paris",
+        "recipient_postal_code": "75001",
         "recipient_country": "FR",
         "recipient_vat_number": "",  # B2C
         "line_items": [{"description": "Virtual ticket", "quantity": 1, "unit_price": 1000, "total": 1000}],
@@ -1404,10 +1425,10 @@ async def test_create_invoice_auto_calculates_vat(
     assert response.status_code == 201
     data = response.json()
 
-    # Verify auto-calculated VAT
-    assert data["tax_rate"] == "20.00"
-    assert data["tax_amount"] == "200.00"
-    assert data["total"] == "1200.00"
+    # Verify auto-calculated VAT (API returns floats, not strings)
+    assert float(data["tax_rate"]) == 20.0
+    assert float(data["tax_amount"]) == 200.0
+    assert float(data["total"]) == 1200.0
     assert data["vat_auto_calculated"] is True
 
     # Verify OSS notes text
@@ -1427,11 +1448,11 @@ async def test_create_invoice_appends_reverse_charge_notes(
     from datetime import date
 
     from app.models.booking import BookingOption
-    from app.models.registration import Registration
+    from app.models.registration import BillingProfile, Registration
 
     # Setup: DE conference, FR customer B2B (has VAT number), virtual → Reverse Charge
     conference.country = "DE"
-    conference.settings = {"eu_countries": ["DE", "FR"], "vat_rules": None}
+    conference.settings = {"eu_countries": ["DE", "FR"]}  # Use DEFAULT_VAT_RULES
 
     # Create booking option with virtual attendance
     booking_option = BookingOption(
@@ -1444,11 +1465,29 @@ async def test_create_invoice_appends_reverse_charge_notes(
     )
     db_session.add(booking_option)
 
+    # Create billing profile
+    billing_profile = BillingProfile(
+        id=uuid.uuid4(),
+        tenant_id=tenant_with_invoices_module.id,
+        conference_id=conference.id,
+        street="123 Rue Example",
+        postal_code="75001",
+        city="Paris",
+        country="FR",
+        contact_first_name="Jean",
+        contact_last_name="Dupont",
+        contact_phone="+33123456789",
+        contact_email="jean@example.fr",
+        vat_number="FR12345678901",
+    )
+    db_session.add(billing_profile)
+
     # Create registration
     registration = Registration(
         id=uuid.uuid4(),
         conference_id=conference.id,
         tenant_id=tenant_with_invoices_module.id,
+        billing_profile_id=billing_profile.id,
         booking_option_id=booking_option.id,
         first_name="Jean",
         last_name="Dupont",
@@ -1466,6 +1505,9 @@ async def test_create_invoice_appends_reverse_charge_notes(
         "recipient_source_id": str(registration.id),
         "recipient_name": "ACME SAS",
         "recipient_email": "jean@example.fr",
+        "recipient_address_line1": "123 Rue Example",
+        "recipient_city": "Paris",
+        "recipient_postal_code": "75001",
         "recipient_country": "FR",
         "recipient_vat_number": "FR12345678901",  # B2B
         "line_items": [{"description": "Virtual ticket", "quantity": 1, "unit_price": 1000, "total": 1000}],
@@ -1482,10 +1524,10 @@ async def test_create_invoice_appends_reverse_charge_notes(
     assert response.status_code == 201
     data = response.json()
 
-    # Verify reverse charge (0% VAT)
-    assert data["tax_rate"] == "0.00"
-    assert data["tax_amount"] == "0.00"
-    assert data["total"] == "1000.00"
+    # Verify reverse charge (0% VAT) - API returns floats, not strings
+    assert float(data["tax_rate"]) == 0.0
+    assert float(data["tax_amount"]) == 0.0
+    assert float(data["total"]) == 1000.0
     assert data["vat_auto_calculated"] is True
 
     # Verify reverse charge notes
@@ -1541,10 +1583,10 @@ async def test_update_invoice_draft_allows_manual_override(
     assert response.status_code == 200
     data = response.json()
 
-    # Verify manual override
-    assert data["tax_rate"] == "25.00"
-    assert data["tax_amount"] == "250.00"
-    assert data["total"] == "1250.00"
+    # Verify manual override (API returns floats, not strings)
+    assert float(data["tax_rate"]) == 25.00
+    assert float(data["tax_amount"]) == 250.00
+    assert float(data["total"]) == 1250.00
     assert data["vat_auto_calculated"] is False
 
 
@@ -1613,17 +1655,19 @@ async def test_preview_vat_endpoint(
 
     # Setup: DE conference, FR customer
     conference.country = "DE"
-    conference.settings = {"eu_countries": ["DE", "FR"], "vat_rules": None}
+    conference.settings = {"eu_countries": ["DE", "FR"]}  # Use DEFAULT_VAT_RULES
 
-    # Seed FR VAT rate
+    # Seed FR VAT rate (tenant-specific)
     fr_vat_rate = VatRateByCountry(
         id=uuid.uuid4(),
+        tenant_id=tenant_with_invoices_module.id,  # Tenant-specific
         country_code="FR",
         country_name="France",
         standard_rate=Decimal("20.00"),
     )
     db_session.add(fr_vat_rate)
     await db_session.commit()
+    await db_session.refresh(conference)  # Refresh to ensure settings are loaded
 
     # Preview VAT for FR B2C virtual
     payload = {

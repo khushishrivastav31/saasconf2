@@ -80,28 +80,15 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Second currency save fix and VAT rate global fallback
-- **Fix 1**: Second currency field not clearing when selecting "Same as primary"
-  - Root cause: Frontend sent `undefined` instead of `null`, backend ignored undefined values
-  - Added `queryClient.invalidateQueries()` to refetch conference data after save
-  - Added `useEffect` with ref to sync form state when server data changes
-  - Updated `ConferenceUpdate` type to allow `invoice_currency: string | null`
-- **Fix 2**: VAT rate display showing 0% for global rates (e.g., Germany)
-  - Added `or_()` clause in `fiscal_representative.py` tax-info endpoint for global rate fallback
-  - Added global rate fallback in `vat_calculation.py` for both conference and customer country lookups
-  - Updated preview VAT endpoint to use `VatRateByCountry` instead of deleted `ConferenceVatRate`
-- **Fix 3**: VAT calculation type errors in tests
-  - Handle `None` conference.settings with `(settings or {}).get()`
-  - Add `None` guard in `get_vat_rule()` function
-  - Convert `invoice.subtotal` (float) to Decimal before calculations
-  - Handle `None` subtotal values
-- **Fix 4**: Mypy errors
-  - Remove duplicate `second_currency`/`exchange_rate` fields in `settings.py`
-  - Update preview VAT endpoint to use `VatRateByCountry` table
-  - Add `attendance_type` field to `BookingOptionResponse` in `booking_matrix.py`
-- **Files modified**:
-  - Backend: `fiscal_representative.py`, `vat_calculation.py`, `vat_rules.py`, `invoices.py`, `booking_matrix.py`, `settings.py`
-  - Frontend: `FinancialSettingsTab.tsx`, `conference.ts`
-- **Tests**: 74 passed (invoice), 31 passed (invoice settings), 1222 passed (frontend)
-- **Linters**: ✅ Ruff clean, mypy clean, TypeScript clean
-- **Status**: ✅ Committed and pushed to main (e219759)
+- **Last completed**: Tenant handbook updates for VAT rate management
+- **Changes**:
+  - Removed outdated "VAT Rate Periods" section (manual conference rates no longer exist)
+  - Updated "Currency & Tax" section with new features:
+    - Conference Tax Rate (auto-pulled from country rates)
+    - Country VAT/Tax Rates management (tenant-specific CRUD)
+    - EU Countries List configuration
+    - Dual currency support details with placeholder examples
+  - Updated "Invoice Details" section to describe automatic VAT calculation
+  - Updated Finance settings overview with comprehensive tax management features
+- **Files modified**: `frontend/src/pages/Handbook/handbookSections.tsx`
+- **Status**: ✅ Committed and pushed to main (514245e)
