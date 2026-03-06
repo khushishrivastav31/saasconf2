@@ -1001,6 +1001,34 @@ info@company.com,,,Tech Solutions`}
             or the envelope icon in the invoice list.
           </li>
         </ul>
+        <h3>Stripe Payment Links (Credit Card Invoices)</h3>
+        <p>
+          Invoices with template type <strong>Invoice (Credit Card)</strong> can generate Stripe
+          payment links for online payments.
+        </p>
+        <ul>
+          <li>
+            When sending a credit card invoice, a Stripe payment link is automatically created and
+            included in the email as a &ldquo;Pay Online&rdquo; button.
+          </li>
+          <li>
+            The payment link takes the recipient to a Stripe-hosted payment page where they can pay
+            with credit card, Google Pay, or Apple Pay.
+          </li>
+          <li>
+            When payment succeeds, Stripe sends a webhook notification to SaaSConf, which
+            automatically updates the invoice status from <code>sent</code> to <code>paid</code>.
+          </li>
+          <li>
+            You can also convert a <strong>Bank Transfer</strong> invoice to{' '}
+            <strong>Credit Card</strong> using the &ldquo;Convert to Credit Card&rdquo; button. This
+            creates a payment link and resends the email with the payment button.
+          </li>
+          <li>
+            Payment links remain active until the invoice is paid or cancelled. If you cancel an
+            invoice, the payment link is automatically deactivated.
+          </li>
+        </ul>
         <h3>Cancellation &amp; Credit Notes</h3>
         <p>
           Only <strong>draft</strong> invoices can be deleted. Sent and overdue invoices must be{' '}
@@ -1009,12 +1037,17 @@ info@company.com,,,Tech Solutions`}
         </p>
         <ul>
           <li>
-            Click <strong>Cancel Invoice</strong> on a sent or overdue invoice. You must provide a
-            cancellation reason (stored as internal comment on the cancelled invoice).
+            Click <strong>Cancel Invoice</strong> on a sent, overdue, or paid invoice. You must
+            provide a cancellation reason (stored as internal comment on the cancelled invoice).
           </li>
           <li>
             The system creates a credit note with negated line-item amounts, assigns a cancellation
             number, and emails the credit note PDF to the recipient.
+          </li>
+          <li>
+            If cancelling a <strong>paid</strong> credit card invoice, the system automatically
+            issues a full Stripe refund before creating the credit note. The refund typically takes
+            5-10 business days to appear in the customer&rsquo;s account.
           </li>
           <li>
             Credit notes appear as <strong>indented sub-rows</strong> directly under their parent
@@ -1027,6 +1060,26 @@ info@company.com,,,Tech Solutions`}
           <li>
             Credit notes <strong>cannot be deleted</strong>. They can be resent like any other sent
             invoice.
+          </li>
+        </ul>
+        <h3>Manual Refunds</h3>
+        <p>
+          For <strong>cancelled</strong> credit card invoices that were paid via Stripe, you can
+          issue a refund using the <strong>Refund</strong> button in the detail panel.
+        </p>
+        <ul>
+          <li>
+            The refund button only appears for cancelled invoices with template type{' '}
+            <strong>Credit Card</strong> that have a Stripe payment intent ID and have not already
+            been refunded.
+          </li>
+          <li>
+            Clicking <strong>Refund</strong> issues a full refund via Stripe and records the refund
+            event in the invoice audit log.
+          </li>
+          <li>
+            All payment and refund events are logged in the invoice&rsquo;s event history, which you
+            can view in the <strong>Documents</strong> tab of the invoice detail panel.
           </li>
         </ul>
         <h3>Invoice Details</h3>
@@ -1451,9 +1504,9 @@ info@company.com,,,Tech Solutions`}
         </p>
         <h3>Stripe Setup</h3>
         <p>
-          Configure Stripe payment integration for online payments on registrations. Stripe API keys
-          are stored per conference and secured with role-based access control.{' '}
-          <em>This tab is only visible to super-administrators.</em>
+          Configure Stripe payment integration for online credit card payments on invoices. Stripe
+          API keys and webhook secrets are stored per conference and secured with role-based access
+          control. <em>This tab is only visible to super-administrators.</em>
         </p>
         <h4>Access Control</h4>
         <p>
@@ -1472,26 +1525,100 @@ info@company.com,,,Tech Solutions`}
             <code>sk_</code>). Never shared with the browser. Stored encrypted in the database.
           </li>
           <li>
-            <strong>Enable Stripe Payments</strong> &mdash; toggle to activate Stripe on the
-            conference registration flow.
+            <strong>Webhook Secret</strong> &mdash; your Stripe webhook signing secret (starts with{' '}
+            <code>whsec_</code>). Used to verify that webhook events sent to SaaSConf actually come
+            from Stripe. This is <strong>required</strong> for automatic invoice status updates when
+            payments succeed.
+          </li>
+          <li>
+            <strong>Enable Stripe Payments</strong> &mdash; toggle to activate Stripe payment links
+            on credit card invoices.
           </li>
         </ul>
         <p>
-          The secret key field has a show/hide toggle (password input). For tenant super users, the
-          full key is shown. For regular admins, it is masked (e.g. <code>sk_****...****abc</code>
-          ).
+          The secret key and webhook secret fields have show/hide toggles (password inputs). For
+          tenant super users, the full keys are shown. For regular admins, they are masked (e.g.{' '}
+          <code>sk_****...****abc</code>).
+        </p>
+        <h4>Webhook Configuration</h4>
+        <p>
+          To receive automatic payment notifications from Stripe, you must configure a webhook
+          endpoint in your Stripe Dashboard:
+        </p>
+        <ol>
+          <li>
+            Go to <strong>Stripe Dashboard &rarr; Developers &rarr; Webhooks</strong>.
+          </li>
+          <li>
+            Click <strong>Add endpoint</strong> and enter your webhook URL:{' '}
+            <code>https://yourdomain.com/api/v1/stripe-webhook</code>
+          </li>
+          <li>
+            Select the following events to listen for:
+            <ul>
+              <li>
+                <code>payment_intent.succeeded</code> &mdash; marks invoice as paid
+              </li>
+              <li>
+                <code>charge.succeeded</code> &mdash; logs payment confirmation
+              </li>
+              <li>
+                <code>payment_intent.payment_failed</code> &mdash; logs failed payment attempt
+              </li>
+            </ul>
+          </li>
+          <li>
+            After creating the endpoint, copy the <strong>Signing secret</strong> (starts with{' '}
+            <code>whsec_</code>) and paste it into the <strong>Webhook Secret</strong> field in
+            SaaSConf.
+          </li>
+        </ol>
+        <p>
+          Once configured, Stripe will automatically notify SaaSConf when payments succeed or fail,
+          updating invoice statuses in real-time. All webhook events are logged in the invoice event
+          history.
         </p>
         <h4>Testing vs Production</h4>
         <ul>
           <li>
-            <strong>Test keys</strong> (start with <code>pk_test_</code> or <code>sk_test_</code>)
-            are for development and staging. Use these while setting up.
+            <strong>Test keys</strong> (start with <code>pk_test_</code>, <code>sk_test_</code>, or{' '}
+            <code>whsec_test_</code>) are for development and staging. Use these while setting up.
           </li>
           <li>
-            <strong>Live keys</strong> (start with <code>pk_live_</code> or <code>sk_live_</code>)
-            are for production. Only enter live keys when ready to accept real payments.
+            <strong>Live keys</strong> (start with <code>pk_live_</code>, <code>sk_live_</code>, or{' '}
+            <code>whsec_live_</code>) are for production. Only enter live keys when ready to accept
+            real payments.
+          </li>
+          <li>
+            <strong>Important:</strong> Create separate webhook endpoints for test and live modes in
+            your Stripe Dashboard. Test mode webhooks receive events from test payments, while live
+            mode webhooks receive events from real payments.
           </li>
         </ul>
+        <h4>Payment Flow</h4>
+        <p>Here&rsquo;s how Stripe payments work end-to-end:</p>
+        <ol>
+          <li>
+            Create an invoice with template type <strong>Invoice (Credit Card)</strong>.
+          </li>
+          <li>
+            Click <strong>Send</strong>. SaaSConf generates a Stripe payment link and emails the
+            invoice PDF with a &ldquo;Pay Online&rdquo; button.
+          </li>
+          <li>The recipient clicks the button and is taken to a Stripe-hosted payment page.</li>
+          <li>
+            After successful payment, Stripe sends a <code>payment_intent.succeeded</code> webhook
+            to SaaSConf.
+          </li>
+          <li>
+            SaaSConf verifies the webhook signature, updates the invoice status to <code>paid</code>
+            , and logs the payment event.
+          </li>
+          <li>
+            The invoice detail panel shows the payment event in the <strong>Documents</strong> tab
+            with the Stripe payment intent ID, charge ID, amount, and timestamp.
+          </li>
+        </ol>
         <p>
           For setup instructions and key generation, visit the <strong>Stripe Dashboard</strong>{' '}
           (developers section).
