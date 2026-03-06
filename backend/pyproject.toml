@@ -109,6 +109,10 @@ module = [
     "html2docx",
     "weasyprint",
     "weasyprint.*",
+    "facturx",
+    "facturx.*",
+    "lxml",
+    "lxml.*",
 ]
 ignore_missing_imports = true
 
