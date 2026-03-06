@@ -52,6 +52,7 @@ class InvoiceCreate(BaseModel):
     tax_amount: float | None = Field(None, ge=0)
     total: float | None = Field(None, ge=0)
     currency: str | None = Field(None, max_length=3)
+    attendance_type: str | None = Field(None, max_length=20)
     notes: str | None = None
     internal_comment: str | None = None
     contact_persons: list[LocationContactPerson] = Field(default_factory=list)
@@ -114,6 +115,7 @@ class InvoiceUpdate(BaseModel):
     tax_amount: float | None = Field(None, ge=0)
     total: float | None = Field(None, ge=0)
     currency: str | None = Field(None, max_length=3)
+    attendance_type: str | None = Field(None, max_length=20)
     notes: str | None = None
     internal_comment: str | None = None
     contact_persons: list[LocationContactPerson] | None = None
@@ -203,6 +205,7 @@ class InvoiceResponse(BaseModel):
     total: float | None = None
     currency: str | None = None
     vat_auto_calculated: bool = False
+    attendance_type: str | None = None
     notes: str | None = None
     internal_comment: str | None = None
     contact_persons: list[LocationContactPerson] = []

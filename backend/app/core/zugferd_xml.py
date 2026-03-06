@@ -2,11 +2,24 @@
 
 Generates CII (Cross-Industry Invoice) XML from SaaSConf invoice data
 using the factur-x library for EN 16931 compliance.
+
+All ZUGFeRD parameters are auto-determined from invoice/conference data:
+- Profile: Always EN16931 (EU standard)
+- Seller VAT ID: From company settings or fiscal representative
+- Contact info: From conference email/phone
+- Payment terms: Always 30 days
+- Payment means: Auto-determined from invoice template_type
+- Tax category: Auto-determined from VAT calculation result
+- Invoice type: Auto-determined from template_type (380=invoice, 381=credit note)
 """
+
+# ruff: noqa: UP031 - Using % formatting for XML namespace interpolation with lxml
 
 import asyncio
 import logging
 from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -14,17 +27,19 @@ logger = logging.getLogger(__name__)
 async def generate_zugferd_xml(
     invoice: Any,  # Invoice model
     conference: Any,  # Conference model
-    zugferd_settings: dict,
+    db: AsyncSession,
 ) -> bytes:
     """Generate ZUGFeRD CII XML from invoice data.
 
     Uses factur-x library for XML structure and validation.
     Returns XML bytes ready for PDF embedding.
 
+    All parameters are auto-determined - no manual configuration needed.
+
     Args:
         invoice: Invoice model instance
         conference: Conference model instance
-        zugferd_settings: ZUGFeRD configuration dict from conference settings
+        db: Database session for VAT calculation
 
     Returns:
         bytes: Generated XML ready for PDF embedding
@@ -33,24 +48,19 @@ async def generate_zugferd_xml(
         ValueError: If required data is missing or invalid
         RuntimeError: If XML generation fails
     """
-    # Map invoice fields to CII XML structure
-    xml_data = _map_invoice_to_zugferd(invoice, conference, zugferd_settings)
+    # Map invoice fields to CII XML structure (auto-determines all values)
+    xml_data = await _map_invoice_to_zugferd(invoice, conference, db)
 
-    # Generate XML using factur-x library (CPU-bound, run in thread pool)
+    # Generate XML using lxml (CPU-bound, run in thread pool)
+    # Profile is always EN16931 (EU standard)
     try:
-        from facturx import generate_facturx_from_dict
-
-        xml_bytes = await asyncio.to_thread(
-            generate_facturx_from_dict,
-            xml_data,
-            level=zugferd_settings.get("profile", "EN16931"),
-        )
+        xml_bytes = await asyncio.to_thread(_generate_cii_xml, xml_data)
 
         logger.info(
             f"ZUGFeRD XML generated for invoice {invoice.id}",
             extra={
                 "invoice_id": str(invoice.id),
-                "profile": zugferd_settings.get("profile"),
+                "profile": "EN16931",
                 "xml_size": len(xml_bytes),
             },
         )
@@ -65,33 +75,321 @@ async def generate_zugferd_xml(
         raise RuntimeError(f"Failed to generate ZUGFeRD XML: {e}") from e
 
 
-def _map_invoice_to_zugferd(invoice: Any, conference: Any, settings: dict) -> dict:
+def _generate_cii_xml(data: dict) -> bytes:
+    """Generate UN/CEFACT CII XML from mapped invoice data.
+
+    Args:
+        data: Mapped invoice data from _map_invoice_to_zugferd
+
+    Returns:
+        bytes: ZUGFeRD XML in UN/CEFACT CII format
+    """
+    from lxml import etree
+
+    # Define namespaces
+    nsmap = {
+        "rsm": "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100",
+        "ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
+        "udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
+        "qdt": "urn:un:unece:uncefact:data:standard:QualifiedDataType:100",
+    }
+
+    # Create root element
+    root = etree.Element(
+        "{urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100}CrossIndustryInvoice",
+        nsmap=nsmap,
+    )
+
+    # Exchange context
+    context = etree.SubElement(root, "{%s}ExchangedDocumentContext" % nsmap["rsm"])
+    guideline = etree.SubElement(context, "{%s}GuidelineSpecifiedDocumentContextParameter" % nsmap["ram"])
+    guideline_id = etree.SubElement(guideline, "{%s}ID" % nsmap["ram"])
+    guideline_id.text = "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:EN16931"
+
+    # Exchanged document
+    doc = etree.SubElement(root, "{%s}ExchangedDocument" % nsmap["rsm"])
+    doc_id = etree.SubElement(doc, "{%s}ID" % nsmap["ram"])
+    doc_id.text = data.get("invoice_number", "DRAFT")
+
+    doc_type = etree.SubElement(doc, "{%s}TypeCode" % nsmap["ram"])
+    doc_type.text = data.get("invoice_type_code", "380")
+
+    doc_issue = etree.SubElement(doc, "{%s}IssueDateTime" % nsmap["ram"])
+    issue_str = etree.SubElement(doc_issue, "{%s}DateTimeString" % nsmap["udt"], format="102")
+    if data.get("issue_date"):
+        issue_str.text = data["issue_date"].replace("-", "")
+
+    # Supply chain trade transaction
+    trade = etree.SubElement(root, "{%s}SupplyChainTradeTransaction" % nsmap["rsm"])
+
+    # Line items
+    for item in data.get("line_items", []):
+        item_elem = etree.SubElement(trade, "{%s}IncludedSupplyChainTradeLineItem" % nsmap["ram"])
+
+        line_doc = etree.SubElement(item_elem, "{%s}AssociatedDocumentLineDocument" % nsmap["ram"])
+        line_id = etree.SubElement(line_doc, "{%s}LineID" % nsmap["ram"])
+        line_id.text = str(item.get("line_id", "1"))
+
+        product = etree.SubElement(item_elem, "{%s}SpecifiedTradeProduct" % nsmap["ram"])
+        name = etree.SubElement(product, "{%s}Name" % nsmap["ram"])
+        name.text = item.get("name", "Item")
+
+        agreement = etree.SubElement(item_elem, "{%s}SpecifiedLineTradeAgreement" % nsmap["ram"])
+        net_price = etree.SubElement(agreement, "{%s}NetPriceProductTradePrice" % nsmap["ram"])
+        charge = etree.SubElement(net_price, "{%s}ChargeAmount" % nsmap["ram"])
+        charge.text = f"{item.get('unit_price', 0):.2f}"
+
+        delivery = etree.SubElement(item_elem, "{%s}SpecifiedLineTradeDelivery" % nsmap["ram"])
+        qty = etree.SubElement(delivery, "{%s}BilledQuantity" % nsmap["ram"])
+        qty.set("unitCode", "C62")  # C62 = unit/piece (UN/ECE recommendation 20)
+        qty.text = f"{item.get('quantity', 1):.2f}"
+
+        settlement = etree.SubElement(item_elem, "{%s}SpecifiedLineTradeSettlement" % nsmap["ram"])
+        tax = etree.SubElement(settlement, "{%s}ApplicableTradeTax" % nsmap["ram"])
+        tax_type = etree.SubElement(tax, "{%s}TypeCode" % nsmap["ram"])
+        tax_type.text = "VAT"
+        tax_category = etree.SubElement(tax, "{%s}CategoryCode" % nsmap["ram"])
+        tax_category.text = item.get("tax_category", "S")
+        tax_percent = etree.SubElement(tax, "{%s}RateApplicablePercent" % nsmap["ram"])
+        tax_percent.text = f"{item.get('tax_percent', 0):.2f}"
+
+        line_total = etree.SubElement(settlement, "{%s}SpecifiedTradeSettlementLineMonetarySummation" % nsmap["ram"])
+        line_amount = etree.SubElement(line_total, "{%s}LineTotalAmount" % nsmap["ram"])
+        line_amount.text = f"{item.get('line_total', 0):.2f}"
+
+    # Trade agreement
+    agreement = etree.SubElement(trade, "{%s}ApplicableHeaderTradeAgreement" % nsmap["ram"])
+
+    # Seller party (supplier)
+    seller = etree.SubElement(agreement, "{%s}SellerTradeParty" % nsmap["ram"])
+    seller_name = etree.SubElement(seller, "{%s}Name" % nsmap["ram"])
+    seller_name.text = data.get("seller", {}).get("name", "Unknown")
+
+    # Seller postal address (required - must come before SpecifiedTaxRegistration)
+    # Element order: PostcodeCode, LineOne, LineTwo, LineThree, CityName, CountryID
+    seller_address_data = data.get("seller", {}).get("address", {})
+    if seller_address_data:
+        seller_address = etree.SubElement(seller, "{%s}PostalTradeAddress" % nsmap["ram"])
+
+        # PostcodeCode must come first
+        if seller_address_data.get("postal_code"):
+            seller_postcode = etree.SubElement(seller_address, "{%s}PostcodeCode" % nsmap["ram"])
+            seller_postcode.text = seller_address_data["postal_code"]
+
+        # Then street address lines
+        if seller_address_data.get("street"):
+            seller_street = etree.SubElement(seller_address, "{%s}LineOne" % nsmap["ram"])
+            seller_street.text = seller_address_data["street"]
+
+        # Then city
+        if seller_address_data.get("city"):
+            seller_city = etree.SubElement(seller_address, "{%s}CityName" % nsmap["ram"])
+            seller_city.text = seller_address_data["city"]
+
+        # Finally country code
+        if data.get("seller", {}).get("country_code"):
+            seller_country = etree.SubElement(seller_address, "{%s}CountryID" % nsmap["ram"])
+            seller_country.text = data["seller"]["country_code"]
+
+    # Seller VAT ID (required for domestic sales - must come after address)
+    seller_vat = data.get("seller", {}).get("vat_id")
+    if seller_vat:
+        seller_spec_tax = etree.SubElement(seller, "{%s}SpecifiedTaxRegistration" % nsmap["ram"])
+        seller_tax_id = etree.SubElement(seller_spec_tax, "{%s}ID" % nsmap["ram"], schemeID="VA")
+        seller_tax_id.text = seller_vat
+
+    # Buyer party (customer)
+    buyer = etree.SubElement(agreement, "{%s}BuyerTradeParty" % nsmap["ram"])
+    buyer_name = etree.SubElement(buyer, "{%s}Name" % nsmap["ram"])
+    buyer_name.text = data.get("buyer", {}).get("name", "Unknown")
+
+    # Buyer postal address (required - must come before SpecifiedTaxRegistration)
+    # Element order: PostcodeCode, LineOne, LineTwo, LineThree, CityName, CountryID
+    buyer_address_data = data.get("buyer", {}).get("address", {})
+    if buyer_address_data:
+        buyer_address = etree.SubElement(buyer, "{%s}PostalTradeAddress" % nsmap["ram"])
+
+        # PostcodeCode must come first
+        if buyer_address_data.get("postal_code"):
+            buyer_postcode = etree.SubElement(buyer_address, "{%s}PostcodeCode" % nsmap["ram"])
+            buyer_postcode.text = buyer_address_data["postal_code"]
+
+        # Then street address lines
+        if buyer_address_data.get("street"):
+            buyer_street = etree.SubElement(buyer_address, "{%s}LineOne" % nsmap["ram"])
+            buyer_street.text = buyer_address_data["street"]
+
+        # Then city
+        if buyer_address_data.get("city"):
+            buyer_city = etree.SubElement(buyer_address, "{%s}CityName" % nsmap["ram"])
+            buyer_city.text = buyer_address_data["city"]
+
+        # Finally country code
+        if data.get("buyer", {}).get("country_code"):
+            buyer_country = etree.SubElement(buyer_address, "{%s}CountryID" % nsmap["ram"])
+            buyer_country.text = data["buyer"]["country_code"]
+
+    # Buyer VAT ID (required for B2B reverse charge - must come after address)
+    buyer_vat = data.get("buyer", {}).get("vat_id")
+    if buyer_vat:
+        buyer_spec_tax = etree.SubElement(buyer, "{%s}SpecifiedTaxRegistration" % nsmap["ram"])
+        buyer_tax_id = etree.SubElement(buyer_spec_tax, "{%s}ID" % nsmap["ram"], schemeID="VA")
+        buyer_tax_id.text = buyer_vat
+
+    # Trade delivery (required by EN16931)
+    delivery_header = etree.SubElement(trade, "{%s}ApplicableHeaderTradeDelivery" % nsmap["ram"])
+    delivery_event = etree.SubElement(delivery_header, "{%s}ActualDeliverySupplyChainEvent" % nsmap["ram"])
+    delivery_date = etree.SubElement(delivery_event, "{%s}OccurrenceDateTime" % nsmap["ram"])
+    delivery_date_format = etree.SubElement(delivery_date, "{%s}DateTimeString" % nsmap["udt"], format="102")
+    # Use issue_date as delivery date (format: YYYYMMDD)
+    delivery_date_format.text = data.get("issue_date", "").replace("-", "")
+
+    # Trade settlement
+    settlement = etree.SubElement(trade, "{%s}ApplicableHeaderTradeSettlement" % nsmap["ram"])
+
+    payment_currency = etree.SubElement(settlement, "{%s}InvoiceCurrencyCode" % nsmap["ram"])
+    payment_currency.text = data.get("currency", "EUR")
+
+    # Payment means (REQUIRED before monetary summation)
+    payment_means_elem = etree.SubElement(settlement, "{%s}SpecifiedTradeSettlementPaymentMeans" % nsmap["ram"])
+    payment_means_code = etree.SubElement(payment_means_elem, "{%s}TypeCode" % nsmap["ram"])
+    payment_means_code.text = data.get("payment_means", {}).get("code", "30")
+
+    # Add bank account details if available
+    payment_means_data = data.get("payment_means", {})
+    if payment_means_data.get("iban"):
+        payee_account = etree.SubElement(payment_means_elem, "{%s}PayeePartyCreditorFinancialAccount" % nsmap["ram"])
+        iban_elem = etree.SubElement(payee_account, "{%s}IBANID" % nsmap["ram"])
+        iban_elem.text = payment_means_data["iban"]
+
+    # Add BIC as a separate element (sibling to PayeePartyCreditorFinancialAccount)
+    if payment_means_data.get("bic"):
+        financial_institution = etree.SubElement(
+            payment_means_elem, "{%s}PayeeSpecifiedCreditorFinancialInstitution" % nsmap["ram"]
+        )
+        bic_elem = etree.SubElement(financial_institution, "{%s}BICID" % nsmap["ram"])
+        bic_elem.text = payment_means_data["bic"]
+
+    # Tax breakdown (REQUIRED before monetary summation)
+    for tax_item in data.get("tax_breakdown", []):
+        tax_elem = etree.SubElement(settlement, "{%s}ApplicableTradeTax" % nsmap["ram"])
+
+        calc_amount = etree.SubElement(tax_elem, "{%s}CalculatedAmount" % nsmap["ram"])
+        calc_amount.text = f"{tax_item.get('tax_amount', 0):.2f}"
+
+        tax_type_code = etree.SubElement(tax_elem, "{%s}TypeCode" % nsmap["ram"])
+        tax_type_code.text = "VAT"
+
+        tax_basis_amount = etree.SubElement(tax_elem, "{%s}BasisAmount" % nsmap["ram"])
+        tax_basis_amount.text = f"{tax_item.get('tax_basis', 0):.2f}"
+
+        tax_category_code = etree.SubElement(tax_elem, "{%s}CategoryCode" % nsmap["ram"])
+        tax_category_code.text = tax_item.get("tax_category", "S")
+
+        tax_rate_percent = etree.SubElement(tax_elem, "{%s}RateApplicablePercent" % nsmap["ram"])
+        tax_rate_percent.text = f"{tax_item.get('tax_percent', 0):.2f}"
+
+    # Monetary summation (MUST come after payment means and tax)
+    summation = etree.SubElement(settlement, "{%s}SpecifiedTradeSettlementHeaderMonetarySummation" % nsmap["ram"])
+
+    line_total = etree.SubElement(summation, "{%s}LineTotalAmount" % nsmap["ram"])
+    line_total.text = f"{data.get('line_total', 0):.2f}"
+
+    tax_basis = etree.SubElement(summation, "{%s}TaxBasisTotalAmount" % nsmap["ram"])
+    tax_basis.text = f"{data.get('tax_basis', 0):.2f}"
+
+    tax_total = etree.SubElement(summation, "{%s}TaxTotalAmount" % nsmap["ram"], currencyID=data.get("currency", "EUR"))
+    tax_total.text = f"{data.get('tax_total', 0):.2f}"
+
+    grand_total = etree.SubElement(summation, "{%s}GrandTotalAmount" % nsmap["ram"])
+    grand_total.text = f"{data.get('grand_total', 0):.2f}"
+
+    due_payable = etree.SubElement(summation, "{%s}DuePayableAmount" % nsmap["ram"])
+    due_payable.text = f"{data.get('grand_total', 0):.2f}"
+
+    # Generate XML bytes
+    return etree.tostring(root, xml_declaration=True, encoding="UTF-8", pretty_print=True)
+
+
+def _determine_tax_category_code(vat_rule: dict | None, tax_rate: float) -> str:
+    """Determine ZUGFeRD tax category code from VAT calculation result.
+
+    Maps VAT decision table rules to UN/CEFACT tax category codes.
+
+    Args:
+        vat_rule: VAT rule dict from VAT decision table
+        tax_rate: Calculated tax rate percentage
+
+    Returns:
+        str: ZUGFeRD tax category code:
+            - "AE": Reverse charge (buyer pays VAT)
+            - "Z": Zero rated (0%)
+            - "E": Exempt from tax
+            - "S": Standard rate (normal VAT)
+    """
+    if not vat_rule:
+        # No rule found, assume exempt
+        return "E"
+
+    # Reverse charge: buyer self-accounts for VAT
+    if vat_rule.get("reverse_charge"):
+        return "AE"
+
+    # VAT charged at standard rate
+    if vat_rule.get("charge_vat"):
+        if tax_rate > 0:
+            return "S"  # Standard rate
+        else:
+            return "Z"  # Zero rated
+
+    # No VAT charged, not reverse charge
+    return "E"  # Exempt
+
+
+async def _map_invoice_to_zugferd(invoice: Any, conference: Any, db: AsyncSession) -> dict:
     """Map SaaSConf Invoice model to factur-x dict structure.
+
+    All ZUGFeRD parameters are auto-determined from invoice/conference data.
 
     Args:
         invoice: Invoice model instance
         conference: Conference model instance
-        settings: ZUGFeRD settings dict
+        db: Database session for VAT calculation
 
     Returns:
         dict: factur-x compatible data structure
     """
-    from app.core.invoice_pdf import (
-        _normalize_country_to_iso,
-        _resolve_bank_info,
-        _resolve_vat_number,
-    )
+    from app.core.default_settings import DEFAULT_EU_COUNTRIES, DEFAULT_VAT_RULES
+    from app.core.invoice_pdf import _normalize_country_to_iso
+    from app.core.vat_calculation import classify_customer_location, classify_customer_type
+    from app.core.vat_rules import get_vat_rule
 
     # Get company info from conference settings
     company_info = (conference.settings or {}).get("invoice_company_info", {})
 
-    # Resolve VAT number (company or fiscal rep)
-    vat_number = _resolve_vat_number(company_info)
+    # ── AUTO-DETERMINE SELLER VAT ID ──
+    # Use company tax_id, or fiscal representative if configured
+    vat_number = company_info.get("tax_id")
+    fiscal_rep = company_info.get("fiscal_representative")
+    if fiscal_rep and fiscal_rep.get("vat_number"):
+        # Use fiscal representative's VAT number
+        vat_number = fiscal_rep["vat_number"]
 
-    # Resolve bank info (from bank_accounts array or legacy fields)
-    bank_info = _resolve_bank_info(company_info)
+    # ── EXTRACT BANK INFO ──
+    # From bank_accounts array or legacy fields
+    iban = ""
+    bic = ""
+    bank_accounts = company_info.get("bank_accounts", [])
+    if bank_accounts and len(bank_accounts) > 0:
+        first_account = bank_accounts[0]
+        iban = first_account.get("iban", "")
+        bic = first_account.get("bic", "")
+    else:
+        # Fallback to legacy fields
+        iban = company_info.get("iban", "")
+        bic = company_info.get("bic", "")
 
-    # Build seller data
+    # ── BUILD SELLER DATA ──
     seller_country = _normalize_country_to_iso(company_info.get("country", ""))
     seller_data = {
         "name": company_info.get("name", "Unknown Company"),
@@ -101,8 +399,6 @@ def _map_invoice_to_zugferd(invoice: Any, conference: Any, settings: dict) -> di
     # Add VAT ID (required for ZUGFeRD)
     if vat_number:
         seller_data["vat_id"] = vat_number
-    elif settings.get("seller_vat_id"):
-        seller_data["vat_id"] = settings["seller_vat_id"]
 
     # Add seller address
     seller_address: dict[str, Any] = {}
@@ -124,11 +420,15 @@ def _map_invoice_to_zugferd(invoice: Any, conference: Any, settings: dict) -> di
     if seller_address:
         seller_data["address"] = seller_address
 
-    # Add contact info if available
-    if settings.get("seller_contact_email"):
-        seller_data["contact_email"] = settings["seller_contact_email"]
-    if settings.get("seller_contact_phone") or company_info.get("phone"):
-        seller_data["contact_phone"] = settings.get("seller_contact_phone") or company_info.get("phone")
+    # ── AUTO-DETERMINE CONTACT INFO ──
+    # Use conference contact_email/phone (from conference details)
+    if conference.contact_email:
+        seller_data["contact_email"] = conference.contact_email
+    if conference.phone:
+        seller_data["contact_phone"] = conference.phone
+    # Fallback to company info if conference doesn't have contact info
+    elif company_info.get("phone"):
+        seller_data["contact_phone"] = company_info.get("phone")
 
     # Build buyer data
     buyer_country = invoice.recipient_country or ""
@@ -161,13 +461,40 @@ def _map_invoice_to_zugferd(invoice: Any, conference: Any, settings: dict) -> di
     if buyer_address:
         buyer_data["address"] = buyer_address
 
+    # ── AUTO-DETERMINE TAX CATEGORY CODE ──
+    # Re-run VAT calculation to get the rule that was applied
+    # This ensures tax category matches the actual VAT treatment
+    eu_countries = (conference.settings or {}).get("eu_countries", DEFAULT_EU_COUNTRIES)
+    vat_rules = (conference.settings or {}).get("vat_rules", DEFAULT_VAT_RULES)
+
+    # Classify customer for VAT decision table
+    customer_type = classify_customer_type(invoice.recipient_vat_number)
+    customer_location = classify_customer_location(
+        invoice.recipient_country or "",
+        conference.country or "",
+        eu_countries,
+    )
+
+    # Infer attendance type from registration (or default to in_person)
+    from app.core.vat_calculation import infer_attendance_type_from_registration
+
+    attendance_type = await infer_attendance_type_from_registration(invoice, db)
+    if not attendance_type:
+        attendance_type = "in_person"
+
+    # Get VAT rule that was applied to this invoice
+    vat_rule = get_vat_rule(vat_rules, attendance_type, customer_type, customer_location)
+
     # Convert amounts to float (factur-x expects float, not Decimal)
     subtotal = float(invoice.subtotal) if invoice.subtotal else 0.0
     tax_amount = float(invoice.tax_amount) if invoice.tax_amount else 0.0
     total = float(invoice.total) if invoice.total else 0.0
     tax_rate = float(invoice.tax_rate) if invoice.tax_rate else 0.0
 
-    # Build line items
+    # Determine tax category code from VAT rule
+    tax_category_code = _determine_tax_category_code(vat_rule, tax_rate)
+
+    # ── BUILD LINE ITEMS ──
     line_items = []
     for idx, item in enumerate(invoice.line_items or [], start=1):
         line_item = {
@@ -176,29 +503,44 @@ def _map_invoice_to_zugferd(invoice: Any, conference: Any, settings: dict) -> di
             "quantity": float(item.get("quantity", 1)),
             "unit_price": float(item.get("unit_price", 0)),
             "line_total": float(item.get("total", 0)),
-            "tax_category": settings.get("tax_category_code", "S"),
+            "tax_category": tax_category_code,
             "tax_percent": tax_rate,
         }
         line_items.append(line_item)
 
+    # ── AUTO-DETERMINE PAYMENT MEANS CODE ──
+    # Based on invoice template_type:
+    # - bank_transfer → "30" (Credit transfer)
+    # - credit_card → "48" (Payment card)
+    # - credit_note → "30" (default to credit transfer)
+    payment_means_code = "30"  # Default: credit transfer
+    if invoice.template_type == "credit_card":
+        payment_means_code = "48"
+
     # Build payment info
     payment_data: dict[str, Any] = {
-        "code": settings.get("payment_means_code", "30"),
+        "code": payment_means_code,
     }
 
     # Add bank account if available
-    if bank_info.get("iban"):
-        payment_data["iban"] = bank_info["iban"]
-    if bank_info.get("bic"):
-        payment_data["bic"] = bank_info["bic"]
+    if iban:
+        payment_data["iban"] = iban
+    if bic:
+        payment_data["bic"] = bic
 
-    # Build complete factur-x data structure
+    # ── AUTO-DETERMINE INVOICE TYPE CODE ──
+    # Based on invoice template_type:
+    # - credit_note → "381" (Credit note)
+    # - invoice/bank_transfer/credit_card → "380" (Commercial invoice)
+    invoice_type_code = "381" if invoice.template_type == "credit_note" else "380"
+
+    # ── BUILD COMPLETE FACTUR-X DATA STRUCTURE ──
     zugferd_data = {
         # Document metadata
         "invoice_number": invoice.invoice_number or "DRAFT",
         "issue_date": invoice.issue_date.isoformat() if invoice.issue_date else None,
         "due_date": invoice.due_date.isoformat() if invoice.due_date else None,
-        "invoice_type_code": settings.get("invoice_type_code", "380"),
+        "invoice_type_code": invoice_type_code,
         "currency": invoice.currency or "EUR",
         # Parties
         "seller": seller_data,
@@ -214,7 +556,7 @@ def _map_invoice_to_zugferd(invoice: Any, conference: Any, settings: dict) -> di
                 "tax_basis": subtotal,
                 "tax_percent": tax_rate,
                 "tax_amount": tax_amount,
-                "tax_category": settings.get("tax_category_code", "S"),
+                "tax_category": tax_category_code,
             }
         ],
         # Line items
@@ -222,8 +564,8 @@ def _map_invoice_to_zugferd(invoice: Any, conference: Any, settings: dict) -> di
         # Payment
         "payment_means": payment_data,
         "payment_terms": {
-            "code": settings.get("payment_terms_code", "30"),
-            "description": f"Net {settings.get('payment_terms_code', '30')} days",
+            "code": "30",  # Always Net 30 days
+            "description": "Net 30 days",
         },
     }
 

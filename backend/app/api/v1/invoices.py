@@ -276,6 +276,30 @@ async def create_invoice(
     # Validate required recipient fields
     validate_recipient_fields(invoice_data)
 
+    # Auto-populate attendance_type from booking option if creating from registration
+    attendance_type_to_use = invoice_data.attendance_type
+    if (
+        not attendance_type_to_use
+        and invoice_data.recipient_source_type == "registration"
+        and invoice_data.recipient_source_id
+    ):
+        # Query registration to get booking_option.attendance_type
+        from app.models.booking import BookingOption
+        from app.models.registration import Registration
+
+        registration_stmt = select(Registration.booking_option_id).where(
+            Registration.id == invoice_data.recipient_source_id
+        )
+        registration_result = await db.execute(registration_stmt)
+        booking_option_id = registration_result.scalar_one_or_none()
+
+        if booking_option_id:
+            booking_option_stmt = select(BookingOption.attendance_type).where(BookingOption.id == booking_option_id)
+            booking_option_result = await db.execute(booking_option_stmt)
+            attendance_type_from_booking = booking_option_result.scalar_one_or_none()
+            if attendance_type_from_booking:
+                attendance_type_to_use = attendance_type_from_booking
+
     invoice = Invoice(
         tenant_id=current_user.tenant_id,
         conference_id=conference.id,
@@ -301,6 +325,7 @@ async def create_invoice(
         tax_amount=invoice_data.tax_amount,
         total=invoice_data.total,
         currency=invoice_data.currency,
+        attendance_type=attendance_type_to_use,
         notes=invoice_data.notes,
         internal_comment=invoice_data.internal_comment,
         contact_persons=(

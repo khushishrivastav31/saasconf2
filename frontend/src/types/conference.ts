@@ -461,6 +461,7 @@ export interface Invoice {
   total: number | null;
   currency: string | null;
   vat_auto_calculated: boolean;
+  attendance_type: string | null;
   notes: string | null;
   internal_comment: string | null;
   contact_persons: LocationContactPerson[];
@@ -517,6 +518,7 @@ export interface InvoiceCreate {
   tax_amount?: number;
   total?: number;
   currency?: string;
+  attendance_type?: string;
   notes?: string;
   internal_comment?: string;
   contact_persons?: LocationContactPerson[];
@@ -546,6 +548,7 @@ export interface InvoiceUpdate {
   tax_amount?: number;
   total?: number;
   currency?: string;
+  attendance_type?: string;
   notes?: string;
   internal_comment?: string;
   contact_persons?: LocationContactPerson[];

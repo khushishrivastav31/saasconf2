@@ -73,6 +73,9 @@ class Invoice(Base):
     total: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
     vat_auto_calculated: Mapped[bool] = mapped_column(Boolean, default=False)
+    attendance_type: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
+    )  # "virtual", "onsite", or null — used for VAT calculation in hybrid conferences
 
     # Notes (rich text — shown on invoice PDF via [NOTES] placeholder)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

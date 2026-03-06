@@ -857,7 +857,8 @@ async def generate_invoice_pdf(
     try:
         from app.core.zugferd_xml import generate_zugferd_xml
 
-        zugferd_xml = await generate_zugferd_xml(invoice, conference, zugferd_config)
+        # All parameters auto-determined from invoice/conference data
+        zugferd_xml = await generate_zugferd_xml(invoice, conference, db)
     except Exception as e:
         logger.error(
             f"ZUGFeRD XML generation failed for invoice {invoice.id}: {e}",
@@ -872,12 +873,15 @@ async def generate_invoice_pdf(
 
         html_obj = HTML(string=full_html)
 
-        # Create Factur-X attachment
+        # Create Factur-X attachment from XML string
+        # Convert bytes to string for WeasyPrint
+        xml_string = zugferd_xml.decode("utf-8") if isinstance(zugferd_xml, bytes) else zugferd_xml
+
         facturx_attachment = WeasyAttachment(
-            url="data:application/xml;base64," + base64.b64encode(zugferd_xml).decode(),
+            string=xml_string,
+            name="factur-x.xml",  # Use name parameter, not filename (which expects a file path)
             description="Factur-X/ZUGFeRD invoice data",
             relationship="Data",
-            filename="factur-x.xml",
         )
 
         # Generate PDF/A-3b with embedded XML

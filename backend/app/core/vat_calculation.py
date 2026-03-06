@@ -3,9 +3,10 @@
 import logging
 from decimal import Decimal
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.address import _resolve_country_code
 from app.core.default_settings import DEFAULT_EU_COUNTRIES, DEFAULT_VAT_RULES
 from app.core.vat_rules import get_vat_rule
 from app.models.booking import BookingOption
@@ -127,11 +128,26 @@ async def calculate_vat_for_invoice(
         eu_countries,
     )
 
-    # Step 3: Infer attendance type from registration (or default to in_person)
-    attendance_type = await infer_attendance_type_from_registration(invoice, db)
+    # Step 3: Determine attendance type (priority: direct field → infer from registration → conference venue)
+    attendance_type = invoice.attendance_type
     if not attendance_type:
-        logger.warning(f"Invoice {invoice.id}: no attendance type found, defaulting to in_person")
-        attendance_type = "in_person"
+        attendance_type = await infer_attendance_type_from_registration(invoice, db)
+    if not attendance_type:
+        # Fall back to conference venue_type
+        venue_type = conference.venue_type
+        if venue_type == "virtual":
+            attendance_type = "virtual"
+        elif venue_type == "in_person":
+            attendance_type = "in_person"
+        elif venue_type == "hybrid":
+            # For hybrid conferences without explicit attendance type, default to in_person
+            logger.warning(
+                f"Invoice {invoice.id}: hybrid conference but no attendance type specified, defaulting to in_person"
+            )
+            attendance_type = "in_person"
+        else:
+            logger.warning(f"Invoice {invoice.id}: unknown venue type '{venue_type}', defaulting to in_person")
+            attendance_type = "in_person"
 
     # Step 4: Lookup VAT rule from decision table
     vat_rules = (conference.settings or {}).get("vat_rules", DEFAULT_VAT_RULES)
@@ -148,38 +164,72 @@ async def calculate_vat_for_invoice(
         rate = Decimal("0.00")
     elif rule.get("vat_rate_source") == "conference":
         # Use conference country VAT rate (from country rates table)
-        conference_country_iso = (conference.country or "").strip().upper()
-        stmt = select(VatRateByCountry.standard_rate).where(
-            or_(
-                VatRateByCountry.tenant_id == conference.tenant_id,
-                VatRateByCountry.tenant_id.is_(None),  # Global rates fallback
-            ),
-            VatRateByCountry.country_code == conference_country_iso,
-        )
-        result = await db.execute(stmt)
-        fetched_rate = result.scalar_one_or_none()
-        if fetched_rate is None:
-            logger.warning(f"No VAT rate found for conference country {conference.country}, using 0%")
+        # Priority: tenant-specific rate first, then global fallback
+        # Resolve country name to ISO code (e.g., "Germany" → "DE")
+        conference_country_iso = _resolve_country_code(conference.country)
+
+        if not conference_country_iso:
+            logger.warning(f"Could not resolve conference country '{conference.country}' to ISO code, using 0%")
             rate = Decimal("0.00")
         else:
-            rate = fetched_rate
+            # Try tenant-specific rate first
+            stmt = select(VatRateByCountry.standard_rate).where(
+                VatRateByCountry.tenant_id == conference.tenant_id,
+                VatRateByCountry.country_code == conference_country_iso,
+            )
+            result = await db.execute(stmt)
+            fetched_rate = result.scalar_one_or_none()
+
+            # Fall back to global rate if no tenant-specific rate found
+            if fetched_rate is None:
+                stmt = select(VatRateByCountry.standard_rate).where(
+                    VatRateByCountry.tenant_id.is_(None),
+                    VatRateByCountry.country_code == conference_country_iso,
+                )
+                result = await db.execute(stmt)
+                fetched_rate = result.scalar_one_or_none()
+
+            if fetched_rate is None:
+                logger.warning(
+                    f"No VAT rate found for conference country {conference.country} (ISO: {conference_country_iso}), using 0%"
+                )
+                rate = Decimal("0.00")
+            else:
+                rate = fetched_rate
     elif rule.get("vat_rate_source") == "customer":
         # Use customer country VAT rate
-        recipient_iso = (invoice.recipient_country or "").strip().upper()
-        stmt = select(VatRateByCountry.standard_rate).where(
-            or_(
-                VatRateByCountry.tenant_id == conference.tenant_id,
-                VatRateByCountry.tenant_id.is_(None),  # Global rates fallback
-            ),
-            VatRateByCountry.country_code == recipient_iso,
-        )
-        result = await db.execute(stmt)
-        fetched_rate = result.scalar_one_or_none()
-        if fetched_rate is None:
-            logger.warning(f"No VAT rate found for country {invoice.recipient_country}, using 0%")
+        # Priority: tenant-specific rate first, then global fallback
+        # Resolve country name to ISO code (e.g., "Germany" → "DE")
+        recipient_iso = _resolve_country_code(invoice.recipient_country)
+
+        if not recipient_iso:
+            logger.warning(f"Could not resolve customer country '{invoice.recipient_country}' to ISO code, using 0%")
             rate = Decimal("0.00")
         else:
-            rate = fetched_rate
+            # Try tenant-specific rate first
+            stmt = select(VatRateByCountry.standard_rate).where(
+                VatRateByCountry.tenant_id == conference.tenant_id,
+                VatRateByCountry.country_code == recipient_iso,
+            )
+            result = await db.execute(stmt)
+            fetched_rate = result.scalar_one_or_none()
+
+            # Fall back to global rate if no tenant-specific rate found
+            if fetched_rate is None:
+                stmt = select(VatRateByCountry.standard_rate).where(
+                    VatRateByCountry.tenant_id.is_(None),
+                    VatRateByCountry.country_code == recipient_iso,
+                )
+                result = await db.execute(stmt)
+                fetched_rate = result.scalar_one_or_none()
+
+            if fetched_rate is None:
+                logger.warning(
+                    f"No VAT rate found for customer country {invoice.recipient_country} (ISO: {recipient_iso}), using 0%"
+                )
+                rate = Decimal("0.00")
+            else:
+                rate = fetched_rate
     else:
         # vat_rate_source == "none"
         rate = Decimal("0.00")

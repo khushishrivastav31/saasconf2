@@ -1103,6 +1103,102 @@ info@company.com,,,Tech Solutions`}
           Invoices can be exported as CSV (up to 50,000 rows). The export includes a UTF-8 BOM for
           compatibility with Excel.
         </p>
+        <h3>ZUGFeRD/Factur-X E-Invoicing</h3>
+        <p>
+          ZUGFeRD (also known as Factur-X) embeds machine-readable XML data within invoice PDFs,
+          enabling automated processing by customer accounting systems while remaining
+          human-readable. This is{' '}
+          <strong>mandatory in Germany for B2B invoices from 2025-2028</strong> and required for EU
+          public sector contracts.
+        </p>
+        <h4>How It Works</h4>
+        <p>
+          When ZUGFeRD is enabled, invoice PDFs include embedded XML that complies with the{' '}
+          <strong>EN 16931 EU standard</strong>. Customer accounting software (DATEV, Lexware,
+          sevDesk, SAP, etc.) can automatically extract invoice data for direct posting without
+          manual entry.
+        </p>
+        <h4>Enabling ZUGFeRD</h4>
+        <p>
+          Navigate to <strong>Settings &rarr; Finance &rarr; ZUGFeRD</strong> and toggle{' '}
+          <strong>Enable ZUGFeRD/Factur-X</strong>. All settings are automatically determined from
+          your existing invoice and company data:
+        </p>
+        <ul>
+          <li>
+            <strong>Profile:</strong> EN16931 (EU standard for compliance)
+          </li>
+          <li>
+            <strong>Seller VAT ID:</strong> From company tax_id or fiscal representative
+          </li>
+          <li>
+            <strong>Contact Info:</strong> From conference email/phone
+          </li>
+          <li>
+            <strong>Payment Terms:</strong> Net 30 days
+          </li>
+          <li>
+            <strong>Payment Means:</strong> Credit transfer (bank) or payment card
+          </li>
+          <li>
+            <strong>Tax Category:</strong> Based on VAT decision table (standard rate, reverse
+            charge, exempt, etc.)
+          </li>
+          <li>
+            <strong>Invoice Type:</strong> 380 (commercial invoice) or 381 (credit note)
+          </li>
+        </ul>
+        <h4>Data Requirements</h4>
+        <p>For ZUGFeRD to generate valid XML, invoices must include:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Required Fields</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <strong>Seller (Company)</strong>
+              </td>
+              <td>
+                Company name, VAT ID (tax_id or fiscal rep), country (ISO code like DE), address,
+                city, postal code
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Buyer (Customer)</strong>
+              </td>
+              <td>
+                Recipient name, country (ISO code required), address and city (recommended), VAT ID
+                (for B2B)
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Invoice</strong>
+              </td>
+              <td>
+                Invoice number, issue date, due date (not required for credit notes), currency, line
+                items with descriptions/quantities/prices, tax rate and amount
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <h4>Validation</h4>
+        <p>
+          The system validates each invoice against EN 16931 requirements before embedding XML. If
+          validation fails (e.g., missing buyer country), a standard PDF without ZUGFeRD is
+          generated instead, with a warning logged.
+        </p>
+        <h4>Credit Notes</h4>
+        <p>
+          Credit notes automatically use invoice type code 381 and support negative amounts. Due
+          date is not required for credit notes since they represent refunds rather than payment
+          requests.
+        </p>
       </>
     ),
   },
@@ -1503,6 +1599,246 @@ info@company.com,,,Tech Solutions`}
           template tab. The preview opens in a modal with mock data (sample customer, line items,
           totals). Switch between template tabs to preview each type individually. Use this to test
           formatting and placeholder variables before saving.
+        </p>
+        <h3>ZUGFeRD/Factur-X E-Invoicing</h3>
+        <p>
+          ZUGFeRD (also known as Factur-X) is a hybrid electronic invoicing standard that embeds
+          machine-readable XML data within PDF invoices. This enables automated invoice processing
+          by customer accounting systems while maintaining a human-readable PDF format.
+        </p>
+        <h4>Why use ZUGFeRD?</h4>
+        <ul>
+          <li>
+            <strong>EU Compliance</strong> &mdash; German B2B e-invoicing is mandatory from
+            2025-2028; French regulations have a similar timeline.
+          </li>
+          <li>
+            <strong>Automated Processing</strong> &mdash; customers can import invoices directly
+            into their accounting software (DATEV, Lexware, sevDesk, SAP, etc.).
+          </li>
+          <li>
+            <strong>Single File</strong> &mdash; PDF/A-3 format embeds XML, no need for separate
+            files.
+          </li>
+          <li>
+            <strong>EN 16931 Standard</strong> &mdash; full EU standard compliance, required for
+            public sector contracts.
+          </li>
+        </ul>
+        <h4>Configuration</h4>
+        <p>
+          Enable ZUGFeRD in <strong>Settings &rarr; Finance &rarr; ZUGFeRD Settings</strong>.
+          Required fields:
+        </p>
+        <ul>
+          <li>
+            <strong>Enabled</strong> &mdash; toggle to activate ZUGFeRD for this conference.
+          </li>
+          <li>
+            <strong>Profile</strong> &mdash; compliance level. Recommended: <strong>EN16931</strong>{' '}
+            (full EU standard compliance, supported by all major accounting software).
+          </li>
+          <li>
+            <strong>Seller VAT ID</strong> &mdash; required for e-invoicing (e.g.{' '}
+            <code>DE123456789</code> for German companies, <code>FR12345678901</code> for French).
+          </li>
+        </ul>
+        <p>Optional configuration:</p>
+        <ul>
+          <li>
+            <strong>Seller Contact Email/Phone</strong> &mdash; invoice issuer contact details
+            included in the XML.
+          </li>
+          <li>
+            <strong>Payment Terms Code</strong> &mdash; net payment days (default: 30 = Net 30
+            days).
+          </li>
+          <li>
+            <strong>Payment Means Code</strong> &mdash; payment method (default: 30 = credit
+            transfer). Common codes: 30 (bank transfer), 48 (credit card), 49 (direct debit).
+          </li>
+          <li>
+            <strong>Tax Category Code</strong> &mdash; VAT category (default: S = standard rate).
+            Other codes: Z (zero rated), E (exempt), AE (reverse charge).
+          </li>
+          <li>
+            <strong>Invoice Type Code</strong> &mdash; document type (default: 380 = commercial
+            invoice). Other codes: 381 (credit note), 384 (corrected invoice).
+          </li>
+        </ul>
+        <h4>Profile Selection</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Profile</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>MINIMUM</td>
+              <td>Bare minimum fields. Limited adoption. Use only if explicitly required.</td>
+            </tr>
+            <tr>
+              <td>EN16931 (recommended)</td>
+              <td>
+                Full EU standard compliance. Required for public sector contracts. Supported by all
+                major accounting software.
+              </td>
+            </tr>
+            <tr>
+              <td>EXTENDED</td>
+              <td>Maximum detail level. Overly complex for most use cases. Rarely needed.</td>
+            </tr>
+          </tbody>
+        </table>
+        <h4>Data Requirements</h4>
+        <p>
+          For ZUGFeRD to generate successfully, invoices must have complete data. Missing required
+          fields will cause the system to fall back to standard PDFs (without embedded XML). A
+          validation status indicator appears on the invoice detail panel when ZUGFeRD is enabled.
+        </p>
+        <p>
+          <strong>Seller requirements</strong> (from Settings &rarr; Finance &rarr; Company Data):
+        </p>
+        <ul>
+          <li>Company name</li>
+          <li>VAT ID or Tax ID</li>
+          <li>Full address (street, city, postal code)</li>
+          <li>Country (must be 2-letter ISO code: DE, FR, US, etc.)</li>
+        </ul>
+        <p>
+          <strong>Buyer requirements</strong> (from invoice recipient fields):
+        </p>
+        <ul>
+          <li>Recipient name</li>
+          <li>Recipient country (must be 2-letter ISO code, e.g. DE not &ldquo;Germany&rdquo;)</li>
+          <li>Recipient address (recommended)</li>
+          <li>Recipient city (recommended)</li>
+          <li>Recipient VAT number (recommended for B2B invoices)</li>
+        </ul>
+        <p>
+          <strong>Financial requirements:</strong>
+        </p>
+        <ul>
+          <li>Invoice number</li>
+          <li>Issue date and due date</li>
+          <li>Currency code (EUR, USD, GBP, etc.)</li>
+          <li>Subtotal, tax rate, tax amount, and total</li>
+          <li>Minimum 1 line item with description, quantity, unit price, and total</li>
+        </ul>
+        <h4>Validation Status</h4>
+        <p>
+          When ZUGFeRD is enabled, the invoice detail panel shows a validation status indicator:
+        </p>
+        <ul>
+          <li>
+            <strong>Green badge</strong>: &ldquo;ZUGFeRD Compliant (EN16931)&rdquo; &mdash; all
+            requirements met, PDF will include embedded XML.
+          </li>
+          <li>
+            <strong>Yellow badge</strong>: &ldquo;Missing ZUGFeRD Requirements&rdquo; &mdash; lists
+            specific missing fields. The invoice will generate as a standard PDF (without XML) until
+            fields are filled.
+          </li>
+        </ul>
+        <h4>How It Works</h4>
+        <p>When you download or email a ZUGFeRD invoice:</p>
+        <ol>
+          <li>The system validates invoice data against ZUGFeRD requirements.</li>
+          <li>
+            If valid, it generates XML (UN/CEFACT CII format) from invoice data using the factur-x
+            library.
+          </li>
+          <li>
+            The XML is embedded inside the PDF as an attachment (PDF/A-3b format) using the filename{' '}
+            <code>factur-x.xml</code>.
+          </li>
+          <li>
+            The resulting PDF is both human-readable and machine-processable. Customers can open it
+            in any PDF reader to view the invoice, or import it into accounting software to
+            automatically extract the structured data.
+          </li>
+        </ol>
+        <p>
+          <strong>Graceful fallback:</strong> If validation fails or XML generation encounters
+          errors, the system automatically generates a standard PDF (without embedded XML) and logs
+          a warning. Invoice delivery is never blocked.
+        </p>
+        <h4>Email Filenames</h4>
+        <p>
+          When ZUGFeRD is enabled, email attachments use the prefix <code>zugferd_</code> to
+          indicate that the PDF contains structured data (e.g. <code>zugferd_2026-00001.pdf</code>).
+          This helps recipients identify e-invoices at a glance.
+        </p>
+        <h4>Testing & Validation</h4>
+        <p>To verify that generated PDFs are valid ZUGFeRD documents:</p>
+        <ul>
+          <li>
+            <strong>German official validator:</strong> Upload the PDF to{' '}
+            <a
+              href="https://www.zugferd-rechnung.de/validator/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              https://www.zugferd-rechnung.de/validator/
+            </a>
+            . A green checkmark confirms &ldquo;Valid ZUGFeRD PDF/A-3&rdquo;.
+          </li>
+          <li>
+            <strong>Accounting software:</strong> Import the PDF into DATEV, Lexware, sevDesk, or
+            other accounting tools to test automated data extraction.
+          </li>
+          <li>
+            <strong>factur-x CLI:</strong> Install the factur-x Python library and run{' '}
+            <code>facturx-pdfextractxml invoice.pdf</code> to extract and inspect the embedded XML.
+          </li>
+        </ul>
+        <h4>Common Issues</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Issue</th>
+              <th>Solution</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Validation error: &ldquo;Buyer country must be ISO 3166-1 alpha-2 code&rdquo;</td>
+              <td>
+                Update invoice recipient country to 2-letter code (e.g. DE instead of
+                &ldquo;Germany&rdquo;). The frontend country dropdown stores ISO codes
+                automatically.
+              </td>
+            </tr>
+            <tr>
+              <td>Validation error: &ldquo;Missing seller VAT ID&rdquo;</td>
+              <td>
+                Go to Settings &rarr; Finance &rarr; Company Data and fill in the Tax ID / VAT
+                Number field, or set the Seller VAT ID in ZUGFeRD Settings.
+              </td>
+            </tr>
+            <tr>
+              <td>Standard PDF generated instead of ZUGFeRD</td>
+              <td>
+                Check the validation status indicator on the invoice detail panel for specific
+                missing fields. Fill in all required data and regenerate the PDF.
+              </td>
+            </tr>
+            <tr>
+              <td>External validator reports &ldquo;Not a valid ZUGFeRD PDF&rdquo;</td>
+              <td>
+                Check backend logs for embedding errors. Ensure ZUGFeRD is enabled in settings and
+                all required fields are filled. Test with a minimal invoice first.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <h4>Performance</h4>
+        <p>
+          ZUGFeRD adds approximately 100-200ms to PDF generation time per invoice (XML generation +
+          embedding). The embedded XML is typically 10-50KB in size. All processing runs
+          asynchronously to avoid blocking the API.
         </p>
         <h3>Stripe Setup</h3>
         <p>

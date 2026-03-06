@@ -68,7 +68,8 @@ def validate_zugferd_requirements(invoice: Any) -> list[str]:
     if not invoice.issue_date:
         errors.append("Missing issue date")
 
-    if not invoice.due_date:
+    # Due date only required for regular invoices, not credit notes
+    if not invoice.due_date and invoice.template_type != "credit_note":
         errors.append("Missing due date (required for payment terms)")
 
     if not invoice.invoice_number:
@@ -116,35 +117,40 @@ async def validate_zugferd_pdf(pdf_bytes: bytes) -> dict:
             - warnings (list[str]): List of warning messages
     """
     try:
-        from facturx import check_facturx_pdf
+        import io
 
-        # Run validation in thread pool (I/O bound operation)
-        result = await asyncio.to_thread(check_facturx_pdf, pdf_bytes)
+        from facturx import get_facturx_level, get_facturx_xml_from_pdf
 
-        # factur-x check_facturx_pdf returns different formats depending on version
-        # Handle both dict and boolean return types
-        if isinstance(result, dict):
-            return {
-                "valid": result.get("valid", False),
-                "profile": result.get("profile"),
-                "errors": result.get("errors", []),
-                "warnings": result.get("warnings", []),
-            }
-        elif isinstance(result, bool):
-            # Older versions just return True/False
-            return {
-                "valid": result,
-                "profile": None,
-                "errors": [] if result else ["Validation failed"],
-                "warnings": [],
-            }
-        else:
+        # Extract and validate XML from PDF (runs XSD validation)
+        # Run in thread pool as it's I/O bound
+        pdf_file = io.BytesIO(pdf_bytes)
+        result = await asyncio.to_thread(get_facturx_xml_from_pdf, pdf_file, check_xsd=True)
+
+        if result is None:
             return {
                 "valid": False,
                 "profile": None,
-                "errors": [f"Unexpected validation result type: {type(result)}"],
+                "errors": ["No ZUGFeRD XML found in PDF"],
                 "warnings": [],
             }
+
+        # get_facturx_xml_from_pdf returns tuple: (filename, xml_bytes)
+        _xml_filename, xml_bytes = result
+
+        # Parse XML to etree for profile detection
+        from lxml import etree
+
+        xml_etree = etree.fromstring(xml_bytes)
+
+        # Get the profile/level (MINIMUM, BASIC, EN16931, EXTENDED)
+        profile = await asyncio.to_thread(get_facturx_level, xml_etree)
+
+        return {
+            "valid": True,
+            "profile": profile,
+            "errors": [],
+            "warnings": [],
+        }
 
     except ImportError as e:
         logger.error(f"factur-x library not available: {e}")
@@ -155,6 +161,7 @@ async def validate_zugferd_pdf(pdf_bytes: bytes) -> dict:
             "warnings": [],
         }
     except Exception as e:
+        # XSD validation errors, missing XML, or parsing errors
         logger.error(f"ZUGFeRD PDF validation failed: {e}")
         return {
             "valid": False,
@@ -173,57 +180,7 @@ def validate_zugferd_settings(settings: dict) -> list[str]:
     Returns:
         list[str]: List of error messages (empty = valid)
     """
-    errors: list[str] = []
-
-    # Check if enabled
-    if not settings.get("enabled"):
-        return errors  # Not enabled, no validation needed
-
-    # Validate required fields when enabled
-    if not settings.get("seller_vat_id"):
-        errors.append("seller_vat_id required when ZUGFeRD is enabled")
-
-    # Validate profile
-    valid_profiles = ("MINIMUM", "BASIC_WL", "BASIC", "EN16931", "EXTENDED")
-    profile = settings.get("profile", "EN16931")
-    if profile not in valid_profiles:
-        errors.append(f"Invalid profile: {profile}. Must be one of: {', '.join(valid_profiles)}")
-
-    # Validate payment terms code (optional but should be numeric if provided)
-    payment_terms = settings.get("payment_terms_code")
-    if payment_terms and not str(payment_terms).isdigit():
-        errors.append("payment_terms_code should be numeric (e.g., '30' for Net 30 days)")
-
-    # Validate payment means code (UN/CEFACT code list 4461)
-    payment_means = settings.get("payment_means_code")
-    if payment_means:
-        # Common codes: 30=Credit transfer, 48=Card, 49=Direct debit, 1=Cash
-        valid_means_codes = ("1", "10", "30", "31", "42", "48", "49", "57", "58", "97")
-        if payment_means not in valid_means_codes:
-            errors.append(
-                f"payment_means_code '{payment_means}' is uncommon. "
-                f"Standard codes: 30 (credit transfer), 48 (card), 49 (direct debit)"
-            )
-
-    # Validate tax category code (UN/CEFACT 5305)
-    tax_category = settings.get("tax_category_code")
-    if tax_category:
-        valid_tax_codes = ("S", "Z", "E", "AE", "K", "G", "O", "L", "M")
-        if tax_category not in valid_tax_codes:
-            errors.append(
-                f"Invalid tax_category_code: {tax_category}. "
-                f"Valid codes: S (standard), Z (zero rated), E (exempt), etc."
-            )
-
-    # Validate invoice type code (UN/CEFACT 1001)
-    invoice_type = settings.get("invoice_type_code")
-    if invoice_type:
-        # Common codes: 380=Commercial invoice, 381=Credit note, 384=Corrected invoice
-        valid_type_codes = ("380", "381", "384", "389", "751")
-        if invoice_type not in valid_type_codes:
-            errors.append(
-                f"invoice_type_code '{invoice_type}' is uncommon. "
-                f"Standard codes: 380 (commercial invoice), 381 (credit note), 384 (corrected)"
-            )
-
-    return errors
+    # ZUGFeRD settings now only contains 'enabled' field
+    # All other parameters are auto-determined from invoice data
+    # No validation needed beyond the enabled flag
+    return []

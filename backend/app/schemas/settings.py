@@ -449,26 +449,19 @@ class InvoiceCompanyInfo(BaseModel):
 
 
 class ZugferdSettings(BaseModel):
-    """ZUGFeRD/Factur-X e-invoicing configuration."""
+    """ZUGFeRD/Factur-X e-invoicing configuration.
+
+    All ZUGFeRD parameters are auto-determined from invoice data:
+    - Profile: Always EN16931 (EU standard)
+    - Seller VAT ID: From company settings or fiscal representative
+    - Contact info: From conference email/phone
+    - Payment terms: Always 30 days
+    - Payment means: Auto-determined from invoice template_type
+    - Tax category: Auto-determined from VAT calculation result
+    - Invoice type: Auto-determined from template_type (380=invoice, 381=credit note)
+    """
 
     enabled: bool = False
-    profile: str = "EN16931"  # MINIMUM | BASIC_WL | BASIC | EN16931 | EXTENDED
-    seller_vat_id: str | None = None  # Required when enabled
-    seller_contact_email: str | None = None
-    seller_contact_phone: str | None = None
-    payment_terms_code: str = "30"  # Net 30 days
-    payment_means_code: str = "30"  # Credit transfer
-    tax_category_code: str = "S"  # Standard rate
-    invoice_type_code: str = "380"  # Commercial invoice
-
-    @field_validator("profile")
-    @classmethod
-    def validate_profile(cls, v: str) -> str:
-        """Validate ZUGFeRD profile."""
-        allowed = ("MINIMUM", "BASIC_WL", "BASIC", "EN16931", "EXTENDED")
-        if v not in allowed:
-            raise ValueError(f"Must be one of: {', '.join(allowed)}")
-        return v
 
 
 class InvoiceSettingsResponse(BaseModel):

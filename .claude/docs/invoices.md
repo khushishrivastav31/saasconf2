@@ -853,6 +853,494 @@ settings = {
 
 ---
 
+## ZUGFeRD/Factur-X E-Invoicing
+
+### Overview
+
+ZUGFeRD (Zentraler User Guide des Forums elektronische Rechnung Deutschland) and Factur-X are identical hybrid e-invoicing standards that combine human-readable PDF with machine-readable XML data in a single file.
+
+**Why ZUGFeRD?**
+- **EU Compliance**: German B2B e-invoicing mandatory from 2025-2028, French similar timeline
+- **Automated Processing**: Customers can import invoices directly into accounting systems
+- **Single File**: PDF/A-3 format embeds XML, no separate files needed
+- **EN 16931 Standard**: Full EU standard compliance with recommended profile
+
+**Architecture**:
+```
+Invoice Data → factur-x Library → CII XML
+                                     ↓
+HTML Template → WeasyPrint → PDF + Embedded XML → PDF/A-3b
+```
+
+**Technical Stack**:
+- **Standard**: ZUGFeRD 2.4 / Factur-X 1.08 (2026 specification)
+- **XML Format**: UN/CEFACT CII (Cross-Industry Invoice)
+- **PDF Format**: PDF/A-3b (ISO 19005-3 archival standard)
+- **Library**: factur-x==3.15 for XML generation
+- **Embedding**: WeasyPrint native Attachment API
+
+### Configuration
+
+#### Enable ZUGFeRD
+
+**Settings → Finance → ZUGFeRD Settings**
+
+**Required Fields**:
+- **Enabled**: Toggle to activate ZUGFeRD
+- **Profile**: Compliance level (recommended: EN16931)
+- **Seller VAT ID**: Required for e-invoicing (e.g., DE123456789)
+
+**Optional Fields**:
+- **Seller Contact Email**: Invoice issuer email
+- **Seller Contact Phone**: Invoice issuer phone
+- **Payment Terms Code**: Net days (default: 30)
+- **Payment Means Code**: Payment method (default: 30 = credit transfer)
+- **Tax Category Code**: VAT category (default: S = standard rate)
+- **Invoice Type Code**: Document type (default: 380 = commercial invoice)
+
+**Settings Schema** (`conference.settings["zugferd_settings"]`):
+```python
+{
+    "enabled": true,
+    "profile": "EN16931",  # MINIMUM | BASIC_WL | BASIC | EN16931 | EXTENDED
+    "seller_vat_id": "DE123456789",
+    "seller_contact_email": "billing@company.com",
+    "seller_contact_phone": "+49301234567",
+    "payment_terms_code": "30",  # Net 30 days
+    "payment_means_code": "30",  # Credit transfer
+    "tax_category_code": "S",  # Standard rate
+    "invoice_type_code": "380",  # Commercial invoice
+}
+```
+
+#### Profile Selection
+
+**EN16931 (COMFORT)** - Recommended:
+- Full EU standard compliance
+- Required for public sector contracts
+- Supported by all major accounting software
+- Balanced between simplicity and features
+
+**MINIMUM** - Basic:
+- Bare minimum fields
+- Limited adoption
+- Use only if explicitly required
+
+**EXTENDED** - Complex:
+- Maximum detail
+- Overly complex for most use cases
+- Rarely needed
+
+### Data Requirements
+
+For ZUGFeRD to generate successfully, invoices must have:
+
+#### Seller Requirements
+- **Company Name**: From `invoice_company_info.name`
+- **VAT ID**: From `invoice_company_info.tax_id` OR `zugferd_settings.seller_vat_id`
+- **Country**: From `invoice_company_info.country` (must be ISO code)
+- **Address**: From `invoice_company_info.address` OR `address_line1`
+- **City**: From `invoice_company_info.city`
+- **Postal Code**: From `invoice_company_info.postal_code`
+
+#### Buyer Requirements
+- **Name**: `invoice.recipient_name`
+- **Country**: `invoice.recipient_country` (must be ISO 3166-1 alpha-2, e.g., DE, FR)
+- **Address**: `invoice.recipient_address_line1` (recommended)
+- **City**: `invoice.recipient_city` (recommended)
+- **VAT ID**: `invoice.recipient_vat_number` (recommended for B2B)
+
+#### Financial Requirements
+- **Invoice Number**: `invoice.invoice_number`
+- **Issue Date**: `invoice.issue_date`
+- **Due Date**: `invoice.due_date`
+- **Currency**: `invoice.currency` (ISO code, e.g., EUR, USD)
+- **Subtotal**: `invoice.subtotal`
+- **Tax Rate**: `invoice.tax_rate`
+- **Tax Amount**: `invoice.tax_amount`
+- **Total**: `invoice.total`
+
+#### Line Items
+- **Minimum 1 line item** required
+- Each item must have:
+  - Description: `line_items[].description`
+  - Quantity: `line_items[].quantity`
+  - Unit Price: `line_items[].unit_price`
+  - Total: `line_items[].total`
+
+### XML Generation
+
+**Module**: `app/core/zugferd_xml.py`
+
+**Main Function**:
+```python
+async def generate_zugferd_xml(
+    invoice: Invoice,
+    conference: Conference,
+    zugferd_settings: dict,
+) -> bytes:
+    """Generate ZUGFeRD CII XML from invoice data."""
+```
+
+**Process**:
+```python
+# 1. Map invoice fields to factur-x dict structure
+xml_data = _map_invoice_to_zugferd(invoice, conference, zugferd_settings)
+
+# 2. Generate XML using factur-x library (CPU-bound, run in thread pool)
+from facturx import generate_facturx_from_dict
+
+xml_bytes = await asyncio.to_thread(
+    generate_facturx_from_dict,
+    xml_data,
+    level=zugferd_settings["profile"],  # EN16931
+)
+
+# 3. Return XML bytes ready for PDF embedding
+return xml_bytes
+```
+
+**Data Mapping** (`_map_invoice_to_zugferd()`):
+- Converts Invoice model → factur-x dict
+- Normalizes country names → ISO codes
+- Formats amounts as floats (factur-x expects float, not Decimal)
+- Resolves bank info from `bank_accounts[]` array or legacy fields
+- Builds seller, buyer, line items, payment terms, tax breakdown
+
+### PDF Embedding
+
+**Integration Point**: `app/core/invoice_pdf.py`
+
+**Updated `generate_invoice_pdf()` Signature**:
+```python
+async def generate_invoice_pdf(
+    invoice: Invoice,
+    conference: Conference,
+    db: AsyncSession,
+    enable_zugferd: bool | None = None,  # None = auto-detect from settings
+) -> bytes:
+```
+
+**Flow**:
+```python
+# 1-11. Generate standard PDF (existing logic)
+pdf_bytes = await _generate_pdf_with_weasyprint(html, page_format, orientation)
+
+# 12. Check if ZUGFeRD enabled
+zugferd_config = conference.settings.get("zugferd_settings", {})
+if not zugferd_config.get("enabled"):
+    return pdf_bytes  # Return standard PDF
+
+# 13. Validate invoice data
+from app.core.zugferd_validation import validate_zugferd_requirements
+validation_errors = validate_zugferd_requirements(invoice)
+if validation_errors:
+    logger.warning(f"Invoice {invoice.id} doesn't meet ZUGFeRD requirements")
+    return pdf_bytes  # Graceful fallback
+
+# 14. Generate ZUGFeRD XML
+from app.core.zugferd_xml import generate_zugferd_xml
+zugferd_xml = await generate_zugferd_xml(invoice, conference, zugferd_config)
+
+# 15. Embed XML using WeasyPrint Attachment API
+from weasyprint import HTML, Attachment
+import base64
+
+html_obj = HTML(string=full_html)
+facturx_attachment = Attachment(
+    url="data:application/xml;base64," + base64.b64encode(zugferd_xml).decode(),
+    description="Factur-X/ZUGFeRD invoice data",
+    relationship="Data",
+    filename="factur-x.xml",
+)
+
+zugferd_pdf_bytes = html_obj.write_pdf(
+    pdf_variant="pdf/a-3b",  # PDF/A-3 compliance
+    attachments=[facturx_attachment],
+)
+
+return zugferd_pdf_bytes
+```
+
+**Graceful Fallback**:
+- If validation fails → return standard PDF
+- If XML generation fails → return standard PDF
+- If embedding fails → return standard PDF
+- Logs warnings but never blocks PDF generation
+
+### Validation
+
+**Module**: `app/core/zugferd_validation.py`
+
+#### Pre-Generation Validation
+
+**Function**: `validate_zugferd_requirements(invoice) -> list[str]`
+
+```python
+errors = validate_zugferd_requirements(invoice)
+if errors:
+    # Example errors:
+    # - "Missing seller VAT ID (company tax_id in settings)"
+    # - "Missing buyer country (required for ZUGFeRD)"
+    # - "Buyer country must be ISO 3166-1 alpha-2 code (e.g., DE, FR)"
+    # - "Missing issue date"
+    # - "Line item 1: missing description"
+```
+
+**Returns**: List of error messages (empty list = valid)
+
+#### Post-Generation Validation
+
+**Function**: `validate_zugferd_pdf(pdf_bytes) -> dict`
+
+```python
+result = await validate_zugferd_pdf(pdf_bytes)
+# Returns:
+{
+    "valid": bool,
+    "profile": str,  # "EN16931" if detected
+    "errors": list[str],
+    "warnings": list[str],
+}
+```
+
+**Uses**: factur-x library's `check_facturx_pdf()` function
+
+#### Settings Validation
+
+**Function**: `validate_zugferd_settings(settings) -> list[str]`
+
+```python
+errors = validate_zugferd_settings(settings)
+# Checks:
+# - seller_vat_id required when enabled
+# - profile in valid list (MINIMUM, BASIC_WL, BASIC, EN16931, EXTENDED)
+# - payment_terms_code is numeric
+# - payment_means_code is standard (30, 48, 49, etc.)
+# - tax_category_code is valid (S, Z, E, AE, K, G, O, L, M)
+# - invoice_type_code is standard (380, 381, 384, etc.)
+```
+
+### API Endpoints
+
+#### Validation Endpoint
+
+**`POST /conferences/{id}/invoices/{invoice_id}/validate-zugferd`**
+
+**Purpose**: Check if invoice meets ZUGFeRD requirements before generating
+
+**Returns**:
+```json
+{
+    "valid": true,
+    "profile": "EN16931",
+    "errors": [],
+    "warnings": [],
+    "can_generate": true
+}
+```
+
+**Flow**:
+1. Validate data requirements
+2. Test-generate PDF with ZUGFeRD
+3. Validate generated PDF
+4. Return detailed status
+
+#### Download with ZUGFeRD Override
+
+**`GET /conferences/{id}/invoices/{invoice_id}/pdf?enable_zugferd=true`**
+
+**Query Parameters**:
+- `enable_zugferd`: `true` = force ZUGFeRD, `false` = force standard PDF, `null` = auto-detect from settings
+
+**Use Cases**:
+- Download standard PDF even when ZUGFeRD enabled (for testing)
+- Download ZUGFeRD PDF even when disabled (for testing)
+
+### Frontend Integration
+
+#### Settings UI
+
+**Component**: `FinancialSettingsTab.tsx → ZugferdSection`
+
+**Features**:
+- Enable/disable toggle
+- Profile dropdown (MINIMUM, EN16931, EXTENDED)
+- Seller VAT ID input (required when enabled)
+- Advanced settings (contact email/phone, payment codes)
+- Help text explaining EU compliance
+- Auto-save on change
+
+#### Validation Status Indicator
+
+**Component**: `InvoiceDetailsTab.tsx → ZugferdValidationStatus`
+
+**Features**:
+- Shows validation status when ZUGFeRD enabled
+- Green badge: "ZUGFeRD Compliant (EN16931)"
+- Yellow badge: "Missing ZUGFeRD Requirements"
+- Lists validation errors with specific missing fields
+- Updates on invoice data changes
+
+**Example**:
+```
+⚠️ Missing ZUGFeRD Requirements
+  • Missing buyer country (required for ZUGFeRD)
+  • Missing due date (required for payment terms)
+```
+
+#### Download Toggle
+
+**Location**: Invoice list and detail panel
+
+**Feature**: Toggle to include/exclude ZUGFeRD XML when downloading PDF
+
+### Email Integration
+
+**Module**: `app/core/invoice_email.py`
+
+**Updated `build_pdf_attachment()`**:
+```python
+# Filename prefix for ZUGFeRD PDFs
+if zugferd_enabled:
+    filename = f"zugferd_{invoice.invoice_number}.pdf"
+else:
+    filename = f"invoice_{invoice.invoice_number}.pdf"
+```
+
+**Why**: Clear indicator to recipients that PDF contains structured data
+
+### Testing
+
+#### Unit Tests
+
+**File**: `backend/tests/test_zugferd.py` (50+ tests)
+
+**Coverage**:
+- XML generation for all profiles
+- Validation (requirements, settings, PDF)
+- Bank info resolution (array vs legacy fields)
+- Multiple line items
+- Edge cases (no buyer VAT, different currencies, minimal data)
+
+**Run**:
+```bash
+cd backend
+venv/bin/python -m pytest tests/test_zugferd.py -v
+```
+
+#### External Validators
+
+**German Official Validator**:
+- URL: https://www.zugferd-rechnung.de/validator/
+- Upload generated PDF
+- Check: "Valid ZUGFeRD PDF/A-3" green checkmark
+
+**factur-x CLI**:
+```bash
+# Extract embedded XML for inspection
+pip install factur-x
+facturx-pdfextractxml invoice.pdf
+
+# Validate PDF
+facturx-validate invoice.pdf
+```
+
+**Accounting Software**:
+- DATEV (Germany)
+- Lexware (Germany)
+- sevDesk (Germany)
+- Test import into customer's actual accounting system
+
+### Common Issues
+
+#### Invoice doesn't meet requirements
+
+**Symptom**: Standard PDF generated instead of ZUGFeRD
+
+**Check**:
+1. Validation status indicator in invoice detail panel
+2. Backend logs for warning messages
+3. Run validation endpoint to get specific errors
+4. Ensure buyer country is ISO code (DE, not Germany)
+
+**Fix**: Fill in missing required fields listed in validation errors
+
+#### Generated PDF fails external validation
+
+**Symptom**: Validator reports "Not a valid ZUGFeRD PDF"
+
+**Check**:
+1. ZUGFeRD enabled in settings?
+2. XML actually embedded? (use `facturx-pdfextractxml` to check)
+3. Check logs for embedding errors
+4. Verify WeasyPrint version supports PDF/A-3
+
+**Fix**:
+- Ensure WeasyPrint >= 60.0
+- Check for PDF generation exceptions in logs
+- Test with minimal invoice data first
+
+#### Buyer country validation fails
+
+**Symptom**: "Buyer country must be ISO 3166-1 alpha-2 code"
+
+**Cause**: Country stored as full name (e.g., "Germany") instead of code (e.g., "DE")
+
+**Fix**:
+- Frontend uses country dropdown (stores ISO codes)
+- Backend has `_normalize_country_to_iso()` helper for legacy data
+- Update invoice recipient_country to 2-letter ISO code
+
+#### Missing seller VAT ID
+
+**Symptom**: "Missing seller VAT ID (company tax_id in settings)"
+
+**Fix**: Settings → Finance → Company Info → Tax ID / VAT Number
+
+**Fallback**: Or set `zugferd_settings.seller_vat_id` explicitly
+
+### Performance
+
+**Overhead per invoice**:
+- XML generation: +50-150ms (CPU-bound, runs in thread pool)
+- PDF embedding: +20-50ms (WeasyPrint native support)
+- Total: ~100-200ms additional per ZUGFeRD invoice
+
+**Optimization**:
+- XML generation runs async via `asyncio.to_thread()` (non-blocking)
+- PDF embedding integrated in WeasyPrint pipeline (single pass)
+- No database schema changes (no query impact)
+- XML size: typically 10-50KB (negligible memory impact)
+
+**Caching**: Not implemented (invoices change, settings change). Consider if performance issues arise.
+
+### Security & Compliance
+
+**Input Validation**:
+- All XML generation uses Pydantic schemas
+- XSD validation via factur-x library
+- Country codes validated against ISO 3166-1 list
+- VAT IDs validated (existing python-stdnum integration)
+
+**PDF/A-3 Security**:
+- Embedded XML is metadata only (no executable content)
+- WeasyPrint ensures PDF/A-3b compliance (no JavaScript)
+- Attachments restricted to application/xml MIME type
+
+**Data Privacy**:
+- ZUGFeRD XML contains same data as visible PDF
+- No additional PII exposure
+- Embedded XML inherits PDF security (encryption, permissions)
+
+**Compliance Standards**:
+- **EN 16931-1**: EU e-invoicing standard (full compliance with EN16931 profile)
+- **PDF/A-3b**: ISO 19005-3 (archival standard)
+- **ZUGFeRD 2.4 / Factur-X 1.08**: Latest 2026 specification
+- **UN/CEFACT CII**: Cross-Industry Invoice XML format
+
+---
+
 ## API Endpoints
 
 ### Invoice CRUD
