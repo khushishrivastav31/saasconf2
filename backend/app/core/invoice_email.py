@@ -29,6 +29,15 @@ def build_pdf_attachment(pdf_bytes: bytes, invoice: "Invoice") -> dict:
     is_credit_note = invoice.template_type == "credit_note"
     filename_prefix = "credit_note" if is_credit_note else "invoice"
 
+    # Check if ZUGFeRD is enabled (add "zugferd_" prefix to filename)
+    zugferd_enabled = False
+    if invoice.conference and invoice.conference.settings:
+        zugferd_config = invoice.conference.settings.get("zugferd_settings", {})
+        zugferd_enabled = zugferd_config.get("enabled", False)
+
+    if zugferd_enabled:
+        filename_prefix = f"zugferd_{filename_prefix}"
+
     return {
         "filename": f"{filename_prefix}_{invoice.invoice_number}.pdf",
         "content": base64.b64encode(pdf_bytes).decode("ascii"),

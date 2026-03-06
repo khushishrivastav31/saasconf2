@@ -20,7 +20,12 @@ from app.core.exceptions import ValidationError
 from app.core.invoice_number import validate_invoice_template
 from app.core.invoice_pdf import DEFAULT_INVOICE_TEMPLATE_HTML
 from app.models.conference import Conference
-from app.schemas.settings import InvoiceCompanyInfo, InvoiceSettingsResponse, InvoiceSettingsUpdate
+from app.schemas.settings import (
+    InvoiceCompanyInfo,
+    InvoiceSettingsResponse,
+    InvoiceSettingsUpdate,
+    ZugferdSettings,
+)
 
 router = APIRouter()
 
@@ -101,6 +106,8 @@ async def get_invoice_settings(
         currency_position=settings.get("currency_position", "before"),
         # EU countries
         eu_countries=settings.get("eu_countries", DEFAULT_EU_COUNTRIES),
+        # ZUGFeRD/Factur-X settings
+        zugferd_settings=ZugferdSettings(**(settings.get("zugferd_settings", {}))),
     )
 
 
@@ -139,6 +146,14 @@ async def update_invoice_settings(
         valid, error = validate_invoice_template(data.cancellation_number_template)
         if not valid:
             raise ValidationError(error or "Invalid cancellation number template")
+
+    # Validate ZUGFeRD settings if provided
+    if data.zugferd_settings:
+        from app.core.zugferd_validation import validate_zugferd_settings
+
+        zugferd_errors = validate_zugferd_settings(data.zugferd_settings.model_dump())
+        if zugferd_errors:
+            raise ValidationError(f"Invalid ZUGFeRD settings: {'; '.join(zugferd_errors)}")
 
     # Update settings
     settings = conference.settings or {}

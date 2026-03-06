@@ -448,6 +448,29 @@ class InvoiceCompanyInfo(BaseModel):
         return v
 
 
+class ZugferdSettings(BaseModel):
+    """ZUGFeRD/Factur-X e-invoicing configuration."""
+
+    enabled: bool = False
+    profile: str = "EN16931"  # MINIMUM | BASIC_WL | BASIC | EN16931 | EXTENDED
+    seller_vat_id: str | None = None  # Required when enabled
+    seller_contact_email: str | None = None
+    seller_contact_phone: str | None = None
+    payment_terms_code: str = "30"  # Net 30 days
+    payment_means_code: str = "30"  # Credit transfer
+    tax_category_code: str = "S"  # Standard rate
+    invoice_type_code: str = "380"  # Commercial invoice
+
+    @field_validator("profile")
+    @classmethod
+    def validate_profile(cls, v: str) -> str:
+        """Validate ZUGFeRD profile."""
+        allowed = ("MINIMUM", "BASIC_WL", "BASIC", "EN16931", "EXTENDED")
+        if v not in allowed:
+            raise ValueError(f"Must be one of: {', '.join(allowed)}")
+        return v
+
+
 class InvoiceSettingsResponse(BaseModel):
     """Invoice configuration response schema."""
 
@@ -475,6 +498,8 @@ class InvoiceSettingsResponse(BaseModel):
     currency_position: str = "before"
     # EU member states
     eu_countries: list[str] = []
+    # ZUGFeRD/Factur-X settings
+    zugferd_settings: ZugferdSettings = Field(default_factory=ZugferdSettings)
 
 
 class InvoiceSettingsUpdate(BaseModel):
@@ -499,6 +524,8 @@ class InvoiceSettingsUpdate(BaseModel):
     number_format_preset: str | None = None
     # EU member states (list of ISO 3166-1 alpha-2 codes)
     eu_countries: list[str] | None = None
+    # ZUGFeRD/Factur-X settings
+    zugferd_settings: ZugferdSettings | None = None
 
     @field_validator("invoice_counter_reset", "cancellation_counter_reset")
     @classmethod

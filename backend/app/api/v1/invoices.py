@@ -814,8 +814,13 @@ async def download_invoice_pdf(
     current_user: CurrentUserDep,
     db: DbSessionDep,
     inline: bool = False,
+    enable_zugferd: bool | None = None,
 ) -> StreamingResponse:
-    """Generate and download invoice as PDF."""
+    """Generate and download invoice as PDF with optional ZUGFeRD embedding.
+
+    Args:
+        enable_zugferd: Override ZUGFeRD setting (None = auto-detect from settings)
+    """
     tenant_id = current_user.tenant_id
 
     # Get invoice
@@ -835,8 +840,8 @@ async def download_invoice_pdf(
     # Get conference for template
     conference = await get_conference_for_tenant(db, conference_id, tenant_id)
 
-    # Generate PDF
-    pdf_bytes = await generate_invoice_pdf(invoice, conference, db)
+    # Generate PDF (with optional ZUGFeRD embedding)
+    pdf_bytes = await generate_invoice_pdf(invoice, conference, db, enable_zugferd=enable_zugferd)
 
     filename = f"invoice_{invoice.invoice_number or 'draft'}.pdf"
     disposition = "inline" if inline else "attachment"
@@ -886,6 +891,79 @@ async def preview_invoice_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": "inline"},
     )
+
+
+@router.post(
+    "/{invoice_id}/validate-zugferd",
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def validate_invoice_zugferd(
+    conference_id: UUID,
+    invoice_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> dict:
+    """Validate if invoice meets ZUGFeRD/Factur-X requirements.
+
+    Returns validation status with list of missing/invalid fields.
+    Does not require ZUGFeRD to be enabled in settings.
+    """
+    tenant_id = current_user.tenant_id
+
+    # Get invoice with conference relationship
+    result = await db.execute(
+        select(Invoice)
+        .where(
+            Invoice.id == invoice_id,
+            Invoice.conference_id == conference_id,
+            Invoice.tenant_id == tenant_id,
+        )
+        .options(selectinload(Invoice.conference), selectinload(Invoice.events))
+    )
+    invoice = result.scalar_one_or_none()
+    if not invoice:
+        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+
+    # Check data requirements
+    from app.core.zugferd_validation import validate_zugferd_requirements
+
+    errors = validate_zugferd_requirements(invoice)
+
+    if errors:
+        return {
+            "valid": False,
+            "errors": errors,
+            "warnings": [],
+            "can_generate": False,
+        }
+
+    # Test-generate ZUGFeRD PDF to validate
+    try:
+        conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+
+        # Force ZUGFeRD enabled for validation test
+        pdf_bytes = await generate_invoice_pdf(invoice, conference, db, enable_zugferd=True)
+
+        # Validate generated PDF
+        from app.core.zugferd_validation import validate_zugferd_pdf
+
+        validation_result = await validate_zugferd_pdf(pdf_bytes)
+
+        return {
+            "valid": validation_result["valid"],
+            "profile": validation_result.get("profile"),
+            "errors": validation_result.get("errors", []),
+            "warnings": validation_result.get("warnings", []),
+            "can_generate": validation_result["valid"],
+        }
+    except Exception as e:
+        return {
+            "valid": False,
+            "profile": None,
+            "errors": [str(e)],
+            "warnings": [],
+            "can_generate": False,
+        }
 
 
 @router.delete(

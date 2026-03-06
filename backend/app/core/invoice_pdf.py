@@ -5,6 +5,7 @@ and items table rendering.
 """
 
 import base64
+import logging
 import re
 from decimal import Decimal
 
@@ -16,6 +17,8 @@ from app.models.attachment import Attachment
 from app.models.conference import Conference
 from app.models.fiscal_representative import FiscalRepresentative
 from app.models.invoice import Invoice
+
+logger = logging.getLogger(__name__)
 
 # Mapping of full country names to ISO 3166-1 alpha-2 codes.
 # Matches frontend/src/config/countries.ts COUNTRY_OPTIONS.
@@ -585,13 +588,15 @@ async def generate_invoice_pdf(
     invoice: Invoice,
     conference: Conference,
     db: AsyncSession,
+    enable_zugferd: bool | None = None,
 ) -> bytes:
-    """Generate PDF from invoice template and data.
+    """Generate PDF from invoice template and data with optional ZUGFeRD embedding.
 
     Args:
         invoice: Invoice model instance
         conference: Conference model instance
         db: Database session (for future use with attachments)
+        enable_zugferd: Override ZUGFeRD setting (None = auto-detect from conference settings)
 
     Returns:
         PDF file as bytes
@@ -601,6 +606,7 @@ async def generate_invoice_pdf(
     2. Replaces all placeholders with invoice/conference data
     3. Renders items table
     4. Generates PDF using WeasyPrint (full HTML/CSS support)
+    5. Optionally embeds ZUGFeRD XML for e-invoicing compliance (if enabled)
     """
 
     settings = conference.settings or {}
@@ -824,8 +830,79 @@ async def generate_invoice_pdf(
     </html>
     """
 
-    # Generate PDF with WeasyPrint (full HTML/CSS support + page format)
-    return _generate_pdf_with_weasyprint(full_html, page_format)
+    # Generate standard PDF first
+    pdf_bytes = _generate_pdf_with_weasyprint(full_html, page_format)
+
+    # Check if ZUGFeRD/Factur-X embedding should be applied
+    zugferd_config = settings.get("zugferd_settings", {})
+
+    if enable_zugferd is None:
+        enable_zugferd = zugferd_config.get("enabled", False)
+
+    if not enable_zugferd:
+        return pdf_bytes  # Return standard PDF without ZUGFeRD
+
+    # Validate invoice meets ZUGFeRD requirements
+    from app.core.zugferd_validation import validate_zugferd_requirements
+
+    validation_errors = validate_zugferd_requirements(invoice)
+    if validation_errors:
+        logger.warning(
+            f"Invoice {invoice.id} doesn't meet ZUGFeRD requirements: {validation_errors}",
+            extra={"invoice_id": str(invoice.id), "errors": validation_errors},
+        )
+        return pdf_bytes  # Fallback to standard PDF
+
+    # Generate ZUGFeRD XML
+    try:
+        from app.core.zugferd_xml import generate_zugferd_xml
+
+        zugferd_xml = await generate_zugferd_xml(invoice, conference, zugferd_config)
+    except Exception as e:
+        logger.error(
+            f"ZUGFeRD XML generation failed for invoice {invoice.id}: {e}",
+            extra={"invoice_id": str(invoice.id), "error": str(e)},
+        )
+        return pdf_bytes  # Fallback to standard PDF
+
+    # Embed XML in PDF using WeasyPrint Attachment API
+    try:
+        from weasyprint import HTML
+        from weasyprint import Attachment as WeasyAttachment
+
+        html_obj = HTML(string=full_html)
+
+        # Create Factur-X attachment
+        facturx_attachment = WeasyAttachment(
+            url="data:application/xml;base64," + base64.b64encode(zugferd_xml).decode(),
+            description="Factur-X/ZUGFeRD invoice data",
+            relationship="Data",
+            filename="factur-x.xml",
+        )
+
+        # Generate PDF/A-3b with embedded XML
+        zugferd_pdf_bytes = html_obj.write_pdf(
+            pdf_variant="pdf/a-3b",
+            attachments=[facturx_attachment],
+        )
+
+        logger.info(
+            f"ZUGFeRD PDF generated for invoice {invoice.id}",
+            extra={
+                "invoice_id": str(invoice.id),
+                "profile": zugferd_config.get("profile"),
+                "xml_size_bytes": len(zugferd_xml),
+            },
+        )
+
+        return zugferd_pdf_bytes
+
+    except Exception as e:
+        logger.error(
+            f"ZUGFeRD PDF embedding failed for invoice {invoice.id}: {e}",
+            extra={"invoice_id": str(invoice.id), "error": str(e)},
+        )
+        return pdf_bytes  # Fallback to standard PDF
 
 
 async def generate_invoice_pdf_from_data(

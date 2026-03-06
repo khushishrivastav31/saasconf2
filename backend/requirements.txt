@@ -57,3 +57,5 @@ python-docx==1.1.2
 html2docx==1.6.0
 schwifty==2026.1.0  # IBAN/BIC validation with checksum verification
 weasyprint==68.0  # Full HTML/CSS to PDF conversion with image support
+factur-x==3.15
+lxml==5.3.0

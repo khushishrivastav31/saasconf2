@@ -12,6 +12,7 @@ export * from './review';
 export * from './attachment';
 export * from './email';
 export * from './form';
+export * from './invoice';
 export * from './program';
 export * from './messaging';
 export * from './registration';
