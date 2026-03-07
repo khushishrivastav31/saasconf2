@@ -1,6 +1,7 @@
 """Invoice schemas."""
 
 from datetime import date, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -176,6 +177,36 @@ class InvoiceEventResponse(BaseModel):
     created_at: datetime
 
 
+class VatRequirementLevel(StrEnum):
+    """VAT number requirement level."""
+
+    REQUIRED = "required"
+    RECOMMENDED = "recommended"
+    OPTIONAL = "optional"
+
+
+class VatRequirement(BaseModel):
+    """VAT requirement context."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    level: VatRequirementLevel
+    reason: str
+    rule_reference: str | None = None
+
+
+class VatWarning(BaseModel):
+    """VAT validation warning."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    code: str  # "vat_required_missing", "vat_required_invalid", "vat_recommended_missing"
+    level: str  # "error", "warning", "info"
+    message: str  # Human-readable message with full context
+    requirement: VatRequirement
+    can_override: bool  # Admin can acknowledge and proceed
+
+
 class InvoiceResponse(BaseModel):
     """Invoice response schema."""
 
@@ -220,6 +251,9 @@ class InvoiceResponse(BaseModel):
     stripe_payment_link_url: str | None = None
     # Payment/refund events (audit trail)
     events: list[InvoiceEventResponse] = []
+    # VAT validation warnings and requirements
+    vat_warnings: list[VatWarning] | None = None
+    vat_requirement: VatRequirement | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime

@@ -12,6 +12,12 @@ interface VatNumberInputProps {
   label?: string;
   placeholder?: string;
   disabled?: boolean;
+  /** Show red asterisk when true (legally required). */
+  required?: boolean;
+  /** VAT requirement level for visual treatment. */
+  level?: 'required' | 'recommended' | 'optional';
+  /** Human-readable explanation of why VAT is needed. */
+  requirementReason?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,14 +94,14 @@ function StatusIcon({ status }: { status: VatStatus }) {
 
 function getInputClasses(status: VatStatus): string {
   const base =
-    'block w-full rounded-md shadow-sm py-2 px-3 text-sm dark:bg-gray-800 dark:text-gray-100';
+    'mt-1 block w-full rounded-md shadow-sm focus:outline-none sm:text-sm dark:bg-gray-800 dark:text-gray-100';
   switch (status) {
     case 'valid':
-      return `${base} border-green-500 ring-1 ring-green-500 focus:border-green-500 focus:ring-green-500`;
+      return `${base} border-green-500 focus:border-green-500 focus:ring-green-500`;
     case 'invalid':
-      return `${base} border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500`;
+      return `${base} border-red-500 focus:border-red-500 focus:ring-red-500`;
     case 'uncertain':
-      return `${base} border-yellow-500 ring-1 ring-yellow-500 focus:border-yellow-500 focus:ring-yellow-500`;
+      return `${base} border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500`;
     default:
       return `${base} border-gray-300 dark:border-gray-600 focus:border-primary-500 focus:ring-primary-500`;
   }
@@ -129,6 +135,9 @@ export default function VatNumberInput({
   label = 'VAT Number',
   placeholder = 'e.g. DE123456789',
   disabled = false,
+  required = false,
+  level = 'optional',
+  requirementReason,
 }: VatNumberInputProps) {
   const { status, message, validate, reset } = useVatValidation();
 
@@ -158,13 +167,43 @@ export default function VatNumberInput({
     <div>
       <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         {label}
+        {required && (
+          <span className="text-red-500 ml-1" aria-label="required">
+            *
+          </span>
+        )}
+        {level === 'recommended' && !required && (
+          <span className="text-yellow-600 dark:text-yellow-400 text-xs ml-2 font-normal">
+            (Recommended for B2B)
+          </span>
+        )}
         {statusLabel && (
           <span className={`ml-2 text-xs font-normal ${statusLabel.className}`}>
             {statusLabel.text}
           </span>
         )}
       </label>
-      <div className="relative mt-1">
+
+      {/* Requirement explanation */}
+      {requirementReason && (
+        <div className="mt-1 mb-2 text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+          <svg
+            className="w-4 h-4 shrink-0 mt-0.5"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <span>{requirementReason}</span>
+        </div>
+      )}
+
+      <div className="relative">
         <input
           id={id}
           type="text"

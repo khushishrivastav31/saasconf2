@@ -253,6 +253,7 @@ export interface SessionType {
   duration_minutes: number;
   cfp_eligible: boolean;
   separately_bookable: boolean;
+  max_attendees: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -264,6 +265,7 @@ export interface SessionTypeCreate {
   duration_minutes: number;
   cfp_eligible?: boolean;
   separately_bookable?: boolean;
+  max_attendees?: number | null;
   is_active?: boolean;
 }
 
@@ -273,6 +275,7 @@ export interface SessionTypeUpdate {
   duration_minutes?: number;
   cfp_eligible?: boolean;
   separately_bookable?: boolean;
+  max_attendees?: number | null;
   is_active?: boolean;
 }
 
@@ -434,6 +437,22 @@ export interface InvoiceEvent {
   created_at: string;
 }
 
+export type VatRequirementLevel = 'required' | 'recommended' | 'optional';
+
+export interface VatRequirement {
+  level: VatRequirementLevel;
+  reason: string;
+  rule_reference: string | null;
+}
+
+export interface VatWarning {
+  code: string;
+  level: string;
+  message: string;
+  requirement: VatRequirement;
+  can_override: boolean;
+}
+
 export interface Invoice {
   id: string;
   tenant_id: string;
@@ -471,6 +490,8 @@ export interface Invoice {
   stripe_charge_id: string | null;
   stripe_payment_link_url: string | null;
   events: InvoiceEvent[];
+  vat_warnings: VatWarning[] | null;
+  vat_requirement: VatRequirement | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

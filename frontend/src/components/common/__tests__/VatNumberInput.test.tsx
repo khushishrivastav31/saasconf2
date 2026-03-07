@@ -289,4 +289,80 @@ describe('VatNumberInput', () => {
       });
     });
   });
+
+  // ── New prop tests ──────────────────────────────────────────────────
+
+  it('shows red asterisk when required prop is true', () => {
+    render(<VatNumberInput {...defaultProps} required={true} label="VAT Number" />);
+
+    const asterisk = screen.getByLabelText('required');
+    expect(asterisk).toBeInTheDocument();
+    expect(asterisk).toHaveTextContent('*');
+  });
+
+  it('does not show asterisk when required is false', () => {
+    render(<VatNumberInput {...defaultProps} required={false} />);
+
+    expect(screen.queryByLabelText('required')).not.toBeInTheDocument();
+  });
+
+  it('shows recommended label when level is recommended', () => {
+    render(<VatNumberInput {...defaultProps} level="recommended" />);
+
+    expect(screen.getByText('(Recommended for B2B)')).toBeInTheDocument();
+  });
+
+  it('does not show recommended label when level is required', () => {
+    render(<VatNumberInput {...defaultProps} level="required" required={true} />);
+
+    expect(screen.queryByText('(Recommended for B2B)')).not.toBeInTheDocument();
+  });
+
+  it('does not show recommended label when level is optional', () => {
+    render(<VatNumberInput {...defaultProps} level="optional" />);
+
+    expect(screen.queryByText('(Recommended for B2B)')).not.toBeInTheDocument();
+  });
+
+  it('shows requirement reason below label with info icon', () => {
+    const reason =
+      'VAT number is required for reverse charge on virtual services to EU businesses.';
+    render(<VatNumberInput {...defaultProps} requirementReason={reason} />);
+
+    expect(screen.getByText(reason)).toBeInTheDocument();
+    // Check for info icon (SVG)
+    const icon = screen.getByText(reason).previousSibling;
+    expect(icon).toBeInTheDocument();
+    expect(icon?.nodeName).toBe('svg');
+  });
+
+  it('does not show requirement reason when not provided', () => {
+    render(<VatNumberInput {...defaultProps} />);
+
+    // Should not have the info icon/reason container
+    const container = document.querySelector('.flex.items-start.gap-1');
+    expect(container).not.toBeInTheDocument();
+  });
+
+  it('combines required asterisk with validation status', async () => {
+    mockedApi.post.mockResolvedValueOnce({
+      data: { valid: true, method: 'stdnum', vat_normalized: 'DE123456789' },
+    });
+
+    render(
+      <VatNumberInput {...defaultProps} value="DE123456789" required={true} label="VAT Number" />
+    );
+
+    // Should show asterisk
+    expect(screen.getByLabelText('required')).toBeInTheDocument();
+
+    // Trigger validation
+    fireEvent.blur(screen.getByLabelText(/VAT Number/));
+
+    // Should show both asterisk and valid status
+    await waitFor(() => {
+      expect(screen.getByLabelText('required')).toBeInTheDocument();
+      expect(screen.getByText('Valid')).toBeInTheDocument();
+    });
+  });
 });

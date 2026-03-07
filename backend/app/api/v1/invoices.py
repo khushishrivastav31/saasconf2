@@ -65,6 +65,8 @@ from app.schemas.invoice import (
     RecipientSearchResponse,
     RecipientSearchResult,
     ReopenInvoiceRequest,
+    VatRequirement,
+    VatWarning,
 )
 from app.schemas.vat_rate import VatPreviewRequest, VatPreviewResponse
 
@@ -77,6 +79,8 @@ logger = logging.getLogger(__name__)
 def build_invoice_response(
     invoice: Invoice,
     related_invoice_number: str | None = None,
+    vat_warnings: list[VatWarning] | None = None,
+    vat_requirement: VatRequirement | None = None,
 ) -> InvoiceResponse:
     """Build an InvoiceResponse from an Invoice model."""
     # Explicitly convert events to avoid lazy loading
@@ -146,6 +150,8 @@ def build_invoice_response(
         vat_auto_calculated=invoice.vat_auto_calculated,
         attendance_type=invoice.attendance_type,
         events=events_data,
+        vat_warnings=vat_warnings,
+        vat_requirement=vat_requirement,
         is_active=invoice.is_active,
         created_at=invoice.created_at,
         updated_at=invoice.updated_at,
@@ -352,6 +358,11 @@ async def create_invoice(
         else:
             invoice.notes = notes_text
 
+    # Validate VAT requirements (warnings, not errors)
+    from app.core.invoice_validation import validate_vat_requirements
+
+    vat_warnings, vat_requirement = await validate_vat_requirements(invoice, conference, db, current_user)
+
     db.add(invoice)
 
     audit_log = create_invoice_audit_log(
@@ -384,7 +395,7 @@ async def create_invoice(
     # Re-query invoice with events to avoid lazy loading issues after commit
     invoice = await refresh_invoice_with_events(db, invoice.id)
 
-    return build_invoice_response(invoice)
+    return build_invoice_response(invoice, vat_warnings=vat_warnings, vat_requirement=vat_requirement)
 
 
 # --- Static path routes (must come before /{invoice_id} routes) ---
