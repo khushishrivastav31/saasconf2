@@ -27,12 +27,18 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.invoice_audit import create_invoice_audit_log
-from app.core.invoice_email import send_invoice_email
+from app.core.invoice_email import (
+    send_invoice_email,
+    send_replacement_invoice_emails,
+)
 from app.core.invoice_events import InvoiceEventType, log_invoice_event
 from app.core.invoice_number import generate_cancellation_number, generate_invoice_number
 from app.core.invoice_operations import create_credit_note_for_invoice
 from app.core.invoice_pdf import generate_invoice_pdf
 from app.core.invoice_queries import get_invoice_with_events, refresh_invoice_with_events
+from app.core.invoice_registration_cancellation import cancel_registrations_for_invoice
+from app.core.invoice_registration_transfer import transfer_registrations_to_invoice
+from app.core.invoice_replacement import create_replacement_invoice
 from app.core.invoice_validation import validate_recipient_fields
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
@@ -65,6 +71,8 @@ from app.schemas.invoice import (
     RecipientSearchResponse,
     RecipientSearchResult,
     ReopenInvoiceRequest,
+    ReplaceInvoiceRequest,
+    ReplaceInvoiceResponse,
     VatRequirement,
     VatWarning,
 )
@@ -1191,7 +1199,39 @@ async def cancel_invoice(
     invoice = await refresh_invoice_with_events(db, invoice.id)
     credit_note = await refresh_invoice_with_events(db, credit_note.id)
 
-    # 4. Send credit note PDF to recipient (best-effort)
+    # 4. Cancel registrations if requested (in separate transaction)
+    registrations_cancelled = 0
+    access_removed_count = 0
+
+    if body.cancel_registrations:
+        # Verify invoice has registrations before proceeding
+        if invoice.recipient_source_type == "registration" and invoice.recipient_source_id:
+            try:
+                registrations_cancelled, access_removed_count = await cancel_registrations_for_invoice(
+                    db=db,
+                    invoice=invoice,
+                    conference=conference,
+                    tenant_id=current_user.tenant_id,
+                    user_id=current_user.user_id,
+                    cancellation_message=body.cancellation_email_message,
+                )
+                await db.commit()
+
+                # Send cancellation emails to attendees (best-effort, outside transaction)
+                # TODO: Implement email sending to each registration.email
+                # This requires querying registrations again and sending individual emails
+
+            except Exception as e:
+                logger.error(f"Failed to cancel registrations for invoice {invoice.invoice_number}: {e}")
+                # Don't raise - invoice cancellation succeeded, just log the error
+        else:
+            # No registrations found but user requested cancellation
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot cancel registrations: invoice is not linked to any registrations",
+            )
+
+    # 5. Send credit note PDF to recipient (best-effort)
     if credit_note.recipient_email:
         with contextlib.suppress(Exception):
             await send_invoice_email(
@@ -1207,6 +1247,204 @@ async def cancel_invoice(
     return CancelInvoiceResponse(
         cancelled_invoice=build_invoice_response(invoice, related_invoice_number=None),
         credit_note=build_invoice_response(credit_note, related_invoice_number=invoice.invoice_number),
+        registrations_cancelled=registrations_cancelled,
+        access_removed_count=access_removed_count,
+    )
+
+
+@router.post(
+    "/{invoice_id}/replace",
+    response_model=ReplaceInvoiceResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def replace_invoice(
+    conference_id: UUID,
+    invoice_id: UUID,
+    body: ReplaceInvoiceRequest,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+) -> ReplaceInvoiceResponse:
+    """Replace an invoice with corrected billing information.
+
+    Creates a new invoice with corrected billing details while keeping all
+    registrations linked. The original invoice is cancelled with a credit note.
+
+    Only sent, overdue, or paid invoices can be replaced (not drafts or credit notes).
+    """
+    await _require_invoice_admin(db, current_user, conference_id)
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+
+    # Get old invoice
+    old_invoice = await get_invoice_with_events(db, invoice_id, conference_id, current_user.tenant_id)
+
+    # Cannot replace a credit note
+    if old_invoice.template_type == "credit_note":
+        raise HTTPException(status_code=400, detail="Cannot replace a credit note.")
+
+    # Cannot replace an invoice that's already been replaced (check this before status)
+    if old_invoice.replaced_by_invoice_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="This invoice has already been replaced. Cannot replace again.",
+        )
+
+    # Validation: only sent, overdue, or paid invoices can be replaced
+    if old_invoice.status not in ("sent", "overdue", "paid"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot replace an invoice with status '{old_invoice.status}'. "
+            "Only sent, overdue, or paid invoices can be replaced.",
+        )
+
+    # Build corrected fields dict (only non-None values)
+    corrected_fields = {
+        k: v
+        for k, v in {
+            "recipient_name": body.recipient_name,
+            "recipient_email": body.recipient_email,
+            "recipient_address_line1": body.recipient_address_line1,
+            "recipient_address_line2": body.recipient_address_line2,
+            "recipient_city": body.recipient_city,
+            "recipient_state": body.recipient_state,
+            "recipient_postal_code": body.recipient_postal_code,
+            "recipient_country": body.recipient_country,
+            "recipient_vat_number": body.recipient_vat_number,
+            "procurement_code": body.procurement_code,
+        }.items()
+        if v is not None
+    }
+
+    # 1. Create replacement invoice
+    new_invoice = await create_replacement_invoice(
+        db=db,
+        old_invoice=old_invoice,
+        conference=conference,
+        corrected_fields=corrected_fields,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        current_user=current_user,
+        replacement_reason=body.reason,
+    )
+    db.add(new_invoice)
+    await db.flush()  # Get new_invoice.id
+
+    # 2. Validate registration transfer (no DB changes needed)
+    registrations_transferred = await transfer_registrations_to_invoice(
+        db=db,
+        old_invoice=old_invoice,
+        new_invoice=new_invoice,
+        tenant_id=current_user.tenant_id,
+    )
+
+    # 3. Deactivate old Stripe payment link if credit_card (only for sent invoices)
+    if old_invoice.status in ("sent", "overdue") and old_invoice.template_type == "credit_card":
+        await deactivate_payment_link_for_invoice(old_invoice, conference)
+
+    # 4. Cancel old invoice
+    old_invoice.status = "cancelled"
+    old_invoice.internal_comment = f"Replaced by {new_invoice.invoice_number}. Reason: {body.reason}"
+    old_invoice.replaced_by_invoice_id = new_invoice.id
+
+    # 5. Generate cancellation number and create credit note
+    cancellation_number = await generate_cancellation_number(db, conference_id, current_user.tenant_id)
+    credit_note = create_credit_note_for_invoice(
+        invoice=old_invoice,
+        credit_note_number=cancellation_number,
+        tenant_id=current_user.tenant_id,
+        conference_id=conference_id,
+    )
+    db.add(credit_note)
+
+    # 6. Create audit logs
+    old_audit = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.replaced",
+        resource_type="invoice",
+        resource_id=old_invoice.id,
+        details={
+            "old_invoice_number": old_invoice.invoice_number,
+            "new_invoice_number": new_invoice.invoice_number,
+            "credit_note_number": cancellation_number,
+            "reason": body.reason,
+            "corrected_fields": list(corrected_fields.keys()),
+        },
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    new_audit = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.replacement_created",
+        resource_type="invoice",
+        resource_id=new_invoice.id,
+        details={
+            "new_invoice_number": new_invoice.invoice_number,
+            "replaces_invoice_number": old_invoice.invoice_number,
+            "registrations_transferred": registrations_transferred,
+        },
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    credit_audit = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="invoice.credit_note_created",
+        resource_type="invoice",
+        resource_id=credit_note.id,
+        details={
+            "credit_note_number": cancellation_number,
+            "original_invoice_number": old_invoice.invoice_number,
+            "original_invoice_id": str(old_invoice.id),
+        },
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(old_audit)
+    db.add(new_audit)
+    db.add(credit_audit)
+
+    # Log invoice events
+    await log_invoice_event(
+        db=db,
+        invoice_id=old_invoice.id,
+        tenant_id=old_invoice.tenant_id,
+        event_type=InvoiceEventType.INVOICE_CANCELLED,
+        status="succeeded",
+        user=current_user,
+        metadata={
+            "invoice_number": old_invoice.invoice_number,
+            "replaced_by": new_invoice.invoice_number,
+            "reason": body.reason,
+        },
+    )
+
+    await db.commit()
+
+    # Transaction committed - re-query invoices
+    old_invoice = await refresh_invoice_with_events(db, old_invoice.id)
+    credit_note = await refresh_invoice_with_events(db, credit_note.id)
+    new_invoice = await refresh_invoice_with_events(db, new_invoice.id)
+
+    # 7. Send emails (best-effort, outside transaction)
+    payment_link_url = new_invoice.stripe_payment_link_url if new_invoice.template_type == "credit_card" else None
+
+    with contextlib.suppress(Exception):
+        await send_replacement_invoice_emails(
+            db=db,
+            credit_note=credit_note,
+            new_invoice=new_invoice,
+            conference=conference,
+            payment_link_url=payment_link_url,
+            custom_message=body.custom_email_message,
+        )
+
+    return ReplaceInvoiceResponse(
+        old_invoice=build_invoice_response(old_invoice, related_invoice_number=None),
+        credit_note=build_invoice_response(credit_note, related_invoice_number=old_invoice.invoice_number),
+        new_invoice=build_invoice_response(new_invoice, related_invoice_number=None),
+        registrations_transferred=registrations_transferred,
     )
 
 

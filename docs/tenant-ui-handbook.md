@@ -142,23 +142,95 @@ When creating an invoice with VAT issues, you'll see warning banners:
 - **Sent** invoices are read-only to maintain audit trail
 - To modify a sent invoice, you must cancel it and create a new one
 
+#### Replacing an Invoice (Billing Correction)
+
+Use **Replace Invoice** when the buyer provided incorrect billing information (wrong company name, address, PO number, or VAT number) but the invoice should remain valid.
+
+**When to Use**:
+- Company name was entered incorrectly
+- Wrong VAT number provided
+- Address needs correction
+- PO/procurement code missing or wrong
+
+**How It Works**:
+1. Open a sent, overdue, or paid invoice
+2. Click **Replace Invoice**
+3. Enter:
+   - Reason for replacement (required)
+   - Corrected billing fields (only change what's wrong)
+   - Custom email message (optional)
+4. System automatically:
+   - Cancels the old invoice (creates credit note)
+   - Creates new invoice with corrected billing information
+   - Keeps all active registrations linked
+   - Sends both credit note and new invoice emails using templates from settings
+
+**Status Inheritance**:
+- **Paid invoices**: New invoice inherits "paid" status (customer already paid)
+- **Sent invoices**: New invoice gets "sent" status (customer still needs to pay)
+
+**Stripe Handling** (Credit Card Invoices Only):
+- **Paid invoices**: No new payment link needed (already paid)
+- **Sent invoices**: Old payment link deactivated, new payment link created automatically
+
+**Important Notes**:
+- ✅ Registrations stay active and linked (no disruption to attendees)
+- ✅ At least one billing field must be different from the original
+- ✅ Email templates from settings are used for all communications
+- ❌ Cannot replace draft, credit note, or already-replaced invoices
+- ❌ Bank transfer invoices don't use Stripe (handled manually)
+
+**Use Case Example**:
+> Customer enters "Acme Corp" but their legal entity is "Acme Corporation GmbH". Replace the invoice with the corrected name without affecting their confirmed conference registrations.
+
 #### Cancelling an Invoice
 
-When you cancel a sent invoice:
-1. System creates a **credit note** (negative invoice)
-2. Original invoice status changes to **Cancelled**
-3. Credit note is linked to the original invoice
-4. Reason for cancellation is logged
+Use **Cancel Invoice** when you need to truly cancel an invoice (not just correct billing details).
+
+**Standard Cancellation** (No Registrations):
+1. Open a sent, overdue, or paid invoice
+2. Click **Cancel Invoice**
+3. Enter cancellation reason
+4. System automatically:
+   - Creates **credit note** (negative invoice)
+   - Changes invoice status to **Cancelled**
+   - Links credit note to original invoice
+   - Sends credit note email using template from settings
+
+**Enhanced Cancellation** (With Registrations):
+
+For invoices linked to attendee registrations, you can optionally cancel the registrations when cancelling the invoice.
 
 **Steps**:
-1. Open the sent invoice
-2. Click **Cancel**
+1. Open the invoice (must be sent, overdue, or paid)
+2. Click **Cancel Invoice**
 3. Enter cancellation reason
-4. System automatically creates credit note
+4. **Check "Cancel all registrations"** (if applicable)
+5. Enter cancellation message for attendees (optional)
+6. System automatically:
+   - Cancels the invoice + creates credit note
+   - Cancels all linked registrations (status → CANCELLED)
+   - Removes conference access for those attendees
+   - Keeps user accounts active (they can still access portal for other events)
+   - Sends cancellation email to each attendee using template from settings
 
-**For Paid Credit Card Invoices**:
-- System can process automatic refund via Stripe
-- Refund status is tracked in invoice events
+**Stripe Refund Handling** (Credit Card Invoices Only):
+- **Paid invoices**: System automatically issues full Stripe refund
+- **Sent invoices**: System deactivates the payment link (prevents payment)
+- **Bank transfer**: Manual refund handling required (outside system)
+
+**Important Notes**:
+- ✅ Attendees lose access to THIS conference only
+- ✅ User accounts remain active for future events
+- ✅ All actions are logged in audit trail
+- ✅ Email templates from settings are used
+- ❌ This action cannot be undone
+- ❌ Leave "Cancel all registrations" unchecked if you only need to cancel the invoice (billing correction should use "Replace" instead)
+
+**Decision Guide**:
+- **Billing correction only?** → Use **Replace Invoice** (keeps registrations active)
+- **True cancellation (event cancelled, refund needed)?** → Use **Cancel Invoice** with "Cancel all registrations" checked
+- **Wrong invoice sent?** → Use **Cancel Invoice** without checking "Cancel all registrations", then create correct invoice
 
 #### Marking as Paid (Bank Transfer)
 
@@ -312,6 +384,21 @@ You can customize the VAT rules in conference settings if you have special tax a
    - Follow up on overdue invoices
    - Use credit card option for faster payment
 
+6. **Choose the right correction method**
+   - **Billing info wrong?** → Use "Replace Invoice" (fast, keeps registrations active)
+   - **Amount or items wrong?** → Cancel and create new invoice
+   - **True cancellation needed?** → Use "Cancel Invoice" with registration options
+
+7. **Handle registrations carefully**
+   - Review before checking "Cancel all registrations"
+   - Only use for true cancellations (event cancelled, full refund)
+   - Use "Replace Invoice" for billing corrections to avoid disruption
+
+8. **Communicate with attendees**
+   - System sends automatic emails using your templates from settings
+   - Add custom messages for clarity (optional field in Replace/Cancel dialogs)
+   - Follow up personally for sensitive situations (full event cancellation)
+
 ---
 
 ## Troubleshooting
@@ -347,10 +434,20 @@ Ensure all required fields are filled:
 
 ### Can't Edit Sent Invoice
 
-This is by design to maintain audit compliance. To modify:
+This is by design to maintain audit compliance. To modify a sent invoice:
+
+**For Billing Corrections** (wrong name, address, VAT, PO number):
+1. Use **Replace Invoice** feature
+2. Enter the corrected billing information
+3. System automatically handles cancellation and reissuance
+4. Registrations stay active
+
+**For Other Changes** (amounts, line items, dates):
 1. Cancel the sent invoice (creates credit note)
 2. Create a new invoice with correct details
 3. Send the new invoice
+
+**Tip**: Always use "Replace Invoice" for simple billing corrections to avoid disrupting attendee registrations.
 
 ### Credit Card Payment Failed
 
@@ -363,6 +460,43 @@ Check invoice events for error details:
 1. Customer can retry using the same payment link
 2. Or create a new invoice if needed
 3. Contact customer to resolve payment issue
+
+### Replace Invoice Says "No Fields Changed"
+
+The system requires at least one billing field to be different from the original invoice.
+
+**Check**:
+- Are you actually changing a value?
+- Did you type the exact same information?
+- Try changing company name, VAT number, or address
+
+**Tip**: If you need to change amounts or line items (not billing info), cancel and create a new invoice instead.
+
+### Registrations Cancelled by Mistake
+
+If you cancelled an invoice with "Cancel all registrations" checked by mistake:
+
+**Unfortunately, this cannot be automatically undone**, but you can:
+1. Manually reactivate registrations in the Registrations tab
+2. Manually restore conference access for affected users
+3. Contact affected attendees to explain the error
+
+**Prevention**:
+- Only check "Cancel all registrations" for true cancellations (event cancelled, refund issued)
+- For billing corrections, always use "Replace Invoice" instead
+
+### Invoice Replacement Not Appearing
+
+After replacing an invoice, you should see:
+- Old invoice: Status = "Cancelled"
+- Credit note: Linked to old invoice
+- New invoice: With corrected billing information
+
+**If missing**:
+1. Check the invoice list - all three should be visible
+2. Refresh the page
+3. Check invoice events for errors
+4. Contact support if issue persists
 
 ---
 

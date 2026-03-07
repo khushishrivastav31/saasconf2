@@ -301,6 +301,12 @@ class CancelInvoiceRequest(BaseModel):
     """Request body for cancelling an invoice."""
 
     reason: str = Field(..., min_length=1, max_length=1000)
+    cancel_registrations: bool = Field(
+        default=False, description="Also cancel associated registrations and remove conference access"
+    )
+    cancellation_email_message: str | None = Field(
+        default=None, max_length=2000, description="Optional message to include in cancellation emails"
+    )
 
 
 class CancelInvoiceResponse(BaseModel):
@@ -308,6 +314,39 @@ class CancelInvoiceResponse(BaseModel):
 
     cancelled_invoice: InvoiceResponse
     credit_note: InvoiceResponse
+    registrations_cancelled: int = 0
+    access_removed_count: int = 0
+
+
+class ReplaceInvoiceRequest(BaseModel):
+    """Request body for replacing an invoice with corrected billing information."""
+
+    reason: str = Field(..., min_length=1, max_length=1000, description="Reason for replacement")
+
+    # Corrected billing fields (all optional)
+    recipient_name: str | None = Field(default=None, max_length=255)
+    recipient_email: str | None = Field(default=None, max_length=255)
+    recipient_address_line1: str | None = Field(default=None, max_length=255)
+    recipient_address_line2: str | None = Field(default=None, max_length=255)
+    recipient_city: str | None = Field(default=None, max_length=100)
+    recipient_state: str | None = Field(default=None, max_length=100)
+    recipient_postal_code: str | None = Field(default=None, max_length=20)
+    recipient_country: str | None = Field(default=None, max_length=100)
+    recipient_vat_number: str | None = Field(default=None, max_length=20)
+    procurement_code: str | None = Field(default=None, max_length=100)
+
+    custom_email_message: str | None = Field(
+        default=None, max_length=2000, description="Optional message to include in replacement emails"
+    )
+
+
+class ReplaceInvoiceResponse(BaseModel):
+    """Response from replacing an invoice."""
+
+    old_invoice: InvoiceResponse  # cancelled
+    credit_note: InvoiceResponse
+    new_invoice: InvoiceResponse  # replacement
+    registrations_transferred: int
 
 
 class ConvertToCreditCardResponse(BaseModel):

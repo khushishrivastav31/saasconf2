@@ -94,6 +94,15 @@ class Invoice(Base):
         UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True
     )
 
+    # Replacement tracking (distinct from credit notes)
+    replaced_by_invoice_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True
+    )
+    replaces_invoice_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True
+    )
+    replacement_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
     # Stripe payment tracking (for credit_card template type)
     stripe_payment_intent_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     stripe_charge_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -117,6 +126,12 @@ class Invoice(Base):
     related_invoice: Mapped["Invoice | None"] = relationship(
         "Invoice", remote_side="Invoice.id", foreign_keys=[related_invoice_id]
     )
+    replaced_by_invoice: Mapped["Invoice | None"] = relationship(
+        "Invoice", remote_side="Invoice.id", foreign_keys=[replaced_by_invoice_id]
+    )
+    replaces_invoice: Mapped["Invoice | None"] = relationship(
+        "Invoice", remote_side="Invoice.id", foreign_keys=[replaces_invoice_id]
+    )
     events: Mapped[list["InvoiceEvent"]] = relationship(
         "InvoiceEvent", back_populates="invoice", cascade="all, delete-orphan"
     )
@@ -126,6 +141,8 @@ class Invoice(Base):
         Index("idx_invoices_tenant", "tenant_id"),
         Index("idx_invoices_conference", "tenant_id", "conference_id"),
         Index("idx_invoices_related", "related_invoice_id"),
+        Index("idx_invoices_replaced_by", "replaced_by_invoice_id"),
+        Index("idx_invoices_replaces", "replaces_invoice_id"),
         Index("idx_invoices_stripe_intent", "stripe_payment_intent_id"),
         # Partial unique index: enforces uniqueness for assigned numbers, allows multiple NULLs (drafts)
         Index(

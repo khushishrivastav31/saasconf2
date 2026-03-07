@@ -23,6 +23,8 @@ import type {
   PaginatedResponse,
   LocationContactPerson,
   RecipientSearchResult,
+  ReplaceInvoiceRequest,
+  ReplaceInvoiceResponse,
 } from '../../../types';
 import { parseApiError } from '../../../utils/apiError';
 import { formatNumber } from '../../../utils/formatCurrency';
@@ -90,6 +92,19 @@ export default function ConferenceInvoicesTab({
       setDebouncedSearch(value);
     }, 300);
   }, []);
+
+  // Read invoice ID from URL parameter and select it
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const invoiceId = params.get('invoice');
+    if (invoiceId && invoiceId !== selectedInvoiceId) {
+      setSelectedInvoiceId(invoiceId);
+      // Clean up the URL parameter
+      params.delete('invoice');
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [selectedInvoiceId, setSelectedInvoiceId]);
 
   // Use conference currency if set
   const isCurrencyLocked = !!conference.currency;
@@ -247,10 +262,24 @@ export default function ConferenceInvoicesTab({
   });
 
   const cancelMutation = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+    mutationFn: async ({
+      id,
+      reason,
+      cancel_registrations,
+      cancellation_email_message,
+    }: {
+      id: string;
+      reason: string;
+      cancel_registrations?: boolean;
+      cancellation_email_message?: string;
+    }) => {
       const response = await api.post<CancelInvoiceResponse>(
         `/conferences/${conference.id}/invoices/${id}/cancel`,
-        { reason }
+        {
+          reason,
+          cancel_registrations,
+          cancellation_email_message,
+        }
       );
       return response.data;
     },
@@ -260,9 +289,41 @@ export default function ConferenceInvoicesTab({
       });
       setSelectedInvoiceId(result.credit_note.id);
       setError(null);
+      if (result.registrations_cancelled && result.registrations_cancelled > 0) {
+        showToast(
+          `Invoice cancelled. ${result.registrations_cancelled} registration(s) cancelled and ${result.access_removed_count || 0} conference access(es) removed.`,
+          'success'
+        );
+      } else {
+        showToast('Invoice cancelled and credit note created.', 'success');
+      }
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, 'Failed to cancel invoice'));
+    },
+  });
+
+  const replaceMutation = useMutation({
+    mutationFn: async ({ id, request }: { id: string; request: ReplaceInvoiceRequest }) => {
+      const response = await api.post<ReplaceInvoiceResponse>(
+        `/conferences/${conference.id}/invoices/${id}/replace`,
+        request
+      );
+      return response.data;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invoices.byConference(conference.id),
+      });
+      setSelectedInvoiceId(result.new_invoice.id);
+      setError(null);
+      showToast(
+        `Invoice replaced successfully. ${result.registrations_transferred} registration(s) transferred to new invoice.`,
+        'success'
+      );
+    },
+    onError: (err: unknown) => {
+      setError(parseApiError(err, 'Failed to replace invoice'));
     },
   });
 
@@ -763,7 +824,15 @@ export default function ConferenceInvoicesTab({
               await sendMutation.mutateAsync(id);
             }}
             onDelete={(id) => deleteMutation.mutate(id)}
-            onCancel={(id, reason) => cancelMutation.mutate({ id, reason })}
+            onCancel={(id, reason, cancel_registrations, cancellation_email_message) =>
+              cancelMutation.mutate({
+                id,
+                reason,
+                cancel_registrations,
+                cancellation_email_message,
+              })
+            }
+            onReplace={(id, request) => replaceMutation.mutate({ id, request })}
             onRefund={async (id) => {
               await refundMutation.mutateAsync(id);
             }}

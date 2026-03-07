@@ -6,6 +6,7 @@ import InvoiceDetailsTab from './InvoiceDetailsTab';
 import InvoiceLineItemsTab from './InvoiceLineItemsTab';
 import InvoiceContactsTab from './InvoiceContactsTab';
 import InvoiceDocumentsTab from './InvoiceDocumentsTab';
+import ReplaceInvoiceDialog from './ReplaceInvoiceDialog';
 import type {
   Invoice,
   InvoiceUpdate,
@@ -13,6 +14,7 @@ import type {
   InvoiceStatus,
   PlatformCurrency,
   LocationContactPerson,
+  ReplaceInvoiceRequest,
 } from '../../types';
 
 const STATUS_COLORS: Record<InvoiceStatus, string> = {
@@ -30,7 +32,13 @@ interface InvoiceDetailPanelProps {
   onSave: (data: InvoiceUpdate) => Promise<void>;
   onSend?: (id: string) => Promise<void>;
   onDelete?: (id: string) => void;
-  onCancel?: (id: string, reason: string) => void;
+  onCancel?: (
+    id: string,
+    reason: string,
+    cancelRegistrations?: boolean,
+    cancellationEmailMessage?: string
+  ) => void;
+  onReplace?: (id: string, request: import('../../types').ReplaceInvoiceRequest) => void;
   onRefund?: (id: string) => Promise<void>;
   onConvertToCreditCard?: (id: string) => Promise<void>;
   onMarkPaid?: (id: string, payment_date: string, comment: string) => void;
@@ -52,6 +60,7 @@ export default function InvoiceDetailPanel({
   onSend,
   onDelete,
   onCancel,
+  onReplace,
   onRefund,
   onConvertToCreditCard,
   onMarkPaid,
@@ -105,9 +114,12 @@ export default function InvoiceDetailPanel({
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
   const [showRefundConfirm, setShowRefundConfirm] = useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [cancelRegistrations, setCancelRegistrations] = useState(false);
+  const [cancellationEmailMessage, setCancellationEmailMessage] = useState('');
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [showMarkPaidDialog, setShowMarkPaidDialog] = useState(false);
@@ -120,6 +132,12 @@ export default function InvoiceDetailPanel({
   const isCancellable =
     (invoice.status === 'sent' || invoice.status === 'overdue' || invoice.status === 'paid') &&
     invoice.template_type !== 'credit_note';
+
+  // Determine if invoice can be replaced (billing correction)
+  const isReplaceable =
+    (invoice.status === 'sent' || invoice.status === 'overdue' || invoice.status === 'paid') &&
+    invoice.template_type !== 'credit_note' &&
+    !invoice.replaced_by_invoice_id; // Can't replace if already replaced
 
   // Determine if refund button should be shown
   const canRefund =
@@ -599,6 +617,15 @@ export default function InvoiceDetailPanel({
               Cancel Invoice
             </button>
           )}
+          {isReplaceable && onReplace && (
+            <button
+              type="button"
+              onClick={() => setShowReplaceDialog(true)}
+              className="px-4 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-md transition-colors"
+            >
+              Replace Invoice
+            </button>
+          )}
           {canRefund && onRefund && (
             <button
               type="button"
@@ -752,6 +779,8 @@ export default function InvoiceDetailPanel({
             onClick={() => {
               setShowCancelConfirm(false);
               setCancelReason('');
+              setCancelRegistrations(false);
+              setCancellationEmailMessage('');
             }}
           />
           <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
@@ -784,7 +813,7 @@ export default function InvoiceDetailPanel({
                     </strong>
                   )}
                   {invoice.recipient_email
-                    ? ` The credit note will be sent to ${invoice.recipient_email}.`
+                    ? ` The credit note will be sent to ${invoice.recipient_email} using the email template from settings.`
                     : ''}{' '}
                   This action cannot be undone.
                 </p>
@@ -801,6 +830,50 @@ export default function InvoiceDetailPanel({
                     autoFocus
                   />
                 </label>
+                {invoice.recipient_source_type === 'registration' && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={cancelRegistrations}
+                        onChange={(e) => {
+                          setCancelRegistrations(e.target.checked);
+                          if (!e.target.checked) {
+                            setCancellationEmailMessage('');
+                          }
+                        }}
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Cancel all registrations
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          This will cancel all attendee registrations linked to this invoice and
+                          remove their conference access. User accounts will remain active.
+                        </p>
+                      </div>
+                    </label>
+                    {cancelRegistrations && (
+                      <label className="block mt-3">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Cancellation message to attendees (optional)
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-1">
+                          This message will be included in the cancellation email template sent to
+                          each attendee.
+                        </p>
+                        <textarea
+                          value={cancellationEmailMessage}
+                          onChange={(e) => setCancellationEmailMessage(e.target.value)}
+                          rows={2}
+                          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                          placeholder="e.g. Unfortunately the event has been cancelled. Full refund has been processed."
+                        />
+                      </label>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
@@ -809,6 +882,8 @@ export default function InvoiceDetailPanel({
                 onClick={() => {
                   setShowCancelConfirm(false);
                   setCancelReason('');
+                  setCancelRegistrations(false);
+                  setCancellationEmailMessage('');
                 }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
@@ -819,8 +894,15 @@ export default function InvoiceDetailPanel({
                 disabled={!cancelReason.trim()}
                 onClick={() => {
                   setShowCancelConfirm(false);
-                  onCancel?.(invoice.id, cancelReason.trim());
+                  onCancel?.(
+                    invoice.id,
+                    cancelReason.trim(),
+                    cancelRegistrations,
+                    cancellationEmailMessage.trim() || undefined
+                  );
                   setCancelReason('');
+                  setCancelRegistrations(false);
+                  setCancellationEmailMessage('');
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -832,6 +914,17 @@ export default function InvoiceDetailPanel({
           </div>
         </div>
       )}
+
+      {/* Replace Invoice dialog */}
+      <ReplaceInvoiceDialog
+        invoice={invoice}
+        open={showReplaceDialog}
+        onClose={() => setShowReplaceDialog(false)}
+        onConfirm={(request: ReplaceInvoiceRequest) => {
+          onReplace?.(invoice.id, request);
+          setShowReplaceDialog(false);
+        }}
+      />
 
       {/* Refund to Stripe confirmation dialog */}
       <ConfirmDialog
