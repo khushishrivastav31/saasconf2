@@ -2,6 +2,8 @@
  * Invoice and ZUGFeRD/Factur-X types
  */
 
+import type { Invoice } from './conference';
+
 /**
  * ZUGFeRD/Factur-X Settings
  *
@@ -61,50 +63,4 @@ export interface CancelInvoiceRequest {
   reason: string;
   cancel_registrations?: boolean;
   cancellation_email_message?: string;
-}
-
-/**
- * Enhanced cancel invoice response with registration cancellation counts.
- */
-export interface CancelInvoiceResponse {
-  cancelled_invoice: Invoice;
-  credit_note: Invoice;
-  registrations_cancelled?: number;
-  access_removed_count?: number;
-}
-
-/**
- * Base Invoice type (must be defined elsewhere in codebase).
- * This is just a reference placeholder.
- */
-export interface Invoice {
-  id: string;
-  invoice_number: string;
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
-  template_type: 'credit_card' | 'bank_transfer' | 'credit_note';
-  recipient_name: string;
-  recipient_email: string;
-  recipient_address_line1?: string;
-  recipient_city?: string;
-  recipient_postal_code?: string;
-  recipient_country?: string;
-  recipient_vat_number?: string;
-  procurement_code?: string;
-  subtotal: number;
-  tax_amount: number;
-  tax_rate: number;
-  total: number;
-  currency: string;
-  issue_date: string;
-  due_date: string;
-  recipient_source_type?: 'registration' | 'sponsor';
-  recipient_source_id?: string;
-  stripe_payment_link_url?: string;
-  replaced_by_invoice_id?: string;
-  replaces_invoice_id?: string;
-  replacement_reason?: string;
-  related_invoice_id?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }

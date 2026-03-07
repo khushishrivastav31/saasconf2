@@ -473,6 +473,7 @@ export interface Invoice {
   recipient_postal_code: string | null;
   recipient_country: string | null;
   recipient_vat_number: string | null;
+  procurement_code: string | null;
   line_items: InvoiceLineItem[];
   subtotal: number | null;
   tax_rate: number | null;
@@ -486,6 +487,9 @@ export interface Invoice {
   contact_persons: LocationContactPerson[];
   related_invoice_id: string | null;
   related_invoice_number: string | null;
+  replaced_by_invoice_id: string | null;
+  replaces_invoice_id: string | null;
+  replacement_reason: string | null;
   stripe_payment_intent_id: string | null;
   stripe_charge_id: string | null;
   stripe_payment_link_url: string | null;
@@ -500,6 +504,8 @@ export interface Invoice {
 export interface CancelInvoiceResponse {
   cancelled_invoice: Invoice;
   credit_note: Invoice;
+  registrations_cancelled?: number;
+  access_removed_count?: number;
 }
 
 export interface ConvertToCreditCardResponse {
