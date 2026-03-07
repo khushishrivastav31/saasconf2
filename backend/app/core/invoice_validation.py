@@ -103,7 +103,7 @@ async def validate_vat_requirements(
 
     # Convert to Pydantic model
     vat_requirement = VatRequirement(
-        level=requirement.level.value,
+        level=requirement.level,
         reason=requirement.reason,
         rule_reference=requirement.rule_reference,
     )

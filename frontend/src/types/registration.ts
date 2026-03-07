@@ -23,6 +23,8 @@ export interface BillingProfile {
   vat_number: string | null;
   vat_validated: boolean | null;
   procurement_code: string | null;
+  payment_method?: string | null;
+  discount_code?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +42,8 @@ export interface BillingProfileCreate {
   vat_number?: string | null;
   vat_validated?: boolean | null;
   procurement_code?: string | null;
+  payment_method?: string | null;
+  discount_code?: string | null;
 }
 
 export interface BillingProfileUpdate {
@@ -54,6 +58,8 @@ export interface BillingProfileUpdate {
   contact_email?: string;
   vat_number?: string | null;
   procurement_code?: string | null;
+  payment_method?: string | null;
+  discount_code?: string | null;
 }
 
 // Registration Item (add-on)
@@ -101,6 +107,8 @@ export interface Registration {
   phone: string | null;
   booking_option_id: string;
   booking_option_name: string | null;
+  main_session_id: string | null;
+  main_session_name: string | null;
   items: RegistrationItem[];
   registration_mode: RegistrationMode;
   status: RegistrationStatus;
@@ -139,6 +147,7 @@ export interface CompanySingleRegistrationCreate {
 
 export interface BulkAttendeeData extends AttendeeData {
   booking_option_id: string;
+  main_session_id?: string;
   items?: RegistrationItemCreate[];
   notes?: string | null;
 }
@@ -180,6 +189,10 @@ export interface BookableSessionInfo {
   description: string | null;
   speaker_name: string | null;
   has_paper: boolean;
+  max_attendees: number | null;
+  current_count: number;
+  available_spots: number | null;
+  is_full: boolean;
 }
 
 export interface BookableSlot {

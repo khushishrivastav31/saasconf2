@@ -1,15 +1,8 @@
 """VAT requirement detection based on VAT Decision Table rules."""
 
 from dataclasses import dataclass
-from enum import StrEnum
 
-
-class VatRequirementLevel(StrEnum):
-    """VAT number requirement level."""
-
-    REQUIRED = "required"  # Reverse charge - legally mandatory
-    RECOMMENDED = "recommended"  # B2B best practice
-    OPTIONAL = "optional"  # B2C or non-critical
+from app.schemas.invoice import VatRequirementLevel
 
 
 @dataclass
