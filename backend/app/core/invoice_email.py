@@ -129,3 +129,116 @@ async def send_invoice_email(
     except Exception as e:
         logger.error(f"Failed to send email for invoice {invoice.id}: {e}")
         return False
+
+
+async def send_replacement_invoice_emails(
+    db: AsyncSession,
+    credit_note: "Invoice",
+    new_invoice: "Invoice",
+    conference: "Conference",
+    payment_link_url: str | None = None,
+    custom_message: str | None = None,
+) -> tuple[bool, bool]:
+    """Send both credit note and replacement invoice emails.
+
+    Used when replacing an invoice due to billing corrections. Sends:
+    1. Credit note for the cancelled original invoice
+    2. New invoice with corrected billing information
+
+    Args:
+        db: Database session
+        credit_note: Credit note invoice
+        new_invoice: New replacement invoice
+        conference: Conference model
+        payment_link_url: Optional Stripe payment link URL for new invoice
+        custom_message: Optional custom message for both emails
+
+    Returns:
+        Tuple of (credit_note_sent, new_invoice_sent)
+    """
+    credit_note_sent = False
+    new_invoice_sent = False
+
+    # Send credit note email
+    try:
+        credit_note_sent = await send_invoice_email(
+            db=db,
+            invoice=credit_note,
+            conference=conference,
+            custom_message=custom_message,
+        )
+    except Exception as e:
+        logger.error(f"Failed to send credit note email for {credit_note.invoice_number}: {e}")
+
+    # Send new invoice email
+    try:
+        if custom_message:
+            new_invoice_message = custom_message
+        else:
+            original_number = (
+                credit_note.related_invoice.invoice_number if credit_note.related_invoice else "previous invoice"
+            )
+            new_invoice_message = f"This invoice replaces {original_number} due to billing information correction."
+        new_invoice_sent = await send_invoice_email(
+            db=db,
+            invoice=new_invoice,
+            conference=conference,
+            payment_link_url=payment_link_url,
+            custom_message=new_invoice_message,
+        )
+    except Exception as e:
+        logger.error(f"Failed to send new invoice email for {new_invoice.invoice_number}: {e}")
+
+    return credit_note_sent, new_invoice_sent
+
+
+async def send_registration_cancellation_email(
+    registration_email: str,
+    registration_name: str,
+    conference_name: str,
+    invoice_number: str,
+    cancellation_message: str | None = None,
+) -> bool:
+    """Send cancellation email to attendee.
+
+    Args:
+        registration_email: Email address of the attendee
+        registration_name: Name of the attendee
+        conference_name: Name of the conference
+        invoice_number: Invoice number that was cancelled
+        cancellation_message: Optional custom message from admin
+
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    try:
+        subject = f"Registration Cancellation - {conference_name}"
+
+        # Build email body
+        html = f"""
+        <p>Dear {registration_name},</p>
+
+        <p>We regret to inform you that your registration for <strong>{conference_name}</strong> has been cancelled
+        due to invoice cancellation (Invoice: {invoice_number}).</p>
+        """
+
+        if cancellation_message:
+            html += f"<p><strong>Message from organizers:</strong><br>{cancellation_message}</p>"
+
+        html += """
+        <p>Your user account remains active. If you believe this cancellation was made in error,
+        please contact the conference organizers.</p>
+
+        <p>Best regards,<br>
+        Conference Team</p>
+        """
+
+        return await send_email(
+            to=registration_email,
+            subject=subject,
+            html=html,
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to send cancellation email to {registration_email}: {e}")
+        return False
