@@ -236,6 +236,13 @@ def _generate_cii_xml(data: dict) -> bytes:
         buyer_tax_id = etree.SubElement(buyer_spec_tax, "{%s}ID" % nsmap["ram"], schemeID="VA")
         buyer_tax_id.text = buyer_vat
 
+    # Buyer order reference (PO number) - optional per EN16931
+    buyer_order_ref = data.get("buyer_order_reference")
+    if buyer_order_ref:
+        order_ref_doc = etree.SubElement(agreement, "{%s}BuyerOrderReferencedDocument" % nsmap["ram"])
+        order_ref_id = etree.SubElement(order_ref_doc, "{%s}IssuerAssignedID" % nsmap["ram"])
+        order_ref_id.text = str(buyer_order_ref)
+
     # Trade delivery (required by EN16931)
     delivery_header = etree.SubElement(trade, "{%s}ApplicableHeaderTradeDelivery" % nsmap["ram"])
     delivery_event = etree.SubElement(delivery_header, "{%s}ActualDeliverySupplyChainEvent" % nsmap["ram"])
@@ -545,6 +552,8 @@ async def _map_invoice_to_zugferd(invoice: Any, conference: Any, db: AsyncSessio
         # Parties
         "seller": seller_data,
         "buyer": buyer_data,
+        # References
+        "buyer_order_reference": invoice.procurement_code,  # PO number (optional)
         # Amounts
         "line_total": subtotal,
         "tax_basis": subtotal,

@@ -32,6 +32,7 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 from app.models.conference import Conference
+from app.models.invoice import Invoice
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
@@ -289,3 +290,61 @@ def regular_user_token(regular_user: User) -> str:
 def auth_headers(token: str) -> dict[str, str]:
     """Return authorization headers for a token."""
     return {"Authorization": f"Bearer {token}"}
+
+
+# ── Invoice test fixtures ─────────────────────────────────────────────────
+
+
+@pytest_asyncio.fixture()
+async def invoice(db_session: AsyncSession, conference: Conference) -> Invoice:
+    """Create and return a test invoice."""
+    from datetime import date, timedelta
+
+    today = date.today()
+    inv = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=conference.tenant_id,
+        conference_id=conference.id,
+        invoice_number="INV-TEST-001",
+        template_type="bank_transfer",
+        status="draft",
+        issue_date=today,
+        due_date=today + timedelta(days=30),
+        recipient_name="Test Company",
+        recipient_email="billing@testcompany.com",
+        recipient_address_line1="123 Test Street",
+        recipient_city="Test City",
+        recipient_postal_code="12345",
+        recipient_country="DE",
+        recipient_vat_number="DE123456789",
+        subtotal=100.0,
+        tax_rate=19.0,
+        tax_amount=19.0,
+        total=119.0,
+        currency="EUR",
+        is_active=True,
+    )
+    db_session.add(inv)
+    await db_session.commit()
+    await db_session.refresh(inv)
+    return inv
+
+
+@pytest_asyncio.fixture()
+async def invoice_with_procurement_code(invoice: Invoice, db_session: AsyncSession) -> Invoice:
+    """Invoice with procurement code."""
+    invoice.procurement_code = "PO-2024-12345"
+    db_session.add(invoice)
+    await db_session.commit()
+    await db_session.refresh(invoice)
+    return invoice
+
+
+@pytest_asyncio.fixture()
+async def invoice_without_procurement_code(invoice: Invoice, db_session: AsyncSession) -> Invoice:
+    """Invoice without procurement code."""
+    invoice.procurement_code = None
+    db_session.add(invoice)
+    await db_session.commit()
+    await db_session.refresh(invoice)
+    return invoice

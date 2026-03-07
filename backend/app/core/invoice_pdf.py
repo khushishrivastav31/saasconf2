@@ -137,6 +137,7 @@ DEFAULT_INVOICE_TEMPLATE_HTML = """
     <p><strong>[RECIPIENT_NAME]</strong></p>
     <p>[RECIPIENT_ADDRESS]</p>
     <p>VAT: [RECIPIENT_VAT]</p>
+    <p>PO Number: [PROCUREMENT_CODE]</p>
   </div>
 
   [ITEMS_TABLE]
@@ -719,8 +720,11 @@ async def generate_invoice_pdf(
         "[RECIPIENT_NAME]": invoice.recipient_name or "",
         "[RECIPIENT_ADDRESS]": _format_recipient_address(invoice),
         "[RECIPIENT_VAT]": invoice.recipient_vat_number or "",
+        "[PROCUREMENT_CODE]": invoice.procurement_code or "",
+        "[PO_NUMBER]": invoice.procurement_code or "",
         # Financial (formatted using conference number format settings)
         "[SUBTOTAL]": format_amount(invoice.subtotal, settings) if invoice.subtotal else format_amount(0, settings),
+        "[DISCOUNT_CODE]": invoice.discount_code or "",
         "[TAX_RATE]": f"{invoice.tax_rate:.2f}" if invoice.tax_rate else "0.00",
         "[TAX_AMOUNT]": format_amount(invoice.tax_amount, settings)
         if invoice.tax_amount

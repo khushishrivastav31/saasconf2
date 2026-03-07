@@ -1694,3 +1694,68 @@ async def test_preview_vat_endpoint(
     assert "rule_applied" in data
     assert data["notes_text"] is not None
     assert "OSS" in data["notes_text"]
+
+
+# ── Procurement Code Tests ────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_create_invoice_with_procurement_code(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+) -> None:
+    """Test creating invoice with procurement code via API."""
+    payload = {
+        "invoice_number": "INV-PO-001",
+        "status": "draft",
+        "template_type": "bank_transfer",
+        "procurement_code": "PO-2024-99999",
+        "recipient_name": "Test Company",
+        "recipient_address_line1": "123 Test St",
+        "recipient_city": "Test City",
+        "recipient_postal_code": "12345",
+        "recipient_country": "DE",
+        "subtotal": "100.00",
+        "tax_rate": "19.00",
+        "tax_amount": "19.00",
+        "total": "119.00",
+        "currency": "EUR",
+    }
+
+    url = _invoices_url(conference.id)
+    response = await client.post(
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices)
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["procurement_code"] == "PO-2024-99999"
+
+
+@pytest.mark.asyncio
+async def test_update_invoice_procurement_code(
+    client: AsyncClient,
+    conference: Conference,
+    tenant_with_invoices_module: Tenant,
+    tenant_admin_user: User,
+    admin_token_invoices: str,
+    sample_invoice: Invoice,
+) -> None:
+    """Test updating invoice procurement code via API."""
+    payload = {"procurement_code": "PO-UPDATED-12345"}
+
+    url = _invoices_url(conference.id, str(sample_invoice.id))
+    response = await client.put(
+        url,
+        json=payload,
+        headers=auth_headers(admin_token_invoices)
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["procurement_code"] == "PO-UPDATED-12345"

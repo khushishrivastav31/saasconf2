@@ -3,12 +3,16 @@
 import uuid
 from datetime import datetime
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.program import ProgramSession
 
 
 class RegistrationStatus(StrEnum):
@@ -77,6 +81,10 @@ class BillingProfile(Base):
     vat_validated: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     procurement_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
+    # Payment preferences
+    payment_method: Mapped[str | None] = mapped_column(String(20), nullable=True)  # bank_transfer, credit_card
+    discount_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -141,6 +149,13 @@ class Registration(Base):
         nullable=False,
     )
 
+    # Main session selection (optional - for session-based booking options like tutorials)
+    main_session_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("program_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     # Registration metadata
     registration_mode: Mapped[str] = mapped_column(
         String(20), nullable=False, default=RegistrationMode.INDIVIDUAL.value
@@ -169,6 +184,7 @@ class Registration(Base):
     items: Mapped[list["RegistrationItem"]] = relationship(
         "RegistrationItem", back_populates="registration", cascade="all, delete-orphan"
     )
+    main_session: Mapped["ProgramSession | None"] = relationship("ProgramSession", foreign_keys=[main_session_id])
 
     __table_args__ = (
         Index("idx_registrations_tenant", "tenant_id"),

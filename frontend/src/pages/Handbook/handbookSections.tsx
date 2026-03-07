@@ -1076,7 +1076,9 @@ info@company.com,,,Tech Solutions`}
           <li>
             <strong>Recipient</strong> &mdash; billing name, address, VAT number, and email. The
             address fields (Address Line 1, City, Postal Code, Country) are{' '}
-            <strong>required</strong> when creating an invoice.
+            <strong>required</strong> when creating an invoice. Optionally, you can specify a{' '}
+            <strong>Procurement Code</strong> (PO number) which appears on the PDF and is included
+            in ZUGFeRD XML when enabled.
           </li>
           <li>
             <strong>Issue &amp; Due Dates</strong> &mdash; when the invoice was issued and when
@@ -1173,7 +1175,7 @@ info@company.com,,,Tech Solutions`}
               </td>
               <td>
                 Recipient name, country (ISO code required), address and city (recommended), VAT ID
-                (for B2B)
+                (for B2B), procurement code/PO number (optional)
               </td>
             </tr>
             <tr>
@@ -1574,6 +1576,22 @@ info@company.com,,,Tech Solutions`}
             <code>[TOTAL]</code>
           </li>
         </ul>
+        <h4>Recipient/Buyer Information</h4>
+        <ul>
+          <li>
+            <code>[RECIPIENT_NAME]</code> &mdash; buyer company or person name
+          </li>
+          <li>
+            <code>[RECIPIENT_ADDRESS]</code> &mdash; formatted buyer address
+          </li>
+          <li>
+            <code>[RECIPIENT_VAT]</code> &mdash; buyer VAT/tax ID number
+          </li>
+          <li>
+            <code>[PROCUREMENT_CODE]</code> or <code>[PO_NUMBER]</code> &mdash; purchase order
+            number (optional, included in ZUGFeRD XML when present)
+          </li>
+        </ul>
         <h4>VAT Source Selector</h4>
         <p>
           If a fiscal representative is configured, a dropdown appears at the top of the Invoice
@@ -1716,6 +1734,10 @@ info@company.com,,,Tech Solutions`}
           <li>Recipient address (recommended)</li>
           <li>Recipient city (recommended)</li>
           <li>Recipient VAT number (recommended for B2B invoices)</li>
+          <li>
+            Procurement code / PO number (optional, included as BuyerOrderReferencedDocument when
+            present)
+          </li>
         </ul>
         <p>
           <strong>Financial requirements:</strong>

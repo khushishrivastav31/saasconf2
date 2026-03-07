@@ -52,6 +52,7 @@ class InvoiceCreate(BaseModel):
     tax_amount: float | None = Field(None, ge=0)
     total: float | None = Field(None, ge=0)
     currency: str | None = Field(None, max_length=3)
+    procurement_code: str | None = Field(None, max_length=100)
     attendance_type: str | None = Field(None, max_length=20)
     notes: str | None = None
     internal_comment: str | None = None
@@ -115,6 +116,7 @@ class InvoiceUpdate(BaseModel):
     tax_amount: float | None = Field(None, ge=0)
     total: float | None = Field(None, ge=0)
     currency: str | None = Field(None, max_length=3)
+    procurement_code: str | None = Field(None, max_length=100)
     attendance_type: str | None = Field(None, max_length=20)
     notes: str | None = None
     internal_comment: str | None = None
@@ -204,6 +206,7 @@ class InvoiceResponse(BaseModel):
     tax_amount: float | None = None
     total: float | None = None
     currency: str | None = None
+    procurement_code: str | None = None
     vat_auto_calculated: bool = False
     attendance_type: str | None = None
     notes: str | None = None

@@ -64,6 +64,12 @@ class Invoice(Base):
     recipient_postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     recipient_country: Mapped[str | None] = mapped_column(String(100), nullable=True)
     recipient_vat_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    procurement_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # Payment
+    payment_method: Mapped[str | None] = mapped_column(String(20), nullable=True)  # bank_transfer, credit_card
+    discount_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    discount_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
 
     # Financial
     line_items: Mapped[list | None] = mapped_column(JSONB, nullable=True)
