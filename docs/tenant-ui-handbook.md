@@ -300,6 +300,140 @@ View the full audit trail in the **Events** tab of each invoice.
 
 ---
 
+## Registration Management
+
+### Managing Attendee Registrations
+
+SaaSConf provides comprehensive tools for managing conference attendee registrations, including the ability to update attendee information and handle registration changes.
+
+### Replacing an Attendee
+
+Use **Replace Attendee** when you need to substitute one attendee with another for an existing registration. This is common when an employee changes roles, leaves the company, or transfers their ticket to a colleague.
+
+**When to Use**:
+- Employee left the company and replacement is attending
+- Original attendee can't attend and transfers ticket
+- Wrong person was registered initially
+- Department change or internal transfer
+
+**How It Works**:
+
+1. Navigate to the **Registrations** tab in your conference
+2. Find the registration you want to update
+3. Click on the registration to view details
+4. Click **Replace Attendee** button
+5. Fill in the replacement attendee information:
+   - **First Name** * (required)
+   - **Last Name** * (required)
+   - **Email** * (required, validated on blur)
+   - **Phone** (validated on blur)
+   - **Pronouns** (dropdown from conference settings)
+   - **Job Title**
+   - **Department**
+6. Enter **Replacement Reason** * (required) - why this change is happening
+7. Add **Cancellation Message** (optional) - message sent to original attendee
+8. **Optional**: Add additional booking items for the new attendee:
+   - Click "Add Additional Item"
+   - Choose type: Booking Option or Tutorial
+   - Select the specific item
+   - Click "Add" to include it
+9. Review the summary:
+   - **Without additional items**: Shows simple replacement message
+   - **With additional items**: Shows that a new invoice will be created for the extra items
+10. Click **Replace** to confirm
+
+**What Happens Automatically**:
+
+The system handles all necessary updates:
+
+1. **Original Attendee**:
+   - Registration status changed to CANCELLED
+   - Receives cancellation email with your custom message
+   - Conference access removed
+   - User account stays active (can access other events)
+
+2. **New Attendee**:
+   - New registration created with replacement status
+   - Inherits the original booking option and items
+   - Receives welcome email with conference details
+   - Conference access granted
+   - User account created automatically if doesn't exist
+
+3. **Additional Items (if added)**:
+   - New invoice created for additional items only (delta invoicing)
+   - Invoice inherits billing information from original registration
+   - Invoice sent via email with payment details
+   - Credit card invoices include Stripe payment link
+
+4. **Audit Trail**:
+   - Replacement record created with full details
+   - Both registrations linked via replacement_id
+   - All actions logged in system events
+
+**Validation Rules**:
+
+- ✅ Email is validated with proper format checking
+- ✅ Phone number is validated if provided
+- ✅ Pronouns must be selected from conference settings (cannot be custom text)
+- ✅ Additional items cannot duplicate existing items:
+  - Can't add same booking option as current registration
+  - Can't add multiple tutorials (one at a time)
+  - Can't add items already in the registration
+
+**Additional Items - Smart Filtering**:
+
+When adding additional booking options:
+- System filters out items the attendee already has
+- Disables Tutorial type if attendee already has a tutorial (you can only be in one tutorial at a time)
+- Shows only active booking options
+- Prevents duplicate selections
+
+**Billing & Invoicing**:
+
+**Scenario A - No Additional Items**:
+- No new invoice created
+- Original invoice (if any) remains unchanged
+- Registration billing stays linked to original billing profile
+
+**Scenario B - With Additional Items**:
+- New invoice created automatically for additional items only
+- Invoice uses billing profile from original registration
+- Invoice includes only the new items (delta invoicing)
+- Email sent to billing contact with payment information
+- For credit card template: Stripe payment link included
+
+**Email Templates**:
+
+All emails use templates configured in conference settings:
+- **Original Attendee**: Cancellation email (customizable message)
+- **New Attendee**: Welcome/registration confirmation email
+- **Billing Contact**: Invoice email (if additional items added)
+
+**Important Notes**:
+
+- ✅ Replacement is instant - no approval workflow needed
+- ✅ Conference access is transferred immediately
+- ✅ Audit trail preserved with full replacement details
+- ✅ Email and phone are validated in real-time
+- ✅ Can add multiple additional items (booking options, tutorials)
+- ❌ Cannot replace an already-replaced registration
+- ❌ Cannot replace a cancelled registration
+- ❌ Cannot select custom pronouns (must use conference settings)
+- ❌ Cannot add duplicate items or multiple tutorials
+
+**Use Case Examples**:
+
+**Example 1 - Simple Employee Transfer**:
+> Sarah from Marketing registered for the conference but left the company. John from Marketing will attend instead. Use Replace Attendee to transfer Sarah's registration to John with reason "Employee departure - internal transfer".
+
+**Example 2 - Replacement with Upgrades**:
+> Original attendee had "2-Day Pass" but replacement attendee also wants to attend a tutorial. Add the tutorial as an additional item when replacing. System creates invoice only for the tutorial cost.
+
+**Example 3 - Cross-Department Transfer**:
+> IT department employee registered but can't attend. Sales department employee will attend instead and wants to add networking dinner. Replace attendee and add dinner as additional item. Invoice sent to original billing profile.
+
+---
+
 ## VAT Settings
 
 ### Configuring VAT Rates
@@ -399,6 +533,48 @@ You can customize the VAT rules in conference settings if you have special tax a
    - Add custom messages for clarity (optional field in Replace/Cancel dialogs)
    - Follow up personally for sensitive situations (full event cancellation)
 
+### Registration Management
+
+1. **Configure pronouns in settings first**
+   - Add pronoun options in Conference Settings before registration opens
+   - Common options: "he/him", "she/her", "they/them", "prefer not to say"
+   - Ensures dropdown works correctly in Replace Attendee modal
+
+2. **Validate contact information**
+   - Email and phone validation happens automatically on blur
+   - Red border indicates invalid format - fix before proceeding
+   - Proper validation prevents communication issues
+
+3. **Use replacement reason field meaningfully**
+   - Document why the replacement is happening
+   - Examples: "Employee departure", "Internal transfer", "Original attendee unavailable"
+   - Helps with audit trail and future reference
+
+4. **Add custom messages for sensitive situations**
+   - Use the cancellation message field for original attendee
+   - Explain the situation clearly and professionally
+   - Helps maintain good relationships with cancelled attendees
+
+5. **Review additional items carefully**
+   - System prevents duplicates and multiple tutorials automatically
+   - Only add items the new attendee actually needs
+   - Remember: additional items create a new invoice
+
+6. **Check billing before adding paid items**
+   - Additional items use original registration's billing profile
+   - Verify billing contact is correct before adding paid items
+   - Invoice will be sent to the billing profile email
+
+7. **Monitor audit trail**
+   - Replacement records include full details of who, when, why
+   - Check registration events to track replacement history
+   - Use for compliance and record-keeping
+
+8. **Don't replace already-replaced registrations**
+   - System prevents this to maintain clean audit trail
+   - Always work with the current active registration
+   - Follow the replacement chain if needed
+
 ---
 
 ## Troubleshooting
@@ -497,6 +673,65 @@ After replacing an invoice, you should see:
 2. Refresh the page
 3. Check invoice events for errors
 4. Contact support if issue persists
+
+### Replace Attendee Issues
+
+**Email Validation Error**:
+- Red border appears on email field
+- Email format is invalid (missing @ or domain)
+- Fix: Enter a valid email address (user@example.com)
+- Validation happens when you click outside the field (on blur)
+
+**Phone Validation Error**:
+- Red border appears on phone field
+- Phone format is invalid
+- Fix: Enter valid phone number with country code (+1234567890)
+- Can include spaces, dashes, parentheses for readability
+
+**"Tutorial Already Exists" - Can't Add Tutorial**:
+- Tutorial option is disabled in the Type dropdown
+- Attendee already has a tutorial in their registration
+- Can only be in one tutorial session at a time
+- Fix: Remove existing tutorial first, or choose a different additional item type
+
+**Additional Item Already in Registration**:
+- Booking option doesn't appear in dropdown
+- Item is already part of the attendee's registration
+- System filters out duplicate items automatically
+- Fix: Choose a different booking option
+
+**No Pronouns Available**:
+- Pronouns dropdown is empty or missing
+- Conference settings don't have pronouns configured
+- Fix: Go to Conference Settings > General > Pronouns and add options (e.g., "he/him", "she/her", "they/them")
+
+**Can't Replace Already-Replaced Registration**:
+- Error message: "Registration has already been replaced"
+- This registration was previously replaced
+- Fix: Find the current active registration and replace that instead
+- Check registration events to see replacement history
+
+**Replace Button Not Visible**:
+- You may not have admin permissions
+- Registration may already be cancelled or replaced
+- Fix: Verify you have conference admin access
+- Check registration status - must be active
+
+**Invoice Not Created for Additional Items**:
+- Check if you actually added additional items before clicking Replace
+- Verify items were in the "Added Items" list before confirming
+- Check invoice tab to see if invoice was created
+- Review replacement record events for errors
+
+**Email Not Sent**:
+- Check email templates are configured in conference settings
+- Verify email addresses are correct
+- Check spam folder
+- Review invoice/registration events for email send confirmation
+- Templates required:
+  - Registration cancellation email
+  - Registration welcome/confirmation email
+  - Invoice email (if additional items added)
 
 ---
 
