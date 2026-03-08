@@ -22,6 +22,7 @@ from app.core.vat_validation import validate_vat_number
 from app.models.booking import BookingOption
 from app.models.cfp_applicants import CFPApplicant
 from app.models.cfp_papers import CFPPaper
+from app.models.invoice import Invoice
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot
 from app.models.registration import (
     BillingProfile,
@@ -39,6 +40,8 @@ from app.schemas.registration import (
     RegistrationListResponse,
     RegistrationResponse,
     RegistrationUpdate,
+    ReplaceAttendeeRequest,
+    ReplaceAttendeeResponse,
     UnifiedRegistrationCreate,
     UnifiedRegistrationResponse,
 )
@@ -764,6 +767,103 @@ async def delete_registration(
     await db.commit()
 
     return {"message": f"Registration for '{name}' deleted successfully"}
+
+
+# ---------------------------------------------------------------------------
+# Replace Attendee
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{registration_id}/replace")
+async def replace_attendee_endpoint(
+    conference_id: UUID,
+    registration_id: UUID,
+    data: "ReplaceAttendeeRequest",
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> "ReplaceAttendeeResponse":
+    """
+    Replace one attendee with another on an existing registration.
+
+    Scenario A (no additional_items): Simple replacement, no invoice changes
+    Scenario B (with additional_items): Create new invoice for delta items only
+    """
+    from app.core.exceptions import ValidationError
+    from app.core.registration_replacement import replace_attendee
+
+    tenant_id = current_user.tenant_id
+    await check_conference_admin(conference_id, current_user, db)
+
+    # Load conference
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+
+    # Load old registration
+    result = await db.execute(
+        select(Registration)
+        .where(
+            Registration.id == registration_id,
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == tenant_id,
+        )
+        .options(
+            selectinload(Registration.billing_profile),
+            selectinload(Registration.items),
+            selectinload(Registration.main_session),
+        )
+    )
+    old_reg = result.scalar_one_or_none()
+    if not old_reg:
+        raise NotFoundError(f"Registration '{registration_id}' not found")
+
+    # Validate old registration is not already cancelled
+    if old_reg.status == RegistrationStatus.CANCELLED:
+        raise ValidationError("Cannot replace a cancelled registration")
+
+    # Validate new email is unique
+    await _check_email_unique(db, conference_id, data.new_attendee.email)
+
+    # Validate additional items
+    for item in data.additional_items:
+        if item.booking_option_id:
+            await _validate_booking_option(db, item.booking_option_id, conference_id, tenant_id)
+
+    # Perform replacement
+    old_registration, new_registration, replacement_record, additional_invoice = await replace_attendee(
+        db=db,
+        old_registration=old_reg,
+        new_attendee_data=data.new_attendee,
+        additional_items=data.additional_items,
+        conference=conference,
+        tenant_id=tenant_id,
+        user_id=current_user.user_id,
+        replacement_reason=data.replacement_reason,
+        cancellation_message=data.cancellation_message,
+    )
+
+    # Refresh objects from DB after commit
+    await db.refresh(old_registration)
+    await db.refresh(new_registration)
+    await db.refresh(replacement_record)
+    if additional_invoice:
+        # Re-query invoice with events loaded for build_invoice_response
+        result = await db.execute(
+            select(Invoice).where(Invoice.id == additional_invoice.id).options(selectinload(Invoice.events))
+        )
+        additional_invoice = result.scalar_one()
+
+    # Build responses
+    opt_map = await _get_option_name_map(db, conference_id, tenant_id)
+
+    from app.api.v1.invoices.crud import build_invoice_response
+
+    return ReplaceAttendeeResponse(
+        old_registration=_build_response(old_registration, option_name=opt_map.get(old_registration.booking_option_id)),
+        new_registration=_build_response(new_registration, option_name=opt_map.get(new_registration.booking_option_id)),
+        replacement_id=replacement_record.id,
+        has_additional_items=replacement_record.has_additional_items,
+        additional_items_invoice=build_invoice_response(additional_invoice) if additional_invoice else None,
+        emails_sent={"old_attendee": True, "new_attendee": True, "invoice": bool(additional_invoice)},
+    )
 
 
 # ---------------------------------------------------------------------------
