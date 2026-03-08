@@ -63,6 +63,9 @@ const MessagesPage = lazy(() => import('./pages/portal/MessagesPage'));
 const NewsPage = lazy(() => import('./pages/portal/NewsPage'));
 const LandingPage = lazy(() => import('./pages/portal/LandingPage'));
 
+// Lazy-loaded public registration portal
+const PublicRegistrationPage = lazy(() => import('./pages/PublicRegistration'));
+
 function LazyFallback() {
   return (
     <div className="flex justify-center py-12">
@@ -373,6 +376,9 @@ function App() {
 
         {/* CFP Landing Page — public route */}
         <Route path=":tenantSlug/portal/:abbreviation" element={<LandingPage />} />
+
+        {/* Public Registration Portal — public route */}
+        <Route path=":tenantSlug/register/:conferenceSlug" element={<PublicRegistrationPage />} />
 
         {/* CFP Applicant Portal — authenticated routes */}
         <Route
