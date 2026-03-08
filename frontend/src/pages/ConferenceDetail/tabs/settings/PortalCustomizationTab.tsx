@@ -6,7 +6,7 @@
  * - Custom CSS (file upload or inline editor)
  * - Portal URL display
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -41,6 +41,25 @@ function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabP
   const [cssMode, setCSSMode] = useState<CSSMode>(useInlineCSS ? 'inline' : 'file');
   const [cssContent, setCSSContent] = useState(inlineCSS);
   const [uploading, setUploading] = useState(false);
+  const [loadingDefaultCSS, setLoadingDefaultCSS] = useState(false);
+
+  // Fetch default CSS template on mount if no custom CSS exists
+  useEffect(() => {
+    if (!inlineCSS && cssMode === 'inline') {
+      setLoadingDefaultCSS(true);
+      fetch('/api/v1/portal-templates/default-registration-portal.css')
+        .then((res) => res.text())
+        .then((css) => {
+          setCSSContent(css);
+        })
+        .catch((error) => {
+          console.error('Failed to load default CSS template:', error);
+        })
+        .finally(() => {
+          setLoadingDefaultCSS(false);
+        });
+    }
+  }, [inlineCSS, cssMode]);
 
   // Portal URL construction
   const tenantSlug = conference.tenant_slug || 'demo';
@@ -145,97 +164,21 @@ function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabP
 
   // Download default template
   const downloadDefaultTemplate = () => {
-    // TODO: Fetch from backend endpoint /api/v1/portal-templates/default-registration-portal.css
-    // For now, create a simple template
-    const defaultCSS = `/* Default Public Registration Portal CSS Template */
-
-.portal-registration {
-  /* Main container wrapper */
-}
-
-.portal-container {
-  max-width: 768px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
-.portal-card {
-  background: white;
-  border-radius: 0.5rem;
-  padding: 2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.portal-heading {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #111827;
-  margin-bottom: 0.5rem;
-}
-
-.portal-subheading {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.portal-text {
-  color: #6b7280;
-  line-height: 1.625;
-}
-
-.portal-button {
-  padding: 0.625rem 1.25rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  transition: all 0.15s;
-}
-
-.portal-button-primary {
-  background: #4f46e5;
-  color: white;
-}
-
-.portal-button-primary:hover {
-  background: #4338ca;
-}
-
-.portal-button-secondary {
-  background: #e5e7eb;
-  color: #374151;
-}
-
-.portal-button-secondary:hover {
-  background: #d1d5db;
-}
-
-.portal-input {
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-}
-
-.portal-input:focus {
-  outline: 2px solid #4f46e5;
-  outline-offset: 2px;
-}
-
-.portal-select {
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-}
-`;
-
-    const blob = new Blob([defaultCSS], { type: 'text/css' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'registration-portal-default.css';
-    a.click();
-    URL.revokeObjectURL(url);
+    // Fetch from backend endpoint
+    fetch('/api/v1/portal-templates/default-registration-portal.css')
+      .then((res) => res.blob())
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'default-registration-portal.css';
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch((error) => {
+        showToast('Failed to download template', 'error');
+        console.error('Failed to download default template:', error);
+      });
   };
 
   // Copy portal URL to clipboard
@@ -423,18 +366,24 @@ function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabP
                         onClick={downloadDefaultTemplate}
                         className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                       >
-                        View Template
+                        Download Template
                       </button>
                     </div>
                   </div>
-                  <textarea
-                    value={cssContent}
-                    onChange={(e) => setCSSContent(e.target.value)}
-                    disabled={!isAdmin}
-                    rows={20}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="/* Enter your custom CSS here */"
-                  />
+                  {loadingDefaultCSS ? (
+                    <div className="flex justify-center items-center py-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                  ) : (
+                    <textarea
+                      value={cssContent}
+                      onChange={(e) => setCSSContent(e.target.value)}
+                      disabled={!isAdmin}
+                      rows={20}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="/* Enter your custom CSS here */"
+                    />
+                  )}
                   {isOverLimit && (
                     <p className="mt-2 text-sm text-red-600 dark:text-red-400">
                       CSS content exceeds the 100KB limit. Please reduce the size.
