@@ -312,3 +312,62 @@ class BulkRegistrationResponse(BaseModel):
 UnifiedAttendeeData = BulkAttendeeData
 UnifiedRegistrationCreate = BulkRegistrationCreate
 UnifiedRegistrationResponse = BulkRegistrationResponse
+
+
+# ---------------------------------------------------------------------------
+# Replace Attendee schemas
+# ---------------------------------------------------------------------------
+
+
+class ReplaceAttendeeNewAttendeeData(BaseModel):
+    """New attendee information for replacement."""
+
+    first_name: str = Field(..., min_length=1, max_length=255)
+    last_name: str = Field(..., min_length=1, max_length=255)
+    email: EmailStr
+    phone: str | None = Field(None, max_length=50)
+    pronouns: str | None = Field(None, max_length=50)
+    job_title: str | None = Field(None, max_length=255)
+    department: str | None = Field(None, max_length=255)
+
+
+class AdditionalItemCreate(BaseModel):
+    """Additional item to add during replacement (Scenario B)."""
+
+    item_type: str = Field(..., pattern="^(booking_option|tutorial)$")
+    booking_option_id: UUID | None = None
+    program_session_id: UUID | None = None
+    item_name: str | None = None  # Optional override
+
+
+class ReplaceAttendeeRequest(BaseModel):
+    """Request to replace an attendee on an existing registration."""
+
+    # New attendee data
+    new_attendee: ReplaceAttendeeNewAttendeeData
+
+    # Additional items (optional - empty list = Scenario A)
+    additional_items: list[AdditionalItemCreate] = Field(default_factory=list)
+
+    # Metadata
+    replacement_reason: str | None = Field(None, max_length=1000)
+    cancellation_message: str | None = Field(None, max_length=2000)
+
+
+class ReplaceAttendeeResponse(BaseModel):
+    """Response after replacing an attendee."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    old_registration: RegistrationResponse
+    new_registration: RegistrationResponse
+    replacement_id: UUID
+
+    # Invoice info
+    has_additional_items: bool
+    additional_items_invoice: dict | None = None  # InvoiceResponse if Scenario B
+
+    # Email status
+    emails_sent: dict[str, bool] = Field(
+        default_factory=lambda: {"old_attendee": False, "new_attendee": False, "invoice": False}
+    )

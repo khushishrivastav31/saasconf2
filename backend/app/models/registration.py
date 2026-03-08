@@ -6,7 +6,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -263,3 +263,82 @@ class RegistrationItem(Base):
 
     def __repr__(self) -> str:
         return f"<RegistrationItem {self.item_type}: {self.item_name}>"
+
+
+class RegistrationReplacement(Base):
+    """
+    Audit trail for attendee replacements.
+
+    Tracks when one attendee is replaced with another on an existing registration.
+    Scenario A: Simple replacement (no additional items) - no invoice changes.
+    Scenario B: Replacement with additional items - creates incremental invoice.
+    """
+
+    __tablename__ = "registration_replacements"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    conference_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("conferences.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # Original registration (now cancelled)
+    old_registration_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("registrations.id", ondelete="SET NULL"),
+        nullable=False,
+    )
+    old_attendee_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    old_attendee_name: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    # New registration (replacement)
+    new_registration_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("registrations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # Invoice for additional items (null for Scenario A - simple replacement)
+    additional_items_invoice_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("invoices.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    # Metadata
+    replacement_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    has_additional_items: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    replaced_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    replaced_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Snapshot of old registration items (for audit/reporting)
+    old_items_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Relationships
+    old_registration: Mapped["Registration"] = relationship(
+        "Registration", foreign_keys=[old_registration_id], lazy="select"
+    )
+    new_registration: Mapped["Registration"] = relationship(
+        "Registration", foreign_keys=[new_registration_id], lazy="select"
+    )
+
+    __table_args__ = (
+        Index("idx_registration_replacements_old_reg", "old_registration_id"),
+        Index("idx_registration_replacements_new_reg", "new_registration_id"),
+        Index("idx_registration_replacements_conference", "conference_id"),
+        Index("idx_registration_replacements_replaced_at", "replaced_at"),
+        Index("idx_registration_replacements_tenant", "tenant_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<RegistrationReplacement {self.old_attendee_name} → new registration {self.new_registration_id}>"
