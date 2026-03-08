@@ -868,6 +868,8 @@ async def download_invoice_pdf(
     Args:
         enable_zugferd: Override ZUGFeRD setting (None = auto-detect from settings)
     """
+    # Require admin access
+    await _require_invoice_admin(db, current_user, conference_id)
     tenant_id = current_user.tenant_id
 
     # Get invoice
@@ -910,6 +912,8 @@ async def preview_invoice_pdf(
     db: DbSessionDep,
 ) -> StreamingResponse:
     """Preview invoice PDF in browser (inline display)."""
+    # Require admin access
+    await _require_invoice_admin(db, current_user, conference_id)
     tenant_id = current_user.tenant_id
 
     # Get invoice
@@ -955,6 +959,8 @@ async def validate_invoice_zugferd(
     Returns validation status with list of missing/invalid fields.
     Does not require ZUGFeRD to be enabled in settings.
     """
+    # Require admin access
+    await _require_invoice_admin(db, current_user, conference_id)
     tenant_id = current_user.tenant_id
 
     # Get invoice with conference relationship
@@ -1860,7 +1866,7 @@ async def sync_all_stripe_payments(
     }
 
 
-@router.get("/{invoice_id}/debug-stripe-search")
+@router.get("/{invoice_id}/debug-stripe-search", include_in_schema=False)
 async def debug_stripe_search(
     conference_id: UUID,
     invoice_id: UUID,
@@ -1868,6 +1874,8 @@ async def debug_stripe_search(
     current_user: CurrentUserDep,
 ) -> dict:
     """Debug endpoint to see what Stripe search returns for an invoice."""
+    # Require admin access
+    await _require_invoice_admin(db, current_user, conference_id)
     # Get conference
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
@@ -2066,9 +2074,9 @@ async def convert_to_credit_card(
     Only allowed for bank_transfer invoices with status sent/overdue.
     Updates template_type to credit_card and creates a Stripe payment link.
     """
-    # Get conference and check admin access
+    # Require admin access
+    await _require_invoice_admin(db, current_user, conference_id)
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    await check_conference_admin_access(db, current_user.user_id, conference_id)
 
     # Get invoice
     result = await db.execute(
@@ -2190,9 +2198,8 @@ async def mark_invoice_paid(
     Only allowed for bank_transfer invoices with status sent/overdue.
     Changes status to paid and logs the manual payment event.
     """
-    # Get conference and check admin access
-    _ = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    await check_conference_admin_access(db, current_user.user_id, conference_id)
+    # Require admin access
+    await _require_invoice_admin(db, current_user, conference_id)
 
     # Get invoice
     result = await db.execute(
@@ -2272,9 +2279,8 @@ async def reopen_invoice(
     Requires a comment explaining the reason for reopening.
     Logs the reopen event for audit trail.
     """
-    # Get conference and check admin access
-    _ = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-    await check_conference_admin_access(db, current_user.user_id, conference_id)
+    # Require admin access
+    await _require_invoice_admin(db, current_user, conference_id)
 
     # Get invoice
     result = await db.execute(

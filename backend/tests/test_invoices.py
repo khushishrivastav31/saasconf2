@@ -1759,3 +1759,166 @@ async def test_update_invoice_procurement_code(
     assert response.status_code == 200
     data = response.json()
     assert data["procurement_code"] == "PO-UPDATED-12345"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# SECURITY TESTS - Authorization
+# ═══════════════════════════════════════════════════════════════════════
+
+
+async def test_pdf_download_requires_authorization(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    sample_invoice: Invoice,
+    invoices_module: Module,
+) -> None:
+    """Verify download_invoice_pdf endpoint requires admin authorization."""
+    from app.core.security import hash_password
+
+    # Create a non-admin user from a different tenant
+    other_tenant = Tenant(
+        id=uuid.uuid4(),
+        name="Other Tenant",
+        slug="other-tenant",
+        is_active=True,
+    )
+    db_session.add(other_tenant)
+
+    non_admin_user = User(
+        id=uuid.uuid4(),
+        tenant_id=other_tenant.id,
+        email="nonadmin@example.com",
+        password_hash=hash_password("password123"),
+        role="user",  # Not an admin
+        is_active=True,
+    )
+    db_session.add(non_admin_user)
+    await db_session.commit()
+
+    # Create token for non-admin user
+    non_admin_token = _make_token(non_admin_user, modules=["invoices"])
+
+    # Try to download PDF
+    url = _invoices_url(conference.id, f"{sample_invoice.id}/pdf")
+    response = await client.get(url, headers=auth_headers(non_admin_token))
+
+    # Should be forbidden (403) - user is not admin for this conference's tenant
+    assert response.status_code == 403
+
+
+async def test_pdf_preview_requires_authorization(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    sample_invoice: Invoice,
+    invoices_module: Module,
+) -> None:
+    """Verify preview_invoice_pdf endpoint requires admin authorization."""
+    from app.core.security import hash_password
+
+    # Create a non-admin user from a different tenant
+    other_tenant = Tenant(
+        id=uuid.uuid4(),
+        name="Other Tenant",
+        slug="other-tenant",
+        is_active=True,
+    )
+    db_session.add(other_tenant)
+
+    non_admin_user = User(
+        id=uuid.uuid4(),
+        tenant_id=other_tenant.id,
+        email="nonadmin@example.com",
+        password_hash=hash_password("password123"),
+        role="user",
+        is_active=True,
+    )
+    db_session.add(non_admin_user)
+    await db_session.commit()
+
+    non_admin_token = _make_token(non_admin_user, modules=["invoices"])
+
+    # Try to preview PDF
+    url = _invoices_url(conference.id, f"{sample_invoice.id}/preview-pdf")
+    response = await client.post(url, headers=auth_headers(non_admin_token))
+
+    assert response.status_code == 403
+
+
+async def test_zugferd_validation_requires_authorization(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    sample_invoice: Invoice,
+    invoices_module: Module,
+) -> None:
+    """Verify validate_invoice_zugferd endpoint requires admin authorization."""
+    from app.core.security import hash_password
+
+    # Create a non-admin user from a different tenant
+    other_tenant = Tenant(
+        id=uuid.uuid4(),
+        name="Other Tenant",
+        slug="other-tenant",
+        is_active=True,
+    )
+    db_session.add(other_tenant)
+
+    non_admin_user = User(
+        id=uuid.uuid4(),
+        tenant_id=other_tenant.id,
+        email="nonadmin@example.com",
+        password_hash=hash_password("password123"),
+        role="user",
+        is_active=True,
+    )
+    db_session.add(non_admin_user)
+    await db_session.commit()
+
+    non_admin_token = _make_token(non_admin_user, modules=["invoices"])
+
+    # Try to validate ZUGFeRD
+    url = _invoices_url(conference.id, f"{sample_invoice.id}/validate-zugferd")
+    response = await client.post(url, headers=auth_headers(non_admin_token))
+
+    assert response.status_code == 403
+
+
+async def test_debug_stripe_search_requires_authorization(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    conference: Conference,
+    sample_invoice: Invoice,
+    invoices_module: Module,
+) -> None:
+    """Verify debug_stripe_search endpoint requires admin authorization."""
+    from app.core.security import hash_password
+
+    # Create a non-admin user from a different tenant
+    other_tenant = Tenant(
+        id=uuid.uuid4(),
+        name="Other Tenant",
+        slug="other-tenant",
+        is_active=True,
+    )
+    db_session.add(other_tenant)
+
+    non_admin_user = User(
+        id=uuid.uuid4(),
+        tenant_id=other_tenant.id,
+        email="nonadmin@example.com",
+        password_hash=hash_password("password123"),
+        role="user",
+        is_active=True,
+    )
+    db_session.add(non_admin_user)
+    await db_session.commit()
+
+    non_admin_token = _make_token(non_admin_user, modules=["invoices"])
+
+    # Try to access debug endpoint
+    url = _invoices_url(conference.id, f"{sample_invoice.id}/debug-stripe-search")
+    response = await client.get(url, headers=auth_headers(non_admin_token))
+
+    assert response.status_code == 403

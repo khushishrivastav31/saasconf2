@@ -336,6 +336,7 @@ async def readiness_check() -> JSONResponse:
 
 # ─── Ops endpoints (super-admin only) ─────────────────────
 @app.post("/ops/data-retention-cleanup")
+@limiter.limit("5/hour")
 async def data_retention_cleanup(
     request: Request,
     authorization: str | None = None,
@@ -367,11 +368,12 @@ async def data_retention_cleanup(
             logger.info("Data retention cleanup completed: %s", rows)
             return JSONResponse(content={"status": "completed", "results": rows})
     except Exception as e:
-        logger.error("Data retention cleanup failed: %s", e)
-        return JSONResponse(status_code=500, content={"detail": str(e)})
+        logger.error("Data retention cleanup failed: %s", e, exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": "Data retention cleanup failed"})
 
 
 @app.post("/ops/send-deadline-reminders")
+@limiter.limit("5/hour")
 async def send_deadline_reminders(
     request: Request,
 ) -> JSONResponse:
@@ -466,8 +468,8 @@ async def send_deadline_reminders(
             logger.info("Deadline reminders sent: %d, errors: %d", sent_count, errors)
             return JSONResponse(content={"status": "completed", "sent": sent_count, "errors": errors})
     except Exception as e:
-        logger.error("Deadline reminder job failed: %s", e)
-        return JSONResponse(status_code=500, content={"detail": str(e)})
+        logger.error("Deadline reminder job failed: %s", e, exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": "Failed to send deadline reminders"})
 
 
 # Include API router

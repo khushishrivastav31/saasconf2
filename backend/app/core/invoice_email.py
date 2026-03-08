@@ -2,6 +2,7 @@
 
 import base64
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -241,4 +242,47 @@ async def send_registration_cancellation_email(
 
     except Exception as e:
         logger.error(f"Failed to send cancellation email to {registration_email}: {e}")
+        return False
+
+
+async def send_email_best_effort(
+    email_func: Callable,
+    *args,
+    operation_name: str,
+    invoice_number: str | None = None,
+    **kwargs,
+) -> bool:
+    """Send email with proper error logging (best-effort).
+
+    Use this helper instead of contextlib.suppress(Exception) to ensure
+    email failures are logged for monitoring and debugging, while still
+    allowing operations to complete successfully.
+
+    Args:
+        email_func: Async email function to call
+        *args: Positional arguments for email function
+        operation_name: Human-readable operation name for logging
+        invoice_number: Optional invoice number for logging context
+        **kwargs: Keyword arguments for email function
+
+    Returns:
+        True if email sent successfully, False if failed
+
+    Example:
+        success = await send_email_best_effort(
+            send_invoice_email,
+            invoice, conference, db,
+            operation_name="invoice_send",
+            invoice_number=invoice.invoice_number,
+        )
+    """
+    try:
+        await email_func(*args, **kwargs)
+        logger.info(f"Email sent successfully: {operation_name} (invoice: {invoice_number or 'N/A'})")
+        return True
+    except Exception as e:
+        logger.warning(
+            f"Failed to send email: {operation_name} (invoice: {invoice_number or 'N/A'}): {e}",
+            exc_info=True,
+        )
         return False

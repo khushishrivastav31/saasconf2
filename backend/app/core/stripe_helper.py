@@ -5,6 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 
 import stripe
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import CurrentUser
@@ -42,6 +43,32 @@ def get_stripe_client(conference: Conference) -> stripe.StripeClient | None:  # 
     # TODO: Use StripeClient(api_key=...) for better multi-tenant safety
     stripe.api_key = secret_key
     return stripe  # type: ignore[return-value]
+
+
+def validate_stripe_enabled(conference: Conference) -> tuple[dict, str]:
+    """Validate Stripe is enabled and return settings + secret key.
+
+    Use this helper to reduce duplication of Stripe validation logic across endpoints.
+
+    Args:
+        conference: Conference with settings
+
+    Returns:
+        Tuple of (stripe_settings dict, secret_key string)
+
+    Raises:
+        HTTPException: If Stripe not enabled (400) or secret key missing (400)
+    """
+    stripe_settings = conference.settings.get("stripe", {})
+
+    if not stripe_settings.get("is_enabled"):
+        raise HTTPException(status_code=400, detail="Stripe is not enabled for this conference")
+
+    secret_key = stripe_settings.get("secret_key")
+    if not secret_key:
+        raise HTTPException(status_code=400, detail="Stripe secret key not configured")
+
+    return stripe_settings, secret_key
 
 
 async def deactivate_payment_link_for_invoice(

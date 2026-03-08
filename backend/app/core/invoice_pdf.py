@@ -4,6 +4,7 @@ Provides PDF generation from invoice templates with variable replacement
 and items table rendering.
 """
 
+import asyncio
 import base64
 import logging
 import re
@@ -834,8 +835,8 @@ async def generate_invoice_pdf(
     </html>
     """
 
-    # Generate standard PDF first
-    pdf_bytes = _generate_pdf_with_weasyprint(full_html, page_format)
+    # Generate standard PDF first (in thread pool to avoid blocking event loop)
+    pdf_bytes = await asyncio.to_thread(_generate_pdf_with_weasyprint, full_html, page_format)
 
     # Check if ZUGFeRD/Factur-X embedding should be applied
     zugferd_config = settings.get("zugferd_settings", {})
@@ -1152,7 +1153,8 @@ async def generate_invoice_pdf_from_data(
     """
 
     # Generate PDF with WeasyPrint (full HTML/CSS support + page format)
-    return _generate_pdf_with_weasyprint(full_html, page_format)
+    # Run in thread pool to avoid blocking event loop
+    return await asyncio.to_thread(_generate_pdf_with_weasyprint, full_html, page_format)
 
 
 def _replace_items_placeholder(html: str, items_table_html: str) -> str:

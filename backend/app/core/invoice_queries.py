@@ -47,6 +47,44 @@ async def get_invoice_with_events(
     return invoice
 
 
+async def get_invoice_basic(
+    db: AsyncSession,
+    invoice_id: UUID,
+    conference_id: UUID,
+    tenant_id: UUID,
+) -> Invoice:
+    """Fetch invoice without relationships (for simple operations).
+
+    Use this when you only need basic invoice fields and don't need events or other relationships.
+    More efficient than get_invoice_with_events() when relationships aren't needed.
+
+    Args:
+        db: Database session
+        invoice_id: Invoice ID
+        conference_id: Conference ID (for scoping)
+        tenant_id: Tenant ID (for multi-tenancy isolation)
+
+    Returns:
+        Invoice model without relationships loaded
+
+    Raises:
+        NotFoundError: If invoice not found
+    """
+    result = await db.execute(
+        select(Invoice).where(
+            Invoice.id == invoice_id,
+            Invoice.conference_id == conference_id,
+            Invoice.tenant_id == tenant_id,
+        )
+    )
+    invoice = result.scalar_one_or_none()
+
+    if not invoice:
+        raise NotFoundError(f"Invoice with ID '{invoice_id}' not found")
+
+    return invoice
+
+
 async def refresh_invoice_with_events(
     db: AsyncSession,
     invoice_id: UUID,
