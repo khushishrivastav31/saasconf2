@@ -856,12 +856,18 @@ async def replace_attendee_endpoint(
 
     from app.api.v1.invoices.crud import build_invoice_response
 
+    # Convert invoice response to dict for schema
+    invoice_dict = None
+    if additional_invoice:
+        invoice_response = build_invoice_response(additional_invoice)
+        invoice_dict = invoice_response.model_dump()
+
     return ReplaceAttendeeResponse(
         old_registration=_build_response(old_registration, option_name=opt_map.get(old_registration.booking_option_id)),
         new_registration=_build_response(new_registration, option_name=opt_map.get(new_registration.booking_option_id)),
         replacement_id=replacement_record.id,
         has_additional_items=replacement_record.has_additional_items,
-        additional_items_invoice=build_invoice_response(additional_invoice) if additional_invoice else None,
+        additional_items_invoice=invoice_dict,
         emails_sent={"old_attendee": True, "new_attendee": True, "invoice": bool(additional_invoice)},
     )
 
