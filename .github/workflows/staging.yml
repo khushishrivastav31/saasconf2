@@ -77,6 +77,7 @@ jobs:
         working-directory: backend
         run: |
           pip install mypy
+          rm -rf .mypy_cache
           mypy app/ --config-file=pyproject.toml
 
       - name: Run tests
