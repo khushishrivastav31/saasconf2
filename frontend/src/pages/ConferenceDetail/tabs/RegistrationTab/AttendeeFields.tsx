@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
+import { validateEmail } from '../../../../utils/validators';
 import type { AttendeeData } from '../../../../types';
 
 interface AttendeeFieldsProps {
@@ -17,6 +19,7 @@ export default function AttendeeFields({
   prefix,
 }: AttendeeFieldsProps) {
   const p = prefix ? `${prefix}-` : '';
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const { data: pronounOptions } = useQuery({
     queryKey: queryKeys.settings.pronounOptions(conferenceId),
@@ -73,10 +76,12 @@ export default function AttendeeFields({
           id={`${p}email`}
           type="email"
           required
-          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+          className={`mt-1 block w-full rounded-md border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm`}
           value={data.email}
           onChange={(e) => onChange({ ...data, email: e.target.value })}
+          onBlur={(e) => setEmailError(validateEmail(e.target.value))}
         />
+        {emailError && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>}
       </div>
       {pronounOptions && pronounOptions.length > 0 && (
         <div>

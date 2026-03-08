@@ -77,6 +77,15 @@ const columns: ColumnConfig<SessionType>[] = [
     ),
   },
   {
+    key: 'max_attendees',
+    label: 'Max Attendees',
+    render: (st) => (
+      <span className="text-sm text-gray-900 dark:text-gray-100">
+        {st.separately_bookable ? (st.max_attendees ? st.max_attendees : 'Unlimited') : '—'}
+      </span>
+    ),
+  },
+  {
     key: 'is_active',
     label: 'Active',
     render: (st) => <StatusBadge isActive={st.is_active} />,
@@ -104,6 +113,7 @@ function SessionTypeForm({
     duration_minutes: 30,
     cfp_eligible: true,
     separately_bookable: false,
+    max_attendees: null,
     is_active: true,
   });
   const [autoSlug, setAutoSlug] = useState(true);
@@ -116,6 +126,7 @@ function SessionTypeForm({
         duration_minutes: item.duration_minutes,
         cfp_eligible: item.cfp_eligible,
         separately_bookable: item.separately_bookable,
+        max_attendees: item.max_attendees,
         is_active: item.is_active,
       });
       setAutoSlug(false);
@@ -126,6 +137,7 @@ function SessionTypeForm({
         duration_minutes: 30,
         cfp_eligible: true,
         separately_bookable: false,
+        max_attendees: null,
         is_active: true,
       });
       setAutoSlug(true);
@@ -240,6 +252,31 @@ function SessionTypeForm({
             (session can be booked individually by attendees)
           </span>
         </div>
+
+        {formData.separately_bookable && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Max Attendees
+            </label>
+            <input
+              type="number"
+              min={1}
+              placeholder="Leave empty for unlimited"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+              value={formData.max_attendees || ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  max_attendees: e.target.value ? parseInt(e.target.value) : null,
+                })
+              }
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Leave empty for unlimited capacity. Once this limit is reached, the session will no
+              longer appear as available for booking.
+            </p>
+          </div>
+        )}
 
         <div className="flex items-center">
           <input

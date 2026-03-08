@@ -9,6 +9,7 @@ import type {
   LocationContactPerson,
 } from '../types';
 import { parseApiError } from '../utils/apiError';
+import { validateEmail } from '../utils/validators';
 import RichTextEditor from './common/RichTextEditor';
 import AlertDialog from './AlertDialog';
 import Modal from './Modal';
@@ -72,6 +73,7 @@ function SendContractModal({
   const [subject, setSubject] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
   const [sendAsPdf, setSendAsPdf] = useState(contract.is_editable);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Fetch rendered template when modal opens
   const { data: preview, isLoading: isLoadingTemplate } = useQuery<{
@@ -188,23 +190,30 @@ function SendContractModal({
             Additional Email Addresses
           </label>
           <div className="flex gap-2">
-            <input
-              type="email"
-              value={extraEmail}
-              onChange={(e) => setExtraEmail(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addExtraEmail();
-                }
-              }}
-              placeholder="email@example.com"
-              className="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-            />
+            <div className="flex-1">
+              <input
+                type="email"
+                value={extraEmail}
+                onChange={(e) => setExtraEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addExtraEmail();
+                  }
+                }}
+                onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+                placeholder="email@example.com"
+                className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500`}
+              />
+              {emailError && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+              )}
+            </div>
             <button
               type="button"
               onClick={addExtraEmail}
-              className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-100"
+              disabled={!!emailError}
+              className="px-3 py-1.5 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Add
             </button>

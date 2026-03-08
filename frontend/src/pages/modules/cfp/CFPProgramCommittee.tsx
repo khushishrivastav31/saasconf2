@@ -9,7 +9,7 @@ import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import type { CommitteeMember, CFPTopic, Applicant, CFPCommitteeRole } from '../../../types';
 import { parseApiError } from '../../../utils/apiError';
-import { validatePhone } from '../../../utils/validators';
+import { validatePhone, validateEmail } from '../../../utils/validators';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 
 interface MemberListResponse {
@@ -213,6 +213,7 @@ function MemberForm({
       : emptyForm
   );
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [applicantSearch, setApplicantSearch] = useState('');
 
   // Fetch available committee roles from settings
@@ -455,9 +456,13 @@ function MemberForm({
               type="email"
               value={formData.email}
               onChange={(e) => setFormData((d) => ({ ...d, email: e.target.value }))}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+              className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
               required
             />
+            {emailError && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

@@ -50,6 +50,8 @@ class BillingProfileBase(BaseModel):
     contact_email: EmailStr
     vat_number: str | None = Field(None, max_length=50)
     procurement_code: str | None = Field(None, max_length=100)
+    payment_method: str | None = Field(None, max_length=20)  # bank_transfer, credit_card
+    discount_code: str | None = Field(None, max_length=50)
 
 
 class BillingProfileCreate(BillingProfileBase):
@@ -73,6 +75,8 @@ class BillingProfileUpdate(BaseModel):
     vat_number: str | None = Field(None, max_length=50)
     vat_validated: bool | None = None
     procurement_code: str | None = Field(None, max_length=100)
+    payment_method: str | None = Field(None, max_length=20)
+    discount_code: str | None = Field(None, max_length=50)
 
 
 class BillingProfileResponse(BillingProfileBase):
@@ -98,6 +102,13 @@ class RegistrationItemCreate(BaseModel):
 
     item_type: RegistrationItemType
     booking_option_id: UUID | None = None
+    program_session_id: UUID | None = None
+    notes: str | None = None
+
+
+class RegistrationItemUpdate(BaseModel):
+    """Update a registration item (typically to select a session)."""
+
     program_session_id: UUID | None = None
     notes: str | None = None
 
@@ -175,6 +186,7 @@ class BulkAttendeeData(BaseModel):
     department: str | None = Field(None, max_length=255)
     phone: str | None = Field(None, max_length=50)
     booking_option_id: UUID
+    main_session_id: UUID | None = None
     items: list[RegistrationItemCreate] = Field(default_factory=list)
     notes: str | None = None
 
@@ -215,6 +227,7 @@ class RegistrationUpdate(BaseModel):
     department: str | None = Field(None, max_length=255)
     phone: str | None = Field(None, max_length=50)
     booking_option_id: UUID | None = None
+    main_session_id: UUID | None = None
     status: RegistrationStatus | None = None
     notes: str | None = None
 
@@ -251,6 +264,10 @@ class RegistrationResponse(BaseModel):
     # Booking option
     booking_option_id: UUID
     booking_option_name: str | None = None
+
+    # Main session (for tutorial/session-based booking options)
+    main_session_id: UUID | None = None
+    main_session_name: str | None = None
 
     # Add-on items
     items: list[RegistrationItemResponse] = Field(default_factory=list)

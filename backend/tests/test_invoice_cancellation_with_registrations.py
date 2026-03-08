@@ -3,7 +3,7 @@
 import uuid
 from datetime import date
 from decimal import Decimal
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
@@ -20,7 +20,6 @@ from app.models.registration import BillingProfile, Registration, RegistrationSt
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -51,15 +50,24 @@ def _invoices_url(conference_id: uuid.UUID, invoice_id: uuid.UUID | None = None,
 @pytest.fixture(autouse=True)
 def mock_stripe_refund():
     """Mock Stripe refund for all tests."""
-    with patch("app.api.v1.invoices.refund_payment", new_callable=AsyncMock) as mock:
-        mock.return_value = {
-            "refund_id": "re_test_12345",
+    mock_refund_obj = type(
+        "Refund",
+        (object,),
+        {
+            "id": "re_test_12345",
             "status": "succeeded",
-            "amount": 2000.00,
-            "currency": "EUR",
-            "event_id": "evt_test_12345",
-        }
-        yield mock
+            "amount": 200000,  # cents
+            "currency": "eur",
+            "charge": "ch_test_12345",
+        },
+    )()
+
+    with patch("stripe.Refund.create") as mock_create:
+        mock_create.return_value = mock_refund_obj
+        with patch("app.core.stripe_helper.get_stripe_client") as mock_get_client:
+            # Return a truthy mock client so Stripe is considered enabled
+            mock_get_client.return_value = True
+            yield mock_create
 
 
 @pytest_asyncio.fixture()
@@ -262,7 +270,7 @@ async def test_cancel_paid_bank_transfer_with_registrations(
     admin_token_invoices: str,
 ) -> None:
     """Test cancelling paid bank_transfer invoice - no Stripe refund + cancels registrations."""
-    billing_profile, registrations = billing_profile_with_registrations
+    billing_profile, _registrations = billing_profile_with_registrations
 
     # Create paid bank transfer invoice
     invoice = Invoice(
@@ -422,7 +430,7 @@ async def test_cancel_sent_credit_card_with_registrations(
     admin_token_invoices: str,
 ) -> None:
     """Test cancelling sent credit_card invoice - deactivates link + cancels registrations."""
-    billing_profile, registrations = billing_profile_with_registrations
+    billing_profile, _registrations = billing_profile_with_registrations
 
     # Create sent credit card invoice
     invoice = Invoice(

@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { COUNTRY_OPTIONS, EU_COUNTRY_CODES } from '../../../../config/countries';
+import { validateEmail } from '../../../../utils/validators';
 import VatNumberInput from '../../../../components/common/VatNumberInput';
 import type { BillingProfileCreate, Conference } from '../../../../types';
 
@@ -45,6 +46,8 @@ function determineVatRequirement(
 }
 
 export default function BillingFields({ data, onChange, conference }: BillingFieldsProps) {
+  const [emailError, setEmailError] = useState<string | null>(null);
+
   const vatRequirement = useMemo(() => {
     if (!conference) {
       return { level: 'optional' as const };
@@ -223,10 +226,14 @@ export default function BillingFields({ data, onChange, conference }: BillingFie
             id="contact_email"
             type="email"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+            className={`mt-1 block w-full rounded-md border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
             value={data.contact_email}
             onChange={(e) => onChange({ ...data, contact_email: e.target.value })}
+            onBlur={(e) => setEmailError(validateEmail(e.target.value))}
           />
+          {emailError && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+          )}
         </div>
         <div>
           <label

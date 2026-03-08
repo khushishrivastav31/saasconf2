@@ -20,6 +20,8 @@ interface SelectionState {
   setSelectedCommitteeMemberId: (id: string | null) => void;
   selectedApplicantId: string | null;
   setSelectedApplicantId: (id: string | null) => void;
+  selectedRegistrationId: string | null;
+  setSelectedRegistrationId: (id: string | null) => void;
   /** Reset all selections (e.g. when switching tabs). */
   resetAll: () => void;
 }
@@ -33,6 +35,7 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [selectedCommitteeMemberId, setSelectedCommitteeMemberId] = useState<string | null>(null);
   const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null);
+  const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
 
   const resetAll = () => {
     setSelectedLocationId(null);
@@ -41,6 +44,7 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     setSelectedInvoiceId(null);
     setSelectedCommitteeMemberId(null);
     setSelectedApplicantId(null);
+    setSelectedRegistrationId(null);
   };
 
   return (
@@ -58,6 +62,8 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
         setSelectedCommitteeMemberId,
         selectedApplicantId,
         setSelectedApplicantId,
+        selectedRegistrationId,
+        setSelectedRegistrationId,
         resetAll,
       }}
     >

@@ -21,7 +21,6 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
 
-
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
@@ -51,17 +50,34 @@ def _invoices_url(conference_id: uuid.UUID, invoice_id: uuid.UUID | None = None,
 @pytest.fixture(autouse=True)
 def mock_stripe_operations():
     """Mock Stripe operations for all E2E tests."""
-    with patch("app.api.v1.invoices.refund_payment", new_callable=AsyncMock) as mock_refund, \
-         patch("app.core.invoice_replacement.create_payment_link", new_callable=AsyncMock) as mock_payment_link:
-        mock_refund.return_value = {
-            "refund_id": "re_test_e2e",
+    # Mock Stripe refund
+    mock_refund_obj = type(
+        "Refund",
+        (object,),
+        {
+            "id": "re_test_e2e",
             "status": "succeeded",
-            "amount": 2000.00,
-            "currency": "EUR",
-            "event_id": "evt_test_e2e",
-        }
+            "amount": 200000,  # cents
+            "currency": "eur",
+            "charge": "ch_test_e2e",
+        },
+    )()
+
+    with (
+        patch("stripe.Refund.create") as mock_refund_create,
+        patch("app.core.stripe_helper.get_stripe_client") as mock_get_client,
+        patch("app.core.invoice_replacement.create_payment_link", new_callable=AsyncMock) as mock_payment_link,
+    ):
+        # Configure mocks
+        mock_refund_create.return_value = mock_refund_obj
+        mock_get_client.return_value = True  # Truthy to indicate Stripe enabled
         mock_payment_link.return_value = (None, "https://buy.stripe.com/test_e2e_link")
-        yield {"refund": mock_refund, "payment_link": mock_payment_link}
+
+        yield {
+            "refund": mock_refund_create,
+            "get_client": mock_get_client,
+            "payment_link": mock_payment_link,
+        }
 
 
 @pytest_asyncio.fixture()
@@ -254,7 +270,9 @@ async def test_full_replacement_flow_paid_invoice(
         select(Invoice)
         .where(
             Invoice.conference_id == conference.id,
-            Invoice.invoice_number.in_(["INV-E2E-PAID-001", data["credit_note"]["invoice_number"], data["new_invoice"]["invoice_number"]]),  # type: ignore[attr-defined]
+            Invoice.invoice_number.in_(
+                ["INV-E2E-PAID-001", data["credit_note"]["invoice_number"], data["new_invoice"]["invoice_number"]]
+            ),  # type: ignore[attr-defined]
         )
         .execution_options(populate_existing=True)
     )
@@ -439,9 +457,7 @@ async def test_full_cancellation_flow_with_registrations(
 
     # Step 7: Verify user accounts still active
     result_users = await db_session.execute(
-        select(User)
-        .where(User.id.in_([u.id for u in portal_users]))
-        .execution_options(populate_existing=True)
+        select(User).where(User.id.in_([u.id for u in portal_users])).execution_options(populate_existing=True)
     )
     fresh_users = result_users.scalars().all()
     for user in fresh_users:

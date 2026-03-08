@@ -10,8 +10,8 @@ interface BookingOptionSelectProps {
   required?: boolean;
   id?: string;
   conferenceId?: string;
-  sessionSelections?: Record<string, string>;
-  onSessionChange?: (selections: Record<string, string>) => void;
+  sessionSelections?: Record<string, Record<string, string>>;
+  onSessionChange?: (optionId: string, selections: Record<string, string>) => void;
 }
 
 export default function BookingOptionSelect({
@@ -102,8 +102,8 @@ export default function BookingOptionSelect({
                 <OptionSessions
                   conferenceId={conferenceId}
                   optionId={o.id}
-                  selections={sessionSelections}
-                  onChange={onSessionChange}
+                  selections={sessionSelections[o.id] || {}}
+                  onChange={(sel) => onSessionChange(o.id, sel)}
                 />
               )}
           </div>

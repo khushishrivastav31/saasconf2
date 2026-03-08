@@ -247,6 +247,106 @@ If you have any questions, please don't hesitate to reach out.
 Warm regards,
 The [Conference Name] Team""",
     },
+    EmailTemplateType.REGISTRATION_INVOICE: {
+        "subject": "Invoice [Invoice Number] for [Conference Name]",
+        "body_html": """<h2>Invoice for [Conference Name]</h2>
+<p>Dear [Recipient Name],</p>
+<p>Thank you for registering for <strong>[Conference Name]</strong>.</p>
+<p>Please find attached your invoice with the following details:</p>
+<div style="margin: 20px 0; padding: 16px; background-color: #f3f4f6; border-radius: 8px;">
+    <p style="margin: 0;"><strong>Invoice Number:</strong> [Invoice Number]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Total Amount:</strong> [Total Amount]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Due Date:</strong> [Due Date]</p>
+</div>
+<p>If you have any questions regarding this invoice, please contact us at [Support Email].</p>
+<p>We look forward to seeing you at [Conference Name]!</p>
+<p>Warm regards,<br>The [Conference Name] Team</p>""",
+        "body_text": """Invoice for [Conference Name]
+
+Dear [Recipient Name],
+
+Thank you for registering for [Conference Name].
+
+Please find attached your invoice with the following details:
+
+Invoice Number: [Invoice Number]
+Total Amount: [Total Amount]
+Due Date: [Due Date]
+
+If you have any questions regarding this invoice, please contact us at [Support Email].
+
+We look forward to seeing you at [Conference Name]!
+
+Warm regards,
+The [Conference Name] Team""",
+    },
+    EmailTemplateType.ATTENDEE_WELCOME: {
+        "subject": "Welcome to [Conference Name] — Set up your portal access",
+        "body_html": """<h2>Welcome to [Conference Name]!</h2>
+<p>Hi [First Name],</p>
+<p>Your registration for <strong>[Conference Name]</strong> has been confirmed.</p>
+<div style="margin: 20px 0; padding: 16px; background-color: #f3f4f6; border-radius: 8px;">
+    <p style="margin: 0;"><strong>Attendee:</strong> [First Name] [Last Name]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Email:</strong> [Email]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Registration Type:</strong> [Booking Option Name]</p>
+</div>
+<p>We've created a portal account for you. To access your attendee portal and view your registration details, please set up your password:</p>
+<p><a href="[Password Setup Link]" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Set up my password</a></p>
+<p>This link will expire in 7 days. If you need a new link, you can use the "Forgot Password" option on the login page.</p>
+<p>If you have any questions or need support, please reach out to us at [Support Email].</p>
+<p>We look forward to seeing you at the conference!</p>
+<p>Warm regards,<br>The [Conference Name] Team</p>""",
+        "body_text": """Welcome to [Conference Name]!
+
+Hi [First Name],
+
+Your registration for [Conference Name] has been confirmed.
+
+Attendee: [First Name] [Last Name]
+Email: [Email]
+Registration Type: [Booking Option Name]
+
+We've created a portal account for you. To access your attendee portal and view your registration details, please set up your password by visiting:
+
+[Password Setup Link]
+
+This link will expire in 7 days. If you need a new link, you can use the "Forgot Password" option on the login page.
+
+If you have any questions or need support, please reach out to us at [Support Email].
+
+We look forward to seeing you at the conference!
+
+Warm regards,
+The [Conference Name] Team""",
+    },
+    EmailTemplateType.REGISTRATION_CANCELLATION: {
+        "subject": "Registration Cancellation - [Conference Name]",
+        "body_html": """<h2>Registration Cancellation</h2>
+<p>Dear [Registration Name],</p>
+<p>We regret to inform you that your registration for <strong>[Conference Name]</strong> has been cancelled due to invoice cancellation.</p>
+<div style="margin: 20px 0; padding: 16px; background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px;">
+    <p style="margin: 0;"><strong>Invoice:</strong> [Invoice Number]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Conference:</strong> [Conference Name]</p>
+</div>
+[Cancellation Message]
+<p>Your user account remains active. If you believe this cancellation was made in error, please contact the conference organizers.</p>
+<p>Warm regards,<br>The [Conference Name] Team</p>""",
+        "body_text": """Registration Cancellation
+
+Dear [Registration Name],
+
+We regret to inform you that your registration for [Conference Name] has been cancelled due to invoice cancellation.
+
+Invoice: [Invoice Number]
+Conference: [Conference Name]
+
+[Cancellation Message]
+
+Your user account remains active. If you believe this cancellation was made in error, please contact the conference organizers.
+
+Warm regards,
+The [Conference Name] Team""",
+    },
     # System-level template (no conference context)
     EmailTemplateType.TENANT_USER_WELCOME: {
         "subject": "Welcome to [Company Name] — Set up your password",

@@ -28,6 +28,7 @@ import type {
 } from '../../../types';
 import { parseApiError } from '../../../utils/apiError';
 import { formatNumber } from '../../../utils/formatCurrency';
+import { validateEmail } from '../../../utils/validators';
 import InvoiceDetailPanel from '../../../components/InvoiceDetailPanel';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import ContactPersonList from '../../../components/ContactPersonList';
@@ -156,6 +157,7 @@ export default function ConferenceInvoicesTab({
   const [autoCalculateVat, setAutoCalculateVat] = useState(true);
   const [isLoadingVatPreview, setIsLoadingVatPreview] = useState(false);
   const vatPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -1085,12 +1087,16 @@ export default function ConferenceInvoicesTab({
                   </label>
                   <input
                     type="email"
-                    className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    className={`block w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
                     value={createForm.recipient_email || ''}
                     onChange={(e) =>
                       setCreateForm({ ...createForm, recipient_email: e.target.value })
                     }
+                    onBlur={(e) => setEmailError(validateEmail(e.target.value))}
                   />
+                  {emailError && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+                  )}
                 </div>
               </div>
 
@@ -1471,7 +1477,7 @@ export default function ConferenceInvoicesTab({
               <div className="flex gap-2 pt-1">
                 <button
                   type="submit"
-                  disabled={createMutation.isPending}
+                  disabled={createMutation.isPending || !!emailError}
                   className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
                 >
                   {createMutation.isPending ? 'Creating...' : 'Create Draft'}

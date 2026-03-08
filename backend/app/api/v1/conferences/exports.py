@@ -16,9 +16,11 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.models.associations import ConferenceCFP
+from app.models.booking import BookingOption
 from app.models.cfp import CFPPaper
 from app.models.conference import Conference
 from app.models.invoice import Invoice
+from app.models.registration import Registration
 
 from ._shared import MODULE_CODE, _tenant_filter
 
@@ -202,3 +204,121 @@ async def export_conference_papers(
         row_mapper=_map_paper_row,
         filename=filename,
     )
+
+
+@router.get("/{conference_id}/export/attendees", dependencies=[Depends(require_module("registration"))])
+async def export_conference_attendees(
+    conference_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> StreamingResponse:
+    """
+    Export all conference attendees as CSV.
+
+    Requires admin access to the conference.
+    """
+    # Check access
+    if not current_user.is_super_admin and not current_user.is_tenant_admin:
+        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+        if not has_access:
+            raise AuthorizationError("Admin access to this conference required")
+
+    # Verify conference exists
+    result = await db.execute(
+        select(Conference).where(Conference.id == conference_id).where(_tenant_filter(current_user))
+    )
+    conference = result.scalar_one_or_none()
+    if not conference:
+        raise NotFoundError("Conference not found")
+
+    # Fetch registrations with eager loading (prevent N+1)
+    stmt = (
+        select(Registration)
+        .where(
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == current_user.tenant_id,
+        )
+        .options(
+            selectinload(Registration.billing_profile),
+            selectinload(Registration.items),
+            selectinload(Registration.main_session),
+        )
+        .order_by(Registration.created_at.desc())
+        .limit(50000)  # Safety cap
+    )
+    registrations_result = await db.execute(stmt)
+    registrations = registrations_result.scalars().all()
+
+    # Batch-fetch booking option names (single query)
+    option_ids = {r.booking_option_id for r in registrations}
+    if option_ids:
+        option_stmt = select(BookingOption).where(BookingOption.id.in_(option_ids))
+        option_result = await db.execute(option_stmt)
+        options_map = {opt.id: opt.name for opt in option_result.scalars()}
+    else:
+        options_map = {}
+
+    # Batch-fetch invoice numbers (single query by billing_profile_id)
+    billing_ids = {r.billing_profile_id for r in registrations if r.billing_profile_id}
+    if billing_ids:
+        invoice_stmt = select(Invoice.recipient_source_id, Invoice.invoice_number).where(
+            Invoice.recipient_source_type == "registration",
+            Invoice.recipient_source_id.in_(billing_ids),
+            Invoice.is_active == True,
+        )
+        invoice_result = await db.execute(invoice_stmt)
+        invoices_map = {row[0]: row[1] for row in invoice_result}
+    else:
+        invoices_map = {}
+
+    # CSV headers
+    headers = [
+        "First Name",
+        "Last Name",
+        "Email",
+        "Phone",
+        "Job Title",
+        "Department",
+        "Pronouns",
+        "Company Name",
+        "Booking Option Name",
+        "Main Session Name",
+        "Add-on Items",
+        "Registration Mode",
+        "Status",
+        "Invoice Number",
+        "Created At",
+        "Updated At",
+        "Notes",
+        "Billing Contact Email",
+    ]
+
+    # Row mapper
+    def row_mapper(reg: Registration) -> list[str]:
+        # Get add-on items (skip duplicates of main booking)
+        addon_names = [item.item_name for item in reg.items if item.booking_option_id != reg.booking_option_id]
+
+        return [
+            reg.first_name,
+            reg.last_name,
+            reg.email,
+            reg.phone or "",
+            reg.job_title or "",
+            reg.department or "",
+            reg.pronouns or "",
+            reg.billing_profile.company_name or "" if reg.billing_profile else "",
+            options_map.get(reg.booking_option_id, "(deleted)"),
+            reg.main_session.title if reg.main_session else "",
+            ", ".join(addon_names),
+            reg.registration_mode,
+            reg.status,
+            invoices_map.get(reg.billing_profile_id, ""),
+            reg.created_at.isoformat(),
+            reg.updated_at.isoformat(),
+            reg.notes or "",
+            reg.billing_profile.contact_email if reg.billing_profile else "",
+        ]
+
+    # Return CSV response
+    filename = f"{conference.abbreviation or conference.name.replace(' ', '_')}_attendees.csv"
+    return csv_response(headers=headers, rows=registrations, row_mapper=row_mapper, filename=filename)

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { COUNTRY_OPTIONS } from '../../config/countries';
+import { validateEmail } from '../../utils/validators';
 import type { Invoice, ReplaceInvoiceRequest } from '../../types';
+import VatNumberInput from '../common/VatNumberInput';
 
 interface ReplaceInvoiceDialogProps {
   invoice: Invoice;
@@ -27,6 +29,8 @@ export default function ReplaceInvoiceDialog({
   const [recipientVatNumber, setRecipientVatNumber] = useState(invoice.recipient_vat_number || '');
   const [procurementCode, setProcurementCode] = useState(invoice.procurement_code || '');
   const [customMessage, setCustomMessage] = useState('');
+  const [vatValid, setVatValid] = useState<boolean | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const handleClose = () => {
     setReason('');
@@ -39,6 +43,8 @@ export default function ReplaceInvoiceDialog({
     setRecipientVatNumber(invoice.recipient_vat_number || '');
     setProcurementCode(invoice.procurement_code || '');
     setCustomMessage('');
+    setVatValid(null);
+    setEmailError(null);
     onClose();
   };
 
@@ -91,7 +97,11 @@ export default function ReplaceInvoiceDialog({
     recipientVatNumber !== invoice.recipient_vat_number ||
     procurementCode !== invoice.procurement_code;
 
-  const isValid = reason.trim() && hasChanges;
+  // Check VAT validation status when VAT number has changed
+  const vatChanged = recipientVatNumber !== invoice.recipient_vat_number;
+  const vatIsValid = !vatChanged || !recipientVatNumber.trim() || vatValid !== false;
+
+  const isValid = reason.trim() && hasChanges && vatIsValid && !emailError;
 
   if (!open) return null;
 
@@ -183,8 +193,12 @@ export default function ReplaceInvoiceDialog({
                   type="email"
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                  onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+                  className={`mt-1 block w-full rounded-md border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500`}
                 />
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+                )}
               </label>
 
               {/* Address */}
@@ -238,16 +252,16 @@ export default function ReplaceInvoiceDialog({
               </label>
 
               {/* VAT Number */}
-              <label className="block mb-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">VAT Number</span>
-                <input
-                  type="text"
+              <div className="mb-3">
+                <VatNumberInput
                   value={recipientVatNumber}
-                  onChange={(e) => setRecipientVatNumber(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                  onChange={setRecipientVatNumber}
+                  onValidationResult={setVatValid}
+                  country={recipientCountry}
+                  label="VAT Number"
                   placeholder="e.g. DE999888777"
                 />
-              </label>
+              </div>
 
               {/* Procurement Code / PO Number */}
               <label className="block mb-3">

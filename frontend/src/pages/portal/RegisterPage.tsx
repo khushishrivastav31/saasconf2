@@ -7,6 +7,7 @@ import { parseApiError } from '../../utils/apiError';
 import portalApi from '../../config/portalApi';
 import ConferenceLogo from '../../components/ConferenceLogo';
 import ThemeToggle from '../../components/ThemeToggle';
+import { validateEmail } from '../../utils/validators';
 import type { PortalLandingData, PortalTenant } from '../../types/portal';
 import type { AlumniCheckResponse } from '../../types/alumni';
 
@@ -23,6 +24,7 @@ function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alumniInfo, setAlumniInfo] = useState<AlumniCheckResponse | null>(null);
@@ -51,8 +53,13 @@ function RegisterPage() {
 
   // Alumni check on email blur (only when we have a conference context)
   const handleEmailBlur = useCallback(async () => {
+    // First, validate email format
+    const validationError = validateEmail(email);
+    setEmailError(validationError);
+
+    // Only check alumni if email is valid and we have conference context
     const conferenceId = conferenceData?.conference?.id;
-    if (!email || !conferenceId) {
+    if (!email || !conferenceId || validationError) {
       setAlumniInfo(null);
       return;
     }
@@ -217,9 +224,16 @@ function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={handleEmailBlur}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+              className={`w-full border ${
+                emailError
+                  ? 'border-red-500 dark:border-red-500'
+                  : 'border-gray-300 dark:border-gray-600'
+              } rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
               placeholder="you@example.com"
             />
+            {emailError && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+            )}
             {alumniInfo && alumniInfo.is_alumni && (
               <div className="mt-2 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-3 py-2 rounded text-sm">
                 Welcome back! You previously attended:{' '}
@@ -258,7 +272,7 @@ function RegisterPage() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !!emailError}
             className="w-full bg-primary-600 text-white py-2 rounded-md hover:bg-primary-700 disabled:opacity-50 text-sm font-medium"
           >
             {isSubmitting ? 'Creating account...' : 'Create Account'}

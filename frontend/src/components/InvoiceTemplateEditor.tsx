@@ -121,6 +121,16 @@ const TEMPLATE_PLACEHOLDERS = [
     ],
   },
   {
+    category: 'Recipient',
+    items: [
+      { name: '[RECIPIENT_NAME]', description: 'Recipient company/name' },
+      { name: '[RECIPIENT_ADDRESS]', description: 'Recipient address (formatted)' },
+      { name: '[RECIPIENT_VAT]', description: 'Recipient VAT number' },
+      { name: '[PROCUREMENT_CODE]', description: 'PO/Procurement number' },
+      { name: '[PO_NUMBER]', description: 'PO number (alias)' },
+    ],
+  },
+  {
     category: 'Invoice',
     items: [
       { name: '[INVOICE_NUMBER]', description: 'Invoice number' },
@@ -129,6 +139,7 @@ const TEMPLATE_PLACEHOLDERS = [
       { name: '[DUE_DATE]', description: 'Payment due date' },
       { name: '[NOTES]', description: 'Invoice notes/remarks' },
       { name: '[CURRENCY_1]', description: 'Primary currency code' },
+      { name: '[DISCOUNT_CODE]', description: 'Discount code applied' },
     ],
   },
   {
@@ -261,6 +272,21 @@ export default function InvoiceTemplateEditor({
   const [formattedHtml, setFormattedHtml] = useState('');
   const [formattedHeaderHtml, setFormattedHeaderHtml] = useState('');
   const [formattedFooterHtml, setFormattedFooterHtml] = useState('');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(['Invoice', 'Items & Totals'])
+  );
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
 
   // Preview mutation
   const previewMutation = useMutation({
@@ -466,31 +492,52 @@ export default function InvoiceTemplateEditor({
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Click to insert</p>
             </div>
-            <div className="p-2 space-y-3">
-              {TEMPLATE_PLACEHOLDERS.map((category) => (
-                <div key={category.category}>
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-1 mb-1.5 uppercase tracking-wider">
-                    {category.category}
-                  </h4>
-                  <div className="space-y-0.5">
-                    {category.items.map((item) => (
-                      <button
-                        key={item.name}
-                        onClick={() => insertPlaceholder(item.name)}
-                        disabled={disabled}
-                        className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 transition-colors disabled:opacity-50 group"
+            <div className="p-2 space-y-1">
+              {TEMPLATE_PLACEHOLDERS.map((category) => {
+                const isExpanded = expandedCategories.has(category.category);
+                return (
+                  <div key={category.category}>
+                    <button
+                      onClick={() => toggleCategory(category.category)}
+                      className="w-full flex items-center justify-between px-1 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                    >
+                      <span className="uppercase tracking-wider">{category.category}</span>
+                      <svg
+                        className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <code className="font-mono text-primary-600 dark:text-primary-400 text-[11px]">
-                          {item.name}
-                        </code>
-                        <p className="text-gray-500 dark:text-gray-400 mt-0.5 text-[11px] leading-tight">
-                          {item.description}
-                        </p>
-                      </button>
-                    ))}
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+                    {isExpanded && (
+                      <div className="space-y-0.5 mt-1 mb-2">
+                        {category.items.map((item) => (
+                          <button
+                            key={item.name}
+                            onClick={() => insertPlaceholder(item.name)}
+                            disabled={disabled}
+                            className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 transition-colors disabled:opacity-50 group"
+                          >
+                            <code className="font-mono text-primary-600 dark:text-primary-400 text-[11px]">
+                              {item.name}
+                            </code>
+                            <p className="text-gray-500 dark:text-gray-400 mt-0.5 text-[11px] leading-tight">
+                              {item.description}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

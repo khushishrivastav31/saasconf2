@@ -4,6 +4,7 @@ import base64
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -194,50 +195,57 @@ async def send_replacement_invoice_emails(
 
 
 async def send_registration_cancellation_email(
+    db: AsyncSession,
     registration_email: str,
     registration_name: str,
     conference_name: str,
     invoice_number: str,
+    conference_id: UUID,
+    tenant_id: UUID,
     cancellation_message: str | None = None,
 ) -> bool:
-    """Send cancellation email to attendee.
+    """Send cancellation email to attendee using customizable template.
 
     Args:
+        db: Database session
         registration_email: Email address of the attendee
         registration_name: Name of the attendee
         conference_name: Name of the conference
         invoice_number: Invoice number that was cancelled
+        conference_id: Conference ID for template lookup
+        tenant_id: Tenant ID for template lookup
         cancellation_message: Optional custom message from admin
 
     Returns:
         True if email sent successfully, False otherwise
     """
     try:
-        subject = f"Registration Cancellation - {conference_name}"
+        from app.core.email_templates import build_registration_cancellation_context, render_email
+        from app.schemas.email_template import EmailTemplateType
 
-        # Build email body
-        html = f"""
-        <p>Dear {registration_name},</p>
+        # Build context for email template
+        context = build_registration_cancellation_context(
+            registration_name=registration_name,
+            conference_name=conference_name,
+            invoice_number=invoice_number,
+            cancellation_message=cancellation_message or "",
+        )
 
-        <p>We regret to inform you that your registration for <strong>{conference_name}</strong> has been cancelled
-        due to invoice cancellation (Invoice: {invoice_number}).</p>
-        """
+        # Render email template
+        rendered = await render_email(
+            db,
+            EmailTemplateType.REGISTRATION_CANCELLATION,
+            context,
+            conference_id=conference_id,
+            tenant_id=tenant_id,
+        )
 
-        if cancellation_message:
-            html += f"<p><strong>Message from organizers:</strong><br>{cancellation_message}</p>"
-
-        html += """
-        <p>Your user account remains active. If you believe this cancellation was made in error,
-        please contact the conference organizers.</p>
-
-        <p>Best regards,<br>
-        Conference Team</p>
-        """
-
+        # Send email
         return await send_email(
             to=registration_email,
-            subject=subject,
-            html=html,
+            subject=rendered.subject,
+            html=rendered.body_html,
+            text=rendered.body_text,
         )
 
     except Exception as e:

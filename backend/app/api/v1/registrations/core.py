@@ -1,5 +1,6 @@
 """Core registration endpoints: CRUD, bookable sessions, create, and VAT validation."""
 
+import logging
 import math
 from collections import OrderedDict
 from uuid import UUID
@@ -11,6 +12,12 @@ from sqlalchemy.orm import selectinload
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.core.exceptions import NotFoundError
+from app.core.invoice_auto_generation import create_invoice_for_registrations
+from app.core.registration_emails import (
+    send_attendee_welcome_email,
+    send_registration_invoice_email,
+)
+from app.core.user_auto_creation import create_user_for_registration
 from app.core.vat_validation import validate_vat_number
 from app.models.booking import BookingOption
 from app.models.cfp_applicants import CFPApplicant
@@ -19,6 +26,7 @@ from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot
 from app.models.registration import (
     BillingProfile,
     Registration,
+    RegistrationItem,
     RegistrationMode,
     RegistrationStatus,
 )
@@ -45,6 +53,7 @@ from ._helpers import (
     limiter,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -99,6 +108,7 @@ async def get_bookable_sessions(
             ProgramTimeSlot,
             SessionType.id.label("st_id"),
             SessionType.name.label("st_name"),
+            SessionType.max_attendees.label("st_max_attendees"),
             CFPApplicant.first_name.label("speaker_first"),
             CFPApplicant.last_name.label("speaker_last"),
         )
@@ -119,9 +129,51 @@ async def get_bookable_sessions(
     if not rows:
         return {"day_name": day_name, "groups": []}
 
+    # Count registrations for each session (both main_session_id and registration_items)
+    session_ids = [str(session.id) for session, *_ in rows]
+
+    # Count main sessions
+    main_session_counts = await db.execute(
+        select(
+            Registration.main_session_id,
+            func.count(Registration.id).label("count"),
+        )
+        .where(
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == tenant_id,
+            Registration.main_session_id.in_(session_ids),
+            Registration.status != "cancelled",
+        )
+        .group_by(Registration.main_session_id)
+    )
+    main_counts = {str(row[0]): row[1] for row in main_session_counts}
+
+    # Count items with program_session_id
+    item_session_counts = await db.execute(
+        select(
+            RegistrationItem.program_session_id,
+            func.count(RegistrationItem.id).label("count"),
+        )
+        .join(Registration, Registration.id == RegistrationItem.registration_id)
+        .where(
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == tenant_id,
+            Registration.status != "cancelled",
+            RegistrationItem.program_session_id.in_(session_ids),
+        )
+        .group_by(RegistrationItem.program_session_id)
+    )
+    item_counts = {str(row[0]): row[1] for row in item_session_counts}
+
+    # Combine counts
+    session_capacity = {}
+    for session_id in session_ids:
+        current_count = main_counts.get(session_id, 0) + item_counts.get(session_id, 0)
+        session_capacity[session_id] = current_count
+
     # Group by session type, then by time slot within each type
     type_map: OrderedDict[str, dict] = OrderedDict()
-    for session, slot, st_id, st_name, speaker_first, speaker_last in rows:
+    for session, slot, st_id, st_name, st_max_attendees, speaker_first, speaker_last in rows:
         type_key = str(st_id) if st_id else "untyped"
         type_label = st_name if st_name else "Other"
 
@@ -159,6 +211,15 @@ async def get_bookable_sessions(
                 slots[slot_key]["label"] = f"{slots[slot_key]['start_time']} – {new_end}"
 
         speaker_name = f"{speaker_first} {speaker_last}".strip() if speaker_first else None
+        current_count = session_capacity.get(str(session.id), 0)
+        max_attendees = st_max_attendees
+        available_spots = max_attendees - current_count if max_attendees is not None else None
+        is_full = max_attendees is not None and current_count >= max_attendees
+
+        # Skip fully booked sessions
+        if is_full:
+            continue
+
         slots[slot_key]["sessions"].append(
             {
                 "id": str(session.id),
@@ -166,6 +227,10 @@ async def get_bookable_sessions(
                 "description": session.description,
                 "speaker_name": speaker_name,
                 "has_paper": session.paper_id is not None,
+                "max_attendees": max_attendees,
+                "current_count": current_count,
+                "available_spots": available_spots,
+                "is_full": is_full,
             }
         )
 
@@ -217,6 +282,7 @@ async def list_registrations(
         .options(
             selectinload(Registration.billing_profile),
             selectinload(Registration.items),
+            selectinload(Registration.main_session),
         )
     )
 
@@ -274,6 +340,7 @@ async def get_registration(
         .options(
             selectinload(Registration.billing_profile),
             selectinload(Registration.items),
+            selectinload(Registration.main_session),
         )
     )
     reg = result.scalar_one_or_none()
@@ -322,8 +389,13 @@ async def create_registration(
     db.add(billing)
     await db.flush()
 
+    # Unified endpoint always uses company_bulk mode
+    # (This is the new unified flow that replaces individual/company/bulk)
+    registration_mode = RegistrationMode.COMPANY_BULK.value
+
     # Create registrations
     responses: list[RegistrationResponse] = []
+    registrations: list[Registration] = []
     for att in data.attendees:
         reg = Registration(
             tenant_id=tenant_id,
@@ -337,7 +409,8 @@ async def create_registration(
             department=att.department,
             phone=att.phone,
             booking_option_id=att.booking_option_id,
-            registration_mode=RegistrationMode.COMPANY_BULK.value,
+            main_session_id=att.main_session_id,
+            registration_mode=registration_mode,
             status=RegistrationStatus.REGISTERED_PENDING_INVOICE.value,
             notes=att.notes,
             created_by=current_user.user_id,
@@ -349,6 +422,7 @@ async def create_registration(
         if items:
             await db.flush()
         reg.billing_profile = billing
+        registrations.append(reg)
         responses.append(
             _build_response(
                 reg,
@@ -357,7 +431,37 @@ async def create_registration(
             )
         )
 
+    # Auto-generate invoice for all registrations
+    invoice = await create_invoice_for_registrations(db, registrations, billing, conference, tenant_id, current_user)
+
+    # Create user accounts and collect password tokens
+    user_tokens: list[tuple[Registration, str]] = []
+    for reg in registrations:
+        _user, raw_token = await create_user_for_registration(db, reg, tenant_id)
+        if raw_token:  # Only add if new user with token
+            user_tokens.append((reg, raw_token))
+
+    # Update registration status to INVOICED if invoice was created
+    if invoice:
+        for reg in registrations:
+            reg.status = RegistrationStatus.INVOICED.value
+
     await db.commit()
+
+    # Send emails AFTER commit (non-blocking - failures logged but don't rollback)
+    if invoice:
+        # Send invoice email to billing contact
+        try:
+            await send_registration_invoice_email(db, invoice, conference)
+        except Exception as e:
+            logger.error(f"Failed to send invoice email: {e}", exc_info=True)
+
+        # Send welcome emails to each attendee
+        for reg, token in user_tokens:
+            try:
+                await send_attendee_welcome_email(db, reg, conference, token)
+            except Exception as e:
+                logger.error(f"Failed to send welcome email to {reg.email}: {e}", exc_info=True)
 
     return UnifiedRegistrationResponse(
         billing_profile_id=billing.id,
@@ -425,6 +529,9 @@ async def create_individual_registration(
     await db.refresh(reg)
     await db.refresh(billing)
 
+    # Manually set billing_profile relationship so it's available in _build_response
+    reg.billing_profile = billing
+
     return _build_response(reg, option_name=opt.name, items=items)
 
 
@@ -483,6 +590,9 @@ async def create_company_registration(
     await db.commit()
     await db.refresh(reg)
     await db.refresh(billing)
+
+    # Manually set billing_profile relationship so it's available in _build_response
+    reg.billing_profile = billing
 
     return _build_response(reg, option_name=opt.name, items=items)
 
@@ -596,6 +706,7 @@ async def update_registration(
         .options(
             selectinload(Registration.billing_profile),
             selectinload(Registration.items),
+            selectinload(Registration.main_session),
         )
     )
     reg = result.scalar_one_or_none()

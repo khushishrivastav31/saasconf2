@@ -200,6 +200,7 @@ class SessionType(Base):
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     cfp_eligible: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     separately_bookable: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    max_attendees: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

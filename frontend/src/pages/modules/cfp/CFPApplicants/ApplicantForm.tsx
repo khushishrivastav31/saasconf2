@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { useSaveStatus } from '../../../../hooks/useSaveStatus';
 import { useAuthMedia } from '../../../../hooks/useAuthMedia';
-import { validatePhone } from '../../../../utils/validators';
+import { validatePhone, validateEmail } from '../../../../utils/validators';
 import {
   ACCEPTED_IMAGE_FORMATS,
   ACCEPTED_VIDEO_FORMATS,
@@ -130,6 +130,7 @@ export function ApplicantForm({
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Media preview modal state
   const [mediaPreview, setMediaPreview] = useState<{
@@ -439,9 +440,13 @@ export function ApplicantForm({
             type="email"
             value={formData.email}
             onChange={(e) => setFormData((d) => ({ ...d, email: e.target.value }))}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+            onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+            className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
             required
           />
+          {emailError && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+          )}
         </div>
 
         <div>

@@ -36,6 +36,7 @@ async def get_invoice_with_events(
             Invoice.id == invoice_id,
             Invoice.conference_id == conference_id,
             Invoice.tenant_id == tenant_id,
+            Invoice.is_active.is_(True),
         )
         .options(selectinload(Invoice.events))
     )
@@ -75,6 +76,7 @@ async def get_invoice_basic(
             Invoice.id == invoice_id,
             Invoice.conference_id == conference_id,
             Invoice.tenant_id == tenant_id,
+            Invoice.is_active.is_(True),
         )
     )
     invoice = result.scalar_one_or_none()

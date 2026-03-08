@@ -83,6 +83,8 @@ export const emptyBilling: BillingProfileCreate = {
   contact_email: '',
   vat_number: '',
   procurement_code: '',
+  payment_method: 'bank_transfer',
+  discount_code: '',
 };
 
 export const emptyUnifiedAttendee: UnifiedAttendeeData = {

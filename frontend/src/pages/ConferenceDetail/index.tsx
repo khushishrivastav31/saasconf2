@@ -30,6 +30,7 @@ const SpeakersTab = lazy(() => import('./tabs/SpeakersTab'));
 const MessagingTab = lazy(() => import('./tabs/MessagingTab'));
 const NewsTab = lazy(() => import('./tabs/NewsTab'));
 const RegistrationTab = lazy(() => import('./tabs/RegistrationTab'));
+const AttendeesTab = lazy(() => import('./tabs/AttendeesTab'));
 const AlumniTab = lazy(() => import('./tabs/AlumniTab'));
 const DeadlinesTab = lazy(() => import('./tabs/DeadlinesTab'));
 const CFPTopics = lazy(() => import('../modules/cfp').then((m) => ({ default: m.CFPTopics })));
@@ -429,7 +430,9 @@ function ConferenceDetailContent() {
               {activeSection === 'speakers' && (
                 <SpeakersTab conference={conference} isAdmin={isAdmin} />
               )}
-              {activeSection === 'attendees' && <ComingSoonContent name="Attendees" />}
+              {activeSection === 'attendees' && (
+                <AttendeesTab conference={conference} isAdmin={isAdmin} />
+              )}
               {activeSection === 'sponsors' && (
                 <ConferenceSponsorsTab conference={conference} isAdmin={isAdmin} />
               )}

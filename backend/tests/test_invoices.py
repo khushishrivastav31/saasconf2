@@ -437,10 +437,7 @@ async def test_delete_invoice(
     url = _invoices_url(conference.id, str(sample_invoice.id))
     response = await client.delete(url, headers=auth_headers(admin_token_invoices))
 
-    assert response.status_code == 200
-    data = response.json()
-    assert "message" in data
-    assert "deleted" in data["message"].lower()
+    assert response.status_code == 204
 
 
 async def test_delete_invoice_verify_gone(
@@ -459,7 +456,7 @@ async def test_delete_invoice_verify_gone(
         url,
         headers=auth_headers(admin_token_invoices),
     )
-    assert delete_response.status_code == 200
+    assert delete_response.status_code == 204
 
     # Verify GET returns 404
     get_response = await client.get(

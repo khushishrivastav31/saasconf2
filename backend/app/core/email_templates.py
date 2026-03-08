@@ -303,3 +303,74 @@ def build_sponsor_contract_context(
         "Custom Message": custom_block,
         "Contract Content": content_block,
     }
+
+
+def build_registration_invoice_context(
+    *,
+    recipient_name: str = "",
+    conference_name: str = "",
+    invoice_number: str = "",
+    total_amount: str = "",
+    due_date: str = "",
+    support_email: str = "",
+) -> dict[str, str]:
+    """Build context for registration invoice emails."""
+    return {
+        "Recipient Name": recipient_name or "Sir or Madam",
+        "Conference Name": conference_name,
+        "Invoice Number": invoice_number,
+        "Total Amount": total_amount,
+        "Due Date": due_date,
+        "Support Email": support_email,
+    }
+
+
+def build_attendee_welcome_context(
+    *,
+    first_name: str = "",
+    last_name: str = "",
+    email: str = "",
+    conference_name: str = "",
+    booking_option_name: str = "",
+    password_setup_link: str = "",
+    support_email: str = "",
+) -> dict[str, str]:
+    """Build context for attendee welcome emails."""
+    full_name = f"{first_name} {last_name}".strip() or email.split("@")[0]
+    return {
+        "First Name": first_name or full_name,
+        "Last Name": last_name,
+        "Full Name": full_name,
+        "Email": email,
+        "Conference Name": conference_name,
+        "Booking Option Name": booking_option_name,
+        "Password Setup Link": password_setup_link,
+        "Support Email": support_email,
+    }
+
+
+def build_registration_cancellation_context(
+    *,
+    registration_name: str = "",
+    conference_name: str = "",
+    invoice_number: str = "",
+    cancellation_message: str = "",
+) -> dict[str, str]:
+    """Build context for registration cancellation emails."""
+    # Format cancellation message as HTML block if provided
+    message_block = ""
+    if cancellation_message:
+        message_block = (
+            '<div style="margin: 20px 0; padding: 16px; background-color: #fffbeb; '
+            'border-left: 4px solid #f59e0b; border-radius: 8px;">'
+            f'<p style="margin: 0;"><strong>Message from organizers:</strong></p>'
+            f'<p style="margin: 8px 0 0 0;">{cancellation_message}</p>'
+            "</div>"
+        )
+
+    return {
+        "Registration Name": registration_name or "Sir or Madam",
+        "Conference Name": conference_name,
+        "Invoice Number": invoice_number,
+        "Cancellation Message": message_block,
+    }

@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../config/api';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
-import { validatePhone } from '../../utils/validators';
+import { validatePhone, validateEmail } from '../../utils/validators';
 import Modal from '../../components/Modal';
 import RichTextEditor from '../../components/common/RichTextEditor';
 import AttachmentList from '../../components/AttachmentList';
@@ -385,6 +385,7 @@ function CreateVolunteerModal({
     conference_id: '',
   });
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const { data: conferences } = useQuery({
     queryKey: ['conferences-for-select'],
@@ -407,7 +408,7 @@ function CreateVolunteerModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (phoneError) return;
+    if (phoneError || emailError) return;
     onSubmit(formData);
   };
 
@@ -469,10 +470,14 @@ function CreateVolunteerModal({
             <input
               type="email"
               required
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
+              className={`mt-1 block w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm`}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
             />
+            {emailError && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+            )}
           </div>
 
           <div>
@@ -590,6 +595,7 @@ function EditVolunteerModal({
     status: volunteer.status,
   });
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const { data: rolesData } = useQuery({
     queryKey: ['volunteer-roles', volunteer.conference_ids?.[0]],
@@ -604,7 +610,7 @@ function EditVolunteerModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (phoneError) return;
+    if (phoneError || emailError) return;
     onSubmit(formData);
   };
 
@@ -646,10 +652,14 @@ function EditVolunteerModal({
             <input
               type="email"
               required
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
+              className={`mt-1 block w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm`}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
             />
+            {emailError && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+            )}
           </div>
 
           <div>

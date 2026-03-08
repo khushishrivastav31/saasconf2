@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import RichTextEditor from '../common/RichTextEditor';
 import VatNumberInput from '../common/VatNumberInput';
 import { COUNTRY_OPTIONS } from '../../config/countries';
 import api from '../../config/api';
 import { queryKeys } from '../../config/queryKeys';
+import { validateEmail } from '../../utils/validators';
 import type {
   Invoice,
   InvoiceUpdate,
@@ -43,6 +45,8 @@ export default function InvoiceDetailsTab({
   conferenceCurrency,
   readOnly = false,
 }: InvoiceDetailsTabProps) {
+  const [emailError, setEmailError] = useState<string | null>(null);
+
   // Use conference currency if set
   const isCurrencyLocked = !!conferenceCurrency;
   const hasNumber = invoice.invoice_number !== null;
@@ -228,7 +232,7 @@ export default function InvoiceDetailsTab({
               </label>
               <input
                 type="email"
-                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+                className={`mt-1 block w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100`}
                 value={formData.recipient_email || ''}
                 onChange={(e) =>
                   setFormData({
@@ -236,8 +240,12 @@ export default function InvoiceDetailsTab({
                     recipient_email: e.target.value,
                   })
                 }
+                onBlur={(e) => setEmailError(validateEmail(e.target.value))}
                 disabled={readOnly}
               />
+              {emailError && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+              )}
             </div>
           </div>
 

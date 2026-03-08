@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -16,10 +17,25 @@ function formatSessionLabel(session: {
   title: string;
   speaker_name: string | null;
   has_paper: boolean;
+  max_attendees?: number | null;
+  current_count?: number;
+  available_spots?: number | null;
 }): string {
-  if (!session.has_paper) return 'To be announced';
-  if (session.speaker_name) return `${session.title} – ${session.speaker_name}`;
-  return session.title;
+  let label = '';
+  if (!session.has_paper) {
+    label = 'To be announced';
+  } else if (session.speaker_name) {
+    label = `${session.title} – ${session.speaker_name}`;
+  } else {
+    label = session.title;
+  }
+
+  // Add capacity information if available
+  if (session.max_attendees && session.available_spots !== undefined) {
+    label += ` (${session.available_spots} spots left)`;
+  }
+
+  return label;
 }
 
 function SlotDropdown({
@@ -96,11 +112,13 @@ export function OptionSessions({
   conferenceId,
   optionId,
   selections,
+  selectedSessionId,
   onChange,
 }: {
   conferenceId: string;
   optionId: string;
   selections: Record<string, string>;
+  selectedSessionId?: string | null;
   onChange: (selections: Record<string, string>) => void;
 }) {
   const { data, isLoading } = useQuery({
@@ -113,6 +131,27 @@ export function OptionSessions({
     },
     staleTime: 0,
   });
+
+  // Build selections from selectedSessionId if provided and selections is empty
+  const effectiveSelections = React.useMemo(() => {
+    if (Object.keys(selections).length > 0) {
+      return selections;
+    }
+    if (!selectedSessionId || !data) {
+      return {};
+    }
+    // Find which slot contains this session
+    for (const group of data.groups) {
+      for (const slot of group.slots) {
+        const session = slot.sessions.find((s) => s.id === selectedSessionId);
+        if (session) {
+          const key = selectionKey(group, slot);
+          return { [key]: selectedSessionId };
+        }
+      }
+    }
+    return {};
+  }, [selections, selectedSessionId, data]);
 
   if (isLoading) {
     return <div className="text-xs text-gray-400 dark:text-gray-500 py-2">Loading sessions...</div>;
@@ -128,7 +167,7 @@ export function OptionSessions({
         <SessionTypeGroup
           key={group.session_type_id || 'untyped'}
           group={group}
-          selections={selections}
+          selections={effectiveSelections}
           onChange={onChange}
         />
       ))}

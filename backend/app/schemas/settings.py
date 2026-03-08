@@ -194,6 +194,7 @@ class SessionTypeCreate(BaseModel):
     duration_minutes: int = Field(..., gt=0)
     cfp_eligible: bool = True
     separately_bookable: bool = False
+    max_attendees: int | None = Field(None, gt=0)
     is_active: bool = True
 
 
@@ -205,6 +206,7 @@ class SessionTypeUpdate(BaseModel):
     duration_minutes: int | None = Field(None, gt=0)
     cfp_eligible: bool | None = None
     separately_bookable: bool | None = None
+    max_attendees: int | None = Field(None, gt=0)
     is_active: bool | None = None
 
 
@@ -221,6 +223,7 @@ class SessionTypeResponse(BaseModel):
     duration_minutes: int
     cfp_eligible: bool
     separately_bookable: bool
+    max_attendees: int | None
     is_active: bool
     created_at: datetime
     updated_at: datetime

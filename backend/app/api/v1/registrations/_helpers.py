@@ -4,7 +4,7 @@ from uuid import UUID
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from sqlalchemy import func, select
+from sqlalchemy import func, inspect, select
 
 from app.core.dependencies import DbSessionDep
 from app.core.exceptions import ValidationError
@@ -64,7 +64,42 @@ async def _resolve_item(
         option = result.scalar_one_or_none()
         if not option:
             raise ValidationError(f"Booking option '{item_data.booking_option_id}' not found for this conference")
-        return option.name, False
+
+        option_name = option.name
+
+        # If this booking option has a conference_day_id, it can have session selections
+        # Check if program is published to determine if session can be confirmed or is pending
+        program_published = conference.program_published_at is not None
+
+        # If a specific session is selected, validate and append to name
+        if item_data.program_session_id:
+            if program_published:
+                session_result = await db.execute(
+                    select(ProgramSession).where(
+                        ProgramSession.id == item_data.program_session_id,
+                        ProgramSession.conference_id == conference_id,
+                        ProgramSession.tenant_id == tenant_id,
+                    )
+                )
+                session = session_result.scalar_one_or_none()
+                if session and session.title:
+                    # Combine: "Day 1 - Python Basics Tutorial"
+                    option_name = f"{option_name} - {session.title}"
+                    return option_name, False
+                else:
+                    # Session ID provided but not found - treat as pending
+                    return f"{option_name} (session to be selected)", True
+            else:
+                # Program not published yet - session will be selected later
+                return f"{option_name} (session to be selected)", True
+
+        # No session selected - check if this option requires session selection
+        # If option has conference_day_id and program isn't published, mark as pending
+        if option.conference_day_id and not program_published:
+            return f"{option_name} (session to be selected)", True
+
+        # No session selected and either option doesn't require it or program is published
+        return option_name, False
 
     elif item_data.item_type == RegistrationItemType.TUTORIAL:
         program_published = conference.program_published_at is not None
@@ -106,7 +141,7 @@ async def _create_items(
             registration_id=registration.id,
             item_type=item_data.item_type.value,
             booking_option_id=item_data.booking_option_id,
-            program_session_id=item_data.program_session_id if not pending else None,
+            program_session_id=item_data.program_session_id,
             item_name=item_name,
             pending=pending,
             notes=item_data.notes,
@@ -133,6 +168,17 @@ def _build_response(
     items: list[RegistrationItem] | None = None,
 ) -> RegistrationResponse:
     """Build a RegistrationResponse from a Registration model."""
+    # Safely check if relationships are loaded without triggering lazy loads
+    insp = inspect(reg)
+
+    # Get items - either from parameter or loaded relationship
+    if items is not None:
+        item_list = items
+    elif "items" not in insp.unloaded:
+        item_list = reg.items
+    else:
+        item_list = []
+
     item_responses = [
         RegistrationItemResponse(
             id=item.id,
@@ -144,10 +190,19 @@ def _build_response(
             notes=item.notes,
             created_at=item.created_at,
         )
-        for item in (items if items is not None else reg.items)
+        for item in item_list
     ]
 
-    billing = reg.billing_profile
+    # Get billing_profile without lazy load
+    billing = None
+    if "billing_profile" not in insp.unloaded:
+        billing = reg.billing_profile
+
+    # Get main_session without lazy load
+    main_session = None
+    if "main_session" not in insp.unloaded:
+        main_session = reg.main_session
+
     return RegistrationResponse(
         id=reg.id,
         tenant_id=reg.tenant_id,
@@ -162,6 +217,8 @@ def _build_response(
         phone=reg.phone,
         booking_option_id=reg.booking_option_id,
         booking_option_name=option_name,
+        main_session_id=reg.main_session_id,
+        main_session_name=main_session.title if main_session else None,
         items=item_responses,
         registration_mode=reg.registration_mode,
         status=reg.status,

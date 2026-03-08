@@ -23,13 +23,13 @@ async def cancel_registrations_for_invoice(
     tenant_id: UUID,
     user_id: UUID,
     cancellation_message: str | None = None,
-) -> tuple[int, int]:
+) -> tuple[int, int, list[dict[str, str]]]:
     """Cancel registrations and remove conference access when invoice is cancelled.
 
     This is used for TRUE cancellations (not billing corrections). It:
     1. Updates registration status → CANCELLED
     2. Deletes UserConferenceAccess (conference access only, user account stays active)
-    3. Sends cancellation email to each attendee (best-effort)
+    3. Returns registration data for email sending (caller sends after commit)
     4. Creates audit log per registration
 
     Args:
@@ -41,14 +41,15 @@ async def cancel_registrations_for_invoice(
         cancellation_message: Optional message to include in cancellation emails
 
     Returns:
-        Tuple of (registrations_cancelled, access_removed_count)
+        Tuple of (registrations_cancelled, access_removed_count, registration_data_for_emails)
+        where registration_data_for_emails is a list of dicts with 'email' and 'name' keys
 
     Raises:
         ValidationError: If cancel_registrations=true but no registrations found
     """
     # Only registration-sourced invoices can have registrations
     if invoice.recipient_source_type != "registration" or not invoice.recipient_source_id:
-        return 0, 0
+        return 0, 0, []
 
     billing_profile_id = invoice.recipient_source_id
 
@@ -65,14 +66,15 @@ async def cancel_registrations_for_invoice(
     registrations = result.scalars().all()
 
     if not registrations:
-        return 0, 0
+        return 0, 0, []
 
-    # Track counts
+    # Track counts and data for emails
     registrations_cancelled = 0
     access_removed_count = 0
     registration_emails: set[str] = set()
+    email_data: list[dict[str, str]] = []
 
-    # Step 1: Update registration statuses and collect emails
+    # Step 1: Update registration statuses and collect data for emails
     for registration in registrations:
         # Skip already-cancelled registrations
         if registration.status == RegistrationStatus.CANCELLED:
@@ -86,6 +88,15 @@ async def cancel_registrations_for_invoice(
 
         # Collect registration email for portal access removal
         registration_emails.add(registration.email.lower())
+
+        # Collect data for cancellation email (to be sent by caller after commit)
+        full_name = f"{registration.first_name} {registration.last_name}".strip()
+        email_data.append(
+            {
+                "email": registration.email,
+                "name": full_name or registration.email,
+            }
+        )
 
         # Create audit log
         audit = AuditLog(
@@ -163,7 +174,7 @@ async def cancel_registrations_for_invoice(
             # Don't raise - best-effort operation
             access_removed_count = 0
 
-    # Step 3: Send cancellation emails (best-effort, outside transaction)
-    # This will be done by the caller after the transaction commits
+    # Step 3: Return email data for caller to send after transaction commits
+    # Caller will use send_registration_cancellation_email() for each registration
 
-    return registrations_cancelled, access_removed_count
+    return registrations_cancelled, access_removed_count, email_data

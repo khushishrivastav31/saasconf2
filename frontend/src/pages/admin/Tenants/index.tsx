@@ -6,7 +6,7 @@ import Modal from '../../../components/Modal';
 import RichTextEditor from '../../../components/common/RichTextEditor';
 import type { Tenant, TenantCreate, ContactPerson, PaginatedResponse } from '../../../types';
 import TenantDetailModal from './TenantDetailModal';
-import { validatePhone } from '../../../utils/validators';
+import { validatePhone, validateEmail } from '../../../utils/validators';
 
 export default function Tenants() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -198,6 +198,7 @@ function CreateTenantModal({
       });
       setNewContact({ first_name: '', last_name: '', email: '', phone: '', role: '' });
       setNewContactPhoneError(null);
+      setNewContactEmailError(null);
     }
   };
 
@@ -219,6 +220,9 @@ function CreateTenantModal({
   const [deleteContactIndex, setDeleteContactIndex] = useState<number | null>(null);
   const [editContactPhoneError, setEditContactPhoneError] = useState<string | null>(null);
   const [newContactPhoneError, setNewContactPhoneError] = useState<string | null>(null);
+  const [editContactEmailError, setEditContactEmailError] = useState<string | null>(null);
+  const [newContactEmailError, setNewContactEmailError] = useState<string | null>(null);
+  const [adminEmailError, setAdminEmailError] = useState<string | null>(null);
 
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -535,15 +539,20 @@ function CreateTenantModal({
                             </label>
                             <input
                               type="email"
-                              className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+                              className={`w-full border ${editContactEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                               value={contact.email || ''}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const value = e.target.value;
                                 updateContact(index, {
                                   ...contact,
-                                  email: e.target.value,
-                                })
-                              }
+                                  email: value,
+                                });
+                                setEditContactEmailError(validateEmail(value));
+                              }}
                             />
+                            {editContactEmailError && (
+                              <p className="mt-1 text-xs text-red-600">{editContactEmailError}</p>
+                            )}
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
@@ -574,8 +583,9 @@ function CreateTenantModal({
                             onClick={() => {
                               setEditingContactIndex(null);
                               setEditContactPhoneError(null);
+                              setEditContactEmailError(null);
                             }}
-                            disabled={!!editContactPhoneError}
+                            disabled={!!editContactPhoneError || !!editContactEmailError}
                             className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Done
@@ -700,10 +710,17 @@ function CreateTenantModal({
                   <input
                     type="email"
                     placeholder="email@example.com"
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+                    className={`w-full border ${newContactEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                     value={newContact.email}
-                    onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setNewContact({ ...newContact, email: value });
+                      setNewContactEmailError(validateEmail(value));
+                    }}
                   />
+                  {newContactEmailError && (
+                    <p className="mt-1 text-xs text-red-600">{newContactEmailError}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
@@ -732,7 +749,8 @@ function CreateTenantModal({
                   disabled={
                     !newContact.first_name.trim() ||
                     !newContact.last_name.trim() ||
-                    !!newContactPhoneError
+                    !!newContactPhoneError ||
+                    !!newContactEmailError
                   }
                   className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -782,17 +800,20 @@ function CreateTenantModal({
                 </label>
                 <input
                   type="email"
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${
                     showErrors && errors.admin_email
-                      ? 'border-red-300 bg-red-50'
-                      : 'border-gray-300'
+                      ? 'border-red-300 bg-red-50 dark:bg-red-900/30'
+                      : adminEmailError
+                        ? 'border-red-300'
+                        : 'border-gray-300 dark:border-gray-600'
                   }`}
                   value={formData.admin_email}
                   onChange={(e) => {
-                    setFormData({ ...formData, admin_email: e.target.value });
+                    const value = e.target.value;
+                    setFormData({ ...formData, admin_email: value });
+                    setAdminEmailError(validateEmail(value));
                     if (showErrors && errors.admin_email) {
-                      const value = e.target.value.trim();
-                      if (value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                      if (value.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
                         setErrors((prev) => {
                           const { admin_email: _, ...rest } = prev;
                           return rest;
@@ -800,7 +821,13 @@ function CreateTenantModal({
                       }
                     }
                   }}
+                  onBlur={() => {
+                    setAdminEmailError(validateEmail(formData.admin_email));
+                  }}
                 />
+                {adminEmailError && !showErrors && (
+                  <p className="mt-1 text-sm text-red-600">{adminEmailError}</p>
+                )}
                 {showErrors && errors.admin_email && (
                   <p className="mt-1 text-sm text-red-600">{errors.admin_email}</p>
                 )}
@@ -876,7 +903,7 @@ function CreateTenantModal({
           </button>
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !!adminEmailError}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
           >
             {isLoading ? 'Creating...' : 'Create'}

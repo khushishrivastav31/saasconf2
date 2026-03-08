@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
 import ThemeToggle from '../components/ThemeToggle';
+import { validateEmail } from '../utils/validators';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
@@ -68,11 +70,19 @@ export default function Login() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800"
+                className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
+                  emailError
+                    ? 'border-red-500 dark:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600'
+                } placeholder-gray-500 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800`}
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={(e) => setEmailError(validateEmail(e.target.value))}
               />
+              {emailError && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+              )}
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
@@ -104,7 +114,7 @@ export default function Login() {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !!emailError}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}

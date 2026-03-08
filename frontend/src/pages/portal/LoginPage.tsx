@@ -8,6 +8,7 @@ import { parseApiError } from '../../utils/apiError';
 import portalApi from '../../config/portalApi';
 import ConferenceLogo from '../../components/ConferenceLogo';
 import ThemeToggle from '../../components/ThemeToggle';
+import { validateEmail } from '../../utils/validators';
 import type { PortalLandingData, PortalTenant } from '../../types/portal';
 
 function LoginPage() {
@@ -21,6 +22,7 @@ function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdminRedirect, setShowAdminRedirect] = useState(false);
 
@@ -197,9 +199,17 @@ function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+              className={`w-full border ${
+                emailError
+                  ? 'border-red-500 dark:border-red-500'
+                  : 'border-gray-300 dark:border-gray-600'
+              } rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
               placeholder="you@example.com"
             />
+            {emailError && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+            )}
           </div>
 
           <div>
@@ -217,7 +227,7 @@ function LoginPage() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !!emailError}
             className="w-full bg-primary-600 text-white py-2 rounded-md hover:bg-primary-700 disabled:opacity-50 text-sm font-medium"
           >
             {isSubmitting ? 'Signing in...' : 'Sign In'}

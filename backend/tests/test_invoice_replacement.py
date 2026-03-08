@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
@@ -17,7 +16,6 @@ from app.models.invoice import Invoice
 from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -231,9 +229,9 @@ async def test_replace_paid_credit_card_invoice_inherits_paid_status(
     assert data["new_invoice"]["recipient_vat_number"] == "DE999888777"
     assert float(data["new_invoice"]["total"]) == 1190.00
     # Paid invoices don't get a new Stripe link
-    assert data["new_invoice"]["stripe_payment_link_url"] is None or data["new_invoice"][
-        "stripe_payment_link_url"
-    ] == ""
+    assert (
+        data["new_invoice"]["stripe_payment_link_url"] is None or data["new_invoice"]["stripe_payment_link_url"] == ""
+    )
 
 
 @pytest.mark.asyncio()
@@ -286,9 +284,9 @@ async def test_replace_paid_bank_transfer_invoice(
     assert data["new_invoice"]["status"] == "paid"
     assert data["new_invoice"]["recipient_postal_code"] == "SW1A 2AA"
     # Bank transfer - no Stripe
-    assert data["new_invoice"]["stripe_payment_link_url"] is None or data["new_invoice"][
-        "stripe_payment_link_url"
-    ] == ""
+    assert (
+        data["new_invoice"]["stripe_payment_link_url"] is None or data["new_invoice"]["stripe_payment_link_url"] == ""
+    )
 
 
 @pytest.mark.asyncio()

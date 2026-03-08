@@ -73,6 +73,9 @@ class EmailTemplateType:
     PAPER_ACCEPTANCE = "paper_acceptance"
     PAPER_REJECTION = "paper_rejection"
     SPONSOR_CONTRACT_SEND = "sponsor_contract_send"
+    REGISTRATION_INVOICE = "registration_invoice"
+    ATTENDEE_WELCOME = "attendee_welcome"
+    REGISTRATION_CANCELLATION = "registration_cancellation"
 
     # System templates (no tenant_id)
     SYSTEM_TYPES: ClassVar[list[str]] = [TENANT_USER_WELCOME]
@@ -88,6 +91,9 @@ class EmailTemplateType:
         PAPER_ACCEPTANCE,
         PAPER_REJECTION,
         SPONSOR_CONTRACT_SEND,
+        REGISTRATION_INVOICE,
+        ATTENDEE_WELCOME,
+        REGISTRATION_CANCELLATION,
     ]
 
     ALL_TYPES: ClassVar[list[str]] = SYSTEM_TYPES + CONFERENCE_TYPES

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sanitizeHtml } from '../../utils/richText';
+import { validateEmail } from '../../utils/validators';
 import portalApi from '../../config/portalApi';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
 import { usePortalBasePath } from '../../hooks/usePortalBasePath';
@@ -44,6 +45,7 @@ function PaperDetailPage() {
   const [cospeakerEmails, setCospeakerEmails] = useState<string[]>([]);
   const [cospeakerInput, setCospeakerInput] = useState('');
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
 
   // Video state
@@ -602,24 +604,30 @@ function PaperDetailPage() {
                   <span className="text-gray-400 dark:text-gray-500 font-normal">(max 3)</span>
                 </label>
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="email"
-                    value={cospeakerInput}
-                    onChange={(e) => setCospeakerInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCospeaker();
-                      }
-                    }}
-                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                    placeholder="Co-speaker email"
-                    disabled={cospeakerEmails.length >= 3}
-                  />
+                  <div className="flex-1">
+                    <input
+                      type="email"
+                      value={cospeakerInput}
+                      onChange={(e) => setCospeakerInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCospeaker();
+                        }
+                      }}
+                      onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+                      className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
+                      placeholder="Co-speaker email"
+                      disabled={cospeakerEmails.length >= 3}
+                    />
+                    {emailError && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={handleAddCospeaker}
-                    disabled={cospeakerEmails.length >= 3}
+                    disabled={cospeakerEmails.length >= 3 || !!emailError}
                     className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
                   >
                     Add

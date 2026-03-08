@@ -10,6 +10,7 @@ import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner, ButtonSpinner } from '../../../components/common/LoadingSpinner';
 import { useToast } from '../../../components/Toast';
 import { DeleteIcon, SearchIcon } from '../icons';
+import { validateEmail } from '../../../utils/validators';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -100,6 +101,8 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
   const [addForm, setAddForm] = useState<AlumniFormData>(EMPTY_FORM);
   const [editForm, setEditForm] = useState<AlumniFormData>(EMPTY_FORM);
   const [showCsvHelp, setShowCsvHelp] = useState(false);
+  const [addEmailError, setAddEmailError] = useState<string | null>(null);
+  const [editEmailError, setEditEmailError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -146,6 +149,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
       });
       setIsAddOpen(false);
       setAddForm(EMPTY_FORM);
+      setAddEmailError(null);
       setError(null);
       showToast('Alumni added successfully.', 'success');
     },
@@ -168,6 +172,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
       });
       setEditTarget(null);
       setEditForm(EMPTY_FORM);
+      setEditEmailError(null);
       setError(null);
       showToast('Alumni updated successfully.', 'success');
     },
@@ -238,6 +243,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
       company: alumni.company || '',
       notes: alumni.notes || '',
     });
+    setEditEmailError(null);
     setError(null);
   };
 
@@ -325,6 +331,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
               onClick={() => {
                 setIsAddOpen(true);
                 setAddForm(EMPTY_FORM);
+                setAddEmailError(null);
                 setError(null);
               }}
               className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 dark:text-primary-300 dark:bg-primary-900/30 dark:border-primary-700 dark:hover:bg-primary-900/50 transition-colors"
@@ -606,6 +613,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
         open={isAddOpen}
         onClose={() => {
           setIsAddOpen(false);
+          setAddEmailError(null);
           setError(null);
         }}
         title="Add Alumni"
@@ -649,9 +657,17 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
               type="email"
               required
               value={addForm.email}
-              onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-primary-500 focus:border-primary-500"
+              onChange={(e) => {
+                const value = e.target.value;
+                setAddForm({ ...addForm, email: value });
+                setAddEmailError(validateEmail(value));
+              }}
+              onBlur={() => {
+                setAddEmailError(validateEmail(addForm.email));
+              }}
+              className={`w-full px-3 py-2 text-sm border ${addEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-primary-500 focus:border-primary-500`}
             />
+            {addEmailError && <p className="mt-1 text-sm text-red-600">{addEmailError}</p>}
           </div>
 
           <div>
@@ -683,6 +699,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
               type="button"
               onClick={() => {
                 setIsAddOpen(false);
+                setAddEmailError(null);
                 setError(null);
               }}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -691,7 +708,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
             </button>
             <button
               type="submit"
-              disabled={createMutation.isPending}
+              disabled={createMutation.isPending || !!addEmailError}
               className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50 transition-colors"
             >
               {createMutation.isPending ? <ButtonSpinner label="Adding..." /> : 'Add Alumni'}
@@ -707,6 +724,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
         open={editTarget !== null}
         onClose={() => {
           setEditTarget(null);
+          setEditEmailError(null);
           setError(null);
         }}
         title="Edit Alumni"
@@ -750,9 +768,17 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
               type="email"
               required
               value={editForm.email}
-              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-primary-500 focus:border-primary-500"
+              onChange={(e) => {
+                const value = e.target.value;
+                setEditForm({ ...editForm, email: value });
+                setEditEmailError(validateEmail(value));
+              }}
+              onBlur={() => {
+                setEditEmailError(validateEmail(editForm.email));
+              }}
+              className={`w-full px-3 py-2 text-sm border ${editEmailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-primary-500 focus:border-primary-500`}
             />
+            {editEmailError && <p className="mt-1 text-sm text-red-600">{editEmailError}</p>}
             {editTarget && editForm.email !== editTarget.email && (
               <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                 Changing the email will also update linked registration and portal records.
@@ -789,6 +815,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
               type="button"
               onClick={() => {
                 setEditTarget(null);
+                setEditEmailError(null);
                 setError(null);
               }}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -797,7 +824,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
             </button>
             <button
               type="submit"
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || !!editEmailError}
               className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50 transition-colors"
             >
               {updateMutation.isPending ? <ButtonSpinner label="Saving..." /> : 'Save Changes'}
