@@ -118,6 +118,85 @@ async def deactivate_payment_link_for_invoice(
         return False
 
 
+async def create_payment_intent(
+    db: AsyncSession,
+    conference: Conference,
+    invoice: Invoice,
+) -> tuple[str, str]:
+    """Create Stripe PaymentIntent for invoice (for embedded Stripe Elements).
+
+    Used by public registration portal to create embedded payment flows.
+    Unlike Payment Links, this creates the PaymentIntent immediately and returns
+    the client_secret for frontend to use with Stripe Elements.
+
+    Args:
+        db: Database session
+        conference: Conference with Stripe settings
+        invoice: Invoice to create payment for
+
+    Returns:
+        Tuple of (payment_intent_id, client_secret)
+
+    Raises:
+        ValidationError: If Stripe not configured or API error
+    """
+    client = get_stripe_client(conference)
+    if not client:
+        raise ValidationError("Stripe is not enabled for this conference")
+
+    if not invoice.total or not invoice.currency:
+        raise ValidationError("Invoice must have total and currency")
+
+    # Generate idempotency key
+    idempotency_key = f"invoice-{invoice.id}-payment-intent-{datetime.utcnow().isoformat()}"
+
+    try:
+        # Create PaymentIntent
+        payment_intent = stripe.PaymentIntent.create(
+            amount=int(invoice.total * 100),
+            currency=invoice.currency.lower(),
+            metadata={
+                "system": "saasconf",
+                "tenant_id": str(invoice.tenant_id),
+                "conference_id": str(invoice.conference_id),
+                "invoice_id": str(invoice.id),
+                "invoice_number": invoice.invoice_number or "DRAFT",
+                "template_type": invoice.template_type,
+            },
+            idempotency_key=idempotency_key,
+        )
+
+        # Store payment_intent_id on invoice
+        invoice.stripe_payment_intent_id = payment_intent.id
+
+        # Log success
+        await log_invoice_event(
+            db=db,
+            invoice_id=invoice.id,
+            tenant_id=invoice.tenant_id,
+            event_type=InvoiceEventType.PAYMENT_INTENT_CREATED,
+            status="requires_payment_method",
+            stripe_object_id=payment_intent.id,
+            stripe_object_type="payment_intent",
+            stripe_idempotency_key=idempotency_key,
+            amount=invoice.total,
+            currency=invoice.currency,
+            metadata={
+                "payment_intent_id": payment_intent.id,
+                "invoice_number": invoice.invoice_number or "DRAFT",
+            },
+        )
+
+        if not payment_intent.client_secret:
+            raise ValidationError("Stripe PaymentIntent created but missing client_secret")
+
+        return (payment_intent.id, payment_intent.client_secret)
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe payment intent creation failed for invoice {invoice.id}: {e}")
+        raise ValidationError(f"Stripe error: {e!s}") from e
+
+
 async def create_payment_link(
     db: AsyncSession,
     conference: Conference,

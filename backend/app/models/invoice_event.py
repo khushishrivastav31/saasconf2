@@ -86,6 +86,7 @@ class InvoiceEventType:
     """Constants for invoice event types."""
 
     PAYMENT_LINK_CREATED = "payment_link_created"
+    PAYMENT_INTENT_CREATED = "payment_intent_created"
     PAYMENT_SUCCEEDED = "payment_succeeded"
     PAYMENT_FAILED = "payment_failed"
     REFUND_INITIATED = "refund_initiated"

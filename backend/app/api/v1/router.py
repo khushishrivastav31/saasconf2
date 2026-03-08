@@ -19,6 +19,8 @@ from app.api.v1 import (
     messaging,
     modules,
     news,
+    portal,
+    portal_templates,
     program,
     registrations,
     screen_overlays,
@@ -141,6 +143,12 @@ api_router.include_router(attachments.router, prefix="/attachments", tags=["Atta
 
 # CFP Applicant Portal (public + applicant-auth endpoints)
 api_router.include_router(cfp_portal.router, tags=["CFP Portal"])
+
+# Public Registration Portal (public endpoints, no auth required)
+api_router.include_router(portal.router, tags=["Public Portal"])
+
+# Portal Templates (downloadable CSS templates)
+api_router.include_router(portal_templates.router, tags=["Portal Templates"])
 
 # Stripe webhooks (public endpoint, signature verified)
 api_router.include_router(stripe_webhooks.router, tags=["Stripe"])

@@ -30,6 +30,7 @@ class RegistrationMode(StrEnum):
     INDIVIDUAL = "individual"
     COMPANY_SINGLE = "company_single"
     COMPANY_BULK = "company_bulk"
+    PORTAL = "portal"
 
 
 class RegistrationItemType(StrEnum):
