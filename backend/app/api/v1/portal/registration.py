@@ -35,6 +35,8 @@ from app.models.tenant import Tenant
 from app.schemas.portal_registration import (
     PortalRegistrationRequest,
     PortalRegistrationResponse,
+    PublicBookingOption,
+    PublicConference,
 )
 from app.schemas.registration import RegistrationResponse
 
@@ -97,6 +99,109 @@ async def resolve_tenant_and_conference(
         )
 
     return tenant, conference
+
+
+@router.get("/{tenant_slug}/conferences/{conference_slug}")
+async def get_public_conference(
+    tenant_slug: str,
+    conference_slug: str,
+    db: DbSessionDep,
+) -> PublicConference:
+    """
+    Get public conference details for registration portal.
+
+    No authentication required - publicly accessible endpoint.
+    """
+    from datetime import date
+
+    from app.models.booking import BookingPeriod
+
+    tenant, conference = await resolve_tenant_and_conference(db, tenant_slug, conference_slug)
+
+    # Fetch active booking periods to get current prices
+    today = date.today()
+    periods_result = await db.execute(
+        select(BookingPeriod)
+        .where(
+            BookingPeriod.conference_id == conference.id,
+            BookingPeriod.is_active == True,  # noqa: E712
+            BookingPeriod.start_date <= today,
+            BookingPeriod.end_date >= today,
+        )
+        .order_by(BookingPeriod.sort_order)
+    )
+    active_periods = periods_result.scalars().all()
+
+    # Use the first active period for pricing (or None if no active period)
+    current_period = active_periods[0] if active_periods else None
+
+    # Fetch booking options with availability
+    result = await db.execute(
+        select(BookingOption)
+        .where(
+            BookingOption.conference_id == conference.id,
+            BookingOption.is_active == True,  # noqa: E712
+        )
+        .order_by(BookingOption.sort_order)
+    )
+    booking_options_db = result.scalars().all()
+
+    # Build public booking options with availability
+    booking_options = []
+    for option in booking_options_db:
+        # Get price from current period
+        price = 0.0
+        if current_period and current_period.prices:
+            option_price = current_period.prices.get(str(option.id))
+            if option_price is not None:
+                price = float(option_price)
+
+        # Skip options with no price (not available in current period)
+        if price <= 0:
+            continue
+
+        # Count current registrations
+        registrations_result = await db.execute(
+            select(Registration).where(
+                Registration.booking_option_id == option.id,
+                Registration.status.in_([RegistrationStatus.CONFIRMED, RegistrationStatus.PENDING]),
+            )
+        )
+        current_count = len(registrations_result.scalars().all())
+
+        # Check if sold out
+        is_sold_out = False
+        if option.capacity is not None:
+            is_sold_out = current_count >= option.capacity
+
+        booking_options.append(
+            PublicBookingOption(
+                id=option.id,
+                name=option.name,
+                description=option.description,
+                price=price,
+                capacity=option.capacity,
+                current_registrations=current_count,
+                is_sold_out=is_sold_out,
+                conference_day_id=option.conference_day_id,
+            )
+        )
+
+    # Build location string
+    location = conference.venue_name or conference.city or None
+
+    return PublicConference(
+        id=conference.id,
+        name=conference.name,
+        abbreviation=conference.abbreviation or "",
+        description=conference.description,
+        start_date=conference.start_date.isoformat() if conference.start_date else None,
+        end_date=conference.end_date.isoformat() if conference.end_date else None,
+        location=location,
+        website=conference.website,
+        booking_options=booking_options,
+        currency=conference.currency or "EUR",
+    )
 
 
 @router.post("/{tenant_slug}/conferences/{conference_slug}/register")
