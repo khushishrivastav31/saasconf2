@@ -120,7 +120,7 @@ async def validate_invoice_zugferd(
             Invoice.conference_id == conference_id,
             Invoice.tenant_id == current_user.tenant_id,
         )
-        .options(selectinload(Invoice.events))
+        .options(selectinload(Invoice.conference), selectinload(Invoice.events))
     )
     invoice = result.scalar_one_or_none()
     if not invoice:

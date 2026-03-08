@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { queryKeys } from '../../../config/queryKeys';
@@ -579,9 +579,8 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredData.items.map((reg) => (
-                  <>
+                  <React.Fragment key={reg.id}>
                     <tr
-                      key={reg.id}
                       onClick={() => handleRowClick(reg.id)}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                     >
@@ -914,7 +913,7 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
