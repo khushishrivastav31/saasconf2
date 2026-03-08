@@ -160,29 +160,26 @@ async def get_public_conference(
         if price <= 0:
             continue
 
-        # Count current registrations
+        # Count current registrations (all non-cancelled)
         registrations_result = await db.execute(
             select(Registration).where(
                 Registration.booking_option_id == option.id,
-                Registration.status.in_([RegistrationStatus.CONFIRMED, RegistrationStatus.PENDING]),
+                Registration.status != RegistrationStatus.CANCELLED,
             )
         )
         current_count = len(registrations_result.scalars().all())
 
-        # Check if sold out
-        is_sold_out = False
-        if option.capacity is not None:
-            is_sold_out = current_count >= option.capacity
-
+        # Note: BookingOption doesn't have capacity tracking yet
+        # Always show as available (not sold out)
         booking_options.append(
             PublicBookingOption(
                 id=option.id,
                 name=option.name,
                 description=option.description,
                 price=price,
-                capacity=option.capacity,
+                capacity=None,  # Not implemented yet
                 current_registrations=current_count,
-                is_sold_out=is_sold_out,
+                is_sold_out=False,  # No capacity limits yet
                 conference_day_id=option.conference_day_id,
             )
         )
