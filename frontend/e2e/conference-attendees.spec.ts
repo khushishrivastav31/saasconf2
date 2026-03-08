@@ -15,7 +15,7 @@ test.describe('Conference Attendees Tab', () => {
 
     await detail.navigateToSection('Attendees');
 
-    await expect(page.getByRole('heading', { name: /attendees/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { level: 2, name: /attendees/i })).toBeVisible({ timeout: 10000 });
   });
 
   test('should show attendees table or empty state', async ({ page }) => {
