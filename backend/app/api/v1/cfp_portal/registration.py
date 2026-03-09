@@ -42,7 +42,7 @@ async def check_alumni_status(
         }
     """
     tenant_id = current_applicant.tenant_id
-    user_email = current_applicant.email
+    user_email = current_applicant.applicant.email
 
     # Verify conference exists and belongs to tenant
     result = await db.execute(
@@ -99,7 +99,7 @@ async def create_authenticated_registration(
     - Same payment flow as public registration (Stripe Elements or bank transfer)
     """
     tenant_id = current_applicant.tenant_id
-    user_email = current_applicant.email
+    user_email = current_applicant.applicant.email
 
     # Verify conference exists and is active
     result = await db.execute(
