@@ -2,6 +2,15 @@
  * Public Registration Portal Types
  */
 
+export interface PublicBookingPeriod {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  prices: Record<string, number>;
+  sort_order: number;
+}
+
 export interface PublicConference {
   id: string;
   name: string;
@@ -11,8 +20,15 @@ export interface PublicConference {
   end_date: string;
   location: string | null;
   website: string | null;
+  logo_url?: string | null;
   booking_options: PublicBookingOption[];
+  booking_periods: PublicBookingPeriod[];
   currency: string;
+  country?: string | null;
+  venue_type?: string | null;
+  registration_start_date?: string | null;
+  registration_end_date?: string | null;
+  success_message?: string | null;
 }
 
 export interface PublicBookingOption {
@@ -34,7 +50,7 @@ export interface PortalAttendee {
   pronouns?: string;
   job_title?: string;
   department?: string;
-  booking_option_id: string;
+  booking_option_ids: string[]; // Multi-select support
   items?: AttendeeItem[];
   notes?: string;
 }
@@ -49,28 +65,26 @@ export interface AttendeeItem {
 export interface PortalBilling {
   // Company info
   company_name?: string;
-  tax_id?: string;
   vat_number?: string;
 
   // Address
-  address_line1: string;
-  address_line2?: string;
-  city: string;
-  state_province?: string;
+  street: string;
   postal_code: string;
+  city: string;
   country: string;
 
   // Contact
-  contact_name: string;
+  contact_first_name: string;
+  contact_last_name: string;
   contact_email: string;
-  contact_phone?: string;
+  contact_phone: string; // REQUIRED - must match backend schema
 
   // Payment
   payment_method: 'credit_card' | 'bank_transfer';
 
   // Optional
-  purchase_order_number?: string;
-  notes?: string;
+  discount_code?: string;
+  procurement_code?: string;
 }
 
 export interface PortalRegistrationRequest {
@@ -113,3 +127,22 @@ export const WIZARD_STEPS: WizardStep[] = [
   { number: 5, label: 'Payment', path: 'payment' },
   { number: 6, label: 'Confirmation', path: 'confirmation' },
 ];
+
+export interface DiscountCodeValidation {
+  valid: boolean;
+  message?: string;
+  discount_type?: 'fixed' | 'percentage';
+  discount_value?: number;
+  currency?: string;
+  description?: string;
+  applicable_option_ids?: string[] | null;
+  applicable_period_ids?: string[] | null;
+  is_combinable?: boolean;
+}
+
+export interface VatCalculation {
+  vat_rate: number;
+  vat_amount: number;
+  total: number;
+  notes?: string | null;
+}

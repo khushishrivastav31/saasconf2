@@ -528,6 +528,7 @@ async def validate_discount_code(
         "description": discount.description,
         "applicable_option_ids": applicable_option_ids or None,  # None = applies to all
         "applicable_period_ids": applicable_period_ids or None,  # None = applies to all periods
+        "is_combinable": discount.is_combinable,
     }
 
 

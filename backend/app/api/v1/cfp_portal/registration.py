@@ -601,6 +601,7 @@ async def validate_discount_authenticated(
         "description": discount.description,
         "applicable_option_ids": applicable_option_ids or None,
         "applicable_period_ids": applicable_period_ids or None,
+        "is_combinable": discount.is_combinable,
     }
 
 
