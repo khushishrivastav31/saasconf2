@@ -62,6 +62,9 @@ const InfoPage = lazy(() => import('./pages/portal/InfoPage'));
 const MessagesPage = lazy(() => import('./pages/portal/MessagesPage'));
 const NewsPage = lazy(() => import('./pages/portal/NewsPage'));
 const LandingPage = lazy(() => import('./pages/portal/LandingPage'));
+const AuthenticatedRegistrationPage = lazy(
+  () => import('./pages/portal/AuthenticatedRegistrationPage')
+);
 
 // Lazy-loaded public registration portal
 const PublicRegistrationPage = lazy(() => import('./pages/PublicRegistration'));
@@ -378,7 +381,7 @@ function App() {
         <Route path=":tenantSlug/portal/:abbreviation" element={<LandingPage />} />
 
         {/* Public Registration Portal — public route */}
-        <Route path=":tenantSlug/register/:conferenceSlug" element={<PublicRegistrationPage />} />
+        <Route path=":tenantSlug/register/:conferenceSlug/*" element={<PublicRegistrationPage />} />
 
         {/* CFP Applicant Portal — authenticated routes */}
         <Route
@@ -402,6 +405,7 @@ function App() {
           <Route path="messages" element={<MessagesPage />} />
           <Route path="news" element={<NewsPage />} />
           <Route path="info/:conferenceId" element={<InfoPage />} />
+          <Route path="register/:conferenceId" element={<AuthenticatedRegistrationPage />} />
         </Route>
 
         {/* Legacy redirects for old URLs / emailed links */}
