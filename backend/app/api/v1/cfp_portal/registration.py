@@ -1,9 +1,11 @@
 """Authenticated portal registration endpoints for logged-in users."""
 
 import logging
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.core.alumni_discount import validate_alumni_discount
@@ -11,11 +13,14 @@ from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.invoice_auto_generation import create_invoice_for_registrations
 from app.core.registration_emails import send_attendee_welcome_email, send_registration_invoice_email
-from app.core.stripe_helper import create_payment_intent
+from app.core.stripe_helper import create_payment_intent as create_stripe_payment_intent
 from app.core.user_auto_creation import create_user_for_registration
+from app.core.vat_calculation import classify_customer_location, classify_customer_type
+from app.core.vat_rules import get_vat_rule
 from app.models.booking import BookingOption
 from app.models.conference import Conference
 from app.models.registration import BillingProfile, Registration, RegistrationItem, RegistrationMode, RegistrationStatus
+from app.models.vat_rates import VatRateByCountry
 from app.schemas.portal_registration import PortalRegistrationRequest, PortalRegistrationResponse
 from app.schemas.registration import RegistrationItemResponse, RegistrationResponse
 
@@ -79,6 +84,523 @@ async def check_alumni_status(
         "discount_id": str(discount.id) if discount else None,
         "alumni_conferences": alumni_conferences,
         "warning_message": warning_message,
+    }
+
+
+@router.get("/portal/conferences/{conference_id}/public-details")
+async def get_authenticated_conference_details(
+    conference_id: UUID,
+    current_applicant: CurrentApplicantDep,
+    db: DbSessionDep,
+) -> dict:
+    """Get conference details for authenticated portal registration.
+
+    Returns conference data including booking options, periods, and pricing.
+    Same schema as public endpoint but requires authentication.
+    """
+    from datetime import date
+    from app.models.booking import BookingOption, BookingPeriod
+    from app.models.registration import Registration, RegistrationStatus
+    from app.schemas.portal_registration import PublicBookingOption, PublicBookingPeriod, PublicConference
+
+    tenant_id = current_applicant.tenant_id
+
+    # Verify conference exists and belongs to user's tenant
+    result = await db.execute(
+        select(Conference).where(
+            Conference.id == conference_id,
+            Conference.tenant_id == tenant_id,
+            Conference.is_active.is_(True),
+        )
+    )
+    conference = result.scalar_one_or_none()
+    if not conference:
+        raise NotFoundError("Conference not found")
+
+    # Fetch ALL booking periods
+    all_periods_result = await db.execute(
+        select(BookingPeriod)
+        .where(
+            BookingPeriod.conference_id == conference.id,
+            BookingPeriod.is_active == True,
+        )
+        .order_by(BookingPeriod.sort_order)
+    )
+    all_periods = all_periods_result.scalars().all()
+
+    # Find current active period for pricing
+    today = date.today()
+    current_period = None
+    for period in all_periods:
+        if period.start_date <= today <= period.end_date:
+            current_period = period
+            break
+
+    # Fetch booking options with availability
+    result = await db.execute(
+        select(BookingOption)
+        .where(
+            BookingOption.conference_id == conference.id,
+            BookingOption.is_active == True,
+        )
+        .order_by(BookingOption.sort_order)
+    )
+    booking_options_db = result.scalars().all()
+
+    # Build public booking options with availability
+    booking_options = []
+    for option in booking_options_db:
+        # Get price from current period
+        price = 0.0
+        if current_period and current_period.prices:
+            option_price = current_period.prices.get(str(option.id))
+            if option_price is not None:
+                price = float(option_price)
+
+        # Skip options with no price
+        if price <= 0:
+            continue
+
+        # Count current registrations
+        registrations_result = await db.execute(
+            select(Registration).where(
+                Registration.booking_option_id == option.id,
+                Registration.status != RegistrationStatus.CANCELLED,
+            )
+        )
+        current_count = len(registrations_result.scalars().all())
+
+        booking_options.append(
+            PublicBookingOption(
+                id=option.id,
+                name=option.name,
+                description=option.description,
+                price=price,
+                capacity=None,
+                current_registrations=current_count,
+                is_sold_out=False,
+                conference_day_id=option.conference_day_id,
+            )
+        )
+
+    # Build location string
+    location = conference.venue_name or conference.city or None
+
+    # Build public booking periods
+    booking_periods = [
+        PublicBookingPeriod(
+            id=period.id,
+            name=period.name,
+            start_date=period.start_date.isoformat(),
+            end_date=period.end_date.isoformat(),
+            prices=period.prices or {},
+            sort_order=period.sort_order or 0,
+        )
+        for period in all_periods
+    ]
+
+    # Extract registration portal settings
+    portal_settings = conference.settings.get("public_registration_portal", {}) if conference.settings else {}
+    registration_start = portal_settings.get("registration_start_date")
+    registration_end = portal_settings.get("registration_end_date")
+    success_message = portal_settings.get("success_message")
+
+    return PublicConference(
+        id=conference.id,
+        name=conference.name,
+        abbreviation=conference.abbreviation or "",
+        description=conference.description,
+        start_date=conference.start_date.isoformat() if conference.start_date else None,
+        end_date=conference.end_date.isoformat() if conference.end_date else None,
+        location=location,
+        website=conference.website,
+        logo_url=conference.logo_url,
+        booking_options=booking_options,
+        booking_periods=booking_periods,
+        currency=conference.currency or "EUR",
+        country=conference.country,
+        venue_type=conference.venue_type,
+        registration_start_date=registration_start,
+        registration_end_date=registration_end,
+        success_message=success_message,
+    ).model_dump()
+
+
+class VatCalculationRequest(BaseModel):
+    """Request for VAT calculation preview."""
+
+    subtotal: float
+    country: str
+    vat_number: str | None = None
+
+
+@router.post("/portal/conferences/{conference_id}/calculate-vat")
+async def calculate_vat_authenticated(
+    conference_id: UUID,
+    data: VatCalculationRequest,
+    current_applicant: CurrentApplicantDep,
+    db: DbSessionDep,
+) -> dict:
+    """Calculate VAT for authenticated portal registration (preview before submission)."""
+    from app.core.address import _resolve_country_code
+    from app.core.default_settings import DEFAULT_EU_COUNTRIES, DEFAULT_VAT_RULES
+
+    tenant_id = current_applicant.tenant_id
+
+    # Verify conference exists and belongs to user's tenant
+    result = await db.execute(
+        select(Conference).where(
+            Conference.id == conference_id,
+            Conference.tenant_id == tenant_id,
+            Conference.is_active.is_(True),
+        )
+    )
+    conference = result.scalar_one_or_none()
+    if not conference:
+        raise NotFoundError("Conference not found")
+
+    # Step 1: Classify customer type (B2B vs B2C)
+    customer_type = classify_customer_type(data.vat_number)
+
+    # Step 2: Classify customer location (domestic/EU/non-EU)
+    eu_countries = (conference.settings or {}).get("eu_countries", DEFAULT_EU_COUNTRIES)
+    customer_location = classify_customer_location(
+        data.country,
+        conference.country or "",
+        eu_countries,
+    )
+
+    # Step 3: Determine attendance type
+    venue_type = conference.venue_type
+    if venue_type == "virtual":
+        attendance_type = "virtual"
+    elif venue_type == "in_person":
+        attendance_type = "in_person"
+    else:  # hybrid
+        attendance_type = "in_person"  # safest assumption
+
+    # Step 4: Lookup VAT rule
+    vat_rules = (conference.settings or {}).get("vat_rules", DEFAULT_VAT_RULES)
+    rule = get_vat_rule(vat_rules, attendance_type, customer_type, customer_location)
+
+    if not rule:
+        return {
+            "vat_rate": 0.0,
+            "vat_amount": 0.0,
+            "total": data.subtotal,
+            "notes": None,
+        }
+
+    # Step 5: Determine tax rate
+    rate = Decimal("0.00")
+
+    if not rule.get("charge_vat"):
+        rate = Decimal("0.00")
+    elif rule.get("vat_rate_source") == "conference":
+        conference_country_iso = _resolve_country_code(conference.country)
+        if conference_country_iso:
+            stmt = select(VatRateByCountry.standard_rate).where(
+                VatRateByCountry.tenant_id == conference.tenant_id,
+                VatRateByCountry.country_code == conference_country_iso,
+            )
+            result = await db.execute(stmt)
+            fetched_rate = result.scalar_one_or_none()
+
+            if fetched_rate is None:
+                stmt = select(VatRateByCountry.standard_rate).where(
+                    VatRateByCountry.tenant_id.is_(None),
+                    VatRateByCountry.country_code == conference_country_iso,
+                )
+                result = await db.execute(stmt)
+                fetched_rate = result.scalar_one_or_none()
+
+            if fetched_rate is not None:
+                rate = fetched_rate
+    elif rule.get("vat_rate_source") == "customer":
+        customer_country_iso = _resolve_country_code(data.country)
+        if customer_country_iso:
+            stmt = select(VatRateByCountry.standard_rate).where(
+                VatRateByCountry.tenant_id == conference.tenant_id,
+                VatRateByCountry.country_code == customer_country_iso,
+            )
+            result = await db.execute(stmt)
+            fetched_rate = result.scalar_one_or_none()
+
+            if fetched_rate is None:
+                stmt = select(VatRateByCountry.standard_rate).where(
+                    VatRateByCountry.tenant_id.is_(None),
+                    VatRateByCountry.country_code == customer_country_iso,
+                )
+                result = await db.execute(stmt)
+                fetched_rate = result.scalar_one_or_none()
+
+            if fetched_rate is not None:
+                rate = fetched_rate
+
+    # Step 6: Calculate tax amount
+    subtotal = Decimal(str(data.subtotal))
+    vat_amount = (subtotal * rate / Decimal("100")).quantize(Decimal("0.01"))
+    total = subtotal + vat_amount
+
+    # Step 7: Generate notes
+    notes = None
+    if rule.get("reverse_charge"):
+        notes = (
+            "VAT Reverse Charge: In accordance with Article 196 of the VAT Directive 2006/112/EC, "
+            "the customer is liable for VAT in their country of establishment."
+        )
+    elif rule.get("oss_applicable"):
+        notes = f"VAT charged under the EU One-Stop Shop (OSS) scheme at the rate applicable in your country ({rate}%)."
+
+    return {
+        "vat_rate": float(rate),
+        "vat_amount": float(vat_amount),
+        "total": float(total),
+        "notes": notes,
+    }
+
+
+class CreatePaymentIntentRequest(BaseModel):
+    """Request to create Stripe PaymentIntent."""
+
+    amount: float
+    currency: str
+
+
+class UpdatePaymentIntentRequest(BaseModel):
+    """Request to update Stripe PaymentIntent amount."""
+
+    amount: float
+
+
+@router.post("/portal/conferences/{conference_id}/create-payment-intent")
+async def create_payment_intent_authenticated(
+    conference_id: UUID,
+    data: CreatePaymentIntentRequest,
+    current_applicant: CurrentApplicantDep,
+    db: DbSessionDep,
+) -> dict:
+    """Create Stripe PaymentIntent for authenticated portal registration."""
+    from app.config import get_settings
+
+    settings = get_settings()
+    tenant_id = current_applicant.tenant_id
+
+    # Verify conference
+    result = await db.execute(
+        select(Conference).where(
+            Conference.id == conference_id,
+            Conference.tenant_id == tenant_id,
+            Conference.is_active.is_(True),
+        )
+    )
+    conference = result.scalar_one_or_none()
+    if not conference:
+        raise NotFoundError("Conference not found")
+
+    # Check Stripe configuration
+    stripe_settings = (conference.settings or {}).get("stripe", {})
+    if not stripe_settings.get("enabled"):
+        raise ValidationError("Credit card payments are not enabled for this conference")
+
+    publishable_key = stripe_settings.get("publishable_key") or settings.STRIPE_PUBLISHABLE_KEY
+    secret_key = stripe_settings.get("secret_key") or settings.STRIPE_SECRET_KEY
+
+    if not secret_key:
+        raise ValidationError("Stripe is not properly configured")
+
+    # Create PaymentIntent
+    payment_intent = await create_stripe_payment_intent(
+        amount=data.amount,
+        currency=data.currency,
+        stripe_secret_key=secret_key,
+    )
+
+    return {
+        "payment_intent_id": payment_intent["id"],
+        "client_secret": payment_intent["client_secret"],
+        "publishable_key": publishable_key,
+    }
+
+
+@router.post("/portal/conferences/{conference_id}/update-payment-intent/{payment_intent_id}")
+async def update_payment_intent_authenticated(
+    conference_id: UUID,
+    payment_intent_id: str,
+    data: UpdatePaymentIntentRequest,
+    current_applicant: CurrentApplicantDep,
+    db: DbSessionDep,
+) -> dict:
+    """Update Stripe PaymentIntent amount for authenticated portal registration."""
+    from app.config import get_settings
+
+    settings = get_settings()
+    tenant_id = current_applicant.tenant_id
+
+    # Verify conference
+    result = await db.execute(
+        select(Conference).where(
+            Conference.id == conference_id,
+            Conference.tenant_id == tenant_id,
+            Conference.is_active.is_(True),
+        )
+    )
+    conference = result.scalar_one_or_none()
+    if not conference:
+        raise NotFoundError("Conference not found")
+
+    # Get Stripe secret key
+    stripe_settings = (conference.settings or {}).get("stripe", {})
+    secret_key = stripe_settings.get("secret_key") or settings.STRIPE_SECRET_KEY
+
+    if not secret_key:
+        raise ValidationError("Stripe is not properly configured")
+
+    # Update PaymentIntent using Stripe API
+    try:
+        import stripe
+
+        stripe.api_key = secret_key
+
+        payment_intent = stripe.PaymentIntent.modify(
+            payment_intent_id,
+            amount=int(data.amount * 100),  # Convert to cents
+        )
+
+        logger.info(f"Updated PaymentIntent {payment_intent_id} to {data.amount}")
+
+        return {
+            "success": True,
+            "payment_intent_id": payment_intent.id,
+            "amount": data.amount,
+        }
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe PaymentIntent update failed for {payment_intent_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Stripe error: {e!s}") from e
+
+
+@router.get("/portal/conferences/{conference_id}/validate-discount/{code}")
+async def validate_discount_authenticated(
+    conference_id: UUID,
+    code: str,
+    current_applicant: CurrentApplicantDep,
+    db: DbSessionDep,
+) -> dict:
+    """Validate discount code for authenticated portal registration.
+
+    For authenticated users, primarily used to validate ALUMNI discount.
+    """
+    from datetime import date
+    from app.models.booking import DiscountCode, DiscountCodeOption, DiscountCodePeriod, BookingPeriod
+
+    tenant_id = current_applicant.tenant_id
+    user_email = current_applicant.applicant.email
+
+    # Verify conference
+    result = await db.execute(
+        select(Conference).where(
+            Conference.id == conference_id,
+            Conference.tenant_id == tenant_id,
+            Conference.is_active.is_(True),
+        )
+    )
+    conference = result.scalar_one_or_none()
+    if not conference:
+        raise NotFoundError("Conference not found")
+
+    # Look up the discount code
+    result = await db.execute(
+        select(DiscountCode).where(
+            DiscountCode.conference_id == conference.id,
+            DiscountCode.code == code.upper(),
+            DiscountCode.is_active == True,
+        )
+    )
+    discount = result.scalar_one_or_none()
+
+    if not discount:
+        return {
+            "valid": False,
+            "message": "Invalid discount code",
+        }
+
+    # For ALUMNI discount, check if user is actually alumni
+    if code.upper() == "ALUMNI":
+        is_alumni, alumni_discount, _ = await validate_alumni_discount(
+            db=db,
+            tenant_id=tenant_id,
+            conference_id=conference.id,
+            user_email=user_email,
+        )
+
+        if not is_alumni:
+            return {
+                "valid": False,
+                "message": "ALUMNI discount is only available to past attendees",
+            }
+
+        if not alumni_discount:
+            return {
+                "valid": False,
+                "message": "ALUMNI discount is not currently available for this conference",
+            }
+
+    # Check date range
+    today = date.today()
+    if discount.start_date and today < discount.start_date:
+        return {
+            "valid": False,
+            "message": f"This discount code is not valid until {discount.start_date.strftime('%Y-%m-%d')}",
+        }
+
+    if discount.end_date and today > discount.end_date:
+        return {
+            "valid": False,
+            "message": f"This discount code expired on {discount.end_date.strftime('%Y-%m-%d')}",
+        }
+
+    # Check usage limit
+    if discount.max_uses > 0 and discount.usage_count >= discount.max_uses:
+        return {
+            "valid": False,
+            "message": "This discount code has reached its maximum usage limit",
+        }
+
+    # Get applicable booking options (if restricted)
+    option_result = await db.execute(
+        select(DiscountCodeOption.booking_option_id).where(DiscountCodeOption.discount_code_id == discount.id)
+    )
+    applicable_option_ids = [str(row[0]) for row in option_result.all()]
+
+    # Get applicable periods (if restricted)
+    period_result = await db.execute(
+        select(DiscountCodePeriod.booking_period_id).where(DiscountCodePeriod.discount_code_id == discount.id)
+    )
+    applicable_period_ids = [str(row[0]) for row in period_result.all()]
+
+    # If no period restrictions, find current active period
+    if not applicable_period_ids:
+        all_periods_result = await db.execute(
+            select(BookingPeriod).where(
+                BookingPeriod.conference_id == conference.id,
+                BookingPeriod.is_active == True,
+            )
+        )
+        all_periods = all_periods_result.scalars().all()
+        for period in all_periods:
+            if period.start_date <= today <= period.end_date:
+                applicable_period_ids = [str(period.id)]
+                break
+
+    return {
+        "valid": True,
+        "discount_type": discount.discount_type,
+        "discount_value": float(discount.discount_value),
+        "currency": discount.currency or conference.currency,
+        "description": discount.description,
+        "applicable_option_ids": applicable_option_ids or None,
+        "applicable_period_ids": applicable_period_ids or None,
     }
 
 
