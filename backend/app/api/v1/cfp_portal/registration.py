@@ -20,7 +20,7 @@ from app.core.vat_rules import get_vat_rule
 from app.models.booking import BookingOption
 from app.models.conference import Conference
 from app.models.registration import BillingProfile, Registration, RegistrationItem, RegistrationMode, RegistrationStatus
-from app.models.vat_rates import VatRateByCountry
+from app.models.vat_rate_by_country import VatRateByCountry
 from app.schemas.portal_registration import PortalRegistrationRequest, PortalRegistrationResponse
 from app.schemas.registration import RegistrationItemResponse, RegistrationResponse
 
