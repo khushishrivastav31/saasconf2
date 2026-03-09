@@ -1,13 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { COUNTRY_OPTIONS, EU_COUNTRY_CODES } from '../../../../config/countries';
 import { validateEmail } from '../../../../utils/validators';
 import VatNumberInput from '../../../../components/common/VatNumberInput';
-import type { BillingProfileCreate, Conference } from '../../../../types';
+import type { BillingProfileCreate } from '../../../../types';
 
 interface BillingFieldsProps {
   data: BillingProfileCreate;
   onChange: (d: BillingProfileCreate) => void;
-  conference?: Conference;
+  conference?: {
+    country?: string | null;
+    venue_type?: string | null;
+  };
+  // NEW props for portal pre-fill:
+  initialValues?: Partial<BillingProfileCreate>; // Pre-fill from user profile
+  readOnlyFields?: Array<keyof BillingProfileCreate>; // Lock specific fields
 }
 
 // Helper to determine VAT requirement client-side
@@ -45,8 +51,26 @@ function determineVatRequirement(
   return { level: 'optional' };
 }
 
-export default function BillingFields({ data, onChange, conference }: BillingFieldsProps) {
+export default function BillingFields({
+  data,
+  onChange,
+  conference,
+  initialValues,
+  readOnlyFields,
+}: BillingFieldsProps) {
   const [emailError, setEmailError] = useState<string | null>(null);
+
+  // On mount, merge initialValues with data (one-time pre-fill)
+  useEffect(() => {
+    if (initialValues && Object.keys(initialValues).length > 0) {
+      onChange({ ...data, ...initialValues });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
+
+  // Helper to check if a field is read-only
+  const isReadOnly = (field: keyof BillingProfileCreate): boolean =>
+    readOnlyFields?.includes(field) ?? false;
 
   const vatRequirement = useMemo(() => {
     if (!conference) {
@@ -178,7 +202,8 @@ export default function BillingFields({ data, onChange, conference }: BillingFie
             id="contact_first_name"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+            disabled={isReadOnly('contact_first_name')}
+            className={`mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${isReadOnly('contact_first_name') ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
             value={data.contact_first_name}
             onChange={(e) => onChange({ ...data, contact_first_name: e.target.value })}
           />
@@ -194,7 +219,8 @@ export default function BillingFields({ data, onChange, conference }: BillingFie
             id="contact_last_name"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+            disabled={isReadOnly('contact_last_name')}
+            className={`mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${isReadOnly('contact_last_name') ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
             value={data.contact_last_name}
             onChange={(e) => onChange({ ...data, contact_last_name: e.target.value })}
           />
@@ -210,7 +236,8 @@ export default function BillingFields({ data, onChange, conference }: BillingFie
             id="contact_phone"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
+            disabled={isReadOnly('contact_phone')}
+            className={`mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${isReadOnly('contact_phone') ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
             value={data.contact_phone}
             onChange={(e) => onChange({ ...data, contact_phone: e.target.value })}
           />
@@ -226,7 +253,8 @@ export default function BillingFields({ data, onChange, conference }: BillingFie
             id="contact_email"
             type="email"
             required
-            className={`mt-1 block w-full rounded-md border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
+            disabled={isReadOnly('contact_email')}
+            className={`mt-1 block w-full rounded-md border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${isReadOnly('contact_email') ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''}`}
             value={data.contact_email}
             onChange={(e) => onChange({ ...data, contact_email: e.target.value })}
             onBlur={(e) => setEmailError(validateEmail(e.target.value))}

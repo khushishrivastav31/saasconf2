@@ -61,6 +61,19 @@ function InformationCircleIcon() {
   );
 }
 
+function TicketIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+      />
+    </svg>
+  );
+}
+
 function ClipboardListIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -465,6 +478,8 @@ function PortalLayout() {
                   {conferencesWithCfps.map((conf) => {
                     const infoHref = `${basePath}/info/${conf.id}`;
                     const infoActive = isActive(infoHref);
+                    const registerHref = `${basePath}/register/${conf.id}`;
+                    const registerActive = isActive(registerHref);
                     return (
                       <div key={conf.id}>
                         {!sidebarCollapsed && (
@@ -475,21 +490,38 @@ function PortalLayout() {
                             {conf.name}
                           </p>
                         )}
-                        <Link
-                          to={infoHref}
-                          onClick={closeMobileSidebar}
-                          title={sidebarCollapsed ? `${conf.name} — Info` : undefined}
-                          className={`flex items-center py-1.5 text-sm font-medium rounded-md ${
-                            sidebarCollapsed ? 'justify-center px-2' : 'px-3 pl-6'
-                          } ${
-                            infoActive
-                              ? 'bg-gray-800 text-white'
-                              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                          }`}
-                        >
-                          <InformationCircleIcon />
-                          {!sidebarCollapsed && <span className="ml-2">Info</span>}
-                        </Link>
+                        <div className={`space-y-0.5 ${sidebarCollapsed ? '' : ''}`}>
+                          <Link
+                            to={infoHref}
+                            onClick={closeMobileSidebar}
+                            title={sidebarCollapsed ? `${conf.name} — Info` : undefined}
+                            className={`flex items-center py-1.5 text-sm font-medium rounded-md ${
+                              sidebarCollapsed ? 'justify-center px-2' : 'px-3 pl-6'
+                            } ${
+                              infoActive
+                                ? 'bg-gray-800 text-white'
+                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                            }`}
+                          >
+                            <InformationCircleIcon />
+                            {!sidebarCollapsed && <span className="ml-2">Info</span>}
+                          </Link>
+                          <Link
+                            to={registerHref}
+                            onClick={closeMobileSidebar}
+                            title={sidebarCollapsed ? `${conf.name} — Register` : undefined}
+                            className={`flex items-center py-1.5 text-sm font-medium rounded-md ${
+                              sidebarCollapsed ? 'justify-center px-2' : 'px-3 pl-6'
+                            } ${
+                              registerActive
+                                ? 'bg-gray-800 text-white'
+                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                            }`}
+                          >
+                            <TicketIcon />
+                            {!sidebarCollapsed && <span className="ml-2">Register</span>}
+                          </Link>
+                        </div>
                       </div>
                     );
                   })}
