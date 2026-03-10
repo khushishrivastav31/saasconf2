@@ -174,7 +174,7 @@ async def submit_answers(
         q = question_map.get(answer.question_id)
         if not q:
             raise ValidationError(f"Unknown question: {answer.question_id}")
-        if q["type"] == "radio" and answer.answer_value not in q.get("options", []):
+        if q["type"] in ("radio", "dropdown") and answer.answer_value not in q.get("options", []):
             raise ValidationError(f"Invalid option for question '{q['text']}': {answer.answer_value}")
 
     # Load existing answers to handle upsert

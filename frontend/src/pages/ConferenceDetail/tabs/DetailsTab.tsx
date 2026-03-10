@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import api from '../../../config/api';
-import { COUNTRY_OPTIONS } from '../../../config/countries';
+import { COUNTRIES_BY_CONTINENT } from '../../../config/countries';
 import {
   TIMEZONE_OPTIONS,
   resolveTimezoneValue,
@@ -750,10 +750,14 @@ function ConferenceDetailsTab({
                   disabled={!isAdmin}
                 >
                   <option value="">Select a country...</option>
-                  {COUNTRY_OPTIONS.map((c) => (
-                    <option key={c.code} value={c.name}>
-                      {c.name}
-                    </option>
+                  {COUNTRIES_BY_CONTINENT.map((group) => (
+                    <optgroup key={group.continent} label={group.continent}>
+                      {group.countries.map((c) => (
+                        <option key={c.code} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>

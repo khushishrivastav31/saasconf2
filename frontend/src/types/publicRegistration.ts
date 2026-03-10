@@ -30,6 +30,8 @@ export interface PublicConference {
   registration_end_date?: string | null;
   success_message?: string | null;
   policies?: Record<string, PolicyEntry> | null;
+  stripe_enabled?: boolean;
+  bank_transfer_countries?: string[] | null;
 }
 
 export interface PolicyEntry {

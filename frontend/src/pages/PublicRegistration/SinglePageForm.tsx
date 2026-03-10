@@ -24,7 +24,11 @@ import InlineStripePayment from './components/InlineStripePayment';
 import { useToast } from '../../components/Toast';
 import { parseApiError } from '../../utils/apiError';
 import VatNumberInput from '../../components/common/VatNumberInput';
-import { COUNTRY_OPTIONS, EU_COUNTRY_CODES } from '../../config/countries';
+import {
+  COUNTRIES_BY_CONTINENT,
+  EU_COUNTRY_CODES,
+  isBankTransferCountry,
+} from '../../config/countries';
 import { validateEmail, validatePhone } from '../../utils/validators';
 import { applyDiscount } from './helpers';
 import PolicyLinks from './components/PolicyLinks';
@@ -339,6 +343,28 @@ export default function SinglePageForm({
       setPublishableKey(null);
     }
   }, [billing.payment_method, paymentIntentId]);
+
+  // Payment method availability based on Stripe status and country
+  const stripeEnabled = conference.stripe_enabled ?? false;
+  const bankTransferAvailable =
+    !stripeEnabled ||
+    !billing.country ||
+    isBankTransferCountry(billing.country, conference.bank_transfer_countries);
+  const creditCardAvailable = stripeEnabled;
+
+  // Auto-switch payment method when availability changes
+  useEffect(() => {
+    if (!stripeEnabled && billing.payment_method === 'credit_card') {
+      setBilling((prev) => ({ ...prev, payment_method: 'bank_transfer' }));
+    } else if (
+      stripeEnabled &&
+      billing.country &&
+      !isBankTransferCountry(billing.country, conference.bank_transfer_countries) &&
+      billing.payment_method === 'bank_transfer'
+    ) {
+      setBilling((prev) => ({ ...prev, payment_method: 'credit_card' }));
+    }
+  }, [billing.country, stripeEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Copy first attendee data to billing
   const copyAttendeeDataToBilling = () => {
@@ -967,10 +993,14 @@ export default function SinglePageForm({
                 }}
               >
                 <option value="">Select country...</option>
-                {COUNTRY_OPTIONS.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.name}
-                  </option>
+                {COUNTRIES_BY_CONTINENT.map((group) => (
+                  <optgroup key={group.continent} label={group.continent}>
+                    {group.countries.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
@@ -1269,42 +1299,57 @@ export default function SinglePageForm({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Payment Method *
               </label>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="bank_transfer"
-                    checked={billing.payment_method === 'bank_transfer'}
-                    onChange={(e) =>
-                      setBilling({
-                        ...billing,
-                        payment_method: e.target.value as 'credit_card' | 'bank_transfer',
-                      })
-                    }
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                    Bank Transfer
-                  </span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="credit_card"
-                    checked={billing.payment_method === 'credit_card'}
-                    onChange={(e) =>
-                      setBilling({
-                        ...billing,
-                        payment_method: e.target.value as 'credit_card' | 'bank_transfer',
-                      })
-                    }
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Credit Card</span>
-                </label>
-              </div>
+              {!creditCardAvailable ? (
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Bank Transfer</p>
+                </div>
+              ) : bankTransferAvailable ? (
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      value="bank_transfer"
+                      checked={billing.payment_method === 'bank_transfer'}
+                      onChange={(e) =>
+                        setBilling({
+                          ...billing,
+                          payment_method: e.target.value as 'credit_card' | 'bank_transfer',
+                        })
+                      }
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
+                    />
+                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                      Bank Transfer
+                    </span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      value="credit_card"
+                      checked={billing.payment_method === 'credit_card'}
+                      onChange={(e) =>
+                        setBilling({
+                          ...billing,
+                          payment_method: e.target.value as 'credit_card' | 'bank_transfer',
+                        })
+                      }
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
+                    />
+                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                      Credit Card
+                    </span>
+                  </label>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Credit Card</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Bank transfer is not available for your billing country.
+                  </p>
+                </div>
+              )}
 
               {/* Inline Stripe Payment - shows when credit card is selected */}
               {billing.payment_method === 'credit_card' && (

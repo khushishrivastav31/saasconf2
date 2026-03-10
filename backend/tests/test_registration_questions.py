@@ -52,6 +52,15 @@ SAMPLE_QUESTIONS = [
         "sort_order": 2,
         "is_active": True,
     },
+    {
+        "id": "q-track",
+        "text": "Which track do you prefer?",
+        "type": "dropdown",
+        "required": False,
+        "options": ["Frontend", "Backend", "DevOps", "AI/ML"],
+        "sort_order": 3,
+        "is_active": True,
+    },
 ]
 
 
@@ -188,10 +197,11 @@ async def test_get_questions_configured(
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is True
-    assert len(data["questions"]) == 3
+    assert len(data["questions"]) == 4
     assert data["questions"][0]["id"] == "q-meal"
     assert data["questions"][1]["type"] == "radio"
     assert len(data["questions"][1]["options"]) == 4
+    assert data["questions"][3]["type"] == "dropdown"
 
 
 @pytest.mark.asyncio
@@ -322,7 +332,7 @@ async def test_pending_questions_with_registration(
     assert len(data["conferences"]) == 1
     conf = data["conferences"][0]
     assert conf["conference_name"] == questions_conference.name
-    assert len(conf["questions"]) == 3
+    assert len(conf["questions"]) == 4
     assert conf["has_mandatory_pending"] is True
 
 
@@ -455,3 +465,198 @@ async def test_admin_answers_after_submission(
     answer_map = {a["question_id"]: a["answer_value"] for a in item["answers"]}
     assert answer_map["q-meal"] == "true"
     assert answer_map["q-tshirt"] == "M"
+
+
+# --- Dropdown Type Tests ---
+
+
+@pytest.mark.asyncio
+async def test_update_dropdown_requires_options(
+    client: AsyncClient, conference: Conference, tenant_admin_token: str
+):
+    """PUT rejects dropdown questions with fewer than 2 options."""
+    resp = await client.put(
+        f"/api/v1/conferences/{conference.id}/settings/registration-questions",
+        headers=auth(tenant_admin_token),
+        json={
+            "enabled": True,
+            "questions": [
+                {
+                    "id": "q1",
+                    "text": "Pick one",
+                    "type": "dropdown",
+                    "required": True,
+                    "options": ["Only one"],
+                    "sort_order": 0,
+                    "is_active": True,
+                }
+            ],
+        },
+    )
+    assert resp.status_code == 400
+    assert "at least 2 options" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_submit_dropdown_answer_success(
+    client: AsyncClient,
+    registered_applicant: CFPApplicant,
+    applicant_token: str,
+    questions_conference: Conference,
+):
+    """Submit valid dropdown answer succeeds."""
+    resp = await client.post(
+        f"/api/v1/portal/conferences/{questions_conference.id}/registration-questions/answers",
+        headers=auth(applicant_token),
+        json={
+            "answers": [
+                {"question_id": "q-meal", "answer_value": "true"},
+                {"question_id": "q-tshirt", "answer_value": "L"},
+                {"question_id": "q-track", "answer_value": "Backend"},
+            ]
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["answers_saved"] == 3
+
+
+@pytest.mark.asyncio
+async def test_submit_invalid_dropdown_option(
+    client: AsyncClient,
+    registered_applicant: CFPApplicant,
+    applicant_token: str,
+    questions_conference: Conference,
+):
+    """Submit with invalid dropdown option fails."""
+    resp = await client.post(
+        f"/api/v1/portal/conferences/{questions_conference.id}/registration-questions/answers",
+        headers=auth(applicant_token),
+        json={
+            "answers": [
+                {"question_id": "q-meal", "answer_value": "true"},
+                {"question_id": "q-tshirt", "answer_value": "L"},
+                {"question_id": "q-track", "answer_value": "InvalidTrack"},
+            ]
+        },
+    )
+    assert resp.status_code == 400
+    assert "Invalid option" in resp.json()["detail"]
+
+
+# --- Stats & Export Tests ---
+
+
+@pytest.mark.asyncio
+async def test_stats_endpoint(
+    client: AsyncClient,
+    registered_applicant: CFPApplicant,
+    applicant_token: str,
+    questions_conference: Conference,
+    tenant_admin_token: str,
+):
+    """Stats endpoint returns correct counts and percentages."""
+    # Submit answers first
+    await client.post(
+        f"/api/v1/portal/conferences/{questions_conference.id}/registration-questions/answers",
+        headers=auth(applicant_token),
+        json={
+            "answers": [
+                {"question_id": "q-meal", "answer_value": "true"},
+                {"question_id": "q-tshirt", "answer_value": "M"},
+                {"question_id": "q-dietary", "answer_value": "No nuts"},
+                {"question_id": "q-track", "answer_value": "Backend"},
+            ]
+        },
+    )
+
+    # Get stats
+    resp = await client.get(
+        f"/api/v1/conferences/{questions_conference.id}/registration-question-answers/stats",
+        headers=auth(tenant_admin_token),
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_respondents"] == 1
+    assert len(data["questions"]) == 4
+
+    # Check checkbox question stats
+    meal_stat = next(q for q in data["questions"] if q["question_id"] == "q-meal")
+    assert meal_stat["total_responses"] == 1
+    yes_opt = next(o for o in meal_stat["option_stats"] if o["label"] == "Yes")
+    assert yes_opt["count"] == 1
+    assert yes_opt["percentage"] == 100.0
+
+    # Check radio question stats
+    tshirt_stat = next(q for q in data["questions"] if q["question_id"] == "q-tshirt")
+    assert tshirt_stat["total_responses"] == 1
+    m_opt = next(o for o in tshirt_stat["option_stats"] if o["label"] == "M")
+    assert m_opt["count"] == 1
+
+    # Check text question stats
+    dietary_stat = next(q for q in data["questions"] if q["question_id"] == "q-dietary")
+    assert dietary_stat["text_answers"] is not None
+    assert len(dietary_stat["text_answers"]) == 1
+    assert dietary_stat["text_answers"][0]["answer_value"] == "No nuts"
+
+    # Check dropdown question stats
+    track_stat = next(q for q in data["questions"] if q["question_id"] == "q-track")
+    assert track_stat["total_responses"] == 1
+    backend_opt = next(o for o in track_stat["option_stats"] if o["label"] == "Backend")
+    assert backend_opt["count"] == 1
+    assert backend_opt["percentage"] == 100.0
+
+
+@pytest.mark.asyncio
+async def test_export_csv(
+    client: AsyncClient,
+    registered_applicant: CFPApplicant,
+    applicant_token: str,
+    questions_conference: Conference,
+    tenant_admin_token: str,
+):
+    """Export endpoint returns CSV with correct headers and data."""
+    # Submit answers first
+    await client.post(
+        f"/api/v1/portal/conferences/{questions_conference.id}/registration-questions/answers",
+        headers=auth(applicant_token),
+        json={
+            "answers": [
+                {"question_id": "q-meal", "answer_value": "true"},
+                {"question_id": "q-tshirt", "answer_value": "L"},
+                {"question_id": "q-dietary", "answer_value": "Vegan"},
+                {"question_id": "q-track", "answer_value": "Frontend"},
+            ]
+        },
+    )
+
+    # Export CSV
+    resp = await client.get(
+        f"/api/v1/conferences/{questions_conference.id}/registration-question-answers/export",
+        headers=auth(tenant_admin_token),
+    )
+    assert resp.status_code == 200
+    assert "text/csv" in resp.headers["content-type"]
+
+    # Parse CSV content (skip BOM)
+    content = resp.text.lstrip("\ufeff")
+    lines = content.strip().split("\n")
+    assert len(lines) == 2  # header + 1 data row
+
+    import csv as csv_mod
+    import io as io_mod
+
+    reader = csv_mod.reader(io_mod.StringIO(content))
+    headers = next(reader)
+    assert headers[0] == "Applicant Name"
+    assert headers[1] == "Applicant Email"
+    assert headers[2] == "Completed At"
+    assert "Do you need a vegetarian meal?" in headers
+    assert "Which track do you prefer?" in headers
+
+    data_row = next(reader)
+    assert registered_applicant.email in data_row[1]
+    # Check answer values are present in the row
+    assert "true" in data_row
+    assert "L" in data_row
+    assert "Vegan" in data_row
+    assert "Frontend" in data_row

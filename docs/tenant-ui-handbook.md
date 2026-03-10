@@ -10825,12 +10825,13 @@ Question Types:
 | **Text Field** | Free-form text input for open-ended answers |
 | **Checkbox** | Single yes/no checkbox (e.g., "I need a vegetarian meal") |
 | **Radio Buttons** | Multiple-choice selection from predefined options (minimum 2 options) |
+| **Dropdown** | Single-selection dropdown list from predefined options (minimum 2 options) |
 
 Configuration:
 - **Enabled toggle**: Turns the registration questions feature on/off for this conference
 - **Add Question**: Creates a new question at the bottom of the list
 - **Question text**: The question shown to the attendee
-- **Type selector**: Choose between Text Field, Checkbox, or Radio Buttons
+- **Type selector**: Choose between Text Field, Checkbox, Radio Buttons, or Dropdown
 - **Mandatory toggle**: When checked, the attendee must answer this question before accessing the portal
 - **Active toggle**: Inactive questions are not shown to attendees
 - **Reorder**: Use the up/down arrows to change question order
@@ -10844,11 +10845,19 @@ How It Works:
 5. Once all mandatory questions are answered, the portal is accessible normally
 6. Answers are submitted once and not shown again
 
-Admin Answers View:
-- Below the question definitions, a "Submitted Answers" panel shows all responses
-- Displays applicant name, email, and answers per question
-- Search by name or email to find specific respondents
-- Paginated for conferences with many attendees
+Analytics — Registration Questions:
+
+Path: Analytics > Registration Questions
+
+The analytics tab provides statistics and export capabilities for registration question answers:
+
+- **Statistics Dashboard**: Per-question statistics with visual bar charts
+  - Radio/Dropdown: Shows count and percentage for each option (e.g., "Vegan: 70 (35%)")
+  - Checkbox: Shows Yes/No counts and percentages
+  - Text: Lists all text answers with respondent names
+- **Total Respondents**: Shows how many attendees have submitted answers
+- **CSV Export**: Download all answers as a CSV file for further analysis in Excel/Google Sheets
+- **Individual Responses**: Searchable, paginated table showing each respondent's answers
 
 Dependencies:
 - Requires: Active conference registration, portal user account
@@ -10857,9 +10866,11 @@ Dependencies:
 Best Practices:
 - Keep the number of questions small (3-5) to avoid survey fatigue
 - Mark only truly essential questions as mandatory
-- Use radio buttons for questions with fixed options (T-shirt sizes, meal preferences)
+- Use radio buttons or dropdowns for questions with fixed options (T-shirt sizes, meal preferences)
+- Use dropdowns when there are many options (5+) to save screen space
 - Use text fields for open-ended information (dietary restrictions, accessibility needs)
-- Review answers in the admin panel before the conference to plan logistics
+- Review analytics before the conference to plan logistics
+- Export CSV for sharing with catering, venue, or logistics teams
 
 ---
 

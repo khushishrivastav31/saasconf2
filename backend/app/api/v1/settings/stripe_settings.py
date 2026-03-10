@@ -10,10 +10,11 @@ from fastapi import APIRouter
 from sqlalchemy import select
 
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
+from app.core.default_settings import BANK_TRANSFER_COUNTRIES
 from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.core.exceptions import AuthorizationError
 from app.models.conference import Conference
-from app.schemas.settings import StripeSettings, StripeSettingsResponse
+from app.schemas.settings import BankTransferCountriesUpdate, StripeSettings, StripeSettingsResponse
 
 router = APIRouter()
 
@@ -76,6 +77,7 @@ async def get_stripe_settings(
         publishable_key=stripe_settings.get("publishable_key"),
         secret_key=secret_key,
         is_enabled=stripe_settings.get("is_enabled", False),
+        bank_transfer_countries=settings.get("bank_transfer_countries", BANK_TRANSFER_COUNTRIES),
     )
 
 
@@ -146,3 +148,39 @@ async def update_stripe_settings(
 
     # Return updated settings (unmasked for super user)
     return await get_stripe_settings(conference_id, current_user, db)
+
+
+@router.put(
+    "/stripe-settings/bank-transfer-countries",
+    response_model=list[str],
+)
+async def update_bank_transfer_countries(
+    conference_id: UUID,
+    data: BankTransferCountriesUpdate,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> list[str]:
+    """Update which countries are eligible for bank transfer payment.
+
+    Any conference admin can update this setting (not restricted to super users).
+    """
+    await check_conference_admin(conference_id, current_user, db)
+
+    result = await db.execute(
+        select(Conference).where(
+            Conference.id == conference_id,
+            Conference.tenant_id == current_user.tenant_id,
+        )
+    )
+    conference = result.scalar_one()
+
+    settings = conference.settings or {}
+    settings["bank_transfer_countries"] = data.countries
+    conference.settings = settings
+
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(conference, "settings")
+    await db.commit()
+
+    return data.countries

@@ -78,10 +78,10 @@ async def update_registration_questions_settings(
             seen_ids.add(qid)
 
             qtype = q.get("type")
-            if qtype == "radio":
+            if qtype in ("radio", "dropdown"):
                 options = q.get("options", [])
                 if len(options) < 2:
-                    raise ValidationError(f"Radio question '{q.get('text', '')}' must have at least 2 options")
+                    raise ValidationError(f"Radio/dropdown question '{q.get('text', '')}' must have at least 2 options")
 
     # Merge into existing settings
     settings = conference.settings or {}

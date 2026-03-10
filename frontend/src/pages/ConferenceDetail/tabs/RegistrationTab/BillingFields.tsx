@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { COUNTRY_OPTIONS, EU_COUNTRY_CODES } from '../../../../config/countries';
+import { COUNTRIES_BY_CONTINENT, EU_COUNTRY_CODES } from '../../../../config/countries';
 import { validateEmail } from '../../../../utils/validators';
 import VatNumberInput from '../../../../components/common/VatNumberInput';
 import type { BillingProfileCreate } from '../../../../types';
@@ -172,10 +172,14 @@ export default function BillingFields({
             }}
           >
             <option value="">Select a country</option>
-            {COUNTRY_OPTIONS.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name}
-              </option>
+            {COUNTRIES_BY_CONTINENT.map((group) => (
+              <optgroup key={group.continent} label={group.continent}>
+                {group.countries.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>

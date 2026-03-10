@@ -583,6 +583,22 @@ class StripeSettingsResponse(BaseModel):
     secret_key: str | None = None  # Masked for non-super-users
     webhook_secret: str | None = None  # Masked for non-super-users
     is_enabled: bool = False
+    bank_transfer_countries: list[str] = []
+
+
+class BankTransferCountriesUpdate(BaseModel):
+    """Update bank transfer eligible countries."""
+
+    countries: list[str] = Field(..., min_length=0, max_length=250)
+
+    @field_validator("countries")
+    @classmethod
+    def validate_country_codes(cls, v: list[str]) -> list[str]:
+        for code in v:
+            if len(code) != 2 or not code.isalpha() or code != code.upper():
+                msg = f"Invalid country code: {code}. Must be 2-letter uppercase ISO code."
+                raise ValueError(msg)
+        return sorted(set(v))
 
 
 # --- Policy Settings Schemas ---

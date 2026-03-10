@@ -4,7 +4,7 @@ import api from '../../../../config/api';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import { validatePhone, validateEmail } from '../../../../utils/validators';
-import { COUNTRY_OPTIONS } from '../../../../config/countries';
+import { COUNTRIES_BY_CONTINENT } from '../../../../config/countries';
 import { parseApiError } from '../../../../utils/apiError';
 import { useSaveStatus } from '../../../../hooks/useSaveStatus';
 import type { Tenant, TenantUpdate, ContactPerson } from '../../../../types';
@@ -582,10 +582,14 @@ export default function CompanyInfoTab({
                 onChange={(e) => handleFieldChange('country', e.target.value)}
               >
                 <option value="">Select a country</option>
-                {COUNTRY_OPTIONS.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.name}
-                  </option>
+                {COUNTRIES_BY_CONTINENT.map((group) => (
+                  <optgroup key={group.continent} label={group.continent}>
+                    {group.countries.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>

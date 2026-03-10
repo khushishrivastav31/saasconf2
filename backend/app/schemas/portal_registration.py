@@ -64,6 +64,8 @@ class PublicConference(BaseModel):
     registration_end_date: str | None = None  # When registration closes
     success_message: str | None = None  # Custom success message for confirmation page
     policies: dict[str, dict] | None = None  # Enabled policies (type, url, content)
+    stripe_enabled: bool = False  # Whether Stripe (credit card) payment is active
+    bank_transfer_countries: list[str] | None = None  # ISO codes where bank transfer is allowed
 
     model_config = {"from_attributes": True}
 

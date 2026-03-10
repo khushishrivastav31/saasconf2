@@ -252,6 +252,8 @@ async def get_public_conference(
         registration_end_date=registration_end,
         success_message=success_message,
         policies=public_policies or None,
+        stripe_enabled=(conference.settings or {}).get("stripe", {}).get("is_enabled", False),
+        bank_transfer_countries=(conference.settings or {}).get("bank_transfer_countries"),
     )
 
 
@@ -948,6 +950,22 @@ async def create_public_registration(
     opt_map: dict[UUID, BookingOption] = {}
     for oid in option_ids:
         opt_map[oid] = await _validate_booking_option(db, oid, conference_id, tenant_id)
+
+    # Enforce: bank transfer only for countries enabled in conference settings
+    from app.core.default_settings import BANK_TRANSFER_COUNTRIES
+
+    conf_settings = conference.settings or {}
+    stripe_conf = conf_settings.get("stripe", {})
+    stripe_enabled = stripe_conf.get("is_enabled", False)
+
+    if stripe_enabled and data.billing.payment_method == "bank_transfer":
+        allowed_countries = conf_settings.get("bank_transfer_countries", BANK_TRANSFER_COUNTRIES)
+        billing_country = (data.billing.country or "").strip().upper()
+        if billing_country not in allowed_countries:
+            raise HTTPException(
+                status_code=400,
+                detail="Bank transfer is not available for your billing country. Please use credit card payment.",
+            )
 
     # Create shared billing profile
     # Extract payment_intent_id before creating billing profile (not stored in BillingProfile model)

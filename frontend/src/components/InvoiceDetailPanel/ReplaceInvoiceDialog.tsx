@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { COUNTRY_OPTIONS } from '../../config/countries';
+import { COUNTRIES_BY_CONTINENT } from '../../config/countries';
 import { validateEmail } from '../../utils/validators';
 import type { Invoice, ReplaceInvoiceRequest } from '../../types';
 import VatNumberInput from '../common/VatNumberInput';
@@ -243,10 +243,14 @@ export default function ReplaceInvoiceDialog({
                   className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                 >
                   <option value="">Select a country...</option>
-                  {COUNTRY_OPTIONS.map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.name}
-                    </option>
+                  {COUNTRIES_BY_CONTINENT.map((group) => (
+                    <optgroup key={group.continent} label={group.continent}>
+                      {group.countries.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </label>

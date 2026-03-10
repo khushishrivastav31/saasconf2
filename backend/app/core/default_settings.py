@@ -126,6 +126,37 @@ DEFAULT_EU_COUNTRIES: list[str] = [
     "SE",
 ]
 
+# Countries where bank transfer payment is available (European countries).
+# All other countries must use credit card.
+BANK_TRANSFER_COUNTRIES: list[str] = [
+    *DEFAULT_EU_COUNTRIES,
+    # EEA (non-EU)
+    "IS",  # Iceland
+    "LI",  # Liechtenstein
+    "NO",  # Norway
+    # Other European
+    "GB",  # United Kingdom
+    "CH",  # Switzerland
+    "AL",  # Albania
+    "AD",  # Andorra
+    "AM",  # Armenia
+    "AZ",  # Azerbaijan
+    "BY",  # Belarus
+    "BA",  # Bosnia and Herzegovina
+    "GE",  # Georgia
+    "XK",  # Kosovo
+    "MD",  # Moldova
+    "MC",  # Monaco
+    "ME",  # Montenegro
+    "MK",  # North Macedonia
+    "RU",  # Russia
+    "SM",  # San Marino
+    "RS",  # Serbia
+    "TR",  # Turkey
+    "UA",  # Ukraine
+    "VA",  # Vatican City
+]
+
 
 # Map bare language codes to their most common regional variant so that
 # callers can pass either "de" or "de-DE".

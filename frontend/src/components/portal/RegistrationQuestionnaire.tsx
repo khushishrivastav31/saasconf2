@@ -14,7 +14,7 @@ import ConferenceLogo from '../ConferenceLogo';
 interface PendingQuestion {
   id: string;
   text: string;
-  type: 'checkbox' | 'text' | 'radio';
+  type: 'checkbox' | 'text' | 'radio' | 'dropdown';
   required: boolean;
   options: string[];
 }
@@ -95,7 +95,7 @@ export default function RegistrationQuestionnaire({
             errors[q.id] = 'This field is required';
           } else if (q.type === 'text' && !val.trim()) {
             errors[q.id] = 'This field is required';
-          } else if (q.type === 'radio' && !val) {
+          } else if ((q.type === 'radio' || q.type === 'dropdown') && !val) {
             errors[q.id] = 'Please select an option';
           }
         }
@@ -214,6 +214,27 @@ export default function RegistrationQuestionnaire({
                       </label>
                     ))}
                   </div>
+                </div>
+              ) : q.type === 'dropdown' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {q.text}
+                    {q.required && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+                  <select
+                    value={answers[q.id]}
+                    onChange={(e) => updateAnswer(q.id, e.target.value)}
+                    className="w-full min-h-11 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                  >
+                    <option value="" disabled>
+                      Select an option...
+                    </option>
+                    {q.options.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               ) : null}
               {validationErrors[q.id] && (

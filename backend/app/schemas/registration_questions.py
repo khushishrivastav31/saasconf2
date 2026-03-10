@@ -20,9 +20,9 @@ class RegistrationQuestion(BaseModel):
 
     id: str = Field(..., description="UUID string identifying the question")
     text: str = Field(..., min_length=1, max_length=1000)
-    type: Literal["checkbox", "text", "radio"]
+    type: Literal["checkbox", "text", "radio", "dropdown"]
     required: bool = False
-    options: list[str] = Field(default_factory=list, description="Options for radio-type questions")
+    options: list[str] = Field(default_factory=list, description="Options for radio/dropdown-type questions")
     sort_order: int = 0
     is_active: bool = True
 
@@ -62,7 +62,7 @@ class PendingQuestion(BaseModel):
 
     id: str
     text: str
-    type: Literal["checkbox", "text", "radio"]
+    type: Literal["checkbox", "text", "radio", "dropdown"]
     required: bool
     options: list[str] = []
 
@@ -111,3 +111,26 @@ class AnswersListResponse(BaseModel):
 
     items: list[ApplicantAnswersResponse]
     total: int
+
+
+# --- Analytics / Stats Schemas ---
+
+
+class OptionStat(BaseModel):
+    label: str
+    count: int
+    percentage: float
+
+
+class QuestionStat(BaseModel):
+    question_id: str
+    question_text: str
+    question_type: str
+    total_responses: int
+    option_stats: list[OptionStat]
+    text_answers: list[dict] | None = None  # For text type: [{applicant_name, applicant_email, answer_value}]
+
+
+class AnswerStatsResponse(BaseModel):
+    questions: list[QuestionStat]
+    total_respondents: int

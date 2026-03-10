@@ -20,6 +20,7 @@ import {
   ProgramDesignIcon,
   ProgramBuildIcon,
   AnalyticsIcon,
+  AnalyticsQuestionsIcon,
   MessagingIcon,
   NewsIcon,
   RegistrationIcon,
@@ -65,6 +66,7 @@ export type SectionId =
   | 'attendees'
   | 'sponsors'
   | 'analytics'
+  | 'analytics-questions'
   | 'service_providers'
   | 'program'
   | 'program-design'
@@ -218,5 +220,8 @@ export const moduleSections: SectionDef[] = [
     name: 'Analytics',
     icon: AnalyticsIcon,
     moduleCode: 'analytics',
+    children: [
+      { id: 'analytics-questions', name: 'Registration Questions', icon: AnalyticsQuestionsIcon },
+    ],
   },
 ];

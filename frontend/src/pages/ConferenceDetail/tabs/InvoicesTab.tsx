@@ -38,7 +38,7 @@ import VatNumberInput from '../../../components/common/VatNumberInput';
 import AlertDialog from '../../../components/AlertDialog';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
-import { COUNTRY_OPTIONS } from '../../../config/countries';
+import { COUNTRIES_BY_CONTINENT } from '../../../config/countries';
 import { ChevronLeftIcon, CloseIcon, DeleteIcon } from '../icons';
 import { useSelection } from '../SelectionContext';
 import { useToast } from '../../../components/Toast';
@@ -1168,10 +1168,14 @@ export default function ConferenceInvoicesTab({
                     }
                   >
                     <option value="">Select a country</option>
-                    {COUNTRY_OPTIONS.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.name}
-                      </option>
+                    {COUNTRIES_BY_CONTINENT.map((group) => (
+                      <optgroup key={group.continent} label={group.continent}>
+                        {group.countries.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </div>
