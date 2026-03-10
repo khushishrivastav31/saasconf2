@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useCallback, lazy, Suspense } from 'react';
 import { Navigate, Outlet, Link, useLocation, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
@@ -8,6 +8,8 @@ import ConferenceLogo from '../../components/ConferenceLogo';
 import ThemeToggle from '../../components/ThemeToggle';
 
 const ScreenOverlayDisplay = lazy(() => import('../../components/portal/ScreenOverlayDisplay'));
+import RegistrationQuestionnaire from '../../components/portal/RegistrationQuestionnaire';
+import PolicyLinks from '../PublicRegistration/components/PolicyLinks';
 import type {
   PortalConferenceSummary,
   PortalTenant,
@@ -205,6 +207,53 @@ function PortalLayout() {
     enabled: !!applicant,
   });
   const isCommitteeMember = (committeeMemberships?.items.length ?? 0) > 0;
+
+  // Pending registration questions gate
+  interface PendingQuestionData {
+    id: string;
+    text: string;
+    type: 'checkbox' | 'text' | 'radio';
+    required: boolean;
+    options: string[];
+  }
+  interface ConferencePendingData {
+    conference_id: string;
+    conference_name: string;
+    questions: PendingQuestionData[];
+    has_mandatory_pending: boolean;
+  }
+  interface PendingSummary {
+    conferences: ConferencePendingData[];
+    has_any_mandatory_pending: boolean;
+  }
+
+  const { data: pendingQuestions, refetch: refetchPendingQuestions } = useQuery({
+    queryKey: ['portal-pending-questions'],
+    queryFn: async () => {
+      const res = await portalApi.get<PendingSummary>('/portal/registration-questions/pending');
+      return res.data;
+    },
+    enabled: !!applicant,
+    staleTime: 60000,
+  });
+
+  const [questionsDismissed, setQuestionsDismissed] = useState(false);
+
+  const handleQuestionsComplete = useCallback(() => {
+    setQuestionsDismissed(true);
+    refetchPendingQuestions();
+  }, [refetchPendingQuestions]);
+
+  // Show questionnaire gate if there are mandatory pending questions
+  const showQuestionnaireGate =
+    !questionsDismissed &&
+    pendingQuestions?.has_any_mandatory_pending &&
+    pendingQuestions.conferences.some((c) => c.has_mandatory_pending);
+
+  // Find first conference with mandatory pending questions
+  const gateConference = showQuestionnaireGate
+    ? pendingQuestions?.conferences.find((c) => c.has_mandatory_pending)
+    : null;
 
   if (isLoading) {
     return (
@@ -506,21 +555,23 @@ function PortalLayout() {
                             <InformationCircleIcon />
                             {!sidebarCollapsed && <span className="ml-2">Info</span>}
                           </Link>
-                          <Link
-                            to={registerHref}
-                            onClick={closeMobileSidebar}
-                            title={sidebarCollapsed ? `${conf.name} — Register` : undefined}
-                            className={`flex items-center py-1.5 text-sm font-medium rounded-md ${
-                              sidebarCollapsed ? 'justify-center px-2' : 'px-3 pl-6'
-                            } ${
-                              registerActive
-                                ? 'bg-gray-800 text-white'
-                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                            }`}
-                          >
-                            <TicketIcon />
-                            {!sidebarCollapsed && <span className="ml-2">Register</span>}
-                          </Link>
+                          {conf.registration_open && (
+                            <Link
+                              to={registerHref}
+                              onClick={closeMobileSidebar}
+                              title={sidebarCollapsed ? `${conf.name} — Register` : undefined}
+                              className={`flex items-center py-1.5 text-sm font-medium rounded-md ${
+                                sidebarCollapsed ? 'justify-center px-2' : 'px-3 pl-6'
+                              } ${
+                                registerActive
+                                  ? 'bg-gray-800 text-white'
+                                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                              }`}
+                            >
+                              <TicketIcon />
+                              {!sidebarCollapsed && <span className="ml-2">Register</span>}
+                            </Link>
+                          )}
                         </div>
                       </div>
                     );
@@ -597,10 +648,23 @@ function PortalLayout() {
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="py-6 px-4 sm:px-6 lg:px-8">
-          <Outlet />
-        </main>
+        {/* Page content — gated by registration questions */}
+        {gateConference ? (
+          <RegistrationQuestionnaire
+            conference={gateConference}
+            tenantLogoUrl={tenant?.logo_url}
+            onComplete={handleQuestionsComplete}
+          />
+        ) : (
+          <main className="py-6 px-4 sm:px-6 lg:px-8">
+            <Outlet />
+          </main>
+        )}
+
+        {/* Policy links footer */}
+        <footer className="py-4 px-4 sm:px-6 lg:px-8">
+          <PolicyLinks policies={tenant?.policies} className="" />
+        </footer>
       </div>
 
       {/* Screen overlay (shown after login) */}

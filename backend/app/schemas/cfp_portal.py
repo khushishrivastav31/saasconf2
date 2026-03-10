@@ -172,6 +172,7 @@ class PortalConferenceSummary(BaseModel):
     venue_type: str = "onsite"
     logo_url: str | None = None
     cfps: list[PortalCFPResponse] = []
+    registration_open: bool = False
 
 
 class PortalTenantResponse(BaseModel):
@@ -181,6 +182,7 @@ class PortalTenantResponse(BaseModel):
     name: str
     slug: str
     logo_url: str | None = None
+    policies: dict[str, dict] | None = None
 
 
 class PortalLandingResponse(BaseModel):

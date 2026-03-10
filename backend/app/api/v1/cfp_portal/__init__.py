@@ -9,6 +9,7 @@ from .messaging import router as messaging_router
 from .news import router as news_router
 from .papers import router as papers_router
 from .registration import router as registration_router
+from .registration_questions import router as registration_questions_router
 from .reviews import router as reviews_router
 from .screen_overlays import router as screen_overlays_router
 
@@ -23,5 +24,6 @@ router.include_router(news_router)
 router.include_router(screen_overlays_router)
 router.include_router(invoices_router)
 router.include_router(registration_router)
+router.include_router(registration_questions_router)
 router.include_router(form_schema_router)
 router.include_router(auth_router)

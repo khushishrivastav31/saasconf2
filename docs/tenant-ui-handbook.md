@@ -4,8 +4,8 @@
 
 ---
 
-Last Updated: March 8, 2026  
-Version: 2.0  
+Last Updated: March 10, 2026
+Version: 2.1  
 Audience: Tenant Admins, Conference Admins, Team Members
 
 ---
@@ -59,11 +59,12 @@ This comprehensive handbook covers all aspects of using the SaaSConf platform to
 ### Configuration
 27. Complete Settings Guide
 28. Registration Management
+29. Policies Management
 
 ### Resources
-29. Best Practices & Conference Templates
-30. Troubleshooting & Common Issues
-31. Glossary & FAQ
+30. Best Practices & Conference Templates
+31. Troubleshooting & Common Issues
+32. Glossary & FAQ
 
 ---
 
@@ -10773,6 +10774,95 @@ Best Practice: Include detailed benefits in description for transparency.
 
 ---
 
+### Policies
+
+Path: Settings > Conference Setup > Policies
+
+What It Is: Legal and compliance policies displayed on the public and authenticated registration portals. Five policy types are supported:
+
+| Policy | Purpose |
+|--------|---------|
+| Privacy Policy | Data protection and privacy information for attendees |
+| Cookies Policy | Information about cookie usage on the registration portal |
+| Imprint | Legal notice with company/organization details (required in some jurisdictions, e.g. Germany) |
+| Terms and Conditions | Registration terms that attendees must accept before completing registration |
+| Code of Conduct | Expected behavior standards for conference participants |
+
+Configuration (per policy):
+- **Enabled/Hidden toggle**: Controls whether the policy appears on the portal
+- **Type**: External URL or Inline Content
+  - *External URL*: Enter a full URL (must start with `https://` or `http://`). Opens in a new browser tab when clicked.
+  - *Inline Content*: Use the rich text editor to write policy text directly. Opens in a modal dialog when clicked.
+
+How Policies Appear on the Portal:
+- Enabled policies show as clickable links in the registration portal footer
+- URL-type policies open the link in a new tab
+- Content-type policies open in a scrollable modal dialog
+- **Terms and Conditions** (special behavior): When enabled, a mandatory consent checkbox appears during registration. Attendees cannot submit their registration without checking "I accept the Terms and Conditions"
+
+Dependencies:
+- Used in: Public registration portal, authenticated registration portal
+- Affects: Registration form submission (T&C consent), portal footer display
+
+Best Practices:
+- Always enable a Privacy Policy if collecting personal data (GDPR requirement in the EU)
+- Use external URLs if your organization already hosts policies on its website
+- Use inline content for conference-specific policies (e.g., Code of Conduct tailored to the event)
+- Enable Terms and Conditions for paid conferences to ensure legal acceptance before payment
+- Test your policies by previewing the registration portal after saving
+
+---
+
+### Registration Questions
+
+Path: Settings > Conference Setup > Registration Questions
+
+What It Is: Questions shown to portal users after their first login following conference registration. Use these to collect additional information from attendees (dietary needs, T-shirt sizes, accessibility requirements, etc.).
+
+Question Types:
+| Type | Description |
+|------|-------------|
+| **Text Field** | Free-form text input for open-ended answers |
+| **Checkbox** | Single yes/no checkbox (e.g., "I need a vegetarian meal") |
+| **Radio Buttons** | Multiple-choice selection from predefined options (minimum 2 options) |
+
+Configuration:
+- **Enabled toggle**: Turns the registration questions feature on/off for this conference
+- **Add Question**: Creates a new question at the bottom of the list
+- **Question text**: The question shown to the attendee
+- **Type selector**: Choose between Text Field, Checkbox, or Radio Buttons
+- **Mandatory toggle**: When checked, the attendee must answer this question before accessing the portal
+- **Active toggle**: Inactive questions are not shown to attendees
+- **Reorder**: Use the up/down arrows to change question order
+- **Remove**: Delete a question from the list
+
+How It Works:
+1. Admin defines questions in Settings > Conference Setup > Registration Questions
+2. When a registered attendee logs into the portal, they see a full-page questionnaire
+3. If any mandatory questions are unanswered, the questionnaire blocks access to the rest of the portal
+4. Optional questions can be skipped
+5. Once all mandatory questions are answered, the portal is accessible normally
+6. Answers are submitted once and not shown again
+
+Admin Answers View:
+- Below the question definitions, a "Submitted Answers" panel shows all responses
+- Displays applicant name, email, and answers per question
+- Search by name or email to find specific respondents
+- Paginated for conferences with many attendees
+
+Dependencies:
+- Requires: Active conference registration, portal user account
+- Affects: Portal access (gates behind questionnaire if mandatory questions exist)
+
+Best Practices:
+- Keep the number of questions small (3-5) to avoid survey fatigue
+- Mark only truly essential questions as mandatory
+- Use radio buttons for questions with fixed options (T-shirt sizes, meal preferences)
+- Use text fields for open-ended information (dietary restrictions, accessibility needs)
+- Review answers in the admin panel before the conference to plan logistics
+
+---
+
 ## CFP & Reviews Settings
 
 Configure your call for papers and review process.
@@ -15031,6 +15121,25 @@ Persistent Session Issues:
 - Log out completely
 - Close all browser tabs
 - Log back in fresh
+
+### Policies Not Showing on Portal
+
+Symptoms:
+- Policy links missing from registration portal footer
+- Terms and Conditions checkbox not appearing
+
+Troubleshooting:
+1. Verify the policy is **enabled** (toggle set to "Visible") in Settings > Conference Setup > Policies
+2. Click **Save Changes** — unsaved policies won't appear on the portal
+3. For URL-type policies, ensure the URL starts with `https://` or `http://`
+4. For content-type policies, ensure the content field is not empty
+5. Hard refresh the portal page (Ctrl+Shift+R / Cmd+Shift+R)
+6. The T&C checkbox only appears when Terms and Conditions is enabled
+
+Policy Content Not Rendering:
+- Rich text content is sanitized for security — some HTML tags (e.g., `<script>`, `<iframe>`) are stripped
+- If content looks wrong, re-edit in the rich text editor and save again
+- Images in inline content must be hosted externally (paste image URLs, not files)
 
 ---
 

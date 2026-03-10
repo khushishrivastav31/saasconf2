@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -582,6 +583,38 @@ class StripeSettingsResponse(BaseModel):
     secret_key: str | None = None  # Masked for non-super-users
     webhook_secret: str | None = None  # Masked for non-super-users
     is_enabled: bool = False
+
+
+# --- Policy Settings Schemas ---
+
+
+class PolicyEntry(BaseModel):
+    """A single policy entry — either an external URL or inline rich text."""
+
+    type: Literal["url", "content"] | None = None
+    url: str | None = None
+    content: str | None = None
+    enabled: bool = False
+
+
+class PoliciesSettingsResponse(BaseModel):
+    """Response schema for all conference policies."""
+
+    privacy_policy: PolicyEntry = Field(default_factory=PolicyEntry)
+    cookies_policy: PolicyEntry = Field(default_factory=PolicyEntry)
+    imprint: PolicyEntry = Field(default_factory=PolicyEntry)
+    terms_and_conditions: PolicyEntry = Field(default_factory=PolicyEntry)
+    code_of_conduct: PolicyEntry = Field(default_factory=PolicyEntry)
+
+
+class PoliciesSettingsUpdate(BaseModel):
+    """Update schema — only provided policies are updated (partial merge)."""
+
+    privacy_policy: PolicyEntry | None = None
+    cookies_policy: PolicyEntry | None = None
+    imprint: PolicyEntry | None = None
+    terms_and_conditions: PolicyEntry | None = None
+    code_of_conduct: PolicyEntry | None = None
 
 
 # Re-exports for backward compatibility

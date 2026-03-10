@@ -94,6 +94,7 @@ export interface PortalConferenceSummary {
   venue_type: 'onsite' | 'virtual' | 'hybrid';
   logo_url: string | null;
   cfps: PortalCFP[];
+  registration_open: boolean;
 }
 
 export interface PortalLandingData {
@@ -101,11 +102,18 @@ export interface PortalLandingData {
   tenant_name: string;
 }
 
+export interface PortalTenantPolicyEntry {
+  type: 'url' | 'content' | null;
+  url?: string | null;
+  content?: string | null;
+}
+
 export interface PortalTenant {
   id: string;
   name: string;
   slug: string;
   logo_url: string | null;
+  policies?: Record<string, PortalTenantPolicyEntry> | null;
 }
 
 export interface PortalConferenceDetail {

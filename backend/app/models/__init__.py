@@ -53,6 +53,7 @@ from app.models.registration import (
     RegistrationMode,
     RegistrationStatus,
 )
+from app.models.registration_question_answer import RegistrationQuestionAnswer
 from app.models.review import (
     PaperReview,
     ReviewAnswer,
@@ -145,6 +146,7 @@ __all__ = [
     "RegistrationItem",
     "RegistrationItemType",
     "RegistrationMode",
+    "RegistrationQuestionAnswer",
     "RegistrationStatus",
     "ReviewAnswer",
     "ReviewCriterion",

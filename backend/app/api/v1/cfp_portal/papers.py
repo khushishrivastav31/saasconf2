@@ -1,5 +1,6 @@
 """CFP Applicant Portal - Paper management and browsing endpoints."""
 
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -99,8 +100,19 @@ async def list_conferences(
         for conference_id, cfp in cfp_result.all():
             cfps_by_conf[conference_id].append(cfp)
 
+    today = date.today()
     items = []
     for conf in conferences:
+        # Determine if public registration is currently open
+        portal_settings = (conf.settings or {}).get("public_registration_portal", {})
+        reg_open = False
+        if portal_settings.get("enabled"):
+            reg_start = portal_settings.get("registration_start_date")
+            reg_end = portal_settings.get("registration_end_date")
+            start_ok = reg_start is None or date.fromisoformat(reg_start) <= today
+            end_ok = reg_end is None or today <= date.fromisoformat(reg_end)
+            reg_open = start_ok and end_ok
+
         items.append(
             PortalConferenceSummary(
                 id=conf.id,
@@ -114,6 +126,7 @@ async def list_conferences(
                 venue_type=conf.venue_type,
                 logo_url=conf.logo_url,
                 cfps=[PortalCFPResponse.model_validate(cfp) for cfp in cfps_by_conf.get(conf.id, [])],
+                registration_open=reg_open,
             )
         )
 

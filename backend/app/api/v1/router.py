@@ -22,6 +22,7 @@ from app.api.v1 import (
     portal,
     portal_templates,
     program,
+    registration_question_answers,
     registrations,
     screen_overlays,
     service_providers,
@@ -131,6 +132,9 @@ api_router.include_router(news.router, prefix="/conferences/{conference_id}/news
 api_router.include_router(
     registrations.router, prefix="/conferences/{conference_id}/registrations", tags=["Registrations"]
 )
+
+# Registration question answers (conference-scoped, admin view)
+api_router.include_router(registration_question_answers.router, tags=["Registration Questions"])
 
 # Messaging (conference-scoped)
 api_router.include_router(messaging.router, prefix="/conferences/{conference_id}/messaging", tags=["Messaging"])

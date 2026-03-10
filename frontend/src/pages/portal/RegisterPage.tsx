@@ -8,6 +8,7 @@ import portalApi from '../../config/portalApi';
 import ConferenceLogo from '../../components/ConferenceLogo';
 import ThemeToggle from '../../components/ThemeToggle';
 import { validateEmail } from '../../utils/validators';
+import PolicyLinks from '../PublicRegistration/components/PolicyLinks';
 import type { PortalLandingData, PortalTenant } from '../../types/portal';
 import type { AlumniCheckResponse } from '../../types/alumni';
 
@@ -288,6 +289,9 @@ function RegisterPage() {
             Sign In
           </Link>
         </p>
+
+        {/* Policy links */}
+        <PolicyLinks policies={tenantData?.policies} className="mt-6" />
       </div>
     </div>
   );
