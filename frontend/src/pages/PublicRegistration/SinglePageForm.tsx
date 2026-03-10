@@ -27,6 +27,8 @@ import VatNumberInput from '../../components/common/VatNumberInput';
 import { COUNTRY_OPTIONS, EU_COUNTRY_CODES } from '../../config/countries';
 import { validateEmail, validatePhone } from '../../utils/validators';
 import { applyDiscount } from './helpers';
+import PolicyLinks from './components/PolicyLinks';
+import PolicyModal from './components/PolicyModal';
 
 interface SinglePageFormProps {
   conference: PublicConference;
@@ -131,6 +133,14 @@ export default function SinglePageForm({
 
   // VAT calculation state
   const [vatCalculation, setVatCalculation] = useState<VatCalculation | null>(null);
+
+  // Terms & Conditions consent (show when T&C or Privacy Policy is enabled)
+  const hasTerms = !!(
+    conference.policies?.terms_and_conditions || conference.policies?.privacy_policy
+  );
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
 
   // PaymentIntent state for payment-first flow
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
@@ -676,6 +686,12 @@ export default function SinglePageForm({
         );
         return;
       }
+    }
+
+    // Terms & Conditions consent check
+    if (hasTerms && !termsAccepted) {
+      showToast('Please accept the Terms and Conditions and Privacy Policy to proceed.', 'error');
+      return;
     }
 
     // Get reCAPTCHA token
@@ -1308,6 +1324,69 @@ export default function SinglePageForm({
           </div>
         </div>
 
+        {/* Terms & Conditions / Privacy Policy Consent */}
+        {hasTerms && (
+          <div className="flex items-start gap-3 bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <input
+              type="checkbox"
+              id="terms-consent"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
+            />
+            <label htmlFor="terms-consent" className="text-sm text-gray-700 dark:text-gray-300">
+              I hereby acknowledge that I have read and understood the{' '}
+              {conference.policies?.terms_and_conditions?.type === 'url' &&
+              conference.policies.terms_and_conditions.url ? (
+                <a
+                  href={conference.policies.terms_and_conditions.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 hover:text-primary-700 underline"
+                >
+                  Terms and Conditions
+                </a>
+              ) : conference.policies?.terms_and_conditions?.type === 'content' &&
+                conference.policies.terms_and_conditions.content ? (
+                <button
+                  type="button"
+                  onClick={() => setTermsModalOpen(true)}
+                  className="text-primary-600 hover:text-primary-700 underline font-medium"
+                >
+                  Terms and Conditions
+                </button>
+              ) : (
+                <span className="text-primary-600 font-medium">Terms and Conditions</span>
+              )}{' '}
+              and{' '}
+              {conference.policies?.privacy_policy?.type === 'url' &&
+              conference.policies.privacy_policy.url ? (
+                <a
+                  href={conference.policies.privacy_policy.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 hover:text-primary-700 underline"
+                >
+                  Privacy Policy
+                </a>
+              ) : conference.policies?.privacy_policy?.type === 'content' &&
+                conference.policies.privacy_policy.content ? (
+                <button
+                  type="button"
+                  onClick={() => setPrivacyModalOpen(true)}
+                  className="text-primary-600 hover:text-primary-700 underline font-medium"
+                >
+                  Privacy Policy
+                </button>
+              ) : (
+                <span className="text-primary-600 font-medium">Privacy Policy</span>
+              )}{' '}
+              and I agree to all of the terms.
+              <span className="text-red-500 ml-0.5">*</span>
+            </label>
+          </div>
+        )}
+
         {/* Submit Button */}
         <div className="flex justify-end">
           <button
@@ -1345,7 +1424,28 @@ export default function SinglePageForm({
           </a>{' '}
           apply.
         </p>
+
+        {/* Policy links */}
+        <PolicyLinks policies={conference.policies} className="mt-2" />
       </div>
+
+      {/* Terms & Conditions Modal */}
+      {termsModalOpen && conference.policies?.terms_and_conditions?.content && (
+        <PolicyModal
+          title="Terms and Conditions"
+          content={conference.policies.terms_and_conditions.content}
+          onClose={() => setTermsModalOpen(false)}
+        />
+      )}
+
+      {/* Privacy Policy Modal */}
+      {privacyModalOpen && conference.policies?.privacy_policy?.content && (
+        <PolicyModal
+          title="Privacy Policy"
+          content={conference.policies.privacy_policy.content}
+          onClose={() => setPrivacyModalOpen(false)}
+        />
+      )}
     </form>
   );
 }

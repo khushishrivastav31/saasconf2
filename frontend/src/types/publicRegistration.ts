@@ -29,6 +29,13 @@ export interface PublicConference {
   registration_start_date?: string | null;
   registration_end_date?: string | null;
   success_message?: string | null;
+  policies?: Record<string, PolicyEntry> | null;
+}
+
+export interface PolicyEntry {
+  type: 'url' | 'content' | null;
+  url?: string | null;
+  content?: string | null;
 }
 
 export interface PublicBookingOption {

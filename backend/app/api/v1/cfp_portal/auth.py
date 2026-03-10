@@ -646,6 +646,8 @@ async def get_tenant_info(
     db: DbSessionDep,
 ) -> PortalTenantResponse:
     """Get basic tenant info for the portal login page."""
+    from app.models.conference import Conference
+
     tenant = await _resolve_tenant(db, tenant_slug)
     # Rewrite logo_url to use the portal-accessible endpoint so the
     # frontend can fetch it without admin auth / CORS issues.
@@ -658,11 +660,33 @@ async def get_tenant_info(
             rf"/portal/tenant/{tenant.id}/logo",
             tenant.logo_url,
         )
+
+    # Aggregate enabled policies from all active conferences
+    conf_result = await db.execute(
+        select(Conference.settings).where(
+            Conference.tenant_id == tenant.id,
+            Conference.is_active.is_(True),
+        )
+    )
+    public_policies: dict[str, dict] = {}
+    for (settings,) in conf_result.all():
+        if not settings:
+            continue
+        all_policies = settings.get("policies", {})
+        for key, entry in all_policies.items():
+            if isinstance(entry, dict) and entry.get("enabled") and key not in public_policies:
+                public_policies[key] = {
+                    "type": entry.get("type"),
+                    "url": entry.get("url"),
+                    "content": entry.get("content"),
+                }
+
     return PortalTenantResponse(
         id=tenant.id,
         name=tenant.name,
         slug=tenant.slug,
         logo_url=portal_logo_url,
+        policies=public_policies or None,
     )
 
 

@@ -14,6 +14,8 @@ import { usePaymentIntent } from '../../hooks/usePaymentIntent';
 import AttendeeSection from '../PublicRegistration/components/AttendeeSection';
 import OrderSummary from '../PublicRegistration/components/OrderSummary';
 import InlineStripePayment from '../PublicRegistration/components/InlineStripePayment';
+import PolicyLinks from '../PublicRegistration/components/PolicyLinks';
+import PolicyModal from '../PublicRegistration/components/PolicyModal';
 import BillingFields from '../ConferenceDetail/tabs/RegistrationTab/BillingFields';
 import { useToast } from '../../components/Toast';
 import { parseApiError } from '../../utils/apiError';
@@ -110,6 +112,14 @@ export default function AuthenticatedRegistrationForm({
 
   // Payment attempt state
   const [attemptingPayment, setAttemptingPayment] = useState(false);
+
+  // Terms & Conditions consent (show when T&C or Privacy Policy is enabled)
+  const hasTerms = !!(
+    conference?.policies?.terms_and_conditions || conference?.policies?.privacy_policy
+  );
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
 
   // Auto-fetch ALUMNI discount validation on mount if eligible
   useEffect(() => {
@@ -299,6 +309,12 @@ export default function AuthenticatedRegistrationForm({
     if (missingBillingFields.length > 0) {
       const fieldList = missingBillingFields.join(', ');
       showToast(`Please fill in the following required fields: ${fieldList}`, 'error');
+      return;
+    }
+
+    // Terms & Conditions consent check
+    if (hasTerms && !termsAccepted) {
+      showToast('Please accept the Terms and Conditions and Privacy Policy to proceed.', 'error');
       return;
     }
 
@@ -635,6 +651,69 @@ export default function AuthenticatedRegistrationForm({
         </div>
       </div>
 
+      {/* Terms & Conditions / Privacy Policy Consent */}
+      {hasTerms && conference && (
+        <div className="flex items-start gap-3 bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <input
+            type="checkbox"
+            id="terms-consent"
+            checked={termsAccepted}
+            onChange={(e) => setTermsAccepted(e.target.checked)}
+            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
+          />
+          <label htmlFor="terms-consent" className="text-sm text-gray-700 dark:text-gray-300">
+            I hereby acknowledge that I have read and understood the{' '}
+            {conference.policies?.terms_and_conditions?.type === 'url' &&
+            conference.policies.terms_and_conditions.url ? (
+              <a
+                href={conference.policies.terms_and_conditions.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-700 underline"
+              >
+                Terms and Conditions
+              </a>
+            ) : conference.policies?.terms_and_conditions?.type === 'content' &&
+              conference.policies.terms_and_conditions.content ? (
+              <button
+                type="button"
+                onClick={() => setTermsModalOpen(true)}
+                className="text-blue-600 hover:text-blue-700 underline font-medium"
+              >
+                Terms and Conditions
+              </button>
+            ) : (
+              <span className="text-blue-600 font-medium">Terms and Conditions</span>
+            )}{' '}
+            and{' '}
+            {conference.policies?.privacy_policy?.type === 'url' &&
+            conference.policies.privacy_policy.url ? (
+              <a
+                href={conference.policies.privacy_policy.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-700 underline"
+              >
+                Privacy Policy
+              </a>
+            ) : conference.policies?.privacy_policy?.type === 'content' &&
+              conference.policies.privacy_policy.content ? (
+              <button
+                type="button"
+                onClick={() => setPrivacyModalOpen(true)}
+                className="text-blue-600 hover:text-blue-700 underline font-medium"
+              >
+                Privacy Policy
+              </button>
+            ) : (
+              <span className="text-blue-600 font-medium">Privacy Policy</span>
+            )}{' '}
+            and I agree to all of the terms.
+            <span className="text-red-500 ml-0.5">*</span>
+          </label>
+        </div>
+      )}
+
       {/* Submit Button */}
       <div className="flex justify-end">
         <button
@@ -649,6 +728,27 @@ export default function AuthenticatedRegistrationForm({
               : 'Complete Registration'}
         </button>
       </div>
+
+      {/* Policy links */}
+      {conference && <PolicyLinks policies={conference.policies} className="mt-4" />}
+
+      {/* Terms & Conditions Modal */}
+      {termsModalOpen && conference?.policies?.terms_and_conditions?.content && (
+        <PolicyModal
+          title="Terms and Conditions"
+          content={conference.policies.terms_and_conditions.content}
+          onClose={() => setTermsModalOpen(false)}
+        />
+      )}
+
+      {/* Privacy Policy Modal */}
+      {privacyModalOpen && conference?.policies?.privacy_policy?.content && (
+        <PolicyModal
+          title="Privacy Policy"
+          content={conference.policies.privacy_policy.content}
+          onClose={() => setPrivacyModalOpen(false)}
+        />
+      )}
     </form>
   );
 }

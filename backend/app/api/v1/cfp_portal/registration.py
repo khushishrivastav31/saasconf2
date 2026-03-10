@@ -206,6 +206,17 @@ async def get_authenticated_conference_details(
     registration_end = portal_settings.get("registration_end_date")
     success_message = portal_settings.get("success_message")
 
+    # Extract enabled policies (only expose enabled ones to portal)
+    all_policies = (conference.settings or {}).get("policies", {})
+    public_policies = {}
+    for key, entry in all_policies.items():
+        if isinstance(entry, dict) and entry.get("enabled"):
+            public_policies[key] = {
+                "type": entry.get("type"),
+                "url": entry.get("url"),
+                "content": entry.get("content"),
+            }
+
     return PublicConference(
         id=conference.id,
         name=conference.name,
@@ -224,6 +235,7 @@ async def get_authenticated_conference_details(
         registration_start_date=registration_start,
         registration_end_date=registration_end,
         success_message=success_message,
+        policies=public_policies or None,
     ).model_dump()
 
 

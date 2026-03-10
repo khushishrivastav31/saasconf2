@@ -63,6 +63,7 @@ class PublicConference(BaseModel):
     registration_start_date: str | None = None  # When registration opens
     registration_end_date: str | None = None  # When registration closes
     success_message: str | None = None  # Custom success message for confirmation page
+    policies: dict[str, dict] | None = None  # Enabled policies (type, url, content)
 
     model_config = {"from_attributes": True}
 
