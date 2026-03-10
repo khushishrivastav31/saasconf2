@@ -72,6 +72,7 @@ class PortalRegistrationRequest(BaseModel):
 
     billing: BillingProfileCreate
     attendees: list[BulkAttendeeData] = Field(..., min_length=1, max_length=50)
+    discount_code: str | None = Field(None, description="Optional discount code (authenticated users: ALUMNI only)")
     recaptcha_token: str | None = Field(None, description="reCAPTCHA token (optional if not enabled)")
 
     # Security fields

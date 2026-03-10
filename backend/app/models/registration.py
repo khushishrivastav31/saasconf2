@@ -289,11 +289,11 @@ class RegistrationReplacement(Base):
         nullable=False,
     )
 
-    # Original registration (now cancelled)
-    old_registration_id: Mapped[uuid.UUID] = mapped_column(
+    # Original registration (NULL after deletion — audit data preserved in denormalized fields)
+    old_registration_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("registrations.id", ondelete="SET NULL"),
-        nullable=False,
+        nullable=True,
     )
     old_attendee_email: Mapped[str] = mapped_column(String(255), nullable=False)
     old_attendee_name: Mapped[str] = mapped_column(String(500), nullable=False)

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -15,6 +15,8 @@ import type {
   RegistrationItem,
   BookingOption,
   BookingPeriod,
+  DiscountCodeValidation,
+  VatCalculation,
 } from '../../../../types';
 import { parseApiError } from '../../../../utils/apiError';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
@@ -31,6 +33,13 @@ import AttendeeFields from './AttendeeFields';
 import BillingFields from './BillingFields';
 import BookingOptionSelect from './BookingOptionSelect';
 import { OptionSessions } from './SessionSelector';
+import ReplaceAttendeeModal from '../../../../components/modals/ReplaceAttendeeModal';
+import OrderSummary from '../../../PublicRegistration/components/OrderSummary';
+import type {
+  PortalAttendee,
+  PublicBookingPeriod,
+  PublicBookingOption,
+} from '../../../../types/publicRegistration';
 
 // ---------------------------------------------------------------------------
 // Main Tab
@@ -60,11 +69,25 @@ export default function RegistrationTab({
   >([{}]);
   const [billing, setBilling] = useState<BillingProfileCreate>({ ...emptyBilling });
 
+  // Discount code validation state
+  const [discountValidation, setDiscountValidation] = useState<DiscountCodeValidation | null>(null);
+
+  // VAT calculation state
+  const [vatCalculation, setVatCalculation] = useState<VatCalculation | null>(null);
+
   // Detail view
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null);
+
+  // Replace attendee state
+  const [replaceTarget, setReplaceTarget] = useState<Registration | null>(null);
+
+  // Debug logging for replaceTarget state changes
+  useEffect(() => {
+    console.log('replaceTarget state changed:', replaceTarget);
+  }, [replaceTarget]);
 
   // Add item state
   const [showAddItem, setShowAddItem] = useState(false);
@@ -136,6 +159,155 @@ export default function RegistrationTab({
     }
     return map;
   }, [invoicesData]);
+
+  // ---- Effects for discount and VAT calculation ----
+
+  // Discount validation hook - debounced
+  useEffect(() => {
+    const validateDiscount = async (code: string) => {
+      try {
+        const response = await api.get<DiscountCodeValidation>(
+          `/conferences/${conference.id}/registrations/validate-discount/${encodeURIComponent(code.trim())}`
+        );
+        setDiscountValidation(response.data);
+      } catch {
+        setDiscountValidation({
+          valid: false,
+          message: 'Error validating code',
+        } as DiscountCodeValidation);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (billing.discount_code && billing.discount_code.trim()) {
+        validateDiscount(billing.discount_code);
+      } else {
+        setDiscountValidation(null);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [billing.discount_code, conference.id]);
+
+  // VAT calculation hook
+  useEffect(() => {
+    const calculateVat = async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const activePeriod = periods.find(
+        (p) => p.is_active && p.start_date <= today && p.end_date >= today
+      );
+
+      if (!activePeriod) {
+        setVatCalculation(null);
+        return;
+      }
+
+      let subtotal = 0;
+      attendees.forEach((_, idx) => {
+        const selectedOptions = attendeeOptionIds[idx] || [];
+        selectedOptions.forEach((optionId) => {
+          const price = Number(activePeriod.prices?.[optionId] || 0);
+
+          if (discountValidation?.valid) {
+            const applies =
+              (!discountValidation.applicable_option_ids ||
+                discountValidation.applicable_option_ids.length === 0 ||
+                discountValidation.applicable_option_ids.includes(optionId)) &&
+              (!discountValidation.applicable_period_ids ||
+                discountValidation.applicable_period_ids.length === 0 ||
+                discountValidation.applicable_period_ids.includes(activePeriod.id));
+
+            if (applies) {
+              const discountValue = discountValidation.discount_value || 0;
+              const discountAmount =
+                discountValidation.discount_type === 'percentage'
+                  ? (price * discountValue) / 100
+                  : Math.min(discountValue, price);
+              subtotal += price - discountAmount;
+            } else {
+              subtotal += price;
+            }
+          } else {
+            subtotal += price;
+          }
+        });
+      });
+
+      if (!billing.country || subtotal === 0) {
+        setVatCalculation(null);
+        return;
+      }
+
+      try {
+        const response = await api.post<VatCalculation>(
+          `/conferences/${conference.id}/registrations/calculate-vat`,
+          {
+            country: billing.country,
+            vat_number: billing.vat_number || null,
+            subtotal,
+          }
+        );
+        setVatCalculation(response.data);
+      } catch (err) {
+        console.error('VAT calculation failed:', err);
+        setVatCalculation(null);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      calculateVat();
+    }, 500);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    billing.country,
+    billing.vat_number,
+    attendeeOptionIds,
+    discountValidation,
+    periods,
+    attendees.length,
+    conference.id,
+  ]);
+
+  // Convert admin types to public types for OrderSummary component
+  const publicBookingOptions: PublicBookingOption[] = useMemo(() => {
+    return options.map((opt) => ({
+      id: opt.id,
+      name: opt.name,
+      description: opt.description || '',
+      price: 0, // Price comes from period
+      capacity: null,
+      current_registrations: 0,
+      is_sold_out: false,
+      conference_day_id: opt.conference_day_id,
+    }));
+  }, [options]);
+
+  const publicBookingPeriods: PublicBookingPeriod[] = useMemo(() => {
+    return periods.map((period) => ({
+      id: period.id,
+      name: period.name,
+      start_date: period.start_date,
+      end_date: period.end_date,
+      prices: period.prices || {},
+      sort_order: period.sort_order,
+    }));
+  }, [periods]);
+
+  const portalAttendees: PortalAttendee[] = useMemo(() => {
+    return attendees.map((att, idx) => ({
+      first_name: att.first_name,
+      last_name: att.last_name,
+      email: att.email,
+      phone: att.phone || '',
+      job_title: att.job_title || '',
+      department: att.department || '',
+      pronouns: att.pronouns || '',
+      booking_option_ids: attendeeOptionIds[idx] || [],
+      items: [],
+    }));
+  }, [attendees, attendeeOptionIds]);
 
   // ---- Mutations ----
 
@@ -441,13 +613,28 @@ export default function RegistrationTab({
               {STATUS_LABELS[selectedReg.status] || selectedReg.status}
             </span>
             <div className="flex-1" />
-            {isAdmin && selectedReg.status === 'registered_pending_invoice' && (
-              <button
-                onClick={() => setDeleteTarget(selectedReg)}
-                className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-              >
-                Delete Registration
-              </button>
+            {isAdmin && (
+              <div className="flex items-center gap-2">
+                {(selectedReg.status === 'invoiced' || selectedReg.status === 'paid') && (
+                  <button
+                    onClick={() => {
+                      console.log('Replace Attendee clicked', selectedReg);
+                      setReplaceTarget(selectedReg);
+                    }}
+                    className="px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                  >
+                    Replace Attendee
+                  </button>
+                )}
+                {selectedReg.status === 'registered_pending_invoice' && (
+                  <button
+                    onClick={() => setDeleteTarget(selectedReg)}
+                    className="px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-md hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+                  >
+                    Delete Registration
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -462,8 +649,8 @@ export default function RegistrationTab({
                   {selectedReg.booking_option_name || 'Unknown option'}
                 </span>
               </div>
-              {/* Main session selection */}
-              {selectedReg.booking_option_id && (
+              {/* Session selector */}
+              {isAdmin && selectedReg.booking_option_id && (
                 <OptionSessions
                   conferenceId={conference.id}
                   optionId={selectedReg.booking_option_id}
@@ -476,6 +663,7 @@ export default function RegistrationTab({
                       sessionId,
                     });
                   }}
+                  compact={true}
                 />
               )}
             </div>
@@ -557,56 +745,65 @@ export default function RegistrationTab({
               <p className="text-sm text-gray-400 dark:text-gray-500">No items</p>
             ) : (
               <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-                {selectedReg.items.map((item) => (
-                  <li key={item.id} className="py-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {item.item_name}
-                        </span>
-                        <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
-                          {item.item_type === 'tutorial' ? 'Tutorial' : 'Option'}
-                        </span>
-                        {item.pending && (
-                          <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
-                            (to be selected)
+                {[...selectedReg.items]
+                  .sort((a, b) => {
+                    const optMap: Record<string, number> = {};
+                    options.forEach((o) => (optMap[o.id] = o.sort_order));
+                    const sortA = a.booking_option_id ? (optMap[a.booking_option_id] ?? 999) : 999;
+                    const sortB = b.booking_option_id ? (optMap[b.booking_option_id] ?? 999) : 999;
+                    return sortA - sortB;
+                  })
+                  .map((item) => (
+                    <li key={item.id} className="py-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {item.item_name}
                           </span>
+                          <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+                            {item.item_type === 'tutorial' ? 'Tutorial' : 'Option'}
+                          </span>
+                          {item.pending && (
+                            <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                              (to be selected)
+                            </span>
+                          )}
+                        </div>
+                        {isAdmin && selectedReg.status === 'registered_pending_invoice' && (
+                          <button
+                            onClick={() =>
+                              removeItemMutation.mutate({
+                                regId: selectedReg.id,
+                                itemId: item.id,
+                              })
+                            }
+                            className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                          >
+                            Remove
+                          </button>
                         )}
                       </div>
-                      {isAdmin && selectedReg.status === 'registered_pending_invoice' && (
-                        <button
-                          onClick={() =>
-                            removeItemMutation.mutate({
+
+                      {/* Session selector for this item */}
+                      {isAdmin && item.booking_option_id && (
+                        <OptionSessions
+                          conferenceId={conference.id}
+                          optionId={item.booking_option_id}
+                          selections={{}}
+                          selectedSessionId={item.program_session_id}
+                          onChange={(selections) => {
+                            const sessionId = Object.values(selections).find(Boolean) || null;
+                            updateItemSessionMutation.mutate({
                               regId: selectedReg.id,
                               itemId: item.id,
-                            })
-                          }
-                          className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                        >
-                          Remove
-                        </button>
+                              sessionId,
+                            });
+                          }}
+                          compact={true}
+                        />
                       )}
-                    </div>
-                    {/* Session selector for this item */}
-                    {isAdmin && item.booking_option_id && (
-                      <OptionSessions
-                        conferenceId={conference.id}
-                        optionId={item.booking_option_id}
-                        selections={
-                          item.program_session_id ? { default: item.program_session_id } : {}
-                        }
-                        onChange={(selections) => {
-                          const sessionId = Object.values(selections).find(Boolean) || null;
-                          updateItemSessionMutation.mutate({
-                            regId: selectedReg.id,
-                            itemId: item.id,
-                            sessionId,
-                          });
-                        }}
-                      />
-                    )}
-                  </li>
-                ))}
+                    </li>
+                  ))}
               </ul>
             )}
           </div>
@@ -619,6 +816,22 @@ export default function RegistrationTab({
           onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
           onCancel={() => setDeleteTarget(null)}
         />
+
+        {replaceTarget && (
+          <>
+            {console.log('About to render ReplaceAttendeeModal (detail view)', {
+              replaceTarget,
+              isOpen: !!replaceTarget,
+              conferenceId: conference.id,
+            })}
+            <ReplaceAttendeeModal
+              isOpen={!!replaceTarget}
+              onClose={() => setReplaceTarget(null)}
+              registration={replaceTarget}
+              conferenceId={conference.id}
+            />
+          </>
+        )}
       </div>
     );
   }
@@ -779,6 +992,16 @@ export default function RegistrationTab({
             </div>
             <BillingFields data={billing} onChange={setBilling} conference={conference} />
           </div>
+
+          {/* Order Summary - reusing component from public registration */}
+          <OrderSummary
+            attendees={portalAttendees}
+            bookingOptions={publicBookingOptions}
+            bookingPeriods={publicBookingPeriods}
+            currency={conference.currency || 'EUR'}
+            discount={discountValidation}
+            vatCalculation={vatCalculation}
+          />
 
           {/* Submit */}
           <div className="flex justify-end gap-3">
@@ -978,6 +1201,22 @@ export default function RegistrationTab({
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      {replaceTarget && (
+        <>
+          {console.log('About to render ReplaceAttendeeModal', {
+            replaceTarget,
+            isOpen: !!replaceTarget,
+            conferenceId: conference.id,
+          })}
+          <ReplaceAttendeeModal
+            isOpen={!!replaceTarget}
+            onClose={() => setReplaceTarget(null)}
+            registration={replaceTarget}
+            conferenceId={conference.id}
+          />
+        </>
+      )}
     </div>
   );
 }

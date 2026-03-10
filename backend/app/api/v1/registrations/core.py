@@ -3,9 +3,11 @@
 import logging
 import math
 from collections import OrderedDict
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
@@ -13,13 +15,9 @@ from app.core.conference_helpers import check_conference_admin, get_conference_f
 from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.core.exceptions import NotFoundError
 from app.core.invoice_auto_generation import create_invoice_for_registrations
-from app.core.registration_emails import (
-    send_attendee_welcome_email,
-    send_registration_invoice_email,
-)
 from app.core.user_auto_creation import create_user_for_registration
 from app.core.vat_validation import validate_vat_number
-from app.models.booking import BookingOption
+from app.models.booking import BookingOption, BookingPeriod
 from app.models.cfp_applicants import CFPApplicant
 from app.models.cfp_papers import CFPPaper
 from app.models.invoice import Invoice
@@ -52,6 +50,7 @@ from ._helpers import (
     _check_email_unique,
     _create_items,
     _get_option_name_map,
+    _send_registration_emails,
     _validate_booking_option,
     limiter,
 )
@@ -387,7 +386,7 @@ async def create_registration(
     billing = BillingProfile(
         tenant_id=tenant_id,
         conference_id=conference_id,
-        **data.billing.model_dump(),
+        **data.billing.model_dump(exclude={"payment_intent_id", "vat_validated"}),
     )
     db.add(billing)
     await db.flush()
@@ -452,25 +451,80 @@ async def create_registration(
     await db.commit()
 
     # Send emails AFTER commit (non-blocking - failures logged but don't rollback)
-    if invoice:
-        # Send invoice email to billing contact
-        try:
-            await send_registration_invoice_email(db, invoice, conference)
-        except Exception as e:
-            logger.error(f"Failed to send invoice email: {e}", exc_info=True)
-
-        # Send welcome emails to each attendee
-        for reg, token in user_tokens:
-            try:
-                await send_attendee_welcome_email(db, reg, conference, token)
-            except Exception as e:
-                logger.error(f"Failed to send welcome email to {reg.email}: {e}", exc_info=True)
+    password_setup_tokens = {reg.id: token for reg, token in user_tokens}
+    await _send_registration_emails(
+        db=db,
+        registrations=registrations,
+        conference=conference,
+        invoice=invoice,
+        password_setup_tokens=password_setup_tokens,
+    )
 
     return UnifiedRegistrationResponse(
         billing_profile_id=billing.id,
         registrations=responses,
         total_created=len(responses),
     )
+
+
+@router.get("/validate-discount/{code}")
+async def validate_discount_code_admin(
+    conference_id: UUID,
+    code: str,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> dict:
+    """Validate discount code for admin registration (authenticated endpoint)."""
+    from app.core.discount_code_validation import (
+        ValidationError,
+        get_applicable_option_ids,
+        get_applicable_period_ids,
+        validate_and_get_discount_code,
+    )
+
+    tenant_id = current_user.tenant_id
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+
+    # Get active booking period
+    today = date.today()
+    active_period_stmt = select(BookingPeriod).where(
+        BookingPeriod.conference_id == conference.id,
+        BookingPeriod.tenant_id == tenant_id,
+        BookingPeriod.is_active == True,
+        BookingPeriod.start_date <= today,
+        BookingPeriod.end_date >= today,
+    )
+    active_period_result = await db.execute(active_period_stmt)
+    active_period = active_period_result.scalar_one_or_none()
+
+    try:
+        discount = await validate_and_get_discount_code(db, code, conference.id, tenant_id, registration_date=today)
+
+        # Get applicable options and periods
+        option_ids = await get_applicable_option_ids(db, discount.id)
+        period_ids = await get_applicable_period_ids(db, discount.id)
+
+        # Check if applies to current period
+        period_applies = True
+        if period_ids and active_period:
+            period_applies = active_period.id in period_ids
+
+        return {
+            "valid": period_applies,
+            "message": "Valid discount code" if period_applies else "Discount not valid for current booking period",
+            "discount_type": discount.discount_type,
+            "discount_value": float(discount.discount_value),
+            "currency": discount.currency,
+            "description": discount.description,
+            "applicable_option_ids": [str(opt_id) for opt_id in option_ids] if option_ids else None,
+            "applicable_period_ids": [str(per_id) for per_id in period_ids] if period_ids else None,
+            "is_combinable": discount.is_combinable,
+        }
+    except ValidationError as e:
+        return {
+            "valid": False,
+            "message": str(e),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -499,7 +553,7 @@ async def create_individual_registration(
     billing = BillingProfile(
         tenant_id=tenant_id,
         conference_id=conference_id,
-        **data.billing.model_dump(),
+        **data.billing.model_dump(exclude={"payment_intent_id", "vat_validated"}),
     )
     db.add(billing)
     await db.flush()
@@ -563,7 +617,7 @@ async def create_company_registration(
     billing = BillingProfile(
         tenant_id=tenant_id,
         conference_id=conference_id,
-        **data.billing.model_dump(),
+        **data.billing.model_dump(exclude={"payment_intent_id", "vat_validated"}),
     )
     db.add(billing)
     await db.flush()
@@ -633,7 +687,7 @@ async def create_bulk_registration(
     billing = BillingProfile(
         tenant_id=tenant_id,
         conference_id=conference_id,
-        **data.billing.model_dump(),
+        **data.billing.model_dump(exclude={"payment_intent_id", "vat_validated"}),
     )
     db.add(billing)
     await db.flush()
@@ -827,8 +881,12 @@ async def replace_attendee_endpoint(
         if item.booking_option_id:
             await _validate_booking_option(db, item.booking_option_id, conference_id, tenant_id)
 
-    # Perform replacement
-    old_registration, new_registration, replacement_record, additional_invoice = await replace_attendee(
+    # Build old registration response BEFORE replacement (it will be deleted)
+    opt_map = await _get_option_name_map(db, conference_id, tenant_id)
+    old_reg_response = _build_response(old_reg, option_name=opt_map.get(old_reg.booking_option_id))
+
+    # Perform replacement (old registration is hard-deleted inside)
+    _old_registration, new_registration, replacement_record, additional_invoice = await replace_attendee(
         db=db,
         old_registration=old_reg,
         new_attendee_data=data.new_attendee,
@@ -840,8 +898,7 @@ async def replace_attendee_endpoint(
         cancellation_message=data.cancellation_message,
     )
 
-    # Refresh objects from DB after commit
-    await db.refresh(old_registration)
+    # Refresh surviving objects from DB after commit
     await db.refresh(new_registration)
     await db.refresh(replacement_record)
     if additional_invoice:
@@ -852,8 +909,6 @@ async def replace_attendee_endpoint(
         additional_invoice = result.scalar_one()
 
     # Build responses
-    opt_map = await _get_option_name_map(db, conference_id, tenant_id)
-
     from app.api.v1.invoices.crud import build_invoice_response
 
     # Convert invoice response to dict for schema
@@ -863,7 +918,7 @@ async def replace_attendee_endpoint(
         invoice_dict = invoice_response.model_dump()
 
     return ReplaceAttendeeResponse(
-        old_registration=_build_response(old_registration, option_name=opt_map.get(old_registration.booking_option_id)),
+        old_registration=old_reg_response,
         new_registration=_build_response(new_registration, option_name=opt_map.get(new_registration.booking_option_id)),
         replacement_id=replacement_record.id,
         has_additional_items=replacement_record.has_additional_items,
@@ -875,6 +930,14 @@ async def replace_attendee_endpoint(
 # ---------------------------------------------------------------------------
 # VAT Validation
 # ---------------------------------------------------------------------------
+
+
+class VatCalculationRequest(BaseModel):
+    """Request to calculate VAT for registration preview."""
+
+    country: str
+    vat_number: str | None = None
+    subtotal: float
 
 
 @router.post("/validate-vat")
@@ -891,3 +954,129 @@ async def validate_vat(
     tenant_id = current_user.tenant_id
     await get_conference_for_tenant(db, conference_id, tenant_id)
     return await validate_vat_number(vat_number, country)
+
+
+@router.post("/calculate-vat")
+async def calculate_vat_admin(
+    conference_id: UUID,
+    data: VatCalculationRequest,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> dict:
+    """Calculate VAT for admin registration (preview before submission)."""
+    from decimal import Decimal
+
+    from app.core.address import _resolve_country_code
+    from app.core.default_settings import DEFAULT_EU_COUNTRIES, DEFAULT_VAT_RULES
+    from app.core.vat_calculation import classify_customer_location, classify_customer_type
+    from app.core.vat_rules import get_vat_rule
+    from app.models.vat_rate_by_country import VatRateByCountry
+
+    tenant_id = current_user.tenant_id
+    conference = await get_conference_for_tenant(db, conference_id, tenant_id)
+
+    # Step 1: Classify customer type (B2B vs B2C)
+    customer_type = classify_customer_type(data.vat_number)
+
+    # Step 2: Classify customer location (domestic/EU/non-EU)
+    eu_countries = (conference.settings or {}).get("eu_countries", DEFAULT_EU_COUNTRIES)
+    customer_location = classify_customer_location(
+        data.country,
+        conference.country or "",
+        eu_countries,
+    )
+
+    # Step 3: Determine attendance type (default to conference venue type)
+    venue_type = conference.venue_type
+    if venue_type == "virtual":
+        attendance_type = "virtual"
+    elif venue_type == "in_person" or venue_type == "hybrid":
+        attendance_type = "in_person"
+    else:
+        attendance_type = "in_person"
+
+    # Step 4: Lookup VAT rule from decision table
+    vat_rules = (conference.settings or {}).get("vat_rules", DEFAULT_VAT_RULES)
+    rule = get_vat_rule(vat_rules, attendance_type, customer_type, customer_location)
+
+    if not rule:
+        return {
+            "vat_rate": 0.0,
+            "vat_amount": 0.0,
+            "total": data.subtotal,
+            "notes": None,
+        }
+
+    # Step 5: Determine tax rate based on rule
+    rate = Decimal("0.00")
+
+    if not rule.get("charge_vat"):
+        rate = Decimal("0.00")
+    elif rule.get("vat_rate_source") == "conference":
+        # Use conference country VAT rate
+        conference_country_iso = _resolve_country_code(conference.country)
+        if conference_country_iso:
+            # Try tenant-specific rate first
+            stmt = select(VatRateByCountry.standard_rate).where(
+                VatRateByCountry.tenant_id == conference.tenant_id,
+                VatRateByCountry.country_code == conference_country_iso,
+            )
+            result = await db.execute(stmt)
+            fetched_rate = result.scalar_one_or_none()
+
+            # Fall back to global rate
+            if fetched_rate is None:
+                stmt = select(VatRateByCountry.standard_rate).where(
+                    VatRateByCountry.tenant_id.is_(None),
+                    VatRateByCountry.country_code == conference_country_iso,
+                )
+                result = await db.execute(stmt)
+                fetched_rate = result.scalar_one_or_none()
+
+            if fetched_rate is not None:
+                rate = fetched_rate
+    elif rule.get("vat_rate_source") == "customer":
+        # Use customer country VAT rate
+        customer_country_iso = _resolve_country_code(data.country)
+        if customer_country_iso:
+            # Try tenant-specific rate first
+            stmt = select(VatRateByCountry.standard_rate).where(
+                VatRateByCountry.tenant_id == conference.tenant_id,
+                VatRateByCountry.country_code == customer_country_iso,
+            )
+            result = await db.execute(stmt)
+            fetched_rate = result.scalar_one_or_none()
+
+            # Fall back to global rate
+            if fetched_rate is None:
+                stmt = select(VatRateByCountry.standard_rate).where(
+                    VatRateByCountry.tenant_id.is_(None),
+                    VatRateByCountry.country_code == customer_country_iso,
+                )
+                result = await db.execute(stmt)
+                fetched_rate = result.scalar_one_or_none()
+
+            if fetched_rate is not None:
+                rate = fetched_rate
+
+    # Step 6: Calculate tax amount
+    subtotal = Decimal(str(data.subtotal))
+    vat_amount = (subtotal * rate / Decimal("100")).quantize(Decimal("0.01"))
+    total = subtotal + vat_amount
+
+    # Step 7: Generate notes text
+    notes = None
+    if rule.get("reverse_charge"):
+        notes = (
+            "VAT Reverse Charge: In accordance with Article 196 of the VAT Directive 2006/112/EC, "
+            "the customer is liable for VAT in their country of establishment."
+        )
+    elif rule.get("oss_applicable"):
+        notes = f"VAT charged under the EU One-Stop Shop (OSS) scheme at the rate applicable in your country ({rate}%)."
+
+    return {
+        "vat_rate": float(rate),
+        "vat_amount": float(vat_amount),
+        "total": float(total),
+        "notes": notes,
+    }

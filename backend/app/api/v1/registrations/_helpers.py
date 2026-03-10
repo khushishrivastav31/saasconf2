@@ -83,8 +83,7 @@ async def _resolve_item(
                 )
                 session = session_result.scalar_one_or_none()
                 if session and session.title:
-                    # Combine: "Day 1 - Python Basics Tutorial"
-                    option_name = f"{option_name} - {session.title}"
+                    # Session is selected and valid - return option name (session shows in dropdown)
                     return option_name, False
                 else:
                     # Session ID provided but not found - treat as pending
@@ -266,3 +265,134 @@ async def _auto_add_alumni(db: DbSessionDep, reg: Registration) -> None:  # type
         source=AlumniSource.REGISTRATION.value,
     )
     db.add(alumni)
+
+
+async def _create_registrations_for_attendees(
+    db,
+    attendees: list,
+    billing_profile_id: UUID,
+    conference_id: UUID,
+    tenant_id: UUID,
+    registration_mode: str,
+    conference: Conference,
+    created_by: UUID | None = None,
+) -> tuple[list[Registration], list[RegistrationResponse]]:
+    """Create Registration records for all attendees.
+
+    Unified registration creation logic used by admin, authenticated portal, and public portal.
+
+    Args:
+        db: Database session
+        attendees: List of attendee data (must have first_name, last_name, email, items)
+        billing_profile_id: Associated billing profile ID
+        conference_id: Conference UUID
+        tenant_id: Tenant UUID
+        registration_mode: One of: INDIVIDUAL, COMPANY_SINGLE, COMPANY_BULK, PORTAL
+        conference: Conference model (for program_published_at check)
+        created_by: Optional user ID (admin registrations only)
+
+    Returns:
+        Tuple of (registrations, registration_responses)
+    """
+    registrations = []
+    responses = []
+
+    # Get option name map for responses
+    option_name_map = await _get_option_name_map(db, conference_id, tenant_id)
+
+    for attendee_data in attendees:
+        # Check email uniqueness
+        await _check_email_unique(db, conference_id, attendee_data.email)
+
+        # Create registration
+        reg = Registration(
+            tenant_id=tenant_id,
+            conference_id=conference_id,
+            billing_profile_id=billing_profile_id,
+            first_name=attendee_data.first_name,
+            last_name=attendee_data.last_name,
+            email=attendee_data.email.lower(),
+            phone=getattr(attendee_data, "phone", None),
+            pronouns=getattr(attendee_data, "pronouns", None),
+            job_title=getattr(attendee_data, "job_title", None),
+            department=getattr(attendee_data, "department", None),
+            booking_option_id=attendee_data.booking_option_ids[0] if attendee_data.booking_option_ids else None,
+            main_session_id=None,
+            registration_mode=registration_mode,
+            status="confirmed",
+            created_by=created_by,
+        )
+        db.add(reg)
+        await db.flush()  # Get reg.id for items
+
+        # Create items
+        items = await _create_items(
+            db,
+            reg,
+            attendee_data.items,
+            conference_id,
+            tenant_id,
+            conference,
+        )
+
+        # Build response
+        option_name = option_name_map.get(reg.booking_option_id) if reg.booking_option_id else None
+        response = _build_response(reg, option_name=option_name, items=items)
+
+        registrations.append(reg)
+        responses.append(response)
+
+    return registrations, responses
+
+
+async def _send_registration_emails(
+    db,
+    registrations: list[Registration],
+    conference: Conference,
+    invoice,
+    password_setup_tokens: dict[UUID, str] | None = None,
+) -> None:
+    """Send invoice and welcome emails for registrations.
+
+    Unified email sending logic used by admin, authenticated portal, and public portal.
+
+    Args:
+        db: Database session
+        registrations: List of Registration models
+        conference: Conference model
+        invoice: Invoice model (or None if not created yet)
+        password_setup_tokens: Optional dict mapping registration_id to password setup token
+    """
+    from app.core.registration_emails import send_attendee_welcome_email, send_registration_invoice_email
+
+    # Send invoice email to billing contact (if invoice exists)
+    if invoice:
+        try:
+            await send_registration_invoice_email(
+                db=db,
+                invoice=invoice,
+                conference=conference,
+            )
+        except Exception as e:
+            # Log but don't fail the registration
+            import logging
+
+            logging.getLogger(__name__).warning(f"Failed to send invoice email: {e}")
+
+    # Send welcome email to each attendee
+    for reg in registrations:
+        try:
+            # Get password setup token for this registration
+            token = password_setup_tokens.get(reg.id, "") if password_setup_tokens else ""
+
+            await send_attendee_welcome_email(
+                db=db,
+                registration=reg,
+                conference=conference,
+                password_setup_token=token,
+            )
+        except Exception as e:
+            # Log but don't fail the registration
+            import logging
+
+            logging.getLogger(__name__).warning(f"Failed to send welcome email to {reg.email}: {e}")

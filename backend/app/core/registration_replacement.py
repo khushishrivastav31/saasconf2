@@ -90,11 +90,11 @@ async def replace_attendee(
         for item in old_registration.items
     ]
 
-    # Cancel old registration
+    # Capture old registration data before deletion
     old_status = old_registration.status
-    old_registration.status = RegistrationStatus.CANCELLED
     old_attendee_name = f"{old_registration.first_name} {old_registration.last_name}"
     old_attendee_email = old_registration.email
+    old_tenant_id = old_registration.tenant_id
 
     # Remove old user's conference access (keep user account)
     access_removed = await _remove_conference_access(db, old_registration.email, conference.id)
@@ -176,14 +176,15 @@ async def replace_attendee(
     )
     db.add(replacement_record)
 
-    # Create audit log
+    # Create audit log (use captured old_registration.id before deletion)
+    old_registration_id = old_registration.id
     db.add(
         AuditLog(
             tenant_id=tenant_id,
             user_id=user_id,
             action="registration.replaced",
             resource_type="registration",
-            resource_id=old_registration.id,
+            resource_id=old_registration_id,
             details={
                 "old_attendee": old_attendee_name,
                 "old_email": old_attendee_email,
@@ -196,17 +197,28 @@ async def replace_attendee(
         )
     )
 
+    # Flush audit record and replacement record before deleting old registration
+    # (RegistrationReplacement.old_registration_id will be SET NULL by DB cascade)
+    await db.flush()
+
+    # Hard-delete old registration (cascade deletes its RegistrationItems)
+    # The old attendee's User account is preserved — only the registration is removed
+    await db.delete(old_registration)
+
     await db.commit()
 
     # Send emails (after commit, best-effort)
+    # Use captured values since old_registration is now deleted
     await _send_replacement_emails(
         db,
-        old_registration,
-        new_registration,
-        conference,
-        additional_invoice,
-        password_token,
-        cancellation_message,
+        old_attendee_name=old_attendee_name,
+        old_attendee_email=old_attendee_email,
+        old_tenant_id=old_tenant_id,
+        new_registration=new_registration,
+        conference=conference,
+        additional_invoice=additional_invoice,
+        password_token=password_token,
+        cancellation_message=cancellation_message,
     )
 
     return old_registration, new_registration, replacement_record, additional_invoice
@@ -450,7 +462,10 @@ async def _create_user_and_access(
 
 async def _send_replacement_emails(
     db: AsyncSession,
-    old_registration: Registration,
+    *,
+    old_attendee_name: str,
+    old_attendee_email: str,
+    old_tenant_id: UUID,
     new_registration: Registration,
     conference: Conference,
     additional_invoice: Invoice | None,
@@ -463,7 +478,7 @@ async def _send_replacement_emails(
     # Send cancellation email to old attendee
     try:
         context = build_registration_cancellation_context(
-            registration_name=f"{old_registration.first_name} {old_registration.last_name}",
+            registration_name=old_attendee_name,
             conference_name=conference.name,
             invoice_number="",
             cancellation_message=cancellation_message or "Your registration has been transferred to another attendee.",
@@ -475,10 +490,10 @@ async def _send_replacement_emails(
             EmailTemplateType.REGISTRATION_CANCELLATION,
             context,
             conference_id=conference.id,
-            tenant_id=old_registration.tenant_id,
+            tenant_id=old_tenant_id,
         )
         emails_sent["old_attendee"] = await send_email(
-            to=old_registration.email,
+            to=old_attendee_email,
             subject=rendered.subject,
             html=rendered.body_html,
             text=rendered.body_text,

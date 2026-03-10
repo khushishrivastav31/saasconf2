@@ -34,7 +34,7 @@ from app.models.user import User
 from app.models.booking import BookingOption, BookingPeriod
 from app.models.program import ProgramSession, ProgramTimeSlot, ProgramDay
 from app.models.settings import SessionType
-from app.models.discount_code import DiscountCode
+from app.models.booking import DiscountCode
 
 
 # ──────────────────────────────────────────────────────────────────────────

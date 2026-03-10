@@ -7,7 +7,7 @@ Implements comprehensive security measures for public-facing forms.
 
 import logging
 from collections import OrderedDict
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
@@ -20,10 +20,6 @@ from app.core.dependencies import DbSessionDep
 from app.core.exceptions import ValidationError
 from app.core.invoice_auto_generation import create_invoice_for_registrations
 from app.core.recaptcha import validate_recaptcha
-from app.core.registration_emails import (
-    send_attendee_welcome_email,
-    send_registration_invoice_email,
-)
 from app.core.registration_security import validate_registration_security
 from app.core.stripe_helper import create_payment_intent
 from app.core.user_auto_creation import create_user_for_registration
@@ -59,6 +55,7 @@ from ..registrations._helpers import (
     _build_response,
     _check_email_unique,
     _create_items,
+    _send_registration_emails,
     _validate_booking_option,
 )
 
@@ -86,9 +83,7 @@ async def resolve_tenant_and_conference(
         HTTPException: If tenant or conference not found
     """
     # Find tenant (case-insensitive slug lookup)
-    result = await db.execute(
-        select(Tenant).where(func.lower(Tenant.slug) == tenant_slug.lower())
-    )
+    result = await db.execute(select(Tenant).where(func.lower(Tenant.slug) == tenant_slug.lower()))
     tenant = result.scalar_one_or_none()
     if not tenant:
         raise HTTPException(status_code=404, detail=f"Tenant '{tenant_slug}' not found")
@@ -750,9 +745,7 @@ async def create_payment_intent_preview(
         if not payment_intent.client_secret:
             raise HTTPException(status_code=500, detail="Failed to create payment intent")
 
-        logger.info(
-            f"Created preview PaymentIntent {payment_intent.id} for {data.total} {conference.currency}"
-        )
+        logger.info(f"Created preview PaymentIntent {payment_intent.id} for {data.total} {conference.currency}")
 
         return CreatePaymentIntentResponse(
             payment_intent_id=payment_intent.id,
@@ -1042,9 +1035,7 @@ async def create_public_registration(
                                 "conference_id": str(conference.id),
                             },
                         )
-                        logger.info(
-                            f"Updated PaymentIntent {payment_intent_id} metadata with invoice_id {invoice.id}"
-                        )
+                        logger.info(f"Updated PaymentIntent {payment_intent_id} metadata with invoice_id {invoice.id}")
                 except Exception as e:
                     logger.error(f"Failed to update PaymentIntent metadata: {e}")
                     # Don't fail registration if metadata update fails
@@ -1052,9 +1043,7 @@ async def create_public_registration(
                 # Update registration statuses to PAID
                 for reg in registrations:
                     reg.status = RegistrationStatus.PAID.value
-                logger.info(
-                    f"Marked invoice {invoice.id} as paid with PaymentIntent {payment_intent_id}"
-                )
+                logger.info(f"Marked invoice {invoice.id} as paid with PaymentIntent {payment_intent_id}")
         else:
             # Legacy flow: Create PaymentIntent for frontend to confirm
             # This shouldn't happen in the new payment-first flow
@@ -1069,9 +1058,7 @@ async def create_public_registration(
                         invoice=invoice,
                     )
                     payment_client_secret = client_secret
-                    logger.info(
-                        f"Created PaymentIntent {new_payment_intent_id} for invoice {invoice.id}"
-                    )
+                    logger.info(f"Created PaymentIntent {new_payment_intent_id} for invoice {invoice.id}")
                 except ValidationError as e:
                     logger.error(f"Failed to create PaymentIntent for invoice {invoice.id}: {e}")
                     raise HTTPException(status_code=500, detail="Failed to initialize payment") from e
@@ -1084,35 +1071,29 @@ async def create_public_registration(
     await db.commit()
 
     # Post-commit operations (emails, user creation)
-    # Create user accounts for each attendee
+    # Create user accounts and collect password tokens
+    user_tokens: list[tuple[Registration, str]] = []
     for reg in registrations:
         try:
-            _user, password_token = await create_user_for_registration(
+            _user, raw_token = await create_user_for_registration(
                 db=db,
                 tenant_id=tenant_id,
                 registration=reg,
             )
-            # Send welcome email with password setup link
-            await send_attendee_welcome_email(
-                db=db,
-                registration=reg,
-                conference=conference,
-                password_setup_token=password_token,
-            )
+            if raw_token:  # Only add if new user with token
+                user_tokens.append((reg, raw_token))
         except Exception as e:
-            logger.error(f"Failed to create user/send welcome email for {reg.email}: {e}")
-            # Continue - don't block registration on email failures
+            logger.error(f"Failed to create user for registration {reg.id}: {e}")
 
-    # Send invoice email to billing contact
-    if invoice:
-        try:
-            await send_registration_invoice_email(
-                db=db,
-                invoice=invoice,
-                conference=conference,
-            )
-        except Exception as e:
-            logger.error(f"Failed to send invoice email for invoice {invoice.id}: {e}")
+    # Build password_setup_tokens dict and send emails
+    password_setup_tokens = {reg.id: token for reg, token in user_tokens}
+    await _send_registration_emails(
+        db=db,
+        registrations=registrations,
+        conference=conference,
+        invoice=invoice,
+        password_setup_tokens=password_setup_tokens,
+    )
 
     # Build success URL
     success_url = f"/{tenant_slug}/register/{conference_slug}/success"

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import RichTextEditor from '../common/RichTextEditor';
+import RichTextDisplay from '../common/RichTextDisplay';
 import VatNumberInput from '../common/VatNumberInput';
 import { COUNTRY_OPTIONS } from '../../config/countries';
 import api from '../../config/api';
@@ -391,12 +392,18 @@ export default function InvoiceDetailsTab({
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Notes (shown on invoice)
         </label>
-        <RichTextEditor
-          value={formData.notes || ''}
-          onChange={(html) => setFormData({ ...formData, notes: html })}
-          rows={3}
-          disabled={readOnly}
-        />
+        {readOnly ? (
+          <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md">
+            <RichTextDisplay content={formData.notes || ''} />
+          </div>
+        ) : (
+          <RichTextEditor
+            value={formData.notes || ''}
+            onChange={(html) => setFormData({ ...formData, notes: html })}
+            rows={3}
+            disabled={false}
+          />
+        )}
       </div>
 
       <div>

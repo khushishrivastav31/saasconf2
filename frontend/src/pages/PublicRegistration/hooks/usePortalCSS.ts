@@ -11,7 +11,9 @@ export function usePortalCSS(tenantSlug: string, conferenceSlug: string): void {
   useEffect(() => {
     if (!tenantSlug || !conferenceSlug) return;
 
-    const cssUrl = `${import.meta.env.VITE_API_URL || ''}/api/v1/portal/${tenantSlug}/conferences/${conferenceSlug}/custom-css`;
+    // Add timestamp for cache busting (force fresh CSS on page load)
+    const timestamp = Date.now();
+    const cssUrl = `${import.meta.env.VITE_API_URL || ''}/api/v1/portal/${tenantSlug}/conferences/${conferenceSlug}/custom-css?t=${timestamp}`;
 
     // Fetch custom CSS
     fetch(cssUrl)

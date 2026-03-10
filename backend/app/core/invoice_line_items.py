@@ -6,7 +6,12 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.discount_code_validation import calculate_discount_for_item, check_discount_applies_to_option
+from app.core.discount_code_validation import (
+    calculate_discount_for_item,
+    check_discount_applies,
+    get_applicable_option_ids,
+    get_applicable_period_ids,
+)
 from app.models.booking import BookingOption, BookingPeriod, DiscountCode
 from app.models.program import ProgramSession
 from app.models.registration import Registration, RegistrationItem
@@ -41,6 +46,13 @@ async def generate_line_items_from_registration(
     subtotal = Decimal("0.00")
     total_discount = Decimal("0.00")
 
+    # Load discount restrictions once (frontend logic)
+    applicable_option_ids: list = []
+    applicable_period_ids: list = []
+    if discount_code:
+        applicable_option_ids = await get_applicable_option_ids(db, discount_code.id)
+        applicable_period_ids = await get_applicable_period_ids(db, discount_code.id)
+
     # Get main booking option
     booking_option_stmt = select(BookingOption).where(BookingOption.id == registration.booking_option_id)
     booking_option_result = await db.execute(booking_option_stmt)
@@ -59,8 +71,13 @@ async def generate_line_items_from_registration(
     else:
         logger.warning(f"No price found for option {option_id_str} in period {booking_period.id}")
 
-    # Query for RegistrationItems (add-ons only)
-    items_stmt = select(RegistrationItem).where(RegistrationItem.registration_id == registration.id)
+    # Query for RegistrationItems (add-ons only), sorted by booking option sort_order
+    items_stmt = (
+        select(RegistrationItem)
+        .join(BookingOption, RegistrationItem.booking_option_id == BookingOption.id)
+        .where(RegistrationItem.registration_id == registration.id)
+        .order_by(BookingOption.sort_order)
+    )
     items_result = await db.execute(items_stmt)
     items = items_result.scalars().all()
 
@@ -76,10 +93,15 @@ async def generate_line_items_from_registration(
         if session and session.title:
             main_description = f"{booking_option.name} - {session.title}"
 
-    # Check if discount applies to main option
+    # Check if discount applies to main option (using frontend logic)
     discount_for_main = Decimal("0.00")
     if discount_code:
-        applies = await check_discount_applies_to_option(db, discount_code.id, booking_option.id)
+        applies = check_discount_applies(
+            applicable_option_ids,
+            applicable_period_ids,
+            option_id=booking_option.id,
+            period_id=booking_period.id,
+        )
         if applies:
             discount_for_main = calculate_discount_for_item(discount_code, price)
             logger.debug(f"Discount {discount_for_main} applies to main option {booking_option.name}")
@@ -93,7 +115,7 @@ async def generate_line_items_from_registration(
             total=float(price - discount_for_main),
         )
     )
-    subtotal += price
+    subtotal += price - discount_for_main
     total_discount += discount_for_main
 
     # Add RegistrationItem add-ons (tutorials, extra day passes, etc.)
@@ -113,23 +135,40 @@ async def generate_line_items_from_registration(
             else:
                 logger.warning(f"No price found for add-on option {item_option_id_str} in period {booking_period.id}")
 
-        # Check if discount applies to this add-on
+        # Build item description with session info if applicable
+        item_description = item.item_name
+
+        # Check if this item has a session selection
+        if item.program_session_id:
+            session_result = await db.execute(
+                select(ProgramSession).where(ProgramSession.id == item.program_session_id)
+            )
+            session = session_result.scalar_one_or_none()
+            if session and session.title:
+                item_description = f"{item.item_name} - {session.title}"
+
+        # Check if discount applies to this add-on (using frontend logic)
         item_discount = Decimal("0.00")
         if discount_code and item.booking_option_id:
-            applies = await check_discount_applies_to_option(db, discount_code.id, item.booking_option_id)
+            applies = check_discount_applies(
+                applicable_option_ids,
+                applicable_period_ids,
+                option_id=item.booking_option_id,
+                period_id=booking_period.id,
+            )
             if applies:
                 item_discount = calculate_discount_for_item(discount_code, item_price)
 
         line_items.append(
             InvoiceLineItem(
-                description=item.item_name,
+                description=item_description,
                 quantity=1,
                 unit_price=float(item_price),
                 discount=float(item_discount),
                 total=float(item_price - item_discount),
             )
         )
-        subtotal += item_price
+        subtotal += item_price - item_discount
         total_discount += item_discount
 
     return (line_items, subtotal, total_discount)
@@ -184,7 +223,7 @@ async def generate_line_items_for_bulk_registrations(
                 total=float(total),
             )
         )
-        subtotal += item_subtotal
+        subtotal += total
         total_discount += item_total_discount
 
     return (line_items, subtotal, total_discount)

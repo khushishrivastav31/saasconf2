@@ -58,6 +58,7 @@ class BillingProfileCreate(BillingProfileBase):
     """Schema for creating a billing profile."""
 
     vat_validated: bool | None = None
+    payment_intent_id: str | None = None  # Stripe PaymentIntent ID for credit card payments
 
 
 class BillingProfileUpdate(BaseModel):

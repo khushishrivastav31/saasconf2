@@ -238,6 +238,8 @@ class InvoiceResponse(BaseModel):
     total: float | None = None
     currency: str | None = None
     procurement_code: str | None = None
+    discount_code: str | None = None
+    discount_amount: float | None = None
     vat_auto_calculated: bool = False
     attendance_type: str | None = None
     notes: str | None = None

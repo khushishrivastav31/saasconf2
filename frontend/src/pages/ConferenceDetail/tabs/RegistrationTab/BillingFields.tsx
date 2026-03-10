@@ -14,6 +14,9 @@ interface BillingFieldsProps {
   // NEW props for portal pre-fill:
   initialValues?: Partial<BillingProfileCreate>; // Pre-fill from user profile
   readOnlyFields?: Array<keyof BillingProfileCreate>; // Lock specific fields
+  // Hide fields when handled externally (e.g., in portal form):
+  hidePaymentMethod?: boolean;
+  hideDiscountCode?: boolean;
 }
 
 // Helper to determine VAT requirement client-side
@@ -57,6 +60,8 @@ export default function BillingFields({
   conference,
   initialValues,
   readOnlyFields,
+  hidePaymentMethod = false,
+  hideDiscountCode = false,
 }: BillingFieldsProps) {
   const [emailError, setEmailError] = useState<string | null>(null);
 
@@ -278,40 +283,44 @@ export default function BillingFields({
             onChange={(e) => onChange({ ...data, procurement_code: e.target.value || null })}
           />
         </div>
-        <div>
-          <label
-            htmlFor="payment_method"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            Payment Method *
-          </label>
-          <select
-            id="payment_method"
-            required
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-            value={data.payment_method || 'bank_transfer'}
-            onChange={(e) => onChange({ ...data, payment_method: e.target.value })}
-          >
-            <option value="bank_transfer">Bank Transfer</option>
-            <option value="credit_card">Credit Card</option>
-          </select>
-        </div>
-        <div>
-          <label
-            htmlFor="discount_code"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            Discount Code
-          </label>
-          <input
-            id="discount_code"
-            type="text"
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-            value={data.discount_code || ''}
-            onChange={(e) => onChange({ ...data, discount_code: e.target.value || null })}
-            placeholder="Enter code if applicable"
-          />
-        </div>
+        {!hidePaymentMethod && (
+          <div>
+            <label
+              htmlFor="payment_method"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Payment Method *
+            </label>
+            <select
+              id="payment_method"
+              required
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              value={data.payment_method || 'bank_transfer'}
+              onChange={(e) => onChange({ ...data, payment_method: e.target.value })}
+            >
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="credit_card">Credit Card</option>
+            </select>
+          </div>
+        )}
+        {!hideDiscountCode && (
+          <div>
+            <label
+              htmlFor="discount_code"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Discount Code
+            </label>
+            <input
+              id="discount_code"
+              type="text"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              value={data.discount_code || ''}
+              onChange={(e) => onChange({ ...data, discount_code: e.target.value || null })}
+              placeholder="Enter code if applicable"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

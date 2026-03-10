@@ -4,9 +4,9 @@
 
 ---
 
-**Last Updated**: March 8, 2026  
-**Version**: 2.0  
-**Audience**: Tenant Admins, Conference Admins, Team Members
+Last Updated: March 8, 2026  
+Version: 2.0  
+Audience: Tenant Admins, Conference Admins, Team Members
 
 ---
 
@@ -81,20 +81,20 @@ This handbook guides you through the tenant admin interface, explaining how to c
 SaaSConf has a hierarchical permission system with four distinct roles:
 
 #### Super Admin
-- **Scope**: Platform-wide access
-- **Who has this role**: SaaSConf platform administrators only
-- **Capabilities**:
+- Scope: Platform-wide access
+- Who has this role: SaaSConf platform administrators only
+- Capabilities:
   - Manage all tenant companies
   - Configure platform-wide modules
   - View audit logs across all tenants
   - Access administrative dashboard with system-wide statistics
-- **Restrictions**: Cannot access individual tenant data unless explicitly granted access
-- **UI Access**: Super Admin dashboard at `/admin/tenants`, `/admin/modules`, `/admin/audit-logs`
+- Restrictions: Cannot access individual tenant data unless explicitly granted access
+- UI Access: Super Admin dashboard at `/admin/tenants`, `/admin/modules`, `/admin/audit-logs`
 
 #### Tenant Admin
-- **Scope**: Full access within their organization (tenant)
-- **Who has this role**: Organization administrators designated during tenant setup
-- **Capabilities**:
+- Scope: Full access within their organization (tenant)
+- Who has this role: Organization administrators designated during tenant setup
+- Capabilities:
   - Create, edit, and delete conferences
   - Invite and manage team members
   - Configure all conference settings
@@ -102,33 +102,33 @@ SaaSConf has a hierarchical permission system with four distinct roles:
   - Manage billing and invoicing
   - Upload logos and branding assets
   - Configure email templates
-- **Restrictions**: Cannot access other tenants' data or platform administration
-- **UI Access**: All tenant features, conferences, and settings
+- Restrictions: Cannot access other tenants' data or platform administration
+- UI Access: All tenant features, conferences, and settings
 
 #### Conference Admin (Team Member with Admin Access)
-- **Scope**: Admin access to specific conferences only
-- **Who has this role**: Team members granted admin-level conference access
-- **Capabilities**:
+- Scope: Admin access to specific conferences only
+- Who has this role: Team members granted admin-level conference access
+- Capabilities:
   - Edit conference details within assigned conferences
   - Manage team members for assigned conferences
   - Configure settings for assigned conferences
   - Create/edit sessions, speakers, sponsors
   - Access all modules within assigned conferences
-- **Restrictions**: Cannot create new conferences, cannot access unassigned conferences, cannot manage tenant-level users
-- **Configuration**: Set via "Edit Team Member" → "Conference Access" → Select conference → Choose "Admin" access level
+- Restrictions: Cannot create new conferences, cannot access unassigned conferences, cannot manage tenant-level users
+- Configuration: Set via "Edit Team Member" → "Conference Access" → Select conference → Choose "Admin" access level
 
 #### Team Member (Read-Only User)
-- **Scope**: Read-only access to assigned conferences or all conferences
-- **Who has this role**: Team members with read-only access level
-- **Capabilities**:
+- Scope: Read-only access to assigned conferences or all conferences
+- Who has this role: Team members with read-only access level
+- Capabilities:
   - View all data within assigned conferences
   - Export data (CSV, PDF reports)
   - View dashboards and statistics
   - Access portal previews
-- **Restrictions**: Cannot create, edit, or delete any data. Cannot invite users or change settings.
-- **Configuration**: Set via "Edit Team Member" → Role: "Read-only" + "Conference Access" configuration
+- Restrictions: Cannot create, edit, or delete any data. Cannot invite users or change settings.
+- Configuration: Set via "Edit Team Member" → Role: "Read-only" + "Conference Access" configuration
 
-**[Screenshot: Team page showing role badges - Admin (purple), Read-only (gray)]**
+[Screenshot: Team page showing role badges - Admin (purple), Read-only (gray)]
 
 ### Navigation Overview
 
@@ -136,27 +136,27 @@ The SaaSConf interface is organized into three main areas:
 
 #### Top Navigation Bar
 Located at the top of every page, this bar provides:
-- **Logo/Home Link**: Returns to main dashboard
-- **User Menu** (top-right): Access to profile settings, theme toggle (light/dark mode), and logout
-- **Notifications Icon**: Message notifications (if enabled in your profile)
+- Logo/Home Link: Returns to main dashboard
+- User Menu (top-right): Access to profile settings, theme toggle (light/dark mode), and logout
+- Notifications Icon: Message notifications (if enabled in your profile)
 
-**[Screenshot: Top navigation bar with user menu expanded]**
+[Screenshot: Top navigation bar with user menu expanded]
 
 #### Main Dashboard
 Your landing page after login shows:
-- **For Super Admins**: Cards linking to Companies, Modules, and Audit Logs
-- **For Tenant Admins/Users**: List of available modules (if tenant has modules enabled)
-- **Welcome Message**: Displays your name or email
-- **Quick Stats**: Conference counts by status (upcoming, ongoing, past)
+- For Super Admins: Cards linking to Companies, Modules, and Audit Logs
+- For Tenant Admins/Users: List of available modules (if tenant has modules enabled)
+- Welcome Message: Displays your name or email
+- Quick Stats: Conference counts by status (upcoming, ongoing, past)
 
-**[Screenshot: Tenant user dashboard showing module cards]**
+[Screenshot: Tenant user dashboard showing module cards]
 
 #### Conference Management Area
 Accessed via the "Conferences" page, which shows:
-- **Conference Grid**: Visual cards for each conference with logo, dates, location, status badge
-- **Filter Bar**: Filter by status (upcoming, ongoing, past, draft)
-- **Stats Summary**: Total, upcoming, ongoing, and past conference counts
-- **Create Conference Button**: Visible only to Tenant Admins
+- Conference Grid: Visual cards for each conference with logo, dates, location, status badge
+- Filter Bar: Filter by status (upcoming, ongoing, past, draft)
+- Stats Summary: Total, upcoming, ongoing, and past conference counts
+- Create Conference Button: Visible only to Tenant Admins
 
 Each conference card displays:
 - Conference logo (if uploaded)
@@ -168,7 +168,7 @@ Each conference card displays:
 - Published/Draft indicator
 - Delete button (Super Admin and Tenant Super User only)
 
-**[Screenshot: Conferences page showing grid view with status badges and filters]**
+[Screenshot: Conferences page showing grid view with status badges and filters]
 
 ### Accessing Your Conference
 
@@ -178,18 +178,18 @@ To access a conference:
 2. Locate your conference in the grid (use the filter dropdown if you have many conferences)
 3. Click anywhere on the conference card to open the conference detail view
 
-**[Screenshot: Conference card being hovered, showing cursor pointer]**
+[Screenshot: Conference card being hovered, showing cursor pointer]
 
 The Conference Detail page opens with a sidebar navigation showing all available sections. The sidebar is organized into logical groups:
-- **Overview**: Details, Team, Social
-- **Content Management**: CFPs, Papers, Speakers, Sessions, News
-- **Event Operations**: Volunteers, Locations, Sponsors, Booking, Invoices
-- **Program Management**: Program Design, Program Build
-- **Communication**: Messaging, Screen Overlays
-- **Data**: Attendees, Alumni, Deadlines
-- **Configuration**: Settings (with sub-sections)
+- Overview: Details, Team, Social
+- Content Management: CFPs, Papers, Speakers, Sessions, News
+- Event Operations: Volunteers, Locations, Sponsors, Booking, Invoices
+- Program Management: Program Design, Program Build
+- Communication: Messaging, Screen Overlays
+- Data: Attendees, Alumni, Deadlines
+- Configuration: Settings (with sub-sections)
 
-**[Screenshot: Conference detail sidebar navigation with expanded Settings section]**
+[Screenshot: Conference detail sidebar navigation with expanded Settings section]
 
 ### What Happens Automatically
 
@@ -202,11 +202,11 @@ When you first log in:
 
 ### Best Practices
 
-1. **Role Assignment**: Assign the minimum necessary role. Use read-only access for team members who only need to view data.
-2. **Conference-Specific Access**: For large teams, use conference-specific access instead of "All Conferences" to reduce clutter and improve security.
-3. **Theme Preference**: Set your theme preference in the user menu for consistent visual experience.
-4. **Browser Compatibility**: SaaSConf works best in modern browsers (Chrome, Firefox, Safari, Edge). Enable JavaScript and allow cookies.
-5. **Navigation Tips**: Use the sidebar collapse button (left sidebar) to maximize workspace on smaller screens.
+1. Role Assignment: Assign the minimum necessary role. Use read-only access for team members who only need to view data.
+2. Conference-Specific Access: For large teams, use conference-specific access instead of "All Conferences" to reduce clutter and improve security.
+3. Theme Preference: Set your theme preference in the user menu for consistent visual experience.
+4. Browser Compatibility: SaaSConf works best in modern browsers (Chrome, Firefox, Safari, Edge). Enable JavaScript and allow cookies.
+5. Navigation Tips: Use the sidebar collapse button (left sidebar) to maximize workspace on smaller screens.
 
 ---
 
@@ -214,15 +214,15 @@ When you first log in:
 
 ### Overview
 
-The Conference Dashboard is your central hub for managing a single conference. It opens when you click a conference card from the Conferences page. The dashboard consists of a **Details tab** (your default view), a collapsible **sidebar** for navigation, and a **header** showing conference status and quick actions.
+The Conference Dashboard is your central hub for managing a single conference. It opens when you click a conference card from the Conferences page. The dashboard consists of a Details tab (your default view), a collapsible sidebar for navigation, and a header showing conference status and quick actions.
 
 The Details tab provides an overview of all conference information and quick editing capabilities for core settings.
 
 ### Prerequisites
 
-- **Permission Required**: At least read-only access to the conference
-- **For Editing**: Admin access (Tenant Admin or Conference Admin role)
-- **Browser**: Modern browser with JavaScript enabled
+- Permission Required: At least read-only access to the conference
+- For Editing: Admin access (Tenant Admin or Conference Admin role)
+- Browser: Modern browser with JavaScript enabled
 
 ### Conference Status
 
@@ -230,191 +230,191 @@ Conferences automatically move through status phases based on dates:
 
 #### Status Types and Meanings
 
-**Upcoming** (Blue Badge)
+Upcoming (Blue Badge)
 - Conference start date is in the future
 - Most common status during planning phase
 - All features fully accessible for configuration
 
-**Ongoing** (Green Badge)
+Ongoing (Green Badge)
 - Current date is between start_date and end_date
 - Conference is actively happening
 - Portal typically shows live program and session details
 
-**Past** (Gray Badge)
+Past (Gray Badge)
 - Current date is after end_date
 - Conference has concluded
 - Data remains accessible for reporting and historical reference
 - Can still be edited (dates can be changed to reactivate)
 
-**Draft** (Yellow Badge)
+Draft (Yellow Badge)
 - Custom status for conferences not yet ready for publication
 - No automatic status rules apply
 - Manually controlled via publish toggle
 
-**[Screenshot: Conference header showing status badge and conference name]**
+[Screenshot: Conference header showing status badge and conference name]
 
 ### Quick Stats and Overview
 
 The Details tab displays real-time statistics and metadata:
 
 #### Displayed Information
-- **Conference Logo**: Visual branding identifier (shown in header and cards)
-- **Basic Details**: Name, abbreviation, description
-- **Dates**: Start date, end date
-- **Location Details**: Venue name, address, city, state/province, postal code, country
-- **Timezone**: Conference timezone (auto-suggested based on country)
-- **Event Type**: Onsite, Virtual, or Hybrid
-- **Venue URL**: Optional link to venue website or map
-- **Virtual Platform URL**: Streaming platform link (for virtual/hybrid events)
-- **Contact Information**: Support email, contact email, phone (used in templates and invoices)
-- **Website**: Conference website URL
-- **Portal URLs**: Auto-generated shareable links for attendee/applicant access
+- Conference Logo: Visual branding identifier (shown in header and cards)
+- Basic Details: Name, abbreviation, description
+- Dates: Start date, end date
+- Location Details: Venue name, address, city, state/province, postal code, country
+- Timezone: Conference timezone (auto-suggested based on country)
+- Event Type: Onsite, Virtual, or Hybrid
+- Venue URL: Optional link to venue website or map
+- Virtual Platform URL: Streaming platform link (for virtual/hybrid events)
+- Contact Information: Support email, contact email, phone (used in templates and invoices)
+- Website: Conference website URL
+- Portal URLs: Auto-generated shareable links for attendee/applicant access
 
-**[Screenshot: Details tab showing all conference information fields]**
+[Screenshot: Details tab showing all conference information fields]
 
 ### Editing Conference Information
 
 All fields in the Details tab auto-save after a 500ms delay when you stop typing. A save status indicator appears in the top-right corner of each section.
 
 #### Save Status Indicators
-- **Saving...** (gray, spinning icon): Changes are being sent to server
-- **Saved** (green, checkmark): Changes saved successfully
-- **Save failed** (red, X icon): Error occurred; check your connection
+- Saving... (gray, spinning icon): Changes are being sent to server
+- Saved (green, checkmark): Changes saved successfully
+- Save failed (red, X icon): Error occurred; check your connection
 
-**[Screenshot: Save status indicators in different states]**
+[Screenshot: Save status indicators in different states]
 
 #### Basic Details Section
 
-**Conference Name** (Required)
+Conference Name (Required)
 - Main identifier for the conference
 - Displayed on all pages, emails, and invoices
 - Character limit: 255 characters
-- **Validation**: Cannot be empty
-- **Example**: "International Conference on Software Engineering 2026"
+- Validation: Cannot be empty
+- Example: "International Conference on Software Engineering 2026"
 
-**Abbreviation** (Optional but Recommended)
+Abbreviation (Optional but Recommended)
 - Short form of conference name
 - Used in URL generation for portal access
-- **Best Practice**: Use consistent abbreviations (e.g., "ICSE2026")
-- **Portal URL Impact**: If present, creates conference-specific landing page: `/{tenant-slug}/portal/{abbreviation}`
+- Best Practice: Use consistent abbreviations (e.g., "ICSE2026")
+- Portal URL Impact: If present, creates conference-specific landing page: `/{tenant-slug}/portal/{abbreviation}`
 
-**[Screenshot: Basic details section with name and abbreviation fields]**
+[Screenshot: Basic details section with name and abbreviation fields]
 
-**Conference Description** (Optional)
+Conference Description (Optional)
 - Rich-text field supporting formatting (bold, italic, lists, links)
 - Displayed on portal landing pages
-- **Toolbar**: Basic formatting options appear on selection
-- **Safety**: HTML is automatically sanitized to prevent XSS
-- **Best Practice**: Keep to 2-3 paragraphs for portal readability
+- Toolbar: Basic formatting options appear on selection
+- Safety: HTML is automatically sanitized to prevent XSS
+- Best Practice: Keep to 2-3 paragraphs for portal readability
 
-**[Screenshot: Rich text editor with formatting toolbar visible]**
+[Screenshot: Rich text editor with formatting toolbar visible]
 
-**Website** (Optional)
+Website (Optional)
 - Main conference website URL
 - Auto-normalized on blur (adds `https://` if missing)
-- **Validation**: Must be valid URL format if provided
-- **Example**: Enter `example.com`, system converts to `https://example.com`
+- Validation: Must be valid URL format if provided
+- Example: Enter `example.com`, system converts to `https://example.com`
 
 #### Date and Time Settings
 
-**Start Date** (Required)
+Start Date (Required)
 - First day of the conference
 - Used for status calculation (upcoming/ongoing/past)
-- **Smart Behavior**: If you set start date after existing end date, end date auto-adjusts to match
-- **Format**: Date picker (YYYY-MM-DD)
+- Smart Behavior: If you set start date after existing end date, end date auto-adjusts to match
+- Format: Date picker (YYYY-MM-DD)
 
-**End Date** (Required)
+End Date (Required)
 - Last day of the conference
-- **Constraint**: Must be same as or after start date
-- **Default**: If not set, defaults to start date (single-day conference)
+- Constraint: Must be same as or after start date
+- Default: If not set, defaults to start date (single-day conference)
 
-**Timezone** (Required)
+Timezone (Required)
 - Determines how session times are displayed in portal
-- **Auto-Suggestion**: When you select a country, system suggests default timezone
-- **Dropdown Options**: Searchable list of common timezones (e.g., "Europe/Berlin", "America/New_York")
-- **Best Practice**: Set timezone before creating sessions to avoid confusion
+- Auto-Suggestion: When you select a country, system suggests default timezone
+- Dropdown Options: Searchable list of common timezones (e.g., "Europe/Berlin", "America/New_York")
+- Best Practice: Set timezone before creating sessions to avoid confusion
 
-**[Screenshot: Date fields and timezone dropdown]**
+[Screenshot: Date fields and timezone dropdown]
 
 #### Contact Information Section
 
 These fields populate placeholders in email templates and invoice templates.
 
-**Support Email** (Optional)
+Support Email (Optional)
 - Used as reply-to address in automated emails
 - Placeholder: `[SUPPORT_EMAIL]` in templates
-- **Validation**: Email format checked on blur
-- **Error Display**: Red border + error message if invalid
-- **Example**: `support@conference.org`
+- Validation: Email format checked on blur
+- Error Display: Red border + error message if invalid
+- Example: `support@conference.org`
 
-**Contact Email** (Optional)
+Contact Email (Optional)
 - General contact email for attendees
 - Placeholder: `[CONTACT_EMAIL]` in templates
-- **Validation**: Email format checked on blur
+- Validation: Email format checked on blur
 
-**Phone** (Optional)
+Phone (Optional)
 - Contact phone number
 - Placeholder: `[PHONE]` in invoices and templates
-- **Validation**: International format checked on blur (e.g., `+49 123 456789`)
-- **Error Display**: Red border + error message if invalid
-- **Format**: Accepts `+` prefix or `00` prefix
+- Validation: International format checked on blur (e.g., `+49 123 456789`)
+- Error Display: Red border + error message if invalid
+- Format: Accepts `+` prefix or `00` prefix
 
-**[Screenshot: Contact information fields with validation error shown]**
+[Screenshot: Contact information fields with validation error shown]
 
 #### Location Section
 
-**Venue Name** (Optional)
+Venue Name (Optional)
 - Name of the physical or virtual venue
-- **Example**: "Berlin Congress Center"
+- Example: "Berlin Congress Center"
 
-**Address** (Optional)
+Address (Optional)
 - Street address of venue
 - Displayed on attendee information pages
 
-**Postal Code** / **City** / **State/Province** (Optional)
+Postal Code / City / State/Province (Optional)
 - Standard address components
 - Used for location display on conference cards
 
-**Country** (Required for Timezone Auto-Suggestion)
+Country (Required for Timezone Auto-Suggestion)
 - Dropdown with full country list
-- **Smart Behavior**: Selecting country auto-suggests timezone if timezone is currently empty
-- **Storage**: Stores full country name (e.g., "Germany", not "DE")
+- Smart Behavior: Selecting country auto-suggests timezone if timezone is currently empty
+- Storage: Stores full country name (e.g., "Germany", not "DE")
 
-**Event Type** (Required)
+Event Type (Required)
 - Three options:
-  - **Onsite**: Physical venue only
-  - **Virtual**: Online-only event
-  - **Hybrid**: Both physical and online
-- **UI Impact**: Virtual/Hybrid shows additional field for streaming platform URL
+  - Onsite: Physical venue only
+  - Virtual: Online-only event
+  - Hybrid: Both physical and online
+- UI Impact: Virtual/Hybrid shows additional field for streaming platform URL
 
-**Venue URL** (Optional)
+Venue URL (Optional)
 - Link to venue website or map
 - Auto-normalized on blur (adds `https://` if missing)
 
-**Streaming Platform URL** (Conditional - Virtual/Hybrid Only)
+Streaming Platform URL (Conditional - Virtual/Hybrid Only)
 - URL for online attendees to access sessions
 - Only shown if Event Type is Virtual or Hybrid
 - Auto-normalized on blur
-- **Example**: `https://zoom.us/j/123456789`
+- Example: `https://zoom.us/j/123456789`
 
-**[Screenshot: Location section with event type dropdown and conditional streaming URL field]**
+[Screenshot: Location section with event type dropdown and conditional streaming URL field]
 
 #### Portal URLs Section
 
 This section auto-generates shareable URLs for attendee/applicant access. You cannot edit these URLs directly; they update automatically based on tenant slug and conference abbreviation.
 
-**General Portal Login**
+General Portal Login
 - Format: `https://{your-domain}/{tenant-slug}/portal/user/login`
-- **Use Case**: Share for users to register/login to the general portal
-- **Actions**: Copy button, Open in new tab button
+- Use Case: Share for users to register/login to the general portal
+- Actions: Copy button, Open in new tab button
 
-**Conference Landing Page** (Only if abbreviation is set)
+Conference Landing Page (Only if abbreviation is set)
 - Format: `https://{your-domain}/{tenant-slug}/portal/{abbreviation}`
-- **Use Case**: Direct applicants to this conference's CFP portal
-- **Actions**: Copy button, Open in new tab button
-- **Smart Display**: Only appears if abbreviation field has a value
+- Use Case: Direct applicants to this conference's CFP portal
+- Actions: Copy button, Open in new tab button
+- Smart Display: Only appears if abbreviation field has a value
 
-**[Screenshot: Portal URLs section with copy and open buttons]**
+[Screenshot: Portal URLs section with copy and open buttons]
 
 ### Logo Upload
 
@@ -427,29 +427,29 @@ The conference logo is displayed on conference cards, in the header, and optiona
 4. On success, logo refreshes with cache-busting timestamp
 5. Status returns to idle
 
-**[Screenshot: Logo upload section showing logo preview, upload button, and delete button]**
+[Screenshot: Logo upload section showing logo preview, upload button, and delete button]
 
 #### Technical Specifications
-- **Allowed Formats**: JPEG, PNG, WebP, GIF
-- **Not Allowed**: SVG (XSS risk in portal)
-- **Max File Size**: 10 MB
-- **EXIF Stripping**: Metadata automatically removed for privacy
-- **Storage**: Stored via polymorphic Attachment model (`entity_type="conference_logo"`)
-- **Serving**: Public endpoint with 24-hour cache: `/conferences/{id}/logo?v={timestamp}`
+- Allowed Formats: JPEG, PNG, WebP, GIF
+- Not Allowed: SVG (XSS risk in portal)
+- Max File Size: 10 MB
+- EXIF Stripping: Metadata automatically removed for privacy
+- Storage: Stored via polymorphic Attachment model (`entity_type="conference_logo"`)
+- Serving: Public endpoint with 24-hour cache: `/conferences/{id}/logo?v={timestamp}`
 
 #### Logo Preview
-- **Container**: Flexible width (min 96px, max 192px) and fixed height (96px)
-- **Aspect Ratio**: Preserved automatically
-- **Background**: Light gray in light mode, dark gray in dark mode
-- **Placeholder**: Building icon shown if no logo uploaded
+- Container: Flexible width (min 96px, max 192px) and fixed height (96px)
+- Aspect Ratio: Preserved automatically
+- Background: Light gray in light mode, dark gray in dark mode
+- Placeholder: Building icon shown if no logo uploaded
 
 #### Delete Logo
 - Click "Delete Logo" button
 - Confirmation required: Yes
-- **Impact**: Logo removed from all locations (cards, header, emails)
-- **Restoration**: Upload again to restore (previous logo not recoverable)
+- Impact: Logo removed from all locations (cards, header, emails)
+- Restoration: Upload again to restore (previous logo not recoverable)
 
-**Error Handling**:
+Error Handling:
 - Invalid file type: "Invalid file type. Allowed: JPEG, PNG, WebP, GIF."
 - File too large: "File size exceeds 10MB limit."
 - Network error: "Failed to upload logo. Please try again."
@@ -458,99 +458,99 @@ The conference logo is displayed on conference cards, in the header, and optiona
 ### Edge Cases
 
 #### Date Conflicts
-- **Setting start date after end date**: End date auto-adjusts to match start date
-- **Past dates**: Allowed - useful for importing historical conferences
-- **Future dates beyond 10 years**: Accepted but may trigger warnings in stats
+- Setting start date after end date: End date auto-adjusts to match start date
+- Past dates: Allowed - useful for importing historical conferences
+- Future dates beyond 10 years: Accepted but may trigger warnings in stats
 
 #### Empty Required Fields
-- **Name**: Save fails silently if name is empty (validation prevents this in practice)
-- **Timezone**: Can be empty but recommended to set before creating sessions
+- Name: Save fails silently if name is empty (validation prevents this in practice)
+- Timezone: Can be empty but recommended to set before creating sessions
 
 #### Invalid Email/Phone
-- **Auto-save behavior**: If validation error appears on blur, auto-save is blocked until fixed
-- **User must**: Correct the value and blur again to trigger save
-- **Visual cue**: Red border persists until valid value entered
+- Auto-save behavior: If validation error appears on blur, auto-save is blocked until fixed
+- User must: Correct the value and blur again to trigger save
+- Visual cue: Red border persists until valid value entered
 
 #### Network Issues
-- **Save failed state**: Appears after timeout or 4xx/5xx response
-- **User action**: Check connection, try editing field again to retry
-- **Data loss**: No data loss - form retains all entered values
+- Save failed state: Appears after timeout or 4xx/5xx response
+- User action: Check connection, try editing field again to retry
+- Data loss: No data loss - form retains all entered values
 
 #### Logo Upload Issues
-- **Upload in progress**: Cannot select new file while upload is processing
-- **Multiple uploads**: Uploading new logo automatically replaces old one (delete-then-upload pattern)
-- **Delete during upload**: Not possible - delete button disabled during upload
+- Upload in progress: Cannot select new file while upload is processing
+- Multiple uploads: Uploading new logo automatically replaces old one (delete-then-upload pattern)
+- Delete during upload: Not possible - delete button disabled during upload
 
 ### Validation Rules
 
 #### Email Fields (Support Email, Contact Email)
-- **Pattern**: Standard email regex (RFC 5322 simplified)
-- **Case**: Normalized to lowercase on save
-- **Empty**: Valid (fields are optional)
-- **Error Message**: "Please enter a valid email address."
+- Pattern: Standard email regex (RFC 5322 simplified)
+- Case: Normalized to lowercase on save
+- Empty: Valid (fields are optional)
+- Error Message: "Please enter a valid email address."
 
 #### Phone Field
-- **Library**: Uses `libphonenumber-js` for validation
-- **Format**: International format required (+49..., or 0049...)
-- **Empty**: Valid (field is optional)
-- **Error Message**: "Please enter a valid international phone number (e.g., +49 123 456789)."
+- Library: Uses `libphonenumber-js` for validation
+- Format: International format required (+49..., or 0049...)
+- Empty: Valid (field is optional)
+- Error Message: "Please enter a valid international phone number (e.g., +49 123 456789)."
 
 #### URL Fields (Website, Venue URL, Streaming Platform URL)
-- **Normalization**: Auto-prepends `https://` on blur if protocol missing
-- **Empty**: Valid (fields are optional except where conditional)
-- **Validation**: Basic URL structure check (protocol + domain)
+- Normalization: Auto-prepends `https://` on blur if protocol missing
+- Empty: Valid (fields are optional except where conditional)
+- Validation: Basic URL structure check (protocol + domain)
 
 #### Date Fields
-- **Start Date**: No past date validation (historical conferences allowed)
-- **End Date**: Must be >= start date (enforced via `min` attribute)
+- Start Date: No past date validation (historical conferences allowed)
+- End Date: Must be >= start date (enforced via `min` attribute)
 
 #### Text Length
-- **Name**: Max 255 characters
-- **Abbreviation**: Max 50 characters
-- **Description**: No hard limit (rich text field)
-- **Venue Name, Address, City, State**: Max 255 characters each
+- Name: Max 255 characters
+- Abbreviation: Max 50 characters
+- Description: No hard limit (rich text field)
+- Venue Name, Address, City, State: Max 255 characters each
 
 ### Best Practices
 
-1. **Fill Core Fields First**: Set name, dates, and timezone before inviting team or creating sessions
-2. **Abbreviation Consistency**: Use year + event acronym (e.g., "ICSE2026") for easy portal URL sharing
-3. **Logo Aspect Ratio**: Use landscape logos (16:9 or 4:3) for best display in conference cards
-4. **Contact Fields**: Always fill support_email and contact_email for professional automated emails
-5. **Timezone Accuracy**: Double-check timezone - changing it after publishing program causes confusion
-6. **Description Length**: Keep description under 500 words for portal readability
-7. **Portal URLs**: Copy and test portal URLs before sharing publicly to ensure abbreviation is correct
-8. **Auto-Save Awareness**: Wait for "Saved" indicator before navigating away to prevent data loss
+1. Fill Core Fields First: Set name, dates, and timezone before inviting team or creating sessions
+2. Abbreviation Consistency: Use year + event acronym (e.g., "ICSE2026") for easy portal URL sharing
+3. Logo Aspect Ratio: Use landscape logos (16:9 or 4:3) for best display in conference cards
+4. Contact Fields: Always fill support_email and contact_email for professional automated emails
+5. Timezone Accuracy: Double-check timezone - changing it after publishing program causes confusion
+6. Description Length: Keep description under 500 words for portal readability
+7. Portal URLs: Copy and test portal URLs before sharing publicly to ensure abbreviation is correct
+8. Auto-Save Awareness: Wait for "Saved" indicator before navigating away to prevent data loss
 
 ### Common Issues
 
-**Issue**: Changes not saving
-- **Cause**: Validation error in email/phone field, or network issue
-- **Solution**: Check for red borders indicating validation errors; fix and retry
+Issue: Changes not saving
+- Cause: Validation error in email/phone field, or network issue
+- Solution: Check for red borders indicating validation errors; fix and retry
 
-**Issue**: Logo not updating after upload
-- **Cause**: Browser cache
-- **Solution**: Hard refresh page (Ctrl+F5 / Cmd+Shift+R); system uses cache-busting URLs to prevent this
+Issue: Logo not updating after upload
+- Cause: Browser cache
+- Solution: Hard refresh page (Ctrl+F5 / Cmd+Shift+R); system uses cache-busting URLs to prevent this
 
-**Issue**: Portal URL not showing conference landing page
-- **Cause**: Abbreviation field is empty
-- **Solution**: Set abbreviation field and save; URL section will appear automatically
+Issue: Portal URL not showing conference landing page
+- Cause: Abbreviation field is empty
+- Solution: Set abbreviation field and save; URL section will appear automatically
 
-**Issue**: Timezone dropdown not showing expected timezone
-- **Cause**: Timezone list includes canonical names only
-- **Solution**: Search for city name in dropdown (e.g., "Berlin" → "Europe/Berlin")
+Issue: Timezone dropdown not showing expected timezone
+- Cause: Timezone list includes canonical names only
+- Solution: Search for city name in dropdown (e.g., "Berlin" → "Europe/Berlin")
 
-**Issue**: Save status stuck on "Saving..."
-- **Cause**: Network timeout or server error
-- **Solution**: Check browser console for errors; refresh page to see if save succeeded; retry edit
+Issue: Save status stuck on "Saving..."
+- Cause: Network timeout or server error
+- Solution: Check browser console for errors; refresh page to see if save succeeded; retry edit
 
 ### Related Features
 
-- **Conference Team** (Section 3): Configure team members for this conference
-- **Social Media** (Section 4): Add social links to conference profile
-- **Settings > Financial Settings**: Configure invoice templates using contact placeholders
-- **Settings > Email Templates**: Use contact placeholders (`[CONTACT_EMAIL]`, `[PHONE]`) in templates
-- **Program Design**: Session times use conference timezone
-- **Portal Landing Page**: Conference description appears on portal
+- Conference Team (Section 3): Configure team members for this conference
+- Social Media (Section 4): Add social links to conference profile
+- Settings > Financial Settings: Configure invoice templates using contact placeholders
+- Settings > Email Templates: Use contact placeholders (`[CONTACT_EMAIL]`, `[PHONE]`) in templates
+- Program Design: Session times use conference timezone
+- Portal Landing Page: Conference description appears on portal
 
 ---
 
@@ -558,68 +558,68 @@ The conference logo is displayed on conference cards, in the header, and optiona
 
 ### Overview
 
-The Conference Team feature allows you to list team members associated with a specific conference (e.g., conference chairs, program committee chairs, organizers). This is **separate from user accounts** — team members listed here do not automatically get login access.
+The Conference Team feature allows you to list team members associated with a specific conference (e.g., conference chairs, program committee chairs, organizers). This is separate from user accounts — team members listed here do not automatically get login access.
 
-**Key Distinction**:
-- **Team Tab (Conference Level)**: Lists people associated with this conference (displayed publicly, no login access)
-- **Team Page (Tenant Level)**: Manages user accounts with login credentials (accessible via main navigation)
+Key Distinction:
+- Team Tab (Conference Level): Lists people associated with this conference (displayed publicly, no login access)
+- Team Page (Tenant Level): Manages user accounts with login credentials (accessible via main navigation)
 
-To grant login access to someone, use the **Team page** in the main navigation and invite them as a user.
+To grant login access to someone, use the Team page in the main navigation and invite them as a user.
 
-**[Screenshot: Conference Details sidebar with Team tab highlighted]**
+[Screenshot: Conference Details sidebar with Team tab highlighted]
 
 ### Prerequisites
 
-- **Permission Required**: Read-only access to view team members
-- **For Editing**: Conference Admin or Tenant Admin role
-- **Browser**: Modern browser with JavaScript enabled
+- Permission Required: Read-only access to view team members
+- For Editing: Conference Admin or Tenant Admin role
+- Browser: Modern browser with JavaScript enabled
 
 ### Step-By-Step Instructions
 
 #### Viewing Team Members
 
 1. Navigate to your conference detail page
-2. Click the **Team** tab in the sidebar (under the Details section)
+2. Click the Team tab in the sidebar (under the Details section)
 3. Team members display as cards showing:
    - Full name (first + last)
    - Role label (if set)
    - Manager badge (if `is_manager` is true)
    - Email and phone (if provided)
 
-**[Screenshot: Team tab showing existing team members with role and manager badges]**
+[Screenshot: Team tab showing existing team members with role and manager badges]
 
 #### Adding a Team Member
 
-**Note**: Only users with admin access see the "Add Team Member" form.
+Note: Only users with admin access see the "Add Team Member" form.
 
 1. Scroll to the blue "Add Team Member" form at the bottom of the Team tab
 2. Fill in required fields:
-   - **First Name** * (Required)
-   - **Last Name** * (Required)
+   - First Name * (Required)
+   - Last Name * (Required)
 3. Fill in optional fields:
-   - **Role**: Job title or position (e.g., "Conference Chair", "Program Committee Chair")
-   - **Email**: Contact email (validates on blur)
-   - **Phone**: Contact phone (validates on blur using international format)
-4. Check **Conference Manager** checkbox if this person has managerial responsibility
-5. Click **Add Member** button
+   - Role: Job title or position (e.g., "Conference Chair", "Program Committee Chair")
+   - Email: Contact email (validates on blur)
+   - Phone: Contact phone (validates on blur using international format)
+4. Check Conference Manager checkbox if this person has managerial responsibility
+5. Click Add Member button
 6. Member appears immediately in the list above
 7. Save status indicator shows "Saving..." then "Saved"
 
-**[Screenshot: Add Team Member form with all fields visible and validation error on email field]**
+[Screenshot: Add Team Member form with all fields visible and validation error on email field]
 
 #### Editing a Team Member
 
 1. Locate the team member card in the list
-2. Click the **Edit icon** (pencil) in the top-right of the card
+2. Click the Edit icon (pencil) in the top-right of the card
 3. The card expands into an inline edit form with blue background
 4. Modify fields as needed (same fields as add form)
-5. Click **Save Changes** button
+5. Click Save Changes button
 6. Form collapses back to card view
 7. Save status indicator confirms save
 
-**[Screenshot: Team member card in edit mode showing expanded form]**
+[Screenshot: Team member card in edit mode showing expanded form]
 
-**Validation**:
+Validation:
 - First Name and Last Name cannot be empty
 - Email must be valid format (checked on blur)
 - Phone must be valid international format (checked on blur)
@@ -628,15 +628,15 @@ To grant login access to someone, use the **Team page** in the main navigation a
 #### Removing a Team Member
 
 1. Locate the team member card
-2. Click the **Delete icon** (trash can) in the top-right of the card
+2. Click the Delete icon (trash can) in the top-right of the card
 3. Confirmation dialog appears: "Are you sure you want to remove '[Full Name]' from this conference's team?"
-4. Click **Remove** to confirm, or **Cancel** to abort
+4. Click Remove to confirm, or Cancel to abort
 5. Team member is removed from the list immediately
 6. Save status indicator confirms deletion
 
-**[Screenshot: Confirmation dialog for removing team member]**
+[Screenshot: Confirmation dialog for removing team member]
 
-**Important**: This does **not** delete the person's user account (if they have one). It only removes them from this conference's team listing.
+Important: This does not delete the person's user account (if they have one). It only removes them from this conference's team listing.
 
 ### What Happens Automatically
 
@@ -657,117 +657,117 @@ To grant login access to someone, use the **Team page** in the main navigation a
 - Team count decrements on conference card
 
 #### Validation
-- **Email**: Regex-based validation matching backend EMAIL_RE pattern
-- **Phone**: International format validation via `libphonenumber-js`
-- **Empty Values**: Treated as valid for optional fields
-- **Errors Clear**: Validation errors clear when user types valid value and blurs
+- Email: Regex-based validation matching backend EMAIL_RE pattern
+- Phone: International format validation via `libphonenumber-js`
+- Empty Values: Treated as valid for optional fields
+- Errors Clear: Validation errors clear when user types valid value and blurs
 
 ### Edge Cases
 
 #### Duplicate Names
-- **Allowed**: System does not check for duplicate names
-- **Best Practice**: Use role field to differentiate (e.g., "Conference Chair 2025" vs "Conference Chair 2026")
+- Allowed: System does not check for duplicate names
+- Best Practice: Use role field to differentiate (e.g., "Conference Chair 2025" vs "Conference Chair 2026")
 
 #### Special Characters in Names
-- **Allowed**: Full Unicode support in first_name, last_name, role fields
-- **Display**: Renders correctly in both light and dark modes
+- Allowed: Full Unicode support in first_name, last_name, role fields
+- Display: Renders correctly in both light and dark modes
 
 #### Empty Email/Phone
-- **Allowed**: Both fields are optional
-- **Display**: Empty fields are hidden in card view (only name and role shown)
+- Allowed: Both fields are optional
+- Display: Empty fields are hidden in card view (only name and role shown)
 
 #### Invalid Email Format
-- **Detection**: Checked on blur (when field loses focus)
-- **UI**: Red border + error message: "Please enter a valid email address."
-- **Save Blocking**: Add/Save button disabled while error exists
-- **Fix**: Type valid email and blur again to clear error
+- Detection: Checked on blur (when field loses focus)
+- UI: Red border + error message: "Please enter a valid email address."
+- Save Blocking: Add/Save button disabled while error exists
+- Fix: Type valid email and blur again to clear error
 
 #### Invalid Phone Format
-- **Detection**: Checked on change (live validation)
-- **UI**: Red border + error message: "Please enter a valid international phone number (e.g., +49 123 456789)."
-- **Save Blocking**: Add/Save button disabled while error exists
-- **Examples**: `+49 123 456789`, `0049 123 456789` are valid; `123456789` is invalid
+- Detection: Checked on change (live validation)
+- UI: Red border + error message: "Please enter a valid international phone number (e.g., +49 123 456789)."
+- Save Blocking: Add/Save button disabled while error exists
+- Examples: `+49 123 456789`, `0049 123 456789` are valid; `123456789` is invalid
 
 #### Network Failure During Save
-- **UI**: Save status shows "Save failed"
-- **Data**: Local form retains entered values
-- **Recovery**: Try editing field again to retry save operation
+- UI: Save status shows "Save failed"
+- Data: Local form retains entered values
+- Recovery: Try editing field again to retry save operation
 
 #### Concurrent Edits
-- **Scenario**: Two users edit same team member simultaneously
-- **Behavior**: Last save wins (no conflict detection)
-- **Mitigation**: Save status indicator shows when changes are being saved
+- Scenario: Two users edit same team member simultaneously
+- Behavior: Last save wins (no conflict detection)
+- Mitigation: Save status indicator shows when changes are being saved
 
 ### Validation Rules
 
 #### First Name and Last Name
-- **Required**: Yes
-- **Max Length**: 255 characters
-- **Allowed Characters**: Full Unicode (letters, spaces, hyphens, apostrophes, etc.)
-- **Trimming**: Leading/trailing whitespace removed on save
+- Required: Yes
+- Max Length: 255 characters
+- Allowed Characters: Full Unicode (letters, spaces, hyphens, apostrophes, etc.)
+- Trimming: Leading/trailing whitespace removed on save
 
 #### Role
-- **Required**: No
-- **Max Length**: 255 characters
-- **Purpose**: Job title or position label
-- **Display**: Shows as small gray badge next to name
+- Required: No
+- Max Length: 255 characters
+- Purpose: Job title or position label
+- Display: Shows as small gray badge next to name
 
 #### Email
-- **Required**: No
-- **Validation**: Standard email format (RFC 5322 simplified)
-- **Normalization**: Lowercased on save
-- **Error Message**: "Please enter a valid email address."
-- **Timing**: Validated on blur
+- Required: No
+- Validation: Standard email format (RFC 5322 simplified)
+- Normalization: Lowercased on save
+- Error Message: "Please enter a valid email address."
+- Timing: Validated on blur
 
 #### Phone
-- **Required**: No
-- **Validation**: International format using `libphonenumber-js`
-- **Accepted Formats**: `+49 123 456789`, `0049 123 456789`
-- **Error Message**: "Please enter a valid international phone number (e.g., +49 123 456789)."
-- **Timing**: Validated on change (live)
+- Required: No
+- Validation: International format using `libphonenumber-js`
+- Accepted Formats: `+49 123 456789`, `0049 123 456789`
+- Error Message: "Please enter a valid international phone number (e.g., +49 123 456789)."
+- Timing: Validated on change (live)
 
 #### Conference Manager Checkbox
-- **Type**: Boolean
-- **Default**: False (unchecked)
-- **Display**: Blue "Manager" badge appears on card if true
+- Type: Boolean
+- Default: False (unchecked)
+- Display: Blue "Manager" badge appears on card if true
 
 ### Best Practices
 
-1. **Separate from User Accounts**: Remember this is a display-only list. To grant login access, use the Team page in main navigation.
-2. **Use Role Field**: Always specify role for clarity (e.g., "General Chair", "Program Chair", "Publicity Chair")
-3. **Manager Flag**: Use for organizing committee hierarchy; helps identify key decision-makers
-4. **Contact Info**: Provide email/phone only if you want this information publicly visible on portal
-5. **Consistent Naming**: Use full formal names for professionalism
-6. **Ordering**: Add members in order of seniority or importance (list displays in insertion order)
+1. Separate from User Accounts: Remember this is a display-only list. To grant login access, use the Team page in main navigation.
+2. Use Role Field: Always specify role for clarity (e.g., "General Chair", "Program Chair", "Publicity Chair")
+3. Manager Flag: Use for organizing committee hierarchy; helps identify key decision-makers
+4. Contact Info: Provide email/phone only if you want this information publicly visible on portal
+5. Consistent Naming: Use full formal names for professionalism
+6. Ordering: Add members in order of seniority or importance (list displays in insertion order)
 
 ### Common Issues
 
-**Issue**: Changes not saving
-- **Cause**: Validation error in email or phone field
-- **Solution**: Check for red borders; correct invalid values and try again
+Issue: Changes not saving
+- Cause: Validation error in email or phone field
+- Solution: Check for red borders; correct invalid values and try again
 
-**Issue**: Added member not appearing
-- **Cause**: Save failed due to network issue
-- **Solution**: Check "Save failed" status indicator; retry by adding again
+Issue: Added member not appearing
+- Cause: Save failed due to network issue
+- Solution: Check "Save failed" status indicator; retry by adding again
 
-**Issue**: Cannot find edit button
-- **Cause**: User has read-only access
-- **Solution**: Contact tenant admin to grant conference admin access
+Issue: Cannot find edit button
+- Cause: User has read-only access
+- Solution: Contact tenant admin to grant conference admin access
 
-**Issue**: Removed member still shows on portal
-- **Cause**: Portal cache
-- **Solution**: Wait 5 minutes for cache to clear, or hard refresh portal page
+Issue: Removed member still shows on portal
+- Cause: Portal cache
+- Solution: Wait 5 minutes for cache to clear, or hard refresh portal page
 
-**Issue**: Phone validation failing
-- **Cause**: Missing country code or invalid format
-- **Solution**: Ensure phone starts with `+` or `00` followed by country code (e.g., `+49 123 456789`)
+Issue: Phone validation failing
+- Cause: Missing country code or invalid format
+- Solution: Ensure phone starts with `+` or `00` followed by country code (e.g., `+49 123 456789`)
 
 ### Related Features
 
-- **Team Page (Main Navigation)**: Invite users with login access to your tenant
-- **Conference Access Control**: Grant specific users admin or read-only access to this conference
-- **Settings > Email Templates**: Team member details may be used in custom templates
-- **Portal Display**: Team members can be displayed on public-facing portal pages
+- Team Page (Main Navigation): Invite users with login access to your tenant
+- Conference Access Control: Grant specific users admin or read-only access to this conference
+- Settings > Email Templates: Team member details may be used in custom templates
+- Portal Display: Team members can be displayed on public-facing portal pages
 
 ---
 
@@ -777,33 +777,33 @@ To grant login access to someone, use the **Team page** in the main navigation a
 
 The Social Media tab allows you to configure social media links for your conference. These links appear on your conference's public portal pages, making it easy for attendees and applicants to follow conference updates on their preferred platforms.
 
-**[Screenshot: Social Media tab in conference sidebar]**
+[Screenshot: Social Media tab in conference sidebar]
 
 ### Prerequisites
 
-- **Permission Required**: Read-only access to view social links
-- **For Editing**: Conference Admin or Tenant Admin role
-- **Browser**: Modern browser with JavaScript enabled
+- Permission Required: Read-only access to view social links
+- For Editing: Conference Admin or Tenant Admin role
+- Browser: Modern browser with JavaScript enabled
 
 ### Step-By-Step Instructions
 
 #### Viewing Social Media Links
 
 1. Navigate to your conference detail page
-2. Click the **Social** tab in the sidebar (under the Details section)
+2. Click the Social tab in the sidebar (under the Details section)
 3. Existing social media links display as labeled input fields:
    - Platform name on the left (e.g., "Twitter", "Facebook", "LinkedIn")
    - URL input field in the center
    - Delete button (X icon) on the right (admin only)
 
-**[Screenshot: Social tab showing existing social media links with delete buttons]**
+[Screenshot: Social tab showing existing social media links with delete buttons]
 
 #### Adding a Social Media Channel
 
-**Note**: Only users with admin access see the "Add Channel" form.
+Note: Only users with admin access see the "Add Channel" form.
 
 1. Scroll to the bottom of the Social tab
-2. Click the **Select platform...** dropdown
+2. Click the Select platform... dropdown
 3. Choose from available platforms:
    - Twitter
    - Facebook
@@ -812,16 +812,16 @@ The Social Media tab allows you to configure social media links for your confere
    - YouTube
    - GitHub
    - Mastodon
-   - **Custom...** (for unlisted platforms)
+   - Custom... (for unlisted platforms)
 4. If you selected "Custom...":
    - A text input appears labeled "Platform name"
    - Enter the platform name (e.g., "Bluesky", "Discord")
-5. Click **Add Channel** button
+5. Click Add Channel button
 6. New platform appears in the list above with empty URL field
 7. Enter the URL for your profile/page
 8. Changes auto-save after 500ms delay
 
-**[Screenshot: Add Channel dropdown showing platform options including Custom]**
+[Screenshot: Add Channel dropdown showing platform options including Custom]
 
 #### Editing Social Media URLs
 
@@ -831,20 +831,20 @@ The Social Media tab allows you to configure social media links for your confere
 4. Click outside the field (blur) to trigger auto-save
 5. Save status indicator shows "Saving..." → "Saved"
 
-**[Screenshot: Social media URL field being edited with save status indicator]**
+[Screenshot: Social media URL field being edited with save status indicator]
 
-**URL Normalization**: The system does NOT auto-normalize URLs in social fields (unlike other URL fields). Enter full URLs including `https://`.
+URL Normalization: The system does NOT auto-normalize URLs in social fields (unlike other URL fields). Enter full URLs including `https://`.
 
 #### Deleting a Social Media Channel
 
 1. Locate the platform in the list
-2. Click the **Delete button** (X icon) on the right side of the row
+2. Click the Delete button (X icon) on the right side of the row
 3. Platform is removed immediately
 4. Save triggers automatically (no confirmation dialog)
 
-**[Screenshot: Delete button hover state on social media row]**
+[Screenshot: Delete button hover state on social media row]
 
-**Important**: Deletion is immediate and cannot be undone. To restore, add the platform again and re-enter the URL.
+Important: Deletion is immediate and cannot be undone. To restore, add the platform again and re-enter the URL.
 
 ### What Happens Automatically
 
@@ -864,13 +864,13 @@ The Social Media tab allows you to configure social media links for your confere
 - Field disappears from list
 
 #### Display Order
-- **Known platforms** (Twitter, Facebook, etc.) appear first in dropdown order
-- **Custom platforms** appear after known platforms in insertion order
-- **Storage**: JSON object with platform key → URL value pairs
+- Known platforms (Twitter, Facebook, etc.) appear first in dropdown order
+- Custom platforms appear after known platforms in insertion order
+- Storage: JSON object with platform key → URL value pairs
 
 ### Connecting Social Media Accounts
 
-**Important Clarification**: This feature does **not** connect your social media accounts for auto-posting. It only stores display links.
+Important Clarification: This feature does not connect your social media accounts for auto-posting. It only stores display links.
 
 #### What This Feature Does:
 - Stores social media profile/page URLs
@@ -883,9 +883,9 @@ The Social Media tab allows you to configure social media links for your confere
 - Require authentication or API keys
 - Schedule posts
 
-**For Auto-Posting**: SaaSConf does not currently support automated social media posting. You must post updates manually to your social channels.
+For Auto-Posting: SaaSConf does not currently support automated social media posting. You must post updates manually to your social channels.
 
-**[Screenshot: Social media links displaying on public portal]**
+[Screenshot: Social media links displaying on public portal]
 
 ### Social Media Settings
 
@@ -897,112 +897,112 @@ There are no additional settings for social media beyond the URLs. Each URL is t
 - Icons may be displayed on portal (depends on portal theme)
 
 #### Privacy
-- Links are **public** - visible to anyone viewing your portal
+- Links are public - visible to anyone viewing your portal
 - No authentication or private data is stored
 - URLs are not validated for account ownership
 
 ### Edge Cases
 
 #### Duplicate Platforms
-- **Prevention**: Dropdown only shows platforms not already in the list
-- **After Deletion**: Deleted platforms reappear in dropdown for re-adding
+- Prevention: Dropdown only shows platforms not already in the list
+- After Deletion: Deleted platforms reappear in dropdown for re-adding
 
 #### Custom Platform Name Conflicts
-- **Scenario**: Add custom platform "Twitter" when official Twitter exists
-- **Behavior**: Creates separate entry with key `twitter` (lowercase, underscore-separated)
-- **Display**: Shows as "Twitter" label
-- **Best Practice**: Avoid naming custom platforms with existing platform names
+- Scenario: Add custom platform "Twitter" when official Twitter exists
+- Behavior: Creates separate entry with key `twitter` (lowercase, underscore-separated)
+- Display: Shows as "Twitter" label
+- Best Practice: Avoid naming custom platforms with existing platform names
 
 #### Empty URLs
-- **Allowed**: Platforms can exist with empty URLs
-- **Display**: Empty URL fields are shown (not hidden)
-- **Save**: Saves empty string to database
-- **Portal**: Platforms with empty URLs may be hidden on portal (theme-dependent)
+- Allowed: Platforms can exist with empty URLs
+- Display: Empty URL fields are shown (not hidden)
+- Save: Saves empty string to database
+- Portal: Platforms with empty URLs may be hidden on portal (theme-dependent)
 
 #### Invalid URLs
-- **Validation**: None - system accepts any text
-- **Best Practice**: Always enter full URLs including `https://`
-- **Example**: `https://twitter.com/yourconference`
+- Validation: None - system accepts any text
+- Best Practice: Always enter full URLs including `https://`
+- Example: `https://twitter.com/yourconference`
 
 #### Network Failure During Save
-- **UI**: Save status shows "Save failed"
-- **Data**: Local state retains entered URL
-- **Recovery**: Try editing field again to retry
+- UI: Save status shows "Save failed"
+- Data: Local state retains entered URL
+- Recovery: Try editing field again to retry
 
 #### Special Characters in URLs
-- **Allowed**: Full URL encoding supported
-- **Example**: `https://example.com/path?param=value&other=123`
+- Allowed: Full URL encoding supported
+- Example: `https://example.com/path?param=value&other=123`
 
 #### Custom Platform Name Transformation
-- **Input**: "My Platform Name"
-- **Storage Key**: `my_platform_name` (lowercased, spaces → underscores)
-- **Display**: "My Platform Name" (original capitalization preserved in label)
+- Input: "My Platform Name"
+- Storage Key: `my_platform_name` (lowercased, spaces → underscores)
+- Display: "My Platform Name" (original capitalization preserved in label)
 
 ### Validation Rules
 
 #### Platform Name (Custom Only)
-- **Required**: Yes, if "Custom..." is selected
-- **Max Length**: Unlimited (practical limit ~50 characters for UI)
-- **Allowed Characters**: Full Unicode
-- **Transformation**: Lowercased and spaces replaced with underscores for storage key
+- Required: Yes, if "Custom..." is selected
+- Max Length: Unlimited (practical limit ~50 characters for UI)
+- Allowed Characters: Full Unicode
+- Transformation: Lowercased and spaces replaced with underscores for storage key
 
 #### URL Field
-- **Required**: No (empty URLs are allowed)
-- **Validation**: None - accepts any text
-- **Max Length**: 2048 characters (browser limit for URLs)
-- **Normalization**: None - enter exactly as you want it stored
+- Required: No (empty URLs are allowed)
+- Validation: None - accepts any text
+- Max Length: 2048 characters (browser limit for URLs)
+- Normalization: None - enter exactly as you want it stored
 
 #### Debounce Timing
-- **Delay**: 500ms after last keystroke
-- **Purpose**: Reduce server requests while typing
-- **Override**: Blur (clicking outside field) does not trigger immediate save; waits for debounce
+- Delay: 500ms after last keystroke
+- Purpose: Reduce server requests while typing
+- Override: Blur (clicking outside field) does not trigger immediate save; waits for debounce
 
 ### Best Practices
 
-1. **Use Full URLs**: Always include `https://` protocol (e.g., `https://twitter.com/yourconf`, not `twitter.com/yourconf`)
-2. **Verify Links**: Test each link on portal before sharing publicly to ensure correctness
-3. **Platform Selection**: Use official platform options when available instead of custom
-4. **Custom Names**: Use clear, recognizable names for custom platforms (e.g., "Discord Server", not "Chat")
-5. **Consistency**: Use consistent URL formats across platforms (profile URLs, not post URLs)
-6. **Privacy**: Only add links to accounts you manage or have permission to share
-7. **Maintenance**: Review and update links annually (social media URLs can change)
+1. Use Full URLs: Always include `https://` protocol (e.g., `https://twitter.com/yourconf`, not `twitter.com/yourconf`)
+2. Verify Links: Test each link on portal before sharing publicly to ensure correctness
+3. Platform Selection: Use official platform options when available instead of custom
+4. Custom Names: Use clear, recognizable names for custom platforms (e.g., "Discord Server", not "Chat")
+5. Consistency: Use consistent URL formats across platforms (profile URLs, not post URLs)
+6. Privacy: Only add links to accounts you manage or have permission to share
+7. Maintenance: Review and update links annually (social media URLs can change)
 
 ### Common Issues
 
-**Issue**: Changes not saving
-- **Cause**: Network issue or server error
-- **Solution**: Check browser console; refresh page to verify if changes persisted; retry edit
+Issue: Changes not saving
+- Cause: Network issue or server error
+- Solution: Check browser console; refresh page to verify if changes persisted; retry edit
 
-**Issue**: Platform not appearing in dropdown
-- **Cause**: Platform already added to the list
-- **Solution**: Scroll through existing links to find it, or delete and re-add
+Issue: Platform not appearing in dropdown
+- Cause: Platform already added to the list
+- Solution: Scroll through existing links to find it, or delete and re-add
 
-**Issue**: Link not working on portal
-- **Cause**: Incomplete URL (missing `https://`)
-- **Solution**: Edit URL to include full protocol: `https://twitter.com/...`
+Issue: Link not working on portal
+- Cause: Incomplete URL (missing `https://`)
+- Solution: Edit URL to include full protocol: `https://twitter.com/...`
 
-**Issue**: Cannot delete platform
-- **Cause**: User has read-only access
-- **Solution**: Contact conference admin to grant edit access
+Issue: Cannot delete platform
+- Cause: User has read-only access
+- Solution: Contact conference admin to grant edit access
 
-**Issue**: Custom platform name looks wrong
-- **Cause**: Name was transformed (lowercased, underscores)
-- **Solution**: Delete and re-add with desired capitalization for display label
+Issue: Custom platform name looks wrong
+- Cause: Name was transformed (lowercased, underscores)
+- Solution: Delete and re-add with desired capitalization for display label
 
-**Issue**: Save status stuck on "Saving..."
-- **Cause**: Network timeout
-- **Solution**: Refresh page; if changes didn't persist, re-enter URL
+Issue: Save status stuck on "Saving..."
+- Cause: Network timeout
+- Solution: Refresh page; if changes didn't persist, re-enter URL
 
 ### Related Features
 
-- **Portal Landing Page**: Social links display on public-facing portal pages
-- **News Tab**: Manually share news updates; copy links to post on social media
-- **Messaging Module**: Send email updates to attendees (consider announcing new social channels)
-- **Conference Description**: Mention social media in conference description for visibility
+- Portal Landing Page: Social links display on public-facing portal pages
+- News Tab: Manually share news updates; copy links to post on social media
+- Messaging Module: Send email updates to attendees (consider announcing new social channels)
+- Conference Description: Mention social media in conference description for visibility
 
 ---
 
-**End of Sections 1-4**
+End of Sections 1-4
 
 ---
 
@@ -3746,15 +3746,15 @@ SaaSConf provides VAT calculation tools based on EU regulations, but:
 
 This comprehensive documentation for Sections 5-8 covers:
 
-**Section 5 (Booking Options)**: ~650 lines covering periods, options, pricing matrix, currency config, day linking, auto-sync, validation, best practices, troubleshooting.
+Section 5 (Booking Options): ~650 lines covering periods, options, pricing matrix, currency config, day linking, auto-sync, validation, best practices, troubleshooting.
 
-**Section 6 (Booking Packages)**: ~450 lines covering package creation, pricing strategies, automation, edge cases, validation, best practices.
+Section 6 (Booking Packages): ~450 lines covering package creation, pricing strategies, automation, edge cases, validation, best practices.
 
-**Section 7 (Discount Codes)**: ~550 lines covering individual and bulk codes, template variables, applicability scoping, usage tracking, combinability, validation, best practices.
+Section 7 (Discount Codes): ~550 lines covering individual and bulk codes, template variables, applicability scoping, usage tracking, combinability, validation, best practices.
 
-**Section 8 (Invoice Management - Revised)**: ~850 lines enhancing existing content with Stripe webhook details, ZUGFeRD overview (brief, not full duplication of invoices.md), cross-references to VAT and Registration sections, and improved troubleshooting.
+Section 8 (Invoice Management - Revised): ~850 lines enhancing existing content with Stripe webhook details, ZUGFeRD overview (brief, not full duplication of invoices.md), cross-references to VAT and Registration sections, and improved troubleshooting.
 
-**Total: ~2,500 lines** of comprehensive, user-friendly documentation with:
+Total: ~2,500 lines of comprehensive, user-friendly documentation with:
 - Clear overviews and prerequisites for each section
 - Step-by-step instructions with screenshot placeholders
 - Detailed automation explanations
@@ -3775,24 +3775,24 @@ I'll analyze the codebase to write comprehensive documentation for Section 11 of
 
 ## 11.1 Overview
 
-The **Attendees** tab provides a comprehensive view of all registered conference attendees, including their booking options, session selections, payment status, and personal information. This tab serves as the primary interface for viewing and managing attendee data, tracking registration statistics, and exporting attendee lists for operational purposes.
+The Attendees tab provides a comprehensive view of all registered conference attendees, including their booking options, session selections, payment status, and personal information. This tab serves as the primary interface for viewing and managing attendee data, tracking registration statistics, and exporting attendee lists for operational purposes.
 
-**Key Distinction: Attendees vs Registration Tabs**
+Key Distinction: Attendees vs Registration Tabs
 
 The platform provides two distinct tabs for managing attendees:
 
-- **Registration Tab**: Used for creating new registrations, managing billing profiles, adding/modifying registration items, and handling the registration workflow (from creation through invoicing). This tab focuses on the transactional aspects of registration.
+- Registration Tab: Used for creating new registrations, managing billing profiles, adding/modifying registration items, and handling the registration workflow (from creation through invoicing). This tab focuses on the transactional aspects of registration.
 
-- **Attendees Tab**: Provides a read-only overview optimized for viewing all attendees at a glance, displaying statistics by booking option and session, and exporting attendee data. This tab focuses on operational visibility and reporting rather than registration management.
+- Attendees Tab: Provides a read-only overview optimized for viewing all attendees at a glance, displaying statistics by booking option and session, and exporting attendee data. This tab focuses on operational visibility and reporting rather than registration management.
 
-**Use the Registration tab when you need to:**
+Use the Registration tab when you need to:
 - Create new registrations
 - Modify registration details before invoicing
 - Manage booking options and add-on items
 - View detailed billing information
 - Delete pending registrations
 
-**Use the Attendees tab when you need to:**
+Use the Attendees tab when you need to:
 - Get a quick overview of all attendees
 - View statistics by booking option or session
 - Export attendee lists to CSV
@@ -3803,14 +3803,14 @@ The platform provides two distinct tabs for managing attendees:
 
 ## 11.2 Prerequisites
 
-**Required Permissions:**
+Required Permissions:
 - Admin access to the conference (conference admin, tenant admin, or super admin)
 
-**Module Requirements:**
+Module Requirements:
 - Registration module must be enabled for the tenant
 - Conference must have at least one booking option configured
 
-**Data Dependencies:**
+Data Dependencies:
 - Booking options must be configured in Conference Settings > Booking
 - At least one registration must exist to view attendee data
 - Invoice data must exist to display invoice numbers (optional)
@@ -3819,10 +3819,10 @@ The platform provides two distinct tabs for managing attendees:
 
 ## 11.3 Accessing the Attendees Tab
 
-**Navigation:**
+Navigation:
 1. Navigate to Conferences from the main menu
 2. Click on a conference to open the Conference Detail page
-3. Click the **Attendees** tab in the navigation menu
+3. Click the Attendees tab in the navigation menu
 
 The attendees tab displays immediately with all registered attendees loaded (up to 100 records by default for performance).
 
@@ -3836,17 +3836,17 @@ The Attendees tab displays two types of statistics at the top of the page:
 
 This grid shows the count of attendees for each booking option configured in the conference. Statistics include:
 
-- **Total active attendees** (displayed in the page header, excludes cancelled registrations)
-- **Count per booking option** (includes both main booking options and add-on items)
-- **Visual distinction** for zero-count options (displayed with reduced opacity)
+- Total active attendees (displayed in the page header, excludes cancelled registrations)
+- Count per booking option (includes both main booking options and add-on items)
+- Visual distinction for zero-count options (displayed with reduced opacity)
 
-**Calculation Logic:**
+Calculation Logic:
 - Counts are based on non-cancelled registrations only
 - Both main booking options AND add-on items are counted
 - Each booking option card shows the option name and attendee count
 - Cards are sorted by count (descending), with zero counts included
 
-**Example:**
+Example:
 ```
 Attendees by Booking Option
 ┌────────────┐  ┌────────────┐  ┌────────────┐
@@ -3861,17 +3861,17 @@ Attendees by Booking Option
 
 This grid shows the count of attendees for each session (tutorials, workshops, etc.) across all booking options. Statistics include:
 
-- **Session title** with speaker name (if available)
-- **Attendee count** per session
-- **Visual distinction** (blue theme) to differentiate from booking option stats
-- **Zero-count sessions** included for planning purposes
+- Session title with speaker name (if available)
+- Attendee count per session
+- Visual distinction (blue theme) to differentiate from booking option stats
+- Zero-count sessions included for planning purposes
 
-**Session Types Tracked:**
+Session Types Tracked:
 - Main sessions (tutorials selected as primary booking option session)
 - Add-on sessions (workshops, extra tutorials booked separately)
 - All sessions with papers attached to the program
 
-**Example:**
+Example:
 ```
 Attendees by Session (Tutorials, Workshops, etc.)
 ┌──────────────────────────┐  ┌──────────────────────────┐
@@ -3888,13 +3888,13 @@ Attendees by Session (Tutorials, Workshops, etc.)
 
 The search field provides real-time filtering of attendees:
 
-**Features:**
-- **Debounced search** (300ms delay to prevent excessive queries)
+Features:
+- Debounced search (300ms delay to prevent excessive queries)
 - Searches both name (first + last) and email fields
 - Case-insensitive matching
 - Clear button (×) to reset search
 
-**Usage:**
+Usage:
 1. Type name or email in the search field
 2. Results update automatically after 300ms
 3. Click the × button to clear the search
@@ -3905,14 +3905,14 @@ The search field provides real-time filtering of attendees:
 
 Filter attendees by registration status:
 
-**Available Status Filters:**
-- **All Statuses** (default) - shows all attendees
-- **Registered (Pending Invoice)** - registrations awaiting invoice generation
-- **Invoiced** - invoice generated but not yet paid
-- **Paid** - invoice paid, registration confirmed
-- **Cancelled** - cancelled registrations (excluded from statistics)
+Available Status Filters:
+- All Statuses (default) - shows all attendees
+- Registered (Pending Invoice) - registrations awaiting invoice generation
+- Invoiced - invoice generated but not yet paid
+- Paid - invoice paid, registration confirmed
+- Cancelled - cancelled registrations (excluded from statistics)
 
-**Status Badge Colors:**
+Status Badge Colors:
 - Pending Invoice: Yellow
 - Invoiced: Blue
 - Paid: Green
@@ -3924,12 +3924,12 @@ Filter attendees by registration status:
 
 Filter attendees by their main booking option:
 
-**Features:**
+Features:
 - Dropdown populated with all active booking options
 - Client-side filtering (fast performance)
 - Works in combination with search and status filters
 
-**Usage:**
+Usage:
 1. Select a booking option from the dropdown
 2. Results filter immediately (no server request)
 3. Combined with other filters for precise queries
@@ -3940,7 +3940,7 @@ Filter attendees by their main booking option:
 
 When any filter is active, a "Clear filters" button appears:
 
-**Features:**
+Features:
 - One-click reset of all filters (search, status, booking option)
 - Button only visible when filters are active
 - Returns view to full attendee list
@@ -3955,14 +3955,14 @@ The attendee table displays the following columns:
 
 | Column | Description | Format |
 |--------|-------------|--------|
-| **Name** | First and last name with expand/collapse arrow | Text (clickable) |
-| **Email** | Attendee email address | Text |
-| **Company** | Billing company name (if provided) | Text or — |
-| **Booking Option** | Main booking option + add-on items (below) | Text with sub-items |
-| **Session/Tutorial** | Main session selection | Text or — |
-| **Status** | Registration status badge | Color-coded badge |
+| Name | First and last name with expand/collapse arrow | Text (clickable) |
+| Email | Attendee email address | Text |
+| Company | Billing company name (if provided) | Text or — |
+| Booking Option | Main booking option + add-on items (below) | Text with sub-items |
+| Session/Tutorial | Main session selection | Text or — |
+| Status | Registration status badge | Color-coded badge |
 
-**Table Features:**
+Table Features:
 - Click any row to expand and view full attendee details
 - Expandable rows show detailed information (see 11.6.2)
 - Hover effect for better visibility
@@ -3974,30 +3974,30 @@ The attendee table displays the following columns:
 
 Click on any attendee row to expand and view comprehensive details:
 
-**Attendee Information Section:**
+Attendee Information Section:
 - Job Title
 - Department
 - Company Name
 - Invoice Number (clickable link to invoice)
 - Notes
 
-**Status Information:**
+Status Information:
 - Registration status badge (read-only, determined by invoice status)
 - Registration mode badge (Online/Offline)
 - Admin actions: Delete Registration (pending only)
 
-**Main Booking Option Section:**
+Main Booking Option Section:
 - Booking option name
 - Session selector (for admins to assign/change tutorial selection)
 - Display-only view for non-admin users
 
-**Add-on Items Section:**
+Add-on Items Section:
 - List of all add-on items (additional booking options, tutorials)
 - "Add Item" button for admins (pending registrations only)
 - Session selectors for each add-on item
 - Remove button for each item (pending only)
 
-**Session Selection:**
+Session Selection:
 Admins can select or change tutorial/workshop sessions for:
 - Main booking option (if the option has bookable sessions)
 - Each add-on item (if the item has bookable sessions)
@@ -4014,20 +4014,20 @@ Session selection displays:
 
 Admins can add items to pending registrations:
 
-**Adding an Item:**
+Adding an Item:
 1. Expand an attendee row (status must be "Registered - Pending Invoice")
 2. Click "+ Add Item" in the Add-on Items section
 3. Select item type:
-   - **Booking Option**: Select from active booking options dropdown
-   - **Tutorial**: Creates a pending tutorial assignment (session selected later)
+   - Booking Option: Select from active booking options dropdown
+   - Tutorial: Creates a pending tutorial assignment (session selected later)
 4. Click "Add" to attach the item to the registration
 
-**Removing an Item:**
+Removing an Item:
 1. Expand an attendee row
 2. Click "Remove" next to the item (only visible for pending registrations)
 3. Item is immediately removed (no confirmation dialog)
 
-**Session Assignment:**
+Session Assignment:
 - For booking option items: Session selector displays if option has bookable sessions
 - For tutorial items: Marked as "to be selected" until session is assigned
 - Session changes trigger immediate updates
@@ -4038,7 +4038,7 @@ Admins can add items to pending registrations:
 
 Invoice numbers in the expanded view are clickable:
 
-**Behavior:**
+Behavior:
 1. Click on an invoice number
 2. Page navigates to the Invoices tab with the invoice highlighted
 3. URL includes `?tab=invoices&invoice=<invoice_id>` for direct linking
@@ -4053,13 +4053,13 @@ This enables quick navigation from attendee to their invoice details without man
 
 The Export CSV button (top-right of the page) generates a downloadable CSV file with all attendee data.
 
-**CSV Export Features:**
-- **Available to**: Admins only
-- **Records included**: Up to 50,000 registrations (safety cap)
-- **Filters**: Export includes ALL attendees (search/filters do not apply to export)
-- **File naming**: `<conference_abbreviation>_attendees.csv`
+CSV Export Features:
+- Available to: Admins only
+- Records included: Up to 50,000 registrations (safety cap)
+- Filters: Export includes ALL attendees (search/filters do not apply to export)
+- File naming: `<conference_abbreviation>_attendees.csv`
 
-**CSV Columns:**
+CSV Columns:
 1. First Name
 2. Last Name
 3. Email
@@ -4085,20 +4085,20 @@ The Export CSV button (top-right of the page) generates a downloadable CSV file 
 
 The export endpoint implements several performance optimizations:
 
-**Backend Optimizations:**
+Backend Optimizations:
 - Eager loading of related data (`selectinload` for billing profiles, items, sessions)
 - Batch fetching of booking option names (single query for all option IDs)
 - Batch fetching of invoice numbers (single query by billing profile IDs)
 - 50,000 record safety cap to prevent memory issues
 
-**Export Process:**
+Export Process:
 1. Click "Export CSV" button
 2. Button shows "Exporting..." state
 3. Server generates CSV in memory
 4. Browser downloads file with conference-specific name
 5. Button returns to normal state
 
-**Time Estimates:**
+Time Estimates:
 - 100 attendees: < 1 second
 - 1,000 attendees: 2-3 seconds
 - 10,000 attendees: 15-20 seconds
@@ -4108,24 +4108,24 @@ The export endpoint implements several performance optimizations:
 
 ### 11.7.3 Export Use Cases
 
-**Common Export Scenarios:**
+Common Export Scenarios:
 
-**Badge Printing:**
+Badge Printing:
 Export attendee list and import into badge printing software (name, company, session).
 
-**Email Communications:**
+Email Communications:
 Extract email addresses for bulk email campaigns (use Billing Contact Email for billing notifications).
 
-**Session Planning:**
+Session Planning:
 Use Main Session Name and Add-on Items columns to determine room capacity needs.
 
-**Financial Reconciliation:**
+Financial Reconciliation:
 Export with Invoice Number to reconcile payments against accounting systems.
 
-**Volunteer Assignments:**
+Volunteer Assignments:
 Export attendee contact info for volunteer coordinators (meals, special accommodations).
 
-**Post-Event Analysis:**
+Post-Event Analysis:
 Export for post-conference reporting, attendance statistics, and demographic analysis.
 
 ## 11.8 Automation
@@ -4134,12 +4134,12 @@ Export for post-conference reporting, attendance statistics, and demographic ana
 
 The Attendees tab uses TanStack Query for automatic data management:
 
-**Query Invalidation:**
+Query Invalidation:
 - Attendee list refreshes when registrations are created/deleted
 - Invoice data refreshes when invoices are generated/updated
 - Statistics recalculate automatically when data changes
 
-**Stale-While-Revalidate:**
+Stale-While-Revalidate:
 - Cached data displays immediately on tab switch
 - Background fetch updates data if stale
 - Smooth user experience with no loading spinners for cached data
@@ -4148,12 +4148,12 @@ The Attendees tab uses TanStack Query for automatic data management:
 
 Search input implements 300ms debouncing:
 
-**Benefits:**
+Benefits:
 - Reduces server load by preventing query on every keystroke
 - Smooth typing experience with no lag
 - Immediate feedback with client-side loading state
 
-**Technical Implementation:**
+Technical Implementation:
 ```
 User types → Wait 300ms → No more typing? → Fire search query
 User types → Wait 150ms → Types again → Reset timer → Wait 300ms → Fire query
@@ -4163,7 +4163,7 @@ User types → Wait 150ms → Types again → Reset timer → Wait 300ms → Fir
 
 Registration status is read-only and automatically synchronized with invoice status:
 
-**Status Flow:**
+Status Flow:
 1. Registration created → Status: "Registered - Pending Invoice"
 2. Invoice generated → Status: "Invoiced"
 3. Invoice paid → Status: "Paid"
@@ -4175,38 +4175,38 @@ Users cannot manually change status; it's determined by the invoice lifecycle.
 
 ### 11.9.1 Deleted Booking Options
 
-**Scenario:** A registration references a booking option that has been deleted.
+Scenario: A registration references a booking option that has been deleted.
 
-**Behavior:**
+Behavior:
 - Booking option name displays as "(deleted)"
 - Add-on items with deleted options show "(deleted)"
 - Session selectors do not load for deleted options
 - Export CSV includes "(deleted)" for option name
 
-**Prevention:**
+Prevention:
 - Booking options should be deactivated rather than deleted
 - System maintains referential integrity via foreign keys
 
 ### 11.9.2 Large Attendee Lists
 
-**Scenario:** Conference has 10,000+ attendees.
+Scenario: Conference has 10,000+ attendees.
 
-**Behavior:**
+Behavior:
 - Initial load shows first 100 attendees (configurable `page_size`)
 - Search queries remain capped at 100 results
 - Export CSV handles up to 50,000 records (pagination not required)
 - Statistics calculate across all attendees (no pagination)
 
-**Performance:**
+Performance:
 - Table renders quickly due to 100-record limit
 - Statistics use aggregation queries for speed
 - Export streams data in 1,000-row batches (backend implementation)
 
 ### 11.9.3 Missing Invoice Data
 
-**Scenario:** Invoice data has not loaded or billing profile is missing.
+Scenario: Invoice data has not loaded or billing profile is missing.
 
-**Behavior:**
+Behavior:
 - Invoice column displays "—" (em dash)
 - Invoice link in expanded view displays "—"
 - Export CSV includes empty invoice number field
@@ -4214,9 +4214,9 @@ Users cannot manually change status; it's determined by the invoice lifecycle.
 
 ### 11.9.4 Empty Session Selections
 
-**Scenario:** Booking option has sessions available, but attendee has not selected one.
+Scenario: Booking option has sessions available, but attendee has not selected one.
 
-**Behavior:**
+Behavior:
 - Main Session column displays "—"
 - Session selector in expanded view shows no selection
 - Add-on items with no session selection show "to be selected" badge
@@ -4224,23 +4224,23 @@ Users cannot manually change status; it's determined by the invoice lifecycle.
 
 ### 11.9.5 Concurrent Admin Edits
 
-**Scenario:** Two admins edit the same registration simultaneously.
+Scenario: Two admins edit the same registration simultaneously.
 
-**Behavior:**
+Behavior:
 - Last write wins (no optimistic locking)
 - Both admins see success messages
 - Query invalidation triggers data refresh for both users
 - Second admin's changes overwrite first admin's changes
 
-**Best Practice:**
+Best Practice:
 - Coordinate registration edits via team communication
 - Use Registration tab for detailed edits (better audit trail)
 
 ### 11.9.6 Filter Combinations
 
-**Scenario:** User applies multiple filters that return zero results.
+Scenario: User applies multiple filters that return zero results.
 
-**Behavior:**
+Behavior:
 - Table displays "No attendees match the current filters"
 - Statistics remain visible (show all attendees, not filtered subset)
 - "Clear filters" button visible and functional
@@ -4252,45 +4252,45 @@ Users cannot manually change status; it's determined by the invoice lifecycle.
 
 ### 11.10.1 Search Input Validation
 
-**Validation Rules:**
+Validation Rules:
 - No minimum length requirement
 - Special characters allowed (for international names)
 - Leading/trailing whitespace trimmed before query
 - Empty search returns all attendees
 
-**No Error States:**
+No Error States:
 - Search never fails; worst case is zero results
 
 ### 11.10.2 Filter Validation
 
-**Status Filter:**
+Status Filter:
 - Only predefined status values accepted
 - Invalid status defaults to "All Statuses"
 
-**Booking Option Filter:**
+Booking Option Filter:
 - Only valid booking option IDs accepted
 - Deleted booking options filtered out of dropdown
 
 ### 11.10.3 Export Validation
 
-**Pre-Export Checks:**
+Pre-Export Checks:
 - Export button disabled if no attendees exist
 - Export button disabled during export (prevents duplicate requests)
 - Admin permission required (non-admins don't see button)
 
-**Export Errors:**
+Export Errors:
 - Network errors display error banner
 - Server errors display parsed error message
 - Partial downloads handled by browser (not application concern)
 
 ### 11.10.4 Session Selection Validation
 
-**Booking Option Sessions:**
+Booking Option Sessions:
 - Only sessions associated with the booking option are selectable
 - Invalid session IDs rejected by backend
 - Session selection can be cleared (set to null)
 
-**Tutorial Items:**
+Tutorial Items:
 - Tutorial type items cannot have booking option assigned
 - Booking option type items cannot have tutorial session directly assigned
 
@@ -4298,14 +4298,14 @@ Users cannot manually change status; it's determined by the invoice lifecycle.
 
 ### 11.11.1 Tab Selection Strategy
 
-**Use the Attendees tab for:**
+Use the Attendees tab for:
 - Quick overviews and statistics
 - Searching for specific attendees by name/email
 - Exporting attendee lists for external use
 - Viewing session/tutorial distribution across attendees
 - Getting attendance counts by booking option
 
-**Use the Registration tab for:**
+Use the Registration tab for:
 - Creating new registrations
 - Modifying registration details (before invoicing)
 - Managing billing information
@@ -4313,59 +4313,59 @@ Users cannot manually change status; it's determined by the invoice lifecycle.
 - Deleting pending registrations
 - Replacing paid attendees with new attendees
 
-**Rule of Thumb:**
+Rule of Thumb:
 - Attendees tab = Read-only operations, reporting, exports
 - Registration tab = Write operations, detailed management
 
 ### 11.11.2 Search Performance
 
-**Optimize Searches:**
+Optimize Searches:
 - Use full email addresses for exact matches
 - Use last names for faster results (more selective than first names)
 - Combine search with status filter to narrow results
 
-**Avoid:**
+Avoid:
 - Single-character searches (returns too many results)
 - Searching for common words (e.g., "Inc", "LLC")
 
 ### 11.11.3 Export Workflow
 
-**Before Exporting:**
+Before Exporting:
 1. Ensure all registrations are finalized (no pending changes)
 2. Verify invoice generation is complete
 3. Check that session assignments are finalized
 
-**After Exporting:**
+After Exporting:
 1. Open CSV in Excel/Sheets to verify data completeness
 2. Check for "(deleted)" booking options and resolve
 3. Verify email addresses are valid (no placeholders)
 
-**Export Frequency:**
+Export Frequency:
 - Export daily during early registration for tracking trends
 - Export weekly during active registration period
 - Export final list 1 week before conference for badge printing
 
 ### 11.11.4 Session Assignment Workflow
 
-**Tutorial Selection Process:**
+Tutorial Selection Process:
 1. Create registration with main booking option
 2. Select tutorial/session via session selector in expanded view
 3. Add any add-on items (workshops, extra tutorials)
 4. Assign sessions to each add-on item
 5. Generate invoice once all sessions are selected
 
-**Avoid:**
+Avoid:
 - Generating invoices before finalizing session selections
 - Changing sessions after invoice is sent (requires invoice regeneration)
 
 ### 11.11.5 Statistics Monitoring
 
-**Track These Metrics:**
-- **Total active attendees** (in page header) - overall registration progress
-- **Attendees by booking option** - revenue breakdown, pricing strategy validation
-- **Attendees by session** - room capacity planning, speaker notifications
+Track These Metrics:
+- Total active attendees (in page header) - overall registration progress
+- Attendees by booking option - revenue breakdown, pricing strategy validation
+- Attendees by session - room capacity planning, speaker notifications
 
-**Use Statistics for:**
+Use Statistics for:
 - Early Bird vs. Regular pricing effectiveness
 - Tutorial popularity (plan future offerings)
 - Virtual vs. In-Person attendance trends
@@ -4373,13 +4373,13 @@ Users cannot manually change status; it's determined by the invoice lifecycle.
 
 ### 11.11.6 Data Hygiene
 
-**Regular Maintenance:**
+Regular Maintenance:
 - Delete pending registrations that are abandoned (no response after 1 week)
 - Verify company names are spelled consistently
 - Check for duplicate registrations (same email address)
 - Ensure billing contact emails are valid
 
-**Pre-Conference Cleanup:**
+Pre-Conference Cleanup:
 - Cancel unpaid registrations 1 week before conference
 - Export final attendee list for onsite staff
 - Verify all paid attendees have session selections
@@ -4388,111 +4388,111 @@ Users cannot manually change status; it's determined by the invoice lifecycle.
 
 ### 11.12.1 "No attendees match the current filters"
 
-**Cause:** Active filters exclude all attendees.
+Cause: Active filters exclude all attendees.
 
-**Solution:**
+Solution:
 1. Click "Clear filters" button
 2. Remove filters one by one to identify the exclusionary filter
 3. Adjust filter criteria to match existing data
 
 ### 11.12.2 Export CSV Button Disabled
 
-**Cause 1:** No attendees exist in the system.
+Cause 1: No attendees exist in the system.
 
-**Solution:** Create at least one registration via Registration tab.
+Solution: Create at least one registration via Registration tab.
 
-**Cause 2:** Export is already in progress.
+Cause 2: Export is already in progress.
 
-**Solution:** Wait for current export to complete (button shows "Exporting...").
+Solution: Wait for current export to complete (button shows "Exporting...").
 
-**Cause 3:** User lacks admin permissions.
+Cause 3: User lacks admin permissions.
 
-**Solution:** Request admin access from conference admin or tenant admin.
+Solution: Request admin access from conference admin or tenant admin.
 
 ### 11.12.3 Invoice Number Not Displayed
 
-**Cause 1:** Invoice has not been generated yet.
+Cause 1: Invoice has not been generated yet.
 
-**Solution:** Generate invoice via Invoices tab.
+Solution: Generate invoice via Invoices tab.
 
-**Cause 2:** Billing profile is missing.
+Cause 2: Billing profile is missing.
 
-**Solution:** Edit registration and add billing profile.
+Solution: Edit registration and add billing profile.
 
-**Cause 3:** Invoice query has not loaded.
+Cause 3: Invoice query has not loaded.
 
-**Solution:** Refresh page to trigger invoice data fetch.
+Solution: Refresh page to trigger invoice data fetch.
 
 ### 11.12.4 Session Selector Not Appearing
 
-**Cause 1:** Booking option has no bookable sessions configured.
+Cause 1: Booking option has no bookable sessions configured.
 
-**Solution:** Add sessions to the booking option in Program Design tab.
+Solution: Add sessions to the booking option in Program Design tab.
 
-**Cause 2:** Booking option has been deleted.
+Cause 2: Booking option has been deleted.
 
-**Solution:** Cannot assign sessions to deleted options; recreate booking option or reassign attendee.
+Solution: Cannot assign sessions to deleted options; recreate booking option or reassign attendee.
 
-**Cause 3:** User is not an admin.
+Cause 3: User is not an admin.
 
-**Solution:** Session selector only displays for admins; non-admins see read-only session name.
+Solution: Session selector only displays for admins; non-admins see read-only session name.
 
 ### 11.12.5 Statistics Show Zero for All Booking Options
 
-**Cause 1:** All registrations are cancelled.
+Cause 1: All registrations are cancelled.
 
-**Solution:** Statistics exclude cancelled registrations; this is expected behavior.
+Solution: Statistics exclude cancelled registrations; this is expected behavior.
 
-**Cause 2:** Registrations exist but booking options have been deleted.
+Cause 2: Registrations exist but booking options have been deleted.
 
-**Solution:** Recreate booking options or reassign attendees to active options.
+Solution: Recreate booking options or reassign attendees to active options.
 
-**Cause 3:** Filter is active and excludes all results.
+Cause 3: Filter is active and excludes all results.
 
-**Solution:** Clear filters; statistics calculate across all attendees regardless of filters.
+Solution: Clear filters; statistics calculate across all attendees regardless of filters.
 
 ### 11.12.6 Search Returns No Results
 
-**Cause 1:** Search term does not match any attendee name or email.
+Cause 1: Search term does not match any attendee name or email.
 
-**Solution:** Try alternative spellings, shorter search terms, or browse full list.
+Solution: Try alternative spellings, shorter search terms, or browse full list.
 
-**Cause 2:** Status filter excludes matching attendees.
+Cause 2: Status filter excludes matching attendees.
 
-**Solution:** Clear status filter and search again.
+Solution: Clear status filter and search again.
 
-**Cause 3:** Attendees have not been created yet.
+Cause 3: Attendees have not been created yet.
 
-**Solution:** Create registrations via Registration tab.
+Solution: Create registrations via Registration tab.
 
 ### 11.12.7 Export Fails with Error
 
-**Cause 1:** Network error during export.
+Cause 1: Network error during export.
 
-**Solution:** Check internet connection and retry export.
+Solution: Check internet connection and retry export.
 
-**Cause 2:** Server timeout (too many attendees).
+Cause 2: Server timeout (too many attendees).
 
-**Solution:** Contact system administrator to increase export timeout limit.
+Solution: Contact system administrator to increase export timeout limit.
 
-**Cause 3:** Permission error.
+Cause 3: Permission error.
 
-**Solution:** Verify admin access to conference.
+Solution: Verify admin access to conference.
 
 ## 11.13 Related Documentation
 
-**Internal References:**
+Internal References:
 - Section 10: Registration Management (for creating and editing registrations)
 - Section 12: Invoices Management (for invoice generation and payment tracking)
 - Section 8: Booking Options Configuration (for configuring booking options and pricing)
 - Section 7: Program Design (for creating bookable sessions and tutorials)
 
-**External Resources:**
+External Resources:
 - CSV Export Format Specification (see `.claude/docs/devops.md` - CSV Exports section)
 - Registration Module Documentation (see `.claude/docs/modules.md` - Registration section)
 - Multi-tenant Security Model (see `.claude/docs/security.md` - RLS Policies section)
 
-**API Endpoints:**
+API Endpoints:
 - `GET /conferences/{id}/registrations` - Fetch attendees with search/filter
 - `GET /conferences/{id}/export/attendees` - Export attendees to CSV
 - `GET /conferences/{id}/settings/booking-options` - Fetch booking options
@@ -4502,7 +4502,7 @@ Users cannot manually change status; it's determined by the invoice lifecycle.
 - `PATCH /conferences/{id}/registrations/{reg_id}/items/{item_id}` - Update item session
 - `PUT /conferences/{id}/registrations/{reg_id}` - Update main session
 
-**Related Components:**
+Related Components:
 - `/Users/josediaz/SaaSConf/frontend/src/pages/ConferenceDetail/tabs/AttendeesTab.tsx` - Main component
 - `/Users/josediaz/SaaSConf/frontend/src/pages/ConferenceDetail/tabs/RegistrationTab/index.tsx` - Registration management
 - `/Users/josediaz/SaaSConf/backend/app/api/v1/conferences/exports.py` - Export endpoint
@@ -4510,7 +4510,7 @@ Users cannot manually change status; it's determined by the invoice lifecycle.
 
 ---
 
-**End of Section 11: Attendees Management**
+End of Section 11: Attendees Management
 
 *Total lines: 805*
 
@@ -4521,7 +4521,7 @@ I'll analyze the codebase to create comprehensive documentation for CFP Part 1 (
 
 ## What I've Prepared
 
-**Complete markdown documentation** (~1,275 lines) for:
+Complete markdown documentation (~1,275 lines) for:
 
 ### 12.1 CFP Overview
 - Creating and configuring CFPs
@@ -4563,25 +4563,25 @@ I'll analyze the codebase to create comprehensive documentation for CFP Part 1 (
 ## Documentation Features
 
 Each subsection includes:
-- ✅ **Overview** — Purpose and key concepts
-- ✅ **Prerequisites** — Access requirements
-- ✅ **Steps** — Detailed workflows with numbered steps
-- ✅ **Automation** — Auto-behavior and optimizations
-- ✅ **Edge Cases** — Table of scenarios and behaviors
-- ✅ **Validation** — Frontend and backend validation rules
-- ✅ **Best Practices** — Operational guidance
-- ✅ **Known Issues** — Tracked with issue IDs
-- ✅ **Related Sections** — Cross-references
+- ✅ Overview — Purpose and key concepts
+- ✅ Prerequisites — Access requirements
+- ✅ Steps — Detailed workflows with numbered steps
+- ✅ Automation — Auto-behavior and optimizations
+- ✅ Edge Cases — Table of scenarios and behaviors
+- ✅ Validation — Frontend and backend validation rules
+- ✅ Best Practices — Operational guidance
+- ✅ Known Issues — Tracked with issue IDs
+- ✅ Related Sections — Cross-references
 
 ## Statistics
 
-- **38 screenshot placeholders** for visual reference
-- **15 API endpoints** documented with request/response examples
-- **18 known issues** tracked with IDs
-- **50+ edge cases** documented in tables
-- **100+ best practice recommendations**
+- 38 screenshot placeholders for visual reference
+- 15 API endpoints documented with request/response examples
+- 18 known issues tracked with IDs
+- 50+ edge cases documented in tables
+- 100+ best practice recommendations
 
-**The file path is**: `/Users/josediaz/SaaSConf/.claude/docs/tenant-ui-handbook-cfp-part1.md`
+The file path is: `/Users/josediaz/SaaSConf/.claude/docs/tenant-ui-handbook-cfp-part1.md`
 
 Would you like me to output the content to the terminal so you can manually save it, or would you prefer to grant Write permission so I can create the file directly?
 
@@ -4602,25 +4602,25 @@ The News module enables conference organizers to create, publish, and distribute
 
 ### 14.1. Accessing the News Module
 
-**Navigation:**
+Navigation:
 1. Navigate to your conference from the Conferences list
-2. Click the **News** tab in the conference detail navigation
+2. Click the News tab in the conference detail navigation
 3. The News Articles page displays all articles (drafts and published) for the current conference
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Conference detail page with News tab highlighted in navigation bar]
 ```
 
-**Module Requirements:**
+Module Requirements:
 - The News module must be enabled for your tenant
 - You must have admin or organizer role for the conference
 - The module code is `news` (requires tenant module assignment)
 
-**Empty State:**
+Empty State:
 When no articles exist, you'll see an empty state message prompting you to create your first news article.
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Empty state showing "No news articles" message with "Create your first news article to share updates with attendees" text]
 ```
@@ -4631,34 +4631,34 @@ When no articles exist, you'll see an empty state message prompting you to creat
 
 Articles are created in draft mode by default, allowing you to prepare content before making it visible to attendees.
 
-**Creating a New Article:**
+Creating a New Article:
 
-1. Click the **New Article** button (top-right of the News tab)
+1. Click the New Article button (top-right of the News tab)
 2. The article creation modal opens with the following fields:
-   - **Title** (required): Article headline (max 500 characters)
-   - **Body** (required): Rich text content using the visual editor
-   - **Screen Overlay** (optional): Link to an existing screen overlay for portal display
+   - Title (required): Article headline (max 500 characters)
+   - Body (required): Rich text content using the visual editor
+   - Screen Overlay (optional): Link to an existing screen overlay for portal display
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: "New Article" modal showing title field, rich text editor, and overlay selector]
 ```
 
-**Form Validation:**
-- **Title**: Cannot be empty or whitespace-only
-- **Body**: Must contain at least one character of content
+Form Validation:
+- Title: Cannot be empty or whitespace-only
+- Body: Must contain at least one character of content
 - Both fields are sanitized server-side (HTML tags allowed, scripts stripped)
 
-**Saving the Article:**
-- Click **Save** to create the article as a draft
+Saving the Article:
+- Click Save to create the article as a draft
 - The article appears in the articles list with a "Draft" badge
 - Article metadata includes:
   - Author name (automatically captured from your user profile)
   - Creation timestamp
   - Last update timestamp
 
-**Auto-Save Behavior:**
-The editor does NOT auto-save. Always click **Save** before closing the modal to preserve your work.
+Auto-Save Behavior:
+The editor does NOT auto-save. Always click Save before closing the modal to preserve your work.
 
 ---
 
@@ -4666,58 +4666,58 @@ The editor does NOT auto-save. Always click **Save** before closing the modal to
 
 The News module uses a full-featured rich text editor (TipTap) with extensive formatting capabilities.
 
-**Text Formatting:**
-- **Basic**: Bold, italic, underline, strikethrough
-- **Font Family**: Arial, Georgia, Times New Roman, Courier, Verdana
-- **Font Size**: 6px to 40px (XXX-Small to XXX-Large)
-- **Text Color**: Color picker for custom text colors
-- **Highlight**: Background color highlighting
-- **Clear Formatting**: Remove all styles from selected text
+Text Formatting:
+- Basic: Bold, italic, underline, strikethrough
+- Font Family: Arial, Georgia, Times New Roman, Courier, Verdana
+- Font Size: 6px to 40px (XXX-Small to XXX-Large)
+- Text Color: Color picker for custom text colors
+- Highlight: Background color highlighting
+- Clear Formatting: Remove all styles from selected text
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Rich text editor toolbar showing formatting buttons - undo/redo, font family dropdown, font size dropdown, bold/italic/underline buttons]
 ```
 
-**Structural Elements:**
-- **Headings**: H1, H2, H3, H4, H5, H6
-- **Paragraphs**: Normal paragraph text (default)
-- **Lists**: Bulleted lists, numbered lists, task lists (checkboxes)
-- **Blockquotes**: Indented quote blocks
-- **Code Blocks**: Monospaced code formatting
-- **Horizontal Rules**: Visual dividers
+Structural Elements:
+- Headings: H1, H2, H3, H4, H5, H6
+- Paragraphs: Normal paragraph text (default)
+- Lists: Bulleted lists, numbered lists, task lists (checkboxes)
+- Blockquotes: Indented quote blocks
+- Code Blocks: Monospaced code formatting
+- Horizontal Rules: Visual dividers
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Toolbar section showing heading dropdown (H1-H6), paragraph, list buttons (bullet, numbered, task), blockquote, code, and horizontal rule]
 ```
 
-**Advanced Features:**
+Advanced Features:
 
-**Links:**
+Links:
 1. Select text to link
 2. Click the link icon in the toolbar
 3. Enter the URL in the prompt (e.g., `https://example.com`)
 4. Click OK to insert the link
 5. To remove a link: select linked text, click link icon, leave URL empty, click OK
 
-**Images:**
+Images:
 Three ways to add images:
-1. **URL Method**: Click image icon → enter image URL → click OK
-2. **Drag & Drop**: Drag image files directly into the editor
-3. **Paste**: Copy image from clipboard → paste into editor
+1. URL Method: Click image icon → enter image URL → click OK
+2. Drag & Drop: Drag image files directly into the editor
+3. Paste: Copy image from clipboard → paste into editor
 
-**Image Requirements:**
+Image Requirements:
 - Maximum size: 5 MB
 - Supported formats: Any browser-supported image format (JPEG, PNG, GIF, WebP)
 - Images are embedded as base64 data URLs (stored in the article body)
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Rich text editor with an embedded image and visible image resize handles]
 ```
 
-**Tables:**
+Tables:
 1. Click the table icon in the toolbar
 2. A 3x3 table with header row is inserted
 3. Use table toolbar buttons to:
@@ -4726,27 +4726,27 @@ Three ways to add images:
    - Delete entire table
    - Toggle header row/column
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Rich text editor showing a table with table manipulation buttons (add row, add column, delete row, etc.) in the toolbar]
 ```
 
-**YouTube Embeds:**
+YouTube Embeds:
 1. Click the YouTube icon in the toolbar
 2. Enter the YouTube video URL (e.g., `https://www.youtube.com/watch?v=dQw4w9WgXcQ`)
 3. Click OK to embed the video player
 
-**Text Alignment:**
+Text Alignment:
 - Left align
 - Center align
 - Right align
 - Justify
 
-**Undo/Redo:**
+Undo/Redo:
 - Use the undo/redo buttons in the toolbar
 - Keyboard shortcuts: Cmd+Z (undo), Cmd+Shift+Z (redo) on Mac; Ctrl+Z, Ctrl+Y on Windows
 
-**Character Counter:**
+Character Counter:
 If a maximum length is configured (not default for news), a character counter appears at the bottom of the editor showing current/maximum characters.
 
 ---
@@ -4755,51 +4755,51 @@ If a maximum length is configured (not default for news), a character counter ap
 
 Articles exist in one of two states:
 
-**Draft Status:**
-- **Badge**: Gray "Draft" badge
-- **Visibility**: Visible only to conference admins in the admin interface
-- **Portal**: NOT visible to applicants in the portal
-- **Published At**: `null` (no publication timestamp)
-- **Use Case**: Prepare content, review internally before release
+Draft Status:
+- Badge: Gray "Draft" badge
+- Visibility: Visible only to conference admins in the admin interface
+- Portal: NOT visible to applicants in the portal
+- Published At: `null` (no publication timestamp)
+- Use Case: Prepare content, review internally before release
 
-**Published Status:**
-- **Badge**: Green "Published" badge
-- **Visibility**: Visible to conference admins AND eligible portal users
-- **Portal**: Visible to all applicants who have access to the conference
-- **Published At**: Timestamp of when the article was first published
-- **Use Case**: Active news articles shared with conference participants
+Published Status:
+- Badge: Green "Published" badge
+- Visibility: Visible to conference admins AND eligible portal users
+- Portal: Visible to all applicants who have access to the conference
+- Published At: Timestamp of when the article was first published
+- Use Case: Active news articles shared with conference participants
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: News articles list showing both draft and published articles with their respective badges]
 ```
 
-**Publishing an Article:**
+Publishing an Article:
 
 1. Locate the draft article in the articles list
-2. Click the **eye icon** (publish button) next to the article
+2. Click the eye icon (publish button) next to the article
 3. Confirm the publish action in the dialog:
    - Message: "Are you sure you want to publish '[Article Title]'? It will become visible to all portal users."
-   - Click **Publish** to confirm
+   - Click Publish to confirm
 4. The article status updates to "Published" with a green badge
 5. The `published_at` timestamp is automatically set to the current date/time
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Publish confirmation dialog with warning message and Publish/Cancel buttons]
 ```
 
-**Unpublishing an Article:**
+Unpublishing an Article:
 
 1. Locate the published article
-2. Click the **eye-slash icon** (unpublish button)
+2. Click the eye-slash icon (unpublish button)
 3. Confirm the unpublish action:
    - Message: "Are you sure you want to unpublish '[Article Title]'? It will no longer be visible to portal users."
-   - Click **Unpublish** to confirm
+   - Click Unpublish to confirm
 4. The article reverts to draft status
 5. The `published_at` timestamp is cleared
 
-**Important Notes:**
+Important Notes:
 - Unpublishing an article immediately hides it from the portal
 - Unpublishing does NOT delete the article or its content
 - You can re-publish an article multiple times (the timestamp updates each time)
@@ -4809,17 +4809,17 @@ Articles exist in one of two states:
 
 ### 14.5. Visibility to Portal Users
 
-**Who Can See Published Articles:**
+Who Can See Published Articles:
 
 Portal users (CFP applicants and committee members) can view published news articles if they have access to the conference through:
-- **Paper Submission**: Submitted a paper to a CFP linked to the conference
-- **Committee Membership**: Assigned as a committee member (reviewer, chair, etc.) for the conference
+- Paper Submission: Submitted a paper to a CFP linked to the conference
+- Committee Membership: Assigned as a committee member (reviewer, chair, etc.) for the conference
 
-**Portal Display:**
+Portal Display:
 
-**Location**: Portal → News page (`/portal/news`)
+Location: Portal → News page (`/portal/news`)
 
-**Article List View:**
+Article List View:
 - Articles are displayed as cards in reverse chronological order (newest first)
 - Each card shows:
   - Conference name badge (blue pill badge)
@@ -4828,32 +4828,32 @@ Portal users (CFP applicants and committee members) can view published news arti
   - Preview of first 200 characters of body text (plain text, HTML stripped)
   - "Read more" / "Show less" toggle for articles exceeding 200 characters
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Portal news page showing multiple news article cards with conference badges, titles, dates, and preview text]
 ```
 
-**Full Article View:**
+Full Article View:
 - Click "Read more" to expand the full article content
 - Rich text formatting is preserved (HTML rendered)
 - Images, tables, videos, and links are all interactive
 - Click "Show less" to collapse back to preview
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Expanded news article in portal showing full rich text content with formatting, images, and embedded video]
 ```
 
-**Filtering:**
+Filtering:
 - Portal users see articles from ALL conferences they have access to
 - Articles are sorted by publication date (most recent first)
 - No category or tag filtering (linear chronological feed)
 
-**Refresh Rate:**
+Refresh Rate:
 - Portal news data refreshes every 30 seconds automatically
 - Manual refresh: reload the page or navigate away and back
 
-**No Articles State:**
+No Articles State:
 If a portal user has no accessible conferences or no articles are published, they see:
 - Empty state message: "No news articles yet."
 - Gray dashed border box
@@ -4864,30 +4864,30 @@ If a portal user has no accessible conferences or no articles are published, the
 
 Published articles can be distributed via email to targeted recipient groups.
 
-**Important**: Publishing an article does NOT automatically send emails. Email distribution is a separate, explicit action.
+Important: Publishing an article does NOT automatically send emails. Email distribution is a separate, explicit action.
 
-**Sending a News Article by Email:**
+Sending a News Article by Email:
 
 1. Ensure the article is published (draft articles cannot be sent)
 2. Locate the published article in the articles list
-3. Click the **envelope icon** (send email button) next to the article
+3. Click the envelope icon (send email button) next to the article
 4. The "Send News Article" modal opens
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: News article row with publish icon (green eye), send email icon (envelope), edit icon, and delete icon]
 ```
 
-**Send Email Modal:**
+Send Email Modal:
 
-**Recipient Selection:**
+Recipient Selection:
 The modal provides filtering options to target specific groups:
 
-1. **All Applicants** (checkbox, checked by default)
+1. All Applicants (checkbox, checked by default)
    - Sends to all applicants who submitted papers to CFPs linked to this conference
    - When checked, paper status and committee role filters are disabled
 
-2. **Filter by Paper Status** (dropdown, disabled if "All Applicants" is checked)
+2. Filter by Paper Status (dropdown, disabled if "All Applicants" is checked)
    - Options:
      - All statuses (default)
      - Submitted
@@ -4897,34 +4897,34 @@ The modal provides filtering options to target specific groups:
      - Rejected
    - Only sends to applicants whose papers have the selected status
 
-3. **Filter by Committee Role** (text input, optional)
+3. Filter by Committee Role (text input, optional)
    - Enter a committee role name (e.g., "Reviewer", "Chair")
    - Case-sensitive exact match
    - Can be combined with paper status filter
    - Sends to committee members with the specified role
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: "Send News Article" modal showing article title, "All applicants" checkbox, paper status dropdown, and committee role input]
 ```
 
-**Recipient Preview:**
+Recipient Preview:
 Below the filters, a text description shows who will receive the email:
 - "all applicants" (if All Applicants is checked)
 - "applicants with paper status 'Accepted'" (if status filter is active)
 - "committee members with role 'Reviewer'" (if committee role filter is active)
 - "applicants with paper status 'Submitted' and committee role 'Chair'" (if both filters are active)
 
-**Sending the Email:**
+Sending the Email:
 
 1. Configure recipient filters as desired
-2. Click **Send** button
+2. Click Send button
 3. A confirmation warning appears:
    - "Are you sure you want to send this email?"
    - "This will send '[Article Title]' to [recipient description]. This action cannot be undone."
-   - Click **Back** to return to filters, or **Yes, Send Emails** to proceed
+   - Click Back to return to filters, or Yes, Send Emails to proceed
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Confirmation warning with amber background showing "Are you sure you want to send this email?" message]
 ```
@@ -4938,87 +4938,87 @@ Below the filters, a text description shows who will receive the email:
    - Green success banner: "Email sent to X recipients"
    - Modal auto-closes after 2 seconds
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Success message "Email sent to 47 recipients" in green banner]
 ```
 
-**Error Handling:**
+Error Handling:
 - If no recipients match the criteria: "No recipients found matching the criteria" (404 error)
 - If the email service fails: "Failed to send emails" (red error banner)
 
-**Email Content:**
-- **Subject**: Article title
-- **Body**: Full HTML content of the article (rich text preserved)
-- **Sender**: Your name (from user profile) or email address
-- **Conference Context**: Conference name is included in the email template
-- **Recipient Name**: Personalized with applicant's first name
+Email Content:
+- Subject: Article title
+- Body: Full HTML content of the article (rich text preserved)
+- Sender: Your name (from user profile) or email address
+- Conference Context: Conference name is included in the email template
+- Recipient Name: Personalized with applicant's first name
 
-**Email Delivery:**
+Email Delivery:
 - Emails are sent asynchronously (does not block the UI)
 - Each recipient receives an individual email (not BCC)
 - Failed deliveries to individual recipients do not block others
 - The "emails_sent" count reflects successful deliveries
 
-**Resending:**
+Resending:
 You can send the same article multiple times to the same or different recipient groups. There is no built-in tracking to prevent duplicate sends.
 
 ---
 
 ### 14.7. News Categories/Tags
 
-**Current Status**: The News module does NOT currently support categories or tags.
+Current Status: The News module does NOT currently support categories or tags.
 
-**Implications:**
+Implications:
 - Articles are displayed in a single chronological feed
 - No filtering by topic, category, or keyword
 - No grouping or organization beyond publication date
 - Search functionality is not available in the portal
 
-**Workarounds:**
+Workarounds:
 - Use consistent title prefixes (e.g., "[Venue Update]", "[CFP Reminder]") for visual categorization
 - Leverage the Screen Overlay system to highlight priority announcements
 - Use the email targeting filters to send relevant news to specific groups
 
-**Future Considerations:**
+Future Considerations:
 If your organization requires category-based organization, consider requesting a feature enhancement from your development team. The schema would need to be extended with a `category` field and UI updated for filtering.
 
 ---
 
 ### 14.8. Editing and Deleting Articles
 
-**Editing an Article:**
+Editing an Article:
 
 1. Locate the article in the articles list (draft or published)
-2. Click the **pencil icon** (edit button)
+2. Click the pencil icon (edit button)
 3. The edit modal opens with current values pre-filled:
    - Title field
    - Body (rich text editor with existing content)
    - Screen overlay selector (current selection)
 4. Make desired changes
-5. Click **Save** to update the article
+5. Click Save to update the article
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Edit modal with "Edit Article" title, showing pre-filled title and rich text editor with existing content]
 ```
 
-**Edit Behavior:**
+Edit Behavior:
 - Title and body changes are saved immediately
 - Publishing status (draft/published) is NOT changed by editing
 - To change publish status, use the publish/unpublish icons instead
 - The `updated_at` timestamp updates automatically
 - Author and creation date remain unchanged
 
-**Deleting an Article:**
+Deleting an Article:
 
 1. Locate the article to delete
-2. Click the **trash icon** (delete button)
+2. Click the trash icon (delete button)
 3. Confirm deletion in the dialog:
    - Message: "Are you sure you want to delete '[Article Title]'? This action cannot be undone."
-   - Click **Delete** to confirm, or **Cancel** to abort
+   - Click Delete to confirm, or Cancel to abort
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Delete confirmation dialog with warning message and red Delete button]
 ```
@@ -5026,7 +5026,7 @@ If your organization requires category-based organization, consider requesting a
 4. The article is permanently deleted from the database
 5. Success message: "News article '[Title]' deleted successfully"
 
-**Important Notes:**
+Important Notes:
 - Deletion is permanent and cannot be undone
 - Deleting a published article immediately removes it from the portal
 - Applicants who previously viewed the article will no longer have access
@@ -5038,32 +5038,32 @@ If your organization requires category-based organization, consider requesting a
 
 News articles can be linked to screen overlays to display announcements on registration and portal pages.
 
-**What are Screen Overlays?**
+What are Screen Overlays?
 Screen overlays are modal popups that appear on the portal based on triggers:
-- **First Registration**: Show once on first visit
-- **Scheduled**: Display during a specific date/time range
-- **Always**: Show on every visit (until dismissed)
+- First Registration: Show once on first visit
+- Scheduled: Display during a specific date/time range
+- Always: Show on every visit (until dismissed)
 
-**Linking an Overlay:**
+Linking an Overlay:
 
-1. When creating or editing a news article, scroll to the **Screen Overlay** field
+1. When creating or editing a news article, scroll to the Screen Overlay field
 2. Select an overlay from the dropdown (shows all overlays for the conference)
 3. Dropdown format: "Overlay Title (Trigger Type)"
    - Example: "COVID-19 Safety Guidelines (First Reg)"
 4. Select "No overlay" to remove the link
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Screen Overlay dropdown showing options like "Conference Venue Change (Scheduled)", "Welcome Message (First Reg)", "No overlay"]
 ```
 
-**Behavior:**
+Behavior:
 - When a linked overlay is triggered, the overlay content is displayed to portal users
 - The overlay content is defined separately in the Screen Overlays module
 - The news article body is NOT automatically inserted into the overlay
 - Use overlays to link to or highlight the full news article
 
-**Use Case Example:**
+Use Case Example:
 1. Create a news article: "Keynote Speaker Announced"
 2. Create a screen overlay: "Breaking News: Keynote Speaker Announced! Click to read more" (First Reg trigger)
 3. Link the overlay to the news article
@@ -5076,31 +5076,31 @@ Screen overlays are modal popups that appear on the portal based on triggers:
 
 Each news article automatically captures metadata for audit and attribution purposes.
 
-**Automatically Captured Fields:**
+Automatically Captured Fields:
 
-**Author Information:**
-- **Author First Name**: Captured from the user profile of the article creator
-- **Author Last Name**: Captured from the user profile
+Author Information:
+- Author First Name: Captured from the user profile of the article creator
+- Author Last Name: Captured from the user profile
 - Display format: "By [First Name] [Last Name]"
 - If no name is available: "By Unknown"
 
-**Timestamps:**
-- **created_at**: Date and time the article was first created (UTC)
-- **updated_at**: Date and time of the last edit (updates automatically)
-- **published_at**: Date and time the article was first published (null for drafts)
+Timestamps:
+- created_at: Date and time the article was first created (UTC)
+- updated_at: Date and time of the last edit (updates automatically)
+- published_at: Date and time the article was first published (null for drafts)
   - Cleared when unpublished
   - Updated when re-published
 
-**Screenshot Placeholder:**
+Screenshot Placeholder:
 ```
 [Screenshot: Article card showing "By Sarah Johnson" and "Published January 15, 2026, 3:45 PM" metadata]
 ```
 
-**Display Behavior:**
-- **Admin View**: Shows author name, creation date for drafts, published date for published articles
-- **Portal View**: Shows only publication date (author name NOT displayed to portal users in current implementation)
+Display Behavior:
+- Admin View: Shows author name, creation date for drafts, published date for published articles
+- Portal View: Shows only publication date (author name NOT displayed to portal users in current implementation)
 
-**Format Examples:**
+Format Examples:
 - Admin (draft): "By Sarah Johnson • Created January 14, 2026, 2:30 PM"
 - Admin (published): "By Sarah Johnson • Published January 15, 2026, 3:45 PM"
 - Portal: "January 15, 2026, 3:45 PM"
@@ -5109,38 +5109,38 @@ Each news article automatically captures metadata for audit and attribution purp
 
 ### 14.11. Access Control and Permissions
 
-**Admin Interface:**
+Admin Interface:
 
-**Required Permissions:**
+Required Permissions:
 - Must be a conference admin or organizer for the conference
 - Tenant must have the "news" module enabled
 - Conference must be accessible to your user account
 
-**Capabilities:**
+Capabilities:
 - Create articles (drafts only)
 - Edit any article (own or others)
 - Publish/unpublish any article
 - Delete any article
 - Send articles via email
 
-**Cross-Tenant Isolation:**
+Cross-Tenant Isolation:
 - Articles are scoped to `tenant_id` and `conference_id`
 - You cannot view or modify articles from other tenants
 - API enforces row-level security (RLS) at the database level
 
-**Portal Interface:**
+Portal Interface:
 
-**Required Permissions:**
+Required Permissions:
 - Must be authenticated as a CFP applicant
 - Must have access to at least one conference (via paper submission or committee membership)
 
-**Capabilities:**
+Capabilities:
 - View published articles from accessible conferences only
 - Cannot view draft articles
 - Cannot create, edit, or delete articles
 - Cannot send emails
 
-**Isolation:**
+Isolation:
 - Applicants only see articles from conferences they're linked to
 - Articles from other conferences are hidden (even if published)
 - Draft articles are never visible to portal users
@@ -5149,66 +5149,66 @@ Each news article automatically captures metadata for audit and attribution purp
 
 ### 14.12. Best Practices
 
-**Content Strategy:**
+Content Strategy:
 
-1. **Use Descriptive Titles:**
+1. Use Descriptive Titles:
    - Keep titles under 60 characters for readability
    - Use action words ("Announcing", "Reminder", "Update")
    - Include date/context when relevant: "CFP Extended to March 31"
 
-2. **Structure Your Content:**
+2. Structure Your Content:
    - Start with the most important information (inverted pyramid)
    - Use headings (H2, H3) to break up long articles
    - Add bulleted lists for key points
    - Include a call-to-action (CTA) at the end
 
-3. **Visual Enhancements:**
+3. Visual Enhancements:
    - Add hero images for major announcements
    - Use tables for schedules or comparisons
    - Embed YouTube videos for richer media
    - Apply text highlighting for critical deadlines
 
-**Publication Workflow:**
+Publication Workflow:
 
-1. **Draft First:**
+1. Draft First:
    - Always create articles as drafts initially
    - Review content for accuracy, spelling, grammar
    - Preview formatting in the portal (publish temporarily if needed)
 
-2. **Internal Review:**
+2. Internal Review:
    - Share draft link with co-organizers (via edit modal)
    - Gather feedback before publishing
    - Unpublish during review periods if needed
 
-3. **Publish with Purpose:**
+3. Publish with Purpose:
    - Time publications strategically (e.g., Monday mornings for higher engagement)
    - Link screen overlays for high-priority announcements
    - Send targeted emails to relevant groups only
 
-**Email Targeting:**
+Email Targeting:
 
-1. **Segment Your Audience:**
+1. Segment Your Audience:
    - Use paper status filters to send acceptance letters only to accepted authors
    - Target committee members separately from general applicants
    - Avoid "All Applicants" for role-specific information
 
-2. **Test Before Sending:**
+2. Test Before Sending:
    - Send to a test recipient list first (use "applicant_ids" filter with your own test accounts)
    - Verify email rendering and links
    - Check for typos and formatting issues
 
-3. **Avoid Spam:**
+3. Avoid Spam:
    - Don't send the same article multiple times to the same group
    - Limit email frequency (no more than 2-3 per week)
    - Provide clear subject lines (article title becomes subject)
 
-**Archive Management:**
+Archive Management:
 
-1. **Unpublish Outdated Content:**
+1. Unpublish Outdated Content:
    - Unpublish articles after events have passed (e.g., "CFP Closing Tomorrow")
    - Keep historical articles published if they remain relevant (e.g., "Keynote Speaker Biography")
 
-2. **Delete Sparingly:**
+2. Delete Sparingly:
    - Delete only truly obsolete or incorrect content
    - Unpublish instead of delete to preserve historical record
    - Consider keeping drafts for future reference
@@ -5217,9 +5217,9 @@ Each news article automatically captures metadata for audit and attribution purp
 
 ### 14.13. Technical Details
 
-**Data Model:**
+Data Model:
 
-**NewsArticle Table:**
+NewsArticle Table:
 - `id`: UUID (primary key)
 - `tenant_id`: UUID (foreign key to tenants)
 - `conference_id`: UUID (foreign key to conferences)
@@ -5232,14 +5232,14 @@ Each news article automatically captures metadata for audit and attribution purp
 - `created_at`: DateTime (UTC, auto-generated)
 - `updated_at`: DateTime (UTC, auto-updated)
 
-**Database Indexes:**
+Database Indexes:
 - `ix_news_articles_tenant_id`
 - `ix_news_articles_conference_id`
 - `ix_news_articles_published` (composite: conference_id, is_published, published_at)
 
-**API Endpoints:**
+API Endpoints:
 
-**Admin Endpoints:**
+Admin Endpoints:
 - `GET /api/v1/conferences/{conference_id}/news` - List all articles (admin view)
 - `POST /api/v1/conferences/{conference_id}/news` - Create article (draft)
 - `GET /api/v1/conferences/{conference_id}/news/{article_id}` - Get single article
@@ -5247,17 +5247,17 @@ Each news article automatically captures metadata for audit and attribution purp
 - `DELETE /api/v1/conferences/{conference_id}/news/{article_id}` - Delete article
 - `POST /api/v1/conferences/{conference_id}/news/{article_id}/send` - Send email
 
-**Portal Endpoints:**
+Portal Endpoints:
 - `GET /api/v1/portal/news` - List published articles (applicant view)
 - `GET /api/v1/portal/news/{article_id}` - Get single published article
 
-**HTML Sanitization:**
+HTML Sanitization:
 - Backend: `sanitize_html()` using `nh3` library (Rust-based, robust)
 - Frontend: `sanitizeHtml()` using DOMPurify (for rendering)
 - Allowed tags: All standard HTML except `<script>`, `<iframe>` (except YouTube), `<object>`, `<embed>`
 - Attribute sanitization: `href`, `src`, `style` (limited), `class`, `id`
 
-**Security:**
+Security:
 - Row-level security (RLS) enforced via `tenant_id`
 - Admin endpoints require `CurrentUserDep` and `require_admin()`
 - Portal endpoints require `CurrentApplicantDep`
@@ -5268,69 +5268,69 @@ Each news article automatically captures metadata for audit and attribution purp
 
 ### 14.14. Troubleshooting
 
-**Problem: "News tab is not visible"**
-- **Cause**: News module is not enabled for your tenant
-- **Solution**: Contact your organization admin to enable the "news" module in Modules settings
+Problem: "News tab is not visible"
+- Cause: News module is not enabled for your tenant
+- Solution: Contact your organization admin to enable the "news" module in Modules settings
 
-**Problem: "Cannot create or edit articles"**
-- **Cause**: You do not have admin permissions for the conference
-- **Solution**: Request admin or organizer role assignment from a conference owner
+Problem: "Cannot create or edit articles"
+- Cause: You do not have admin permissions for the conference
+- Solution: Request admin or organizer role assignment from a conference owner
 
-**Problem: "Published article not visible in portal"**
-- **Cause 1**: Applicant does not have access to the conference (no papers or committee membership)
-- **Solution**: Verify the applicant has submitted a paper or is a committee member
-- **Cause 2**: Article was unpublished after initial publication
-- **Solution**: Re-publish the article from the admin interface
+Problem: "Published article not visible in portal"
+- Cause 1: Applicant does not have access to the conference (no papers or committee membership)
+- Solution: Verify the applicant has submitted a paper or is a committee member
+- Cause 2: Article was unpublished after initial publication
+- Solution: Re-publish the article from the admin interface
 
-**Problem: "Email send returns 'No recipients found'"**
-- **Cause**: Filters are too restrictive (no applicants match the criteria)
-- **Solution**: 
+Problem: "Email send returns 'No recipients found'"
+- Cause: Filters are too restrictive (no applicants match the criteria)
+- Solution: 
   - Check paper status filter (ensure applicants have papers with that status)
   - Verify committee role spelling (case-sensitive exact match)
   - Use "All Applicants" to confirm at least some applicants exist
 
-**Problem: "Rich text editor not loading or frozen"**
-- **Cause**: JavaScript error or browser compatibility issue
-- **Solution**: 
+Problem: "Rich text editor not loading or frozen"
+- Cause: JavaScript error or browser compatibility issue
+- Solution: 
   - Refresh the page (Cmd+R / Ctrl+R)
   - Clear browser cache and reload
   - Try a different browser (Chrome, Firefox, Safari, Edge supported)
 
-**Problem: "Images not displaying in email"**
-- **Cause**: Email clients may block base64-encoded images
-- **Solution**: Host images externally (e.g., conference website) and use URL method instead of paste/drag-drop
+Problem: "Images not displaying in email"
+- Cause: Email clients may block base64-encoded images
+- Solution: Host images externally (e.g., conference website) and use URL method instead of paste/drag-drop
 
-**Problem: "Article formatting looks different in portal vs admin"**
-- **Cause**: CSS differences between admin and portal views
-- **Solution**: Use standard formatting (headings, lists, paragraphs) instead of custom font sizes/colors for best cross-environment consistency
+Problem: "Article formatting looks different in portal vs admin"
+- Cause: CSS differences between admin and portal views
+- Solution: Use standard formatting (headings, lists, paragraphs) instead of custom font sizes/colors for best cross-environment consistency
 
-**Problem: "Cannot delete article"**
-- **Cause**: 404 error suggests article was already deleted or belongs to a different conference/tenant
-- **Solution**: Refresh the page to sync the articles list, verify you're in the correct conference
+Problem: "Cannot delete article"
+- Cause: 404 error suggests article was already deleted or belongs to a different conference/tenant
+- Solution: Refresh the page to sync the articles list, verify you're in the correct conference
 
 ---
 
 ### 14.15. Related Modules
 
-**Screen Overlays:**
+Screen Overlays:
 - Link news articles to screen overlays for prominent portal display
 - See Screen Overlays documentation (Section 13) for configuration details
 
-**Messaging:**
+Messaging:
 - For two-way communication with applicants, use the Messaging module instead
 - Messaging supports replies and threads; News is one-way broadcast only
 
-**Call for Papers (CFP):**
+Call for Papers (CFP):
 - News articles can target applicants by paper status
 - Use news to announce CFP deadlines, acceptance decisions, submission guidelines
 
-**Email Templates:**
+Email Templates:
 - Custom email templates for system-generated messages (not applicable to news emails)
 - News emails use a fixed "direct message" template with article content
 
 ---
 
-**End of Section 14: News Module**
+End of Section 14: News Module
 
 Total lines: ~680
 
@@ -5344,46 +5344,41 @@ Now I have enough context to write comprehensive documentation for Section 15 (V
 
 ---
 
-# **Section 15: Volunteers Module**
-
-## **15.1 Volunteers Tab**
-
+# Section 15: Volunteers Module
+## 15.1 Volunteers Tab
 The Volunteers tab is the central hub for managing conference volunteers. It provides a complete interface for creating, linking, and managing volunteer information for your event.
 
-### **Accessing Volunteers**
+### Accessing Volunteers
+Navigate to Conference Detail → Volunteers to access volunteer management features.
 
-Navigate to **Conference Detail → Volunteers** to access volunteer management features.
-
-### **Volunteer Information**
-
+### Volunteer Information
 Each volunteer record contains:
 
-- **Basic Information**
+- Basic Information
   - First Name (required)
   - Last Name (required)
   - Email (required, validated)
   - Phone (optional, validated for international format)
   
-- **Additional Details**
+- Additional Details
   - Status (pending, approved, active, inactive, rejected)
   - T-Shirt Size (XS, S, M, L, XL, XXL)
   - Notes (rich text editor for internal comments)
 
-- **Emergency Contact**
+- Emergency Contact
   - Emergency Contact Name
   - Emergency Contact Phone (validated)
 
-- **Conference Association**
+- Conference Association
   - Volunteers are linked to specific conferences
   - Same volunteer can be associated with multiple conferences across your tenant
   - Removing a volunteer from a conference only unlinks them (doesn't delete the volunteer record)
 
-### **Creating New Volunteers**
-
-**Screenshot placeholder: `volunteers-create-form.png`**  
+### Creating New Volunteers
+Screenshot placeholder: `volunteers-create-form.png`  
 *Shows the inline volunteer creation form with all fields*
 
-1. Click **Create New** in the upper right
+1. Click Create New in the upper right
 2. The creation form appears inline above the volunteer list
 3. Fill in required fields:
    - First Name
@@ -5393,22 +5388,21 @@ Each volunteer record contains:
    - Phone number (validates international formats like `+491234567` or `00491234567`)
    - T-Shirt Size
    - Comments (rich text)
-5. Click **Create Volunteer**
+5. Click Create Volunteer
 6. The new volunteer is automatically linked to this conference
 
-**Validation:**
+Validation:
 - Email addresses are validated for correct format
 - Phone numbers must be in international format (with + or 00 prefix)
 - Validation errors appear in red below the field
 
-### **Linking Existing Volunteers**
-
-**Screenshot placeholder: `volunteers-link-dropdown.png`**  
+### Linking Existing Volunteers
+Screenshot placeholder: `volunteers-link-dropdown.png`  
 *Shows the "Link existing..." dropdown with available volunteers*
 
 If you have volunteers from other conferences in your tenant:
 
-1. Click the **Link existing...** dropdown
+1. Click the Link existing... dropdown
 2. Select a volunteer from the list
 3. The dropdown shows volunteers by name and email
 4. Only volunteers not already linked to this conference appear
@@ -5419,9 +5413,8 @@ This is useful for:
 - Recurring annual conferences
 - Volunteers who work across multiple events in your organization
 
-### **Editing Volunteer Details**
-
-**Screenshot placeholder: `volunteers-edit-modal.png`**  
+### Editing Volunteer Details
+Screenshot placeholder: `volunteers-edit-modal.png`  
 *Shows the edit modal with all volunteer fields and the attachment section*
 
 1. Click the edit icon (pencil) next to any volunteer
@@ -5433,77 +5426,70 @@ This is useful for:
    - Notes
    - Emergency contact information
 4. Upload attachments (photos, documents) using the attachment section at the bottom
-5. Click **Save Changes**
+5. Click Save Changes
 
-**Save Status Indicator:**
+Save Status Indicator:
 - Blue "Save Changes" button → ready to save
 - Spinning indicator → saving in progress
 - Green "Saved!" with checkmark → successfully saved
 - Red "Error" → save failed
 
-### **Volunteer Status Badges**
-
-**Screenshot placeholder: `volunteers-status-badges.png`**  
+### Volunteer Status Badges
+Screenshot placeholder: `volunteers-status-badges.png`  
 *Shows volunteers with different status badges (active, approved, pending, inactive, rejected)*
 
 Status badges appear color-coded in the volunteer list:
 
-- **Active** (green) — Volunteer is actively working at the event
-- **Approved** (blue) — Application approved but not yet active
-- **Pending** (yellow) — Application under review
-- **Inactive** (gray) — Volunteer no longer active
-- **Rejected** (gray) — Application declined
+- Active (green) — Volunteer is actively working at the event
+- Approved (blue) — Application approved but not yet active
+- Pending (yellow) — Application under review
+- Inactive (gray) — Volunteer no longer active
+- Rejected (gray) — Application declined
 
-### **Volunteer Color Coding**
-
+### Volunteer Color Coding
 Each volunteer can be assigned a unique color for visual identification in the program grid. This color is conference-specific and helps distinguish volunteers when viewing assignments and schedules.
 
-**Setting Colors:**
+Setting Colors:
 - Colors are assigned in the Volunteer Assignment tab (see Section 15.3)
 - Click the color dot next to a volunteer's name to cycle through preset colors
 - 10 preset colors available: Blue, Green, Amber, Red, Purple, Pink, Cyan, Lime, Orange, Indigo
 
-### **Removing Volunteers**
-
-**Screenshot placeholder: `volunteers-delete-confirm.png`**  
+### Removing Volunteers
+Screenshot placeholder: `volunteers-delete-confirm.png`  
 *Shows the confirmation dialog when removing a volunteer*
 
 1. Click the delete icon (trash) next to a volunteer
 2. A confirmation dialog appears explaining the action
-3. Click **Remove** to confirm
+3. Click Remove to confirm
 
-**Important:**
-- If the volunteer is linked to other conferences, they are only **unlinked** from this conference
+Important:
+- If the volunteer is linked to other conferences, they are only unlinked from this conference
 - The volunteer record remains in your tenant for other conferences
 - If assigned to tasks, those assignments are removed
 - Attachment records are preserved
 
-### **Volunteer Communications**
-
+### Volunteer Communications
 Volunteers can be contacted through:
 
-1. **Direct Email** — Click the email address in the volunteer list to open your mail client
-2. **Bulk Communications** — Use the Communications tab to send emails to all volunteers
-3. **Schedule Distribution** — Export and send volunteer schedules (see Section 15.4)
+1. Direct Email — Click the email address in the volunteer list to open your mail client
+2. Bulk Communications — Use the Communications tab to send emails to all volunteers
+3. Schedule Distribution — Export and send volunteer schedules (see Section 15.4)
 
 ---
 
-## **15.2 Task Assignment**
-
+## 15.2 Task Assignment
 The Task Assignment tab uses a visual program grid to assign volunteer tasks to specific sessions. Tasks define what volunteers will do (e.g., "Registration Desk," "AV Support," "Session Chair").
 
-### **Accessing Task Assignment**
+### Accessing Task Assignment
+Navigate to Conference Detail → Volunteers → Task Assignment
 
-Navigate to **Conference Detail → Volunteers → Task Assignment**
-
-**Screenshot placeholder: `task-assignment-overview.png`**  
+Screenshot placeholder: `task-assignment-overview.png`  
 *Shows the full task assignment interface with sidebar and program grid*
 
-### **Understanding Volunteer Tasks**
-
+### Understanding Volunteer Tasks
 Volunteer tasks (also called "volunteer roles" in the database) are reusable task definitions created in Settings. Each task represents a type of work volunteers perform.
 
-**Common Task Examples:**
+Common Task Examples:
 - Registration Desk
 - AV Support
 - Session Chair
@@ -5513,65 +5499,62 @@ Volunteer tasks (also called "volunteer roles" in the database) are reusable tas
 - Social Media
 - Setup/Teardown
 
-**Creating Tasks:**
-Tasks are created in **Settings → Volunteer Tasks** (see Section 15.5)
+Creating Tasks:
+Tasks are created in Settings → Volunteer Tasks (see Section 15.5)
 
-### **Program Grid View**
-
-**Screenshot placeholder: `task-assignment-grid.png`**  
+### Program Grid View
+Screenshot placeholder: `task-assignment-grid.png`  
 *Shows the program grid with sessions displaying assigned tasks*
 
 The program grid displays:
 
-- **Horizontal Axis:** Program tracks
-- **Vertical Axis:** Time slots
-- **Session Cards:** Color-coded by session type or track
-- **Task Badges:** Small badges on sessions showing assigned tasks and volunteer counts
+- Horizontal Axis: Program tracks
+- Vertical Axis: Time slots
+- Session Cards: Color-coded by session type or track
+- Task Badges: Small badges on sessions showing assigned tasks and volunteer counts
 
-**Grid Features:**
-- **Day Tabs** — Switch between program days at the top
-- **Time Labels** — Left column shows slot times
-- **Break Indicators** — Session-free slots highlighted in amber with diagonal stripes
-- **Track Headers** — Color-coded track names with colored dots
+Grid Features:
+- Day Tabs — Switch between program days at the top
+- Time Labels — Left column shows slot times
+- Break Indicators — Session-free slots highlighted in amber with diagonal stripes
+- Track Headers — Color-coded track names with colored dots
 
-### **Dragging Tasks onto Sessions**
-
-**Screenshot placeholder: `task-assignment-drag.png`**  
+### Dragging Tasks onto Sessions
+Screenshot placeholder: `task-assignment-drag.png`  
 *Shows a task being dragged from the sidebar onto a session*
 
 The fastest way to assign tasks:
 
-1. **Sidebar** — Shows all active volunteer tasks with a count of how many sessions each is assigned to
-2. **Drag** — Click and hold a task in the sidebar
-3. **Drop** — Drag onto a session card in the grid
-4. **Release** — Drop to assign the task with a default required count of 1
+1. Sidebar — Shows all active volunteer tasks with a count of how many sessions each is assigned to
+2. Drag — Click and hold a task in the sidebar
+3. Drop — Drag onto a session card in the grid
+4. Release — Drop to assign the task with a default required count of 1
 
-**Visual Feedback:**
+Visual Feedback:
 - Task card becomes semi-transparent while dragging
 - Session cards highlight when you hover over them
 - A floating badge follows your cursor showing the task name
 
-### **Clicking Sessions to Manage Tasks**
-
-**Screenshot placeholder: `task-assignment-modal.png`**  
+### Clicking Sessions to Manage Tasks
+Screenshot placeholder: `task-assignment-modal.png`  
 *Shows the session task management modal with assigned tasks and add task form*
 
 Click any session card to open the task management modal:
 
-**Assigned Tasks Section:**
+Assigned Tasks Section:
 - Lists all tasks currently assigned to this session
 - Shows format: `[Task Name] - X/Y assigned`
   - X = number of volunteers currently assigned
   - Y = required volunteer count
 - Editable "Need" field — Change the required count (1-50)
-- **Remove** button — Click to unassign the task from this session
+- Remove button — Click to unassign the task from this session
 
-**Add Task Section:**
+Add Task Section:
 - Dropdown to select from available tasks (tasks not already assigned)
 - "Volunteers needed" field (1-50)
-- **Add** button to assign the task
+- Add button to assign the task
 
-**Workflow:**
+Workflow:
 1. Click a session card
 2. Modal shows current task assignments
 3. Adjust required counts using the input fields
@@ -5579,112 +5562,104 @@ Click any session card to open the task management modal:
 5. Remove tasks using the "Remove" button
 6. Changes save automatically
 
-### **Task Count Badges**
-
-**Screenshot placeholder: `task-count-badges.png`**  
+### Task Count Badges
+Screenshot placeholder: `task-count-badges.png`  
 *Close-up of session cards showing task badges with assignment counts*
 
 Session cards display task badges:
 
-- **Badge Color:**
+- Badge Color:
   - White/semi-transparent background
   - White text
-- **Badge Content:** `[Task Name] (X/Y)`
+- Badge Content: `[Task Name] (X/Y)`
   - X = assigned volunteers
   - Y = required volunteers
-- **Multiple Tasks:** Multiple badges stack vertically
-- **No Tasks:** Session shows "No tasks assigned" in italics
+- Multiple Tasks: Multiple badges stack vertically
+- No Tasks: Session shows "No tasks assigned" in italics
 
-**Visual Indicators:**
+Visual Indicators:
 - Helps quickly identify:
   - Which sessions need volunteer coverage
   - Which tasks are understaffed
   - Session task distribution across the program
 
-### **Managing Required Counts**
-
-**Screenshot placeholder: `task-assignment-count-edit.png`**  
+### Managing Required Counts
+Screenshot placeholder: `task-assignment-count-edit.png`  
 *Shows the "Need" input field being edited*
 
-Each session-task assignment has a **required count** (how many volunteers are needed):
+Each session-task assignment has a required count (how many volunteers are needed):
 
-- **Default:** 1 volunteer when first assigned
-- **Editable:** Change in the session modal or inline
-- **Range:** 1-50 volunteers
-- **Updates Live:** Changes save automatically and update the grid
+- Default: 1 volunteer when first assigned
+- Editable: Change in the session modal or inline
+- Range: 1-50 volunteers
+- Updates Live: Changes save automatically and update the grid
 
-**Example:**
+Example:
 - "Registration Desk" at 08:00-09:00 might need 3 volunteers
 - "Session Chair" typically needs 1 volunteer
 - "Setup/Teardown" might need 5-10 volunteers
 
-### **Removing Task Assignments**
-
+### Removing Task Assignments
 To remove a task from a session:
 
 1. Click the session card
-2. Click **Remove** next to the task
+2. Click Remove next to the task
 3. The task is immediately unassigned
 4. Any volunteer assignments to that task are also removed
 
-**Warning:**
+Warning:
 Removing a task deletes all volunteer assignments for that task-session combination. This action cannot be undone.
 
 ---
 
-## **15.3 Volunteer Assignment**
-
+## 15.3 Volunteer Assignment
 The Volunteer Assignment tab uses the same program grid layout to assign specific volunteers to session tasks. This is where you allocate your volunteer team to their scheduled duties.
 
-### **Accessing Volunteer Assignment**
+### Accessing Volunteer Assignment
+Navigate to Conference Detail → Volunteers → Volunteer Assignment
 
-Navigate to **Conference Detail → Volunteers → Volunteer Assignment**
-
-**Screenshot placeholder: `volunteer-assignment-overview.png`**  
+Screenshot placeholder: `volunteer-assignment-overview.png`  
 *Shows the full volunteer assignment interface with volunteer sidebar and program grid*
 
-### **Volunteer Sidebar**
-
-**Screenshot placeholder: `volunteer-assignment-sidebar.png`**  
+### Volunteer Sidebar
+Screenshot placeholder: `volunteer-assignment-sidebar.png`  
 *Shows the volunteer sidebar with color dots and assignment counts*
 
 The left sidebar lists all volunteers linked to this conference:
 
-**Volunteer Cards Display:**
-- **Color Dot** — Click to cycle through preset colors (for visual identification)
-- **Full Name** — Volunteer's name
-- **Assignment Count Badge** — Blue circle showing how many sessions they're assigned to
+Volunteer Cards Display:
+- Color Dot — Click to cycle through preset colors (for visual identification)
+- Full Name — Volunteer's name
+- Assignment Count Badge — Blue circle showing how many sessions they're assigned to
 
-**Search Feature:**
+Search Feature:
 - Search box at the top filters volunteers by name
 - Real-time filtering as you type
 - Useful for conferences with many volunteers
 
-### **Assigning Volunteers via Drag-and-Drop**
-
-**Screenshot placeholder: `volunteer-assignment-drag.png`**  
+### Assigning Volunteers via Drag-and-Drop
+Screenshot placeholder: `volunteer-assignment-drag.png`  
 *Shows a volunteer being dragged onto a session card*
 
 The primary assignment method:
 
-1. **Drag** — Click and hold a volunteer card in the sidebar
-2. **Drop** — Drag onto a session card in the grid
-3. **Release** — Drop to assign
+1. Drag — Click and hold a volunteer card in the sidebar
+2. Drop — Drag onto a session card in the grid
+3. Release — Drop to assign
 
-**What Happens:**
+What Happens:
 
-- **Single Task:** If the session has only one task, the volunteer is immediately assigned to it
-- **Multiple Tasks:** If the session has multiple tasks, a modal appears asking which task to assign the volunteer to
-- **Already Assigned:** If the volunteer is already assigned to that task, the drop is ignored (no duplicates)
+- Single Task: If the session has only one task, the volunteer is immediately assigned to it
+- Multiple Tasks: If the session has multiple tasks, a modal appears asking which task to assign the volunteer to
+- Already Assigned: If the volunteer is already assigned to that task, the drop is ignored (no duplicates)
 
-**Visual Feedback:**
+Visual Feedback:
 - Volunteer card becomes semi-transparent while dragging
 - Session cards highlight when hovering (blue ring)
 - Floating badge follows cursor showing volunteer name
 
-### **Task Picker Modal (Multi-Task Sessions)**
-
-**Screenshot placeholder: `volunteer-assignment-task-picker.png`**  
+### Task Picker Modal (Multi-Task Sessions)
+Screenshot placeholder: `volunteer-assignment-task-picker.png`  
 *Shows the task picker modal when dropping a volunteer on a multi-task session*
 
 When dropping a volunteer on a session with multiple tasks:
@@ -5698,60 +5673,58 @@ When dropping a volunteer on a session with multiple tasks:
    - "Already assigned" message if volunteer is already on that task (grayed out)
 4. Click a task button to complete the assignment
 
-**Example:**
+Example:
 Session "Keynote Hall" has three tasks:
 - AV Support (1/2) — Amber, understaffed
 - Session Chair (1/1) — Green, fully staffed
 - Room Monitor (0/1) — Amber, empty
 
-### **Session Detail Modal (Click to Manage)**
-
-**Screenshot placeholder: `volunteer-assignment-detail-modal.png`**  
+### Session Detail Modal (Click to Manage)
+Screenshot placeholder: `volunteer-assignment-detail-modal.png`  
 *Shows the session detail modal with task sections and volunteer lists*
 
 Click any session card to open the detailed assignment modal:
 
-**For Each Task:**
+For Each Task:
 
-- **Task Header**
+- Task Header
   - Task name
   - Badge showing assignment status (X/Y format)
   - Green badge if fully staffed, amber if understaffed
 
-- **Assigned Volunteers List**
+- Assigned Volunteers List
   - Shows all volunteers currently assigned to this task
   - Each entry displays:
     - Color dot (volunteer's assigned color)
     - Volunteer full name
     - Remove button (X icon) — click to unassign
 
-- **Add Volunteer Dropdown** (if not fully staffed)
+- Add Volunteer Dropdown (if not fully staffed)
   - Shows volunteers not yet assigned to this task
   - Select a volunteer to add them
   - Dropdown disappears once task is fully staffed
 
-**Workflow:**
+Workflow:
 1. Click a session to see all tasks
 2. Review current assignments for each task
 3. Add volunteers using the dropdown
 4. Remove volunteers using the X icon
 5. Changes save instantly
 
-### **Program Grid Session Cards**
-
-**Screenshot placeholder: `volunteer-assignment-session-cards.png`**  
+### Program Grid Session Cards
+Screenshot placeholder: `volunteer-assignment-session-cards.png`  
 *Close-up of session cards showing task fill status and assigned volunteer names*
 
 Session cards in the grid display:
 
-**Task Badges (for each assigned task):**
+Task Badges (for each assigned task):
 - Badge background:
-  - **Green** — All volunteer slots filled
-  - **Amber** — Understaffed (some slots empty)
+  - Green — All volunteer slots filled
+  - Amber — Understaffed (some slots empty)
 - Badge content: `[Task Name] (X/Y)`
 - Below each badge: tiny colored dots and first names of assigned volunteers
 
-**Example Badge:**
+Example Badge:
 ```
 AV Support (2/3)
 ● John ● Sarah
@@ -5761,24 +5734,23 @@ Shows:
 - 2 of 3 volunteer slots filled
 - John and Sarah are assigned (with their color dots)
 
-**No Tasks Indicator:**
+No Tasks Indicator:
 - Sessions without tasks show "No tasks" in italics
 - These sessions are not droppable (can't assign volunteers)
 
-### **Volunteer Color Assignment**
-
-**Screenshot placeholder: `volunteer-assignment-colors.png`**  
+### Volunteer Color Assignment
+Screenshot placeholder: `volunteer-assignment-colors.png`  
 *Shows clicking a color dot to cycle through preset colors*
 
 Each volunteer has a conference-specific color for visual identification:
 
-**Setting Colors:**
+Setting Colors:
 1. Find the volunteer in the sidebar
 2. Click their color dot (left of their name)
 3. The color cycles to the next preset color
 4. Color updates immediately throughout the interface
 
-**Preset Colors (10 total):**
+Preset Colors (10 total):
 - Blue (#3B82F6)
 - Green (#10B981)
 - Amber (#F59E0B)
@@ -5790,79 +5762,73 @@ Each volunteer has a conference-specific color for visual identification:
 - Orange (#F97316)
 - Indigo (#6366F1)
 
-**Color Purpose:**
+Color Purpose:
 - Helps visually distinguish volunteers in the grid
 - Makes it easy to see workload distribution at a glance
 - Appears in schedules and PDF exports
 
-### **Workload Balancing**
-
-**Screenshot placeholder: `volunteer-assignment-workload.png`**  
+### Workload Balancing
+Screenshot placeholder: `volunteer-assignment-workload.png`  
 *Shows the sidebar with volunteers having different assignment count badges*
 
 The assignment count badge on each volunteer card helps you balance workload:
 
-- **Blue circle** with a number shows total session-task assignments
-- **No badge** means the volunteer has zero assignments
-- **Higher numbers** indicate volunteers with more responsibilities
+- Blue circle with a number shows total session-task assignments
+- No badge means the volunteer has zero assignments
+- Higher numbers indicate volunteers with more responsibilities
 
-**Best Practices:**
+Best Practices:
 - Aim for even distribution across volunteers
 - Some tasks require specialized skills (assign accordingly)
 - Consider volunteer availability when scheduling
 - Review the Volunteer Schedule tab (Section 15.4) to check for conflicts
 
-### **Conflict Detection**
-
+### Conflict Detection
 The system helps prevent scheduling conflicts:
 
-**Time Conflicts:**
+Time Conflicts:
 - Volunteers cannot be assigned to multiple tasks in overlapping time slots
 - The system doesn't automatically prevent this (manual checking required)
 - Use the Volunteer Schedule tab to review each volunteer's timeline
 
-**Duplicate Prevention:**
+Duplicate Prevention:
 - A volunteer cannot be assigned to the same task twice
 - Drag-and-drop to an already-assigned task is ignored
 - Modal task picker grays out already-assigned tasks
 
-### **Removing Assignments**
-
-**Screenshot placeholder: `volunteer-assignment-remove.png`**  
+### Removing Assignments
+Screenshot placeholder: `volunteer-assignment-remove.png`  
 *Shows the remove button next to an assigned volunteer in the detail modal*
 
 To unassign a volunteer:
 
 1. Click the session card to open the detail modal
 2. Find the volunteer in the assigned list
-3. Click the **X** icon next to their name
+3. Click the X icon next to their name
 4. The volunteer is immediately unassigned
 
-**Bulk Removal:**
+Bulk Removal:
 - Remove a volunteer from the conference (Volunteers tab) to unassign them from all tasks
 - Remove a task from a session (Task Assignment tab) to unassign all volunteers from that task
 
 ---
 
-## **15.4 Volunteer Schedule**
-
+## 15.4 Volunteer Schedule
 The Volunteer Schedule tab provides a read-only view of each volunteer's complete schedule with PDF export capabilities for distribution.
 
-### **Accessing Volunteer Schedule**
+### Accessing Volunteer Schedule
+Navigate to Conference Detail → Volunteers → Volunteer Schedule
 
-Navigate to **Conference Detail → Volunteers → Volunteer Schedule**
-
-**Screenshot placeholder: `volunteer-schedule-overview.png`**  
+Screenshot placeholder: `volunteer-schedule-overview.png`  
 *Shows the volunteer schedule interface with expandable volunteer cards*
 
-### **Schedule List View**
-
+### Schedule List View
 The schedule displays all volunteers with assigned tasks in an expandable list format:
 
-**Screenshot placeholder: `volunteer-schedule-collapsed.png`**  
+Screenshot placeholder: `volunteer-schedule-collapsed.png`  
 *Shows multiple volunteer cards in collapsed state*
 
-**Collapsed View:**
+Collapsed View:
 - Volunteer header bar showing:
   - Expand/collapse arrow icon
   - Color dot (volunteer's assigned color)
@@ -5870,43 +5836,41 @@ The schedule displays all volunteers with assigned tasks in an expandable list f
   - Session count (e.g., "3 sessions")
   - PDF download button
 
-**Expanded View:**
+Expanded View:
 - Click the header bar or arrow to expand
 - Shows complete schedule grouped by day
 - Each day section includes a table with session details
 
-### **Schedule Details**
-
-**Screenshot placeholder: `volunteer-schedule-expanded.png`**  
+### Schedule Details
+Screenshot placeholder: `volunteer-schedule-expanded.png`  
 *Shows an expanded volunteer schedule with day sections and session tables*
 
 For each volunteer, the schedule displays:
 
-**Day Groupings:**
+Day Groupings:
 - Sessions organized by program day (e.g., "Day 1," "Conference Day")
 - Day name appears as a section header in uppercase
 
-**Session Table Columns:**
-1. **Time** — Start and end time (e.g., "09:00–10:30")
-2. **Session** — Full session title
-3. **Track** — Track name (or "–" if no track)
-4. **Task** — Task name in a blue badge
+Session Table Columns:
+1. Time — Start and end time (e.g., "09:00–10:30")
+2. Session — Full session title
+3. Track — Track name (or "–" if no track)
+4. Task — Task name in a blue badge
 
-**Screenshot placeholder: `volunteer-schedule-table.png`**  
+Screenshot placeholder: `volunteer-schedule-table.png`  
 *Close-up of the session detail table*
 
-**Empty State:**
+Empty State:
 If a volunteer has no assignments, the expanded view shows:
 > *"No assignments yet."*
 
-### **PDF Export (Individual)**
-
-**Screenshot placeholder: `volunteer-schedule-pdf-button.png`**  
+### PDF Export (Individual)
+Screenshot placeholder: `volunteer-schedule-pdf-button.png`  
 *Shows the PDF button on an individual volunteer card*
 
 Each volunteer has a PDF download button on their header bar:
 
-1. Click **PDF** button
+1. Click PDF button
 2. Browser downloads `volunteer_schedule.pdf`
 3. File contains:
    - Volunteer name at the top
@@ -5914,33 +5878,32 @@ Each volunteer has a PDF download button on their header bar:
    - Complete schedule table grouped by day
    - Formatted for printing
 
-**PDF Contents:**
+PDF Contents:
 - Professional formatting suitable for distribution
 - Clear typography and spacing
 - Day-grouped layout
 - All session details included
 
-**Use Cases:**
+Use Cases:
 - Email to individual volunteers
 - Print for volunteer check-in packets
 - Provide to volunteers during orientation
 
-### **PDF Export (All Volunteers)**
-
-**Screenshot placeholder: `volunteer-schedule-export-all.png`**  
+### PDF Export (All Volunteers)
+Screenshot placeholder: `volunteer-schedule-export-all.png`  
 *Shows the "Export All PDFs" button in the upper right*
 
-The **Export All PDFs** button in the upper right corner downloads all schedules:
+The Export All PDFs button in the upper right corner downloads all schedules:
 
-1. Click **Export All PDFs**
+1. Click Export All PDFs
 2. System generates a PDF for each volunteer with assignments
 3. Browser downloads `volunteer_schedules.zip`
 4. ZIP file contains individual PDFs named by volunteer
 
-**Screenshot placeholder: `volunteer-schedule-zip-contents.png`**  
+Screenshot placeholder: `volunteer-schedule-zip-contents.png`  
 *Shows the contents of the extracted ZIP file with multiple PDFs*
 
-**ZIP File Structure:**
+ZIP File Structure:
 ```
 volunteer_schedules.zip
 ├── volunteer_1_schedule.pdf
@@ -5949,51 +5912,49 @@ volunteer_schedules.zip
 └── ...
 ```
 
-**Use Cases:**
+Use Cases:
 - Bulk distribution via email
 - Print all schedules for volunteer coordinator
 - Archive for event records
 
-**Loading State:**
+Loading State:
 - Button shows "Downloading..." while generating
 - For large volunteer teams, this may take a few seconds
 
-### **Unassigned Sessions Warning**
-
-**Screenshot placeholder: `volunteer-schedule-unassigned.png`**  
+### Unassigned Sessions Warning
+Screenshot placeholder: `volunteer-schedule-unassigned.png`  
 *Shows the unassigned sessions table at the bottom*
 
 Below the volunteer list, a warning section appears if any session-tasks are understaffed:
 
-**Header:**
-> ⚠️ **Unassigned Sessions (X)**
+Header:
+> ⚠️ Unassigned Sessions (X)
 
 Where X is the count of understaffed session-task combinations.
 
-**Table Columns:**
-1. **Session** — Session title
-2. **Day** — Program day name
-3. **Time** — Start and end time
-4. **Track** — Track name (or "–")
-5. **Task** — Task name in blue badge
-6. **Volunteers** — Assignment status in amber (e.g., "1/3")
+Table Columns:
+1. Session — Session title
+2. Day — Program day name
+3. Time — Start and end time
+4. Track — Track name (or "–")
+5. Task — Task name in blue badge
+6. Volunteers — Assignment status in amber (e.g., "1/3")
 
-**Purpose:**
+Purpose:
 - Quickly identify gaps in volunteer coverage
 - Shows how many more volunteers are needed per task
 - Helps ensure all critical tasks are fully staffed
 
-### **Schedule Distribution**
+### Schedule Distribution
+Recommended Workflow:
 
-**Recommended Workflow:**
+1. Finalize Assignments — Complete all volunteer assignments in the Volunteer Assignment tab
+2. Review Schedules — Check each volunteer's schedule for conflicts or overload
+3. Export PDFs — Download all schedules as a ZIP file
+4. Distribute — Email individual PDFs to volunteers or print for packets
+5. Update as Needed — If assignments change, re-export and redistribute
 
-1. **Finalize Assignments** — Complete all volunteer assignments in the Volunteer Assignment tab
-2. **Review Schedules** — Check each volunteer's schedule for conflicts or overload
-3. **Export PDFs** — Download all schedules as a ZIP file
-4. **Distribute** — Email individual PDFs to volunteers or print for packets
-5. **Update as Needed** — If assignments change, re-export and redistribute
-
-**Email Template Example:**
+Email Template Example:
 ```
 Subject: Your [Conference Name] Volunteer Schedule
 
@@ -6014,40 +5975,36 @@ See you at the conference!
 [Conference Coordinator]
 ```
 
-### **Empty State**
-
-**Screenshot placeholder: `volunteer-schedule-empty.png`**  
+### Empty State
+Screenshot placeholder: `volunteer-schedule-empty.png`  
 *Shows the empty state when no volunteers have assignments*
 
 If no volunteers have been assigned to any tasks, the page displays:
 
-> **No volunteer schedules available**  
+> No volunteer schedules available  
 > *Assign volunteers to tasks in the Volunteer Assignment tab first.*
 
 ---
 
-## **15.5 Volunteer Settings**
-
+## 15.5 Volunteer Settings
 Volunteer Settings is where you define the reusable task types that volunteers can perform. These tasks are then assigned to sessions in the Task Assignment tab.
 
-### **Accessing Volunteer Settings**
+### Accessing Volunteer Settings
+Navigate to Conference Detail → Settings → Volunteer Tasks
 
-Navigate to **Conference Detail → Settings → Volunteer Tasks**
-
-**Screenshot placeholder: `volunteer-settings-overview.png`**  
+Screenshot placeholder: `volunteer-settings-overview.png`  
 *Shows the volunteer tasks settings page with the tasks table*
 
-### **Understanding Volunteer Tasks**
+### Understanding Volunteer Tasks
+Important Terminology:
+- Database name: `volunteer_roles` table
+- UI labels: "Volunteer Tasks" in settings, "Tasks" in assignment interface
+- Purpose: Define reusable task definitions for volunteers
 
-**Important Terminology:**
-- **Database name:** `volunteer_roles` table
-- **UI labels:** "Volunteer Tasks" in settings, "Tasks" in assignment interface
-- **Purpose:** Define reusable task definitions for volunteers
-
-**What is a Task?**
+What is a Task?
 A task represents a type of work volunteers perform. Tasks are conference-specific and reusable across multiple sessions.
 
-**Examples:**
+Examples:
 - Registration Desk
 - AV/Tech Support
 - Session Chair
@@ -6060,59 +6017,57 @@ A task represents a type of work volunteers perform. Tasks are conference-specif
 - Crowd Control
 - Translation Services
 
-### **Task List Table**
-
-**Screenshot placeholder: `volunteer-settings-table.png`**  
+### Task List Table
+Screenshot placeholder: `volunteer-settings-table.png`  
 *Shows the tasks table with name, description, and active status*
 
 The tasks table displays:
 
-**Columns:**
-1. **Name** — Short task name (appears in dropdowns and badges)
-2. **Description** — Rich text description (truncated in table)
-3. **Active** — Green "Active" or gray "Inactive" badge
+Columns:
+1. Name — Short task name (appears in dropdowns and badges)
+2. Description — Rich text description (truncated in table)
+3. Active — Green "Active" or gray "Inactive" badge
 
-**Actions Column:**
+Actions Column:
 - Edit icon (pencil) — Edit task details
 - Delete icon (trash) — Delete the task
 
-**Screenshot placeholder: `volunteer-settings-actions.png`**  
+Screenshot placeholder: `volunteer-settings-actions.png`  
 *Close-up of the action buttons*
 
-### **Creating a New Task**
-
-**Screenshot placeholder: `volunteer-settings-create-modal.png`**  
+### Creating a New Task
+Screenshot placeholder: `volunteer-settings-create-modal.png`  
 *Shows the create task modal with all fields*
 
-1. Click **Create Task** button (upper right)
+1. Click Create Task button (upper right)
 2. Modal opens with form fields
 3. Fill in:
-   - **Name** (required) — Short, descriptive name (e.g., "Registration Desk")
-   - **Description** (optional) — Rich text description of responsibilities
-   - **Active** checkbox — Checked by default
-4. Click **Save**
+   - Name (required) — Short, descriptive name (e.g., "Registration Desk")
+   - Description (optional) — Rich text description of responsibilities
+   - Active checkbox — Checked by default
+4. Click Save
 
-**Screenshot placeholder: `volunteer-settings-description-editor.png`**  
+Screenshot placeholder: `volunteer-settings-description-editor.png`  
 *Shows the rich text editor for task description*
 
-**Name Guidelines:**
+Name Guidelines:
 - Keep concise (appears in small badges)
 - Use title case (e.g., "Session Chair," not "session chair")
 - Be specific (e.g., "AV Support" instead of just "Tech")
 - Avoid abbreviations unless universally understood
 
-**Description Best Practices:**
+Description Best Practices:
 - Describe the task responsibilities clearly
 - Include any required skills or qualifications
 - Mention tools or equipment needed
 - Note reporting structure (e.g., "Reports to Event Coordinator")
 - Add time expectations (e.g., "Must arrive 30 minutes early")
 
-**Example Task:**
+Example Task:
 
-**Name:** Registration Desk
+Name: Registration Desk
 
-**Description:**
+Description:
 ```
 **Responsibilities:**
 - Greet attendees and verify registrations
@@ -6128,9 +6083,8 @@ The tasks table displays:
 **Reports to:** Registration Coordinator
 ```
 
-### **Editing Task Details**
-
-**Screenshot placeholder: `volunteer-settings-edit-modal.png`**  
+### Editing Task Details
+Screenshot placeholder: `volunteer-settings-edit-modal.png`  
 *Shows the edit task modal*
 
 1. Click the edit icon (pencil) next to a task
@@ -6139,91 +6093,88 @@ The tasks table displays:
    - Name
    - Description (rich text editor)
    - Active status
-4. Click **Save Changes**
+4. Click Save Changes
 
-**Screenshot placeholder: `volunteer-settings-save-status.png`**  
+Screenshot placeholder: `volunteer-settings-save-status.png`  
 *Shows the save button in different states (saving, saved, error)*
 
-**Save Status:**
+Save Status:
 - Blue "Save Changes" → Ready to save
 - Spinning + "Saving..." → In progress
 - Green checkmark + "Saved!" → Success
 - Red "Error" → Failed (error message appears)
 
-**Editing Active Tasks:**
+Editing Active Tasks:
 - Tasks currently assigned to sessions can be edited
 - Name changes propagate to all assignments immediately
 - Description changes don't affect existing assignments (informational only)
 
-### **Task Active Status**
+### Task Active Status
+The Active checkbox controls whether a task appears in assignment interfaces:
 
-The **Active** checkbox controls whether a task appears in assignment interfaces:
-
-**Active (checked):**
+Active (checked):
 - Task appears in the Task Assignment sidebar
 - Task appears in session task dropdown menus
 - Existing assignments remain visible
 
-**Inactive (unchecked):**
+Inactive (unchecked):
 - Task is hidden from assignment interfaces
 - Cannot be assigned to new sessions
 - Existing assignments remain intact and visible
 - Useful for phasing out deprecated tasks
 
-**Use Cases for Inactive:**
+Use Cases for Inactive:
 - Seasonal tasks (only needed for some conferences)
 - Deprecated tasks (replaced by better-defined tasks)
 - Experimental tasks (testing before making widely available)
 
-### **Deleting Tasks**
-
-**Screenshot placeholder: `volunteer-settings-delete-confirm.png`**  
+### Deleting Tasks
+Screenshot placeholder: `volunteer-settings-delete-confirm.png`  
 *Shows the delete confirmation dialog*
 
 1. Click the delete icon (trash) next to a task
 2. Confirmation dialog appears
-3. Click **Delete** to confirm
+3. Click Delete to confirm
 
-**Warning Messages:**
+Warning Messages:
 - If task is assigned to sessions, the dialog warns:
   > "This task is currently assigned to X sessions. Deleting it will remove all session-task assignments and volunteer assignments. This cannot be undone."
 
-**What Happens on Delete:**
+What Happens on Delete:
 - Task definition is permanently deleted
 - All session-task assignments for this task are deleted
 - All volunteer assignments to this task are deleted
 - Volunteers are unassigned from those sessions
 - This action cannot be undone
 
-**Best Practice:**
-Instead of deleting, consider marking the task as **Inactive** to preserve historical data.
+Best Practice:
+Instead of deleting, consider marking the task as Inactive to preserve historical data.
 
-### **Task Requirements and Descriptions**
-
+### Task Requirements and Descriptions
 Tasks can include detailed requirements and descriptions to help volunteers understand expectations.
 
-**Screenshot placeholder: `volunteer-settings-description-display.png`**  
+Screenshot placeholder: `volunteer-settings-description-display.png`  
 *Shows a task description with formatted text, lists, and sections*
 
-**Rich Text Formatting:**
+Rich Text Formatting:
 - Bold, italic, underline
 - Bulleted and numbered lists
 - Headings for sections
 - Links to external resources
 
-**Common Description Sections:**
-1. **Responsibilities** — What the volunteer will do
-2. **Requirements** — Skills, qualifications, or certifications needed
-3. **Equipment** — Tools or materials provided or required
-4. **Reports To** — Who supervises this task
-5. **Time Expectations** — Shift length, arrival time, break policy
-6. **Training** — Any training provided or required
+Common Description Sections:
+1. Responsibilities — What the volunteer will do
+2. Requirements — Skills, qualifications, or certifications needed
+3. Equipment — Tools or materials provided or required
+4. Reports To — Who supervises this task
+5. Time Expectations — Shift length, arrival time, break policy
+6. Training — Any training provided or required
 
-**Example: AV Support Task**
+Example: AV Support Task
 
-**Name:** AV Support
+Name: AV Support
 
-**Description:**
+Description:
 ```
 **Responsibilities:**
 - Set up microphones and presentation equipment before sessions
@@ -6253,82 +6204,79 @@ Tasks can include detailed requirements and descriptions to help volunteers unde
 Mandatory AV training session on Day 0 at 14:00 in Room A
 ```
 
-### **Task Planning Best Practices**
+### Task Planning Best Practices
+Before Creating Tasks:
 
-**Before Creating Tasks:**
+1. Identify Needs — Review your program and identify which sessions need volunteer support
+2. Define Scope — Clearly define what each task entails
+3. Estimate Counts — Determine how many volunteers are needed per task per session
+4. Consider Skills — Note any special skills or training required
+5. Plan Training — Schedule training for complex tasks
 
-1. **Identify Needs** — Review your program and identify which sessions need volunteer support
-2. **Define Scope** — Clearly define what each task entails
-3. **Estimate Counts** — Determine how many volunteers are needed per task per session
-4. **Consider Skills** — Note any special skills or training required
-5. **Plan Training** — Schedule training for complex tasks
+Common Task Categories:
 
-**Common Task Categories:**
-
-**Registration & Check-In:**
+Registration & Check-In:
 - Registration Desk
 - Badge Distribution
 - Check-in Assistance
 
-**Session Support:**
+Session Support:
 - Session Chair
 - Room Monitor
 - AV/Tech Support
 - Timekeeper
 
-**Information & Hospitality:**
+Information & Hospitality:
 - Information Booth
 - Greeter
 - Hospitality Suite
 
-**Operations:**
+Operations:
 - Setup/Teardown
 - Signage
 - Equipment Transport
 
-**Communications:**
+Communications:
 - Photography
 - Social Media
 - Live Tweeting
 
-**Accessibility:**
+Accessibility:
 - Accessibility Assistance
 - Translation Services
 
-### **Task Reusability**
-
+### Task Reusability
 Tasks are conference-specific but can be used across all sessions within that conference:
 
-**Single Conference:**
+Single Conference:
 - Each conference has its own set of tasks
 - Tasks are not shared between conferences
 - This allows for conference-specific customization
 
-**Within Conference:**
+Within Conference:
 - One task can be assigned to unlimited sessions
 - Same task can have different required counts per session
 - Example: "Session Chair" used for all talk sessions but with varying counts
 
-**Cross-Conference:**
+Cross-Conference:
 - To reuse tasks across conferences, you must recreate them
 - Consider creating a standard set of tasks for your organization
 - Copy descriptions from previous conferences to maintain consistency
 
-### **Empty State**
-
-**Screenshot placeholder: `volunteer-settings-empty.png`**  
+### Empty State
+Screenshot placeholder: `volunteer-settings-empty.png`  
 *Shows the empty state when no tasks are defined*
 
 If no volunteer tasks have been created yet:
 
-> **No volunteer tasks yet**  
+> No volunteer tasks yet  
 > *Create your first task to get started.*
 
-Click **Create Task** to define your first volunteer role.
+Click Create Task to define your first volunteer role.
 
 ---
 
-**End of Section 15: Volunteers Module**
+End of Section 15: Volunteers Module
 
 ---
 
@@ -6336,11 +6284,11 @@ Click **Create Task** to define your first volunteer role.
 
 The Volunteers Module provides a complete workflow for managing conference volunteers:
 
-1. **Volunteers Tab** — Create and manage volunteer records, link volunteers to conferences
-2. **Task Assignment** — Define what needs to be done by assigning tasks to program sessions
-3. **Volunteer Assignment** — Assign specific volunteers to specific session tasks using drag-and-drop
-4. **Volunteer Schedule** — View and export individual and bulk volunteer schedules as PDFs
-5. **Volunteer Settings** — Define reusable task types with detailed descriptions and requirements
+1. Volunteers Tab — Create and manage volunteer records, link volunteers to conferences
+2. Task Assignment — Define what needs to be done by assigning tasks to program sessions
+3. Volunteer Assignment — Assign specific volunteers to specific session tasks using drag-and-drop
+4. Volunteer Schedule — View and export individual and bulk volunteer schedules as PDFs
+5. Volunteer Settings — Define reusable task types with detailed descriptions and requirements
 
 This module streamlines volunteer coordination, ensures adequate coverage for all sessions, and provides volunteers with clear schedules and expectations.
 
@@ -6358,21 +6306,21 @@ The Locations module manages conference venues, rooms, and virtual spaces. Locat
 
 ### 16.1 Location Hierarchy
 
-**Parent-Child Relationships**
+Parent-Child Relationships
 
 Locations support two-level hierarchy:
-- **Top-level venues** (no parent): Conference centers, hotels, university campuses
-- **Child locations** (with parent): Rooms, halls, breakout spaces within a venue
+- Top-level venues (no parent): Conference centers, hotels, university campuses
+- Child locations (with parent): Rooms, halls, breakout spaces within a venue
 
 ![Screenshot placeholder: Location hierarchy sidebar showing indented structure]
 
-**Hierarchy Rules:**
+Hierarchy Rules:
 - Only top-level locations can be parents (single level nesting)
 - Parent selection dropdown shows only top-level venues
 - Child locations appear indented in the sidebar list with arrow icons
 - Orphan children (parent not in current conference) display at top level
 
-**Visual Indicators:**
+Visual Indicators:
 - Top-level venues with children: Building icon
 - Child locations: Right arrow icon (→)
 - Green dot: Active location
@@ -6382,25 +6330,25 @@ Locations support two-level hierarchy:
 
 ### 16.2 Location Types
 
-Location types are **conference-scoped** settings that define categories like "Room", "Hall", "Virtual", "Outdoor Space".
+Location types are conference-scoped settings that define categories like "Room", "Hall", "Virtual", "Outdoor Space".
 
-**Accessing Location Types:**
-1. Navigate to **Conference > Settings**
-2. Under **Location Types**, create custom types
+Accessing Location Types:
+1. Navigate to Conference > Settings
+2. Under Location Types, create custom types
 3. Each type has:
-   - **Name**: Display name (e.g., "Conference Room")
-   - **Slug**: Internal identifier (e.g., "room")
-   - **Description**: Optional notes
-   - **Active toggle**: Show/hide in dropdowns
+   - Name: Display name (e.g., "Conference Room")
+   - Slug: Internal identifier (e.g., "room")
+   - Description: Optional notes
+   - Active toggle: Show/hide in dropdowns
 
-**Common Location Types:**
+Common Location Types:
 - `venue` - Conference centers, hotels
 - `room` - Standard meeting rooms
 - `hall` - Large auditoriums
 - `virtual` - Online meeting spaces
 - `outdoor` - Garden, terrace, plaza
 
-**When creating a location**, the Type dropdown shows only active types. The slug value is stored in the database, so renaming a type's display name won't break existing locations.
+When creating a location, the Type dropdown shows only active types. The slug value is stored in the database, so renaming a type's display name won't break existing locations.
 
 ![Screenshot placeholder: Location type settings with active types]
 
@@ -6408,12 +6356,12 @@ Location types are **conference-scoped** settings that define categories like "R
 
 ### 16.3 Creating Locations
 
-**Two Creation Methods:**
+Two Creation Methods:
 
 #### A. Link Existing Location
 For locations used across multiple conferences:
 
-1. Click **Link existing...** dropdown
+1. Click Link existing... dropdown
 2. Select from unlinked tenant locations
 3. Location appears in list immediately
 
@@ -6421,21 +6369,21 @@ Use case: Organization has permanent venues used by multiple conferences.
 
 #### B. Create New Location
 
-1. Click **Create New** button
+1. Click Create New button
 2. Fill required fields:
-   - **Name*** (required): "Grand Ballroom", "Zoom Room A"
-   - **Code**: Short identifier (e.g., "GB-01")
-   - **Type***: Select from dropdown
-   - **Parent Location**: Optional - select venue for child locations
-   - **Capacity**: Maximum attendees
+   - Name* (required): "Grand Ballroom", "Zoom Room A"
+   - Code: Short identifier (e.g., "GB-01")
+   - Type*: Select from dropdown
+   - Parent Location: Optional - select venue for child locations
+   - Capacity: Maximum attendees
 
 ![Screenshot placeholder: Create location form with all fields]
 
-**Physical vs. Virtual Fields:**
+Physical vs. Virtual Fields:
 
 The form adapts based on location type:
 
-**For Physical Locations** (`type !== "virtual"`):
+For Physical Locations (`type !== "virtual"`):
 - Address Line 1 & 2
 - City, State, Postal Code, Country (dropdown)
 - Building, Floor
@@ -6443,16 +6391,16 @@ The form adapts based on location type:
 - Website (auto-normalizes: `example.com` → `https://example.com`)
 - VAT Number
 
-**For Virtual Locations** (`type === "virtual"`):
+For Virtual Locations (`type === "virtual"`):
 - Platform dropdown: Zoom, Microsoft Teams, Google Meet, Webex, Other
 - URL (auto-normalizes URLs on blur)
 
-**Common Fields (Both Types):**
+Common Fields (Both Types):
 - Description (rich text editor)
 - Contact Persons (see section 16.5)
 - Active checkbox
 
-3. Click **Create Location**
+3. Click Create Location
 4. Location is automatically linked to current conference
 5. Detail panel opens for the new location
 
@@ -6460,18 +6408,18 @@ The form adapts based on location type:
 
 ### 16.4 Capacity Settings
 
-**Purpose:**
+Purpose:
 - Define maximum attendees for each location
 - Used for session scheduling and conflict detection
 - Shown in location list next to location name
 
-**Setting Capacity:**
+Setting Capacity:
 1. Open location detail panel
-2. Enter number in **Capacity** field (minimum: 0)
+2. Enter number in Capacity field (minimum: 0)
 3. Leave blank if capacity is unlimited/unknown
-4. Click **Save**
+4. Click Save
 
-**Capacity Display:**
+Capacity Display:
 - Appears in location list table
 - Shows in session assignment views
 - Used by program scheduling tools
@@ -6482,20 +6430,20 @@ The form adapts based on location type:
 
 ### 16.5 Assigning Locations to Sessions
 
-Locations are assigned to sessions in the **Program** module (see Section 13). The assignment happens in two ways:
+Locations are assigned to sessions in the Program module (see Section 13). The assignment happens in two ways:
 
-**A. Session Detail Panel:**
+A. Session Detail Panel:
 1. Open session in Program tab
-2. Select **Location** dropdown
+2. Select Location dropdown
 3. Choose from conference-linked locations
 4. Only active locations appear in dropdown
 
-**B. Drag-and-Drop (Program Grid):**
-1. Navigate to **Program > Visual Editor**
+B. Drag-and-Drop (Program Grid):
+1. Navigate to Program > Visual Editor
 2. Drag sessions to location rows
 3. Grid shows time conflicts and capacity warnings
 
-**Location Filtering:**
+Location Filtering:
 - Only locations linked to current conference appear
 - Inactive locations hidden from dropdowns
 - Capacity warnings shown when exceeded
@@ -6504,7 +6452,7 @@ Locations are assigned to sessions in the **Program** module (see Section 13). T
 
 ### 16.6 Location Maps & Directions
 
-**Description Field (Rich Text):**
+Description Field (Rich Text):
 
 Use the Description field to provide:
 - Walking directions from main entrance
@@ -6512,7 +6460,7 @@ Use the Description field to provide:
 - Accessibility information
 - Parking instructions
 
-**Example Description Template:**
+Example Description Template:
 ```
 **How to Get Here:**
 - Enter via Main Lobby (Building A)
@@ -6531,7 +6479,7 @@ Use the Description field to provide:
 
 ![Screenshot placeholder: Location description with rich text formatting]
 
-**Website Field:**
+Website Field:
 Use for:
 - Google Maps links
 - Interactive floor plan PDFs
@@ -6541,19 +6489,19 @@ Use for:
 
 ### 16.7 Location Documents
 
-Each location has a **Documents** tab for:
+Each location has a Documents tab for:
 - Floor plans (PDF, PNG, JPG)
 - Fire evacuation maps
 - Setup diagrams
 - Equipment manuals
 
-**Uploading Documents:**
+Uploading Documents:
 1. Open location detail panel
-2. Click **Documents** tab
-3. Click **Upload** or drag files
+2. Click Documents tab
+3. Click Upload or drag files
 4. Files are stored with conference ID for isolation
 
-**File Types Allowed:**
+File Types Allowed:
 - PDF, DOCX, XLSX, TXT
 - Images: JPEG, PNG, WebP, GIF
 - Max size: 10 MB per file
@@ -6566,21 +6514,21 @@ Each location has a **Documents** tab for:
 
 Assign facility managers, AV technicians, or venue coordinators to locations.
 
-**Adding Contacts:**
+Adding Contacts:
 1. Open location detail panel
-2. Click **Contacts** tab
+2. Click Contacts tab
 3. Fill fields:
    - First Name*, Last Name* (required)
    - Email, Phone (validated)
    - Comment (e.g., "Available after 2pm")
-4. Click **Add Contact**
+4. Click Add Contact
 
-**Editing Contacts:**
+Editing Contacts:
 - Click contact row to expand inline editor
 - Update fields and save
 - Delete with trash icon
 
-**Use Cases:**
+Use Cases:
 - Venue manager contact for last-minute changes
 - AV technician for equipment issues
 - Building security for after-hours access
@@ -6593,23 +6541,23 @@ Contact count appears in tab label: "Contacts (3)"
 
 ### 16.9 Location Visibility & Status
 
-**Active Toggle:**
-- **Active = true**: Location appears in session dropdowns
-- **Active = false**: Location hidden but data preserved
+Active Toggle:
+- Active = true: Location appears in session dropdowns
+- Active = false: Location hidden but data preserved
 
-**When to Deactivate:**
+When to Deactivate:
 - Venue no longer available
 - Room undergoing renovation
 - Virtual space URL expired
 
-**Visual Indicators:**
+Visual Indicators:
 - Active locations: Green status dot
 - Inactive locations: Red status dot
 - Inactive locations grayed out in list
 
-**Unlinking vs. Deleting:**
-- **Unlink**: Removes from current conference only (preserves for other conferences)
-- **Delete**: Permanently removes location (only if not linked to sessions)
+Unlinking vs. Deleting:
+- Unlink: Removes from current conference only (preserves for other conferences)
+- Delete: Permanently removes location (only if not linked to sessions)
 
 ---
 
@@ -6621,12 +6569,12 @@ The Sponsors module manages conference sponsors, packages, contracts, and invoic
 
 #### 17.1.1 Sponsors List View
 
-**Overview Screen:**
+Overview Screen:
 - Table view with sortable columns
 - Click any row to open detail panel
 - Sponsor count badge in header
 
-**Table Columns:**
+Table Columns:
 - Company Name
 - Package (from settings)
 - Price + Currency
@@ -6636,7 +6584,7 @@ The Sponsors module manages conference sponsors, packages, contracts, and invoic
 
 ![Screenshot placeholder: Sponsors list table with multiple sponsors]
 
-**Visibility Badge:**
+Visibility Badge:
 - Green "Yes": Sponsor visible on public website
 - Gray "No": Sponsor hidden from public
 
@@ -6644,45 +6592,45 @@ The Sponsors module manages conference sponsors, packages, contracts, and invoic
 
 #### 17.1.2 Adding Sponsors
 
-**Create New Sponsor:**
-1. Click **+ Add Sponsor** button
+Create New Sponsor:
+1. Click + Add Sponsor button
 2. Fill form fields:
 
-**Required Field:**
+Required Field:
 - Company Name*
 
-**Package & Pricing:**
+Package & Pricing:
 - Sponsor Package (dropdown from settings)
 - Price (auto-fills from package but can override)
 - Currency (auto-set from package, read-only display)
 - Visible checkbox (show on website)
 
-**Contact Information:**
+Contact Information:
 - Phone (validates international format)
 - Website (auto-normalizes URLs)
 
-**Address Fields:**
+Address Fields:
 - Address Line 1, Line 2
 - City, State, Postal Code
 - Country (dropdown with ISO codes)
 
-**Tax Information:**
+Tax Information:
 - VAT Number (with validation - see VatNumberInput component)
 
-**Additional:**
+Additional:
 - Comments (rich text)
 - Contact Persons (add multiple)
 
-3. Click **Create**
+3. Click Create
 4. Detail panel opens for new sponsor
 
 ![Screenshot placeholder: Add sponsor form with all fields filled]
 
-**Package Selection Behavior:**
+Package Selection Behavior:
 
 When you select a package:
-- **Price** auto-fills from package default (can override)
-- **Currency** locks to package currency (or conference default)
+- Price auto-fills from package default (can override)
+- Currency locks to package currency (or conference default)
 - Changing package updates currency but preserves custom price
 
 When you select "No Package":
@@ -6693,7 +6641,7 @@ When you select "No Package":
 
 #### 17.1.3 Sponsor Packages
 
-**What are Sponsor Packages?**
+What are Sponsor Packages?
 
 Pre-defined sponsorship tiers with:
 - Name (e.g., "Gold Sponsor", "Platinum Partner")
@@ -6701,14 +6649,14 @@ Pre-defined sponsorship tiers with:
 - Benefits description (rich text)
 - Contract template (DOCX or HTML)
 
-**Accessing Package Settings:**
-1. Navigate to **Conference > Settings**
-2. Scroll to **Sponsor Packages**
-3. Click **+ Add Package**
+Accessing Package Settings:
+1. Navigate to Conference > Settings
+2. Scroll to Sponsor Packages
+3. Click + Add Package
 
 ![Screenshot placeholder: Sponsor packages settings list]
 
-**Package Fields:**
+Package Fields:
 
 | Field | Description | Example |
 |-------|-------------|---------|
@@ -6718,7 +6666,7 @@ Pre-defined sponsorship tiers with:
 | Currency | Package currency (from conference currencies) | EUR |
 | Active | Show/hide in dropdowns | ✓ |
 
-**Benefits Description Template:**
+Benefits Description Template:
 ```
 **Included Benefits:**
 • Logo on conference website (large size)
@@ -6729,7 +6677,7 @@ Pre-defined sponsorship tiers with:
 • Option to provide swag in attendee bags
 ```
 
-**Contract Template:**
+Contract Template:
 - Upload DOCX file with placeholders
 - System converts to HTML for editing
 - See section 17.3 for contract management
@@ -6738,7 +6686,7 @@ Pre-defined sponsorship tiers with:
 
 #### 17.1.4 Sponsor Tiers
 
-**Common Tier Structure:**
+Common Tier Structure:
 
 Most conferences use hierarchical tiers:
 
@@ -6750,7 +6698,7 @@ Most conferences use hierarchical tiers:
 | Bronze | €1,500 - €4,000 | Small booth or table, 2 passes, logo in list |
 | Community | In-kind or €500 | Logo in footer, recognition in program |
 
-**Creating Tiered Packages:**
+Creating Tiered Packages:
 
 1. Create package for each tier
 2. Name clearly: "Platinum Sponsor", "Gold Sponsor"
@@ -6764,32 +6712,32 @@ Most conferences use hierarchical tiers:
 
 #### 17.1.5 Logo Upload
 
-**Uploading Sponsor Logos:**
+Uploading Sponsor Logos:
 
 1. Open sponsor detail panel
-2. Under **Logo** section (top of Details tab)
-3. Click **Upload Logo** or drag image
+2. Under Logo section (top of Details tab)
+3. Click Upload Logo or drag image
 4. Image appears immediately with cache-busting URL
 
-**Logo Specifications:**
-- **Formats**: JPEG, PNG, WebP, GIF (no SVG - XSS risk)
-- **Max size**: 5 MB
-- **Recommended**: PNG with transparent background
-- **Dimensions**: 400x400px minimum, maintain aspect ratio
+Logo Specifications:
+- Formats: JPEG, PNG, WebP, GIF (no SVG - XSS risk)
+- Max size: 5 MB
+- Recommended: PNG with transparent background
+- Dimensions: 400x400px minimum, maintain aspect ratio
 
-**Logo Storage:**
+Logo Storage:
 - Stored via `Attachment` model (`entity_type="sponsor_logo"`)
 - EXIF metadata automatically stripped
 - Replace semantics: Uploading new logo deletes old
 - Public serve endpoint with 24-hour cache
 
-**Cache Busting:**
+Cache Busting:
 Logo URLs include timestamp: `/sponsors/{id}/logo?v={timestamp}`
 
 ![Screenshot placeholder: Logo upload section with preview]
 
-**Deleting Logos:**
-- Click **X** or trash icon next to logo
+Deleting Logos:
+- Click X or trash icon next to logo
 - Confirmation dialog appears
 - Logo removed immediately
 
@@ -6797,7 +6745,7 @@ Logo URLs include timestamp: `/sponsors/{id}/logo?v={timestamp}`
 
 #### 17.1.6 Sponsor Information Management
 
-**Detail Panel Tabs:**
+Detail Panel Tabs:
 
 | Tab | Contents |
 |-----|----------|
@@ -6807,16 +6755,16 @@ Logo URLs include timestamp: `/sponsors/{id}/logo?v={timestamp}`
 | Documents | File attachments (PDFs, images, etc.) |
 | Invoices | Linked invoices with preview (section 17.4) |
 
-**Save Status Indicator:**
+Save Status Indicator:
 - Idle: No indicator
 - Saving: "Saving..." spinner
 - Saved: Green checkmark "Saved"
 - Error: Red X "Save failed"
 
-**Editing Workflow:**
+Editing Workflow:
 1. Click sponsor in list to open detail panel
 2. Modify fields in active tab
-3. Click **Save** button (top right)
+3. Click Save button (top right)
 4. Changes persist, save status appears
 5. Version created for contract edits
 
@@ -6828,23 +6776,23 @@ Logo URLs include timestamp: `/sponsors/{id}/logo?v={timestamp}`
 
 Assign sponsor representatives, booth coordinators, or billing contacts.
 
-**Adding Sponsor Contacts:**
+Adding Sponsor Contacts:
 1. Open sponsor detail panel
-2. Click **Contacts** tab
+2. Click Contacts tab
 3. Fill inline form:
    - First Name*, Last Name*
    - Email (validated)
    - Phone (validated international format)
    - Comment (e.g., "Booth coordinator")
-4. Click **Add**
+4. Click Add
 
-**Contact List Features:**
+Contact List Features:
 - Expandable rows for inline editing
 - Delete button (trash icon)
 - Count in tab label: "Contacts (2)"
 - Used for contract email recipients
 
-**Use Cases:**
+Use Cases:
 - Primary contact for contract signing
 - Invoice recipient
 - Booth setup coordinator
@@ -6858,30 +6806,30 @@ Assign sponsor representatives, booth coordinators, or billing contacts.
 
 #### 17.2.1 Creating Sponsor Packages
 
-**Step-by-Step:**
+Step-by-Step:
 
-1. Navigate to **Conference > Settings > Sponsor Packages**
-2. Click **+ Add Package**
+1. Navigate to Conference > Settings > Sponsor Packages
+2. Click + Add Package
 3. Fill form:
 
-**Basic Information:**
-- **Name***: Package tier name (e.g., "Platinum Sponsor")
-- **Description**: Benefits list (rich text editor)
+Basic Information:
+- Name*: Package tier name (e.g., "Platinum Sponsor")
+- Description: Benefits list (rich text editor)
 
-**Pricing:**
-- **Price***: Default package amount (Decimal, 2 places)
-- **Currency**: Select from conference currencies
+Pricing:
+- Price*: Default package amount (Decimal, 2 places)
+- Currency: Select from conference currencies
 
-**Template:**
-- **Contract Template**: Upload DOCX file (optional)
+Template:
+- Contract Template: Upload DOCX file (optional)
   - Supports placeholders (see 17.3.9)
   - Converted to HTML for editing
   - RTF files also supported (converted via `striprtf`)
 
-**Visibility:**
-- **Active**: Toggle to show/hide in sponsor creation dropdown
+Visibility:
+- Active: Toggle to show/hide in sponsor creation dropdown
 
-4. Click **Save**
+4. Click Save
 5. Package appears in sponsor creation dropdown
 
 ![Screenshot placeholder: Create sponsor package form]
@@ -6890,15 +6838,15 @@ Assign sponsor representatives, booth coordinators, or billing contacts.
 
 #### 17.2.2 Package Pricing
 
-**Price Inheritance:**
+Price Inheritance:
 
 When assigning a package to a sponsor:
-1. **Price** field auto-fills from package default
+1. Price field auto-fills from package default
 2. User can override (e.g., negotiated discount)
-3. **Currency** locks to package currency
+3. Currency locks to package currency
 4. Changing sponsor's package updates currency but preserves custom price
 
-**Multi-Currency Support:**
+Multi-Currency Support:
 
 If you have sponsors in different regions:
 1. Create conference currencies: EUR, USD, GBP
@@ -6908,7 +6856,7 @@ If you have sponsors in different regions:
    - "Gold Sponsor (GBP)" - £7,000
 3. Assign appropriate package to each sponsor
 
-**Currency Display:**
+Currency Display:
 - Shows in sponsor list: "8,000.00 EUR"
 - Detail panel displays full name: "EUR - Euro"
 - Invoice generation uses sponsor's currency
@@ -6917,11 +6865,11 @@ If you have sponsors in different regions:
 
 #### 17.2.3 Package Benefits
 
-**Writing Effective Benefits Descriptions:**
+Writing Effective Benefits Descriptions:
 
 Use the rich text editor to format benefits clearly:
 
-**Example Gold Package Description:**
+Example Gold Package Description:
 ```
 **Premium Visibility**
 • Prominent logo placement on conference website and all marketing materials
@@ -6950,7 +6898,7 @@ Use the rich text editor to format benefits clearly:
 • Discount on future conference sponsorship (10%)
 ```
 
-**Formatting Tips:**
+Formatting Tips:
 - Use bullet points for scannability
 - Bold section headers
 - Include quantities (5 passes, not "several passes")
@@ -6963,22 +6911,22 @@ Use the rich text editor to format benefits clearly:
 
 #### 17.2.4 Package Visibility
 
-**Active Toggle:**
-- **Active = true**: Package appears in sponsor creation dropdown
-- **Active = false**: Package hidden but existing sponsors unchanged
+Active Toggle:
+- Active = true: Package appears in sponsor creation dropdown
+- Active = false: Package hidden but existing sponsors unchanged
 
-**When to Deactivate:**
+When to Deactivate:
 - Package no longer offered (e.g., 2024 tiers)
 - Sold out (e.g., "Title Sponsor" - limit 1)
 - Replaced by new package structure
 
-**Effect on Existing Sponsors:**
+Effect on Existing Sponsors:
 - Sponsors with inactive packages keep their package assignment
 - Package name still displays in sponsor list
 - Can still generate invoices for existing sponsors
 - Cannot assign inactive package to new sponsors
 
-**Reactivating Packages:**
+Reactivating Packages:
 Toggle Active back to true to make available again.
 
 ---
@@ -6989,7 +6937,7 @@ Full lifecycle contract management: generate from templates, edit in browser, tr
 
 #### 17.3.1 Contract Overview
 
-**Contract States:**
+Contract States:
 
 | State | Description | Actions Available |
 |-------|-------------|-------------------|
@@ -6998,15 +6946,15 @@ Full lifecycle contract management: generate from templates, edit in browser, tr
 | Sent | Contract emailed to sponsor | Resend, Mark Signed, Download |
 | Signed | Contract signed by sponsor | Download, View History |
 
-**Contract Metadata:**
+Contract Metadata:
 
 Each contract tracks:
-- **Filename**: Original or generated name
-- **Version**: Increments on each save (immutable versions)
-- **Status**: draft / sent / signed
-- **File Size**: Storage size in bytes
-- **Source Package**: Package used for generation
-- **Sent History**: Email recipients, timestamps, versions sent
+- Filename: Original or generated name
+- Version: Increments on each save (immutable versions)
+- Status: draft / sent / signed
+- File Size: Storage size in bytes
+- Source Package: Package used for generation
+- Sent History: Email recipients, timestamps, versions sent
 
 ![Screenshot placeholder: Contract tab showing metadata and status]
 
@@ -7014,22 +6962,22 @@ Each contract tracks:
 
 #### 17.3.2 Creating Contracts from Templates
 
-**Prerequisite:**
-Sponsor must have a **package assigned** with a **contract template**.
+Prerequisite:
+Sponsor must have a package assigned with a contract template.
 
-**Generating Initial Contract:**
+Generating Initial Contract:
 
 1. Assign sponsor package (Details tab)
-2. Click **Contract** tab
+2. Click Contract tab
 3. If no contract exists, see prompt: "No contract has been generated yet"
-4. Click **Generate Contract** button
+4. Click Generate Contract button
 5. System:
    - Loads template from sponsor's package
    - Replaces placeholders with sponsor data
    - Creates v1 contract (status: draft)
    - Displays contract content (if HTML) or download button (if PDF)
 
-**Template Sources:**
+Template Sources:
 - Package contract template (DOCX/RTF file)
 - Converted to HTML via `mammoth` library
 - Stored in `sponsor_contracts.html_content`
@@ -7040,7 +6988,7 @@ Sponsor must have a **package assigned** with a **contract template**.
 
 #### 17.3.3 DOCX Upload to HTML Conversion
 
-**Document Processing Pipeline:**
+Document Processing Pipeline:
 
 | Format | Converter | Result |
 |--------|-----------|--------|
@@ -7048,7 +6996,7 @@ Sponsor must have a **package assigned** with a **contract template**.
 | RTF | `striprtf` | Plain text → wrapped in `<p>` |
 | Direct HTML | None | Stored as-is |
 
-**DOCX Conversion Details:**
+DOCX Conversion Details:
 
 When you upload a DOCX template:
 1. File saved to attachments storage
@@ -7062,13 +7010,13 @@ When you upload a DOCX template:
 4. Result saved to `html_content` field
 5. `is_editable = true` (can edit in browser)
 
-**RTF Conversion:**
+RTF Conversion:
 - `striprtf` removes formatting codes
 - Outputs plain text
 - Wrapped in `<p>` tags for display
 - Also editable in rich text editor
 
-**Non-Editable Contracts (PDF uploads):**
+Non-Editable Contracts (PDF uploads):
 - PDF files not converted to HTML
 - `html_content` remains null
 - `is_editable = false`
@@ -7080,26 +7028,26 @@ When you upload a DOCX template:
 
 #### 17.3.4 Rich Text Contract Editing
 
-**In-Browser Editing (Editable Contracts Only):**
+In-Browser Editing (Editable Contracts Only):
 
 For contracts with `html_content`:
-1. Click **Contract** tab
+1. Click Contract tab
 2. Content appears in rich text editor (12 rows)
 3. Edit directly:
    - Format text (bold, italic, lists)
    - Add/remove sections
    - Update pricing or terms
    - Insert links or images
-4. **Unsaved Changes** indicator appears
-5. Click **Save** button
+4. Unsaved Changes indicator appears
+5. Click Save button
 
-**Save Behavior:**
+Save Behavior:
 - Creates new immutable version in `sponsor_contract_versions`
 - Increments `version_number`
 - Resets "Unsaved changes" indicator
 - Shows "Saved (new version created)" confirmation
 
-**Rich Text Editor Features:**
+Rich Text Editor Features:
 - Toolbar: Bold, Italic, Lists, Links
 - Paste from Word (formatting preserved)
 - Undo/Redo
@@ -7111,31 +7059,31 @@ For contracts with `html_content`:
 
 #### 17.3.5 Version History
 
-**Automatic Versioning:**
+Automatic Versioning:
 
 Every contract save creates an immutable snapshot:
 - Stored in `sponsor_contract_versions` table
 - Fields: `version`, `filename`, `html_content`, `file_size`, `created_at`
 - Original contract in `sponsor_contracts` (active version)
 
-**Viewing Version History:**
+Viewing Version History:
 
-1. Click **Contract** tab
-2. Scroll to **Version History (N)** toggle
+1. Click Contract tab
+2. Scroll to Version History (N) toggle
 3. Click to expand table
 
-**Version Table Columns:**
-- **Version**: v1, v2, v3...
-- **Date**: Creation timestamp
-- **Size**: File size in KB/MB
-- **Actions**: Download button
+Version Table Columns:
+- Version: v1, v2, v3...
+- Date: Creation timestamp
+- Size: File size in KB/MB
+- Actions: Download button
 
-**Downloading Previous Versions:**
-- Click **Download** for any version
+Downloading Previous Versions:
+- Click Download for any version
 - Downloads DOCX file (HTML converted back)
 - Filename includes version: `contract_v2.docx`
 
-**Use Cases:**
+Use Cases:
 - Audit trail for contract changes
 - Revert to previous version (download → re-upload)
 - Compare changes over time
@@ -7147,14 +7095,14 @@ Every contract save creates an immutable snapshot:
 
 #### 17.3.6 Contract Status Management
 
-**Status Dropdown (Badge):**
+Status Dropdown (Badge):
 
 In contract header, click status badge to change:
-- **Draft** (gray): Work in progress
-- **Sent** (blue): Emailed to sponsor
-- **Signed** (green): Sponsor accepted
+- Draft (gray): Work in progress
+- Sent (blue): Emailed to sponsor
+- Signed (green): Sponsor accepted
 
-**Status Change Behavior:**
+Status Change Behavior:
 
 | From → To | Effect |
 |-----------|--------|
@@ -7163,9 +7111,9 @@ In contract header, click status badge to change:
 | Signed → Draft | Allowed but unusual (re-negotiation) |
 | Any → Draft | Clears `sent_at` timestamp |
 
-**Send History Integration:**
+Send History Integration:
 
-Status automatically updates to "Sent" when contract is emailed via **Send** button (records recipient, timestamp, version).
+Status automatically updates to "Sent" when contract is emailed via Send button (records recipient, timestamp, version).
 
 ![Screenshot placeholder: Status badge dropdown]
 
@@ -7173,35 +7121,35 @@ Status automatically updates to "Sent" when contract is emailed via **Send** but
 
 #### 17.3.7 PDF & DOCX Export
 
-**Two Export Formats:**
+Two Export Formats:
 
-**A. Download (Original Format):**
-- Click **Download** button
+A. Download (Original Format):
+- Click Download button
 - Downloads contract in stored format:
   - DOCX if `is_editable = true`
   - PDF if uploaded as PDF
 - Filename: `{filename}.docx` or `{filename}.pdf`
 
-**B. Download PDF (HTML → PDF Conversion):**
-- Click **Download PDF** button
+B. Download PDF (HTML → PDF Conversion):
+- Click Download PDF button
 - Only appears if contract has `html_content`
 - Backend converts HTML → PDF via `fpdf2`
 - Download: `{filename}.pdf`
 
-**Conversion Details:**
+Conversion Details:
 
 | Source | Library | Output |
 |--------|---------|--------|
 | HTML | `fpdf2` | PDF with basic formatting |
 | HTML | `html2docx` | DOCX (for Download button) |
 
-**PDF Generation (`fpdf2`):**
+PDF Generation (`fpdf2`):
 - Preserves bold, italic, lists
 - Embeds images (if any)
 - Page breaks at logical points
 - Footer with page numbers
 
-**DOCX Generation (`html2docx`):**
+DOCX Generation (`html2docx`):
 - Converts HTML back to Word format
 - Tables, lists, formatting preserved
 - Can open in Microsoft Word or LibreOffice
@@ -7212,30 +7160,30 @@ Status automatically updates to "Sent" when contract is emailed via **Send** but
 
 #### 17.3.8 Email Delivery
 
-**Send Contract Modal:**
+Send Contract Modal:
 
-1. Click **Send** button in Contract tab
+1. Click Send button in Contract tab
 2. Modal opens with:
 
-**Recipient Selection:**
+Recipient Selection:
 - Checkboxes for sponsor contact persons (from Contacts tab)
 - Additional email addresses field (free text, validated)
 - Add multiple extra emails (shown as chips)
 
-**Email Content:**
-- **Subject**: Pre-filled from "Sponsor Contract Send" email template
-- **Body HTML**: Pre-filled, editable rich text
+Email Content:
+- Subject: Pre-filled from "Sponsor Contract Send" email template
+- Body HTML: Pre-filled, editable rich text
 - Template loaded via `/contract/send-preview` endpoint
 
-**Attachment Options:**
+Attachment Options:
 - "Attach contract as PDF" checkbox (default: true if editable)
 - Sends current contract version as PDF attachment
 
-**Send Confirmation:**
+Send Confirmation:
 - Shows recipient count: "Send to 3 recipients"
 - Disabled if no recipients or no subject
 
-3. Click **Send to N recipient(s)**
+3. Click Send to N recipient(s)
 4. Backend:
    - Sends individual email to each recipient
    - Attaches PDF (if selected)
@@ -7244,27 +7192,27 @@ Status automatically updates to "Sent" when contract is emailed via **Send** but
 
 ![Screenshot placeholder: Send contract modal with recipients and template]
 
-**Send History Display:**
+Send History Display:
 
-After sending, expand **Send History (N)** table:
+After sending, expand Send History (N) table:
 - Email addresses
 - Version sent (v1, v2, etc.)
 - Sent timestamp
 
-**Resending:**
+Resending:
 Edit recipients or content and click Send again. Each send appends to history.
 
 ---
 
 #### 17.3.9 Send Preview
 
-**Template Rendering:**
+Template Rendering:
 
 Before opening Send modal, system fetches rendered template:
 
-**Endpoint**: `GET /conferences/{id}/sponsors/{sponsor_id}/contract/send-preview`
+Endpoint: `GET /conferences/{id}/sponsors/{sponsor_id}/contract/send-preview`
 
-**Returns:**
+Returns:
 ```json
 {
   "subject": "Sponsor Contract for PyCon 2025",
@@ -7272,7 +7220,7 @@ Before opening Send modal, system fetches rendered template:
 }
 ```
 
-**Template Context:**
+Template Context:
 Built by `build_sponsor_contract_context()` in `app/core/email_templates.py`:
 
 | Placeholder | Replacement |
@@ -7282,7 +7230,7 @@ Built by `build_sponsor_contract_context()` in `app/core/email_templates.py`:
 | `[Custom Message]` | Optional admin message |
 | `[Contract Content]` | Full HTML contract content (if editable) |
 
-**Editing Before Send:**
+Editing Before Send:
 - Subject and body are editable in modal
 - Changes apply only to current send (not saved to template)
 - Template remains unchanged for future sends
@@ -7293,7 +7241,7 @@ Built by `build_sponsor_contract_context()` in `app/core/email_templates.py`:
 
 #### 17.3.10 Contract Placeholders
 
-**Available Placeholders in Templates:**
+Available Placeholders in Templates:
 
 Use these in DOCX contract templates for auto-replacement:
 
@@ -7311,7 +7259,7 @@ Use these in DOCX contract templates for auto-replacement:
 | `{conference_dates}` | `conference.start_date` - `end_date` | "May 15-18, 2025" |
 | `{current_date}` | Today's date | "2026-03-08" |
 
-**Example Template Snippet:**
+Example Template Snippet:
 ```
 SPONSORSHIP AGREEMENT
 
@@ -7331,7 +7279,7 @@ TERMS AND CONDITIONS:
 [... rest of contract ...]
 ```
 
-**After Generation:**
+After Generation:
 All placeholders replaced with actual sponsor data. If a field is empty, placeholder shows as blank (not `{missing_field}`).
 
 ![Screenshot placeholder: Contract template with placeholders before/after]
@@ -7340,31 +7288,31 @@ All placeholders replaced with actual sponsor data. If a field is empty, placeho
 
 #### 17.3.11 Regenerating Contracts
 
-**When to Regenerate:**
+When to Regenerate:
 
 - Sponsor switched to different package
 - Template updated (need latest version)
 - Contract corrupted or deleted accidentally
 
-**Regenerate Process:**
+Regenerate Process:
 
-1. Click **Regenerate** button (amber warning button)
+1. Click Regenerate button (amber warning button)
 2. Confirmation dialog: "This will replace the current contract content with the package template. The current version will be saved in version history. Continue?"
-3. Click **Regenerate**
+3. Click Regenerate
 4. System:
    - Saves current contract as immutable version
-   - Loads template from **current** sponsor package
+   - Loads template from current sponsor package
    - Replaces all content
    - Increments version number
    - Resets status to Draft
 
-**Package Mismatch Warning:**
+Package Mismatch Warning:
 
 If `contract.source_package_id ≠ sponsor.sponsor_package_id`:
 - Amber banner appears: "This contract was generated from a different package. Click Regenerate to create a new contract from the current package template."
 - Common after changing sponsor's package assignment
 
-**Data Safety:**
+Data Safety:
 Original contract preserved in version history (can download previous version).
 
 ![Screenshot placeholder: Regenerate confirmation with warning banner]
@@ -7373,16 +7321,16 @@ Original contract preserved in version history (can download previous version).
 
 ### 17.4 Sponsor Invoices
 
-Invoices linked to sponsors appear in the **Invoices** tab of the sponsor detail panel.
+Invoices linked to sponsors appear in the Invoices tab of the sponsor detail panel.
 
 #### 17.4.1 Invoices Tab Overview
 
-**Display:**
+Display:
 - Table with Invoice #, Issue Date, Status, Total
 - Status badges (color-coded)
 - Action buttons: Preview, Download, Resend
 
-**Invoice Status Colors:**
+Invoice Status Colors:
 
 | Status | Badge Color |
 |--------|-------------|
@@ -7392,7 +7340,7 @@ Invoices linked to sponsors appear in the **Invoices** tab of the sponsor detail
 | Overdue | Red |
 | Cancelled | Yellow |
 
-**Filtering:**
+Filtering:
 Backend filters invoices by:
 - `recipient_source_type = 'sponsor'`
 - `recipient_source_id = {sponsor_id}`
@@ -7404,19 +7352,19 @@ Backend filters invoices by:
 
 #### 17.4.2 Invoice Preview
 
-**Inline PDF Preview:**
+Inline PDF Preview:
 
 1. Click eye icon on invoice row
 2. PDF renders inline below table using `react-pdf`
 3. All pages shown (scrollable)
 4. Click eye icon again to close preview
 
-**Preview Loading:**
+Preview Loading:
 - Fetches PDF via `/conferences/{id}/invoices/{invoice_id}/pdf`
 - Shows spinner while loading
 - Cached for performance
 
-**Preview Features:**
+Preview Features:
 - Zoom controls
 - Page navigation
 - Print button
@@ -7428,13 +7376,13 @@ Backend filters invoices by:
 
 #### 17.4.3 Invoice Download
 
-**Downloading PDFs:**
+Downloading PDFs:
 
 1. Click download icon on invoice row
 2. PDF downloads immediately
 3. Filename: `invoice_{invoice_number}.pdf` or `invoice_draft.pdf`
 
-**Backend:**
+Backend:
 - Generates PDF on-demand (not pre-generated)
 - Uses invoice data + tenant branding
 - See Invoice module docs for generation details
@@ -7443,13 +7391,13 @@ Backend filters invoices by:
 
 #### 17.4.4 Resend Invoice
 
-**Resend Button:**
+Resend Button:
 
 Appears when:
 - Invoice status is `sent` or `overdue`
 - Invoice has `recipient_email` set
 
-**Resend Process:**
+Resend Process:
 
 1. Click envelope icon on invoice row
 2. Backend:
@@ -7459,7 +7407,7 @@ Appears when:
    - Does NOT change status (remains "sent" or "overdue")
 3. Success toast: "Invoice {number} sent to {email}"
 
-**Use Cases:**
+Use Cases:
 - Sponsor lost original email
 - Reminder for unpaid invoices
 - Resend after correcting email typo
@@ -7468,24 +7416,24 @@ Appears when:
 
 #### 17.4.5 Creating Invoices for Sponsors
 
-**Invoice Creation:**
+Invoice Creation:
 
-Invoices are created in the **Invoices** module (see Section 15), not directly in Sponsors tab.
+Invoices are created in the Invoices module (see Section 15), not directly in Sponsors tab.
 
-**Linking Invoice to Sponsor:**
+Linking Invoice to Sponsor:
 
-1. Navigate to **Invoices** tab (main menu)
-2. Click **+ Create Invoice**
+1. Navigate to Invoices tab (main menu)
+2. Click + Create Invoice
 3. Set:
-   - **Recipient Type**: Sponsor
-   - **Recipient Source**: Select sponsor from dropdown
+   - Recipient Type: Sponsor
+   - Recipient Source: Select sponsor from dropdown
 4. Invoice automatically links:
    - `recipient_source_type = 'sponsor'`
    - `recipient_source_id = {sponsor_id}`
    - `recipient_email` = sponsor's first contact email
 5. Invoice appears in sponsor's Invoices tab
 
-**Invoice Line Items:**
+Invoice Line Items:
 
 Typically for sponsors:
 - Package fee (e.g., "Gold Sponsor Package - €8,000")
@@ -7498,7 +7446,7 @@ Typically for sponsors:
 
 ## Summary Checklist
 
-**Locations Module:**
+Locations Module:
 - ✓ Understand hierarchy (venues → rooms)
 - ✓ Create location types in Settings
 - ✓ Link existing or create new locations
@@ -7508,7 +7456,7 @@ Typically for sponsors:
 - ✓ Upload floor plans to Documents tab
 - ✓ Add facility contact persons
 
-**Sponsors Module:**
+Sponsors Module:
 - ✓ Create sponsor packages in Settings (name, price, currency, benefits)
 - ✓ Upload contract templates (DOCX) to packages
 - ✓ Add sponsors with package assignment
@@ -7524,7 +7472,7 @@ Typically for sponsors:
 
 ---
 
-**End of Sections 16-17 Documentation**
+End of Sections 16-17 Documentation
 
 *Estimated line count: ~950 lines*
 
@@ -7540,33 +7488,33 @@ I've created comprehensive documentation for Section 18 of the tenant UI handboo
 The documentation covers:
 
 ### Main Sections:
-1. **18.1 What Are Service Providers?** - Introduction to service provider types (catering, A/V, security, etc.) and the distinction between location-level and conference-level providers
-2. **18.2 Adding Service Providers** - Step-by-step instructions for adding providers at both location and conference levels, with all field descriptions
-3. **18.3 Managing Contact Persons** - Adding, editing, and removing individual contacts with roles
-4. **18.4 Editing Service Provider Details** - Updating basic information, using rich-text editor for descriptions
-5. **18.5 Attachments and Documents** - Uploading contracts, insurance certificates, price lists, and other files
-6. **18.6 Deleting Service Providers** - How to delete providers and what happens to associated data
-7. **18.7 Linking Providers to Conferences** - Understanding location vs. conference providers, decision guide for which to use
-8. **18.8 Best Practices** - Professional guidance on maintaining contact info, document organization, naming conventions
-9. **18.9 Use Cases and Examples** - Six detailed real-world scenarios showing different provider management patterns
-10. **18.10 Troubleshooting and Tips** - Common issues and solutions
-11. **18.11 Permissions and Access Control** - Role-based access explanation
-12. **18.12 Module Availability** - Module requirements
-13. **18.13 Summary Checklist** - Quick reference for common tasks
-14. **18.14 Frequently Asked Questions** - 15 common questions with detailed answers
-15. **18.15 Related Sections** - Cross-references to other handbook sections
-16. **18.16 Additional Resources** - Training and support information
+1. 18.1 What Are Service Providers? - Introduction to service provider types (catering, A/V, security, etc.) and the distinction between location-level and conference-level providers
+2. 18.2 Adding Service Providers - Step-by-step instructions for adding providers at both location and conference levels, with all field descriptions
+3. 18.3 Managing Contact Persons - Adding, editing, and removing individual contacts with roles
+4. 18.4 Editing Service Provider Details - Updating basic information, using rich-text editor for descriptions
+5. 18.5 Attachments and Documents - Uploading contracts, insurance certificates, price lists, and other files
+6. 18.6 Deleting Service Providers - How to delete providers and what happens to associated data
+7. 18.7 Linking Providers to Conferences - Understanding location vs. conference providers, decision guide for which to use
+8. 18.8 Best Practices - Professional guidance on maintaining contact info, document organization, naming conventions
+9. 18.9 Use Cases and Examples - Six detailed real-world scenarios showing different provider management patterns
+10. 18.10 Troubleshooting and Tips - Common issues and solutions
+11. 18.11 Permissions and Access Control - Role-based access explanation
+12. 18.12 Module Availability - Module requirements
+13. 18.13 Summary Checklist - Quick reference for common tasks
+14. 18.14 Frequently Asked Questions - 15 common questions with detailed answers
+15. 18.15 Related Sections - Cross-references to other handbook sections
+16. 18.16 Additional Resources - Training and support information
 
 ### Key Features of the Documentation:
 
-**Comprehensive Coverage:**
+Comprehensive Coverage:
 - All CRUD operations (Create, Read, Update, Delete)
 - Both location-based and conference-based providers
 - Contact person management with JSONB structure
 - File attachment system integration
 - Rich-text service descriptions
 
-**Practical Examples:**
+Practical Examples:
 - Multi-location conference with shared catering
 - Conference-specific A/V for hybrid events
 - Venue security with seasonal contacts
@@ -7574,14 +7522,14 @@ The documentation covers:
 - Multiple A/V providers for comparison
 - Global provider serving multiple locations
 
-**Screenshot Placeholders:**
+Screenshot Placeholders:
 The documentation includes descriptions of where screenshots would be placed, such as:
 - Service provider list view showing badges for contact persons
 - Detail panel with tabs (Details, Contacts, Documents)
 - Contact person form with first name, last name, email, phone, comment fields
 - Attachment upload interface
 
-**Best Practices:**
+Best Practices:
 - Maintain complete contact information
 - Use descriptive service descriptions with formatting examples
 - Upload key documents immediately
@@ -7589,7 +7537,7 @@ The documentation includes descriptions of where screenshots would be placed, su
 - Standardize VAT numbers for EU providers
 - Regular annual reviews
 
-**File References:**
+File References:
 Based on the codebase analysis:
 - `/Users/josediaz/SaaSConf/backend/app/models/service_provider.py` - ServiceProvider model with all fields
 - `/Users/josediaz/SaaSConf/frontend/src/components/ServiceProviderSection.tsx` - Location provider UI
@@ -7614,11 +7562,11 @@ The Messaging Module provides a complete communication system for conference org
 
 ### 19.1 Overview
 
-**Location**: Conference Detail → Messages tab
+Location: Conference Detail → Messages tab
 
-**Purpose**: Centralized messaging hub for all conference communications
+Purpose: Centralized messaging hub for all conference communications
 
-**Key Features**:
+Key Features:
 - Individual and bulk messaging
 - Message templates with variable substitution
 - File attachments
@@ -7629,7 +7577,7 @@ The Messaging Module provides a complete communication system for conference org
 - Full-text search across messages
 - Export threads as HTML or text
 
-**Access Control**: Module-gated (`messaging` module required)
+Access Control: Module-gated (`messaging` module required)
 
 ---
 
@@ -7639,13 +7587,13 @@ The Messages tab provides a Gmail-style interface with a thread list on the left
 
 #### Interface Layout
 
-**Screenshot**: `[Messages Tab - Main View]`
+Screenshot: `[Messages Tab - Main View]`
 
-**Components**:
-1. **Top toolbar**: Compose and Bulk Send buttons
-2. **Filter row**: Archived, Flagged, Files, Unread, search box, participant filter
-3. **Thread list** (left sidebar, 320px width)
-4. **Thread detail** (right panel, full width)
+Components:
+1. Top toolbar: Compose and Bulk Send buttons
+2. Filter row: Archived, Flagged, Files, Unread, search box, participant filter
+3. Thread list (left sidebar, 320px width)
+4. Thread detail (right panel, full width)
 
 ---
 
@@ -7653,27 +7601,27 @@ The Messages tab provides a Gmail-style interface with a thread list on the left
 
 The left sidebar displays all message threads with visual indicators for status.
 
-**Screenshot**: `[Thread List - Showing Unread, Flagged, and Attachment Indicators]`
+Screenshot: `[Thread List - Showing Unread, Flagged, and Attachment Indicators]`
 
-**Thread Item Display**:
-- **Recipient name** (bold if unread)
-- **Subject line** (smaller text, gray)
-- **Last message preview** (truncated to ~120 chars)
-- **Timestamp** (relative: "5m ago", "Yesterday", or date)
-- **Visual indicators**:
+Thread Item Display:
+- Recipient name (bold if unread)
+- Subject line (smaller text, gray)
+- Last message preview (truncated to ~120 chars)
+- Timestamp (relative: "5m ago", "Yesterday", or date)
+- Visual indicators:
   - Blue dot: unread
   - Yellow star: flagged
   - Paperclip icon: has attachments
   - Blue highlight: selected thread
 
-**Hover Actions**:
+Hover Actions:
 - Archive/unarchive button appears on right side when hovering
 
-**Double-Click**:
+Double-Click:
 - Opens thread in resizable popup modal (672px × 800px)
 - Popup allows replying without losing list context
 
-**Pagination**:
+Pagination:
 - 50 threads per page
 - Previous/Next buttons at bottom of list
 
@@ -7681,21 +7629,21 @@ The left sidebar displays all message threads with visual indicators for status.
 
 #### Filters and Search
 
-**Filter Buttons** (top of thread list):
+Filter Buttons (top of thread list):
 
 | Filter | Behavior |
 |--------|----------|
-| **Archived** | Toggle between active and archived threads |
-| **Flagged** | Show only flagged threads (yellow star) |
-| **Files** | Show threads with attachments (purple) |
-| **Unread** | Show only unread threads (blue) |
+| Archived | Toggle between active and archived threads |
+| Flagged | Show only flagged threads (yellow star) |
+| Files | Show threads with attachments (purple) |
+| Unread | Show only unread threads (blue) |
 
-**Search Box**:
+Search Box:
 - Searches subject and body text (when `search_body=true`)
 - Searches in real-time as you type
 - Full-text search across all messages in thread
 
-**Participant Filter**:
+Participant Filter:
 - Filter by participant name (e.g., "John Smith")
 - Searches across all thread participants
 
@@ -7703,41 +7651,41 @@ The left sidebar displays all message threads with visual indicators for status.
 
 #### Composing a New Message
 
-**Screenshot**: `[Compose Modal - Full View]`
+Screenshot: `[Compose Modal - Full View]`
 
-**Steps**:
-1. Click **Compose** button (top right)
+Steps:
+1. Click Compose button (top right)
 2. Modal opens (672px wide, 85vh tall)
 
-**Fields**:
+Fields:
 
 | Field | Description |
 |-------|-------------|
-| **Template** | Dropdown to apply a saved template (optional) |
-| **To** | Search and select recipients from applicants |
-| **Subject** | Message subject (max 500 chars) |
-| **Variable Pills** | Click to insert: `[First Name]`, `[Last Name]`, `[Email]`, `[Conference Name]`, `[Paper Title]` |
-| **Message** | Rich text editor (12 rows) |
-| **Attachments** | Upload files (drag-and-drop or click) |
-| **Screen Overlay** | Optional: link a screen overlay to show on recipient login |
+| Template | Dropdown to apply a saved template (optional) |
+| To | Search and select recipients from applicants |
+| Subject | Message subject (max 500 chars) |
+| Variable Pills | Click to insert: `[First Name]`, `[Last Name]`, `[Email]`, `[Conference Name]`, `[Paper Title]` |
+| Message | Rich text editor (12 rows) |
+| Attachments | Upload files (drag-and-drop or click) |
+| Screen Overlay | Optional: link a screen overlay to show on recipient login |
 
-**Recipient Selection**:
+Recipient Selection:
 - Type to search applicants by name or email
 - Selected recipients shown as blue chips (removable with ×)
 - Search results show first 20 matches
 - Can select multiple recipients (creates separate threads)
 
-**Template Variables**:
+Template Variables:
 - Variables are replaced per-recipient when sending
 - Example: `"Hi [First Name], your paper [Paper Title] has been accepted!"`
 - Variables work in both subject and body
 
-**Sending**:
+Sending:
 - Button disabled until recipient, subject, and body are filled
 - Shows "Sending..." during submission
 - Success toast: "Message sent" or "Message sent to N recipients"
 
-**Email-Only Mode**:
+Email-Only Mode:
 - Amber badge shown in header: "Email only"
 - Messages sent directly as emails (full body in email)
 - No in-app notification link
@@ -7746,37 +7694,37 @@ The left sidebar displays all message threads with visual indicators for status.
 
 #### Bulk Messaging
 
-**Screenshot**: `[Bulk Compose Modal - Recipient Selection]`
+Screenshot: `[Bulk Compose Modal - Recipient Selection]`
 
-**Purpose**: Send the same message to multiple recipients based on groups or filters.
+Purpose: Send the same message to multiple recipients based on groups or filters.
 
-**Steps**:
-1. Click **Bulk Send** button (top toolbar)
+Steps:
+1. Click Bulk Send button (top toolbar)
 2. Select recipient group
 3. Compose message with variable substitution
 4. Send to all matching recipients
 
-**Recipient Groups**:
+Recipient Groups:
 
 | Group | Filter |
 |-------|--------|
-| **All applicants** | Everyone who submitted papers to this conference |
-| **By paper status** | Filter by: Submitted, In Evaluation, Evaluated, Final Consideration, Accepted, Rejected |
-| **By committee role** | Select from configured committee roles (e.g., "Reviewer", "Track Chair") |
-| **Recipient List** | Custom lists created in Settings > Recipient Lists |
+| All applicants | Everyone who submitted papers to this conference |
+| By paper status | Filter by: Submitted, In Evaluation, Evaluated, Final Consideration, Accepted, Rejected |
+| By committee role | Select from configured committee roles (e.g., "Reviewer", "Track Chair") |
+| Recipient List | Custom lists created in Settings > Recipient Lists |
 
-**Screenshot**: `[Bulk Compose - Paper Status Filter]`
+Screenshot: `[Bulk Compose - Paper Status Filter]`
 
-**Template Variables** (same as compose):
+Template Variables (same as compose):
 - `[First Name]`, `[Last Name]`, `[Email]`, `[Conference Name]`, `[Paper Title]`
 - Each recipient receives a personalized copy
 
-**Confirmation**:
+Confirmation:
 - Blue info box shows: "Sending to: [group description]"
 - Example: "Sending to: Applicants with Accepted papers"
 - Example: "Sending to: List: Keynote Speakers (12 members)"
 
-**Sending**:
+Sending:
 - Creates one thread per recipient
 - Toast shows: "Sent to N recipients"
 - Each recipient sees only their own thread
@@ -7785,68 +7733,68 @@ The left sidebar displays all message threads with visual indicators for status.
 
 #### Thread Detail View
 
-**Screenshot**: `[Thread Detail - Multi-Message Conversation]`
+Screenshot: `[Thread Detail - Multi-Message Conversation]`
 
-**Header**:
+Header:
 - Back button (mobile only)
 - Recipient name(s)
 - Subject line
-- **Actions**:
+- Actions:
   - Flag button (toggle star)
   - Export dropdown (HTML or Text)
   - Archive button
 
-**Message Display**:
+Message Display:
 - Messages shown in chronological order (top to bottom)
 - Sender name and timestamp on each message
 - Your messages: blue background, right-aligned
 - Their messages: white background, left-aligned
 - Internal notes: amber background, centered (visible only to team)
 
-**Screenshot**: `[Message Bubble - Your Message vs. Their Message]`
+Screenshot: `[Message Bubble - Your Message vs. Their Message]`
 
-**Attachments**:
+Attachments:
 - Shown as clickable file buttons below message
 - Display: filename + file size (e.g., "proposal.pdf (245 KB)")
 - Click to download
 
-**Read Receipts**:
+Read Receipts:
 - Your messages show "Seen by [Name]" if read
 - Based on `last_read_at` timestamp per participant
 
-**Internal Notes**:
+Internal Notes:
 - Amber box with dashed border
 - Badge: "INTERNAL NOTE"
 - Only visible to conference team
 - Not sent to applicants via email
 
-**Screenshot**: `[Internal Note - Distinct Styling]`
+Screenshot: `[Internal Note - Distinct Styling]`
 
 ---
 
 #### Replying to Messages
 
-**Reply Box** (bottom of thread detail):
+Reply Box (bottom of thread detail):
 - Rich text editor (3 rows)
 - Template picker dropdown (if templates exist)
 - File attachment upload
 - "Reply" button (disabled if empty)
 
-**Screenshot**: `[Reply Compose - With Template Picker]`
+Screenshot: `[Reply Compose - With Template Picker]`
 
-**Applying Templates**:
+Applying Templates:
 - Click "Template" button above editor
 - Dropdown shows all saved templates
 - Click template name to populate subject/body
 - Variables are replaced on send (not in preview)
 
-**Adding Attachments**:
+Adding Attachments:
 - Click "Attach file" or drag-and-drop
 - Shows file name, size, and remove button
 - Max file size: configured by tenant (default 10MB)
 - Allowed types: PDF, DOCX, XLSX, PNG, JPG, TXT, CSV
 
-**Sending**:
+Sending:
 - Button shows "Sending..." during request
 - New message appears at bottom of thread
 - Auto-scrolls to newest message
@@ -7856,24 +7804,24 @@ The left sidebar displays all message threads with visual indicators for status.
 
 #### Internal Notes
 
-**Screenshot**: `[Add Internal Note Input]`
+Screenshot: `[Add Internal Note Input]`
 
-**Purpose**: Add team-only comments to a thread without notifying the recipient.
+Purpose: Add team-only comments to a thread without notifying the recipient.
 
-**Location**: Below the reply box, amber background
+Location: Below the reply box, amber background
 
-**Interface**:
+Interface:
 - Single-line input: "Add an internal note (only visible to your team)..."
 - "Add Note" button
 - Press Enter to submit
 
-**Behavior**:
+Behavior:
 - Note appears in thread timeline
 - Distinct amber styling with "INTERNAL NOTE" badge
 - Never sent in email notifications
 - Not visible in portal (applicant view)
 
-**Use Cases**:
+Use Cases:
 - "Called applicant, confirmed attendance"
 - "Follow up on this after CFP closes"
 - "Check with finance before approving"
@@ -7882,21 +7830,21 @@ The left sidebar displays all message threads with visual indicators for status.
 
 #### Archive and Flag
 
-**Screenshot**: `[Archive Confirmation Dialog]`
+Screenshot: `[Archive Confirmation Dialog]`
 
-**Flagging**:
+Flagging:
 - Click star icon in thread header
 - Toggle on/off (filled star = flagged)
 - Use for follow-up or priority threads
 - Filter by flagged in thread list
 
-**Archiving**:
+Archiving:
 - Click "Archive" button in thread header
 - Confirmation dialog: "Archive this thread? You can restore it later."
 - Archived threads hidden from main list
 - Access via "Archived" filter button
 
-**Unarchiving**:
+Unarchiving:
 - View archived threads via filter
 - Click "Unarchive" button in thread header
 - Returns thread to active list
@@ -7905,13 +7853,13 @@ The left sidebar displays all message threads with visual indicators for status.
 
 #### Exporting Threads
 
-**Screenshot**: `[Export Dropdown Menu]`
+Screenshot: `[Export Dropdown Menu]`
 
-**Options**:
-1. **Export as HTML**: Full formatted conversation with styling
-2. **Export as Text**: Plain text transcript
+Options:
+1. Export as HTML: Full formatted conversation with styling
+2. Export as Text: Plain text transcript
 
-**Export Format** (HTML):
+Export Format (HTML):
 ```html
 <html>
   <head><title>Thread: [Subject]</title></head>
@@ -7928,7 +7876,7 @@ The left sidebar displays all message threads with visual indicators for status.
 </html>
 ```
 
-**Export Format** (Text):
+Export Format (Text):
 ```
 Subject: [Subject]
 Participants: [Names]
@@ -7942,7 +7890,7 @@ Participants: [Names]
 ...
 ```
 
-**Download**:
+Download:
 - File name: `thread-[UUID].html` or `thread-[UUID].txt`
 - Browser save-as dialog
 
@@ -7950,9 +7898,9 @@ Participants: [Names]
 
 #### Forwarding Messages
 
-**Screenshot**: `[Forward Message - Compose Prefill]`
+Screenshot: `[Forward Message - Compose Prefill]`
 
-**Steps**:
+Steps:
 1. Double-click any message bubble in thread detail
 2. Compose modal opens with prefilled data:
    - Subject: `Fwd: [Original Subject]`
@@ -7961,7 +7909,7 @@ Participants: [Names]
 4. Edit content as needed
 5. Send (creates new thread)
 
-**Use Cases**:
+Use Cases:
 - Forward applicant question to committee
 - Share acceptance letter with another team member
 - Escalate issue to conference chair
@@ -7976,26 +7924,26 @@ Configuration for templates, recipient lists, and messaging mode.
 
 #### Messaging Mode
 
-**Location**: Conference Detail → Settings → Communication → Messaging Settings
+Location: Conference Detail → Settings → Communication → Messaging Settings
 
-**Screenshot**: `[Messaging Mode Settings - Radio Options]`
+Screenshot: `[Messaging Mode Settings - Radio Options]`
 
-**Options**:
+Options:
 
 | Mode | Description |
 |------|-------------|
-| **In-App Messaging** (default) | Messages delivered within platform. Recipients receive email notification with link to view message in app. This is the standard mode. |
-| **Email Only** | Messages sent directly as emails. Full message content included in email body. No in-app thread visible to recipients, but threads still recorded for your reference. |
+| In-App Messaging (default) | Messages delivered within platform. Recipients receive email notification with link to view message in app. This is the standard mode. |
+| Email Only | Messages sent directly as emails. Full message content included in email body. No in-app thread visible to recipients, but threads still recorded for your reference. |
 
-**Email-Only Mode Details**:
+Email-Only Mode Details:
 - Reply-to address: Uses `conference.contact_email`
 - Warning shown if contact email not set
 - Recipients reply directly to your email (not in-app)
 - Admin still sees all threads in Messages tab
 
-**Screenshot**: `[Email-Only Warning - No Contact Email]`
+Screenshot: `[Email-Only Warning - No Contact Email]`
 
-**Changing Mode**:
+Changing Mode:
 - Select radio button
 - Saves immediately (no submit button)
 - Toast: "Saved successfully"
@@ -8005,41 +7953,41 @@ Configuration for templates, recipient lists, and messaging mode.
 
 #### Message Templates
 
-**Location**: Conference Detail → Settings → Communication → Message Templates
+Location: Conference Detail → Settings → Communication → Message Templates
 
-**Screenshot**: `[Message Templates Table]`
+Screenshot: `[Message Templates Table]`
 
-**Purpose**: Create reusable message templates with variable substitution.
+Purpose: Create reusable message templates with variable substitution.
 
-**Template List**:
+Template List:
 - Table columns: Name, Subject, Actions
 - Empty state: "No templates yet."
-- **Create Template** button (top right)
+- Create Template button (top right)
 
 ---
 
 ##### Creating a Template
 
-**Screenshot**: `[Create Template Modal - Full Form]`
+Screenshot: `[Create Template Modal - Full Form]`
 
-**Fields**:
+Fields:
 
 | Field | Description |
 |-------|-------------|
-| **Name** | Template identifier (e.g., "Acceptance Letter") |
-| **Subject** | Email subject line (supports variables) |
-| **Body** | Rich text content (supports variables) |
-| **Screen Overlay** | Optional: link a screen overlay to show on login |
+| Name | Template identifier (e.g., "Acceptance Letter") |
+| Subject | Email subject line (supports variables) |
+| Body | Rich text content (supports variables) |
+| Screen Overlay | Optional: link a screen overlay to show on login |
 
-**Variable Pills** (top of modal):
+Variable Pills (top of modal):
 - Click to insert: `[First Name]`, `[Last Name]`, `[Email]`, `[Conference Name]`, `[Paper Title]`
-- **Smart Insert**:
+- Smart Insert:
   - If subject field focused: inserts into subject at cursor position
   - Otherwise: appends to body HTML
 
-**Screenshot**: `[Template Variables - Insert Behavior]`
+Screenshot: `[Template Variables - Insert Behavior]`
 
-**Example Template**:
+Example Template:
 ```
 Name: Acceptance Notification
 Subject: Congratulations [First Name]! Your paper has been accepted
@@ -8054,12 +8002,12 @@ Best regards,
 The Conference Committee
 ```
 
-**Validation**:
+Validation:
 - All fields required
 - Name must be unique per tenant
 - Save button disabled until valid
 
-**Saving**:
+Saving:
 - "Create" or "Update" button
 - Toast: success/error
 - Closes modal on success
@@ -8068,18 +8016,18 @@ The Conference Committee
 
 ##### Using Templates
 
-**In Compose Modal**:
+In Compose Modal:
 - Template dropdown above recipient field
 - Select template → populates subject and body
 - Variables shown as-is (e.g., `[First Name]`)
 - Edit freely after applying
 
-**In Reply Box**:
+In Reply Box:
 - "Template" button above editor
 - Dropdown shows template names
 - Click to apply body only (subject already set)
 
-**In Bulk Send**:
+In Bulk Send:
 - Template dropdown at top
 - Select → populates subject and body
 - Variables replaced per-recipient on send
@@ -8088,66 +8036,66 @@ The Conference Committee
 
 ##### Managing Templates
 
-**Edit**:
+Edit:
 1. Click "Edit" link in table row
 2. Modal opens with current values
 3. Modify fields
 4. Click "Update"
 
-**Delete**:
+Delete:
 1. Click "Delete" link
 2. Inline confirmation: "Confirm" | "Cancel"
 3. Click "Confirm" → template deleted
 4. No undo (permanent)
 
-**Screenshot**: `[Template Delete Confirmation]`
+Screenshot: `[Template Delete Confirmation]`
 
 ---
 
 #### Recipient Lists
 
-**Location**: Conference Detail → Settings → Communication → Recipient Lists
+Location: Conference Detail → Settings → Communication → Recipient Lists
 
-**Screenshot**: `[Recipient Lists Table]`
+Screenshot: `[Recipient Lists Table]`
 
-**Purpose**: Create named groups of applicants for bulk messaging.
+Purpose: Create named groups of applicants for bulk messaging.
 
-**Recipient List Table**:
+Recipient List Table:
 - Columns: Name, Description, Members, Actions
-- **Members** column shows count (e.g., "12")
+- Members column shows count (e.g., "12")
 - Empty state: "No recipient lists yet."
 
-**Screenshot**: `[Recipient List - Empty State]`
+Screenshot: `[Recipient List - Empty State]`
 
 ---
 
 ##### Creating a Recipient List
 
-**Screenshot**: `[Create Recipient List Modal]`
+Screenshot: `[Create Recipient List Modal]`
 
-**Fields**:
+Fields:
 
 | Field | Description |
 |-------|-------------|
-| **Name** | List name (e.g., "Accepted Speakers 2025") |
-| **Description** | Optional notes (e.g., "Speakers for keynote track") |
-| **Members** | Search and add applicants |
+| Name | List name (e.g., "Accepted Speakers 2025") |
+| Description | Optional notes (e.g., "Speakers for keynote track") |
+| Members | Search and add applicants |
 
-**Member Selection**:
+Member Selection:
 - Type to search applicants by name or email
 - Selected applicants shown as blue chips
 - Click × to remove
 - Search shows first 30 matches
 - No limit on members
 
-**Screenshot**: `[Recipient List - Member Selection]`
+Screenshot: `[Recipient List - Member Selection]`
 
-**Validation**:
+Validation:
 - Name required and unique per tenant
 - At least 1 member required
 - Save button disabled until valid
 
-**Saving**:
+Saving:
 - Creates list + member associations
 - Toast: success/error
 - Closes modal
@@ -8156,14 +8104,14 @@ The Conference Committee
 
 ##### Using Recipient Lists
 
-**In Bulk Send Modal**:
+In Bulk Send Modal:
 - Recipient dropdown shows lists in optgroup: "Recipient Lists"
 - Each list shows member count: "Keynote Speakers (12 members)"
 - Select → blue info box: "Sending to: List: Keynote Speakers (12 members)"
 
-**Screenshot**: `[Bulk Send - Recipient List Selected]`
+Screenshot: `[Bulk Send - Recipient List Selected]`
 
-**Dynamic Membership**:
+Dynamic Membership:
 - Lists are static (not auto-updated)
 - Edit list to add/remove members
 - Changes don't affect past messages
@@ -8172,7 +8120,7 @@ The Conference Committee
 
 ##### Managing Recipient Lists
 
-**Edit**:
+Edit:
 1. Click "Edit" link in table row
 2. Modal opens with current values
 3. Modify name, description, or members
@@ -8181,9 +8129,9 @@ The Conference Committee
    - Add: search and select
 5. Click "Update"
 
-**Screenshot**: `[Edit Recipient List - Modify Members]`
+Screenshot: `[Edit Recipient List - Modify Members]`
 
-**Delete**:
+Delete:
 1. Click "Delete" link
 2. Inline confirmation
 3. Click "Confirm" → list deleted
@@ -8193,9 +8141,9 @@ The Conference Committee
 
 ##### CSV Import
 
-**Note**: CSV import for recipient lists is not currently implemented in the UI. Lists must be created manually via the search interface.
+Note: CSV import for recipient lists is not currently implemented in the UI. Lists must be created manually via the search interface.
 
-**Workaround**: Import applicants via Alumni CSV, then create recipient list by searching for them.
+Workaround: Import applicants via Alumni CSV, then create recipient list by searching for them.
 
 ---
 
@@ -8203,7 +8151,7 @@ The Conference Committee
 
 Variables are placeholders replaced with actual values when sending messages.
 
-**Supported Variables**:
+Supported Variables:
 
 | Variable | Replaced With | Context |
 |----------|--------------|---------|
@@ -8213,14 +8161,14 @@ Variables are placeholders replaced with actual values when sending messages.
 | `[Conference Name]` | Conference title | Always |
 | `[Paper Title]` | Paper title | If applicant has paper |
 
-**Behavior**:
-- Variables work in **subject** and **body**
+Behavior:
+- Variables work in subject and body
 - Replaced independently per recipient
 - Missing values (e.g., no paper) → empty string
 - Case-sensitive (must match exactly)
 - Variables shown as-is in compose preview
 
-**Example**:
+Example:
 ```
 Template:
 Subject: Your submission to [Conference Name]
@@ -8239,36 +8187,36 @@ Body: Hi Jane, we received "". Thank you!
 
 ### 19.5 File Attachments
 
-**Supported Locations**:
+Supported Locations:
 - Compose modal (new messages)
 - Reply box (threaded replies)
 
-**Screenshot**: `[File Attachment Upload Component]`
+Screenshot: `[File Attachment Upload Component]`
 
-**Upload Interface**:
+Upload Interface:
 - Drag-and-drop zone or click to browse
 - Multiple files allowed
 - Shows: filename, size, remove button
 - Real-time upload progress (if large files)
 
-**File Limits**:
+File Limits:
 - Max file size: Tenant-configured (default 10MB)
 - Allowed types: PDF, DOCX, XLSX, PNG, JPG, TXT, CSV
 - Filename sanitized (removes special chars)
 
-**Backend Validation**:
+Backend Validation:
 - Content-type verification (MIME sniffing)
 - Malware scan (if configured)
 - Tenant storage quota enforced
 
-**Attachment Display** (in messages):
+Attachment Display (in messages):
 - File button with icon + filename + size
 - Click to download
 - Browser save-as dialog
 
-**Screenshot**: `[Message with Attachments - Download Buttons]`
+Screenshot: `[Message with Attachments - Download Buttons]`
 
-**Pre-Upload Strategy**:
+Pre-Upload Strategy:
 - Files uploaded immediately on selection
 - Attachment IDs linked to message on send
 - Orphaned attachments (abandoned compose) cleaned up by cron
@@ -8279,29 +8227,29 @@ Body: Hi Jane, we received "". Thank you!
 
 #### Read Receipts
 
-**Tracking**:
+Tracking:
 - Each participant has `last_read_at` timestamp
 - Updated when thread is opened
 - Only visible to admins (not shown to applicants)
 
-**Display**:
+Display:
 - Your messages show: "Seen by [Name]" if read
 - Logic: `participant.last_read_at >= message.created_at`
 - Read receipt shown at bottom of message bubble
 
-**Screenshot**: `[Read Receipt - "Seen by John Smith"]`
+Screenshot: `[Read Receipt - "Seen by John Smith"]`
 
 ---
 
 #### Email Notifications
 
-**Trigger**: New message or reply sent
+Trigger: New message or reply sent
 
-**Recipients**:
+Recipients:
 - All participants except sender
 - Only if `message_notifications_enabled = true` in user/applicant settings
 
-**Email Content** (in-app mode):
+Email Content (in-app mode):
 ```
 Subject: New message from [Conference Name]
 
@@ -8311,7 +8259,7 @@ You have a new message regarding "[Thread Subject]".
 (Link to thread detail page)
 ```
 
-**Email Content** (email-only mode):
+Email Content (email-only mode):
 ```
 Subject: [Thread Subject]
 
@@ -8323,12 +8271,12 @@ From: [Sender Name]
 Reply to this email to respond.
 ```
 
-**Links**:
+Links:
 - Admin link: `http://localhost:3001/modules/conferences/{id}?section=messaging&thread={thread_id}`
 - Portal link: `http://localhost:3002/{tenant}/portal/messages/{thread_id}`
 - Production: Replace `localhost` with actual domain
 
-**Failure Handling**:
+Failure Handling:
 - Email failures logged but don't block message send
 - Message still created and visible in-app
 
@@ -8336,23 +8284,23 @@ Reply to this email to respond.
 
 ### 19.7 Search and Filtering
 
-**Search Box**:
+Search Box:
 - Searches subject line by default
 - Add `search_body=true` for full-text search
 - Matches partial words (case-insensitive)
 - Uses `ILIKE` + unaccent for international chars
 
-**Participant Filter**:
+Participant Filter:
 - Filter by participant name
 - Searches across all thread participants
 - Example: "John" shows threads with any John (sender or recipient)
 
-**Filter Combinations**:
+Filter Combinations:
 - All filters stack (AND logic)
 - Example: Flagged + Unread = only threads that are both flagged AND unread
 - Archived filter overrides all (shows only archived)
 
-**Performance**:
+Performance:
 - Indexes on `thread.subject`, `thread.archived_at`, `flag.flagged`
 - Pagination limits query size (50 per page)
 
@@ -8360,26 +8308,26 @@ Reply to this email to respond.
 
 ### 19.8 Archive Management
 
-**Purpose**: Hide completed threads from main list without deleting.
+Purpose: Hide completed threads from main list without deleting.
 
-**Workflow**:
+Workflow:
 1. User clicks "Archive" button in thread header
 2. Confirmation dialog: "Archive this thread? You can restore it later."
 3. Click "Archive" → `thread.archived_at = now()`
 4. Thread removed from main list
 
-**Accessing Archived**:
+Accessing Archived:
 - Click "Archived" filter button (top toolbar)
 - Shows only archived threads
 - "Unarchive" button appears in thread header
 
-**Unarchiving**:
+Unarchiving:
 - Click "Unarchive" → `thread.archived_at = null`
 - Thread returns to main list
 
-**Screenshot**: `[Archived Thread List - Unarchive Button]`
+Screenshot: `[Archived Thread List - Unarchive Button]`
 
-**Search Behavior**:
+Search Behavior:
 - Search limited to current view (active or archived)
 - Can't search across both simultaneously
 
@@ -8387,45 +8335,45 @@ Reply to this email to respond.
 
 ### 19.9 Flagging Threads
 
-**Purpose**: Mark important threads for follow-up.
+Purpose: Mark important threads for follow-up.
 
-**Interface**:
+Interface:
 - Star icon in thread header (outline = unflagged, filled = flagged)
 - Click to toggle
 - Flagged threads show yellow star in list
 
-**Filter**:
+Filter:
 - "Flagged" button (top toolbar) shows only flagged threads
 - Pill badge turns yellow when active
 
-**Use Cases**:
+Use Cases:
 - Mark urgent inquiries
 - Track threads awaiting response
 - Highlight VIP attendees
 
-**Screenshot**: `[Flagged Thread - Yellow Star]`
+Screenshot: `[Flagged Thread - Yellow Star]`
 
 ---
 
 ### 19.10 Security and Permissions
 
-**Access Control**:
+Access Control:
 - Module gate: `messaging` module required
 - Endpoint dependency: `require_module("messaging")`
 - Tenant admins only (portal users can't access)
 
-**Authorization**:
+Authorization:
 - Users can only access threads for their tenant
 - RLS policies enforce `tenant_id` isolation
 - Applicants can only see threads where they are participants
 
-**HTML Sanitization**:
+HTML Sanitization:
 - All message bodies sanitized with `sanitize_html()` (backend)
 - Prevents XSS attacks
 - Allowed tags: `<p>`, `<strong>`, `<em>`, `<a>`, `<ul>`, `<ol>`, `<li>`, `<br>`
 - Links forced to `target="_blank" rel="noopener"`
 
-**File Upload Security**:
+File Upload Security:
 - Content-type verification (MIME sniffing)
 - Filename sanitization (removes `../`, special chars)
 - File size limits enforced
@@ -8435,22 +8383,22 @@ Reply to this email to respond.
 
 ### 19.11 Performance Considerations
 
-**N+1 Query Prevention**:
+N+1 Query Prevention:
 - Batch-fetch participants via `_resolve_senders()`
 - Batch-fetch attachments via `_fetch_message_attachments()`
 - `selectinload()` for relationships
 
-**Pagination**:
+Pagination:
 - Thread list: 50 per page
 - Prevents large result sets
 - Offset/limit on SQL query
 
-**Caching**:
+Caching:
 - Templates cached per tenant (rarely change)
 - Recipient lists cached (static)
 - Thread list invalidated on new message
 
-**Indexes**:
+Indexes:
 ```sql
 CREATE INDEX idx_message_thread_conference ON message_thread(tenant_id, conference_id, archived_at, updated_at);
 CREATE INDEX idx_message_thread_subject ON message_thread USING gin(to_tsvector('english', subject));
@@ -8461,7 +8409,7 @@ CREATE INDEX idx_thread_flag_flagged ON thread_flag(thread_id, flagged);
 
 ### 19.12 Troubleshooting
 
-**Common Issues**:
+Common Issues:
 
 | Problem | Solution |
 |---------|----------|
@@ -8471,7 +8419,7 @@ CREATE INDEX idx_thread_flag_flagged ON thread_flag(thread_id, flagged);
 | Templates not appearing | Verify templates created for correct tenant. Check module access. |
 | Search not finding messages | Use `search_body=true` for body search. Check spelling. |
 
-**Error Messages**:
+Error Messages:
 
 | Error | Meaning |
 |-------|---------|
@@ -8484,25 +8432,25 @@ CREATE INDEX idx_thread_flag_flagged ON thread_flag(thread_id, flagged);
 
 ### 19.13 Best Practices
 
-**Template Usage**:
+Template Usage:
 - Create templates for common scenarios (acceptance, rejection, reminders)
 - Use clear names ("Acceptance Letter" not "Template 1")
 - Test variables before sending to large groups
 - Keep templates short (mobile-friendly)
 
-**Bulk Messaging**:
+Bulk Messaging:
 - Use recipient lists for recurring groups (keynotes, sponsors)
 - Test with small group first (1-2 recipients)
 - Verify paper status before sending to "Accepted"
 - Double-check variable replacement in preview
 
-**Thread Management**:
+Thread Management:
 - Archive resolved threads weekly
 - Flag urgent threads requiring follow-up
 - Use internal notes for team coordination
 - Export important threads before archiving
 
-**File Attachments**:
+File Attachments:
 - Keep under 2MB for email delivery
 - Use PDFs for documents (universal compatibility)
 - Name files clearly ("CFP_Guidelines.pdf" not "document.pdf")
@@ -8512,7 +8460,7 @@ CREATE INDEX idx_thread_flag_flagged ON thread_flag(thread_id, flagged);
 
 ### 19.14 API Endpoints
 
-**Admin Endpoints** (`/conferences/{id}/messaging/`):
+Admin Endpoints (`/conferences/{id}/messaging/`):
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -8539,7 +8487,7 @@ CREATE INDEX idx_thread_flag_flagged ON thread_flag(thread_id, flagged);
 | PUT | `/recipient-lists/{id}` | Update list |
 | DELETE | `/recipient-lists/{id}` | Delete list |
 
-**Portal Endpoints** (`/portal/messages/`):
+Portal Endpoints (`/portal/messages/`):
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -8554,7 +8502,7 @@ CREATE INDEX idx_thread_flag_flagged ON thread_flag(thread_id, flagged);
 
 ### 19.15 Data Model
 
-**Tables**:
+Tables:
 
 | Table | Purpose |
 |-------|---------|
@@ -8567,7 +8515,7 @@ CREATE INDEX idx_thread_flag_flagged ON thread_flag(thread_id, flagged);
 | `recipient_list_member` | Group membership |
 | `attachment` | File uploads (linked via `entity_type='message'`) |
 
-**Relationships**:
+Relationships:
 - Thread → Messages (1:N)
 - Thread → Participants (M:N via junction)
 - Message → Attachments (1:N)
@@ -8575,13 +8523,13 @@ CREATE INDEX idx_thread_flag_flagged ON thread_flag(thread_id, flagged);
 
 ---
 
-**End of Section 19: Messaging Module**
+End of Section 19: Messaging Module
 
 ---
 
-**Estimated Line Count**: ~650 lines (including tables and examples)
+Estimated Line Count: ~650 lines (including tables and examples)
 
-**Screenshot Placeholders**: 25 screenshots suggested throughout
+Screenshot Placeholders: 25 screenshots suggested throughout
 
 ---
 
@@ -8593,7 +8541,7 @@ Now I have comprehensive information about both the Email System and Screen Over
 
 ## 20. Email System
 
-The email system manages all outgoing email communications with speakers, committee members, sponsors, and attendees. SaaSConf uses **Resend** as the email service provider and supports per-conference customization of email templates.
+The email system manages all outgoing email communications with speakers, committee members, sponsors, and attendees. SaaSConf uses Resend as the email service provider and supports per-conference customization of email templates.
 
 ---
 
@@ -8605,31 +8553,31 @@ Email templates control the content of automated emails sent by the system. Each
 
 The system provides templates for the following scenarios:
 
-**Call for Papers (CFP) & Submissions:**
-- **Applicant Verification** — Email verification for CFP applicants
-- **Committee Verification** — Email verification for program committee members
-- **Submission Confirmation** — Confirmation email sent after paper submission
-- **Co-Speaker Invitation** — Invitation sent to co-speakers added to a paper
-- **Paper Acceptance** — Notification when papers are accepted
-- **Paper Rejection** — Notification when papers are not selected
+Call for Papers (CFP) & Submissions:
+- Applicant Verification — Email verification for CFP applicants
+- Committee Verification — Email verification for program committee members
+- Submission Confirmation — Confirmation email sent after paper submission
+- Co-Speaker Invitation — Invitation sent to co-speakers added to a paper
+- Paper Acceptance — Notification when papers are accepted
+- Paper Rejection — Notification when papers are not selected
 
-**Authentication & Account:**
-- **Password Reset** — Password reset instructions with time-limited link
-- **Attendee Welcome** — Welcome email sent to registered attendees with portal setup link
+Authentication & Account:
+- Password Reset — Password reset instructions with time-limited link
+- Attendee Welcome — Welcome email sent to registered attendees with portal setup link
 
-**Sponsors & Contracts:**
-- **Sponsor Contract Send** — Email accompanying sponsor contract delivery
+Sponsors & Contracts:
+- Sponsor Contract Send — Email accompanying sponsor contract delivery
 
-**Registration & Invoicing:**
-- **Registration Invoice** — Invoice delivery email with PDF attachment
-- **Registration Cancellation** — Cancellation notification with optional custom message
-- **Credit Note** — Credit note delivery (when applicable)
+Registration & Invoicing:
+- Registration Invoice — Invoice delivery email with PDF attachment
+- Registration Cancellation — Cancellation notification with optional custom message
+- Credit Note — Credit note delivery (when applicable)
 
-**Messaging & Communication:**
-- **New Message Notification** — Alert when users receive platform messages
+Messaging & Communication:
+- New Message Notification — Alert when users receive platform messages
 
-**Deadlines:**
-- **Deadline Reminders** — Automated reminders at 7 days, 1 day, and day-of
+Deadlines:
+- Deadline Reminders — Automated reminders at 7 days, 1 day, and day-of
 
 ![Screenshot: Email Templates list showing all template types with status indicators](screenshot-placeholder-email-templates-list.png)
 
@@ -8639,22 +8587,22 @@ The system provides templates for the following scenarios:
 
 Each template consists of three components:
 
-1. **Subject Line** (required)
+1. Subject Line (required)
    - Plain text, max 255 characters
    - Supports placeholders (e.g., `[Conference Name]`, `[First Name]`)
 
-2. **HTML Body** (required)
+2. HTML Body (required)
    - Rich text editor with formatting toolbar
    - Auto-generated plain text version
    - Supports all standard placeholders
 
-3. **Plain Text Body** (auto-generated)
+3. Plain Text Body (auto-generated)
    - Automatically created from HTML version
    - Can be manually edited if needed
    - Used as email fallback for clients without HTML support
 
-**Editing workflow:**
-1. Navigate to **Settings > Communication > Email Templates**
+Editing workflow:
+1. Navigate to Settings > Communication > Email Templates
 2. Click the edit icon next to any template
 3. Modify subject, HTML body, and/or plain text
 4. Preview changes in real-time
@@ -8662,7 +8610,7 @@ Each template consists of three components:
 
 ![Screenshot: Email template editor showing subject, HTML editor, and preview](screenshot-placeholder-email-editor.png)
 
-**Default vs. Customized:**
+Default vs. Customized:
 - Templates display "Using default template" until customized
 - First save creates a conference-specific version
 - Delete action resets to system default
@@ -8673,7 +8621,7 @@ Each template consists of three components:
 
 Placeholders are dynamically replaced with actual values when emails are sent. Use the format `[Placeholder Name]` — case-sensitive and must match exactly.
 
-**Common Placeholders (available in most templates):**
+Common Placeholders (available in most templates):
 
 | Placeholder | Description | Example Value |
 |------------|-------------|---------------|
@@ -8685,7 +8633,7 @@ Placeholders are dynamically replaced with actual values when emails are sent. U
 | `[Company Name]` | Tenant/organization name | Python Community |
 | `[Support Email]` | Support contact email | support@pycon.org |
 
-**CFP & Papers:**
+CFP & Papers:
 
 | Placeholder | Description | Templates |
 |------------|-------------|-----------|
@@ -8694,7 +8642,7 @@ Placeholders are dynamically replaced with actual values when emails are sent. U
 | `[Speakers]` | Comma-separated speaker names | Submission Confirmation |
 | `[Main Speaker Name]` | Primary speaker's name | Co-Speaker Invitation |
 
-**Authentication & Links:**
+Authentication & Links:
 
 | Placeholder | Description | Templates |
 |------------|-------------|-----------|
@@ -8704,7 +8652,7 @@ Placeholders are dynamically replaced with actual values when emails are sent. U
 | `[Password Setup Link]` | Initial password setup URL (expires 7 days) | Attendee Welcome |
 | `[Messages Link]` | Direct link to messages inbox | New Message Notification |
 
-**Sponsors & Contracts:**
+Sponsors & Contracts:
 
 | Placeholder | Description | Templates |
 |------------|-------------|-----------|
@@ -8713,7 +8661,7 @@ Placeholders are dynamically replaced with actual values when emails are sent. U
 | `[Custom Message]` | Organizer's cover message | Sponsor Contract Send |
 | `[Contract Content]` | Inline contract HTML | Sponsor Contract Send |
 
-**Registration & Invoicing:**
+Registration & Invoicing:
 
 | Placeholder | Description | Templates |
 |------------|-------------|-----------|
@@ -8724,13 +8672,13 @@ Placeholders are dynamically replaced with actual values when emails are sent. U
 | `[Cancellation Message]` | Custom cancellation reason | Registration Cancellation |
 | `[Registration Name]` | Attendee name on registration | Registration Cancellation |
 
-**Messaging:**
+Messaging:
 
 | Placeholder | Description | Templates |
 |------------|-------------|-----------|
 | `[Message Subject]` | Subject line of message | New Message Notification |
 
-**System Administration:**
+System Administration:
 
 | Placeholder | Description | Templates |
 |------------|-------------|-----------|
@@ -8742,17 +8690,17 @@ Placeholders are dynamically replaced with actual values when emails are sent. U
 
 The template editor includes real-time preview with two modes:
 
-**HTML Preview:**
+HTML Preview:
 - Renders the email as it will appear in email clients
 - Shows formatting, colors, and layout
 - Placeholders displayed as-is (not replaced)
 
-**Plain Text Preview:**
+Plain Text Preview:
 - Shows the auto-generated text version
 - Useful for verifying readability in text-only clients
 - Automatically strips HTML tags and formatting
 
-**Preview Tabs:**
+Preview Tabs:
 - Switch between HTML and Plain Text views
 - Both update in real-time as you edit
 - Maximum preview height: 256px with scroll
@@ -8765,14 +8713,14 @@ The template editor includes real-time preview with two modes:
 
 The system validates placeholders before saving:
 
-**Invalid Placeholder Warning:**
+Invalid Placeholder Warning:
 - Triggered if unrecognized placeholders are used (e.g., `[Custom Field]`)
 - Lists all invalid placeholders with yellow warning icon
 - Options:
-  - **Go Back & Fix** — Return to editor to correct mistakes
-  - **Save Anyway** — Proceed with invalid placeholders (not replaced at send time)
+  - Go Back & Fix — Return to editor to correct mistakes
+  - Save Anyway — Proceed with invalid placeholders (not replaced at send time)
 
-**Best Practices:**
+Best Practices:
 - Copy placeholder names exactly from the reference panel
 - Use square brackets `[ ]` — not parentheses or curly braces
 - Placeholders are case-sensitive: `[First Name]` works, `[first name]` does not
@@ -8784,15 +8732,15 @@ The system validates placeholders before saving:
 
 #### Testing Templates
 
-**Send Test Emails:**
+Send Test Emails:
 
 While the UI doesn't include a built-in "send test" button, you can test templates by:
 
-1. **Using a test conference** — Create a dedicated test conference and trigger events manually
-2. **Triggering actual events** — Submit test papers, create test registrations, etc.
-3. **Monitoring logs** — Check backend logs for email content when RESEND_API_KEY is not configured (emails log to console)
+1. Using a test conference — Create a dedicated test conference and trigger events manually
+2. Triggering actual events — Submit test papers, create test registrations, etc.
+3. Monitoring logs — Check backend logs for email content when RESEND_API_KEY is not configured (emails log to console)
 
-**Testing Checklist:**
+Testing Checklist:
 - [ ] Subject line displays correctly without raw placeholders
 - [ ] HTML version renders properly in Gmail, Outlook, Apple Mail
 - [ ] Plain text version is readable
@@ -8806,13 +8754,13 @@ While the UI doesn't include a built-in "send test" button, you can test templat
 
 Email templates can trigger screen overlays when users log into the portal after receiving specific emails.
 
-**To link an overlay:**
+To link an overlay:
 1. Edit an email template
-2. Scroll to **Screen Overlay** dropdown
+2. Scroll to Screen Overlay dropdown
 3. Select an overlay to display on user's next login
 4. Save template
 
-**Use cases:**
+Use cases:
 - Show welcome overlay after registration confirmation email
 - Display deadline reminder overlay after email notification
 - Trigger acceptance celebration overlay after paper acceptance email
@@ -8823,12 +8771,12 @@ Email templates can trigger screen overlays when users log into the portal after
 
 #### Template Status & Activation
 
-Each template has an **Active** status toggle:
+Each template has an Active status toggle:
 
-- **Active** (green badge) — Template is live and used for emails
-- **Inactive** (gray badge) — Template exists but emails will not send (falls back to default)
+- Active (green badge) — Template is live and used for emails
+- Inactive (gray badge) — Template exists but emails will not send (falls back to default)
 
-**To toggle status:**
+To toggle status:
 - Edit the template and check/uncheck "Template is active"
 - Useful for temporarily disabling customizations without deleting them
 
@@ -8840,23 +8788,23 @@ Email settings control the global email sending behavior for the conference.
 
 #### Email Sending Toggle
 
-The primary control is **Enable email sending** — a conference-level on/off switch.
+The primary control is Enable email sending — a conference-level on/off switch.
 
-**When ENABLED:**
+When ENABLED:
 - All automated emails are sent normally
 - Includes: submission confirmations, co-speaker invitations, message notifications, deadline reminders, invoice emails, sponsor contract emails, etc.
 
-**When DISABLED:**
+When DISABLED:
 - Automated conference emails are suppressed
 - Backend logs skip actions with message: `Email sending disabled for conference {id}, skipping...`
 
-**Always Sent (regardless of toggle):**
+Always Sent (regardless of toggle):
 - Account verification emails (security requirement)
 - Password reset emails (security requirement)
 
 ![Screenshot: Email settings toggle with description](screenshot-placeholder-email-settings.png)
 
-**Use cases for disabling:**
+Use cases for disabling:
 - Testing conference setup without spamming real users
 - Importing historical data from previous systems
 - Maintenance periods during migration
@@ -8866,16 +8814,16 @@ The primary control is **Enable email sending** — a conference-level on/off sw
 
 #### SMTP Configuration (Backend)
 
-SaaSConf uses **Resend** for email delivery. Configuration is managed at the backend level (not in tenant UI):
+SaaSConf uses Resend for email delivery. Configuration is managed at the backend level (not in tenant UI):
 
-**Environment Variables:**
+Environment Variables:
 ```bash
 RESEND_API_KEY=re_xxxxx              # Resend API key
 RESEND_FROM_EMAIL=noreply@saasconf.com  # Default sender address
 RESEND_FROM_NAME=SaaSConf Platform      # Sender display name
 ```
 
-**Email Provider:**
+Email Provider:
 - Service: [Resend](https://resend.com)
 - API-based (not traditional SMTP)
 - Supports custom sender domains
@@ -8887,20 +8835,20 @@ RESEND_FROM_NAME=SaaSConf Platform      # Sender display name
 
 Tenants can configure custom sender domains to send emails from their own domain instead of the platform default.
 
-**Setup Process:**
+Setup Process:
 
-1. **Tenant Admin** navigates to tenant settings (super admin access required)
+1. Tenant Admin navigates to tenant settings (super admin access required)
 2. Configure `email_domain` field (e.g., `pycon.org`)
 3. Verify domain ownership with Resend
 4. Emails send from `noreply@pycon.org` instead of `noreply@saasconf.com`
 
-**Benefits:**
+Benefits:
 - Improved deliverability (emails from recognized domain)
 - Consistent branding
 - Better SPF/DKIM alignment
 - Reduced spam risk
 
-**Backend Implementation:**
+Backend Implementation:
 ```python
 # app/core/email.py
 async def _get_tenant_from_email(db: AsyncSession, tenant_id: UUID | None) -> str | None:
@@ -8919,30 +8867,30 @@ async def _get_tenant_from_email(db: AsyncSession, tenant_id: UUID | None) -> st
 
 For custom sender domains, tenants must complete DNS verification with Resend:
 
-**DNS Records Required:**
+DNS Records Required:
 
-1. **SPF Record** — Authorizes Resend to send on your behalf
+1. SPF Record — Authorizes Resend to send on your behalf
    ```
    TXT @ "v=spf1 include:_spf.resend.com ~all"
    ```
 
-2. **DKIM Records** — Cryptographic email authentication
+2. DKIM Records — Cryptographic email authentication
    ```
    TXT resend._domainkey "k=rsa; p=..."
    ```
 
-3. **DMARC Policy** (recommended)
+3. DMARC Policy (recommended)
    ```
    TXT _dmarc "v=DMARC1; p=quarantine; rua=mailto:dmarc@yourdomain.com"
    ```
 
-**Verification Steps:**
+Verification Steps:
 1. Add DNS records to domain registrar
 2. Wait for DNS propagation (up to 48 hours)
 3. Verify domain in Resend dashboard
 4. Test email delivery from custom domain
 
-**Note:** This requires super admin or DevOps assistance. Tenant admins should contact support.
+Note: This requires super admin or DevOps assistance. Tenant admins should contact support.
 
 ---
 
@@ -8950,20 +8898,20 @@ For custom sender domains, tenants must complete DNS verification with Resend:
 
 While there's no built-in "send test email" button in the current UI, you can test email configuration by:
 
-1. **Trigger verification email:**
+1. Trigger verification email:
    - Add a test committee member
    - Email verification will be sent immediately
 
-2. **Use password reset:**
+2. Use password reset:
    - Click "Forgot Password" on portal login
    - Enter a test email address
    - Password reset email sends instantly
 
-3. **Submit test paper:**
+3. Submit test paper:
    - Create a test CFP submission
    - Submission confirmation email triggers
 
-4. **Check backend logs:**
+4. Check backend logs:
    - If `RESEND_API_KEY` is not configured, emails log to console
    - Useful for development/testing environments
 
@@ -8971,27 +8919,27 @@ While there's no built-in "send test email" button in the current UI, you can te
 
 ### Email Best Practices
 
-**Deliverability:**
+Deliverability:
 - Use a verified custom domain for production
 - Avoid spam trigger words in subject lines
 - Keep HTML simple (avoid heavy CSS/JavaScript)
 - Include plain text version for all emails
 - Test emails with [Mail Tester](https://www.mail-tester.com)
 
-**Content Guidelines:**
+Content Guidelines:
 - Use clear, actionable subject lines
 - Include conference name for context
 - Always provide contact/support email
 - Include unsubscribe link for marketing emails (if applicable)
 - Personalize with recipient's name
 
-**Security:**
+Security:
 - Never include sensitive data (passwords, payment info) in email body
 - Use time-limited tokens for verification/reset links
 - Sanitize all user-generated content in email templates
 - Validate email addresses before sending
 
-**Performance:**
+Performance:
 - Batch large email sends (e.g., acceptance/rejection notifications)
 - Monitor Resend API rate limits
 - Use async email sending (never block HTTP requests)
@@ -9001,7 +8949,7 @@ While there's no built-in "send test email" button in the current UI, you can te
 
 ## 21. Screen Overlays
 
-Screen overlays are **full-screen modal displays** shown to portal users immediately after logging in. They support rich content (title, body text, images) and animated backgrounds, making them ideal for announcements, celebrations, and important notices.
+Screen overlays are full-screen modal displays shown to portal users immediately after logging in. They support rich content (title, body text, images) and animated backgrounds, making them ideal for announcements, celebrations, and important notices.
 
 ---
 
@@ -9009,13 +8957,13 @@ Screen overlays are **full-screen modal displays** shown to portal users immedia
 
 Screen overlays create immersive, attention-grabbing experiences in the CFP portal. They appear as full-screen modals with:
 
-- **Backdrop** — Semi-transparent dark background (70% opacity)
-- **Content Card** — Centered white card with title, body, and optional image
-- **Animation Layer** — Visual effects behind the content (confetti, fireworks, etc.)
-- **Auto-Dismiss Timer** — Progress bar counting down to automatic dismissal
-- **Close Button** — Manual close option in top-right corner
+- Backdrop — Semi-transparent dark background (70% opacity)
+- Content Card — Centered white card with title, body, and optional image
+- Animation Layer — Visual effects behind the content (confetti, fireworks, etc.)
+- Auto-Dismiss Timer — Progress bar counting down to automatic dismissal
+- Close Button — Manual close option in top-right corner
 
-**Common Use Cases:**
+Common Use Cases:
 - Welcome message for first-time portal users
 - Deadline announcements ("CFP closes in 3 days!")
 - Paper acceptance celebrations with confetti animation
@@ -9032,62 +8980,62 @@ Screen overlays create immersive, attention-grabbing experiences in the CFP port
 
 Overlays display based on configurable trigger rules:
 
-#### **First Registration** (`first_registration`)
-- Shows **once per user** on their first portal login
+#### First Registration (`first_registration`)
+- Shows once per user on their first portal login
 - Tracked via browser localStorage key: `overlay_seen_{overlay_id}`
 - Perfect for: welcome messages, onboarding instructions, first-time guidelines
 
-**Behavior:**
+Behavior:
 - Displays on first login after registration
 - Never shows again for that user (even after logout/login)
 - Clearing browser data resets the flag
 
 ---
 
-#### **Scheduled** (`scheduled`)
+#### Scheduled (`scheduled`)
 - Shows on or after a specific date/time
 - Requires `schedule_date` field (ISO 8601 format with timezone)
 - Perfect for: time-sensitive announcements, deadline reminders, event updates
 
-**Behavior:**
+Behavior:
 - Hidden until `schedule_date` arrives
 - Shows on every login after the scheduled time (until dismissed or marked inactive)
 - Users who saw it before scheduling won't see it again if trigger is `first_registration` + scheduled
 
-**Example Use Case:**
+Example Use Case:
 - Schedule overlay for 7 days before CFP deadline
 - Set `schedule_date` to `2026-03-15T00:00:00Z`
 - All users logging in after March 15 see the reminder
 
 ---
 
-#### **Always** (`always`)
-- Shows on **every portal login**
+#### Always (`always`)
+- Shows on every portal login
 - No localStorage persistence
 - Perfect for: critical ongoing announcements, mandatory policy updates, persistent banners
 
-**Behavior:**
+Behavior:
 - Displays every time user logs in
 - Cannot be permanently dismissed by user
 - Use sparingly to avoid annoying users
 
-**Example Use Case:**
+Example Use Case:
 - COVID-19 policy update that must be acknowledged repeatedly
 - Ongoing maintenance notice
 - Daily motivational message
 
 ---
 
-#### **Linked to Content** (entity-specific)
+#### Linked to Content (entity-specific)
 - Overlays can be linked to specific entities (e.g., email templates)
 - Shows regardless of normal trigger rules when linked event occurs
 
-**Supported Linkages:**
+Supported Linkages:
 - Email templates (via `screen_overlay_id` field)
 - Messaging threads (future implementation)
 - News posts (future implementation)
 
-**Example:**
+Example:
 - Link overlay to "Paper Acceptance" email template
 - Overlay displays automatically when user logs in after receiving acceptance email
 - Confetti animation celebrates their accepted paper
@@ -9098,18 +9046,18 @@ Overlays display based on configurable trigger rules:
 
 ### 21.3 Creating Overlays (Settings > Communication > Screen Overlays)
 
-**Navigation:**
+Navigation:
 Settings > Communication > Screen Overlays
 
-**Create Workflow:**
+Create Workflow:
 
-1. Click **+ Add Overlay** button (top-right)
+1. Click + Add Overlay button (top-right)
 2. Fill in overlay details (see form fields below)
 3. Optionally upload an image
 4. Choose animation style
 5. Set display duration
 6. Configure trigger type
-7. Click **Create Overlay**
+7. Click Create Overlay
 
 ![Screenshot: Screen overlays list view](screenshot-placeholder-overlay-list.png)
 
@@ -9117,48 +9065,48 @@ Settings > Communication > Screen Overlays
 
 #### Form Fields
 
-**Title** (required)
+Title (required)
 - Maximum 500 characters
 - Displayed as overlay headline
 - Supports plain text only (no HTML)
 - Example: `Welcome to PyCon 2026 CFP!`
 
-**Body Text** (optional)
+Body Text (optional)
 - Rich text editor with formatting
 - Supports bold, italic, lists, links
 - HTML content sanitized before display
 - Maximum length: unlimited (but keep concise for readability)
 - Example: `Thank you for submitting your proposal. Review decisions will be sent by April 15th.`
 
-**Trigger Type** (required)
+Trigger Type (required)
 - Dropdown: `first_registration`, `scheduled`, `always`
 - Controls when overlay appears
 - See "Trigger Types" section above for details
 
-**Schedule Date** (conditional — required if trigger = `scheduled`)
+Schedule Date (conditional — required if trigger = `scheduled`)
 - Date/time picker (ISO 8601 format)
 - Timezone-aware (stored in UTC)
 - Only shows overlay on/after this date
 - Hidden if trigger is not `scheduled`
 
-**Animation Style** (required)
+Animation Style (required)
 - Dropdown with 8 options (see section 21.5)
 - Default: `confetti`
 - Controls visual effect behind content card
 
-**Duration** (required)
+Duration (required)
 - Number input (seconds)
 - Default: 5 seconds
 - Range: 1–60 seconds recommended
 - Progress bar auto-dismisses overlay after duration elapses
 
-**Display Order** (optional)
+Display Order (optional)
 - Integer (0 = highest priority)
 - Controls sequence when multiple overlays apply
 - Lower numbers show first
 - Default: 0
 
-**Active Status** (required)
+Active Status (required)
 - Checkbox: "Overlay is active"
 - Default: unchecked (inactive)
 - Inactive overlays are hidden from portal users
@@ -9170,16 +9118,16 @@ Settings > Communication > Screen Overlays
 
 ### 21.4 Title and Body Content
 
-**Title Formatting:**
+Title Formatting:
 - Plain text only (no rich formatting)
 - Rendered in large, centered font
 - White text color on semi-transparent backdrop
 - Keep under 60 characters for best mobile display
 
-**Body Text Editor:**
+Body Text Editor:
 - Rich text editor (same as email templates)
 - Supports:
-  - **Bold** / *Italic* / Underline
+  - Bold / *Italic* / Underline
   - Headings (H1-H6)
   - Bulleted and numbered lists
   - Hyperlinks
@@ -9187,13 +9135,13 @@ Settings > Communication > Screen Overlays
 - Output sanitized with DOMPurify (XSS protection)
 - Rendered in white text with 80% opacity for readability
 
-**Content Guidelines:**
-- **Be concise** — Users want to dismiss overlays quickly
-- **Use visuals** — Upload an image to convey message faster
-- **Action-oriented** — Include clear call-to-action if needed
-- **Mobile-friendly** — Test on small screens (max-width: 384px on mobile)
+Content Guidelines:
+- Be concise — Users want to dismiss overlays quickly
+- Use visuals — Upload an image to convey message faster
+- Action-oriented — Include clear call-to-action if needed
+- Mobile-friendly — Test on small screens (max-width: 384px on mobile)
 
-**HTML Structure (backend renders as):**
+HTML Structure (backend renders as):
 ```html
 <div class="prose prose-sm prose-invert max-w-none mb-4 text-white/80">
   <!-- Sanitized body_text HTML -->
@@ -9204,46 +9152,46 @@ Settings > Communication > Screen Overlays
 
 ### 21.5 Image Upload
 
-Overlays support **one image per overlay** with replace semantics.
+Overlays support one image per overlay with replace semantics.
 
-**Supported Formats:**
+Supported Formats:
 - JPEG (`.jpg`, `.jpeg`)
 - PNG (`.png`)
 - WebP (`.webp`)
 - GIF (`.gif`)
-- **SVG not allowed** (XSS risk in portal context)
+- SVG not allowed (XSS risk in portal context)
 
-**Upload Process:**
+Upload Process:
 
-1. **During Creation:**
+1. During Creation:
    - Select file from file picker
    - Preview displays before saving
    - Image uploads after overlay creation succeeds
 
-2. **After Creation (Editing):**
+2. After Creation (Editing):
    - Click "Upload Image" in edit mode
    - Select new file to replace existing image
    - Old image is automatically deleted
 
-**Image Validation:**
+Image Validation:
 - Maximum file size: 10 MB (configurable via `MAX_UPLOAD_SIZE_MB`)
 - MIME type verified server-side
 - EXIF metadata stripped via `strip_image_metadata()` (privacy + security)
 - Content-type validated with magic byte detection
 
-**Image Storage:**
+Image Storage:
 - Stored in `attachments` table with `entity_type="screen_overlay_image"`
 - Binary data in PostgreSQL BYTEA column
 - Public serve endpoint (no authentication required)
 - Cache-busting URL: `/conferences/{id}/screen-overlays/{overlay_id}/image?v={timestamp}`
 
-**Display Behavior:**
+Display Behavior:
 - Rendered above body text
 - Maximum height: 192px (12rem)
 - Object-fit: contain (maintains aspect ratio)
 - Rounded corners (8px border-radius)
 
-**To Delete Image:**
+To Delete Image:
 - Edit overlay
 - Click "Delete Image" button
 - Image removed immediately
@@ -9257,61 +9205,61 @@ Overlays support **one image per overlay** with replace semantics.
 
 Screen overlays include 8 built-in animation styles that play behind the content card:
 
-#### **Confetti** (default)
+#### Confetti (default)
 - Colorful paper pieces fall from top to bottom
 - Random colors: pink, yellow, green, blue, purple
 - 30 pieces with random delays and speeds
 - Rotation during fall for realistic effect
-- **Best for:** celebrations, acceptances, milestones
+- Best for: celebrations, acceptances, milestones
 
-#### **Fireworks**
+#### Fireworks
 - 8 starburst explosions across the screen
 - Particles radiate outward from burst centers
 - Staggered timing with color variety
 - Glowing particle trails
-- **Best for:** major announcements, awards, grand openings
+- Best for: major announcements, awards, grand openings
 
-#### **Balloons**
+#### Balloons
 - 15 balloons rise from bottom to top
 - 3D shaded balloon shapes with strings
 - Swaying motion during ascent
 - Multi-color palette
-- **Best for:** birthday messages, achievement celebrations, fun announcements
+- Best for: birthday messages, achievement celebrations, fun announcements
 
-#### **Sparkle**
+#### Sparkle
 - 25 twinkling stars appear and fade
 - Random positions across screen
 - Pulsing glow effect
 - Infinite loop animation
-- **Best for:** subtle elegance, VIP announcements, premium content
+- Best for: subtle elegance, VIP announcements, premium content
 
-#### **Spotlight**
+#### Spotlight
 - 3 rotating conical spotlights
 - Different speeds and colors (red, blue, purple)
 - Stage lighting effect
 - Smooth continuous rotation
-- **Best for:** speaker highlights, keynote announcements, featured content
+- Best for: speaker highlights, keynote announcements, featured content
 
-#### **Snow**
+#### Snow
 - 35 snowflakes fall with gentle drift
 - Soft pastel colors (blue, purple, pink, white)
 - Horizontal swaying motion
 - Glowing particle effect
-- **Best for:** winter events, holiday messages, calm announcements
+- Best for: winter events, holiday messages, calm announcements
 
-#### **Stars**
+#### Stars
 - 20 star-shaped particles radiate from center
 - Shooting star effect
 - Sequential launch with trails
 - Multi-color star points
-- **Best for:** excellence awards, top performers, special recognition
+- Best for: excellence awards, top performers, special recognition
 
-#### **None / Minimal**
+#### None / Minimal
 - No animation background
 - Simple dark backdrop only
-- **Best for:** serious announcements, policy updates, professional messages
+- Best for: serious announcements, policy updates, professional messages
 
-**Animation Performance:**
+Animation Performance:
 - Pure CSS animations (no JavaScript overhead)
 - Optimized for 60 FPS on modern devices
 - Graceful degradation on older browsers
@@ -9323,15 +9271,15 @@ Screen overlays include 8 built-in animation styles that play behind the content
 
 ### 21.7 Testing Overlays
 
-**Preview Mode:**
+Preview Mode:
 
-1. Navigate to **Settings > Communication > Screen Overlays**
+1. Navigate to Settings > Communication > Screen Overlays
 2. Find the overlay in the list
-3. Click **Preview** icon (eye button)
+3. Click Preview icon (eye button)
 4. Overlay displays in modal with full animation
 5. Test auto-dismiss timer and close button
 
-**Preview Features:**
+Preview Features:
 - Simulates exact portal experience
 - Shows animation, image, title, and body
 - Progress bar counts down duration
@@ -9340,28 +9288,28 @@ Screen overlays include 8 built-in animation styles that play behind the content
 
 ![Screenshot: Overlay preview button in actions column](screenshot-placeholder-overlay-preview-button.png)
 
-**Portal Testing:**
+Portal Testing:
 
 To test overlays in actual portal:
 
-1. **First Registration Test:**
+1. First Registration Test:
    - Create test user account
    - Log in to portal for first time
    - Verify overlay appears
    - Check localStorage for `overlay_seen_{id}` key
 
-2. **Scheduled Test:**
+2. Scheduled Test:
    - Set `schedule_date` to past timestamp
    - Log in to portal
    - Verify overlay appears
    - Change date to future, verify it doesn't appear
 
-3. **Always Test:**
+3. Always Test:
    - Set trigger to `always`
    - Log out and log in multiple times
    - Verify overlay shows every time
 
-**Testing Checklist:**
+Testing Checklist:
 - [ ] Image displays at correct size and resolution
 - [ ] Title and body text are readable
 - [ ] Animation runs smoothly without lag
@@ -9375,21 +9323,21 @@ To test overlays in actual portal:
 
 ### 21.8 Portal User Experience
 
-**Login Flow:**
+Login Flow:
 
 1. User navigates to `/portal/login`
 2. Enters credentials and submits
 3. Authentication succeeds
 4. Session storage flag `just_logged_in = true` is set
 5. User redirected to `/portal/dashboard`
-6. **ScreenOverlayDisplay component** checks for applicable overlays
+6. ScreenOverlayDisplay component checks for applicable overlays
 7. Backend returns overlays matching trigger rules
 8. First overlay in display order appears
 9. User reads content, overlay auto-dismisses after duration
 10. If multiple overlays apply, next overlay appears after 300ms fade-out
 11. Session flag cleared when queue is empty
 
-**Overlay Display Logic:**
+Overlay Display Logic:
 
 ```javascript
 // Frontend: ScreenOverlayDisplay.tsx
@@ -9406,14 +9354,14 @@ const applicable = data.items.filter((overlay) => {
 });
 ```
 
-**User Controls:**
+User Controls:
 
-- **Auto-Dismiss:** Progress bar shows countdown; overlay disappears when timer reaches zero
-- **Manual Close:** Click "X" button in top-right corner
-- **Backdrop Click:** Click dark area outside content card to dismiss
-- **Keyboard:** ESC key dismisses (accessibility)
+- Auto-Dismiss: Progress bar shows countdown; overlay disappears when timer reaches zero
+- Manual Close: Click "X" button in top-right corner
+- Backdrop Click: Click dark area outside content card to dismiss
+- Keyboard: ESC key dismisses (accessibility)
 
-**Queue Behavior:**
+Queue Behavior:
 
 When multiple overlays apply:
 1. Sorted by `display_order` (ascending), then `created_at` (descending)
@@ -9422,14 +9370,14 @@ When multiple overlays apply:
 4. Next overlay fades in
 5. Repeat until queue is empty
 
-**Persistence:**
+Persistence:
 
 - `first_registration` overlays set localStorage flag: `overlay_seen_{overlay_id} = true`
 - Flag persists across sessions
 - Clearing browser data resets flags
 - `scheduled` and `always` overlays do not set flags
 
-**Mobile Experience:**
+Mobile Experience:
 
 - Overlay content card max-width: 384px on small screens
 - Touch-friendly close button (44px minimum tap target)
@@ -9442,31 +9390,31 @@ When multiple overlays apply:
 
 ### Best Practices
 
-**Content:**
+Content:
 - Keep titles under 60 characters
 - Limit body text to 2-3 sentences
 - Use images to convey message faster
 - Avoid jargon or technical language
 
-**Timing:**
+Timing:
 - Set reasonable durations (5-10 seconds for most content)
 - Don't use `always` trigger unless absolutely necessary
 - Schedule overlays for off-peak hours when possible
 - Test auto-dismiss timer before deploying
 
-**Animations:**
+Animations:
 - Match animation to message tone (confetti for celebrations, snow for calm announcements)
 - Use "none" for serious/professional messages
 - Avoid busy animations for text-heavy overlays
 - Test on low-end devices
 
-**Accessibility:**
+Accessibility:
 - Ensure text has sufficient contrast against backdrop
 - Provide close button (don't rely only on auto-dismiss)
 - Keep content concise for users with cognitive disabilities
 - Test with screen readers
 
-**Performance:**
+Performance:
 - Limit active overlays to 3-5 per conference
 - Compress images before uploading
 - Use WebP format for best size/quality ratio
@@ -9476,7 +9424,7 @@ When multiple overlays apply:
 
 ### Troubleshooting
 
-**Overlay Doesn't Appear:**
+Overlay Doesn't Appear:
 - Check "Active" status is enabled
 - Verify trigger type matches expected behavior
 - For `scheduled`, confirm `schedule_date` is in the past
@@ -9484,20 +9432,20 @@ When multiple overlays apply:
 - Check browser console for JavaScript errors
 - Verify user logged in recently (session flag set)
 
-**Animation Lag:**
+Animation Lag:
 - Reduce particle count (backend change required)
 - Use simpler animation style (sparkle instead of fireworks)
 - Compress image file size
 - Test on different browsers/devices
 
-**Image Not Displaying:**
+Image Not Displaying:
 - Verify image uploaded successfully (check `image_url` field)
 - Test image URL directly: `/conferences/{id}/screen-overlays/{overlay_id}/image`
 - Check image format is supported (JPEG/PNG/WebP/GIF only)
 - Verify file size under 10 MB
 - Clear browser cache and reload
 
-**Auto-Dismiss Too Fast/Slow:**
+Auto-Dismiss Too Fast/Slow:
 - Edit overlay and adjust `duration_seconds` field
 - Test with 5-second increments until optimal
 - Consider content length when setting duration
@@ -9506,7 +9454,7 @@ When multiple overlays apply:
 
 ## Summary
 
-**Section 20: Email System**
+Section 20: Email System
 - 12+ customizable email templates for all scenarios
 - Rich text editor with placeholder support
 - HTML + plain text versions for all emails
@@ -9515,7 +9463,7 @@ When multiple overlays apply:
 - Screen overlay integration
 - Real-time preview and validation
 
-**Section 21: Screen Overlays**
+Section 21: Screen Overlays
 - Full-screen immersive portal announcements
 - 4 trigger types: first_registration, scheduled, always, content-linked
 - 8 animation styles: confetti, fireworks, balloons, sparkle, spotlight, snow, stars, none
@@ -9529,7 +9477,7 @@ Both systems are tightly integrated, allowing overlays to be triggered from emai
 
 ---
 
-**End of Sections 20-21**
+End of Sections 20-21
 
 ---
 
@@ -9539,14 +9487,11 @@ Perfect! Now I have all the information I need to write comprehensive documentat
 
 ---
 
-# **Comprehensive Documentation: Sections 22-24 of Tenant UI Handbook**
-
-## **22. Alumni Module**
-
+# Comprehensive Documentation: Sections 22-24 of Tenant UI Handbook
+## 22. Alumni Module
 The Alumni module tracks past conference attendees across all your conferences, enabling you to maintain a database of your community and track participation over time. Alumni records are created automatically from paid registrations, manually by administrators, or imported via CSV.
 
-### **22.1 Purpose and Overview**
-
+### 22.1 Purpose and Overview
 The Alumni module serves as a centralized contact database for conference participants. It helps you:
 
 - Track attendees across multiple conference years
@@ -9555,64 +9500,58 @@ The Alumni module serves as a centralized contact database for conference partic
 - Export alumni lists for marketing and communication purposes
 - Verify if someone has attended previous conferences via cross-conference lookup
 
-**Screenshot placeholder:** `/handbook/screenshots/22-01-alumni-overview.png`
+Screenshot placeholder: `/handbook/screenshots/22-01-alumni-overview.png`
 *Caption: Alumni module showing list view with search, pagination, and source badges*
 
-### **22.2 Accessing the Alumni Module**
-
-The Alumni module is a **core feature** (no module gate required) and is available in the main conference navigation:
+### 22.2 Accessing the Alumni Module
+The Alumni module is a core feature (no module gate required) and is available in the main conference navigation:
 
 1. Navigate to a conference from your dashboard
-2. In the left sidebar, click **Alumni** under the "People" section
+2. In the left sidebar, click Alumni under the "People" section
 3. The alumni list displays all records for the current conference
 
-### **22.3 Automatic Alumni Creation**
+### 22.3 Automatic Alumni Creation
+Alumni records are created automatically when an attendee pays for a registration (status changes to "paid"). The system creates an alumni entry with:
 
-Alumni records are created automatically when an attendee **pays for a registration** (status changes to "paid"). The system creates an alumni entry with:
-
-- **Email:** From the registration billing profile
-- **First Name:** From the billing profile
-- **Last Name:** From the billing profile
-- **Company:** From the billing profile (if provided)
-- **Source:** Set to "Registration" (green badge)
+- Email: From the registration billing profile
+- First Name: From the billing profile
+- Last Name: From the billing profile
+- Company: From the billing profile (if provided)
+- Source: Set to "Registration" (green badge)
 
 This happens in the background — no administrator action required.
 
-**Screenshot placeholder:** `/handbook/screenshots/22-03-alumni-source-badges.png`
+Screenshot placeholder: `/handbook/screenshots/22-03-alumni-source-badges.png`
 *Caption: Source badges showing Manual (gray), Import (blue), and Registration (green) origins*
 
-### **22.4 Manual Alumni Entry**
-
+### 22.4 Manual Alumni Entry
 Administrators can manually add alumni records for participants who registered outside the system or for historical data entry.
 
-#### **To Add Alumni Manually:**
-
-1. Click the **+ Add Alumni** button (top right, blue/primary button)
+#### To Add Alumni Manually:
+1. Click the + Add Alumni button (top right, blue/primary button)
 2. Fill in the required fields in the modal:
-   - **First Name** (required)
-   - **Last Name** (required)
-   - **Email** (required) — must be valid email format
-   - **Company** (optional)
-   - **Notes** (optional) — free-text field for additional context
-3. Click **Add Alumni**
+   - First Name (required)
+   - Last Name (required)
+   - Email (required) — must be valid email format
+   - Company (optional)
+   - Notes (optional) — free-text field for additional context
+3. Click Add Alumni
 
-**Validation:**
+Validation:
 - Email addresses are validated on blur using the standard email validator
 - Duplicate emails within the same conference are prevented (case-insensitive)
 - Invalid email formats display a red border and error message
 
-**Screenshot placeholder:** `/handbook/screenshots/22-04-add-alumni-modal.png`
+Screenshot placeholder: `/handbook/screenshots/22-04-add-alumni-modal.png`
 *Caption: Add Alumni modal with form fields for manual entry*
 
-**Source Badge:** Manually added alumni display a gray "Manual" badge.
+Source Badge: Manually added alumni display a gray "Manual" badge.
 
-### **22.5 CSV Import**
+### 22.5 CSV Import
+Import large lists of alumni from spreadsheets or external databases using CSV files. The import system supports up to 50,000 rows per file.
 
-Import large lists of alumni from spreadsheets or external databases using CSV files. The import system supports up to **50,000 rows** per file.
-
-#### **Supported CSV Format:**
-
-The CSV file must include a **header row**. Only the `email` column is required.
+#### Supported CSV Format:
+The CSV file must include a header row. Only the `email` column is required.
 
 | Column | Required | Accepted Headers |
 |--------|----------|-----------------|
@@ -9621,12 +9560,11 @@ The CSV file must include a **header row**. Only the `email` column is required.
 | Last Name | No | `last_name`, `lastname`, `last name`, `nachname`, `surname` |
 | Company | No | `company`, `organization`, `organisation`, `firma` |
 
-**Fallback Behavior:**
+Fallback Behavior:
 - If first/last name is missing, the system uses the email prefix as the first name and "-" as the last name
 - Example: `john.doe@example.com` → First: "john.doe", Last: "-"
 
-#### **Example CSV:**
-
+#### Example CSV:
 ```csv
 email,first_name,last_name,company
 john@example.com,John,Doe,Acme Corp
@@ -9634,83 +9572,76 @@ jane@example.com,Jane,Smith,
 bob@example.com,,,Tech Solutions
 ```
 
-**Screenshot placeholder:** `/handbook/screenshots/22-05-csv-format-help.png`
+Screenshot placeholder: `/handbook/screenshots/22-05-csv-format-help.png`
 *Caption: CSV format help panel showing accepted headers and example format*
 
-#### **To Import Alumni:**
-
-1. Click the **Import CSV** button
+#### To Import Alumni:
+1. Click the Import CSV button
 2. Select your CSV file from your computer
 3. Wait for the import to process (a loading state displays during upload)
-4. Review the **Import Results** modal showing:
-   - **Imported:** Number of new alumni added (green text)
-   - **Skipped (duplicates):** Number of emails already in the database (amber text)
-   - **Errors:** List of validation errors (red text, first 10 shown)
+4. Review the Import Results modal showing:
+   - Imported: Number of new alumni added (green text)
+   - Skipped (duplicates): Number of emails already in the database (amber text)
+   - Errors: List of validation errors (red text, first 10 shown)
 
-**Screenshot placeholder:** `/handbook/screenshots/22-06-import-results-modal.png`
+Screenshot placeholder: `/handbook/screenshots/22-06-import-results-modal.png`
 *Caption: Import results modal showing imported count, skipped duplicates, and any errors*
 
-**Notes:**
+Notes:
 - Encoding: UTF-8 recommended
 - Duplicate emails (case-insensitive) are automatically skipped
 - Invalid rows generate errors but don't stop the import process
 - Maximum file size: 50,000 rows
 
-**Source Badge:** Imported alumni display a blue "Import" badge.
+Source Badge: Imported alumni display a blue "Import" badge.
 
-### **22.6 Viewing and Searching Alumni**
-
+### 22.6 Viewing and Searching Alumni
 The alumni list displays all records for the current conference in a paginated table.
 
-#### **Table Columns:**
+#### Table Columns:
+- Name: First and last name (click row to edit)
+- Email: Contact email address
+- Company: Organization name or "—" if empty
+- Source: Badge showing origin (Manual, Import, or Registration)
+- Date Added: When the record was created
+- Actions: Delete button (admin only)
 
-- **Name:** First and last name (click row to edit)
-- **Email:** Contact email address
-- **Company:** Organization name or "—" if empty
-- **Source:** Badge showing origin (Manual, Import, or Registration)
-- **Date Added:** When the record was created
-- **Actions:** Delete button (admin only)
-
-**Screenshot placeholder:** `/handbook/screenshots/22-07-alumni-table-view.png`
+Screenshot placeholder: `/handbook/screenshots/22-07-alumni-table-view.png`
 *Caption: Alumni table with multiple records showing different sources and company information*
 
-#### **Search Functionality:**
-
+#### Search Functionality:
 The search bar (top left) filters alumni by:
 - First name
 - Last name
 - Email address
 - Company name
 
-**Search Behavior:**
+Search Behavior:
 - 300ms debounce (waits for you to stop typing)
 - Case-insensitive matching
 - Accent-insensitive (finds "José" when searching "jose")
 - Partial matches supported
 
-**Screenshot placeholder:** `/handbook/screenshots/22-08-alumni-search.png`
+Screenshot placeholder: `/handbook/screenshots/22-08-alumni-search.png`
 *Caption: Search bar filtering alumni by company name*
 
-#### **Pagination:**
-
+#### Pagination:
 - Default page size: 50 alumni per page
 - Navigation controls: Previous/Next buttons
 - Current page indicator: "Showing 1–50 of 237 alumni"
 - Pages adjust automatically when searching
 
-### **22.7 Editing Alumni Records**
-
+### 22.7 Editing Alumni Records
 Click any alumni row to open the edit modal.
 
-#### **Editable Fields:**
+#### Editable Fields:
+- First Name (required)
+- Last Name (required)
+- Email (required) — validation on blur
+- Company (optional)
+- Notes (optional)
 
-- **First Name** (required)
-- **Last Name** (required)
-- **Email** (required) — validation on blur
-- **Company** (optional)
-- **Notes** (optional)
-
-**Email Change Warning:**
+Email Change Warning:
 When you change an email address, a yellow warning displays:
 > "Changing the email will also update linked registration and portal records."
 
@@ -9718,63 +9649,56 @@ This ensures data consistency — updating alumni email automatically propagates
 - `Registration` records with matching email
 - `CFPApplicant` records with matching email
 
-**Screenshot placeholder:** `/handbook/screenshots/22-09-edit-alumni-modal.png`
+Screenshot placeholder: `/handbook/screenshots/22-09-edit-alumni-modal.png`
 *Caption: Edit Alumni modal showing warning about email changes propagating to other records*
 
-#### **To Edit Alumni:**
-
+#### To Edit Alumni:
 1. Click any alumni row in the table
 2. Modify fields as needed
-3. Click **Save Changes**
+3. Click Save Changes
 4. The table refreshes with updated data
 
-### **22.8 Deleting Alumni**
+### 22.8 Deleting Alumni
+Administrators can delete alumni records. This action is permanent and cannot be undone.
 
-Administrators can delete alumni records. This action is **permanent and cannot be undone**.
-
-#### **To Delete Alumni:**
-
+#### To Delete Alumni:
 1. Click the trash icon in the Actions column
 2. Confirm deletion in the dialog:
    > "Are you sure you want to delete [First Name] [Last Name]? This action cannot be undone."
-3. Click **Delete** to confirm
+3. Click Delete to confirm
 
-**Screenshot placeholder:** `/handbook/screenshots/22-10-delete-confirm-dialog.png`
+Screenshot placeholder: `/handbook/screenshots/22-10-delete-confirm-dialog.png`
 *Caption: Delete confirmation dialog with alumni name*
 
-**Notes:**
+Notes:
 - Deleting an alumni record does NOT delete linked registrations
 - Source badges (Manual/Import/Registration) are retained in the record metadata
 
-### **22.9 Cross-Conference Alumni Lookup**
+### 22.9 Cross-Conference Alumni Lookup
+The system supports a cross-conference lookup endpoint (`GET /conferences/{id}/alumni/check?email=...`) that allows checking if an email exists in other conferences within the same tenant.
 
-The system supports a **cross-conference lookup** endpoint (`GET /conferences/{id}/alumni/check?email=...`) that allows checking if an email exists in other conferences within the same tenant.
-
-**Use Case:**
+Use Case:
 When registering a new attendee, you can check if they've attended previous conferences and pre-fill their information.
 
-### **22.10 CSV Export**
-
+### 22.10 CSV Export
 Export the complete alumni list (all pages) to a CSV file for external use.
 
-#### **To Export Alumni:**
-
-1. Click the **Export CSV** button (top right)
+#### To Export Alumni:
+1. Click the Export CSV button (top right)
 2. The file downloads automatically: `alumni-{conference-id}.csv`
 3. File format: UTF-8 with BOM (Excel-compatible)
 
-**Export Includes:**
+Export Includes:
 - All alumni for the current conference (not filtered by search)
 - All columns: first_name, last_name, email, company, source, created_at
 
-**Screenshot placeholder:** `/handbook/screenshots/22-11-export-csv-button.png`
+Screenshot placeholder: `/handbook/screenshots/22-11-export-csv-button.png`
 *Caption: Export CSV button in the toolbar*
 
-### **22.11 Alumni Data Model**
+### 22.11 Alumni Data Model
+Database Table: `alumni`
 
-**Database Table:** `alumni`
-
-**Key Fields:**
+Key Fields:
 - `id` (UUID, primary key)
 - `tenant_id` (UUID, FK → tenants.id)
 - `conference_id` (UUID, FK → conferences.id)
@@ -9787,10 +9711,9 @@ Export the complete alumni list (all pages) to a CSV file for external use.
 - `created_at` (Timestamp)
 - `updated_at` (Timestamp)
 
-**Uniqueness Constraint:** `email` is unique per conference (case-insensitive via PostgreSQL `citext` or functional index).
+Uniqueness Constraint: `email` is unique per conference (case-insensitive via PostgreSQL `citext` or functional index).
 
-### **22.12 Alumni API Endpoints**
-
+### 22.12 Alumni API Endpoints
 All endpoints are scoped to `/conferences/{conference_id}/alumni/`:
 
 | Method | Endpoint | Description |
@@ -9803,148 +9726,258 @@ All endpoints are scoped to `/conferences/{conference_id}/alumni/`:
 | GET | `/export` | Export CSV (all records) |
 | GET | `/check?email=...` | Cross-conference email lookup |
 
-**Permissions:**
+Permissions:
 - Read access: All conference team members
 - Write/Delete access: Conference admins only
 - Import/Export: Conference admins only
 
+### 22.13 Alumni Discount in Portal Registration
+The system automatically applies alumni discounts when logged-in portal users register for conferences they previously attended. This feature streamlines returning attendee registration and encourages community building.
+
+#### How Alumni Discount Works
+When a portal user clicks the **Register** button in their conference sidebar, the system:
+
+1. **Checks Alumni Status**: Queries the `alumni` table to see if the user's email appears in any conference records for this tenant
+2. **Validates ALUMNI Discount Code**: Looks for an active discount code with code "ALUMNI" for the current conference
+3. **Auto-Applies Discount**: If both conditions are met, the ALUMNI discount automatically applies to the registration (no manual code entry needed)
+4. **Shows Warning If Missing**: If user is alumni but no ALUMNI discount exists, displays a modal warning with their conference history
+
+Screenshot placeholder: `/handbook/screenshots/22-13-portal-register-button.png`
+*Caption: Register button in portal sidebar next to Info button for each conference*
+
+#### Setting Up Alumni Discounts
+
+To enable automatic alumni discounts for a conference:
+
+1. Navigate to **Booking & Registration** → **Discount Codes**
+2. Click **+ Add Discount Code**
+3. Enter the following settings:
+   - **Code**: `ALUMNI` (must be exactly this word, case-insensitive)
+   - **Description**: "Alumni discount for past attendees" (or your preferred text)
+   - **Discount Type**: Percentage or Fixed Amount
+   - **Discount Value**: Your desired discount (e.g., 20% or $50)
+   - **Start Date**: When the discount becomes valid
+   - **End Date**: When the discount expires
+   - **Max Uses**: 0 (unlimited) or a specific number
+   - **Is Active**: Checked
+4. Click **Save**
+
+Screenshot placeholder: `/handbook/screenshots/22-14-alumni-discount-setup.png`
+*Caption: Creating an ALUMNI discount code with 20% percentage discount*
+
+Important Notes:
+- The code **must be "ALUMNI"** (case-insensitive) — other codes won't auto-apply
+- Only one ALUMNI code per conference is supported
+- The discount must be active and within its date range to auto-apply
+- If max uses is reached, the discount won't apply (warning modal shows instead)
+
+#### Portal User Experience
+
+**Scenario 1: Alumni with Valid Discount**
+When a user who attended previous conferences clicks Register:
+1. A green success banner displays: "Alumni Discount Available"
+2. Shows list of conferences they previously attended
+3. Indicates the ALUMNI discount will be automatically applied
+4. User proceeds to registration form with discount pre-applied
+
+Screenshot placeholder: `/handbook/screenshots/22-15-alumni-discount-banner.png`
+*Caption: Green banner confirming ALUMNI discount auto-application*
+
+**Scenario 2: Alumni without Discount**
+When a user who attended previous conferences clicks Register, but no ALUMNI discount exists:
+1. A warning modal appears with yellow warning icon
+2. Shows message: "You are an alumnus from [Conference 2024, Conference 2023], but the ALUMNI discount code is not currently available for this conference."
+3. Lists up to 5 conferences they attended (with "and X more..." if applicable)
+4. User can click "Continue with Registration" to proceed without discount
+
+Screenshot placeholder: `/handbook/screenshots/22-16-alumni-warning-modal.png`
+*Caption: Warning modal when alumni discount is unavailable*
+
+**Scenario 3: Non-Alumni User**
+Users who have not attended previous conferences see no special messaging and register normally.
+
+#### Business Rules
+
+1. **Only Authenticated Portal Users**: Alumni discount auto-application only works for logged-in portal users (not public registration)
+2. **Email Matching**: Alumni status is determined by email address (case-insensitive)
+3. **Cross-Conference Recognition**: System checks all conferences in your tenant, not just the current conference
+4. **No Manual Override**: Portal users cannot manually enter "ALUMNI" code — it's auto-applied only
+5. **Discount Code Restrictions**: For authenticated registrations, only the ALUMNI code is allowed (other discount codes must be applied by admins in the backend)
+6. **Payment Process**: Same payment options as public registration (Stripe Elements for credit card or bank transfer)
+
+#### API Endpoint for Alumni Check
+For developers integrating with the system, the alumni check endpoint is available:
+
+**Endpoint**: `GET /api/v1/portal/conferences/{conference_id}/alumni-check`
+**Authentication**: Required (portal user JWT token)
+
+**Response**:
+```json
+{
+  "is_alumni": true,
+  "has_discount": true,
+  "discount_id": "uuid-here",
+  "alumni_conferences": [
+    {
+      "conference_id": "uuid",
+      "conference_name": "SaaSConf 2024",
+      "conference_abbreviation": "SC24"
+    }
+  ],
+  "warning_message": null
+}
+```
+
+#### Troubleshooting Alumni Discounts
+
+**Issue**: User attended previous conference but system says they're not alumni
+
+**Solutions**:
+1. Verify the user's email matches exactly (check for typos, extra spaces)
+2. Check if their previous registration was marked as "paid" (only paid registrations create alumni records)
+3. Manually add them to the Alumni module if their registration was outside the system
+
+**Issue**: ALUMNI discount code exists but doesn't auto-apply
+
+**Solutions**:
+1. Check the discount code is exactly "ALUMNI" (case doesn't matter, but spelling does)
+2. Verify the discount is marked as Active
+3. Check the start/end dates include today's date
+4. Verify max uses hasn't been reached
+5. Check the discount's conference_id matches the conference being registered for
+
+**Issue**: Warning modal shows even though discount exists
+
+**Possible Causes**:
+- Discount expired (end_date in the past)
+- Max uses reached
+- Discount not marked as Active
+- Discount created for wrong conference
+
 ---
 
-## **23. Deadlines Module**
-
+## 23. Deadlines Module
 The Deadlines module helps conference organizers track critical dates and receive automated reminders. Deadlines can be created for sponsor contracts, CFP submissions, speaker notifications, venue bookings, or any time-sensitive task.
 
-### **23.1 Purpose and Overview**
-
+### 23.1 Purpose and Overview
 The Deadlines module provides:
 
-- **Task tracking** with titles, descriptions, and due dates
-- **Automated email reminders** at 7 days, 1 day, and on the due date
-- **Color-coded visual warnings** (overdue, due soon, active, resolved)
-- **Dashboard toast notifications** when you load a conference with approaching deadlines
-- **Active/Resolved toggle** to mark deadlines as completed without deleting them
+- Task tracking with titles, descriptions, and due dates
+- Automated email reminders at 7 days, 1 day, and on the due date
+- Color-coded visual warnings (overdue, due soon, active, resolved)
+- Dashboard toast notifications when you load a conference with approaching deadlines
+- Active/Resolved toggle to mark deadlines as completed without deleting them
 
-**Screenshot placeholder:** `/handbook/screenshots/23-01-deadlines-overview.png`
+Screenshot placeholder: `/handbook/screenshots/23-01-deadlines-overview.png`
 *Caption: Deadlines module showing active and resolved deadlines with color-coded left borders*
 
-### **23.2 Accessing the Deadlines Module**
-
-The Deadlines module is a **core feature** (no module gate required) and appears in the main conference navigation:
+### 23.2 Accessing the Deadlines Module
+The Deadlines module is a core feature (no module gate required) and appears in the main conference navigation:
 
 1. Navigate to a conference
-2. Click **Deadlines** in the left sidebar
+2. Click Deadlines in the left sidebar
 3. All deadlines for the current conference display in chronological order
 
-### **23.3 Creating a Deadline**
-
+### 23.3 Creating a Deadline
 Administrators can create deadlines to track important dates.
 
-#### **To Create a Deadline:**
-
-1. Click the **New Deadline** button (top right, primary blue button)
+#### To Create a Deadline:
+1. Click the New Deadline button (top right, primary blue button)
 2. Fill in the modal fields:
-   - **Title** (required, max 500 characters) — e.g., "Sponsor contract deadline"
-   - **Description** (optional, multi-line) — Additional context or task details
-   - **Due Date** (required, datetime-local picker) — Date and time when the deadline expires
-3. Click **Create**
+   - Title (required, max 500 characters) — e.g., "Sponsor contract deadline"
+   - Description (optional, multi-line) — Additional context or task details
+   - Due Date (required, datetime-local picker) — Date and time when the deadline expires
+3. Click Create
 
-**Screenshot placeholder:** `/handbook/screenshots/23-03-create-deadline-modal.png`
+Screenshot placeholder: `/handbook/screenshots/23-03-create-deadline-modal.png`
 *Caption: New Deadline modal with title, description, and datetime picker*
 
-**Notes:**
-- Deadlines are created in **active** state by default
+Notes:
+- Deadlines are created in active state by default
 - Reminder flags (7-day, 1-day, due-date) are initialized as `false`
 - The `created_by` field is set to the current user's ID
 
-### **23.4 Deadline Fields**
-
+### 23.4 Deadline Fields
 Each deadline includes:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| **Title** | String (500 chars) | Short description of the deadline |
-| **Description** | Text (optional) | Detailed notes or context |
-| **Due Date** | DateTime (TZ-aware) | When the deadline expires |
-| **Is Active** | Boolean | Whether the deadline is active or resolved |
-| **Reminder 7d Sent** | Boolean | Whether the 7-day reminder email was sent |
-| **Reminder 1d Sent** | Boolean | Whether the 1-day reminder email was sent |
-| **Reminder Due Sent** | Boolean | Whether the due-date reminder email was sent |
-| **Created By** | UUID (FK → users.id) | User who created the deadline |
+| Title | String (500 chars) | Short description of the deadline |
+| Description | Text (optional) | Detailed notes or context |
+| Due Date | DateTime (TZ-aware) | When the deadline expires |
+| Is Active | Boolean | Whether the deadline is active or resolved |
+| Reminder 7d Sent | Boolean | Whether the 7-day reminder email was sent |
+| Reminder 1d Sent | Boolean | Whether the 1-day reminder email was sent |
+| Reminder Due Sent | Boolean | Whether the due-date reminder email was sent |
+| Created By | UUID (FK → users.id) | User who created the deadline |
 
-### **23.5 Viewing Deadlines**
+### 23.5 Viewing Deadlines
+Deadlines display as cards with a colored left border indicating their status.
 
-Deadlines display as **cards** with a colored left border indicating their status.
-
-#### **Deadline Statuses:**
-
+#### Deadline Statuses:
 | Status | Color | Badge | Criteria |
 |--------|-------|-------|----------|
-| **Overdue** | Red | Red badge | Active deadline past due date |
-| **Due Soon** | Amber | Amber badge | Active deadline due within 7 days |
-| **Active** | Blue | Blue badge | Active deadline due in >7 days |
-| **Resolved** | Gray | Gray badge | Deadline marked as completed (inactive) |
+| Overdue | Red | Red badge | Active deadline past due date |
+| Due Soon | Amber | Amber badge | Active deadline due within 7 days |
+| Active | Blue | Blue badge | Active deadline due in >7 days |
+| Resolved | Gray | Gray badge | Deadline marked as completed (inactive) |
 
-**Screenshot placeholder:** `/handbook/screenshots/23-05-deadline-status-cards.png`
+Screenshot placeholder: `/handbook/screenshots/23-05-deadline-status-cards.png`
 *Caption: Four deadline cards showing different status colors and badges*
 
-#### **Card Layout:**
-
+#### Card Layout:
 Each deadline card displays:
-- **Left Border:** Colored based on status (red/amber/blue/gray, 4px thick)
-- **Title:** With optional strikethrough if resolved
-- **Status Badge:** Pill-shaped badge (Overdue/Due soon/Active/Resolved)
-- **Description:** First 2 lines (line-clamp-2) if provided
-- **Due Date:** Icon + formatted date/time
-- **Action Buttons:** Toggle active/resolved, Edit, Delete (admin only)
+- Left Border: Colored based on status (red/amber/blue/gray, 4px thick)
+- Title: With optional strikethrough if resolved
+- Status Badge: Pill-shaped badge (Overdue/Due soon/Active/Resolved)
+- Description: First 2 lines (line-clamp-2) if provided
+- Due Date: Icon + formatted date/time
+- Action Buttons: Toggle active/resolved, Edit, Delete (admin only)
 
-**Screenshot placeholder:** `/handbook/screenshots/23-06-deadline-card-detail.png`
+Screenshot placeholder: `/handbook/screenshots/23-06-deadline-card-detail.png`
 *Caption: Single deadline card showing all elements including action buttons*
 
-**Sorting:**
+Sorting:
 Deadlines are sorted automatically:
 1. Status priority: Overdue → Due Soon → Active → Resolved
 2. Within each status group: Earliest due date first
 
-### **23.6 Active vs Resolved Deadlines**
+### 23.6 Active vs Resolved Deadlines
+Deadlines can be toggled between active and resolved states without deleting them.
 
-Deadlines can be toggled between **active** and **resolved** states without deleting them.
-
-#### **To Toggle Status:**
-
-1. Click the **checkmark icon** (active deadlines) or **circular arrow icon** (resolved deadlines)
+#### To Toggle Status:
+1. Click the checkmark icon (active deadlines) or circular arrow icon (resolved deadlines)
 2. The deadline updates immediately:
-   - **Active → Resolved:** Card becomes gray with 60% opacity, title gets strikethrough
-   - **Resolved → Active:** Card returns to color-coded status, opacity/strikethrough removed
+   - Active → Resolved: Card becomes gray with 60% opacity, title gets strikethrough
+   - Resolved → Active: Card returns to color-coded status, opacity/strikethrough removed
 
-**Screenshot placeholder:** `/handbook/screenshots/23-07-toggle-active-resolved.png`
+Screenshot placeholder: `/handbook/screenshots/23-07-toggle-active-resolved.png`
 *Caption: Side-by-side comparison of active deadline (blue border) and resolved deadline (gray, faded)*
 
-**Use Cases:**
+Use Cases:
 - Mark a deadline as resolved when the task is completed
 - Reactivate a resolved deadline if the task needs to be reopened
 - Keep historical deadlines visible without deleting them
 
-### **23.7 Email Reminder System**
+### 23.7 Email Reminder System
+The system sends automated email reminders at three intervals:
 
-The system sends **automated email reminders** at three intervals:
+1. 7 days before due date
+2. 1 day before due date
+3. On the due date (when `due_date <= now`)
 
-1. **7 days before** due date
-2. **1 day before** due date
-3. **On the due date** (when `due_date <= now`)
-
-**Screenshot placeholder:** `/handbook/screenshots/23-08-email-reminder-schedule.png`
+Screenshot placeholder: `/handbook/screenshots/23-08-email-reminder-schedule.png`
 *Caption: Timeline diagram showing 7-day, 1-day, and due-date reminder triggers*
 
-#### **How Email Reminders Work:**
-
-**Backend Cron Job:**
+#### How Email Reminders Work:
+Backend Cron Job:
 - Endpoint: `POST /ops/send-deadline-reminders`
 - Runs hourly via the `deadline-cron` Docker container
 - Protected by bearer token authentication (`SUPER_ADMIN_PASSWORD`)
 - Rate-limited to 5 requests per hour per IP
 
-**Logic:**
-1. Query all **active deadlines** with unsent reminders
+Logic:
+1. Query all active deadlines with unsent reminders
 2. For each deadline, check if any reminder window is reached:
    - `due_date - 7 days <= now` AND `reminder_7d_sent = false`
    - `due_date - 1 day <= now` AND `reminder_1d_sent = false`
@@ -9952,17 +9985,16 @@ The system sends **automated email reminders** at three intervals:
 3. Send email to `conference.contact_email` or `conference.support_email`
 4. Mark the reminder flag as `true` to prevent duplicate sends
 
-**Email Template:**
+Email Template:
 - Template type: `deadline_reminder` (not yet documented in modules.md)
 - Recipient: Conference contact or support email
 - Content includes: Deadline title, description, due date (formatted in conference timezone)
 
-**Screenshot placeholder:** `/handbook/screenshots/23-09-email-reminder-sample.png`
+Screenshot placeholder: `/handbook/screenshots/23-09-email-reminder-sample.png`
 *Caption: Example email reminder showing deadline title, description, and formatted due date*
 
-#### **Reminder Flag Reset:**
-
-When you **update a deadline's due date**, the system selectively resets reminder flags:
+#### Reminder Flag Reset:
+When you update a deadline's due date, the system selectively resets reminder flags:
 
 - If the new due date is >7 days away → reset all three flags
 - If the new due date is 1-7 days away → reset `reminder_1d_sent` and `reminder_due_sent`
@@ -9970,74 +10002,67 @@ When you **update a deadline's due date**, the system selectively resets reminde
 
 This ensures reminders are sent again for the updated schedule.
 
-### **23.8 Dashboard Toast Notifications**
+### 23.8 Dashboard Toast Notifications
+When you load a conference with approaching deadlines (due within 7 days), the system displays toast warnings on the main conference page.
 
-When you load a conference with **approaching deadlines** (due within 7 days), the system displays **toast warnings** on the main conference page.
-
-**Screenshot placeholder:** `/handbook/screenshots/23-10-dashboard-toast-warning.png`
+Screenshot placeholder: `/handbook/screenshots/23-10-dashboard-toast-warning.png`
 *Caption: Toast notification showing approaching deadline warning*
 
-#### **Toast Logic:**
-
-**Frontend Code:** `ConferenceDetail/index.tsx`
+#### Toast Logic:
+Frontend Code: `ConferenceDetail/index.tsx`
 - Queries deadlines on page load
 - Filters active deadlines due within 7 days
 - Displays once per session (uses `useRef` to prevent re-triggering)
 
-**Toast Content:**
-- **1-2 approaching deadlines:** Shows individual toasts for each
+Toast Content:
+- 1-2 approaching deadlines: Shows individual toasts for each
   - Example: `"Deadline approaching: 'Sponsor contract deadline' is due 3/15/2026"`
   - Overdue: `"Overdue: 'CFP submission' is due 3/8/2026"`
-- **3+ approaching deadlines:** Shows summary toast
+- 3+ approaching deadlines: Shows summary toast
   - Example: `"5 deadlines are approaching or overdue. Check the Deadlines tab."`
 
-**Toast Type:** `warning` (amber/yellow color scheme)
+Toast Type: `warning` (amber/yellow color scheme)
 
-### **23.9 Editing Deadlines**
-
+### 23.9 Editing Deadlines
 Administrators can update deadline details at any time.
 
-#### **To Edit a Deadline:**
-
-1. Click the **pencil/edit icon** on the deadline card
+#### To Edit a Deadline:
+1. Click the pencil/edit icon on the deadline card
 2. Modify fields in the modal:
    - Title
    - Description
    - Due Date (datetime picker shows local time, converts to ISO/UTC on save)
-3. Click **Update**
+3. Click Update
 
-**Screenshot placeholder:** `/handbook/screenshots/23-11-edit-deadline-modal.png`
+Screenshot placeholder: `/handbook/screenshots/23-11-edit-deadline-modal.png`
 *Caption: Edit Deadline modal with pre-filled fields*
 
-**Notes:**
+Notes:
 - Changing the due date may reset reminder flags (see section 23.7)
 - Editing a resolved deadline does NOT automatically reactivate it
 - Due date is displayed in the user's local timezone but stored as UTC in the database
 
-### **23.10 Deleting Deadlines**
-
+### 23.10 Deleting Deadlines
 Administrators can permanently delete deadlines.
 
-#### **To Delete a Deadline:**
-
-1. Click the **trash icon** on the deadline card
+#### To Delete a Deadline:
+1. Click the trash icon on the deadline card
 2. Confirm deletion in the dialog:
    > "Are you sure you want to delete '[Deadline Title]'? This action cannot be undone."
-3. Click **Delete**
+3. Click Delete
 
-**Screenshot placeholder:** `/handbook/screenshots/23-12-delete-deadline-confirm.png`
+Screenshot placeholder: `/handbook/screenshots/23-12-delete-deadline-confirm.png`
 *Caption: Delete confirmation dialog with deadline title*
 
-**Notes:**
+Notes:
 - Deletion is permanent and cannot be undone
-- Consider using the **Resolved** status instead of deleting to maintain historical records
+- Consider using the Resolved status instead of deleting to maintain historical records
 - Deleted deadlines do NOT send any pending reminder emails
 
-### **23.11 Deadline Data Model**
+### 23.11 Deadline Data Model
+Database Table: `deadlines`
 
-**Database Table:** `deadlines`
-
-**Key Fields:**
+Key Fields:
 - `id` (UUID, primary key)
 - `tenant_id` (UUID, FK → tenants.id)
 - `conference_id` (UUID, FK → conferences.id)
@@ -10052,10 +10077,9 @@ Administrators can permanently delete deadlines.
 - `created_at` (Timestamp)
 - `updated_at` (Timestamp)
 
-**Migration:** `105_deadlines.py`
+Migration: `105_deadlines.py`
 
-### **23.12 Deadlines API Endpoints**
-
+### 23.12 Deadlines API Endpoints
 All endpoints are scoped to `/conferences/{conference_id}/deadlines/`:
 
 | Method | Endpoint | Description |
@@ -10066,115 +10090,108 @@ All endpoints are scoped to `/conferences/{conference_id}/deadlines/`:
 | PATCH | `/{deadline_id}/toggle` | Toggle active/resolved status |
 | DELETE | `/{deadline_id}` | Delete deadline permanently |
 
-**Permissions:**
+Permissions:
 - Read access: All conference team members
 - Write/Delete access: Conference admins only
 
-**Cron Endpoint:**
+Cron Endpoint:
 - `POST /ops/send-deadline-reminders` — Hourly cron job, super admin auth required
 
 ---
 
-## **24. Analytics Module**
+## 24. Analytics Module
+The Analytics module is currently a placeholder for future data visualization and reporting features. It is visible in the UI but displays a "Coming Soon" message.
 
-The Analytics module is currently a **placeholder** for future data visualization and reporting features. It is visible in the UI but displays a "Coming Soon" message.
-
-### **24.1 Current Status**
-
+### 24.1 Current Status
 As of March 2026, the Analytics module has no implemented functionality. When users navigate to the Analytics tab, they see:
 
-**Screenshot placeholder:** `/handbook/screenshots/24-01-analytics-coming-soon.png`
+Screenshot placeholder: `/handbook/screenshots/24-01-analytics-coming-soon.png`
 *Caption: Analytics tab showing "Coming Soon" placeholder with flask icon*
 
-**Display:**
+Display:
 - Flask/science icon (gray)
 - Heading: "Analytics"
 - Subtext: "This module is coming soon."
 
-### **24.2 Planned Features**
-
+### 24.2 Planned Features
 The Analytics module is planned to include:
 
-#### **Registration Analytics:**
-- **Registration trends over time** — Line graphs showing daily/weekly registration counts
-- **Ticket type breakdown** — Pie charts showing distribution across booking options
-- **Registration source tracking** — Which marketing channels drive registrations
-- **Completion funnel** — Drop-off analysis for registration flow steps
+#### Registration Analytics:
+- Registration trends over time — Line graphs showing daily/weekly registration counts
+- Ticket type breakdown — Pie charts showing distribution across booking options
+- Registration source tracking — Which marketing channels drive registrations
+- Completion funnel — Drop-off analysis for registration flow steps
 
-#### **Revenue Analytics:**
-- **Total revenue by booking option** — Which tickets generate the most income
-- **Revenue trends** — Daily/weekly revenue growth
-- **Payment status breakdown** — Paid vs pending vs failed payments
-- **Refund tracking** — Total refunds issued and reasons
+#### Revenue Analytics:
+- Total revenue by booking option — Which tickets generate the most income
+- Revenue trends — Daily/weekly revenue growth
+- Payment status breakdown — Paid vs pending vs failed payments
+- Refund tracking — Total refunds issued and reasons
 
-#### **Attendance Analytics:**
-- **Expected vs actual attendance** — Based on registration data
-- **Check-in rates** — If check-in/badging module is implemented
-- **Session popularity** — Which program sessions have the most registrations
-- **Geographic distribution** — Where attendees are coming from (based on billing addresses)
+#### Attendance Analytics:
+- Expected vs actual attendance — Based on registration data
+- Check-in rates — If check-in/badging module is implemented
+- Session popularity — Which program sessions have the most registrations
+- Geographic distribution — Where attendees are coming from (based on billing addresses)
 
-#### **Sponsor Analytics:**
-- **Sponsorship revenue** — Total by package and tier
-- **Sponsor engagement** — Download stats for booth materials, logo usage
-- **Contract completion rates** — Draft vs sent vs signed
+#### Sponsor Analytics:
+- Sponsorship revenue — Total by package and tier
+- Sponsor engagement — Download stats for booth materials, logo usage
+- Contract completion rates — Draft vs sent vs signed
 
-#### **CFP Analytics:**
-- **Submission trends** — Submissions over time, surge near deadline
-- **Acceptance rates** — By topic, track, or submission type
-- **Speaker diversity** — Geographic and organizational distribution
-- **Review progress** — How many papers are evaluated, pending, or unassigned
+#### CFP Analytics:
+- Submission trends — Submissions over time, surge near deadline
+- Acceptance rates — By topic, track, or submission type
+- Speaker diversity — Geographic and organizational distribution
+- Review progress — How many papers are evaluated, pending, or unassigned
 
-### **24.3 Technical Implementation (Future)**
-
-**Data Sources:**
+### 24.3 Technical Implementation (Future)
+Data Sources:
 - `registrations` table — For registration and revenue metrics
 - `sponsors` table — For sponsorship data
 - `cfp_applicants` and `cfp_papers` tables — For CFP metrics
 - `program_sessions` and `session_registrations` — For session attendance
 
-**Visualization Library:**
+Visualization Library:
 Expected to use one of:
-- **Chart.js** — Simple, lightweight, open-source
-- **Recharts** — React-friendly, declarative charting
-- **D3.js** — Highly customizable for complex visualizations
+- Chart.js — Simple, lightweight, open-source
+- Recharts — React-friendly, declarative charting
+- D3.js — Highly customizable for complex visualizations
 
-**Query Optimization:**
-- **Aggregation queries** with `GROUP BY` and `COUNT/SUM` functions
-- **Materialized views** for expensive calculations (daily refresh)
-- **Caching** with Redis for frequently accessed metrics
-- **Date range filters** to limit data processing
+Query Optimization:
+- Aggregation queries with `GROUP BY` and `COUNT/SUM` functions
+- Materialized views for expensive calculations (daily refresh)
+- Caching with Redis for frequently accessed metrics
+- Date range filters to limit data processing
 
-### **24.4 Access and Permissions**
-
+### 24.4 Access and Permissions
 When implemented, Analytics will likely:
-- Be accessible to **conference admins and team members**
-- Provide **read-only views** (no data modification)
-- Support **CSV/PDF export** for sharing reports with stakeholders
+- Be accessible to conference admins and team members
+- Provide read-only views (no data modification)
+- Support CSV/PDF export for sharing reports with stakeholders
 
-### **24.5 Navigation**
-
+### 24.5 Navigation
 The Analytics tab is currently visible in the conference sidebar under the "Reports" section (or similar grouping). Clicking it displays the "Coming Soon" placeholder.
 
-**Screenshot placeholder:** `/handbook/screenshots/24-02-analytics-sidebar-nav.png`
+Screenshot placeholder: `/handbook/screenshots/24-02-analytics-sidebar-nav.png`
 *Caption: Sidebar navigation showing Analytics tab location*
 
 ---
 
-**End of Sections 22-24**
+End of Sections 22-24
 
 ---
 
-## **Summary**
-
+## Summary
 This documentation covers:
 
-- **Section 22 (Alumni Module):** 12 subsections, ~350 lines, covering auto-creation, manual entry, CSV import (50k rows), search, edit with email propagation, cross-conference lookup, and CSV export
-- **Section 23 (Deadlines Module):** 12 subsections, ~250 lines, covering creation, fields, active/resolved status, email reminders (7-day, 1-day, due-date), color-coded warnings, dashboard toasts, and cron system
-- **Section 24 (Analytics Module):** 5 subsections, ~100 lines, covering placeholder status, planned features (registration trends, revenue, attendance, sponsor, CFP analytics), and future implementation notes
+- Section 22 (Alumni Module): 12 subsections, ~350 lines, covering auto-creation, manual entry, CSV import (50k rows), search, edit with email propagation, cross-conference lookup, and CSV export
+- Section 23 (Deadlines Module): 12 subsections, ~250 lines, covering creation, fields, active/resolved status, email reminders (7-day, 1-day, due-date), color-coded warnings, dashboard toasts, and cron system
+- Section 24 (Analytics Module): 5 subsections, ~100 lines, covering placeholder status, planned features (registration trends, revenue, attendance, sponsor, CFP analytics), and future implementation notes
 
-**Total Output:** ~700 lines of comprehensive documentation with 30+ screenshot placeholders.
+Total Output: ~700 lines of comprehensive documentation with 30+ screenshot placeholders.
 
-**Files Referenced:**
+Files Referenced:
 - `/Users/josediaz/SaaSConf/.claude/docs/modules.md` (alumni and deadlines sections)
 - `/Users/josediaz/SaaSConf/frontend/src/pages/ConferenceDetail/tabs/AlumniTab.tsx`
 - `/Users/josediaz/SaaSConf/frontend/src/pages/ConferenceDetail/tabs/DeadlinesTab.tsx`
@@ -10194,32 +10211,32 @@ I've created comprehensive documentation (~950 lines) covering all aspects of in
 
 ## Documentation Structure
 
-### 1. **Overview** 
+### 1. Overview 
 - Key configuration areas (Numbering, Company Data, Bank Accounts, Templates, Number Formats)
 - Navigation guide through the Finance settings menu
 
-### 2. **Invoice Number Generation**
+### 2. Invoice Number Generation
 - Template configuration with 5 variables ([ConferenceSlug], [YYYY], [MM], [DD], [Count])
 - Counter reset modes (Yearly vs Daily)
 - Separate cancellation number templates
 - Real-time preview functionality
 - Manual counter reset procedures
 
-### 3. **Company Information**
+### 3. Company Information
 - Required and optional fields (Name, Address, City, Postal Code, Country, Tax ID, Phone)
 - Auto-populate from "My Company" feature
 - Address formatting guidelines
 - VAT number vs Tax ID explanation
 - Second currency and exchange rate settings
 
-### 4. **Bank Account Management**
+### 4. Bank Account Management
 - Adding multiple bank accounts
 - IBAN validation (using schwifty library)
 - BIC/SWIFT validation
 - Default account selection
 - Account deletion warnings
 
-### 5. **Invoice Templates**
+### 5. Invoice Templates
 - Three template types (Bank Transfer, Credit Card, Credit Note)
 - Rich text editor with WYSIWYG features
 - Placeholder insertion system
@@ -10229,24 +10246,24 @@ I've created comprehensive documentation (~950 lines) covering all aspects of in
 - VAT source selector (Company vs Fiscal Rep)
 - Template copying between types
 
-### 6. **Number Format Settings**
+### 6. Number Format Settings
 - Six presets: US/UK, European, Swiss, French, Indian, No separator
 - Decimal/thousands separator configuration
 - Currency position (before/after)
 - Impact on invoice display
 
-### 7. **Page Format Configuration**
+### 7. Page Format Configuration
 - Six page sizes (A4, A5, Letter, Legal, B5, Tabloid)
 - 2cm margins (fixed)
 - Automatic image/table scaling
 
-### 8. **Second Currency Settings**
+### 8. Second Currency Settings
 - Configuration in Company Data
 - Dual-currency placeholders
 - Exchange rate management (manual)
 - Template examples
 
-### 9. **Template Placeholders Reference**
+### 9. Template Placeholders Reference
 Complete reference of 40+ placeholders organized by category:
 - Company Information (8 placeholders)
 - Fiscal Representative (7 placeholders)
@@ -10258,7 +10275,7 @@ Complete reference of 40+ placeholders organized by category:
 - Contact Information (5 placeholders)
 - Credit Note Placeholders (3 placeholders)
 
-### 10. **Best Practices**
+### 10. Best Practices
 - Numbering strategies
 - Company information compliance
 - Bank account validation tips
@@ -10268,7 +10285,7 @@ Complete reference of 40+ placeholders organized by category:
 - Number format selection
 - Second currency management
 
-### 11. **Troubleshooting**
+### 11. Troubleshooting
 11 common issues with solutions:
 - Invoice numbers not sequential
 - Preview shows wrong logo
@@ -10283,17 +10300,17 @@ Complete reference of 40+ placeholders organized by category:
 
 ## Key Features Documented
 
-✅ **5 configuration variables** for invoice numbering
-✅ **6 number format presets** with examples
-✅ **6 page formats** (A4 through Tabloid)
-✅ **3 template types** with rich text editing
-✅ **40+ placeholders** with complete reference
-✅ **Dual currency** support with exchange rates
-✅ **IBAN/BIC validation** using schwifty library
-✅ **Auto-populate** from My Company
-✅ **Preview functionality** for templates
-✅ **Header/footer** with position: fixed
-✅ **VAT source** selection (Company vs Fiscal Rep)
+✅ 5 configuration variables for invoice numbering
+✅ 6 number format presets with examples
+✅ 6 page formats (A4 through Tabloid)
+✅ 3 template types with rich text editing
+✅ 40+ placeholders with complete reference
+✅ Dual currency support with exchange rates
+✅ IBAN/BIC validation using schwifty library
+✅ Auto-populate from My Company
+✅ Preview functionality for templates
+✅ Header/footer with position: fixed
+✅ VAT source selection (Company vs Fiscal Rep)
 
 ## Screenshot Placeholders
 
@@ -10329,32 +10346,32 @@ I'll analyze the codebase to document Section 10 (Registration Management) compr
 
 ## Summary
 
-I've created a comprehensive **Section 10: Registration Management** documentation (~1,500 lines) covering:
+I've created a comprehensive Section 10: Registration Management documentation (~1,500 lines) covering:
 
 ### Sections Included:
 
-1. **Registration Overview** - Lifecycle, statuses, sources, modes, and relationship to invoices
-2. **Creating Registrations** - 6-step workflow with attendee info, booking options, session selection, billing, and submission
-3. **Registration List View** - Table columns, search/filtering, pagination, and row actions
-4. **Registration Detail Panel** - Attendee header, info grid, status section, booking options, sessions, and add-on items
-5. **Billing Profile Management** - Shared billing profiles, viewing info, update limitations
-6. **Managing Attendees** - Why editing is restricted, replacement workflow reference
-7. **Additional Items** - Adding/removing items, pricing, pending items
-8. **Session Selection** - When required, session flow, grouping, capacity tracking, multi-slot sessions
-9. **Registration Replacement** - Scenarios A & B, workflow, database changes, invoice generation, email notifications
-10. **CSV Export** - Attendee export format, columns, limits, performance, use cases
-11. **Best Practices** - Workflow optimization, data quality, communication, special cases
+1. Registration Overview - Lifecycle, statuses, sources, modes, and relationship to invoices
+2. Creating Registrations - 6-step workflow with attendee info, booking options, session selection, billing, and submission
+3. Registration List View - Table columns, search/filtering, pagination, and row actions
+4. Registration Detail Panel - Attendee header, info grid, status section, booking options, sessions, and add-on items
+5. Billing Profile Management - Shared billing profiles, viewing info, update limitations
+6. Managing Attendees - Why editing is restricted, replacement workflow reference
+7. Additional Items - Adding/removing items, pricing, pending items
+8. Session Selection - When required, session flow, grouping, capacity tracking, multi-slot sessions
+9. Registration Replacement - Scenarios A & B, workflow, database changes, invoice generation, email notifications
+10. CSV Export - Attendee export format, columns, limits, performance, use cases
+11. Best Practices - Workflow optimization, data quality, communication, special cases
 
 ### Key Features:
 
-- ✅ **Cross-referenced** with Sections 5, 6, 7, 8, and 11
-- ✅ **Screenshot placeholders** throughout (55+ placeholder locations)
-- ✅ **Step-by-step instructions** with validation rules and error messages
-- ✅ **Tables and examples** for statuses, modes, fields, workflows
-- ✅ **API endpoint documentation** where relevant
-- ✅ **Glossary** with 10 key terms
-- ✅ **FAQ section** with 10 common questions
-- ✅ **Best practices** covering 6 major areas
+- ✅ Cross-referenced with Sections 5, 6, 7, 8, and 11
+- ✅ Screenshot placeholders throughout (55+ placeholder locations)
+- ✅ Step-by-step instructions with validation rules and error messages
+- ✅ Tables and examples for statuses, modes, fields, workflows
+- ✅ API endpoint documentation where relevant
+- ✅ Glossary with 10 key terms
+- ✅ FAQ section with 10 common questions
+- ✅ Best practices covering 6 major areas
 
 ### Style Consistency:
 
@@ -10367,7 +10384,7 @@ The documentation follows the same style as Section 8 (Invoice Management):
 - Warning/tip callout formats
 - Related documentation links at bottom
 
-**Would you like me to**:
+Would you like me to:
 1. Save this to a different location you specify?
 2. Output the content here so you can save it manually?
 3. Continue with a different approach?
@@ -10377,11 +10394,11 @@ The documentation follows the same style as Section 8 (Invoice Management):
 
 # Comprehensive Documentation for CFP Sections 12.6-12.9
 
-I've completed comprehensive documentation for **Sections 12.6-12.9 (CFP Part 2)** covering:
+I've completed comprehensive documentation for Sections 12.6-12.9 (CFP Part 2) covering:
 
 ## Summary of Content Created
 
-### **12.6 Review Process** (~450 lines)
+### 12.6 Review Process (~450 lines)
 - Review score scales (numeric range, custom, binary)
 - Review criteria and questions configuration
 - Review form settings (speaker feedback, internal comments, must-have)
@@ -10395,7 +10412,7 @@ I've completed comprehensive documentation for **Sections 12.6-12.9 (CFP Part 2)
 - Review export/reporting options
 - Conflict-of-interest handling (automatic and manual)
 
-### **12.7 Decision Making** (~300 lines)
+### 12.7 Decision Making (~300 lines)
 - Paper evaluation workflow (status transitions)
 - Accept/reject decisions (quick buttons and edit form)
 - Conditional acceptance workarounds
@@ -10405,7 +10422,7 @@ I've completed comprehensive documentation for **Sections 12.6-12.9 (CFP Part 2)
 - Committee consensus tools
 - Decision notification timing and workflow
 
-### **12.8 Notifications** (~280 lines)
+### 12.8 Notifications (~280 lines)
 - Notification date configuration
 - Acceptance email templates with variables
 - Rejection email templates with tone guidance
@@ -10415,7 +10432,7 @@ I've completed comprehensive documentation for **Sections 12.6-12.9 (CFP Part 2)
 - Resend functionality
 - Custom messages per paper
 
-### **12.9 CFP Portal (Applicant View)** (~250 lines)
+### 12.9 CFP Portal (Applicant View) (~250 lines)
 - Portal access and authentication
 - Applicant dashboard overview
 - Submission form with dynamic fields
@@ -10427,7 +10444,7 @@ I've completed comprehensive documentation for **Sections 12.6-12.9 (CFP Part 2)
 - Post-acceptance actions and speaker feedback
 - Responsive design for mobile/tablet/desktop
 
-### **Appendices** (~100 lines)
+### Appendices (~100 lines)
 - Paper status lifecycle diagram
 - Review score calculation examples (5 scenarios)
 - Email notification best practices
@@ -10436,7 +10453,7 @@ I've completed comprehensive documentation for **Sections 12.6-12.9 (CFP Part 2)
 
 ## Key Features Documented
 
-**Based on Codebase Analysis**:
+Based on Codebase Analysis:
 - ✅ Complete review configuration system (scales, criteria, questions)
 - ✅ Weighted score calculations with snapshot fields
 - ✅ Auto-assignment algorithm with topic exclusions and COI
@@ -10450,18 +10467,18 @@ I've completed comprehensive documentation for **Sections 12.6-12.9 (CFP Part 2)
 
 ## Total Content
 
-- **~1,280 lines** of comprehensive documentation
-- **36+ screenshot placeholders** for visual guidance
-- **Step-by-step instructions** for admins and applicants
-- **Validation rules** and error messages
-- **Cross-references** to CFP Part 1 (Sections 12.1-12.5)
-- **Examples and templates** throughout
+- ~1,280 lines of comprehensive documentation
+- 36+ screenshot placeholders for visual guidance
+- Step-by-step instructions for admins and applicants
+- Validation rules and error messages
+- Cross-references to CFP Part 1 (Sections 12.1-12.5)
+- Examples and templates throughout
 
 Since I don't have Write permission, the content is ready but I cannot save it to a file. Would you like me to:
 
-1. **Output the full markdown here** so you can copy/paste it into `/Users/josediaz/SaaSConf/.claude/docs/tenant-ui-handbook-cfp-part2.md`
-2. **Create it in chunks** if it's too long for a single message
-3. **Use a different tool** if you can grant Write permission
+1. Output the full markdown here so you can copy/paste it into `/Users/josediaz/SaaSConf/.claude/docs/tenant-ui-handbook-cfp-part2.md`
+2. Create it in chunks if it's too long for a single message
+3. Use a different tool if you can grant Write permission
 
 Please let me know how you'd like to proceed!
 
@@ -10501,25 +10518,25 @@ The Settings section is the control center for your conference. It's organized i
 ### What Settings Control
 
 Settings determine:
-- **Who**: People categories, roles, and pronouns
-- **What**: Session types, location types, booking options
-- **How Much**: Currencies, VAT rates, pricing matrices
-- **How**: Email templates, messaging, payment methods
-- **When**: Booking periods, deadlines (configured separately)
+- Who: People categories, roles, and pronouns
+- What: Session types, location types, booking options
+- How Much: Currencies, VAT rates, pricing matrices
+- How: Email templates, messaging, payment methods
+- When: Booking periods, deadlines (configured separately)
 
 ### Settings vs. Data
 
-**Settings** define the *structure and rules* for your conference:
+Settings define the *structure and rules* for your conference:
 - Session types (e.g., "Keynote", "Workshop", "Tutorial")
 - Booking options (e.g., "2-Day Pass", "Virtual Access")
 - Email templates (e.g., "Registration Confirmation")
 
-**Data** uses those settings to create *actual conference content*:
+Data uses those settings to create *actual conference content*:
 - Actual sessions (e.g., "Opening Keynote by Dr. Smith")
 - Actual registrations (e.g., "John Doe with 2-Day Pass")
 - Actual emails sent (e.g., confirmation to john@example.com)
 
-**Rule**: Configure settings *before* creating data that depends on them.
+Rule: Configure settings *before* creating data that depends on them.
 
 ---
 
@@ -10528,30 +10545,30 @@ Settings determine:
 ### Navigation Path
 
 1. Navigate to your conference in the dashboard
-2. Click the **Settings** tab in the conference navigation
+2. Click the Settings tab in the conference navigation
 3. Use the collapsible sidebar to browse settings categories
 
 ### Settings Sidebar
 
 The settings sidebar is organized into 5 groups:
-- **People & Roles** (3 settings)
-- **Conference Setup** (3 settings)
-- **CFP & Reviews** (3 settings)
-- **Communication** (6 settings)
-- **Finance** (7 settings)
+- People & Roles (3 settings)
+- Conference Setup (3 settings)
+- CFP & Reviews (3 settings)
+- Communication (6 settings)
+- Finance (7 settings)
 
-**Tip**: Click the collapse button (`<<`) to minimize the sidebar for more content space.
+Tip: Click the collapse button (`<<`) to minimize the sidebar for more content space.
 
 ### Permission Requirements
 
 | Permission Level | Access |
 |-----------------|--------|
-| **Conference Admin** | All settings except restricted items |
-| **Tenant Admin** | All settings including Stripe Setup and Invoice Numbering |
-| **Super Admin** | All settings including system-level configurations |
-| **Committee Member** | No settings access (read-only on some areas) |
+| Conference Admin | All settings except restricted items |
+| Tenant Admin | All settings including Stripe Setup and Invoice Numbering |
+| Super Admin | All settings including system-level configurations |
+| Committee Member | No settings access (read-only on some areas) |
 
-**Restricted Settings** (Tenant Admin / Super Admin only):
+Restricted Settings (Tenant Admin / Super Admin only):
 - Invoice Numbering (Finance)
 - Stripe Setup (Finance)
 
@@ -10563,21 +10580,21 @@ The settings sidebar is organized into 5 groups:
 
 | Category | Settings Included | Purpose |
 |----------|------------------|---------|
-| **People & Roles** | Volunteer Tasks, Committee Roles, Pronoun Options | Define people categories and identity options |
-| **Conference Setup** | Location Types, Session Types, Sponsor Packages | Structure program and sponsorship |
-| **CFP & Reviews** | Paper Form, Score Scales, Review Criteria | Configure call for papers and review process |
-| **Communication** | Email Settings, Email Templates, Messaging, Message Templates, Recipient Lists, Screen Overlays | Manage all conference communications |
-| **Finance** | Currency & Tax, Numbering, Company Data, Bank Accounts, Invoice Templates, ZUGFeRD, Stripe Setup | Financial configuration and invoicing |
+| People & Roles | Volunteer Tasks, Committee Roles, Pronoun Options | Define people categories and identity options |
+| Conference Setup | Location Types, Session Types, Sponsor Packages | Structure program and sponsorship |
+| CFP & Reviews | Paper Form, Score Scales, Review Criteria | Configure call for papers and review process |
+| Communication | Email Settings, Email Templates, Messaging, Message Templates, Recipient Lists, Screen Overlays | Manage all conference communications |
+| Finance | Currency & Tax, Numbering, Company Data, Bank Accounts, Invoice Templates, ZUGFeRD, Stripe Setup | Financial configuration and invoicing |
 
 ### Settings Not in Settings Tab
 
 Some configurations are managed elsewhere:
-- **Booking Options/Packages/Periods**: Booking tab (pricing configuration)
-- **Discount Codes**: Booking tab (promotional pricing)
-- **VAT Rates**: Finance > Currency & Tax (see VAT Settings section in handbook)
-- **General Details**: Details tab (conference name, dates, country, timezone)
-- **Conference Logo**: Details tab (branding)
-- **Modules**: Controlled by tenant admins (enables/disables major features)
+- Booking Options/Packages/Periods: Booking tab (pricing configuration)
+- Discount Codes: Booking tab (promotional pricing)
+- VAT Rates: Finance > Currency & Tax (see VAT Settings section in handbook)
+- General Details: Details tab (conference name, dates, country, timezone)
+- Conference Logo: Details tab (branding)
+- Modules: Controlled by tenant admins (enables/disables major features)
 
 ---
 
@@ -10587,81 +10604,81 @@ Define how people are categorized and identified throughout your conference.
 
 ### Volunteer Tasks
 
-**Path**: Settings > People & Roles > Volunteer Tasks
+Path: Settings > People & Roles > Volunteer Tasks
 
-**What It Is**: Task definitions that volunteers can be assigned to during the conference.
+What It Is: Task definitions that volunteers can be assigned to during the conference.
 
-**Use Cases**:
+Use Cases:
 - Registration desk coverage
 - Session room assistance
 - Speaker support
 - Audio/visual setup
 - Catering coordination
 
-**Configuration**:
-- **Name**: Task name (e.g., "Registration Desk", "Room Monitor")
-- **Description**: Detailed task description
-- **Color**: Hex color for visual identification in schedules
-- **Active Status**: Enable/disable tasks
+Configuration:
+- Name: Task name (e.g., "Registration Desk", "Room Monitor")
+- Description: Detailed task description
+- Color: Hex color for visual identification in schedules
+- Active Status: Enable/disable tasks
 
-**Dependencies**:
-- Requires **Volunteers module** to be enabled
+Dependencies:
+- Requires Volunteers module to be enabled
 - Used in: Volunteer Task Assignment, Volunteer Assignment, Volunteer Schedule
 
-**Detailed Documentation**: See `.claude/docs/modules.md` > Volunteer Task System
+Detailed Documentation: See `.claude/docs/modules.md` > Volunteer Task System
 
 ---
 
 ### Committee Roles
 
-**Path**: Settings > People & Roles > Committee Roles
+Path: Settings > People & Roles > Committee Roles
 
-**What It Is**: Roles for program committee members who review CFP submissions.
+What It Is: Roles for program committee members who review CFP submissions.
 
-**Use Cases**:
+Use Cases:
 - Program Chair
 - Track Chair
 - Reviewer
 - External Reviewer
 - Advisory Board
 
-**Configuration**:
-- **Name**: Role name (e.g., "Track Chair")
-- **Description**: Role responsibilities
-- **Active Status**: Enable/disable roles
+Configuration:
+- Name: Role name (e.g., "Track Chair")
+- Description: Role responsibilities
+- Active Status: Enable/disable roles
 
-**Dependencies**:
+Dependencies:
 - Used in: CFP Committee management
 - Affects: Review assignment, committee member permissions
 
-**Best Practice**: Define roles before inviting committee members.
+Best Practice: Define roles before inviting committee members.
 
 ---
 
 ### Pronoun Options
 
-**Path**: Settings > People & Roles > Pronoun Options
+Path: Settings > People & Roles > Pronoun Options
 
-**What It Is**: Pronoun choices offered to attendees, speakers, and volunteers.
+What It Is: Pronoun choices offered to attendees, speakers, and volunteers.
 
-**Common Options**:
+Common Options:
 - he/him
 - she/her
 - they/them
 - prefer not to say
 
-**Configuration**:
-- **Value**: Pronoun text (e.g., "they/them")
-- **Active Status**: Enable/disable options
+Configuration:
+- Value: Pronoun text (e.g., "they/them")
+- Active Status: Enable/disable options
 
-**Dependencies**:
-- **CRITICAL**: Must be configured before registration opens
+Dependencies:
+- CRITICAL: Must be configured before registration opens
 - Used in: Registration forms, Replace Attendee modal, CFP applications, volunteer registration
 - Dropdown will be empty if not configured
 
-**Best Practice**: Add at minimum 4 options including "prefer not to say" for inclusivity.
+Best Practice: Add at minimum 4 options including "prefer not to say" for inclusivity.
 
-**Detailed Documentation**: See troubleshooting section in handbook for "No Pronouns Available" error.
+Detailed Documentation: See troubleshooting section in handbook for "No Pronouns Available" error.
 
 ---
 
@@ -10671,88 +10688,88 @@ Structure your conference program and sponsorship offerings.
 
 ### Location Types
 
-**Path**: Settings > Conference Setup > Location Types
+Path: Settings > Conference Setup > Location Types
 
-**What It Is**: Categories of locations where sessions can take place.
+What It Is: Categories of locations where sessions can take place.
 
-**Use Cases**:
+Use Cases:
 - Conference Room (with capacity numbers)
 - Workshop Space
 - Exhibit Hall
 - Virtual Room
 - Outdoor Space
 
-**Configuration**:
-- **Name**: Location type (e.g., "Main Hall")
-- **Description**: Location details
-- **Active Status**: Enable/disable types
+Configuration:
+- Name: Location type (e.g., "Main Hall")
+- Description: Location details
+- Active Status: Enable/disable types
 
-**Dependencies**:
+Dependencies:
 - Used in: Location management, session assignment
 - Affects: Program grid layout, attendee navigation
 
-**Best Practice**: Create location types that match your venue structure before building program.
+Best Practice: Create location types that match your venue structure before building program.
 
 ---
 
 ### Session Types
 
-**Path**: Settings > Conference Setup > Session Types
+Path: Settings > Conference Setup > Session Types
 
-**What It Is**: Categories of program sessions with duration and properties.
+What It Is: Categories of program sessions with duration and properties.
 
-**Use Cases**:
+Use Cases:
 - Keynote (90 min)
 - Regular Talk (30 min)
 - Tutorial (4 hours)
 - Panel (60 min)
 - Lightning Talk (10 min)
 
-**Configuration**:
-- **Name**: Session type name
-- **Duration**: Default length in minutes
-- **Color**: Hex color for visual identification
-- **Is Tutorial**: Boolean flag for tutorial sessions
-- **Active Status**: Enable/disable types
+Configuration:
+- Name: Session type name
+- Duration: Default length in minutes
+- Color: Hex color for visual identification
+- Is Tutorial: Boolean flag for tutorial sessions
+- Active Status: Enable/disable types
 
-**Special Properties**:
-- **Is Tutorial**: Affects booking behavior (attendees can only book one tutorial)
-- **Duration**: Used for automatic program grid layout
+Special Properties:
+- Is Tutorial: Affects booking behavior (attendees can only book one tutorial)
+- Duration: Used for automatic program grid layout
 
-**Dependencies**:
+Dependencies:
 - Used in: Session creation, program design, registration session selection
 - Affects: Booking logic, program grid
 
-**Best Practice**: Define all session types before creating actual sessions.
+Best Practice: Define all session types before creating actual sessions.
 
 ---
 
 ### Sponsor Packages
 
-**Path**: Settings > Conference Setup > Sponsor Packages
+Path: Settings > Conference Setup > Sponsor Packages
 
-**What It Is**: Sponsorship tiers with associated benefits and pricing.
+What It Is: Sponsorship tiers with associated benefits and pricing.
 
-**Use Cases**:
+Use Cases:
 - Platinum Sponsor (€10,000)
 - Gold Sponsor (€5,000)
 - Silver Sponsor (€2,500)
 - Bronze Sponsor (€1,000)
 - Community Sponsor (€500)
 
-**Configuration**:
-- **Name**: Package name (e.g., "Gold Sponsor")
-- **Price**: Package cost
-- **Currency**: Currency code (EUR, USD, etc.)
-- **Benefits**: Rich-text description of benefits
-- **Display Order**: Sort order for public display
-- **Active Status**: Enable/disable packages
+Configuration:
+- Name: Package name (e.g., "Gold Sponsor")
+- Price: Package cost
+- Currency: Currency code (EUR, USD, etc.)
+- Benefits: Rich-text description of benefits
+- Display Order: Sort order for public display
+- Active Status: Enable/disable packages
 
-**Dependencies**:
+Dependencies:
 - Used in: Sponsor management, sponsor contracts
 - Affects: Invoice creation for sponsors, public sponsor listings
 
-**Best Practice**: Include detailed benefits in description for transparency.
+Best Practice: Include detailed benefits in description for transparency.
 
 ---
 
@@ -10762,83 +10779,83 @@ Configure your call for papers and review process.
 
 ### Paper Form Builder
 
-**Path**: Settings > CFP & Reviews > Paper Form
+Path: Settings > CFP & Reviews > Paper Form
 
-**What It Is**: Custom form builder for CFP submission forms.
+What It Is: Custom form builder for CFP submission forms.
 
-**Use Cases**:
+Use Cases:
 - Add custom fields to CFP submissions
 - Require additional metadata
 - Collect speaker bio, abstract, keywords
 - Request travel support information
 
-**Configuration**:
-- **Field Types**: Text, textarea, select, checkbox, radio
-- **Validation**: Required fields, character limits
-- **Order**: Drag-and-drop field ordering
+Configuration:
+- Field Types: Text, textarea, select, checkbox, radio
+- Validation: Required fields, character limits
+- Order: Drag-and-drop field ordering
 
-**Dependencies**:
+Dependencies:
 - Used in: CFP portal submission form
 - Affects: Submission data structure, review information
 
-**Detailed Documentation**: See `.claude/docs/modules.md` for form schema details.
+Detailed Documentation: See `.claude/docs/modules.md` for form schema details.
 
 ---
 
 ### Score Scales
 
-**Path**: Settings > CFP & Reviews > Score Scales
+Path: Settings > CFP & Reviews > Score Scales
 
-**What It Is**: Rating scales used by reviewers to score submissions.
+What It Is: Rating scales used by reviewers to score submissions.
 
-**Use Cases**:
+Use Cases:
 - 1-5 scale
 - 1-10 scale
 - Accept/Maybe/Reject scale
 - Strong Accept/Accept/Borderline/Reject/Strong Reject
 
-**Configuration**:
-- **Name**: Scale name (e.g., "5-Point Scale")
-- **Min Value**: Lowest score
-- **Max Value**: Highest score
-- **Active Status**: Enable/disable scales
+Configuration:
+- Name: Scale name (e.g., "5-Point Scale")
+- Min Value: Lowest score
+- Max Value: Highest score
+- Active Status: Enable/disable scales
 
-**Dependencies**:
+Dependencies:
 - Used in: Review criteria configuration
 - Affects: Review score calculations, acceptance decisions
 
-**Best Practice**: Use consistent scales across all review criteria for easier comparison.
+Best Practice: Use consistent scales across all review criteria for easier comparison.
 
 ---
 
 ### Review Criteria
 
-**Path**: Settings > CFP & Reviews > Review Criteria
+Path: Settings > CFP & Reviews > Review Criteria
 
-**What It Is**: Specific aspects reviewers evaluate in submissions.
+What It Is: Specific aspects reviewers evaluate in submissions.
 
-**Use Cases**:
+Use Cases:
 - Relevance to conference
 - Technical quality
 - Originality
 - Presentation clarity
 - Impact potential
 
-**Configuration**:
-- **Name**: Criterion name (e.g., "Technical Quality")
-- **Description**: What reviewers should evaluate
-- **Score Scale**: Linked score scale
-- **Weight**: Relative importance (for weighted scoring)
-- **Active Status**: Enable/disable criteria
+Configuration:
+- Name: Criterion name (e.g., "Technical Quality")
+- Description: What reviewers should evaluate
+- Score Scale: Linked score scale
+- Weight: Relative importance (for weighted scoring)
+- Active Status: Enable/disable criteria
 
-**Dependencies**:
+Dependencies:
 - Requires: Score scales to be defined first
 - Used in: Review forms, score aggregation
 - Affects: Acceptance decisions, ranking
 
-**Best Practice**: Provide clear descriptions so reviewers score consistently.
+Best Practice: Provide clear descriptions so reviewers score consistently.
 
-**Detailed Documentation**: See `.claude/docs/modules.md` for review configuration details.
+Detailed Documentation: See `.claude/docs/modules.md` for review configuration details.
 
 ---
 
@@ -10848,175 +10865,175 @@ Manage all conference communication channels and templates.
 
 ### Email Settings
 
-**Path**: Settings > Communication > Email Settings
+Path: Settings > Communication > Email Settings
 
-**What It Is**: SMTP server configuration for sending conference emails.
+What It Is: SMTP server configuration for sending conference emails.
 
-**Configuration**:
-- **SMTP Host**: Mail server hostname (e.g., smtp.gmail.com)
-- **SMTP Port**: Port number (465 for SSL, 587 for TLS)
-- **Username**: SMTP authentication username
-- **Password**: SMTP authentication password (encrypted)
-- **From Email**: Sender email address
-- **From Name**: Sender display name
-- **Use SSL/TLS**: Encryption settings
+Configuration:
+- SMTP Host: Mail server hostname (e.g., smtp.gmail.com)
+- SMTP Port: Port number (465 for SSL, 587 for TLS)
+- Username: SMTP authentication username
+- Password: SMTP authentication password (encrypted)
+- From Email: Sender email address
+- From Name: Sender display name
+- Use SSL/TLS: Encryption settings
 
-**Dependencies**:
-- **CRITICAL**: Must be configured for ANY email functionality
+Dependencies:
+- CRITICAL: Must be configured for ANY email functionality
 - Affects: All automated emails (registration, invoices, CFP, messaging)
 
-**Security Note**: Passwords are encrypted at rest. Use app-specific passwords for Gmail.
+Security Note: Passwords are encrypted at rest. Use app-specific passwords for Gmail.
 
-**Best Practice**: Test email settings before conference launch using a test recipient.
+Best Practice: Test email settings before conference launch using a test recipient.
 
 ---
 
 ### Email Templates
 
-**Path**: Settings > Communication > Email Templates
+Path: Settings > Communication > Email Templates
 
-**What It Is**: Customizable HTML email templates for automated communications.
+What It Is: Customizable HTML email templates for automated communications.
 
-**Available Templates**:
-- **Registration**: Confirmation, cancellation, replacement
-- **Invoices**: Send invoice, credit note, payment confirmation
-- **CFP**: Submission confirmation, acceptance, rejection
-- **Volunteers**: Assignment confirmation, schedule updates
-- **Sponsor Contracts**: Contract send, signature reminder
-- **Deadlines**: 7-day reminder, 1-day reminder, due reminder
+Available Templates:
+- Registration: Confirmation, cancellation, replacement
+- Invoices: Send invoice, credit note, payment confirmation
+- CFP: Submission confirmation, acceptance, rejection
+- Volunteers: Assignment confirmation, schedule updates
+- Sponsor Contracts: Contract send, signature reminder
+- Deadlines: 7-day reminder, 1-day reminder, due reminder
 
-**Template Features**:
-- **Rich-text editor**: WYSIWYG HTML editing
-- **Variable placeholders**: Dynamic content insertion
-- **Preview mode**: See rendered output before saving
-- **Default templates**: System-provided starting points
+Template Features:
+- Rich-text editor: WYSIWYG HTML editing
+- Variable placeholders: Dynamic content insertion
+- Preview mode: See rendered output before saving
+- Default templates: System-provided starting points
 
-**Common Placeholders**:
+Common Placeholders:
 - `[Recipient Name]`: Recipient's full name
 - `[Conference Name]`: Conference title
 - `[Invoice Number]`: Invoice reference
 - `[Payment Link]`: Stripe payment URL (credit card invoices)
 - `[Custom Message]`: Admin-provided custom text
 
-**Dependencies**:
+Dependencies:
 - Requires: Email Settings configured
 - Used in: All automated email sending
 - Affects: Professional appearance, attendee experience
 
-**Best Practice**: Customize templates with conference branding before launch.
+Best Practice: Customize templates with conference branding before launch.
 
-**Detailed Documentation**: See `.claude/docs/invoices.md` > Email System for full placeholder list.
+Detailed Documentation: See `.claude/docs/invoices.md` > Email System for full placeholder list.
 
 ---
 
 ### Messaging Settings
 
-**Path**: Settings > Communication > Messaging
+Path: Settings > Communication > Messaging
 
-**What It Is**: Internal messaging system configuration for communicating with attendees, speakers, sponsors.
+What It Is: Internal messaging system configuration for communicating with attendees, speakers, sponsors.
 
-**Configuration**:
-- **Enable Messaging**: Turn messaging on/off
-- **Reply-To Email**: Email for message replies
-- **Sender Name**: Display name for messages
+Configuration:
+- Enable Messaging: Turn messaging on/off
+- Reply-To Email: Email for message replies
+- Sender Name: Display name for messages
 
-**Dependencies**:
+Dependencies:
 - Used in: Messaging tab, bulk communications
 - Affects: Message delivery, reply handling
 
-**Best Practice**: Set reply-to email to a monitored inbox for attendee responses.
+Best Practice: Set reply-to email to a monitored inbox for attendee responses.
 
 ---
 
 ### Message Templates
 
-**Path**: Settings > Communication > Msg Templates
+Path: Settings > Communication > Msg Templates
 
-**What It Is**: Pre-written message templates for bulk communications.
+What It Is: Pre-written message templates for bulk communications.
 
-**Use Cases**:
+Use Cases:
 - "Welcome to the conference"
 - "Program update notification"
 - "Last-minute venue change"
 - "Post-conference survey"
 
-**Configuration**:
-- **Name**: Template name (internal)
-- **Subject**: Email subject line
-- **Body**: Rich-text message content
-- **Active Status**: Enable/disable templates
+Configuration:
+- Name: Template name (internal)
+- Subject: Email subject line
+- Body: Rich-text message content
+- Active Status: Enable/disable templates
 
-**Dependencies**:
+Dependencies:
 - Used in: Messaging tab when sending bulk messages
 - Affects: Speed of communication, consistency
 
-**Best Practice**: Create templates for recurring messages to save time.
+Best Practice: Create templates for recurring messages to save time.
 
 ---
 
 ### Recipient Lists
 
-**Path**: Settings > Communication > Recipient Lists
+Path: Settings > Communication > Recipient Lists
 
-**What It Is**: Named groups of people for targeted bulk messaging.
+What It Is: Named groups of people for targeted bulk messaging.
 
-**Use Cases**:
+Use Cases:
 - "All Keynote Speakers"
 - "Gold Sponsors"
 - "Tutorial Attendees"
 - "Dietary Restrictions Group"
 
-**Configuration**:
-- **Name**: List name (e.g., "Gold Sponsors")
-- **Description**: List purpose
-- **Members**: Manual or query-based selection
+Configuration:
+- Name: List name (e.g., "Gold Sponsors")
+- Description: List purpose
+- Members: Manual or query-based selection
 
-**Dependencies**:
+Dependencies:
 - Used in: Messaging tab, discount code bulk generation
 - Affects: Targeting for communications and promotions
 
-**Best Practice**: Update lists regularly as registrations change.
+Best Practice: Update lists regularly as registrations change.
 
 ---
 
 ### Screen Overlays
 
-**Path**: Settings > Communication > Screen Overlays
+Path: Settings > Communication > Screen Overlays
 
-**What It Is**: Full-screen modal messages shown to portal users on login or schedule.
+What It Is: Full-screen modal messages shown to portal users on login or schedule.
 
-**Use Cases**:
+Use Cases:
 - Welcome message for first-time portal visitors
 - Important announcement (venue change, COVID policy)
 - Scheduled reminder (CFP deadline approaching)
 - Promotional message (early bird ending)
 
-**Configuration**:
-- **Title**: Overlay heading
-- **Body**: Rich-text content
-- **Image**: Optional image upload (JPEG, PNG, WebP, GIF)
-- **Trigger Type**: first_registration, scheduled, always
-- **Schedule Date**: When to show (for scheduled type)
-- **Animation**: Fade, slide, zoom effects
+Configuration:
+- Title: Overlay heading
+- Body: Rich-text content
+- Image: Optional image upload (JPEG, PNG, WebP, GIF)
+- Trigger Type: first_registration, scheduled, always
+- Schedule Date: When to show (for scheduled type)
+- Animation: Fade, slide, zoom effects
 
-**Trigger Behaviors**:
-- **first_registration**: Shown once per user (localStorage tracking)
-- **scheduled**: Shown on/after schedule date
-- **always**: Shown every portal login
+Trigger Behaviors:
+- first_registration: Shown once per user (localStorage tracking)
+- scheduled: Shown on/after schedule date
+- always: Shown every portal login
 
-**Image Handling**:
+Image Handling:
 - Max file size: 5MB
 - Allowed types: JPEG, PNG, WebP, GIF (no SVG for security)
 - Auto-strips EXIF metadata
 - Cache-busted URLs for updates
 
-**Dependencies**:
+Dependencies:
 - Used in: CFP Portal, Registration Portal
 - Affects: User experience, announcement visibility
 
-**Security Note**: SVG files blocked to prevent XSS attacks.
+Security Note: SVG files blocked to prevent XSS attacks.
 
-**Detailed Documentation**: See `.claude/docs/modules.md` > Screen Overlays for technical details.
+Detailed Documentation: See `.claude/docs/modules.md` > Screen Overlays for technical details.
 
 ---
 
@@ -11026,119 +11043,119 @@ Configure all financial and invoicing settings.
 
 ### Currency & Tax
 
-**Path**: Settings > Finance > Currency & Tax
+Path: Settings > Finance > Currency & Tax
 
-**What It Is**: Primary financial settings including currency, tax rates, and number formatting.
+What It Is: Primary financial settings including currency, tax rates, and number formatting.
 
-**Configuration**:
+Configuration:
 
-**Currency Settings**:
-- **Default Currency**: Conference currency (EUR, USD, GBP, etc.)
-- **Invoice Currency**: Optional separate currency for invoices
-- **Number Format**: Decimal separator, thousands separator, currency symbol position
+Currency Settings:
+- Default Currency: Conference currency (EUR, USD, GBP, etc.)
+- Invoice Currency: Optional separate currency for invoices
+- Number Format: Decimal separator, thousands separator, currency symbol position
 
-**VAT Settings**:
-- **Conference Country**: Determines domestic VAT rules
-- **VAT Rates by Country**: Override global VAT rates for specific countries
-- **VAT Decision Table**: 24 rules for VAT calculation (view-only)
+VAT Settings:
+- Conference Country: Determines domestic VAT rules
+- VAT Rates by Country: Override global VAT rates for specific countries
+- VAT Decision Table: 24 rules for VAT calculation (view-only)
 
-**Number Format Presets**:
-- **European (1.234,56 €)**: Dot thousands, comma decimal, symbol after
-- **US (€1,234.56)**: Comma thousands, dot decimal, symbol before
-- **Custom**: Define your own separators and symbol position
+Number Format Presets:
+- European (1.234,56 €): Dot thousands, comma decimal, symbol after
+- US (€1,234.56): Comma thousands, dot decimal, symbol before
+- Custom: Define your own separators and symbol position
 
-**Dependencies**:
-- **CRITICAL**: Must be set before creating any invoices
+Dependencies:
+- CRITICAL: Must be set before creating any invoices
 - Affects: All invoice calculations, VAT compliance, PDF generation
 - Used in: Invoice creation, booking pricing, registration
 
-**VAT Decision Factors**:
+VAT Decision Factors:
 1. Attendance type (in_person, virtual, hybrid_onsite, hybrid_online)
 2. Customer type (B2B with VAT number, B2C without)
 3. Customer location (domestic, EU, non-EU)
 
-**VAT Outcomes**:
+VAT Outcomes:
 - Charge VAT (yes/no)
 - VAT rate source (conference country, customer country, none)
 - Reverse charge (yes/no)
 - OSS applicable (yes/no)
 
-**Best Practice**:
+Best Practice:
 - Set conference country based on physical event location (or organizer location for virtual events)
 - Review VAT decision table to understand tax treatment
 - Consult tax advisor for special arrangements
 
-**Detailed Documentation**: See "VAT Settings" section in handbook for VAT Decision Table examples.
+Detailed Documentation: See "VAT Settings" section in handbook for VAT Decision Table examples.
 
 ---
 
 ### Invoice Numbering
 
-**Path**: Settings > Finance > Numbering
+Path: Settings > Finance > Numbering
 
-**Restriction**: Tenant Admin / Super Admin only
+Restriction: Tenant Admin / Super Admin only
 
-**What It Is**: Invoice number generation settings and sequence management.
+What It Is: Invoice number generation settings and sequence management.
 
-**Configuration**:
-- **Prefix**: Text before number (e.g., "INV-", "2024-")
-- **Number Sequence**: Starting number, current number
-- **Padding**: Zero-padding (e.g., 001 vs 1)
-- **Suffix**: Text after number (optional)
-- **Credit Note Prefix**: Separate prefix for credit notes (e.g., "CN-")
+Configuration:
+- Prefix: Text before number (e.g., "INV-", "2024-")
+- Number Sequence: Starting number, current number
+- Padding: Zero-padding (e.g., 001 vs 1)
+- Suffix: Text after number (optional)
+- Credit Note Prefix: Separate prefix for credit notes (e.g., "CN-")
 
-**Number Format Examples**:
+Number Format Examples:
 - `INV-2024-001`
 - `CONF24-00001`
 - `2024/001`
 
-**Sequence Management**:
+Sequence Management:
 - Automatically increments on invoice send
 - Cannot decrement (audit trail protection)
 - Separate sequences for invoices and credit notes
 
-**Dependencies**:
+Dependencies:
 - Affects: All sent invoices, credit notes
 - Used in: PDF generation, legal compliance
 
-**Best Practice**:
+Best Practice:
 - Use year in prefix for easy annual tracking
 - Use 3-4 digit padding for professional appearance
 - Never manually edit sequence after production use
 
-**Detailed Documentation**: See `.claude/docs/invoices.md` > Invoice Settings for number generation logic.
+Detailed Documentation: See `.claude/docs/invoices.md` > Invoice Settings for number generation logic.
 
 ---
 
 ### Invoice Company Data
 
-**Path**: Settings > Finance > Company Data
+Path: Settings > Finance > Company Data
 
-**What It Is**: Your organization's legal information printed on invoices.
+What It Is: Your organization's legal information printed on invoices.
 
-**Configuration**:
-- **Company Name**: Legal entity name
-- **Street Address**: Company address
-- **Postal Code**: ZIP/postal code
-- **City**: Company city
-- **Country**: Company country (dropdown)
-- **VAT Number**: Your company VAT registration number
-- **Tax Number**: Additional tax ID if required
-- **Registration Number**: Company registration number
-- **Email**: Company contact email
-- **Phone**: Company phone number
-- **Website**: Company website URL
+Configuration:
+- Company Name: Legal entity name
+- Street Address: Company address
+- Postal Code: ZIP/postal code
+- City: Company city
+- Country: Company country (dropdown)
+- VAT Number: Your company VAT registration number
+- Tax Number: Additional tax ID if required
+- Registration Number: Company registration number
+- Email: Company contact email
+- Phone: Company phone number
+- Website: Company website URL
 
-**Dependencies**:
-- **CRITICAL**: Required for legally valid invoices
+Dependencies:
+- CRITICAL: Required for legally valid invoices
 - Used in: Invoice PDF generation, credit notes
 - Affects: Legal compliance, professional appearance
 
-**Validation**:
+Validation:
 - VAT number validated using same 3-stage validation as customer VAT
 - Country must be selected from dropdown (ISO codes stored)
 
-**Best Practice**:
+Best Practice:
 - Use exact legal entity name as registered
 - Verify VAT number is correct (green checkmark)
 - Include all legally required information for your jurisdiction
@@ -11147,104 +11164,104 @@ Configure all financial and invoicing settings.
 
 ### Bank Accounts
 
-**Path**: Settings > Finance > Bank Accounts
+Path: Settings > Finance > Bank Accounts
 
-**What It Is**: Bank account details for bank transfer invoices.
+What It Is: Bank account details for bank transfer invoices.
 
-**Configuration**:
-- **Bank Name**: Financial institution name
-- **Account Holder**: Account holder name
-- **IBAN**: International Bank Account Number
-- **SWIFT/BIC**: Bank identifier code
-- **Account Number**: Local account number (if not using IBAN)
-- **Sort Code**: Bank sort code (UK)
-- **Routing Number**: Routing number (US)
-- **Currency**: Account currency
-- **Default Account**: Mark as default for new invoices
+Configuration:
+- Bank Name: Financial institution name
+- Account Holder: Account holder name
+- IBAN: International Bank Account Number
+- SWIFT/BIC: Bank identifier code
+- Account Number: Local account number (if not using IBAN)
+- Sort Code: Bank sort code (UK)
+- Routing Number: Routing number (US)
+- Currency: Account currency
+- Default Account: Mark as default for new invoices
 
-**Multiple Accounts**:
+Multiple Accounts:
 - Add multiple accounts for different currencies
 - Select account when creating bank transfer invoice
 
-**Dependencies**:
+Dependencies:
 - Used in: Bank transfer invoice PDF generation
 - Affects: Payment instructions on invoices
 
-**Validation**:
+Validation:
 - IBAN format validation (checksum verification)
 - SWIFT/BIC format validation
 
-**Best Practice**:
+Best Practice:
 - Verify IBAN and SWIFT codes are correct before sending invoices
 - Add separate accounts for each currency you invoice in
 - Mark most-used account as default
 
-**Security Note**: Bank details are visible on invoices sent to customers.
+Security Note: Bank details are visible on invoices sent to customers.
 
 ---
 
 ### Invoice Templates
 
-**Path**: Settings > Finance > Invoice Templates
+Path: Settings > Finance > Invoice Templates
 
-**What It Is**: PDF template configuration and customization for invoices.
+What It Is: PDF template configuration and customization for invoices.
 
-**Configuration**:
-- **Template Type**: bank_transfer, credit_card, credit_note
-- **Header Text**: Custom header text
-- **Footer Text**: Custom footer text (legal notices, payment terms)
-- **Logo**: Conference logo (configured in Details tab)
-- **Colors**: Primary color for accents
-- **Notes**: Default notes added to invoices
+Configuration:
+- Template Type: bank_transfer, credit_card, credit_note
+- Header Text: Custom header text
+- Footer Text: Custom footer text (legal notices, payment terms)
+- Logo: Conference logo (configured in Details tab)
+- Colors: Primary color for accents
+- Notes: Default notes added to invoices
 
-**Template Types**:
-- **bank_transfer**: Shows bank account details for wire transfer
-- **credit_card**: Shows Stripe payment link with QR code
-- **credit_note**: Negative invoice for cancellations
+Template Types:
+- bank_transfer: Shows bank account details for wire transfer
+- credit_card: Shows Stripe payment link with QR code
+- credit_note: Negative invoice for cancellations
 
-**PDF Features**:
+PDF Features:
 - Conference branding (logo, colors)
 - Line item table with VAT breakdown
 - Reverse charge notice (if applicable)
 - Payment instructions (bank details or payment link)
 - QR code for online payment (credit card only)
 
-**Dependencies**:
+Dependencies:
 - Requires: Company Data configured
 - Requires: Bank Accounts configured (for bank transfer)
 - Used in: PDF generation for all invoices
 - Affects: Invoice appearance, payment instructions
 
-**Best Practice**:
+Best Practice:
 - Add payment terms to footer (e.g., "Payment due within 30 days")
 - Include legal notices required in your jurisdiction
 - Test PDF generation before sending to customers
 
-**Detailed Documentation**: See `.claude/docs/invoices.md` > PDF Generation for full PDF feature list.
+Detailed Documentation: See `.claude/docs/invoices.md` > PDF Generation for full PDF feature list.
 
 ---
 
 ### ZUGFeRD Settings
 
-**Path**: Settings > Finance > ZUGFeRD
+Path: Settings > Finance > ZUGFeRD
 
-**What It Is**: ZUGFeRD/Factur-X electronic invoice format configuration (German/French standard).
+What It Is: ZUGFeRD/Factur-X electronic invoice format configuration (German/French standard).
 
-**What ZUGFeRD Is**:
+What ZUGFeRD Is:
 - Hybrid PDF/XML invoice format
 - PDF readable by humans + embedded XML for automated processing
 - Required by many German and French public sector organizations
 
-**Configuration**:
-- **Enable ZUGFeRD**: Turn on/off XML embedding
-- **Profile**: BASIC, COMFORT, EXTENDED
-- **Format**: ZUGFeRD (German) or Factur-X (French)
+Configuration:
+- Enable ZUGFeRD: Turn on/off XML embedding
+- Profile: BASIC, COMFORT, EXTENDED
+- Format: ZUGFeRD (German) or Factur-X (French)
 
-**Dependencies**:
+Dependencies:
 - Used in: Invoice PDF generation (embeds XML)
 - Affects: Invoice file size, e-invoicing compliance
 
-**Best Practice**:
+Best Practice:
 - Only enable if required by customers
 - Use BASIC profile unless customer specifies otherwise
 - Test with customer's accounting system before widespread use
@@ -11253,19 +11270,19 @@ Configure all financial and invoicing settings.
 
 ### Stripe Setup
 
-**Path**: Settings > Finance > Stripe Setup
+Path: Settings > Finance > Stripe Setup
 
-**Restriction**: Tenant Admin / Super Admin only
+Restriction: Tenant Admin / Super Admin only
 
-**What It Is**: Stripe payment integration for credit card invoices.
+What It Is: Stripe payment integration for credit card invoices.
 
-**Configuration**:
-- **Enable Stripe**: Turn on/off credit card payments
-- **Secret Key**: Stripe API secret key (encrypted)
-- **Publishable Key**: Stripe public key (for future client-side use)
-- **Webhook Secret**: Webhook signature verification secret
+Configuration:
+- Enable Stripe: Turn on/off credit card payments
+- Secret Key: Stripe API secret key (encrypted)
+- Publishable Key: Stripe public key (for future client-side use)
+- Webhook Secret: Webhook signature verification secret
 
-**Setup Process**:
+Setup Process:
 1. Create Stripe account at stripe.com
 2. Get API keys from Stripe Dashboard > Developers > API keys
 3. Configure webhook:
@@ -11274,7 +11291,7 @@ Configure all financial and invoicing settings.
    - Copy webhook secret
 4. Enter keys in SaaSConf Settings > Stripe Setup
 
-**Payment Flow**:
+Payment Flow:
 1. Create invoice with template_type = "credit_card"
 2. Send invoice → System creates Stripe Payment Link
 3. Customer receives email with "Pay Online" button
@@ -11282,55 +11299,55 @@ Configure all financial and invoicing settings.
 5. Customer pays → Stripe creates PaymentIntent
 6. Webhook notifies SaaSConf → Invoice status changes to "paid"
 
-**Dependencies**:
+Dependencies:
 - Requires: Valid Stripe account
 - Requires: Webhook configured and verified
 - Used in: Credit card invoice creation, payment processing, refunds
 - Affects: Online payment availability
 
-**Security**:
+Security:
 - Secret key encrypted at rest
 - Webhook signature verification prevents spoofing
 - PCI compliance handled by Stripe (no card data stored in SaaSConf)
 
-**Best Practice**:
+Best Practice:
 - Use live keys for production, test keys for testing
 - Monitor Stripe dashboard for payment issues
 - Test full payment flow before announcing credit card option
 
-**Detailed Documentation**: See `.claude/docs/invoices.md` > Stripe Payment Integration for complete setup guide.
+Detailed Documentation: See `.claude/docs/invoices.md` > Stripe Payment Integration for complete setup guide.
 
 ---
 
 ## General Conference Details
 
-**Path**: Details Tab (not in Settings Tab)
+Path: Details Tab (not in Settings Tab)
 
-**What It Is**: Core conference information and branding.
+What It Is: Core conference information and branding.
 
-**Configuration**:
-- **Name**: Conference title
-- **Slug**: URL-friendly identifier (used in portal URLs)
-- **Description**: Rich-text conference description
-- **Start Date**: Conference start date
-- **End Date**: Conference end date
-- **Country**: Conference country (affects VAT, timezone defaults)
-- **Timezone**: Conference timezone (for all date/time display)
-- **City**: Conference city
-- **Venue**: Venue name and address
-- **Website**: Conference website URL
-- **Contact Email**: Public contact email
-- **Conference Logo**: Branding image (PNG, JPEG, WebP)
+Configuration:
+- Name: Conference title
+- Slug: URL-friendly identifier (used in portal URLs)
+- Description: Rich-text conference description
+- Start Date: Conference start date
+- End Date: Conference end date
+- Country: Conference country (affects VAT, timezone defaults)
+- Timezone: Conference timezone (for all date/time display)
+- City: Conference city
+- Venue: Venue name and address
+- Website: Conference website URL
+- Contact Email: Public contact email
+- Conference Logo: Branding image (PNG, JPEG, WebP)
 
-**Portal URLs** (auto-generated from slug):
+Portal URLs (auto-generated from slug):
 - CFP Portal: `https://your-domain.com/{tenant}/portal/{slug}/cfp`
 - Registration Portal: `https://your-domain.com/{tenant}/portal/{slug}/register`
 
-**Dependencies**:
-- **CRITICAL**: Country and timezone affect all date/time display and VAT calculation
+Dependencies:
+- CRITICAL: Country and timezone affect all date/time display and VAT calculation
 - Affects: Portal access, invoice generation, email timestamps
 
-**Best Practice**:
+Best Practice:
 - Set country based on physical event location (or organizer location for virtual)
 - Verify timezone before creating sessions (changes affect all existing times)
 - Upload high-resolution logo (min 400px width for invoice PDFs)
@@ -11339,32 +11356,32 @@ Configure all financial and invoicing settings.
 
 ## Booking & Registration Settings
 
-**Path**: Booking Tab (not in Settings Tab)
+Path: Booking Tab (not in Settings Tab)
 
 Settings related to attendee registration pricing and packages.
 
 ### Booking Options
 
-**What It Is**: Individual registration items attendees can purchase.
+What It Is: Individual registration items attendees can purchase.
 
-**Use Cases**:
+Use Cases:
 - "2-Day Conference Pass"
 - "1-Day Pass (Day 1)"
 - "Virtual Access Only"
 - "Student Ticket"
 - "Networking Dinner Add-on"
 
-**Configuration**:
-- **Name**: Option name
-- **Description**: Rich-text details
-- **Is Active**: Enable/disable option
-- **Linked to Program Day**: Optional program day association
+Configuration:
+- Name: Option name
+- Description: Rich-text details
+- Is Active: Enable/disable option
+- Linked to Program Day: Optional program day association
 
-**Dependencies**:
+Dependencies:
 - Used in: Booking packages, pricing matrix, discount codes
 - Affects: Registration form, invoice line items
 
-**Program Day Linking**:
+Program Day Linking:
 - If linked to a day with separately_bookable sessions, attendee selects sessions during registration
 - Used for tutorial days, workshop selection
 
@@ -11372,20 +11389,20 @@ Settings related to attendee registration pricing and packages.
 
 ### Booking Packages
 
-**What It Is**: Bundles of booking options sold together.
+What It Is: Bundles of booking options sold together.
 
-**Use Cases**:
+Use Cases:
 - "Full Conference Pass" = 2-Day Pass + Networking Dinner
 - "Speaker Package" = Conference Pass + Hotel Voucher
 - "Premium Experience" = Conference + Tutorial + Dinner + T-shirt
 
-**Configuration**:
-- **Name**: Package name
-- **Description**: Rich-text details
-- **Included Options**: Which booking options are bundled
-- **Is Active**: Enable/disable package
+Configuration:
+- Name: Package name
+- Description: Rich-text details
+- Included Options: Which booking options are bundled
+- Is Active: Enable/disable package
 
-**Dependencies**:
+Dependencies:
 - Requires: Booking options defined first
 - Used in: Registration form package selection
 - Affects: Pricing calculation, invoice itemization
@@ -11394,21 +11411,21 @@ Settings related to attendee registration pricing and packages.
 
 ### Booking Periods
 
-**What It Is**: Time-based pricing periods (e.g., early bird, regular, late).
+What It Is: Time-based pricing periods (e.g., early bird, regular, late).
 
-**Use Cases**:
+Use Cases:
 - "Early Bird" (until Feb 1)
 - "Regular" (Feb 2 - Apr 30)
 - "Late Registration" (May 1 - Conference Start)
 - "On-Site Registration" (during conference)
 
-**Configuration**:
-- **Name**: Period name
-- **Start Date**: Period begins
-- **End Date**: Period ends
-- **Is Active**: Enable/disable period
+Configuration:
+- Name: Period name
+- Start Date: Period begins
+- End Date: Period ends
+- Is Active: Enable/disable period
 
-**Dependencies**:
+Dependencies:
 - Used in: Pricing matrix (period × option = price)
 - Affects: Registration form pricing display
 
@@ -11416,26 +11433,26 @@ Settings related to attendee registration pricing and packages.
 
 ### Pricing Matrix
 
-**What It Is**: Grid of prices for each booking option in each booking period.
+What It Is: Grid of prices for each booking option in each booking period.
 
-**Example**:
+Example:
 | Option | Early Bird | Regular | Late |
 |--------|-----------|---------|------|
 | 2-Day Pass | €200 | €250 | €300 |
 | 1-Day Pass | €120 | €150 | €180 |
 | Virtual | €50 | €75 | €100 |
 
-**Configuration**:
-- **Period (row)**: Booking period
-- **Option (column)**: Booking option
-- **Price (cell)**: Cost in conference currency
+Configuration:
+- Period (row): Booking period
+- Option (column): Booking option
+- Price (cell): Cost in conference currency
 
-**Dependencies**:
+Dependencies:
 - Requires: Booking options and periods defined
 - Used in: Registration form pricing, invoice calculation
 - Affects: Revenue, registration conversion
 
-**Best Practice**:
+Best Practice:
 - Create significant early bird discount to encourage early registration
 - Set regular period longest to capture most registrations
 - Late period should discourage last-minute registration (higher price)
@@ -11444,40 +11461,40 @@ Settings related to attendee registration pricing and packages.
 
 ### Discount Codes
 
-**What It Is**: Promotional codes for reduced pricing.
+What It Is: Promotional codes for reduced pricing.
 
-**Use Cases**:
+Use Cases:
 - Speaker discount code (50% off)
 - Sponsor attendee codes (free passes)
 - Student discount codes (30% off)
 - Referral program codes (€20 off)
 
-**Configuration**:
-- **Code**: Text code attendees enter (e.g., "SPEAKER2024")
-- **Description**: Internal description
-- **Discount Type**: Percentage or fixed amount
-- **Discount Value**: Percentage (25%) or amount (€50)
-- **Currency**: For fixed discounts
-- **Start/End Date**: Validity period
-- **Max Uses**: Usage limit (0 = unlimited)
-- **Is Active**: Enable/disable code
-- **Is Combinable**: Can be used with other discounts
+Configuration:
+- Code: Text code attendees enter (e.g., "SPEAKER2024")
+- Description: Internal description
+- Discount Type: Percentage or fixed amount
+- Discount Value: Percentage (25%) or amount (€50)
+- Currency: For fixed discounts
+- Start/End Date: Validity period
+- Max Uses: Usage limit (0 = unlimited)
+- Is Active: Enable/disable code
+- Is Combinable: Can be used with other discounts
 
-**Applicability**:
-- **Scoped to Booking Options**: Only applies to specific options (or all if empty)
-- **Scoped to Booking Periods**: Only valid in specific periods (or all if empty)
+Applicability:
+- Scoped to Booking Options: Only applies to specific options (or all if empty)
+- Scoped to Booking Periods: Only valid in specific periods (or all if empty)
 
-**Bulk Generation**:
+Bulk Generation:
 - Generate codes for multiple people at once
 - Sources: Sponsors, Speakers, Committee, Recipient Lists
 - Template variables: `[FirstName]`, `[LastName]`, `[Email]`, `[Counter]`
 - Example: `SPEAKER-[LastName]-[Counter]` → `SPEAKER-Smith-001`
 
-**Dependencies**:
+Dependencies:
 - Used in: Registration form checkout
 - Affects: Invoice totals, revenue tracking
 
-**Detailed Documentation**: See `.claude/docs/modules.md` > Booking Module — Discount Codes
+Detailed Documentation: See `.claude/docs/modules.md` > Booking Module — Discount Codes
 
 ---
 
@@ -11487,83 +11504,83 @@ Use this checklist when setting up a new conference. Items are ordered by depend
 
 ### Phase 1: Foundation (Before Any Content Creation)
 
-**General Details** (Details Tab):
+General Details (Details Tab):
 - [ ] Set conference name, slug, dates
 - [ ] Set conference country (affects VAT and timezone)
 - [ ] Set timezone (affects all date/time display)
 - [ ] Upload conference logo
 - [ ] Add venue details, website, contact email
 
-**Finance - Company Data** (Settings > Finance):
+Finance - Company Data (Settings > Finance):
 - [ ] Enter legal company name
 - [ ] Add complete company address
 - [ ] Add company VAT number (verify with green checkmark)
 - [ ] Add tax number, registration number if required
 - [ ] Add company contact email, phone, website
 
-**Finance - Currency & Tax** (Settings > Finance):
+Finance - Currency & Tax (Settings > Finance):
 - [ ] Set default conference currency
 - [ ] Configure number format (EU vs US style)
 - [ ] Review VAT decision table
 - [ ] Override VAT rates if needed (consult tax advisor)
 
-**Email Settings** (Settings > Communication):
+Email Settings (Settings > Communication):
 - [ ] Configure SMTP server (host, port, username, password)
 - [ ] Set "From Email" and "From Name"
 - [ ] Test email sending with test recipient
 
 ### Phase 2: Structure (Before Building Program)
 
-**People & Roles** (Settings > People & Roles):
+People & Roles (Settings > People & Roles):
 - [ ] Add pronoun options (minimum: he/him, she/her, they/them, prefer not to say)
 - [ ] Create committee roles if using CFP
 - [ ] Create volunteer tasks if using volunteers module
 
-**Conference Setup** (Settings > Conference Setup):
+Conference Setup (Settings > Conference Setup):
 - [ ] Create location types matching venue structure
 - [ ] Create session types with durations and colors
 - [ ] Create sponsor packages with pricing and benefits
 
-**CFP & Reviews** (Settings > CFP & Reviews) — If using CFP:
+CFP & Reviews (Settings > CFP & Reviews) — If using CFP:
 - [ ] Design paper form (add custom fields)
 - [ ] Create score scales (e.g., 1-5)
 - [ ] Create review criteria linked to score scales
 
 ### Phase 3: Finance & Invoicing (Before Sending First Invoice)
 
-**Finance - Numbering** (Settings > Finance):
+Finance - Numbering (Settings > Finance):
 - [ ] Set invoice number prefix (e.g., "INV-2024-")
 - [ ] Set credit note prefix (e.g., "CN-2024-")
 - [ ] Configure zero-padding (e.g., 001 vs 1)
 - [ ] Set starting sequence number
 
-**Finance - Bank Accounts** (Settings > Finance):
+Finance - Bank Accounts (Settings > Finance):
 - [ ] Add bank account details (IBAN, SWIFT, account holder)
 - [ ] Verify IBAN and SWIFT codes (validation checks)
 - [ ] Mark default account
 - [ ] Add additional accounts for other currencies if needed
 
-**Finance - Invoice Templates** (Settings > Finance):
+Finance - Invoice Templates (Settings > Finance):
 - [ ] Customize invoice header and footer text
 - [ ] Add payment terms to footer
 - [ ] Add legal notices required in your jurisdiction
 - [ ] Test PDF generation
 
-**Finance - Stripe Setup** (Settings > Finance) — If using credit card payments:
+Finance - Stripe Setup (Settings > Finance) — If using credit card payments:
 - [ ] Create Stripe account
 - [ ] Get API keys (secret, publishable)
 - [ ] Configure webhook in Stripe dashboard
 - [ ] Enter keys in SaaSConf
 - [ ] Test full payment flow
 
-**Finance - ZUGFeRD** (Settings > Finance) — Only if required:
+Finance - ZUGFeRD (Settings > Finance) — Only if required:
 - [ ] Enable ZUGFeRD if customers require it
 - [ ] Select profile (BASIC recommended)
 - [ ] Test with customer's accounting system
 
 ### Phase 4: Communication (Before Launch)
 
-**Communication - Email Templates** (Settings > Communication):
+Communication - Email Templates (Settings > Communication):
 - [ ] Customize registration confirmation template
 - [ ] Customize invoice send template
 - [ ] Customize credit note template
@@ -11571,41 +11588,41 @@ Use this checklist when setting up a new conference. Items are ordered by depend
 - [ ] Customize CFP acceptance/rejection templates (if using CFP)
 - [ ] Test all templates with sample data
 
-**Communication - Messaging** (Settings > Communication):
+Communication - Messaging (Settings > Communication):
 - [ ] Enable messaging if using bulk communications
 - [ ] Set reply-to email to monitored inbox
 - [ ] Set sender name
 
-**Communication - Message Templates** (Settings > Communication):
+Communication - Message Templates (Settings > Communication):
 - [ ] Create welcome message template
 - [ ] Create program update template
 - [ ] Create post-conference survey template
 
-**Communication - Screen Overlays** (Settings > Communication):
+Communication - Screen Overlays (Settings > Communication):
 - [ ] Create welcome overlay for first portal visit
 - [ ] Create CFP deadline reminder overlay (if using CFP)
 - [ ] Upload images and test animations
 
 ### Phase 5: Booking & Registration (Before Registration Opens)
 
-**Booking Options** (Booking Tab):
+Booking Options (Booking Tab):
 - [ ] Create all ticket types (2-day, 1-day, virtual, etc.)
 - [ ] Add rich-text descriptions
 - [ ] Link to program days if using session selection
 - [ ] Activate all options
 
-**Booking Periods** (Booking Tab):
+Booking Periods (Booking Tab):
 - [ ] Create early bird period with dates
 - [ ] Create regular period with dates
 - [ ] Create late period with dates (optional)
 - [ ] Verify dates don't overlap
 
-**Pricing Matrix** (Booking Tab):
+Pricing Matrix (Booking Tab):
 - [ ] Set price for each option in each period
 - [ ] Verify early bird discounts are significant (20-30%)
 - [ ] Test pricing display on registration form
 
-**Discount Codes** (Booking Tab):
+Discount Codes (Booking Tab):
 - [ ] Create speaker discount codes
 - [ ] Create sponsor discount codes
 - [ ] Generate bulk codes if needed
@@ -11613,7 +11630,7 @@ Use this checklist when setting up a new conference. Items are ordered by depend
 
 ### Phase 6: Final Testing (Before Public Launch)
 
-**End-to-End Testing**:
+End-to-End Testing:
 - [ ] Complete full registration as attendee
 - [ ] Receive and verify registration confirmation email
 - [ ] Verify invoice generated correctly with all company data
@@ -11622,7 +11639,7 @@ Use this checklist when setting up a new conference. Items are ordered by depend
 - [ ] Test portal login and screen overlay display
 - [ ] Test messaging to attendees
 
-**Launch Checklist**:
+Launch Checklist:
 - [ ] All settings reviewed and saved
 - [ ] All templates tested with real data
 - [ ] All integrations working (email, Stripe)
@@ -11637,9 +11654,9 @@ Pre-configured settings recommendations for common conference types.
 
 ### Academic Conference
 
-**Recommended Settings**:
+Recommended Settings:
 
-**Session Types**:
+Session Types:
 - Keynote (90 min)
 - Full Paper (30 min)
 - Short Paper (15 min)
@@ -11647,18 +11664,18 @@ Pre-configured settings recommendations for common conference types.
 - Doctoral Consortium (4 hours)
 - Panel Discussion (60 min)
 
-**Booking Options**:
+Booking Options:
 - Full Conference Pass (3 days)
 - Single Day Pass
 - Student Pass (50% discount)
 - Virtual Access Only
 
-**Booking Periods**:
+Booking Periods:
 - Early Bird (6 months before): 30% discount
 - Regular (3 months before): Standard price
 - Late (1 month before): 15% surcharge
 
-**CFP Settings**:
+CFP Settings:
 - Score Scale: 1-5 (Strong Accept to Strong Reject)
 - Review Criteria:
   - Technical Quality (weight: 30%)
@@ -11666,9 +11683,9 @@ Pre-configured settings recommendations for common conference types.
   - Originality (weight: 25%)
   - Presentation Clarity (weight: 20%)
 
-**Pronouns**: Include academic titles option
+Pronouns: Include academic titles option
 
-**Volunteer Tasks**:
+Volunteer Tasks:
 - Session Chair
 - Registration Desk
 - Poster Setup
@@ -11678,9 +11695,9 @@ Pre-configured settings recommendations for common conference types.
 
 ### Tech/Professional Conference
 
-**Recommended Settings**:
+Recommended Settings:
 
-**Session Types**:
+Session Types:
 - Keynote (60 min)
 - Talk (45 min)
 - Workshop (3 hours)
@@ -11688,35 +11705,35 @@ Pre-configured settings recommendations for common conference types.
 - Panel (60 min)
 - Networking Session (90 min)
 
-**Booking Options**:
+Booking Options:
 - 2-Day Conference Pass
 - 1-Day Pass (specify day)
 - Workshop Add-on
 - Virtual Ticket
 - Networking Dinner Add-on
 
-**Booking Packages**:
+Booking Packages:
 - Premium Experience = Conference + Workshop + Dinner
 - Virtual Plus = Virtual + Workshop Recording Access
 
-**Booking Periods**:
+Booking Periods:
 - Super Early Bird (8 months before): 40% discount
 - Early Bird (4 months before): 25% discount
 - Regular (1 month before): Standard price
 - Last Minute (1 week before): 20% surcharge
 
-**Discount Codes**:
+Discount Codes:
 - Speaker code (100% off conference, 50% off dinner)
 - Sponsor attendee codes (free passes based on package tier)
 - Referral code (€50 off for referrer and referee)
 
-**Sponsor Packages**:
+Sponsor Packages:
 - Platinum (€15,000): 10 free passes, booth, keynote slot
 - Gold (€10,000): 5 free passes, booth
 - Silver (€5,000): 2 free passes, logo on website
 - Bronze (€2,500): Logo on website
 
-**Volunteer Tasks**:
+Volunteer Tasks:
 - Registration
 - Speaker Support
 - Booth Setup
@@ -11726,37 +11743,37 @@ Pre-configured settings recommendations for common conference types.
 
 ### Virtual Conference
 
-**Recommended Settings**:
+Recommended Settings:
 
-**Session Types**:
+Session Types:
 - Keynote (60 min)
 - Talk (30 min)
 - Virtual Workshop (90 min)
 - Q&A Session (20 min)
 - Virtual Networking (30 min)
 
-**Booking Options**:
+Booking Options:
 - All-Access Pass
 - Single-Day Access
 - On-Demand Only (recordings)
 
-**Booking Periods**:
+Booking Periods:
 - Early Bird (3 months before): 30% discount
 - Regular (1 month before): Standard price
 - Late (1 week before): 10% surcharge
 
-**Location Types**:
+Location Types:
 - Zoom Room A, B, C
 - YouTube Live
 - Discord Channel
 
-**VAT Configuration**:
-- **CRITICAL**: Virtual conferences trigger different VAT rules
+VAT Configuration:
+- CRITICAL: Virtual conferences trigger different VAT rules
 - Attendance type: "virtual"
 - B2B customers in EU: Reverse charge (require VAT number)
 - B2C customers in EU: OSS rate (customer country VAT)
 
-**Email Templates**:
+Email Templates:
 - Add platform links (Zoom, Discord, etc.) to all confirmations
 - Include tech support contact for platform issues
 
@@ -11764,41 +11781,41 @@ Pre-configured settings recommendations for common conference types.
 
 ### Hybrid Conference
 
-**Recommended Settings**:
+Recommended Settings:
 
-**Session Types**:
+Session Types:
 - Keynote (90 min) [hybrid]
 - In-Person Talk (30 min)
 - Virtual Talk (30 min)
 - Hybrid Panel (60 min)
 - In-Person Workshop (4 hours)
 
-**Booking Options**:
+Booking Options:
 - In-Person Pass (2 days)
 - Virtual Pass (2 days)
 - Hybrid Pass (in-person + virtual)
 - In-Person + Workshop
 - Virtual + Workshop Recording
 
-**Location Types**:
+Location Types:
 - Main Hall (300 capacity) [hybrid setup]
 - Room A (50 capacity)
 - Room B (50 capacity)
 - Zoom Room 1 (virtual only)
 - Zoom Room 2 (virtual only)
 
-**Booking Periods**:
+Booking Periods:
 - Early Bird (5 months before): 35% discount
 - Regular (2 months before): Standard price
 - Late (2 weeks before): 15% surcharge
 
-**VAT Configuration**:
+VAT Configuration:
 - Attendance type:
   - "hybrid_onsite" for in-person bookings
   - "hybrid_online" for virtual bookings
 - B2B virtual attendees in EU: Require VAT number (reverse charge)
 
-**Special Considerations**:
+Special Considerations:
 - Separate pricing for in-person vs virtual (virtual 40-50% of in-person)
 - Include technology fee in in-person price (cameras, streaming)
 - Workshop pricing higher for in-person (venue, catering costs)
@@ -11809,84 +11826,84 @@ Pre-configured settings recommendations for common conference types.
 
 ### Configuration Order
 
-**Always configure in this order**:
+Always configure in this order:
 
-1. **General Details** (country, timezone, currency) — Affects everything
-2. **Company Data** (legal info, VAT number) — Required for invoices
-3. **Email Settings** (SMTP) — Required for communications
-4. **People & Roles** (pronouns, roles) — Required before user data
-5. **Structure** (session types, locations) — Required before program
-6. **Finance** (numbering, bank accounts, templates) — Required before first invoice
-7. **Communication** (templates, overlays) — Required before launch
-8. **Booking** (options, periods, pricing) — Required before registration
+1. General Details (country, timezone, currency) — Affects everything
+2. Company Data (legal info, VAT number) — Required for invoices
+3. Email Settings (SMTP) — Required for communications
+4. People & Roles (pronouns, roles) — Required before user data
+5. Structure (session types, locations) — Required before program
+6. Finance (numbering, bank accounts, templates) — Required before first invoice
+7. Communication (templates, overlays) — Required before launch
+8. Booking (options, periods, pricing) — Required before registration
 
-**Why**: Later settings depend on earlier ones. Setting currency after creating invoices causes inconsistency.
+Why: Later settings depend on earlier ones. Setting currency after creating invoices causes inconsistency.
 
 ---
 
 ### Settings That Affect Other Features
 
-**Country** (Details Tab):
+Country (Details Tab):
 - Affects: VAT calculation, timezone defaults, number format presets
 - Impact: Changing after invoices exist invalidates VAT calculations
-- **Rule**: Set once and don't change
+- Rule: Set once and don't change
 
-**Timezone** (Details Tab):
+Timezone (Details Tab):
 - Affects: All date/time display, session schedules, deadline reminders
 - Impact: Changing after sessions exist shifts all times visually
-- **Rule**: Set once based on venue location, don't change
+- Rule: Set once based on venue location, don't change
 
-**Currency** (Finance Settings):
+Currency (Finance Settings):
 - Affects: Invoice calculations, pricing display, Stripe integration
 - Impact: Changing after invoices exist creates inconsistency
-- **Rule**: Set once and don't change
+- Rule: Set once and don't change
 
-**Pronoun Options** (People & Roles):
+Pronoun Options (People & Roles):
 - Affects: Registration forms, Replace Attendee modal, CFP applications
 - Impact: Adding options is safe, deleting options breaks existing data
-- **Rule**: Add early, rarely delete
+- Rule: Add early, rarely delete
 
-**Session Types** (Conference Setup):
+Session Types (Conference Setup):
 - Affects: Program grid layout, booking logic (tutorials)
 - Impact: Changing "Is Tutorial" flag after registrations breaks booking rules
-- **Rule**: Define completely before sessions, don't change flags
+- Rule: Define completely before sessions, don't change flags
 
-**Score Scales** (CFP & Reviews):
+Score Scales (CFP & Reviews):
 - Affects: Review score calculations, acceptance decisions
 - Impact: Changing scale after reviews exist invalidates comparisons
-- **Rule**: Define before reviews start, don't change
+- Rule: Define before reviews start, don't change
 
 ---
 
 ### Settings Validation
 
-**Before Launch, Verify**:
+Before Launch, Verify:
 
-**Finance Settings**:
+Finance Settings:
 - [ ] Company VAT number shows green checkmark (valid)
 - [ ] Bank IBAN shows green checkmark (valid format)
 - [ ] Invoice number sequence starts at correct number
 - [ ] Test invoice PDF renders correctly with all company data
 - [ ] Stripe test payment completes successfully
 
-**Email Settings**:
+Email Settings:
 - [ ] Test email sends successfully
 - [ ] Email arrives in inbox (not spam)
 - [ ] From name and email appear correctly
 - [ ] Reply-to email is monitored inbox
 
-**Communication Settings**:
+Communication Settings:
 - [ ] All email templates render correctly with placeholders
 - [ ] Screen overlays display properly in portal
 - [ ] Message templates have correct formatting
 
-**Booking Settings**:
+Booking Settings:
 - [ ] Pricing matrix has no empty cells
 - [ ] Early bird period ends before regular starts
 - [ ] Discount codes validate correctly in checkout
 - [ ] Session selection works for tutorial days
 
-**CFP Settings** (if using):
+CFP Settings (if using):
 - [ ] Paper form includes all required fields
 - [ ] Review criteria total to 100% weight
 - [ ] Score scales match expected range
@@ -11897,150 +11914,150 @@ Pre-configured settings recommendations for common conference types.
 
 ### Mistake 1: Setting Currency After Creating Invoices
 
-**Problem**: Invoices created before currency setting use system default, creating mixed-currency invoice list.
+Problem: Invoices created before currency setting use system default, creating mixed-currency invoice list.
 
-**Symptom**: Some invoices show EUR, others show USD.
+Symptom: Some invoices show EUR, others show USD.
 
-**Fix**:
+Fix:
 - Set currency in Finance Settings before creating first invoice
 - If already happened: Manually update currency on draft invoices, recreate sent invoices
 
-**Prevention**: Follow configuration checklist order (currency in Phase 1).
+Prevention: Follow configuration checklist order (currency in Phase 1).
 
 ---
 
 ### Mistake 2: Changing Country After Program Built
 
-**Problem**: VAT calculations depend on conference country. Changing invalidates all existing invoice VAT.
+Problem: VAT calculations depend on conference country. Changing invalidates all existing invoice VAT.
 
-**Symptom**: Old invoices have wrong VAT rate, new invoices have different rate.
+Symptom: Old invoices have wrong VAT rate, new invoices have different rate.
 
-**Fix**:
+Fix:
 - Recalculate VAT on all draft invoices
 - Sent invoices cannot be updated (cancel and recreate if needed)
 
-**Prevention**: Never change country after creating invoices or registrations.
+Prevention: Never change country after creating invoices or registrations.
 
 ---
 
 ### Mistake 3: Not Configuring Pronouns Before Registration
 
-**Problem**: Replace Attendee modal has empty pronoun dropdown if not configured.
+Problem: Replace Attendee modal has empty pronoun dropdown if not configured.
 
-**Symptom**: Cannot complete Replace Attendee action, admin sees empty dropdown.
+Symptom: Cannot complete Replace Attendee action, admin sees empty dropdown.
 
-**Fix**:
+Fix:
 - Go to Settings > People & Roles > Pronoun Options
 - Add options (he/him, she/her, they/them, prefer not to say)
 - Retry Replace Attendee
 
-**Prevention**: Add pronouns in Phase 1 (before any registrations).
+Prevention: Add pronouns in Phase 1 (before any registrations).
 
 ---
 
 ### Mistake 4: Using Weak Early Bird Discounts
 
-**Problem**: Early bird discount too small (5-10%) doesn't incentivize early registration.
+Problem: Early bird discount too small (5-10%) doesn't incentivize early registration.
 
-**Symptom**: Most registrations happen in regular period, cash flow issues.
+Symptom: Most registrations happen in regular period, cash flow issues.
 
-**Fix**:
+Fix:
 - Increase early bird discount to 25-35%
 - Extend early bird period to capture more registrations
 - Communicate early bird deadline prominently
 
-**Prevention**: Use 30% discount as starting point, A/B test if needed.
+Prevention: Use 30% discount as starting point, A/B test if needed.
 
 ---
 
 ### Mistake 5: Not Testing Email Before Launch
 
-**Problem**: SMTP settings incorrect, no emails sent after registration opens.
+Problem: SMTP settings incorrect, no emails sent after registration opens.
 
-**Symptom**: Attendees don't receive confirmation emails, complaints increase.
+Symptom: Attendees don't receive confirmation emails, complaints increase.
 
-**Fix**:
+Fix:
 - Verify SMTP settings (host, port, username, password)
 - Test sending to multiple email providers (Gmail, Outlook, Yahoo)
 - Check spam folder
 - Review email server logs for errors
 
-**Prevention**: Send test emails during Phase 1 (Email Settings configuration).
+Prevention: Send test emails during Phase 1 (Email Settings configuration).
 
 ---
 
 ### Mistake 6: Missing Company Data Fields
 
-**Problem**: Required legal fields (VAT number, registration number) not filled.
+Problem: Required legal fields (VAT number, registration number) not filled.
 
-**Symptom**: Invoices legally invalid, customers cannot process for payment.
+Symptom: Invoices legally invalid, customers cannot process for payment.
 
-**Fix**:
+Fix:
 - Complete all company data fields in Finance > Company Data
 - Verify VAT number with green checkmark
 - Regenerate PDFs for sent invoices (if possible)
 
-**Prevention**: Complete company data in Phase 1, verify all required fields for jurisdiction.
+Prevention: Complete company data in Phase 1, verify all required fields for jurisdiction.
 
 ---
 
 ### Mistake 7: Forgetting to Configure Webhook for Stripe
 
-**Problem**: Stripe payments succeed but invoice status stays "sent" instead of "paid".
+Problem: Stripe payments succeed but invoice status stays "sent" instead of "paid".
 
-**Symptom**: Manual reconciliation required, payment tracking broken.
+Symptom: Manual reconciliation required, payment tracking broken.
 
-**Fix**:
+Fix:
 - Configure webhook in Stripe dashboard
 - URL: `https://your-domain.com/api/v1/stripe/webhook`
 - Events: payment_intent.succeeded, payment_intent.payment_failed, charge.succeeded
 - Enter webhook secret in SaaSConf
 
-**Prevention**: Follow Stripe Setup checklist in Phase 3 completely.
+Prevention: Follow Stripe Setup checklist in Phase 3 completely.
 
 ---
 
 ### Mistake 8: Overlapping Booking Periods
 
-**Problem**: Early bird and regular periods overlap (early bird ends Mar 1, regular starts Feb 28).
+Problem: Early bird and regular periods overlap (early bird ends Mar 1, regular starts Feb 28).
 
-**Symptom**: System doesn't know which price to show on Feb 28-Mar 1.
+Symptom: System doesn't know which price to show on Feb 28-Mar 1.
 
-**Fix**:
+Fix:
 - Adjust period dates so they don't overlap
 - Early bird ends: Feb 28 23:59
 - Regular starts: Mar 1 00:00
 
-**Prevention**: Configure periods sequentially with no gaps or overlaps.
+Prevention: Configure periods sequentially with no gaps or overlaps.
 
 ---
 
 ### Mistake 9: Empty Pricing Matrix Cells
 
-**Problem**: Created booking option but forgot to set price for some periods.
+Problem: Created booking option but forgot to set price for some periods.
 
-**Symptom**: Registration form shows "Price not set" or blank, cannot complete checkout.
+Symptom: Registration form shows "Price not set" or blank, cannot complete checkout.
 
-**Fix**:
+Fix:
 - Go to Booking Tab > Pricing Matrix
 - Fill in all cells (every option × every period)
 - Verify no empty cells remain
 
-**Prevention**: Complete entire pricing matrix immediately after creating options/periods.
+Prevention: Complete entire pricing matrix immediately after creating options/periods.
 
 ---
 
 ### Mistake 10: Changing Session Type "Is Tutorial" After Registrations
 
-**Problem**: Session type flagged as tutorial after attendees already registered for multiple "tutorial" sessions.
+Problem: Session type flagged as tutorial after attendees already registered for multiple "tutorial" sessions.
 
-**Symptom**: Booking validation breaks, system prevents new registrations.
+Symptom: Booking validation breaks, system prevents new registrations.
 
-**Fix**:
+Fix:
 - Revert "Is Tutorial" flag to original value
 - If tutorial limit needed, create new session type for future sessions
 
-**Prevention**: Define all session types with correct flags before building program.
+Prevention: Define all session types with correct flags before building program.
 
 ---
 
@@ -12050,33 +12067,33 @@ Settings documentation is distributed across multiple resources. Use this guide 
 
 ### Where to Find Detailed Documentation
 
-**Invoice Settings**:
-- **Numbering, Company Data, Bank Accounts, Templates, ZUGFeRD**: See `.claude/docs/invoices.md` > Invoice Settings
-- **PDF Generation**: See `.claude/docs/invoices.md` > PDF Generation
-- **VAT Configuration**: See "VAT Settings" section in handbook
+Invoice Settings:
+- Numbering, Company Data, Bank Accounts, Templates, ZUGFeRD: See `.claude/docs/invoices.md` > Invoice Settings
+- PDF Generation: See `.claude/docs/invoices.md` > PDF Generation
+- VAT Configuration: See "VAT Settings" section in handbook
 
-**Stripe Integration**:
-- **Setup, Payment Flow, Webhooks, Refunds**: See `.claude/docs/invoices.md` > Stripe Payment Integration
+Stripe Integration:
+- Setup, Payment Flow, Webhooks, Refunds: See `.claude/docs/invoices.md` > Stripe Payment Integration
 
-**Email System**:
-- **Templates, Placeholders, Email Sending**: See `.claude/docs/invoices.md` > Email System
-- **SMTP Configuration**: See `.claude/docs/devops.md` > Email Configuration
+Email System:
+- Templates, Placeholders, Email Sending: See `.claude/docs/invoices.md` > Email System
+- SMTP Configuration: See `.claude/docs/devops.md` > Email Configuration
 
-**Booking Settings**:
-- **Discount Codes, Bulk Generation**: See `.claude/docs/modules.md` > Booking Module — Discount Codes
-- **Session Selection in Registration**: See `.claude/docs/modules.md` > Registration Module > Session Selection
+Booking Settings:
+- Discount Codes, Bulk Generation: See `.claude/docs/modules.md` > Booking Module — Discount Codes
+- Session Selection in Registration: See `.claude/docs/modules.md` > Registration Module > Session Selection
 
-**Communication Settings**:
-- **Screen Overlays, Image Upload, Trigger Types**: See `.claude/docs/modules.md` > Screen Overlays
+Communication Settings:
+- Screen Overlays, Image Upload, Trigger Types: See `.claude/docs/modules.md` > Screen Overlays
 
-**Volunteer Settings**:
-- **Volunteer Tasks (Roles), Task Assignment, Scheduling**: See `.claude/docs/modules.md` > Volunteer Task System
+Volunteer Settings:
+- Volunteer Tasks (Roles), Task Assignment, Scheduling: See `.claude/docs/modules.md` > Volunteer Task System
 
-**CFP Settings**:
-- **Paper Form Builder, Score Scales, Review Criteria**: See `.claude/docs/modules.md` (CFP section)
+CFP Settings:
+- Paper Form Builder, Score Scales, Review Criteria: See `.claude/docs/modules.md` (CFP section)
 
-**Security & Validation**:
-- **VAT Number Validation, Country Fields, Field Validation**: See `.claude/docs/security.md`
+Security & Validation:
+- VAT Number Validation, Country Fields, Field Validation: See `.claude/docs/security.md`
 
 ---
 
@@ -12084,23 +12101,23 @@ Settings documentation is distributed across multiple resources. Use this guide 
 
 The Settings section provides comprehensive control over your conference configuration. By following the configuration checklist, avoiding common mistakes, and consulting the detailed documentation for specific areas, you can set up a professional, compliant conference platform.
 
-**Key Takeaways**:
+Key Takeaways:
 
-1. **Order Matters**: Configure general settings (country, currency, timezone) first, structure settings second, finance third.
+1. Order Matters: Configure general settings (country, currency, timezone) first, structure settings second, finance third.
 
-2. **Test Everything**: Verify email sending, payment processing, VAT calculations before launch.
+2. Test Everything: Verify email sending, payment processing, VAT calculations before launch.
 
-3. **Don't Change Core Settings**: Country, timezone, currency should be set once and never changed.
+3. Don't Change Core Settings: Country, timezone, currency should be set once and never changed.
 
-4. **Use Templates**: Start with a conference type template (academic, tech, virtual, hybrid) and customize.
+4. Use Templates: Start with a conference type template (academic, tech, virtual, hybrid) and customize.
 
-5. **Consult Documentation**: Settings interact with many features — read detailed docs for critical areas (invoices, VAT, Stripe).
+5. Consult Documentation: Settings interact with many features — read detailed docs for critical areas (invoices, VAT, Stripe).
 
-6. **Plan Ahead**: Configure pronouns, templates, and structures before data creation (registrations, sessions, reviews).
+6. Plan Ahead: Configure pronouns, templates, and structures before data creation (registrations, sessions, reviews).
 
 ---
 
-**Next Steps**: After completing settings configuration, proceed to building your conference content (program, sessions, sponsors, CFP) using the structures you've defined.
+Next Steps: After completing settings configuration, proceed to building your conference content (program, sessions, sponsors, CFP) using the structures you've defined.
 
 
 ---
@@ -12108,7 +12125,7 @@ The Settings section provides comprehensive control over your conference configu
 
 # SaaSConf Best Practices Guide
 
-**Comprehensive operational guidance for conference organizers**
+Comprehensive operational guidance for conference organizers
 
 This guide synthesizes best practices from all SaaSConf modules to help you run successful conferences. Use this as your operational playbook.
 
@@ -12134,14 +12151,14 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 
 ### Timeline: 6 Months Out
 
-**Conference Setup**
+Conference Setup
 - [ ] Create conference in system with basic details (name, dates, location, attendance type)
 - [ ] Configure conference country for VAT calculations
 - [ ] Set conference currency (EUR, USD, GBP, etc.)
 - [ ] Upload conference logo and branding assets
 - [ ] Set timezone for all date/time displays
 
-**Financial Configuration**
+Financial Configuration
 - [ ] Create booking periods (Early Bird, Regular, Late Registration)
   - Early Bird: 6-4 months before event
   - Regular: 4-1 months before event
@@ -12157,7 +12174,7 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 - [ ] Set up invoice templates and numbering format
 - [ ] Configure payment methods (bank transfer, credit card via Stripe)
 
-**CFP Setup**
+CFP Setup
 - [ ] Create CFP form schema with required fields:
   - Talk title, abstract, description
   - Track/topic selection
@@ -12168,14 +12185,14 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 - [ ] Configure review criteria and scoring system
 - [ ] Create review committee (if using peer review)
 
-**Content Planning**
+Content Planning
 - [ ] Define program days and time slots
 - [ ] Create tracks (if multi-track conference)
 - [ ] Define session types (keynote, talk, lightning talk, panel, workshop, tutorial, social)
 - [ ] Create locations/rooms for sessions
 - [ ] Plan special events (keynotes, networking, dinners)
 
-**Team Setup**
+Team Setup
 - [ ] Add tenant admins with appropriate permissions
 - [ ] Create team member accounts for specific roles:
   - Finance team (invoice management)
@@ -12186,7 +12203,7 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 
 ### Timeline: 3 Months Out
 
-**Registration Launch**
+Registration Launch
 - [ ] Test registration flow end-to-end (create test registrations)
 - [ ] Verify email templates for registration confirmation
 - [ ] Set up discount codes:
@@ -12198,7 +12215,7 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 - [ ] Enable self-registration portal
 - [ ] Announce registration opening
 
-**CFP Launch**
+CFP Launch
 - [ ] Announce CFP opening via email and social media
 - [ ] Create screen overlay for CFP announcement (trigger: first login)
 - [ ] Set up automated CFP status emails:
@@ -12207,7 +12224,7 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
   - Acceptance/rejection notifications
 - [ ] Recruit reviewers and assign to committee
 
-**Sponsor Outreach**
+Sponsor Outreach
 - [ ] Create sponsor packages (Gold, Silver, Bronze, etc.)
 - [ ] Generate sponsor contract templates
 - [ ] Begin sponsor outreach campaign
@@ -12215,7 +12232,7 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 
 ### Timeline: 1 Month Out
 
-**CFP Closure & Program Building**
+CFP Closure & Program Building
 - [ ] Close CFP submissions
 - [ ] Complete all reviews (assign reviewers if needed)
 - [ ] Make acceptance/rejection decisions
@@ -12225,20 +12242,20 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 - [ ] Assign sessions to time slots and tracks
 - [ ] Mark sessions as separately bookable (if attendees choose sessions)
 
-**Registration Management**
+Registration Management
 - [ ] Review registration numbers by ticket type
 - [ ] Send reminder emails to incomplete registrations
 - [ ] Follow up on unpaid invoices (overdue status)
 - [ ] Close Early Bird period, activate Regular pricing
 - [ ] Process group registrations and special requests
 
-**Sponsor Management**
+Sponsor Management
 - [ ] Finalize sponsor contracts (send for signature)
 - [ ] Send sponsor invoices
 - [ ] Track sponsor payments
 - [ ] Coordinate sponsor logistics (booth setup, materials)
 
-**Communication Prep**
+Communication Prep
 - [ ] Create email templates for:
   - Pre-event reminders (1 week, 3 days, 1 day)
   - Daily schedules
@@ -12252,7 +12269,7 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 
 ### Timeline: 1 Week Out
 
-**Final Preparations**
+Final Preparations
 - [ ] Publish final program (make visible to attendees)
 - [ ] Send pre-event email with:
   - Schedule overview
@@ -12266,14 +12283,14 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 - [ ] Assign volunteers to tasks (if using volunteer module)
 - [ ] Create volunteer schedules
 
-**Data Quality Check**
+Data Quality Check
 - [ ] Review registration data for duplicates
 - [ ] Verify all paid registrations are linked to invoices
 - [ ] Check for missing contact information
 - [ ] Validate VAT numbers on B2B invoices (avoid audit issues)
 - [ ] Export backup of all data (registrations, CFP, invoices)
 
-**Team Coordination**
+Team Coordination
 - [ ] Hold team briefing meeting
 - [ ] Distribute volunteer schedules
 - [ ] Assign on-site responsibilities
@@ -12286,44 +12303,44 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 
 ### Pricing Strategy
 
-**Use Time-Based Pricing Periods**
-- **Early Bird** (6-4 months out): 20-30% discount to drive early registrations
-- **Regular** (4-1 months out): Standard pricing for majority of attendees
-- **Late** (1 month to event): 10-20% premium to encourage early registration
+Use Time-Based Pricing Periods
+- Early Bird (6-4 months out): 20-30% discount to drive early registrations
+- Regular (4-1 months out): Standard pricing for majority of attendees
+- Late (1 month to event): 10-20% premium to encourage early registration
 
-**Package vs Individual Options**
-- **Packages**: Bundle related items (Full Conference + Dinner + Workshop)
+Package vs Individual Options
+- Packages: Bundle related items (Full Conference + Dinner + Workshop)
   - Pros: Simplifies pricing, encourages upsells, reduces decision fatigue
   - Cons: Less flexibility, may include items attendees don't want
-- **Individual Options**: À la carte selection
+- Individual Options: À la carte selection
   - Pros: Maximum flexibility, attendees pay only for what they want
   - Cons: More complex pricing, requires more decision-making
 
-**Best Practice**: Offer both packages (for simplicity) and individual options (for flexibility)
+Best Practice: Offer both packages (for simplicity) and individual options (for flexibility)
 
-**Example Structure**:
-- **Full Conference Package**: All days + networking dinner (15% savings)
-- **2-Day Pass**: Access to main conference days only
-- **1-Day Pass**: Single day access
-- **Add-ons**: Tutorials, workshops, special dinners (separately bookable)
+Example Structure:
+- Full Conference Package: All days + networking dinner (15% savings)
+- 2-Day Pass: Access to main conference days only
+- 1-Day Pass: Single day access
+- Add-ons: Tutorials, workshops, special dinners (separately bookable)
 
 ### Discount Code Strategy
 
-**Types of Discount Codes**
-1. **Speaker Codes**: 100% discount for accepted speakers
-2. **Sponsor Codes**: Complimentary or discounted tickets per sponsorship tier
-3. **Partner Codes**: Academic institutions, user groups (10-20% discount)
-4. **Group Codes**: 5+ registrations from same organization (15% discount)
-5. **Promotional Codes**: Limited-time offers for marketing campaigns
+Types of Discount Codes
+1. Speaker Codes: 100% discount for accepted speakers
+2. Sponsor Codes: Complimentary or discounted tickets per sponsorship tier
+3. Partner Codes: Academic institutions, user groups (10-20% discount)
+4. Group Codes: 5+ registrations from same organization (15% discount)
+5. Promotional Codes: Limited-time offers for marketing campaigns
 
-**Best Practices**
+Best Practices
 - Use descriptive code names: `SPEAKER2026`, `EARLYBIRD25`, `ACMEGROUP15`
 - Set expiration dates to create urgency
 - Limit max uses for promotional codes (prevent abuse)
 - Make codes non-combinable unless specifically designed to stack
 - Apply codes to specific booking options/periods (scope appropriately)
 
-**Bulk Generation for People Groups**
+Bulk Generation for People Groups
 - Generate codes for: Sponsors, Speakers, Program Committee, Custom Recipient Lists
 - Use template variables: `[ConferenceSlug]-[LastName]-[Counter]`
 - Example: `PYCON2026-SMITH-001`, `PYCON2026-SMITH-002`
@@ -12331,28 +12348,28 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 
 ### VAT Compliance
 
-**Critical VAT Rules**
-1. **Virtual/Hybrid-Online + EU B2B = Reverse Charge Required**
-   - VAT number is **legally required** (Article 196, EU VAT Directive)
+Critical VAT Rules
+1. Virtual/Hybrid-Online + EU B2B = Reverse Charge Required
+   - VAT number is legally required (Article 196, EU VAT Directive)
    - System shows red asterisk and error warning
    - Cannot proceed without VAT number (or admin override)
 
-2. **In-Person + EU B2B = VAT Recommended**
-   - VAT number is **best practice** but not mandatory
+2. In-Person + EU B2B = VAT Recommended
+   - VAT number is best practice but not mandatory
    - System shows yellow "(Recommended for B2B)" label
    - Helps customer reclaim input VAT
 
-3. **Always validate VAT numbers before sending invoices**
+3. Always validate VAT numbers before sending invoices
    - Green checkmark = verified against VIES registry
    - Yellow warning = format OK but VIES unavailable (safe to send)
    - Red X = invalid format (ask customer to verify)
 
-4. **Document VAT decisions**
+4. Document VAT decisions
    - Review VAT warning banners before sending
    - Check rule references (e.g., "Article 196")
    - Add internal comments explaining admin overrides
 
-**VAT Decision Table Quick Reference**
+VAT Decision Table Quick Reference
 
 | Attendance Type | Customer Type | Location | VAT Treatment |
 |----------------|---------------|----------|---------------|
@@ -12365,7 +12382,7 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 | Hybrid-Online | B2B | EU (different) | Reverse charge (0%) - VAT # required |
 | Hybrid-Onsite | B2B | Any | Conference country VAT |
 
-**VAT Rate Overrides**
+VAT Rate Overrides
 - Global defaults maintained for all EU countries
 - Tenant overrides available for:
   - Reduced rates (books, publications, education)
@@ -12375,35 +12392,35 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
 
 ### Invoice Management Workflow
 
-**1. Create Drafts Early**
+1. Create Drafts Early
 - Lock in pricing before event
 - Easy to update while in draft status
 - No audit trail concerns with draft edits
 
-**2. Invoice Types**
-- **Bank Transfer**: Traditional invoicing with wire transfer details
+2. Invoice Types
+- Bank Transfer: Traditional invoicing with wire transfer details
   - Best for: Large corporate sponsors, government entities
   - Payment tracking: Manual (mark as paid when received)
-- **Credit Card**: Stripe-integrated with payment link
+- Credit Card: Stripe-integrated with payment link
   - Best for: Individual registrations, fast payment needed
   - Payment tracking: Automatic via webhook
 
-**3. Recipient Search**
+3. Recipient Search
 - Search across: Sponsors, Speakers, Committee, Volunteers, Registrations
 - Auto-fills: Company name, address, email, VAT number
 - Reduces data entry errors
 
-**4. Review Before Sending**
+4. Review Before Sending
 - Check VAT warnings (red = compliance risk, yellow = best practice)
 - Verify recipient address is complete and accurate
 - Confirm line items, quantities, prices
 - Add internal comments for team coordination
 - Review due date (typically 30 days from issue date)
 
-**5. Correction Workflows**
+5. Correction Workflows
 
-**For Billing Corrections** (wrong name, address, VAT, PO number):
-- Use **Replace Invoice** feature
+For Billing Corrections (wrong name, address, VAT, PO number):
+- Use Replace Invoice feature
 - System automatically:
   - Cancels old invoice (creates credit note)
   - Creates new invoice with corrected billing
@@ -12411,13 +12428,13 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
   - Inherits payment status (paid invoices stay paid)
   - Handles Stripe payment links (deactivates old, creates new if needed)
 
-**For Amount/Line Item Changes**:
+For Amount/Line Item Changes:
 - Cancel existing invoice (creates credit note)
 - Create new invoice with correct details
 - Send new invoice to customer
 
-**For True Cancellations** (event cancelled, refund needed):
-- Use **Cancel Invoice** with "Cancel all registrations" checked
+For True Cancellations (event cancelled, refund needed):
+- Use Cancel Invoice with "Cancel all registrations" checked
 - System automatically:
   - Creates credit note
   - Cancels all linked registrations
@@ -12425,7 +12442,7 @@ This guide synthesizes best practices from all SaaSConf modules to help you run 
   - Issues Stripe refund (credit card invoices)
   - Sends cancellation emails to attendees
 
-**Decision Tree**:
+Decision Tree:
 ```
 Is billing info wrong (name, address, VAT, PO)?
 ├─ YES → Use "Replace Invoice" (fast, no disruption)
@@ -12436,14 +12453,14 @@ Is billing info wrong (name, address, VAT, PO)?
         └─ NO → Leave as-is
 ```
 
-**6. Payment Tracking**
+6. Payment Tracking
 - Credit card: Automatic via Stripe webhooks (instant status update)
 - Bank transfer: Manual marking required
   - Click "Mark as Paid"
   - Enter payment date and bank reference
   - Add internal comment with transaction details
 
-**7. Follow-Up on Overdue Invoices**
+7. Follow-Up on Overdue Invoices
 - System automatically flags invoices past due date
 - Review overdue invoices weekly
 - Send reminder emails (use messaging templates)
@@ -12452,23 +12469,23 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Refund Policies
 
-**Define Refund Policy Early**
+Define Refund Policy Early
 - Document in conference settings and website
 - Typical structure:
   - More than 30 days before: 100% refund
   - 15-30 days before: 50% refund
   - Less than 15 days: No refund (or credit to next year)
 
-**Processing Refunds**
+Processing Refunds
 1. Cancel the invoice (creates credit note)
 2. For credit card payments: System auto-refunds via Stripe
 3. For bank transfers: Process manual refund, document in comments
 4. Cancel registration if appropriate
 5. Update internal tracking (spreadsheet, CRM)
 
-**Attendee Replacement as Alternative**
+Attendee Replacement as Alternative
 - Offer replacement instead of refund when possible
-- Use **Replace Attendee** feature:
+- Use Replace Attendee feature:
   - Keeps invoice valid (no refund needed)
   - Transfers registration to new person
   - Maintains revenue
@@ -12480,147 +12497,147 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Self-Registration vs Manual Entry
 
-**Self-Registration** (Recommended for Most Cases)
-- **Pros**:
+Self-Registration (Recommended for Most Cases)
+- Pros:
   - Reduces admin workload
   - Attendees provide accurate information
   - Immediate confirmation and payment
   - Scales to hundreds/thousands of registrations
-- **Cons**:
+- Cons:
   - Requires functioning portal and email delivery
   - Attendees may enter incorrect data
   - No pre-screening of registrations
 
-**When to Use**: Public conferences, open registration, large events
+When to Use: Public conferences, open registration, large events
 
-**Manual Entry** (Admin-Created Registrations)
-- **Pros**:
+Manual Entry (Admin-Created Registrations)
+- Pros:
   - Full control over data quality
   - Can pre-register VIPs, speakers, sponsors
   - Useful for complementary tickets
   - No portal access needed for attendee
-- **Cons**:
+- Cons:
   - Labor-intensive for large numbers
   - Admin errors possible
   - Slower process
 
-**When to Use**: VIP registrations, comp tickets, speaker registrations, small exclusive events
+When to Use: VIP registrations, comp tickets, speaker registrations, small exclusive events
 
-**Best Practice**: Use both
+Best Practice: Use both
 - Enable self-registration for general attendees
 - Manually create registrations for speakers, sponsors, committee members
 - Use discount codes to control access (speaker codes, invitation-only codes)
 
 ### Registration Workflow
 
-**1. Configure Settings First**
+1. Configure Settings First
 - Add pronouns options (he/him, she/her, they/them, prefer not to say, other)
 - Enable/disable fields (phone, job title, department, dietary restrictions)
 - Set required vs optional fields
 - Configure session selection (if separately bookable sessions)
 
-**2. Session Selection Strategy**
+2. Session Selection Strategy
 
-**Separately Bookable Sessions**
+Separately Bookable Sessions
 - Mark program sessions as `separately_bookable: true`
 - Attendees choose sessions during registration (for workshops, tutorials)
 - System groups by session type (Tutorial, Workshop, Hackathon)
 - Parallel sessions: Choose one via dropdown
 - Non-parallel sessions: Choose from each independently
 
-**When to Use**:
+When to Use:
 - Limited capacity sessions (workshops, tutorials)
 - Parallel tracks where attendee must pick one
 - Special activities requiring advance selection
 
-**When Not to Use**:
+When Not to Use:
 - Open sessions anyone can attend
 - Keynotes and plenaries (everyone attends)
 - Sessions with unlimited capacity
 
-**3. Group Registrations**
+3. Group Registrations
 
-**Group Registration Flow**:
+Group Registration Flow:
 - Single billing profile for entire group
 - Multiple attendee records (each with own data)
 - One invoice for all attendees
 - Use bulk endpoint: `POST /registrations/bulk`
 
-**Best Practices**:
+Best Practices:
 - Require one contact person for group (receives all communications)
 - Collect individual attendee emails (for personal communications)
 - Offer group discounts (5+ attendees = 15% off, 10+ = 20% off)
 - Send confirmation to both group contact and individual attendees
 
-**4. Data Quality Maintenance**
+4. Data Quality Maintenance
 
-**Email Validation**
+Email Validation
 - System validates format on blur (real-time)
 - Red border indicates invalid email
 - Common mistakes: Missing @, invalid domain, typos (.con instead of .com)
 
-**Phone Validation**
+Phone Validation
 - Accepts international formats with country code (+1, +44, +49)
 - Allows spaces, dashes, parentheses for readability
 - Format: +1-555-123-4567 or +44 20 1234 5678
 
-**VAT Number Validation**
+VAT Number Validation
 - Green checkmark = verified via VIES
 - Yellow warning = format OK but VIES unavailable
 - Red X = invalid format
 - Always validate B2B registrations
 
-**5. Handling Special Cases**
+5. Handling Special Cases
 
-**Speaker Registrations**
+Speaker Registrations
 - Create manually with 100% discount code
 - Link to CFP paper/session
 - Mark as "Speaker" in registration type (if field exists)
 - Send special welcome email with speaker info
 
-**Sponsor Registrations**
+Sponsor Registrations
 - Use sponsor-specific discount codes
 - May be complimentary or discounted per package
 - Track against sponsor package allocation (Gold = 5 tickets, Silver = 3, etc.)
 - Link to sponsor record for reporting
 
-**Group Registrations from Companies**
+Group Registrations from Companies
 - Collect single billing profile
 - Individual attendee details for each person
 - One invoice for entire group
 - Bulk discount if applicable
 
-**Academic/Student Registrations**
+Academic/Student Registrations
 - Require proof of enrollment (upload or email verification)
 - Separate ticket type with reduced pricing
 - May require manual approval
 
 ### Attendee Replacement
 
-**When to Replace an Attendee**
+When to Replace an Attendee
 - Original attendee can't attend (illness, conflict, job change)
 - Employee left company, replacement attending
 - Wrong person registered initially
 - Department transfer within organization
 
-**Replacement Process**
+Replacement Process
 1. Navigate to registration in admin panel
-2. Click **Replace Attendee**
+2. Click Replace Attendee
 3. Enter new attendee information:
    - First Name, Last Name (required)
    - Email (required, validated)
    - Phone (validated if provided)
    - Pronouns (from conference settings)
    - Job Title, Department (optional)
-4. Enter **Replacement Reason** (required for audit trail)
-5. Add **Cancellation Message** (sent to original attendee)
+4. Enter Replacement Reason (required for audit trail)
+5. Add Cancellation Message (sent to original attendee)
 6. Optionally add additional booking items for new attendee:
    - Booking options (meals, workshops)
    - Tutorials (max one)
    - System prevents duplicates automatically
-7. Review summary and click **Replace**
+7. Review summary and click Replace
 
-**What Happens Automatically**:
+What Happens Automatically:
 - Original registration: Status → CANCELLED, access removed
 - New registration: Created with replacement link, access granted
 - Original attendee: Receives cancellation email
@@ -12629,7 +12646,7 @@ Is billing info wrong (name, address, VAT, PO)?
 - Billing profile: Inherited from original registration
 - Audit trail: Full replacement record with reason, timestamp, admin
 
-**Validation Rules**:
+Validation Rules:
 - Cannot replace already-replaced registrations (follow chain instead)
 - Cannot replace cancelled registrations
 - Cannot add duplicate booking items
@@ -12637,17 +12654,17 @@ Is billing info wrong (name, address, VAT, PO)?
 - Email and phone must be valid formats
 - Pronouns must be from conference settings (no custom text)
 
-**Additional Items Best Practices**:
+Additional Items Best Practices:
 - Only add items new attendee actually needs
 - Remember: Creates a new invoice (sent to billing contact)
 - Check billing profile is correct before adding paid items
 - System filters out items attendee already has
 - Tutorial option disabled if attendee already has one
 
-**Use Cases**:
-- **Simple Transfer**: Employee A leaves, Employee B attends → Straight replacement, no additional items
-- **Replacement with Upgrades**: New attendee wants tutorial → Add tutorial as additional item
-- **Cross-Department Transfer**: Different department, different needs → Replace + add department-specific items
+Use Cases:
+- Simple Transfer: Employee A leaves, Employee B attends → Straight replacement, no additional items
+- Replacement with Upgrades: New attendee wants tutorial → Add tutorial as additional item
+- Cross-Department Transfer: Different department, different needs → Replace + add department-specific items
 
 ---
 
@@ -12655,48 +12672,48 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Timeline Planning
 
-**6 Months Before Conference**
+6 Months Before Conference
 - Open CFP submissions
 - Announce widely (mailing lists, social media, partner organizations)
 - Create submission guidelines and FAQ
 
-**3-4 Months Before Conference**
+3-4 Months Before Conference
 - Close CFP submissions
 - Allow 1-2 week grace period for technical issues only
 
-**2-3 Months Before Conference**
+2-3 Months Before Conference
 - Complete all reviews
 - Make acceptance/rejection decisions
 - Send notifications with personal messages
 
-**2 Months Before Conference**
+2 Months Before Conference
 - Confirm speaker attendance
 - Request speaker bio/photo updates
 - Collect session materials (slides, handouts)
 
-**1 Month Before Conference**
+1 Month Before Conference
 - Finalize program schedule
 - Publish program to attendees
 - Send speaker logistics (AV requirements, room locations, rehearsal times)
 
 ### Review Process Setup
 
-**Single-Blind vs Double-Blind Review**
-- **Single-Blind**: Reviewers see submitter names (most common)
+Single-Blind vs Double-Blind Review
+- Single-Blind: Reviewers see submitter names (most common)
   - Pros: Context about speaker experience, easier logistics
   - Cons: Potential bias based on reputation
-- **Double-Blind**: Reviewers don't see submitter names
+- Double-Blind: Reviewers don't see submitter names
   - Pros: Reduces bias, focuses on content quality
   - Cons: Harder to implement, submitters may reveal identity in proposal
 
-**Review Criteria**
+Review Criteria
 - Relevance to conference theme/tracks (1-5 points)
 - Technical quality/depth (1-5 points)
 - Clarity of presentation/abstract (1-5 points)
 - Novelty/originality (1-5 points)
 - Speaker experience (1-5 points, only for single-blind)
 
-**Scoring System**
+Scoring System
 - Use weighted average across criteria
 - Set minimum score threshold for acceptance (e.g., 3.5/5.0)
 - Allow written comments in addition to scores
@@ -12704,22 +12721,22 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Reviewer Assignment Strategies
 
-**Random Assignment**
+Random Assignment
 - System assigns papers randomly to reviewers
 - Ensures even distribution of workload
 - May result in poor topic matching
 
-**Topic-Based Assignment**
+Topic-Based Assignment
 - Assign papers to reviewers based on expertise tags
 - Better quality reviews (reviewers understand content)
 - Requires manual configuration or smart matching
 
-**Round-Robin Assignment**
+Round-Robin Assignment
 - Papers assigned in rotation to reviewers
 - Ensures equal workload
 - Combines with topic matching for best results
 
-**Best Practice**:
+Best Practice:
 1. Assign 3 reviewers per paper (odd number prevents ties)
 2. Each reviewer gets 10-15 papers (manageable workload)
 3. Match papers to reviewer expertise when possible
@@ -12727,7 +12744,7 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Decision Communication
 
-**Acceptance Notifications**
+Acceptance Notifications
 - Send personal congratulations message
 - Include:
   - Session details (date, time, room if known)
@@ -12737,7 +12754,7 @@ Is billing info wrong (name, address, VAT, PO)?
   - Next steps (confirm attendance, bio/photo, travel info)
 - Set deadline for confirmation (2 weeks typical)
 
-**Rejection Notifications**
+Rejection Notifications
 - Be respectful and constructive
 - Include:
   - Thank you for submission
@@ -12750,7 +12767,7 @@ Is billing info wrong (name, address, VAT, PO)?
   - Harsh criticism or detailed negative feedback
   - Comparison to accepted papers
 
-**Waitlist Strategy**
+Waitlist Strategy
 - Accept top 80% of needed talks initially
 - Waitlist next 20% (backups in case speakers drop out)
 - Notify waitlisted submitters:
@@ -12761,47 +12778,47 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Managing Difficult Situations
 
-**Late Submissions**
+Late Submissions
 - Set hard deadline (system enforces)
 - Allow 24-hour grace period for technical issues only
 - Document policy clearly on CFP page
 - Don't make exceptions (unfair to on-time submitters)
 
-**Conflict of Interest**
+Conflict of Interest
 - Reviewer works with submitter or at same company
 - Reviewer previously collaborated with submitter
 - Personal relationship between reviewer and submitter
 
-**Resolution**: Reassign paper to different reviewer, flag in system
+Resolution: Reassign paper to different reviewer, flag in system
 
-**Low-Quality Submissions**
+Low-Quality Submissions
 - Incomplete proposals (missing abstract, description)
 - Off-topic submissions (not relevant to conference)
 - Sales pitches or product demos (not educational)
 
-**Resolution**: Reject early with explanation, don't waste reviewer time
+Resolution: Reject early with explanation, don't waste reviewer time
 
-**Speaker Withdrawals After Acceptance**
+Speaker Withdrawals After Acceptance
 - Speaker can no longer attend (conflict, emergency)
 - Company won't approve travel
 - Talk content no longer relevant
 
-**Resolution**:
+Resolution:
 1. Check waitlist for suitable replacement
 2. Invite co-speaker to present alone (if applicable)
 3. Last resort: Cancel session, adjust program schedule
 
-**Duplicate Submissions**
+Duplicate Submissions
 - Same talk submitted to multiple tracks
 - Same submitter with multiple similar talks
 
-**Resolution**: Ask submitter to choose one, or choose best fit for program
+Resolution: Ask submitter to choose one, or choose best fit for program
 
-**Plagiarism or Misconduct**
+Plagiarism or Misconduct
 - Submission contains plagiarized content
 - Violates code of conduct
 
-**Resolution**: Immediate rejection, potential ban from future submissions, document incident
+Resolution: Immediate rejection, potential ban from future submissions, document incident
 
 ---
 
@@ -12809,7 +12826,7 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Session Scheduling Tips
 
-**1. Define Time Structure First**
+1. Define Time Structure First
 - Create program days (Day 1, Day 2, Day 3)
 - Create time slots (09:00-09:45, 10:00-10:45, etc.)
 - Standard slot lengths:
@@ -12820,13 +12837,13 @@ Is billing info wrong (name, address, VAT, PO)?
   - Breaks: 15-30 minutes
   - Lunch: 60-90 minutes
 
-**2. Create Tracks**
+2. Create Tracks
 - Theme-based: AI/ML, Web Development, DevOps, Data Science
 - Level-based: Beginner, Intermediate, Advanced
 - Format-based: Talks, Panels, Workshops
 - Usually 2-4 parallel tracks maximum (avoid overwhelming attendees)
 
-**3. Session Assignment Workflow**
+3. Session Assignment Workflow
 - Start with fixed sessions: Keynotes, breaks, meals, social events
 - Place high-demand talks in larger rooms
 - Place tutorials/workshops in hands-on rooms (if separate)
@@ -12834,7 +12851,7 @@ Is billing info wrong (name, address, VAT, PO)?
 - Balance topics across tracks (don't cluster all AI talks together)
 - Balance levels (mix beginner and advanced in each track)
 
-**4. Visual Program Builder**
+4. Visual Program Builder
 - Use grid view to see entire program at once
 - Drag-and-drop sessions to time slots
 - Color-code by track or session type
@@ -12845,23 +12862,23 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Avoiding Conflicts
 
-**Speaker Conflicts**
+Speaker Conflicts
 - Never schedule same speaker in multiple sessions at same time
 - Leave buffer time between sessions for same speaker (30+ min)
 - Check co-speakers (don't conflict their other sessions)
 - System should warn about double-booking
 
-**Topic Conflicts**
+Topic Conflicts
 - Don't schedule similar topics in parallel (attendees want both)
 - Example: Don't run "Intro to Python" and "Advanced Python" simultaneously
 - Spread popular topics throughout day/conference
 
-**Attendee Conflicts**
+Attendee Conflicts
 - Survey attendees about session interest (pre-conference)
 - Avoid conflicts for most popular combinations
 - Example: If many want both "Security" and "DevOps", schedule in different time slots
 
-**Room Capacity**
+Room Capacity
 - Assign large rooms to popular topics (keynotes, hot topics)
 - Assign small rooms to niche topics
 - Allow 10-20% buffer (don't pack rooms to capacity)
@@ -12869,7 +12886,7 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Speaker Management
 
-**Before Conference**
+Before Conference
 - Send speaker welcome packet:
   - Session details (date, time, room, duration)
   - AV requirements form
@@ -12878,26 +12895,26 @@ Is billing info wrong (name, address, VAT, PO)?
   - Speaker dinner invitation (if hosting)
   - Contact for questions
 
-**2 Weeks Before**
+2 Weeks Before
 - Request final slides (for backup and accessibility)
 - Confirm AV needs (projector, mic, clicker, demo setup)
 - Share room layout and capacity
 - Provide speaker rehearsal time slot (optional)
 
-**1 Week Before**
+1 Week Before
 - Send final schedule with room locations
 - Provide speaker check-in instructions
 - Share emergency contact info
 - Remind about slide deadline
 
-**During Conference**
+During Conference
 - Speaker check-in desk on arrival
 - Provide speaker lounge (if budget allows)
 - AV tech available in each room
 - Session timers/signals (5 min warning, time's up)
 - Collect feedback forms from attendees
 
-**After Conference**
+After Conference
 - Send thank-you email
 - Share attendee feedback/ratings
 - Request post-conference survey
@@ -12906,13 +12923,13 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Location/Room Assignment
 
-**Room Metadata**
+Room Metadata
 - Name: Grand Ballroom, Room A, Workshop Lab 1
 - Capacity: 500, 200, 50, etc.
 - Features: Projector, Microphone, Whiteboard, Hands-on computers
 - Layout: Theater, Classroom, Roundtable, U-shape
 
-**Assignment Strategy**
+Assignment Strategy
 1. Keynotes → Largest room (main hall)
 2. Popular talks → Large rooms (200-300 capacity)
 3. Standard talks → Medium rooms (50-100 capacity)
@@ -12920,7 +12937,7 @@ Is billing info wrong (name, address, VAT, PO)?
 5. Panels/Discussions → Roundtable or U-shape setup
 6. Lightning talks → Medium room (rotate quickly)
 
-**Special Considerations**
+Special Considerations
 - Accessibility: Wheelchair access, hearing loops, closed captioning
 - Recording: Rooms with camera/recording setup
 - Hands-on: Computers, WiFi, power outlets for laptops
@@ -12928,32 +12945,32 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Publishing the Program
 
-**Draft Mode** (Internal Only)
+Draft Mode (Internal Only)
 - Build schedule
 - Assign sessions to slots
 - Reviewers can see
 - Not visible to attendees
 
-**Published Mode** (Public)
+Published Mode (Public)
 - Click "Publish Program"
 - Visible to all registered attendees
 - Appears in portal and public schedule
 - Can still make edits (updates reflected in real-time)
 
-**What to Publish**
+What to Publish
 - Session title, description, speakers
 - Time, date, room/location
 - Track/topic
 - Session type (talk, panel, workshop)
 - Links to speaker bios
 
-**What NOT to Publish (Keep Internal)**
+What NOT to Publish (Keep Internal)
 - Reviewer scores or comments
 - Speaker contact information (email/phone)
 - Internal notes or logistics
 - Unconfirmed or cancelled sessions
 
-**Best Practice**:
+Best Practice:
 - Publish 2-4 weeks before event (gives attendees time to plan)
 - Update regularly if changes occur
 - Send email notification when program published
@@ -12965,30 +12982,30 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Email Timing and Frequency
 
-**Pre-Conference Communications**
+Pre-Conference Communications
 
-**6 Months Before**
+6 Months Before
 - CFP announcement
 - Early bird registration opening
 - Save the date reminder
 
-**3 Months Before**
+3 Months Before
 - CFP closing soon reminder (1 week before deadline)
 - Registration reminder (early bird ends soon)
 - Sponsor opportunities
 
-**2 Months Before**
+2 Months Before
 - Speaker acceptance/rejection notifications
 - Regular registration period opens
 - Program preview (if available)
 
-**1 Month Before**
+1 Month Before
 - Final program published
 - Late registration period begins
 - Hotel/travel information
 - Optional: Social event details
 
-**1 Week Before**
+1 Week Before
 - Pre-event checklist email:
   - Event dates and times
   - Venue address and directions
@@ -12998,28 +13015,28 @@ Is billing info wrong (name, address, VAT, PO)?
   - Session recommendations
   - Mobile app download (if available)
 
-**3 Days Before**
+3 Days Before
 - Final reminder
 - Weather forecast and packing tips
 - Last-minute updates
 
-**Day Before**
+Day Before
 - Welcome message
 - Day 1 schedule highlights
 - Parking/transportation reminders
 
-**During Conference**
+During Conference
 - Daily morning email with schedule
 - Evening email with next day preview
 - Real-time updates via messaging system for urgent changes
 
-**Post-Conference**
+Post-Conference
 - Thank you email (within 2 days)
 - Feedback survey (within 1 week)
 - Session recordings/slides (within 2 weeks)
 - Save the date for next year (within 1 month)
 
-**Best Practices**
+Best Practices
 - Don't over-email: Max 1 email per week until final week
 - Segment emails: Speakers get different emails than general attendees
 - Use clear subject lines: "[PyConf 2026] Program Published" not "Update"
@@ -13028,14 +13045,14 @@ Is billing info wrong (name, address, VAT, PO)?
 
 ### Message Templates
 
-**Template Categories**
-1. **Registration**: Confirmation, payment received, cancellation
-2. **CFP**: Submission received, acceptance, rejection, reminder
-3. **Invoice**: Invoice sent, payment reminder, receipt
-4. **Program**: Schedule update, session reminder, speaker info
-5. **General**: Welcome, daily schedule, thank you, feedback request
+Template Categories
+1. Registration: Confirmation, payment received, cancellation
+2. CFP: Submission received, acceptance, rejection, reminder
+3. Invoice: Invoice sent, payment reminder, receipt
+4. Program: Schedule update, session reminder, speaker info
+5. General: Welcome, daily schedule, thank you, feedback request
 
-**Template Variables**
+Template Variables
 - `[First Name]`, `[Last Name]`, `[Full Name]`
 - `[Email]`, `[Company Name]`
 - `[Conference Name]`, `[Conference Dates]`
@@ -13043,7 +13060,7 @@ Is billing info wrong (name, address, VAT, PO)?
 - `[Invoice Number]`, `[Amount Due]`, `[Due Date]`
 - `[Custom Message]` (for personalization)
 
-**Template Best Practices**
+Template Best Practices
 - Write clear, scannable content (use bullet points)
 - Put most important info first (inverted pyramid)
 - Include clear call-to-action (Register Now, Confirm Attendance, Pay Invoice)
@@ -13051,7 +13068,7 @@ Is billing info wrong (name, address, VAT, PO)?
 - Proofread carefully (errors look unprofessional)
 - Test with sample data before using
 
-**Example Template Structure**:
+Example Template Structure:
 ```
 Subject: [Conference Name] - [Purpose]
 
@@ -13074,72 +13091,72 @@ Best regards,
 
 ### Notification Sequences
 
-**Registration Sequence**
-1. **Immediate**: Registration confirmation (within seconds)
+Registration Sequence
+1. Immediate: Registration confirmation (within seconds)
    - Confirms registration received
    - Includes invoice if payment required
    - Next steps (payment, schedule selection)
-2. **1 Day Later**: Welcome email (if self-registration)
+2. 1 Day Later: Welcome email (if self-registration)
    - Conference overview
    - What to expect
    - Links to program, venue, FAQs
-3. **1 Week Before**: Pre-event reminder
+3. 1 Week Before: Pre-event reminder
    - Detailed logistics
    - Schedule highlights
    - Check-in instructions
 
-**CFP Submission Sequence**
-1. **Immediate**: Submission confirmation
+CFP Submission Sequence
+1. Immediate: Submission confirmation
    - Confirms proposal received
    - Provides submission ID
    - Expected timeline for decision
-2. **After Review Period**: Decision notification
+2. After Review Period: Decision notification
    - Acceptance or rejection
    - Next steps for accepted speakers
    - Thank you and encouragement for rejected
-3. **1 Month Before (Accepted)**: Speaker logistics
+3. 1 Month Before (Accepted): Speaker logistics
    - Session details
    - AV requirements
    - Slide submission deadline
 
-**Invoice Sequence**
-1. **Immediate**: Invoice sent
+Invoice Sequence
+1. Immediate: Invoice sent
    - Invoice PDF attached
    - Payment instructions
    - Due date highlighted
-2. **7 Days Before Due**: Friendly reminder
+2. 7 Days Before Due: Friendly reminder
    - Payment due soon
    - Payment link (credit card)
    - Contact if issues
-3. **On Due Date**: Due today reminder
+3. On Due Date: Due today reminder
    - Payment requested today
    - Consequences if not paid (access removal?)
-4. **7 Days After Due**: Overdue notice
+4. 7 Days After Due: Overdue notice
    - Payment overdue
    - Final reminder before action
    - Contact to discuss
 
 ### Crisis Communication
 
-**Types of Crises**
+Types of Crises
 - Weather emergency (storm, flooding)
 - Venue issue (power outage, evacuation)
 - Health emergency (outbreak, injury)
 - Security threat
 - Major schedule disruption (speaker no-show, equipment failure)
 
-**Communication Protocol**
-1. **Assess Situation**: Gather facts, confirm details, consult team
-2. **Decide on Action**: Cancel, delay, modify, continue with changes
-3. **Draft Message**: Clear, concise, action-oriented
-4. **Send Immediately**:
+Communication Protocol
+1. Assess Situation: Gather facts, confirm details, consult team
+2. Decide on Action: Cancel, delay, modify, continue with changes
+3. Draft Message: Clear, concise, action-oriented
+4. Send Immediately:
    - Email to all attendees
    - Screen overlay in portal (trigger: always)
    - Social media posts
    - On-site announcements (PA system, signage)
-5. **Follow Up**: Updates as situation evolves, final resolution message
+5. Follow Up: Updates as situation evolves, final resolution message
 
-**Crisis Message Template**:
+Crisis Message Template:
 ```
 Subject: [URGENT] [Conference Name] - [Nature of Issue]
 
@@ -13167,7 +13184,7 @@ Contact:
 [Conference Team]
 ```
 
-**Best Practices for Crisis Communication**
+Best Practices for Crisis Communication
 - Act quickly (delay causes panic and rumors)
 - Be transparent (honesty builds trust)
 - Provide clear instructions (reduce confusion)
@@ -13181,14 +13198,14 @@ Contact:
 
 ### Sponsor Package Design
 
-**Package Tiers**
-- **Platinum/Diamond** ($25,000+): Top tier, limited slots (1-2)
-- **Gold** ($10,000-$25,000): Premium tier (3-5 slots)
-- **Silver** ($5,000-$10,000): Standard tier (5-10 slots)
-- **Bronze** ($2,000-$5,000): Entry tier (10-15 slots)
-- **Community** ($500-$1,000): Non-profit/community tier
+Package Tiers
+- Platinum/Diamond ($25,000+): Top tier, limited slots (1-2)
+- Gold ($10,000-$25,000): Premium tier (3-5 slots)
+- Silver ($5,000-$10,000): Standard tier (5-10 slots)
+- Bronze ($2,000-$5,000): Entry tier (10-15 slots)
+- Community ($500-$1,000): Non-profit/community tier
 
-**Package Benefits Matrix**
+Package Benefits Matrix
 
 | Benefit | Platinum | Gold | Silver | Bronze | Community |
 |---------|----------|------|--------|--------|-----------|
@@ -13201,7 +13218,7 @@ Contact:
 | Email to attendees | 1 dedicated | 1 shared | None | None | None |
 | Recruiting booth | Yes | Yes | Yes | Table | None |
 
-**Best Practices**
+Best Practices
 - Create clear package tiers (don't over-complicate)
 - Limit top tiers (scarcity increases value)
 - Offer à la carte add-ons (extra tickets, banner ads, workshops)
@@ -13210,12 +13227,12 @@ Contact:
 
 ### Contract Management Workflow
 
-**1. Generate Contract from Template**
+1. Generate Contract from Template
 - Use sponsor contract template (pre-configured)
 - Or upload DOCX/RTF contract document
 - System converts to editable HTML
 
-**2. Customize Contract Content**
+2. Customize Contract Content
 - Edit rich-text content in-browser
 - Include:
   - Package name and tier
@@ -13226,13 +13243,13 @@ Contact:
   - Signatures section
 - Use placeholders: `[Recipient Name]`, `[Package Name]`, `[Custom Message]`
 
-**3. Version Control**
+3. Version Control
 - System auto-saves versions on each edit
 - View version history
 - Restore previous version if needed
 - Compare versions (manual review)
 
-**4. Send Contract**
+4. Send Contract
 - Click "Send Contract"
 - Enter recipient email
 - Add custom message
@@ -13241,23 +13258,23 @@ Contact:
   - Download link
   - Next steps (sign and return)
 
-**5. Track Status**
-- **Draft**: Contract created but not sent
-- **Sent**: Contract emailed to sponsor
-- **Signed**: Sponsor signed and returned (mark manually)
+5. Track Status
+- Draft: Contract created but not sent
+- Sent: Contract emailed to sponsor
+- Signed: Sponsor signed and returned (mark manually)
 
-**6. Generate Invoice**
+6. Generate Invoice
 - After contract signed, create invoice
 - Use sponsor search to pre-fill billing info
 - Match invoice amount to contract price
 - Send invoice for payment
 
-**7. Download/Export**
+7. Download/Export
 - PDF export for printing
 - DOCX export for editing in Word
 - Attach to emails or print for wet signature
 
-**Best Practices**
+Best Practices
 - Use consistent contract template across sponsors (fairness, efficiency)
 - Version all changes (audit trail for disputes)
 - Send contract well in advance (3-6 months before event)
@@ -13266,26 +13283,26 @@ Contact:
 
 ### Sponsor Invoicing
 
-**Invoice Creation**
+Invoice Creation
 - Use recipient search → Select sponsor
 - Auto-fills company name, address, VAT number
 - Line item: Sponsorship package name (e.g., "Gold Sponsorship - PyConf 2026")
 - Amount: Match contract price
 - Due date: Typically 30 days from contract signing
 
-**VAT Considerations**
+VAT Considerations
 - B2B transaction (sponsor is a company)
 - VAT number required for EU reverse charge (if virtual/hybrid-online)
 - VAT number recommended for all B2B invoices
 - Validate VAT number before sending (avoid audit issues)
 
-**Payment Tracking**
+Payment Tracking
 - Bank transfer: Most common for large amounts (sponsors prefer wire transfer)
 - Credit card: Option for smaller sponsorships (faster payment)
 - Mark as paid manually when bank transfer received
 - Add internal comment with bank reference/transaction ID
 
-**Follow-Up**
+Follow-Up
 - Send invoice immediately after contract signed
 - Reminder at 7 days before due date
 - Reminder on due date
@@ -13295,7 +13312,7 @@ Contact:
 
 ### Sponsor Benefits Fulfillment
 
-**Tracking Deliverables**
+Tracking Deliverables
 - Create checklist for each sponsor (manual or spreadsheet)
 - Items to track:
   - Logo received (for website, program, signage)
@@ -13305,7 +13322,7 @@ Contact:
   - Social media content provided (posts, images)
   - Recruiting materials (job postings, swag)
 
-**Timeline**
+Timeline
 - 3 months before: Request logos and marketing materials
 - 2 months before: Confirm booth requirements
 - 1 month before: Distribute sponsor ticket codes
@@ -13313,7 +13330,7 @@ Contact:
 - During event: Check in with sponsors daily
 - After event: Thank you email, feedback survey, next year invitation
 
-**Sponsor Portal** (If Available)
+Sponsor Portal (If Available)
 - Sponsor login for self-service
 - View contract and invoice
 - Download logo files
@@ -13327,22 +13344,22 @@ Contact:
 
 ### Role Assignment
 
-**Core Roles**
-1. **Tenant Admin**: Full access to all conference settings
-2. **Conference Admin**: Admin access to specific conference(s)
-3. **Finance Team**: Invoice management, payment tracking
-4. **Program Committee**: CFP review, session scheduling
-5. **Volunteer Coordinator**: Volunteer task assignment and scheduling
-6. **Communication Manager**: Email templates, messaging, screen overlays
+Core Roles
+1. Tenant Admin: Full access to all conference settings
+2. Conference Admin: Admin access to specific conference(s)
+3. Finance Team: Invoice management, payment tracking
+4. Program Committee: CFP review, session scheduling
+5. Volunteer Coordinator: Volunteer task assignment and scheduling
+6. Communication Manager: Email templates, messaging, screen overlays
 
-**Permission Levels**
-- **Super Admin**: Platform-level access (SaaSConf staff only)
-- **Tenant Admin**: All conferences in tenant, all modules
-- **Conference Admin**: Specific conference(s), all modules
-- **Module-Specific**: Access to specific features (CFP, Volunteers, etc.)
-- **Read-Only**: View data but cannot edit
+Permission Levels
+- Super Admin: Platform-level access (SaaSConf staff only)
+- Tenant Admin: All conferences in tenant, all modules
+- Conference Admin: Specific conference(s), all modules
+- Module-Specific: Access to specific features (CFP, Volunteers, etc.)
+- Read-Only: View data but cannot edit
 
-**Best Practices**
+Best Practices
 - Follow principle of least privilege (give minimum access needed)
 - Use conference-specific admins (not tenant-wide) when possible
 - Separate finance access from program access (segregation of duties)
@@ -13351,58 +13368,58 @@ Contact:
 
 ### Workflow Coordination
 
-**Pre-Event Workflow**
-1. **Setup Phase** (6 months out):
+Pre-Event Workflow
+1. Setup Phase (6 months out):
    - Lead: Conference Admin
    - Creates conference, configures settings
    - Adds team members with appropriate roles
    - Sets up booking options, CFP, program structure
 
-2. **CFP Phase** (6-3 months out):
+2. CFP Phase (6-3 months out):
    - Lead: Program Committee Chair
    - Opens CFP, announces widely
    - Assigns reviewers to submissions
    - Coordinates review process
    - Makes acceptance decisions
 
-3. **Registration Phase** (6-1 months out):
+3. Registration Phase (6-1 months out):
    - Lead: Registration Coordinator
    - Opens registration, monitors numbers
    - Processes group registrations
    - Handles special requests (accessibility, dietary)
 
-4. **Sponsor Phase** (6-1 months out):
+4. Sponsor Phase (6-1 months out):
    - Lead: Sponsorship Coordinator
    - Sends sponsor contracts
    - Tracks contract signatures and payments
    - Coordinates sponsor benefits fulfillment
 
-5. **Program Building** (2-1 months out):
+5. Program Building (2-1 months out):
    - Lead: Program Committee Chair
    - Assigns sessions to time slots
    - Assigns rooms/locations
    - Publishes program
 
-6. **Communication Phase** (1 month to event):
+6. Communication Phase (1 month to event):
    - Lead: Communication Manager
    - Sends pre-event emails (schedule, logistics)
    - Creates screen overlays for announcements
    - Prepares on-site signage
 
-**During-Event Workflow**
-1. **Check-In Team**: Registration desk, badge printing
-2. **Program Team**: Session monitoring, AV support, speaker coordination
-3. **Volunteer Team**: Task coordination, break coverage
-4. **Communication Team**: Real-time updates, crisis management
-5. **Sponsor Team**: Sponsor booth support, networking facilitation
+During-Event Workflow
+1. Check-In Team: Registration desk, badge printing
+2. Program Team: Session monitoring, AV support, speaker coordination
+3. Volunteer Team: Task coordination, break coverage
+4. Communication Team: Real-time updates, crisis management
+5. Sponsor Team: Sponsor booth support, networking facilitation
 
-**Post-Event Workflow**
-1. **Communication Team**: Thank you emails, survey distribution
-2. **Finance Team**: Final invoicing, payment reconciliation
-3. **Program Team**: Session recording upload, speaker feedback sharing
-4. **Admin Team**: Data export, backup, lessons learned documentation
+Post-Event Workflow
+1. Communication Team: Thank you emails, survey distribution
+2. Finance Team: Final invoicing, payment reconciliation
+3. Program Team: Session recording upload, speaker feedback sharing
+4. Admin Team: Data export, backup, lessons learned documentation
 
-**Coordination Tools**
+Coordination Tools
 - Daily standup meetings (in-person or video)
 - Shared Slack/Teams channel for real-time communication
 - Shared task management (Trello, Asana, or built-in deadlines module)
@@ -13411,20 +13428,20 @@ Contact:
 
 ### Permission Management
 
-**Granting Access**
+Granting Access
 1. Add user account (if doesn't exist)
 2. Add to tenant (if tenant admin)
 3. Add to conference (if conference admin)
 4. Assign specific role/permissions
 5. Enable module access (CFP, Volunteers, etc. if module-gated)
 
-**Reviewing Access**
+Reviewing Access
 - Quarterly access review (who has access to what?)
 - Remove inactive users (haven't logged in 6+ months)
 - Update permissions as roles change
 - Audit log review (check for suspicious activity)
 
-**Offboarding**
+Offboarding
 - Remove all access immediately when team member leaves
 - Document what they had access to (for handoff)
 - Transfer ownership of drafts/content to another admin
@@ -13432,7 +13449,7 @@ Contact:
 
 ### Audit Trail Importance
 
-**What Gets Logged**
+What Gets Logged
 - All invoice actions (create, send, cancel, replace, mark paid)
 - All registration changes (create, update, replace, cancel)
 - All CFP actions (submit, review, accept/reject)
@@ -13440,21 +13457,21 @@ Contact:
 - All setting changes (booking options, VAT rates, templates)
 - User logins and permission changes
 
-**Why Audit Trail Matters**
-- **Accountability**: Know who did what and when
-- **Compliance**: Required for financial audits (invoicing)
-- **Troubleshooting**: Diagnose issues ("invoice disappeared" → check who deleted it)
-- **Dispute resolution**: "I never received that email" → check sent log
-- **Security**: Detect unauthorized access or suspicious activity
+Why Audit Trail Matters
+- Accountability: Know who did what and when
+- Compliance: Required for financial audits (invoicing)
+- Troubleshooting: Diagnose issues ("invoice disappeared" → check who deleted it)
+- Dispute resolution: "I never received that email" → check sent log
+- Security: Detect unauthorized access or suspicious activity
 
-**Using Audit Trail**
+Using Audit Trail
 - Review invoice events for payment tracking
 - Check registration events for replacement history
 - Monitor CFP review activity (ensure all papers reviewed)
 - Track settings changes (who changed VAT rate?)
 - Export logs for compliance/reporting
 
-**Best Practices**
+Best Practices
 - Review audit logs weekly during active periods
 - Set up alerts for critical actions (invoice cancellation, mass deletion)
 - Export logs monthly for long-term storage
@@ -13466,28 +13483,28 @@ Contact:
 
 ### Regular Data Cleanup
 
-**Weekly Tasks** (During Active Registration)
+Weekly Tasks (During Active Registration)
 - Review new registrations for data quality issues
 - Check for duplicate emails (same person registered twice)
 - Validate VAT numbers on B2B invoices
 - Follow up on incomplete registrations
 - Archive test registrations (delete or mark as test)
 
-**Monthly Tasks**
+Monthly Tasks
 - Export registration data backup
 - Export invoice data backup
 - Export CFP submissions backup
 - Review alumni records for updates
 - Clean up draft invoices (delete or complete)
 
-**Pre-Event Tasks** (1 Week Before)
+Pre-Event Tasks (1 Week Before)
 - Final duplicate check (merge or cancel duplicates)
 - Validate all contact information (email, phone)
 - Export attendee list for badge printing
 - Export dietary restrictions for catering
 - Export accessibility needs for venue coordination
 
-**Post-Event Tasks**
+Post-Event Tasks
 - Update alumni records from paid registrations (auto-create alumni)
 - Archive conference data (export all data)
 - Clean up draft/cancelled content
@@ -13496,29 +13513,29 @@ Contact:
 
 ### Duplicate Prevention
 
-**Common Causes of Duplicates**
+Common Causes of Duplicates
 - Attendee registers twice (forgot they registered)
 - Attendee uses different email addresses
 - Group registration + individual registration
 - Admin creates registration that attendee already created
 
-**Prevention Strategies**
-1. **Email-Based Duplicate Detection**
+Prevention Strategies
+1. Email-Based Duplicate Detection
    - System checks for existing email on registration
    - Warns admin if email already exists
    - Attendee portal prevents duplicate self-registration
 
-2. **Name-Based Duplicate Detection**
+2. Name-Based Duplicate Detection
    - Search for similar names before creating manual registration
    - Check: First Name + Last Name + Company
    - Ask attendee to confirm before creating
 
-3. **Communication**
+3. Communication
    - Confirmation email immediately after registration
    - "Already registered? Login here" message on registration page
    - Clear instructions on group vs individual registration
 
-**Duplicate Resolution**
+Duplicate Resolution
 - Identify true duplicates (same person, different records)
 - Keep the registration with more complete data
 - Cancel/merge the duplicate
@@ -13527,56 +13544,56 @@ Contact:
 
 ### CSV Import/Export Hygiene
 
-**Import Best Practices**
-1. **Use Templates**
+Import Best Practices
+1. Use Templates
    - Download CSV template from system
    - Fill in data matching exact column names
    - Don't rename columns or change order
 
-2. **Data Validation Before Import**
+2. Data Validation Before Import
    - Check email format (user@domain.com)
    - Check country codes (ISO 2-letter: DE, US, GB)
    - Check dates (YYYY-MM-DD format)
    - Remove duplicate rows
 
-3. **Encoding**
+3. Encoding
    - Use UTF-8 encoding (supports international characters)
    - System exports with UTF-8 BOM for Excel compatibility
    - Don't use ANSI/Latin-1 (breaks accented characters)
 
-4. **Test First**
+4. Test First
    - Import small sample (10 rows) to verify format
    - Check for errors
    - Import full dataset after successful test
 
-5. **Review After Import**
+5. Review After Import
    - Check imported records for accuracy
    - Verify counts (imported 500 rows = 500 records?)
    - Spot-check random records
 
-**Export Best Practices**
-1. **Regular Backups**
+Export Best Practices
+1. Regular Backups
    - Export all critical data monthly
    - Store backups in secure location (encrypted cloud storage)
    - Keep historical exports (for point-in-time recovery)
 
-2. **Data Filtering**
+2. Data Filtering
    - Export only what you need (don't export everything)
    - Filter by status (active registrations only)
    - Filter by date range (current conference only)
 
-3. **Privacy & Security**
+3. Privacy & Security
    - Don't email exports (contains PII)
    - Use secure file sharing (password-protected)
    - Delete local copies after use
    - Restrict access to authorized personnel only
 
-4. **Excel Compatibility**
+4. Excel Compatibility
    - System exports with UTF-8 BOM (Excel recognizes encoding)
    - CSV format opens directly in Excel
    - Preserve leading zeros (e.g., postal codes) with proper formatting
 
-**Common Import/Export Issues**
+Common Import/Export Issues
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
@@ -13589,7 +13606,7 @@ Contact:
 
 ### Backup Strategies
 
-**What to Backup**
+What to Backup
 - Registration data (all fields, including billing profiles)
 - Invoice data (all invoices, line items, events)
 - CFP submissions (proposals, reviews, decisions)
@@ -13597,23 +13614,23 @@ Contact:
 - Alumni records
 - Configuration data (settings, booking options, templates)
 
-**Backup Frequency**
-- **Daily**: During active registration period
-- **Weekly**: During CFP review period
-- **Monthly**: During planning phase
-- **Immediately After**: Major imports, bulk operations, critical changes
+Backup Frequency
+- Daily: During active registration period
+- Weekly: During CFP review period
+- Monthly: During planning phase
+- Immediately After: Major imports, bulk operations, critical changes
 
-**Backup Storage**
-- **Primary**: Encrypted cloud storage (Google Drive, Dropbox, OneDrive)
-- **Secondary**: Local encrypted drive (offline backup)
-- **Tertiary**: System-level database backups (managed by SaaSConf platform)
+Backup Storage
+- Primary: Encrypted cloud storage (Google Drive, Dropbox, OneDrive)
+- Secondary: Local encrypted drive (offline backup)
+- Tertiary: System-level database backups (managed by SaaSConf platform)
 
-**Backup Testing**
+Backup Testing
 - Test restore quarterly (verify backups are valid)
 - Practice recovery procedure (document steps)
 - Train team on backup location and access
 
-**Retention Policy**
+Retention Policy
 - Keep current conference data: 2 years minimum
 - Keep financial data: 7 years (tax/audit requirements)
 - Keep historical data: Forever (archival, trend analysis)
@@ -13624,79 +13641,79 @@ Contact:
 ## Common Pitfalls to Avoid
 
 ### 1. Not Configuring Pronouns Before Registration Opens
-**Problem**: Replace Attendee modal fails because pronouns dropdown is empty.
-**Solution**: Add pronouns in Conference Settings > General before opening registration.
-**How to Fix**: Add pronouns now, inform attendees they can update profiles.
+Problem: Replace Attendee modal fails because pronouns dropdown is empty.
+Solution: Add pronouns in Conference Settings > General before opening registration.
+How to Fix: Add pronouns now, inform attendees they can update profiles.
 
 ### 2. Using "Cancel Invoice + Cancel Registrations" for Billing Corrections
-**Problem**: Attendees lose conference access when you just needed to fix a billing address.
-**Solution**: Use "Replace Invoice" for billing corrections (keeps registrations active).
-**How to Fix**: Cannot undo cancellation. Manually reactivate registrations, apologize to attendees.
+Problem: Attendees lose conference access when you just needed to fix a billing address.
+Solution: Use "Replace Invoice" for billing corrections (keeps registrations active).
+How to Fix: Cannot undo cancellation. Manually reactivate registrations, apologize to attendees.
 
 ### 3. Not Validating VAT Numbers Before Sending Invoices
-**Problem**: Invalid VAT numbers cause tax audit issues, rejected invoices, payment delays.
-**Solution**: Always verify VAT validation status (green checkmark) before sending.
-**How to Fix**: Resend invoice with corrected VAT number using Replace Invoice feature.
+Problem: Invalid VAT numbers cause tax audit issues, rejected invoices, payment delays.
+Solution: Always verify VAT validation status (green checkmark) before sending.
+How to Fix: Resend invoice with corrected VAT number using Replace Invoice feature.
 
 ### 4. Forgetting to Publish the Program
-**Problem**: Attendees can't see schedule, leads to confusion and complaints.
-**Solution**: Click "Publish Program" 2-4 weeks before event.
-**How to Fix**: Publish immediately, send announcement email.
+Problem: Attendees can't see schedule, leads to confusion and complaints.
+Solution: Click "Publish Program" 2-4 weeks before event.
+How to Fix: Publish immediately, send announcement email.
 
 ### 5. Over-Emailing Attendees
-**Problem**: Email fatigue leads to unsubscribes and missed important messages.
-**Solution**: Limit to 1 email per week until final week, segment by audience.
-**How to Fix**: Apologize, reduce frequency, consolidate info into digest emails.
+Problem: Email fatigue leads to unsubscribes and missed important messages.
+Solution: Limit to 1 email per week until final week, segment by audience.
+How to Fix: Apologize, reduce frequency, consolidate info into digest emails.
 
 ### 6. Not Setting Max Uses on Promotional Discount Codes
-**Problem**: Discount code shared publicly, hundreds use it, massive revenue loss.
-**Solution**: Set max_uses limit on all promotional codes (e.g., 50 uses).
-**How to Fix**: Deactivate code immediately, honor existing uses, tighten for future.
+Problem: Discount code shared publicly, hundreds use it, massive revenue loss.
+Solution: Set max_uses limit on all promotional codes (e.g., 50 uses).
+How to Fix: Deactivate code immediately, honor existing uses, tighten for future.
 
 ### 7. Scheduling Similar Topics in Parallel
-**Problem**: Attendees want both "Intro to Python" and "Advanced Python" but can only attend one.
-**Solution**: Survey attendee interest, avoid conflicts for popular topic combinations.
-**How to Fix**: Move sessions if time allows, or offer recordings for conflicted sessions.
+Problem: Attendees want both "Intro to Python" and "Advanced Python" but can only attend one.
+Solution: Survey attendee interest, avoid conflicts for popular topic combinations.
+How to Fix: Move sessions if time allows, or offer recordings for conflicted sessions.
 
 ### 8. Not Testing Registration Flow Before Launch
-**Problem**: Broken payment links, missing email confirmations, form errors.
-**Solution**: Complete test registration end-to-end before public launch.
-**How to Fix**: Fix issues immediately, notify affected registrants, offer support.
+Problem: Broken payment links, missing email confirmations, form errors.
+Solution: Complete test registration end-to-end before public launch.
+How to Fix: Fix issues immediately, notify affected registrants, offer support.
 
 ### 9. Importing CSV with Wrong Encoding
-**Problem**: Names with accents become garbled (Müller → M��ller).
-**Solution**: Always use UTF-8 encoding for CSV files.
-**How to Fix**: Delete bad import, re-import with correct encoding, fix manually if needed.
+Problem: Names with accents become garbled (Müller → M��ller).
+Solution: Always use UTF-8 encoding for CSV files.
+How to Fix: Delete bad import, re-import with correct encoding, fix manually if needed.
 
 ### 10. Not Following Up on Overdue Sponsor Invoices
-**Problem**: Sponsors don't pay, but you've already delivered benefits (logo on site, booth space).
-**Solution**: Invoice immediately after contract signed, follow up weekly if unpaid.
-**How to Fix**: Personal outreach, escalate to executive contact, withhold future benefits.
+Problem: Sponsors don't pay, but you've already delivered benefits (logo on site, booth space).
+Solution: Invoice immediately after contract signed, follow up weekly if unpaid.
+How to Fix: Personal outreach, escalate to executive contact, withhold future benefits.
 
 ### 11. Leaving Draft Invoices Unsent
-**Problem**: Attendee thinks they paid but invoice was never actually sent.
-**Solution**: Send invoices immediately after registration, don't let drafts pile up.
-**How to Fix**: Send invoice now, apologize for delay, extend due date if needed.
+Problem: Attendee thinks they paid but invoice was never actually sent.
+Solution: Send invoices immediately after registration, don't let drafts pile up.
+How to Fix: Send invoice now, apologize for delay, extend due date if needed.
 
 ### 12. Not Backing Up Data Regularly
-**Problem**: Accidental deletion, system issue, or corruption causes data loss.
-**Solution**: Export data backups weekly during active periods.
-**How to Fix**: If recent backup exists, restore. Otherwise, manual data re-entry required.
+Problem: Accidental deletion, system issue, or corruption causes data loss.
+Solution: Export data backups weekly during active periods.
+How to Fix: If recent backup exists, restore. Otherwise, manual data re-entry required.
 
 ### 13. Granting Too Many People Tenant Admin Access
-**Problem**: Too many people can change critical settings, hard to track who did what.
-**Solution**: Use conference-level admins, grant tenant admin sparingly.
-**How to Fix**: Audit current access, remove unnecessary tenant admin permissions.
+Problem: Too many people can change critical settings, hard to track who did what.
+Solution: Use conference-level admins, grant tenant admin sparingly.
+How to Fix: Audit current access, remove unnecessary tenant admin permissions.
 
 ### 14. Not Setting Clear CFP Deadlines
-**Problem**: Late submissions, extended deadlines, rushed reviews.
-**Solution**: Set hard deadline in system, communicate clearly, don't extend.
-**How to Fix**: Close CFP on deadline, review late submissions only if exceptional circumstances.
+Problem: Late submissions, extended deadlines, rushed reviews.
+Solution: Set hard deadline in system, communicate clearly, don't extend.
+How to Fix: Close CFP on deadline, review late submissions only if exceptional circumstances.
 
 ### 15. Forgetting to Create Credit Note When Cancelling Invoice
-**Problem**: Manual cancellation without proper accounting trail.
-**Solution**: Use "Cancel Invoice" feature (auto-creates credit note).
-**How to Fix**: Manually create credit note for proper accounting, document in invoice events.
+Problem: Manual cancellation without proper accounting trail.
+Solution: Use "Cancel Invoice" feature (auto-creates credit note).
+How to Fix: Manually create credit note for proper accounting, document in invoice events.
 
 ---
 
@@ -13704,33 +13721,33 @@ Contact:
 
 ### Academic Conferences
 
-**Unique Characteristics**
+Unique Characteristics
 - Peer-review emphasis (double-blind often required)
 - Proceedings publication (ISBN, DOI assignment)
 - Poster sessions and demos (different submission types)
 - PhD symposium or student research track
 - Grant-funded travel (reimbursement needed)
 
-**CFP Adaptations**
-- **Submission Types**: Full papers (8-10 pages), short papers (4 pages), posters, demos
-- **Review Process**: Double-blind review (hide author names)
-- **Review Criteria**: Academic rigor, methodology, novelty, reproducibility
-- **Acceptance Rates**: Lower (20-30% for competitive conferences)
-- **Proceedings**: Coordinate with publisher (ACM, IEEE, Springer)
+CFP Adaptations
+- Submission Types: Full papers (8-10 pages), short papers (4 pages), posters, demos
+- Review Process: Double-blind review (hide author names)
+- Review Criteria: Academic rigor, methodology, novelty, reproducibility
+- Acceptance Rates: Lower (20-30% for competitive conferences)
+- Proceedings: Coordinate with publisher (ACM, IEEE, Springer)
 
-**Registration Adaptations**
-- **Student Rates**: Heavily discounted (50-70% off)
-- **Proof of Enrollment**: Require student ID upload or .edu email
-- **Travel Grants**: Track separately (not in SaaSConf, use external system)
-- **Institutional Invoicing**: Many universities require PO numbers
+Registration Adaptations
+- Student Rates: Heavily discounted (50-70% off)
+- Proof of Enrollment: Require student ID upload or .edu email
+- Travel Grants: Track separately (not in SaaSConf, use external system)
+- Institutional Invoicing: Many universities require PO numbers
 
-**Program Considerations**
-- **Session Types**: Paper presentations, posters, panels, tutorials, workshops
-- **Parallel Tracks**: Research areas (AI, HCI, Systems, Theory)
-- **Poster Sessions**: Dedicated time slots with no parallel sessions
-- **Social Events**: Conference banquet, student dinner, informal gatherings
+Program Considerations
+- Session Types: Paper presentations, posters, panels, tutorials, workshops
+- Parallel Tracks: Research areas (AI, HCI, Systems, Theory)
+- Poster Sessions: Dedicated time slots with no parallel sessions
+- Social Events: Conference banquet, student dinner, informal gatherings
 
-**Best Practices**
+Best Practices
 - Start CFP 9-12 months before event (academic timelines longer)
 - Allow 2-3 months for review (thorough peer review takes time)
 - Coordinate with academic calendar (avoid exam periods)
@@ -13739,40 +13756,40 @@ Contact:
 
 ### Tech/Industry Conferences
 
-**Unique Characteristics**
+Unique Characteristics
 - Sponsor-driven revenue model
 - Product demos and vendor booths
 - Networking focus (hallway track)
 - Workshops and hands-on tutorials
 - Fast-paced, trend-focused content
 
-**CFP Adaptations**
-- **Submission Types**: Talks, panels, lightning talks, workshops
-- **Review Process**: Single-blind, committee-based
-- **Review Criteria**: Practical value, relevance, speaker experience
-- **Acceptance Rates**: Higher (40-60%)
-- **Diversity**: Actively recruit underrepresented speakers
+CFP Adaptations
+- Submission Types: Talks, panels, lightning talks, workshops
+- Review Process: Single-blind, committee-based
+- Review Criteria: Practical value, relevance, speaker experience
+- Acceptance Rates: Higher (40-60%)
+- Diversity: Actively recruit underrepresented speakers
 
-**Registration Adaptations**
-- **Corporate Pricing**: Higher rates (companies pay)
-- **Group Discounts**: Common (teams from same company)
-- **Add-Ons**: Workshops, training, certification exams
-- **Package Deals**: Conference + hotel + training
+Registration Adaptations
+- Corporate Pricing: Higher rates (companies pay)
+- Group Discounts: Common (teams from same company)
+- Add-Ons: Workshops, training, certification exams
+- Package Deals: Conference + hotel + training
 
-**Sponsor Integration**
-- **Sponsor Talks**: Some slots reserved for sponsors
-- **Booth Space**: Large expo hall
-- **Recruiting**: Job board, resume drop, company meetups
-- **Product Demos**: Demo area separate from talks
+Sponsor Integration
+- Sponsor Talks: Some slots reserved for sponsors
+- Booth Space: Large expo hall
+- Recruiting: Job board, resume drop, company meetups
+- Product Demos: Demo area separate from talks
 
-**Program Considerations**
-- **Tracks**: Technology areas (Frontend, Backend, DevOps, AI/ML)
-- **Levels**: Beginner, Intermediate, Advanced (clearly labeled)
-- **Lightning Talks**: 5-10 min rapid-fire sessions
-- **Keynotes**: Industry leaders, provocative topics
-- **Social Events**: Happy hours, game nights, unconference sessions
+Program Considerations
+- Tracks: Technology areas (Frontend, Backend, DevOps, AI/ML)
+- Levels: Beginner, Intermediate, Advanced (clearly labeled)
+- Lightning Talks: 5-10 min rapid-fire sessions
+- Keynotes: Industry leaders, provocative topics
+- Social Events: Happy hours, game nights, unconference sessions
 
-**Best Practices**
+Best Practices
 - Prioritize networking time (long breaks, evening events)
 - Offer workshop/tutorial day (hands-on learning)
 - Record sessions and publish online (extend reach)
@@ -13781,42 +13798,42 @@ Contact:
 
 ### Virtual Events
 
-**Unique Characteristics**
+Unique Characteristics
 - No physical venue (streaming platform required)
 - Global audience (timezone challenges)
 - Lower costs (no venue, catering, AV)
 - Higher no-show rates (easier to skip)
 - Recording/replay expected
 
-**Platform Requirements**
-- **Streaming**: Zoom, Hopin, Airmeet, or custom
-- **Interaction**: Q&A, polls, chat, breakout rooms
-- **Networking**: Virtual lounges, 1-on-1 matching
-- **Sponsor Booths**: Virtual booths with chat/video
+Platform Requirements
+- Streaming: Zoom, Hopin, Airmeet, or custom
+- Interaction: Q&A, polls, chat, breakout rooms
+- Networking: Virtual lounges, 1-on-1 matching
+- Sponsor Booths: Virtual booths with chat/video
 
-**CFP Adaptations**
-- **Global Speakers**: Easier to recruit (no travel required)
-- **Pre-Recorded Options**: Allow pre-recording for timezone flexibility
-- **Session Length**: Shorter (30-45 min max, attention span lower)
+CFP Adaptations
+- Global Speakers: Easier to recruit (no travel required)
+- Pre-Recorded Options: Allow pre-recording for timezone flexibility
+- Session Length: Shorter (30-45 min max, attention span lower)
 
-**Registration Adaptations**
-- **Lower Pricing**: No venue costs, should reflect in price
-- **Global Timezones**: Offer replay access for all sessions
-- **Free Tier**: Consider free access to keynotes (marketing)
+Registration Adaptations
+- Lower Pricing: No venue costs, should reflect in price
+- Global Timezones: Offer replay access for all sessions
+- Free Tier: Consider free access to keynotes (marketing)
 
-**VAT Compliance**
-- **Virtual services = OSS rules apply**
-- **B2B EU customers must provide VAT number** (reverse charge)
-- **B2C EU customers pay customer country rate** (OSS)
+VAT Compliance
+- Virtual services = OSS rules apply
+- B2B EU customers must provide VAT number (reverse charge)
+- B2C EU customers pay customer country rate (OSS)
 - Critical: System auto-applies reverse charge, verify before sending invoices
 
-**Program Considerations**
-- **Timezone-Friendly Schedule**: Repeat sessions or offer replays
-- **Shorter Sessions**: 30-45 min talks (not 60 min)
-- **More Breaks**: Every 90 min (screen fatigue)
-- **Interaction**: Polls, Q&A, chat moderation
+Program Considerations
+- Timezone-Friendly Schedule: Repeat sessions or offer replays
+- Shorter Sessions: 30-45 min talks (not 60 min)
+- More Breaks: Every 90 min (screen fatigue)
+- Interaction: Polls, Q&A, chat moderation
 
-**Best Practices**
+Best Practices
 - Test platform thoroughly (tech rehearsal with speakers)
 - Provide speaker training (mute/unmute, screen sharing)
 - Record everything (replay value)
@@ -13826,39 +13843,39 @@ Contact:
 
 ### Hybrid Events
 
-**Unique Characteristics**
+Unique Characteristics
 - Both in-person and virtual attendance options
 - Complex AV setup (stream to virtual attendees)
 - Two-tier pricing (virtual cheaper than in-person)
 - Networking challenges (connecting virtual and in-person)
 
-**Attendance Type Configuration**
+Attendance Type Configuration
 - Set conference attendance type to `hybrid_onsite` or `hybrid_online`
-- **Hybrid-Onsite**: Primarily in-person with virtual option
-- **Hybrid-Online**: Primarily virtual with small in-person component
+- Hybrid-Onsite: Primarily in-person with virtual option
+- Hybrid-Online: Primarily virtual with small in-person component
 
-**CFP Adaptations**
-- **Speaker Attendance**: Allow speakers to present remotely
-- **Mark Speaker Location**: In-person or virtual (affects AV setup)
-- **Interaction Design**: How virtual attendees ask questions?
+CFP Adaptations
+- Speaker Attendance: Allow speakers to present remotely
+- Mark Speaker Location: In-person or virtual (affects AV setup)
+- Interaction Design: How virtual attendees ask questions?
 
-**Registration Adaptations**
-- **Separate Tickets**: In-Person Pass, Virtual Pass
-- **Pricing Difference**: Virtual typically 30-50% of in-person price
-- **Upgrades**: Allow virtual attendees to upgrade to in-person
+Registration Adaptations
+- Separate Tickets: In-Person Pass, Virtual Pass
+- Pricing Difference: Virtual typically 30-50% of in-person price
+- Upgrades: Allow virtual attendees to upgrade to in-person
 
-**VAT Complexity**
-- **In-Person Tickets**: Conference country VAT (local service)
-- **Virtual Tickets**: OSS rules apply (customer country VAT or reverse charge)
-- **System handles automatically based on attendance type field**
+VAT Complexity
+- In-Person Tickets: Conference country VAT (local service)
+- Virtual Tickets: OSS rules apply (customer country VAT or reverse charge)
+- System handles automatically based on attendance type field
 
-**Program Considerations**
-- **Hybrid Sessions**: Streamed live to virtual attendees
-- **In-Person Only**: Networking events, meals, parties
-- **Virtual Only**: Timezone-friendly sessions, async content
-- **AV Setup**: Cameras, mics, streaming equipment for every room
+Program Considerations
+- Hybrid Sessions: Streamed live to virtual attendees
+- In-Person Only: Networking events, meals, parties
+- Virtual Only: Timezone-friendly sessions, async content
+- AV Setup: Cameras, mics, streaming equipment for every room
 
-**Best Practices**
+Best Practices
 - Clearly label which sessions are hybrid vs in-person only
 - Provide virtual networking opportunities (don't ignore virtual attendees)
 - Test AV in every room before event
@@ -13868,38 +13885,38 @@ Contact:
 
 ### Multi-Track Conferences
 
-**Unique Characteristics**
+Unique Characteristics
 - Parallel sessions (2-5 tracks simultaneously)
 - Attendee choice (can't attend everything)
 - Scheduling complexity (avoid conflicts)
 - Larger venue (multiple rooms needed)
 
-**Track Design**
-- **Theme-Based**: AI/ML, Web Dev, DevOps, Data Science
-- **Level-Based**: Beginner, Intermediate, Advanced
-- **Format-Based**: Talks, Workshops, Panels
-- **Audience-Based**: Technical, Business, Design
+Track Design
+- Theme-Based: AI/ML, Web Dev, DevOps, Data Science
+- Level-Based: Beginner, Intermediate, Advanced
+- Format-Based: Talks, Workshops, Panels
+- Audience-Based: Technical, Business, Design
 
-**Scheduling Strategy**
-1. **Create Time Grid**: Slots across tracks
-2. **Place Keynotes**: All-hands sessions (no parallel sessions)
-3. **Balance Topics**: Don't cluster all popular topics in one track
-4. **Balance Levels**: Mix beginner/advanced across tracks
-5. **Avoid Speaker Conflicts**: Same speaker in parallel sessions
+Scheduling Strategy
+1. Create Time Grid: Slots across tracks
+2. Place Keynotes: All-hands sessions (no parallel sessions)
+3. Balance Topics: Don't cluster all popular topics in one track
+4. Balance Levels: Mix beginner/advanced across tracks
+5. Avoid Speaker Conflicts: Same speaker in parallel sessions
 
-**Attendee Guidance**
-- **Track Recommendations**: Suggest tracks by role or interest
-- **Session Selection**: Allow pre-registration for workshops (capacity limits)
-- **Personalized Schedule**: Let attendees build custom schedule
-- **Mobile App**: Essential for multi-track navigation
+Attendee Guidance
+- Track Recommendations: Suggest tracks by role or interest
+- Session Selection: Allow pre-registration for workshops (capacity limits)
+- Personalized Schedule: Let attendees build custom schedule
+- Mobile App: Essential for multi-track navigation
 
-**Separately Bookable Sessions**
+Separately Bookable Sessions
 - Mark sessions as `separately_bookable: true` (workshops, tutorials)
 - Attendees choose during registration
 - Prevents overcrowding
 - System tracks capacity
 
-**Best Practices**
+Best Practices
 - Use color-coding for tracks (visual clarity)
 - Provide printed schedule grid (attendees annotate)
 - Allow session switching (don't over-enforce pre-registration)
@@ -13955,22 +13972,22 @@ Contact:
 
 This best practices guide synthesizes operational wisdom from all SaaSConf modules. Use it as your playbook for successful conference management.
 
-**Key Principles**:
-1. **Plan early**: 6-month timeline prevents last-minute chaos
-2. **Automate workflows**: Use system features (templates, auto-emails, validation)
-3. **Validate data**: Bad data causes downstream problems
-4. **Communicate clearly**: Frequent, concise, targeted emails
-5. **Back up everything**: Data loss is preventable
-6. **Learn continuously**: Post-mortems improve future events
+Key Principles:
+1. Plan early: 6-month timeline prevents last-minute chaos
+2. Automate workflows: Use system features (templates, auto-emails, validation)
+3. Validate data: Bad data causes downstream problems
+4. Communicate clearly: Frequent, concise, targeted emails
+5. Back up everything: Data loss is preventable
+6. Learn continuously: Post-mortems improve future events
 
-**Next Steps**:
+Next Steps:
 - Bookmark this guide for reference
 - Share with your team
 - Customize for your conference type
 - Document your own lessons learned
 - Contribute improvements back
 
-**Need Help?**
+Need Help?
 - Technical Support: support@saasconf.com
 - VAT/Legal Questions: Consult your tax advisor
 - Feature Requests: Submit via feedback form
@@ -13994,23 +14011,23 @@ When encountering issues in SaaSConf, follow this systematic approach to identif
 
 First, determine which module or feature is affected:
 
-- **Invoice/Billing**: VAT calculation, PDF generation, payment processing
-- **Registration**: Attendee management, booking options, replacements
-- **Email**: Delivery failures, template rendering
-- **Portal Access**: Login issues, permissions
-- **Integration**: Stripe, VIES, external services
+- Invoice/Billing: VAT calculation, PDF generation, payment processing
+- Registration: Attendee management, booking options, replacements
+- Email: Delivery failures, template rendering
+- Portal Access: Login issues, permissions
+- Integration: Stripe, VIES, external services
 
 ### 2. Check Browser Console for Errors
 
 Open your browser's developer tools (F12 or right-click → Inspect):
 
-**Chrome/Edge/Safari**:
+Chrome/Edge/Safari:
 1. Press F12 to open Developer Tools
-2. Click the **Console** tab
+2. Click the Console tab
 3. Look for red error messages
 4. Screenshot or copy error text for support
 
-**Common Console Errors**:
+Common Console Errors:
 - `401 Unauthorized` → Session expired, log out and log back in
 - `403 Forbidden` → Insufficient permissions, verify your role
 - `500 Internal Server Error` → Backend issue, contact support
@@ -14020,23 +14037,23 @@ Open your browser's developer tools (F12 or right-click → Inspect):
 
 Check your user role and module access:
 
-1. Navigate to **Settings > Team**
+1. Navigate to Settings > Team
 2. Find your user account
 3. Verify your role:
-   - **Tenant Admin**: Full access to all features
-   - **Conference Admin**: Access to assigned conferences
-   - **Viewer**: Read-only access
-4. Check enabled modules in **Settings > Modules**
+   - Tenant Admin: Full access to all features
+   - Conference Admin: Access to assigned conferences
+   - Viewer: Read-only access
+4. Check enabled modules in Settings > Modules
 5. If missing access, contact your tenant administrator
 
 ### 4. Network Connectivity Issues
 
-**Symptoms**:
+Symptoms:
 - Pages loading slowly or timing out
 - "Connection failed" messages
 - Data not saving
 
-**Resolution**:
+Resolution:
 1. Check internet connection
 2. Try refreshing the page (Ctrl+R or Cmd+R)
 3. Clear browser cache (Ctrl+Shift+Delete)
@@ -14045,25 +14062,25 @@ Check your user role and module access:
 
 ### 5. Cache and Session Issues
 
-**Symptoms**:
+Symptoms:
 - Seeing outdated data
 - Changes not appearing
 - Interface looks broken or missing styles
 
-**Clear Cache (Chrome)**:
+Clear Cache (Chrome):
 1. Press Ctrl+Shift+Delete (Cmd+Shift+Delete on Mac)
 2. Select "Cached images and files"
 3. Choose "All time"
 4. Click "Clear data"
 5. Refresh the page (Ctrl+R)
 
-**Clear Session**:
+Clear Session:
 1. Log out completely
 2. Clear browser cache
 3. Close all browser tabs
 4. Log back in
 
-**Hard Refresh** (force reload):
+Hard Refresh (force reload):
 - Windows: Ctrl+Shift+R
 - Mac: Cmd+Shift+R
 
@@ -14096,52 +14113,52 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Missing Data / Empty Fields
 
-**Symptoms**:
+Symptoms:
 - Fields showing blank when they should have data
 - Dropdowns empty
 - Lists showing no results
 
-**Common Causes & Solutions**:
+Common Causes & Solutions:
 
-**1. Filters Applied**:
+1. Filters Applied:
 - Check if status filters are active (e.g., showing only "Draft" invoices)
 - Clear search boxes
 - Reset date range filters
 - Look for "Active Filters" indicator in UI
 
-**2. Wrong Conference Selected**:
+2. Wrong Conference Selected:
 - Verify correct conference in top navigation
 - Data is isolated per conference
 - Switch to the correct conference context
 
-**3. Module Not Enabled**:
-- Go to **Settings > Modules**
+3. Module Not Enabled:
+- Go to Settings > Modules
 - Check if required module is enabled
 - Contact admin to enable if needed
 
-**4. Data Not Yet Created**:
+4. Data Not Yet Created:
 - Check if records actually exist in other views
 - Verify creation process completed successfully
 - Check audit logs for creation events
 
-**5. Permission Issues**:
+5. Permission Issues:
 - Verify your role has read access to this data
 - Conference admins only see assigned conferences
 - Contact tenant admin to adjust permissions
 
 ### Duplicate Records
 
-**Symptoms**:
+Symptoms:
 - Same invoice/registration appearing multiple times
 - Duplicate discount codes
 - Multiple similar entries
 
-**Prevention**:
+Prevention:
 - System enforces uniqueness constraints on key fields
 - Invoice numbers are auto-generated and unique
 - Email addresses unique per conference for alumni/registrations
 
-**Resolution**:
+Resolution:
 1. Identify the correct/primary record
 2. Delete duplicates (if you have permission)
 3. If unable to delete, contact support
@@ -14149,20 +14166,20 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Data Not Saving
 
-**Symptoms**:
+Symptoms:
 - Click "Save" but changes revert
 - No success message appears
 - Form stays in edit mode
 
-**Troubleshooting Steps**:
+Troubleshooting Steps:
 
-**1. Check for Validation Errors**:
+1. Check for Validation Errors:
 - Look for red-bordered fields
 - Read error messages below fields
 - All required fields (marked with *) must be filled
 - Email/phone fields must be valid format
 
-**2. Check Browser Console**:
+2. Check Browser Console:
 - Open Developer Tools (F12)
 - Look for red error messages
 - Common errors:
@@ -14170,55 +14187,55 @@ Use this table to quickly find solutions based on symptoms:
   - "Invalid format"
   - "Permission denied"
 
-**3. Check Network Tab**:
+3. Check Network Tab:
 - Open Developer Tools (F12) → Network tab
 - Click Save again
 - Look for failed requests (red)
 - Click on failed request to see error details
 
-**4. Session Timeout**:
+4. Session Timeout:
 - If session expired, log out and back in
 - Re-enter your changes
 - Consider working faster or refresh session periodically
 
-**5. Field-Specific Issues**:
-- **Country fields**: Must select from dropdown (not free text)
-- **VAT numbers**: Must match country format
-- **Dates**: Must be valid and in range
-- **Amounts**: Must be positive numbers
+5. Field-Specific Issues:
+- Country fields: Must select from dropdown (not free text)
+- VAT numbers: Must match country format
+- Dates: Must be valid and in range
+- Amounts: Must be positive numbers
 
 ### Data Not Appearing in UI
 
-**Symptoms**:
+Symptoms:
 - Created data doesn't show in lists
 - Search returns no results
 - Recent changes missing
 
-**Immediate Actions**:
+Immediate Actions:
 
-**1. Refresh the Page**:
+1. Refresh the Page:
 - Press F5 or Ctrl+R (Cmd+R on Mac)
 - Or click browser refresh button
 - Check if data appears after refresh
 
-**2. Check Cache**:
+2. Check Cache:
 - Data may be cached temporarily
 - Wait 30 seconds and refresh
 - For persistent issues, clear browser cache
 - Try in incognito/private mode
 
-**3. Verify Creation**:
+3. Verify Creation:
 - Navigate back to creation form
 - Check if record actually saved
 - Look for success message after creation
 - Check audit logs in Settings
 
-**4. Database Sync**:
+4. Database Sync:
 - In rare cases, data may take a few seconds to propagate
 - Refresh after 5-10 seconds
 - If still missing after 1 minute, contact support
 
-**5. Filter/Search Issues**:
+5. Filter/Search Issues:
 - Clear all active filters
 - Try searching by different field (name vs email)
 - Check date range filters aren't excluding your data
@@ -14226,50 +14243,50 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Import/Export Problems
 
-**CSV Import Issues**:
+CSV Import Issues:
 
-**Error: "Invalid CSV format"**:
+Error: "Invalid CSV format":
 - Ensure file is UTF-8 encoded
 - Use comma (,) as delimiter
 - Include header row with exact column names
 - Save as .csv (not .xlsx or other formats)
 
-**Error: "Missing required column"**:
+Error: "Missing required column":
 - Check CSV has all required headers
 - Column names are case-sensitive
 - Remove extra spaces from column names
 - Example required columns: email, first_name, last_name
 
-**Error: "Row X: Invalid email format"**:
+Error: "Row X: Invalid email format":
 - Check email addresses in CSV are valid
 - Format: user@domain.com
 - No spaces, special characters
 - One email per cell
 
-**Error: "Maximum rows exceeded"**:
+Error: "Maximum rows exceeded":
 - Import limit is 50,000 rows per file
 - Split large files into multiple smaller files
 - Import in batches
 
-**Error: "Duplicate email in row X"**:
+Error: "Duplicate email in row X":
 - CSV contains duplicate email addresses
 - Remove duplicates before importing
 - Or use "Skip duplicates" option if available
 
-**CSV Export Issues**:
+CSV Export Issues:
 
-**Excel shows garbled characters**:
+Excel shows garbled characters:
 - File is UTF-8 encoded with BOM for Excel compatibility
 - If issues persist: Open in Excel > Data > From Text/CSV
 - Select "UTF-8" encoding
 - Click Load
 
-**Missing columns in export**:
+Missing columns in export:
 - Check your user role has permission to see those columns
 - Some fields hidden based on module access
 - Contact admin for full data access
 
-**Export times out**:
+Export times out:
 - Large datasets (50k+ rows) may take time
 - Wait up to 60 seconds
 - If timeout persists, contact support to run manual export
@@ -14281,82 +14298,82 @@ Use this table to quickly find solutions based on symptoms:
 
 ### VAT Calculation Issues
 
-**Symptom**: VAT rate is incorrect or unexpected
+Symptom: VAT rate is incorrect or unexpected
 
-**Troubleshooting Steps**:
+Troubleshooting Steps:
 
-**1. Verify Conference Country**:
-- Go to **Settings > General**
+1. Verify Conference Country:
+- Go to Settings > General
 - Check "Conference Country" setting
 - This determines the "home country" for VAT
 - Must be ISO code (e.g., DE, FR, US)
 
-**2. Verify Customer Country**:
+2. Verify Customer Country:
 - Open the invoice
 - Check "Recipient Country" field
 - Must be ISO code (e.g., DE, FR, US)
 - Not full name (Germany → DE)
 
-**3. Check Attendance Type**:
+3. Check Attendance Type:
 - VAT rules differ for in-person vs virtual events
-- Go to **Settings > General**
+- Go to Settings > General
 - Check "Attendance Type" setting:
   - `in_person`: Physical event location
   - `virtual`: Online-only event
   - `hybrid_onsite`: Hybrid with in-person default
   - `hybrid_online`: Hybrid with virtual default
 
-**4. Review VAT Decision Table**:
+4. Review VAT Decision Table:
 - 24 rules determine VAT treatment
-- Go to **Settings > Finance > VAT Settings**
+- Go to Settings > Finance > VAT Settings
 - Find your scenario in the decision table
 - Example: Virtual + EU B2B → Reverse charge (0% VAT)
 
-**5. Check Customer Type**:
-- **B2B** (has VAT number): Different rules apply
-- **B2C** (no VAT number): Consumer rates apply
+5. Check Customer Type:
+- B2B (has VAT number): Different rules apply
+- B2C (no VAT number): Consumer rates apply
 - Verify VAT number presence triggers correct logic
 
-**6. Verify VAT Rate Overrides**:
-- Go to **Settings > Finance > VAT Settings**
+6. Verify VAT Rate Overrides:
+- Go to Settings > Finance > VAT Settings
 - Check "Country VAT Rates" section
 - Tenant-specific overrides take precedence
 - Ensure override rate is correct if present
 
-**7. Check for Edge Cases**:
-- **Reverse charge**: EU B2B virtual services → 0% VAT, buyer pays
-- **OSS (One-Stop Shop)**: EU B2C virtual services → customer country rate
-- **Non-EU customers**: Usually 0% VAT
-- **Same country**: Conference country VAT rate applies
+7. Check for Edge Cases:
+- Reverse charge: EU B2B virtual services → 0% VAT, buyer pays
+- OSS (One-Stop Shop): EU B2C virtual services → customer country rate
+- Non-EU customers: Usually 0% VAT
+- Same country: Conference country VAT rate applies
 
-**When to Contact Support**:
+When to Contact Support:
 - If all settings appear correct but VAT still wrong
 - Provide: Conference country, customer country, attendance type, has VAT number
 - Include invoice ID for investigation
 
 ### VAT Number Validation Issues
 
-**Yellow "Unverified" Warning**:
+Yellow "Unverified" Warning:
 
-**Meaning**:
+Meaning:
 - VAT format is correct
 - VIES registry temporarily unavailable
 - Safe to proceed
 
-**Actions**:
+Actions:
 1. This is normal when VIES API is down (EU system)
 2. Invoice can still be sent
 3. Recommend customer double-check their VAT number
 4. Document in invoice notes that VIES was unavailable
 5. Re-validate later when VIES is back up
 
-**Red "Invalid" Error**:
+Red "Invalid" Error:
 
-**Meaning**:
+Meaning:
 - VAT number format or checksum failed
 - Number may be incorrect
 
-**Troubleshooting**:
+Troubleshooting:
 1. Ask customer to verify their VAT number
 2. Check country code matches:
    - DE for Germany
@@ -14367,20 +14384,20 @@ Use this table to quickly find solutions based on symptoms:
 4. Try entering again carefully
 5. Verify on EU VIES website: https://ec.europa.eu/taxation_customs/vies/
 
-**Common VAT Format Issues**:
-- **Missing country code**: VAT must start with 2-letter country code
-- **Wrong country code**: Must match recipient country
-- **Extra spaces**: Remove all spaces
-- **Wrong length**: Each country has specific length requirements
-- **Invalid checksum**: Number doesn't pass mathematical validation
+Common VAT Format Issues:
+- Missing country code: VAT must start with 2-letter country code
+- Wrong country code: Must match recipient country
+- Extra spaces: Remove all spaces
+- Wrong length: Each country has specific length requirements
+- Invalid checksum: Number doesn't pass mathematical validation
 
-**Admin Override**:
+Admin Override:
 - Tenant admins and super admins can override validation
 - Use only when certain the number is correct
 - Document reason in invoice notes
 - Customer responsible for providing correct VAT number
 
-**Validation Not Triggering**:
+Validation Not Triggering:
 - Validation happens on blur (click outside field)
 - Wait 1-2 seconds for API call
 - Check browser console for errors
@@ -14388,33 +14405,33 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Invoice Number Generation Issues
 
-**Duplicate Invoice Numbers**:
+Duplicate Invoice Numbers:
 
-**Cause**: Extremely rare due to database-level counters
+Cause: Extremely rare due to database-level counters
 
-**If It Happens**:
+If It Happens:
 1. Contact support immediately
 2. Do not send duplicate invoice
 3. Support will manually assign unique number
 4. Root cause will be investigated
 
-**Invoice Number Not Assigned**:
+Invoice Number Not Assigned:
 
-**Symptom**: Invoice sent but shows blank invoice number
+Symptom: Invoice sent but shows blank invoice number
 
-**Troubleshooting**:
+Troubleshooting:
 1. Refresh the page
 2. Check invoice status (should be "Sent")
 3. Open invoice details
 4. If still blank after refresh, contact support
 5. Do not send invoice again (creates duplicate)
 
-**Wrong Number Format**:
+Wrong Number Format:
 
-**Cause**: Settings misconfigured
+Cause: Settings misconfigured
 
-**Resolution**:
-1. Go to **Settings > Finance > Invoice Settings**
+Resolution:
+1. Go to Settings > Finance > Invoice Settings
 2. Check "Invoice Number Template"
 3. Available placeholders:
    - `{YYYY}` - Year (4 digits)
@@ -14427,35 +14444,35 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Payment Processing Issues
 
-**Stripe Payment Failed**:
+Stripe Payment Failed:
 
-**Common Reasons**:
+Common Reasons:
 
-**1. Card Declined**:
+1. Card Declined:
 - Customer's bank declined transaction
 - Customer should contact their bank
 - Or try different card
 - Payment link remains active for retry
 
-**2. Insufficient Funds**:
+2. Insufficient Funds:
 - Customer's card has insufficient balance
 - Customer should add funds or use different card
 
-**3. Payment Link Expired**:
+3. Payment Link Expired:
 - Stripe payment links typically don't expire
 - But can be manually deactivated
 - Check invoice events for "payment_link_deactivated"
 - If deactivated, create new invoice or convert to credit card again
 
-**4. Customer Closed Payment Window**:
+4. Customer Closed Payment Window:
 - Customer may have closed checkout before completing
 - Payment link still active
 - Customer can click link again
 - Or resend invoice with payment link
 
-**Viewing Payment Error Details**:
+Viewing Payment Error Details:
 1. Open invoice
-2. Go to **Events** tab
+2. Go to Events tab
 3. Look for "Payment Failed" event
 4. Read error_message field for details
 5. Common messages:
@@ -14464,7 +14481,7 @@ Use this table to quickly find solutions based on symptoms:
    - "expired_card" → Use valid card
    - "incorrect_cvc" → Check security code
 
-**Resolution Steps**:
+Resolution Steps:
 1. View error details in invoice events
 2. Contact customer with specific error
 3. Customer resolves issue
@@ -14473,33 +14490,33 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Payment Status Not Updating
 
-**Symptom**: Customer paid but invoice still shows "Sent" or "Overdue"
+Symptom: Customer paid but invoice still shows "Sent" or "Overdue"
 
-**Automatic Update (Webhook)**:
+Automatic Update (Webhook):
 
-**Troubleshooting**:
+Troubleshooting:
 1. Wait 5 minutes for webhook to process
 2. Refresh the invoice page
 3. Check invoice events for "Payment Succeeded"
 4. If still not updated, proceed to manual sync
 
-**Manual Sync**:
+Manual Sync:
 
-**Single Invoice**:
+Single Invoice:
 1. Open the invoice
-2. Click **Actions** dropdown
-3. Click **Sync Stripe Payment**
+2. Click Actions dropdown
+3. Click Sync Stripe Payment
 4. System queries Stripe API
 5. Updates status if payment found
 
-**Bulk Sync**:
-1. Go to **Invoices** tab
-2. Click **Sync Stripe Payments** button (top right)
+Bulk Sync:
+1. Go to Invoices tab
+2. Click Sync Stripe Payments button (top right)
 3. System checks all pending credit card invoices
 4. Updates any that were paid
 5. Shows summary: "3 invoices updated to paid"
 
-**If Still Not Updated**:
+If Still Not Updated:
 1. Verify payment in Stripe Dashboard
 2. Find payment intent ID in Stripe
 3. Check invoice events for that payment intent ID
@@ -14508,15 +14525,15 @@ Use this table to quickly find solutions based on symptoms:
    - Stripe payment intent ID
    - Customer email
 
-**Webhook Configuration Issues**:
+Webhook Configuration Issues:
 
-**How to Verify Webhook**:
-1. Go to **Settings > Integrations > Stripe**
+How to Verify Webhook:
+1. Go to Settings > Integrations > Stripe
 2. Check "Webhook Status" indicator
 3. Should show green "Connected"
 4. If red, webhook needs reconfiguration
 
-**Reconfigure Webhook** (Admin):
+Reconfigure Webhook (Admin):
 1. Log into Stripe Dashboard
 2. Go to Developers > Webhooks
 3. Add endpoint: `https://yourdomain.com/api/v1/stripe/webhook`
@@ -14530,40 +14547,40 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Invoice PDF Not Generating
 
-**Symptoms**:
+Symptoms:
 - Download PDF button shows error
 - Email sent without attachment
 - Preview shows blank
 
-**Troubleshooting Steps**:
+Troubleshooting Steps:
 
-**1. Check Template Configuration**:
-- Go to **Settings > Finance > Invoice Templates**
+1. Check Template Configuration:
+- Go to Settings > Finance > Invoice Templates
 - Verify template is not blank
 - Must contain body HTML
 - Header and footer optional
 
-**2. Check Required Placeholders**:
+2. Check Required Placeholders:
 - Template must include:
   - `[ITEMS_TABLE]` - Line items
   - `[TOTAL]` - Total amount
   - `[INVOICE_NUMBER]` - Invoice number
 - Missing placeholders may cause errors
 
-**3. Check for HTML Errors**:
+3. Check for HTML Errors:
 - Templates use TipTap WYSIWYG editor
 - Avoid manual HTML editing
 - Malformed HTML can break PDF generation
 - Test with default template first
 
-**4. Check Company Logo**:
+4. Check Company Logo:
 - If template includes `[COMPANY_LOGO]`
-- Verify logo uploaded in **Settings > Finance > Company Info**
+- Verify logo uploaded in Settings > Finance > Company Info
 - Supported formats: JPEG, PNG, WebP
 - Max size: 5MB
 - If logo missing/corrupt, PDF may fail
 
-**5. Check Browser Console**:
+5. Check Browser Console:
 - Open Developer Tools (F12)
 - Check console for errors
 - Common errors:
@@ -14571,14 +14588,14 @@ Use this table to quickly find solutions based on symptoms:
   - "WeasyPrint error"
   - "Missing attachment"
 
-**6. Test with Minimal Invoice**:
+6. Test with Minimal Invoice:
 - Create new draft invoice
 - Minimal data (recipient name, one line item)
 - Try generating PDF
 - If works, issue is with specific invoice data
 - If fails, issue is with template or configuration
 
-**7. Check Backend Logs** (Admin):
+7. Check Backend Logs (Admin):
 - Access server logs
 - Look for WeasyPrint errors
 - Common issues:
@@ -14586,36 +14603,36 @@ Use this table to quickly find solutions based on symptoms:
   - Invalid CSS
   - Image encoding errors
 
-**When to Contact Support**:
+When to Contact Support:
 - Attach error message from console
 - Mention if issue affects all invoices or specific one
 - Indicate recent changes to templates or settings
 
 ### Refund Issues
 
-**Refund Request Failed**:
+Refund Request Failed:
 
-**Stripe Refund Errors**:
+Stripe Refund Errors:
 
-**"Payment not found"**:
+"Payment not found":
 - Invoice may not have `stripe_payment_intent_id`
 - Check invoice events for payment success
 - Verify payment was via Stripe (not bank transfer)
 - Only credit card invoices can be auto-refunded
 
-**"Refund already issued"**:
+"Refund already issued":
 - Payment was already refunded
 - Check invoice events for "Refund Succeeded"
 - Check Stripe Dashboard for refund history
 - Cannot refund twice
 
-**"Insufficient funds in Stripe account"**:
+"Insufficient funds in Stripe account":
 - Stripe account balance too low for refund
 - Add funds to Stripe account
 - Or wait for balance to increase
 - Refund will process once funds available
 
-**Bank Transfer Refunds**:
+Bank Transfer Refunds:
 - System cannot auto-refund bank transfers
 - Must process manually outside SaaSConf
 - Steps:
@@ -14624,14 +14641,14 @@ Use this table to quickly find solutions based on symptoms:
   3. Mark invoice as cancelled in SaaSConf
   4. Add comment with refund date and reference
 
-**Partial Refund Not Available**:
+Partial Refund Not Available:
 - System currently supports full refunds only
 - For partial refunds:
   1. Process in Stripe Dashboard manually
   2. Add note to invoice documenting partial refund
   3. Keep invoice status as "Paid" with note
 
-**Refund Processing Time**:
+Refund Processing Time:
 - Stripe processes refunds immediately
 - Customer's bank may take 5-10 business days
 - Customer should check bank statement
@@ -14639,32 +14656,32 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Payment Link Issues
 
-**Payment Link Expired**:
+Payment Link Expired:
 - Stripe payment links generally don't expire automatically
 - May be deactivated if invoice cancelled
 - Create new invoice or use "Convert to Credit Card" feature
 
-**Payment Link Not Working**:
+Payment Link Not Working:
 
-**Symptoms**:
+Symptoms:
 - Link leads to error page
 - Customer sees "Payment link invalid"
 
-**Troubleshooting**:
+Troubleshooting:
 1. Check if invoice was cancelled
 2. Check invoice events for "payment_link_deactivated"
 3. If cancelled, invoice cannot be paid
 4. If still active, verify Stripe configuration:
-   - Go to **Settings > Integrations > Stripe**
+   - Go to Settings > Integrations > Stripe
    - Check "Enabled" toggle is on
    - Verify API keys are correct
 5. Test with new invoice to isolate issue
 
-**Payment Link Missing**:
+Payment Link Missing:
 
-**Symptom**: Invoice sent but no payment link in email
+Symptom: Invoice sent but no payment link in email
 
-**Troubleshooting**:
+Troubleshooting:
 1. Verify invoice template_type is "credit_card"
 2. Bank transfer invoices don't get payment links
 3. Check invoice details for `stripe_payment_link_url` field
@@ -14672,7 +14689,7 @@ Use this table to quickly find solutions based on symptoms:
 5. Use "Convert to Credit Card" to generate link
 6. Or create new credit card invoice
 
-**Wrong Amount in Payment Link**:
+Wrong Amount in Payment Link:
 - Payment link created at time of sending
 - If invoice amount changed after sending, link has old amount
 - Solution: Cancel invoice and create new one with correct amount
@@ -14684,32 +14701,32 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Email Not Sending
 
-**Symptoms**:
+Symptoms:
 - Customer reports not receiving invoice/notification
 - No confirmation message after sending
 - Email shows in "Events" but customer didn't receive
 
-**Step-by-Step Troubleshooting**:
+Step-by-Step Troubleshooting:
 
-**1. Verify Email Address**:
+1. Verify Email Address:
 - Check invoice/registration for recipient email
 - Look for typos (gmail.co vs gmail.com)
 - Ensure no extra spaces
 - Test by sending yourself an invoice first
 
-**2. Check Spam/Junk Folder**:
+2. Check Spam/Junk Folder:
 - Ask customer to check spam folder
 - Look for sender: noreply@yourdomain.com
 - Mark as "Not Spam" to whitelist
 - Add sender to contacts
 
-**3. Verify Email Sending Enabled**:
-- Go to **Settings > General**
+3. Verify Email Sending Enabled:
+- Go to Settings > General
 - Check "Email Sending Enabled" toggle
 - If off, emails are logged but not sent
 - Enable for production use
 
-**4. Check Email Configuration** (Admin):
+4. Check Email Configuration (Admin):
 - Verify SMTP/Resend API configured
 - Test email configuration:
   - Send test invoice to yourself
@@ -14717,19 +14734,19 @@ Use this table to quickly find solutions based on symptoms:
 - If using Resend: Check API key is valid
 - If using SMTP: Verify server credentials
 
-**5. Check Recipient Email Provider**:
+5. Check Recipient Email Provider:
 - Some email providers block bulk senders
 - Corporate email may have strict filters
 - Ask IT department to whitelist sender domain
 - Test with personal email (Gmail, Yahoo)
 
-**6. Review Email Template**:
-- Go to **Settings > Communication > Email Templates**
+6. Review Email Template:
+- Go to Settings > Communication > Email Templates
 - Verify template for invoice/registration is configured
 - Must have subject and body
 - Placeholders must be valid
 
-**7. Check Email Events**:
+7. Check Email Events:
 - Open invoice/registration
 - Go to Events tab
 - Look for email send event
@@ -14738,26 +14755,26 @@ Use this table to quickly find solutions based on symptoms:
   - "failed" → Check error_message
   - Missing → Email send wasn't triggered
 
-**Common Error Messages**:
+Common Error Messages:
 - "Invalid recipient email" → Fix email address format
 - "SMTP authentication failed" → Check SMTP credentials
 - "Rate limit exceeded" → Wait and retry
 - "API key invalid" → Reconfigure email service
 
-**8. Verify Tenant Email Domain** (Multi-tenant):
+8. Verify Tenant Email Domain (Multi-tenant):
 - If using custom email domain
-- Check **Settings > Tenant > Email Domain**
+- Check Settings > Tenant > Email Domain
 - Domain must have SPF/DKIM records
 - Verify DNS configuration
 - Test with default sender first
 
-**9. Email Deliverability**:
+9. Email Deliverability:
 - Check sender reputation (not marked as spam)
 - Ensure SPF, DKIM, DMARC configured
 - Use reputable email service (Resend, SendGrid)
 - Avoid sending from personal Gmail/Yahoo in production
 
-**When to Contact Support**:
+When to Contact Support:
 - Provide invoice/registration ID
 - Include recipient email (redacted if sensitive)
 - Attach error message from events
@@ -14765,20 +14782,20 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Email Templates Not Rendering
 
-**Symptoms**:
+Symptoms:
 - Email shows placeholders instead of actual data
 - Missing sections (logo, company info)
 - Formatting broken
 
-**Placeholder Issues**:
+Placeholder Issues:
 
-**Placeholders Not Replaced**:
+Placeholders Not Replaced:
 - Check template uses exact placeholder format: `[INVOICE_NUMBER]`
 - Case-sensitive: `[invoice_number]` won't work
 - No extra spaces: `[ INVOICE_NUMBER ]` won't work
 - Valid placeholders listed in template editor help text
 
-**Missing Data**:
+Missing Data:
 - If placeholder shows blank (not `[PLACEHOLDER]` text)
 - Data field is empty in invoice/registration
 - Fill in missing data:
@@ -14786,14 +14803,14 @@ Use this table to quickly find solutions based on symptoms:
   - Customer details in invoice
   - Registration fields
 
-**Company Logo Not Showing**:
-- Upload logo in **Settings > Finance > Company Info**
+Company Logo Not Showing:
+- Upload logo in Settings > Finance > Company Info
 - Supported formats: JPEG, PNG, WebP
 - Max size: 5MB
 - Use `[COMPANY_LOGO]` placeholder in template
 - Logo embeds as base64 in email
 
-**Formatting Broken**:
+Formatting Broken:
 - Email clients have limited HTML/CSS support
 - Avoid complex layouts
 - Use tables for structure
@@ -14803,16 +14820,16 @@ Use this table to quickly find solutions based on symptoms:
   - Apple Mail
   - Mobile clients
 
-**Testing Templates**:
-1. Go to **Settings > Communication > Email Templates**
+Testing Templates:
+1. Go to Settings > Communication > Email Templates
 2. Edit template
-3. Click **Send Test Email**
+3. Click Send Test Email
 4. Enter your email
 5. Verify rendering
 6. Check in spam folder too
 7. Test in different email clients
 
-**Best Practices**:
+Best Practices:
 - Keep templates simple
 - Use inline CSS (external stylesheets don't work)
 - Avoid background images
@@ -14821,23 +14838,23 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Email Attachments Missing
 
-**Invoice PDF Not Attached**:
+Invoice PDF Not Attached:
 
-**Troubleshooting**:
+Troubleshooting:
 1. Verify PDF generation works (download from UI)
 2. Check email size limits (some servers limit to 10MB)
 3. Large PDFs may be stripped by email server
 4. Check email events for "attachment_failed" error
 5. Try minimal invoice to test
 
-**Resolution**:
+Resolution:
 - Reduce PDF size:
   - Remove high-resolution logo
   - Simplify template (less images)
   - Use compressed logo image
 - Or send payment link instead (customer downloads from Stripe)
 
-**Contract Documents Not Attached**:
+Contract Documents Not Attached:
 - Similar to invoice PDF issues
 - Check document size
 - Test with smaller document
@@ -14845,28 +14862,28 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Email Deliverability Tools
 
-**Test Email Deliverability**:
+Test Email Deliverability:
 
-**Mail-Tester** (https://www.mail-tester.com/):
+Mail-Tester (https://www.mail-tester.com/):
 1. Send test email to address provided
 2. Get deliverability score out of 10
 3. See specific issues (SPF, DKIM, spam triggers)
 4. Fix issues listed
 5. Retest until score is 8+
 
-**MXToolbox** (https://mxtoolbox.com/):
+MXToolbox (https://mxtoolbox.com/):
 - Check domain reputation
 - Verify SPF records
 - Check if blacklisted
 - Test DKIM signature
 
-**Google Postmaster Tools**:
+Google Postmaster Tools:
 - Monitor Gmail delivery
 - Check spam rate
 - View domain reputation
 - Requires domain verification
 
-**Litmus** (https://www.litmus.com/):
+Litmus (https://www.litmus.com/):
 - Test email rendering across clients
 - Paid service
 - Shows how email looks in Gmail, Outlook, etc.
@@ -14877,71 +14894,71 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Portal Login Failures
 
-**"Invalid email or password"**:
+"Invalid email or password":
 
-**Troubleshooting**:
+Troubleshooting:
 1. Verify email is correct (no typos)
 2. Check CAPS LOCK is off
 3. Try password reset if forgotten
 4. Ensure using correct portal (not admin login)
 5. Check email for activation link (new accounts)
 
-**Account Created via Registration**:
+Account Created via Registration:
 - Portal accounts auto-created on registration
 - Initial password set by user during registration
 - If forgot password, use "Forgot Password" link
 - Link sends reset email
 
-**Account Created by Admin**:
+Account Created by Admin:
 - Check email for invite/welcome message
 - Use "Set up my password" link in email
 - Link valid for 7 days
 - Request new invite if expired
 
-**"Account not found"**:
+"Account not found":
 - Email not registered in system
 - Check spelling of email
 - Register for conference first
 - Contact conference organizer
 
-**"Account disabled"**:
+"Account disabled":
 - Admin may have disabled account
 - Contact conference organizer
 - May be due to policy violation
 
 ### Permission Denied Errors
 
-**"You don't have permission to access this"**:
+"You don't have permission to access this":
 
-**Common Causes**:
+Common Causes:
 
-**1. Wrong User Type**:
+1. Wrong User Type:
 - Admin portal (/admin) vs Public portal (/)
 - Use correct URL for your account type
 - Admins and portal users are separate
 
-**2. Module Not Enabled**:
+2. Module Not Enabled:
 - Feature requires module subscription
 - Contact conference organizer
 - Admin enables in Settings > Modules
 
-**3. Role Restrictions**:
+3. Role Restrictions:
 - Your user role lacks permission
 - Conference Admin: Only assigned conferences
 - Viewer: Read-only access
 - Contact Tenant Admin for role change
 
-**4. Registration Required**:
+4. Registration Required:
 - Portal features require active registration
 - Register for conference first
 - Or registration may be cancelled
 
-**5. Session Expired**:
+5. Session Expired:
 - Log out and back in
 - Sessions expire after inactivity
 - May need to re-authenticate
 
-**Checking Your Permissions**:
+Checking Your Permissions:
 1. Log in to portal
 2. View available menu items
 3. Missing menu items = no access
@@ -14949,40 +14966,40 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Registration Form Not Loading
 
-**Symptoms**:
+Symptoms:
 - Portal shows blank page
 - Form loads forever (spinner)
 - "Failed to load" error
 
-**Troubleshooting**:
+Troubleshooting:
 
-**1. Clear Browser Cache**:
+1. Clear Browser Cache:
 - Hard refresh: Ctrl+Shift+R (Cmd+Shift+R)
 - Or clear cache completely
 - Try incognito/private mode
 
-**2. Check Registration Status**:
+2. Check Registration Status:
 - Registration may be closed
 - Check conference dates
 - Confirm early-bird/regular period
 
-**3. Verify Conference Published**:
+3. Verify Conference Published:
 - Conference must be published by admin
 - If unpublished, portal won't load
 - Contact conference organizer
 
-**4. Check Browser Compatibility**:
+4. Check Browser Compatibility:
 - Use modern browser (Chrome, Firefox, Safari, Edge)
 - Update browser to latest version
 - Disable browser extensions (ad blockers)
 - Try different browser
 
-**5. Network Issues**:
+5. Network Issues:
 - Check internet connection
 - Try different network (mobile hotspot)
 - Check if corporate firewall blocking
 
-**6. JavaScript Disabled**:
+6. JavaScript Disabled:
 - Portal requires JavaScript
 - Check browser settings
 - Enable JavaScript
@@ -14990,26 +15007,26 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Session Expired Messages
 
-**"Your session has expired, please log in again"**:
+"Your session has expired, please log in again":
 
-**Why This Happens**:
+Why This Happens:
 - Inactive for extended period (typically 30-60 minutes)
 - Security feature to protect your account
 - Multiple tabs/windows can interfere
 
-**Resolution**:
+Resolution:
 1. Click "OK" or "Log In"
 2. Enter credentials again
 3. Return to what you were doing
 4. Unsaved data may be lost
 
-**Preventing Session Expiry**:
+Preventing Session Expiry:
 - Save work frequently
 - Don't leave forms open for long periods
 - Complete tasks in one session
 - Close other tabs using same account
 
-**Persistent Session Issues**:
+Persistent Session Issues:
 - Clear browser cookies
 - Log out completely
 - Close all browser tabs
@@ -15021,65 +15038,65 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Slow Page Loads
 
-**Symptoms**:
+Symptoms:
 - Pages take 10+ seconds to load
 - Menus slow to open
 - Clicking buttons delayed
 
-**Immediate Actions**:
+Immediate Actions:
 
-**1. Check Internet Speed**:
+1. Check Internet Speed:
 - Run speed test (fast.com or speedtest.net)
 - Minimum recommended: 5 Mbps download
 - If slow, contact ISP or try different network
 
-**2. Clear Browser Cache**:
+2. Clear Browser Cache:
 - Old cached data can slow things down
 - Ctrl+Shift+Delete → Clear cache
 - Restart browser
 
-**3. Close Unnecessary Tabs**:
+3. Close Unnecessary Tabs:
 - Browser memory limit can cause slowdown
 - Close unused tabs
 - Restart browser if many tabs open
 
-**4. Check Browser Extensions**:
+4. Check Browser Extensions:
 - Ad blockers, privacy tools can slow pages
 - Disable extensions temporarily
 - Test in incognito mode (extensions disabled)
 - Re-enable one by one to identify culprit
 
-**5. Check Device Resources**:
+5. Check Device Resources:
 - High CPU/memory usage slows browser
 - Close other applications
 - Restart computer if running for days
 - Check task manager for resource hogs
 
-**Specific Page Slowness**:
+Specific Page Slowness:
 
-**Invoice List Slow**:
+Invoice List Slow:
 - Reduce page size (show 50 instead of 100)
 - Use search/filters to narrow results
 - Export to CSV for large datasets
 
-**Registration List Slow**:
+Registration List Slow:
 - Similar to invoices
 - Filter by status
 - Paginate through results
 
-**PDF Generation Slow**:
+PDF Generation Slow:
 - Complex templates take longer
 - Large logos slow rendering
 - Wait 10-20 seconds for complex PDFs
 - Simplify template if consistently slow
 
-**Network Latency Issues**:
+Network Latency Issues:
 - Distance from server affects speed
 - VPN can add latency
 - Try without VPN
 - Peak hours may be slower
 
-**When to Contact Support**:
+When to Contact Support:
 - Slowness persists after troubleshooting
 - Only affects specific pages
 - Started suddenly (performance regression)
@@ -15087,34 +15104,34 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Timeout Errors
 
-**"Request timed out"**:
+"Request timed out":
 
-**Causes**:
+Causes:
 - Large data export (50k+ rows)
 - Complex PDF generation
 - Network interruption
 - Server overload
 
-**Resolution**:
+Resolution:
 
-**For Exports**:
+For Exports:
 1. Reduce export size
 2. Apply filters before exporting
 3. Export in multiple batches
 4. Contact support for manual export
 
-**For PDFs**:
+For PDFs:
 1. Simplify template
 2. Reduce image sizes
 3. Wait longer (up to 60 seconds)
 4. Try different invoice
 
-**For Bulk Operations**:
+For Bulk Operations:
 1. Process in smaller batches
 2. Wait between batches
 3. Avoid peak hours
 
-**Network Timeouts**:
+Network Timeouts:
 1. Check internet stability
 2. Try wired connection vs WiFi
 3. Restart router
@@ -15122,91 +15139,91 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Large Dataset Handling
 
-**50,000+ Records**:
+50,000+ Records:
 
-**Performance Tips**:
+Performance Tips:
 
-**Use Filters**:
+Use Filters:
 - Don't load all records at once
 - Filter by date range
 - Filter by status
 - Search for specific records
 
-**Pagination**:
+Pagination:
 - Load 50-100 records per page
 - Use Next/Previous buttons
 - Jump to specific page
 
-**Search Instead of Browse**:
+Search Instead of Browse:
 - If you know what you're looking for
 - Use search box
 - Faster than scrolling
 
-**Export for Analysis**:
+Export for Analysis:
 - Download CSV for large datasets
 - Analyze in Excel/Google Sheets
 - Faster than browser UI
 
-**Archive Old Data**:
+Archive Old Data:
 - Delete old draft invoices
 - Archive past conferences
 - Reduces database size
 
 ### Browser Compatibility
 
-**Supported Browsers**:
+Supported Browsers:
 - Chrome 90+ ✅
 - Firefox 88+ ✅
 - Safari 14+ ✅
 - Edge 90+ ✅
 
-**Not Supported**:
+Not Supported:
 - Internet Explorer (any version) ❌
 - Opera Mini ❌
 - Old browsers (2+ years old) ❌
 
-**Mobile Browsers**:
+Mobile Browsers:
 - iOS Safari 14+ ✅
 - Chrome Mobile 90+ ✅
 - Firefox Mobile 88+ ✅
 
-**Check Your Browser Version**:
+Check Your Browser Version:
 
-**Chrome**:
+Chrome:
 1. Click three dots (top right)
 2. Help > About Google Chrome
 3. Shows version number
 4. Auto-updates to latest
 
-**Firefox**:
+Firefox:
 1. Click hamburger menu
 2. Help > About Firefox
 3. Shows version
 4. Auto-updates
 
-**Safari** (Mac):
+Safari (Mac):
 1. Safari menu > About Safari
 2. Shows version
 3. Update via System Preferences
 
-**If Using Old Browser**:
+If Using Old Browser:
 1. Update to latest version
 2. Or switch to supported browser
 3. SaaSConf may not work correctly on old browsers
 
-**Browser-Specific Issues**:
+Browser-Specific Issues:
 
-**Safari**:
+Safari:
 - Some date pickers may look different
 - File uploads work differently
 - Generally well-supported
 
-**Firefox**:
+Firefox:
 - Excellent compatibility
 - Privacy settings may block some features
 - Check "Enhanced Tracking Protection" settings
 
-**Edge**:
+Edge:
 - Chromium-based (same as Chrome)
 - Full compatibility
 - Recommended for Windows users
@@ -15217,75 +15234,75 @@ Use this table to quickly find solutions based on symptoms:
 
 ### Stripe Webhook Failures
 
-**Symptoms**:
+Symptoms:
 - Payments not auto-updating
 - Manual sync required repeatedly
 - Invoice events show payment errors
 
-**Troubleshooting Webhook Connection**:
+Troubleshooting Webhook Connection:
 
-**1. Verify Webhook Configured**:
+1. Verify Webhook Configured:
 - Log into Stripe Dashboard
 - Go to Developers > Webhooks
 - Look for your SaaSConf endpoint
 - Should be: `https://yourdomain.com/api/v1/stripe/webhook`
 
-**2. Check Webhook Status**:
+2. Check Webhook Status:
 - In Stripe Dashboard, webhook should show "Enabled"
 - Look for "Signing secret" (starts with `whsec_`)
 - Copy signing secret
 
-**3. Verify Webhook Secret in SaaSConf**:
-- Go to **Settings > Integrations > Stripe**
+3. Verify Webhook Secret in SaaSConf:
+- Go to Settings > Integrations > Stripe
 - Check "Webhook Secret" field
 - Must match Stripe signing secret exactly
 - No extra spaces or characters
 
-**4. Test Webhook Delivery**:
+4. Test Webhook Delivery:
 - In Stripe Dashboard > Webhooks
 - Click on your webhook endpoint
 - Click "Send test webhook"
 - Select `payment_intent.succeeded` event
 - Should receive 200 OK response
 
-**5. Check Recent Webhook Deliveries**:
+5. Check Recent Webhook Deliveries:
 - In Stripe Dashboard > Webhooks
 - Click your endpoint
 - View recent deliveries
 - Look for failed deliveries (red)
 - Click failed delivery to see error
 
-**Common Webhook Errors**:
+Common Webhook Errors:
 
-**"Invalid signature"**:
+"Invalid signature":
 - Webhook secret mismatch
 - Update webhook secret in SaaSConf settings
 - Must match exactly from Stripe
 
-**"404 Not Found"**:
+"404 Not Found":
 - Wrong webhook URL
 - Should be: `https://yourdomain.com/api/v1/stripe/webhook`
 - Not: `https://yourdomain.com/webhook` (wrong path)
 - Update in Stripe Dashboard
 
-**"401 Unauthorized"**:
+"401 Unauthorized":
 - This shouldn't happen (webhooks are public)
 - Check firewall not blocking Stripe IPs
 - Check reverse proxy configuration
 
-**"500 Internal Server Error"**:
+"500 Internal Server Error":
 - Backend application error
 - Check backend logs
 - Contact support with webhook delivery ID
 
-**Webhook Events Not Configured**:
+Webhook Events Not Configured:
 - Must listen to these events:
   - `payment_intent.succeeded` ✅
   - `payment_intent.payment_failed` ✅
   - `charge.succeeded` ✅
 - Edit webhook in Stripe to add missing events
 
-**Resolution**:
+Resolution:
 1. Fix issues found above
 2. Resend failed webhooks from Stripe Dashboard
 3. Or use manual sync for past payments
@@ -15293,40 +15310,40 @@ Use this table to quickly find solutions based on symptoms:
 
 ### VIES VAT Validation Unavailable
 
-**"VAT validation service temporarily unavailable"**:
+"VAT validation service temporarily unavailable":
 
-**About VIES**:
+About VIES:
 - VIES = VAT Information Exchange System
 - EU-operated service
 - Validates VAT numbers against official registry
 - Sometimes experiences downtime
 
-**When VIES is Down**:
+When VIES is Down:
 - SaaSConf shows "Unverified" status (yellow warning)
 - Format validation still works (checksum)
 - Safe to proceed with invoice
 - Document in invoice notes
 
-**User Actions**:
+User Actions:
 1. Proceed with invoice creation
 2. Add note: "VAT number unverified - VIES unavailable"
 3. Verify VAT number on EU VIES website later: https://ec.europa.eu/taxation_customs/vies/
 4. Or ask customer to confirm their VAT number
 5. Update invoice notes with verification results
 
-**Alternative Validation**:
+Alternative Validation:
 - Use EU VIES website directly
 - Check customer's VAT registration certificate
 - Request official company documents
 - Verify on country-specific tax authority website
 
-**VIES Availability**:
+VIES Availability:
 - Usually available 24/7
 - Maintenance windows occasionally
 - Country-specific systems may be down
 - Retry in a few hours
 
-**If VIES Always Unavailable**:
+If VIES Always Unavailable:
 - Check server internet connectivity
 - Verify firewall allows outbound HTTPS to ec.europa.eu
 - Check DNS resolution working
@@ -15334,40 +15351,40 @@ Use this table to quickly find solutions based on symptoms:
 
 ### ZUGFeRD Generation Errors
 
-**"Invoice doesn't meet ZUGFeRD requirements"**:
+"Invoice doesn't meet ZUGFeRD requirements":
 
-**Common Missing Fields**:
+Common Missing Fields:
 
-**1. Seller VAT ID Missing**:
-- Go to **Settings > Finance > Company Info**
+1. Seller VAT ID Missing:
+- Go to Settings > Finance > Company Info
 - Fill in "Tax ID / VAT Number" field
-- Or in **Settings > Finance > ZUGFeRD Settings**
+- Or in Settings > Finance > ZUGFeRD Settings
 - Set "Seller VAT ID"
 - Must be valid EU VAT format (e.g., DE123456789)
 
-**2. Buyer Country Missing**:
+2. Buyer Country Missing:
 - Open invoice
 - Fill in "Recipient Country" field
 - Must be ISO code (DE, FR, not Germany, France)
 - Required for e-invoicing
 
-**3. Buyer Country Not ISO Code**:
+3. Buyer Country Not ISO Code:
 - Country stored as full name ("Germany")
 - Change to 2-letter ISO code ("DE")
 - Use country dropdown (don't type manually)
 
-**4. Missing Issue Date**:
+4. Missing Issue Date:
 - Invoice must have issue_date
 - Automatically set when sending
 - Draft invoices don't have issue_date yet
 - Send invoice to assign date
 
-**5. Missing Due Date**:
+5. Missing Due Date:
 - Fill in due_date field
 - Required for payment terms in XML
 - Recommended: 30 days from issue date
 
-**6. Missing Line Items**:
+6. Missing Line Items:
 - Invoice must have at least 1 line item
 - Each item needs:
   - Description
@@ -15375,7 +15392,7 @@ Use this table to quickly find solutions based on symptoms:
   - Unit Price
   - Total
 
-**Validation Workflow**:
+Validation Workflow:
 1. Open invoice
 2. Look for ZUGFeRD validation indicator
 3. If yellow/red, click to see missing fields
@@ -15384,50 +15401,50 @@ Use this table to quickly find solutions based on symptoms:
 6. Validation re-runs automatically
 7. Green checkmark = compliant
 
-**Generated PDF Fails External Validation**:
+Generated PDF Fails External Validation:
 
-**Use Official Validator**:
+Use Official Validator:
 - URL: https://www.zugferd-rechnung.de/validator/
 - Upload generated PDF
 - Should show "Valid ZUGFeRD PDF/A-3" in green
 - If errors listed, note specific issues
 
-**Common Validation Errors**:
+Common Validation Errors:
 
-**"Not a valid PDF/A-3 file"**:
+"Not a valid PDF/A-3 file":
 - PDF generation issue
 - Contact support
 - May be WeasyPrint version issue
 
-**"ZUGFeRD XML not found"**:
+"ZUGFeRD XML not found":
 - XML embedding failed
 - Check ZUGFeRD enabled in settings
 - Try generating again
 - Contact support if persists
 
-**"XML validation errors"**:
+"XML validation errors":
 - Data format issue
 - Check buyer/seller country codes
 - Verify amounts are valid
 - Ensure VAT IDs formatted correctly
 
-**Testing ZUGFeRD PDFs**:
+Testing ZUGFeRD PDFs:
 
-**Extract XML**:
+Extract XML:
 ```bash
 # If you have factur-x CLI installed
 facturx-pdfextractxml invoice.pdf
 # Opens extracted XML for inspection
 ```
 
-**Import Test**:
+Import Test:
 - Import into accounting software
 - DATEV (Germany)
 - Lexware (Germany)
 - sevDesk (Germany)
 - Verify data imports correctly
 
-**When to Contact Support**:
+When to Contact Support:
 - Validation consistently fails
 - Missing fields not clear
 - PDF generation errors
@@ -15435,43 +15452,43 @@ facturx-pdfextractxml invoice.pdf
 
 ### CSV Encoding Problems
 
-**Excel Shows Garbled Characters**:
+Excel Shows Garbled Characters:
 
-**Cause**: Excel misinterpreting UTF-8 encoding
+Cause: Excel misinterpreting UTF-8 encoding
 
-**Solution 1 - Open Correctly in Excel**:
+Solution 1 - Open Correctly in Excel:
 1. Open Excel (blank workbook)
-2. Go to **Data > From Text/CSV**
+2. Go to Data > From Text/CSV
 3. Select your CSV file
-4. In preview window, select **File Origin: UTF-8**
-5. Click **Load**
+4. In preview window, select File Origin: UTF-8
+5. Click Load
 6. Characters should display correctly
 
-**Solution 2 - Use Google Sheets**:
+Solution 2 - Use Google Sheets:
 1. Open Google Sheets
 2. File > Import
 3. Upload CSV
 4. Google Sheets handles UTF-8 correctly
 5. Download as Excel if needed
 
-**Solution 3 - Change Excel Default Encoding**:
+Solution 3 - Change Excel Default Encoding:
 1. This varies by Excel version
 2. Generally: Excel Options > Advanced > Encoding
 3. Set to UTF-8
 4. May not be available in all versions
 
-**Characters Affected**:
+Characters Affected:
 - Accented letters (é, ü, ñ)
 - Symbols (€, £, ©)
 - Non-Latin scripts (中文, العربية)
 
-**Why This Happens**:
+Why This Happens:
 - SaaSConf exports UTF-8 with BOM (Byte Order Mark)
 - Should work automatically in Excel
 - Some Excel versions ignore BOM
 - Older Excel (pre-2016) worse at UTF-8
 
-**Prevention**:
+Prevention:
 - Use Google Sheets for CSV imports
 - Or LibreOffice Calc (handles UTF-8 perfectly)
 - Or import using Data > From Text/CSV method
@@ -15482,46 +15499,46 @@ facturx-pdfextractxml invoice.pdf
 
 ### Support Contact Information
 
-**Email Support**:
+Email Support:
 - Email: support@saasconf.com
 - Response time: 24-48 hours
 - For urgent issues, mark as "Urgent" in subject
 
-**Include in Support Requests**:
-1. **Your tenant name** (organization name)
-2. **Conference name** (if applicable)
-3. **Your user email**
-4. **Issue description**:
+Include in Support Requests:
+1. Your tenant name (organization name)
+2. Conference name (if applicable)
+3. Your user email
+4. Issue description:
    - What you were trying to do
    - What happened instead
    - Error messages (exact text or screenshot)
-5. **Steps to reproduce**:
+5. Steps to reproduce:
    - Step 1: ...
    - Step 2: ...
    - Step 3: Error occurred
-6. **Browser and OS**:
+6. Browser and OS:
    - Chrome 120 on Windows 11
    - Safari 17 on macOS Sonoma
-7. **Screenshots** (if applicable):
+7. Screenshots (if applicable):
    - Include error messages
    - Redact sensitive data
-8. **Invoice/Registration IDs** (if applicable)
+8. Invoice/Registration IDs (if applicable)
 
-**What NOT to Include**:
+What NOT to Include:
 - Passwords or API keys
 - Full credit card numbers
 - Personal data of customers (unless necessary)
 
 ### Bug Reporting Process
 
-**Before Reporting a Bug**:
+Before Reporting a Bug:
 1. Check this troubleshooting guide first
 2. Try in incognito/private mode
 3. Clear browser cache
 4. Try different browser
 5. Check if issue is known (status page)
 
-**Bug Report Template**:
+Bug Report Template:
 ```
 Subject: [BUG] Brief description
 
@@ -15555,27 +15572,27 @@ Additional Context:
 Any other relevant information.
 ```
 
-**Bug Priority Levels**:
+Bug Priority Levels:
 
-**Critical** (Report immediately):
+Critical (Report immediately):
 - System completely down
 - Data loss occurring
 - Security vulnerability
 - Payment processing broken
 
-**High** (Report within 1 day):
+High (Report within 1 day):
 - Feature completely broken
 - Workaround not available
 - Affects many users
 - Blocking important workflow
 
-**Medium** (Report within 1 week):
+Medium (Report within 1 week):
 - Feature partially broken
 - Workaround available
 - Affects some users
 - Inconvenient but not blocking
 
-**Low** (Report when convenient):
+Low (Report when convenient):
 - Minor UI glitches
 - Cosmetic issues
 - Nice-to-have improvements
@@ -15583,13 +15600,13 @@ Any other relevant information.
 
 ### Feature Request Process
 
-**How to Submit Feature Requests**:
+How to Submit Feature Requests:
 1. Check if feature already exists (read handbook)
 2. Email: features@saasconf.com
 3. Or use in-app feedback form (if available)
 4. Describe use case (not just feature)
 
-**Feature Request Template**:
+Feature Request Template:
 ```
 Subject: [FEATURE] Brief description
 
@@ -15612,13 +15629,13 @@ Example:
 Provide a specific example scenario.
 ```
 
-**Feature Request Evaluation**:
+Feature Request Evaluation:
 - Reviewed by product team
 - Considered for roadmap
 - No guaranteed timeline
 - Popular requests prioritized
 
-**Voting on Features**:
+Voting on Features:
 - Check roadmap/feedback board (if available)
 - Upvote existing requests
 - Add comments with your use case
@@ -15626,20 +15643,20 @@ Provide a specific example scenario.
 
 ### Community Forums
 
-**Discussion Forums** (if available):
+Discussion Forums (if available):
 - URL: community.saasconf.com
 - Search before posting
 - Tag appropriately
 - Help other users
 
-**Forum Categories**:
+Forum Categories:
 - General Discussion
 - Feature Requests
 - How-To Questions
 - Bug Reports
 - Announcements
 
-**Forum Guidelines**:
+Forum Guidelines:
 - Be respectful and professional
 - Search before posting duplicates
 - Provide context and details
@@ -15652,84 +15669,84 @@ Provide a specific example scenario.
 
 ### EU VAT Regulations
 
-**Official EU Documentation**:
+Official EU Documentation:
 
-**VAT Directive 2006/112/EC**:
+VAT Directive 2006/112/EC:
 - URL: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02006L0112-20200101
 - The primary EU VAT legislation
 - Article 196: Reverse charge for B2B services
 - Article 44: Place of supply for virtual services
 
-**VIES VAT Number Validation**:
+VIES VAT Number Validation:
 - URL: https://ec.europa.eu/taxation_customs/vies/
 - Official EU VAT number validator
 - Check customer VAT numbers
 - Confirm registration status
 - Country-specific search
 
-**EU One-Stop Shop (OSS)**:
+EU One-Stop Shop (OSS):
 - URL: https://taxation-customs.ec.europa.eu/one-stop-shop_en
 - VAT on B2C digital services
 - Register in one country, report all EU sales
 - Quarterly returns
 
-**VAT Rates by Country**:
+VAT Rates by Country:
 - URL: https://ec.europa.eu/taxation_customs/tedb/splSearchForm.html
 - Official VAT rate database
 - Standard, reduced, super-reduced rates
 - Updated regularly
 
-**Your National Tax Authority**:
+Your National Tax Authority:
 - Contact for country-specific guidance
 - VAT registration
 - Filing requirements
 - Legal interpretation
 
-**Disclaimer**:
+Disclaimer:
 SaaSConf provides tools, not tax advice. Always consult a qualified tax advisor for legal compliance.
 
 ### Stripe Documentation
 
-**Official Stripe Docs**:
+Official Stripe Docs:
 - URL: https://stripe.com/docs
 - Comprehensive API documentation
 - Integration guides
 - Testing tools
 
-**Specific Relevant Sections**:
+Specific Relevant Sections:
 
-**Payment Links**:
+Payment Links:
 - URL: https://stripe.com/docs/payment-links
 - How payment links work
 - Customization options
 - Testing payment links
 
-**Payment Intents**:
+Payment Intents:
 - URL: https://stripe.com/docs/payments/payment-intents
 - Payment flow overview
 - Metadata usage
 - Status meanings
 
-**Webhooks**:
+Webhooks:
 - URL: https://stripe.com/docs/webhooks
 - Webhook setup guide
 - Event types
 - Signature verification
 - Testing webhooks locally
 
-**Refunds**:
+Refunds:
 - URL: https://stripe.com/docs/refunds
 - Refund process
 - Partial vs full refunds
 - Refund timeline
 
-**Testing**:
+Testing:
 - URL: https://stripe.com/docs/testing
 - Test card numbers
 - Test scenarios (success, failure, etc.)
 - Test mode vs live mode
 
-**Stripe Dashboard**:
+Stripe Dashboard:
 - URL: https://dashboard.stripe.com/
 - View payments
 - Manage customers
@@ -15738,40 +15755,40 @@ SaaSConf provides tools, not tax advice. Always consult a qualified tax advisor 
 
 ### Email Deliverability Tools
 
-**Mail-Tester**:
+Mail-Tester:
 - URL: https://www.mail-tester.com/
 - Test email deliverability score
 - Identifies spam triggers
 - Checks SPF, DKIM, DMARC
 - Free, instant results
 
-**MXToolbox**:
+MXToolbox:
 - URL: https://mxtoolbox.com/
 - Email blacklist check
 - DNS record lookup
 - SMTP diagnostics
 - Domain health monitoring
 
-**Google Postmaster Tools**:
+Google Postmaster Tools:
 - URL: https://postmaster.google.com/
 - Gmail-specific deliverability
 - Spam rate monitoring
 - Domain reputation
 - Requires domain verification
 
-**SPF Record Check**:
+SPF Record Check:
 - URL: https://mxtoolbox.com/spf.aspx
 - Verify SPF record
 - Check syntax
 - Troubleshoot SPF issues
 
-**DKIM Validator**:
+DKIM Validator:
 - URL: https://mxtoolbox.com/dkim.aspx
 - Verify DKIM signature
 - Test email authentication
 - Troubleshoot DKIM issues
 
-**DMARC Check**:
+DMARC Check:
 - URL: https://mxtoolbox.com/dmarc.aspx
 - Verify DMARC policy
 - Check alignment
@@ -15779,26 +15796,26 @@ SaaSConf provides tools, not tax advice. Always consult a qualified tax advisor 
 
 ### PDF & E-Invoicing Validators
 
-**ZUGFeRD Validator** (Germany):
+ZUGFeRD Validator (Germany):
 - URL: https://www.zugferd-rechnung.de/validator/
 - Official German e-invoice validator
 - Upload PDF to check compliance
 - Shows validation errors
 - Tests PDF/A-3 compliance
 
-**Factur-X Validator** (France):
+Factur-X Validator (France):
 - URL: https://www.factur-x.org/
 - French e-invoicing standard (same as ZUGFeRD)
 - Compliance information
 - Sample invoices
 
-**PDF/A Validator**:
+PDF/A Validator:
 - URL: https://www.pdf-online.com/osa/validate.aspx
 - Check PDF/A compliance
 - Identifies issues
 - Free validation
 
-**factur-x Python Library** (for developers):
+factur-x Python Library (for developers):
 - URL: https://github.com/invoice-x/factur-x
 - Open source
 - CLI tools for extraction/validation
@@ -15806,20 +15823,20 @@ SaaSConf provides tools, not tax advice. Always consult a qualified tax advisor 
 
 ### IBAN Validators
 
-**IBAN Checker**:
+IBAN Checker:
 - URL: https://www.iban.com/iban-checker
 - Validate IBAN format
 - Check country code
 - Verify checksum
 - Free, instant
 
-**IBAN Calculator**:
+IBAN Calculator:
 - URL: https://www.iban.com/calculate-iban
 - Generate IBAN from account details
 - Country-specific formats
 - Useful for customers
 
-**Official IBAN Registry**:
+Official IBAN Registry:
 - URL: https://www.swift.com/standards/data-standards/iban
 - IBAN format by country
 - Structure documentation
@@ -15827,19 +15844,19 @@ SaaSConf provides tools, not tax advice. Always consult a qualified tax advisor 
 
 ### Browser Compatibility Checkers
 
-**Can I Use**:
+Can I Use:
 - URL: https://caniuse.com/
 - Check feature support across browsers
 - Version-specific compatibility
 - Usage statistics
 
-**BrowserStack**:
+BrowserStack:
 - URL: https://www.browserstack.com/
 - Test on real devices/browsers
 - Paid service
 - Screenshots and interactive testing
 
-**Update Your Browser**:
+Update Your Browser:
 - URL: https://browsehappy.com/
 - Check if browser is outdated
 - Download links for modern browsers
@@ -15851,221 +15868,221 @@ SaaSConf provides tools, not tax advice. Always consult a qualified tax advisor 
 
 ### A
 
-**Alumni**
+Alumni
 Former conference attendees tracked for marketing and historical purposes. Can be manually added, imported via CSV, or auto-created from paid registrations.
 
-**Applicant**
+Applicant
 A person who has submitted a proposal to the Call for Papers (CFP) system. Uses separate authentication from regular portal users.
 
-**Attachment**
+Attachment
 Files uploaded to the system (logos, contract documents, screen overlay images). Stored using polymorphic model with entity_type and entity_id.
 
-**Attendance Type**
+Attendance Type
 Conference format affecting VAT calculation. Options: in_person (physical venue), virtual (online only), hybrid_onsite (physical with online option), hybrid_online (online with physical option).
 
-**Audit Log**
+Audit Log
 Record of significant system actions (user creation, invoice sending, data changes) with timestamp, user, and details. Used for compliance and troubleshooting.
 
 ### B
 
-**Bank Transfer Invoice**
+Bank Transfer Invoice
 Invoice type requiring manual payment reconciliation. Customer pays via wire transfer, admin marks as paid manually in system.
 
-**Billing Profile**
+Billing Profile
 Shared billing information for group registrations. One billing profile can be linked to multiple attendees to reduce data entry and enable batch invoicing.
 
-**Booking Option**
+Booking Option
 Conference attendance package (e.g., 2-Day Pass, Virtual Access, Tutorial). Can have multiple booking periods (early-bird, regular, late) with different pricing.
 
-**B2B (Business-to-Business)**
+B2B (Business-to-Business)
 Transaction where customer is a business entity. Identified by presence of VAT number. Subject to different VAT rules than B2C.
 
-**B2C (Business-to-Consumer)**
+B2C (Business-to-Consumer)
 Transaction where customer is individual consumer. No VAT number provided. Subject to consumer VAT rates.
 
 ### C
 
-**Conference Admin**
+Conference Admin
 User role with full access to assigned conferences but not other conferences in the tenant. Can manage registrations, invoices, program, etc.
 
-**Credit Card Invoice**
+Credit Card Invoice
 Invoice type integrated with Stripe for online payment. System automatically creates payment link and processes payments via webhook.
 
-**Credit Note**
+Credit Note
 Negative invoice issued when cancelling a paid invoice. Immutable document with status always "sent". Links to original invoice via related_invoice_id.
 
-**CFP (Call for Papers)**
+CFP (Call for Papers)
 System for collecting and reviewing conference presentation proposals. Separate authentication for applicants. Includes submission, review, and notification workflows.
 
-**CSV (Comma-Separated Values)**
+CSV (Comma-Separated Values)
 Text file format for data import/export. All exports include UTF-8 BOM for Excel compatibility. Import limited to 50,000 rows.
 
 ### D
 
-**Deadline**
+Deadline
 Conference task with due date, reminders, and completion tracking. Core feature (no module required). Sends color-coded reminder emails at 7 days, 1 day, and on due date.
 
-**Discount Code**
+Discount Code
 Promotional code offering percentage or fixed amount discount on booking options. Can be scoped to specific options, periods, and people. Supports bulk generation with templates.
 
-**Draft Invoice**
+Draft Invoice
 Invoice in creation state. Fully editable, can be deleted, no invoice number assigned yet. Status changes to "sent" when first sent to customer.
 
 ### E
 
-**E-Invoicing**
+E-Invoicing
 Electronic invoicing standard combining human-readable PDF with machine-readable XML. See ZUGFeRD/Factur-X. Required for B2B in many EU countries.
 
-**Event (Invoice Event)**
+Event (Invoice Event)
 Audit trail record for invoice actions. Tracks payments, refunds, status changes, emails, Stripe interactions. Immutable log with timestamps and user context.
 
 ### F
 
-**Factur-X**
+Factur-X
 French name for ZUGFeRD e-invoicing standard. Identical specification, different name. SaaSConf supports both via unified implementation.
 
-**Fiscal Representative**
+Fiscal Representative
 Third-party entity representing foreign companies for VAT compliance. Can be configured per conference with separate billing information.
 
 ### I
 
-**IBAN (International Bank Account Number)**
+IBAN (International Bank Account Number)
 Standardized international bank account identifier. Used in bank transfer invoices. Validated by format and checksum. Country-specific structure.
 
-**Invoice Number**
+Invoice Number
 Unique identifier for sent invoices. Auto-generated using configurable template. Supports placeholders: {YYYY}, {YY}, {MM}, {COUNTER}. Draft invoices have no number.
 
-**Invoice Template**
+Invoice Template
 HTML template for PDF generation. Supports 40+ placeholders for dynamic content. Edited via TipTap WYSIWYG editor. Separate header, body, footer sections.
 
-**ISO Code**
+ISO Code
 Two-letter country code standard (ISO 3166-1 alpha-2). Examples: DE (Germany), FR (France), US (United States). Required for ZUGFeRD compliance.
 
 ### L
 
-**Line Item**
+Line Item
 Individual row in invoice listing description, quantity, unit price, and total. Invoice must have at least one line item. Used in PDF and ZUGFeRD XML generation.
 
 ### M
 
-**Multi-Tenancy**
+Multi-Tenancy
 Architecture pattern isolating data between organizations (tenants). Shared database with tenant_id on every table. Row-Level Security (RLS) enforces isolation.
 
-**Module**
+Module
 Optional feature requiring subscription/enablement. Examples: Registration, Volunteers, Alumni, Booking. Enabled per tenant in Settings > Modules.
 
 ### O
 
-**OSS (One-Stop Shop)**
+OSS (One-Stop Shop)
 EU VAT scheme for B2C digital services. Allows companies to register VAT in one country and report all EU B2C sales. Alternative to registering in every customer country.
 
 ### P
 
-**Payment Intent**
+Payment Intent
 Stripe object representing a payment. Created automatically when customer pays via Payment Link. Stores amount, status, customer info, metadata.
 
-**Payment Link**
+Payment Link
 Stripe-hosted checkout page URL. Reusable link for customers to pay invoices. Includes invoice metadata for automatic reconciliation.
 
-**PDF/A-3**
+PDF/A-3
 Archival PDF standard (ISO 19005-3) allowing embedded files. Required for ZUGFeRD. Ensures long-term document accessibility and allows XML attachment.
 
-**Placeholder**
+Placeholder
 Variable in invoice templates replaced with actual data. Format: [INVOICE_NUMBER], [COMPANY_NAME], etc. Case-sensitive, exact spelling required.
 
-**Portal**
+Portal
 Public-facing website for conference attendees. Separate from admin interface. Features: registration, schedule viewing, profile management. Mobile-responsive design.
 
 ### R
 
-**Recipient Search**
+Recipient Search
 Feature for pre-populating invoice recipient data. Searches sponsors, speakers, committee members, volunteers, registrations. Returns up to 10 results per category.
 
-**Refresh Token**
+Refresh Token
 Long-lived authentication token for obtaining new access tokens. Stored as SHA256 hash. Revoked on password change or logout.
 
-**Registration**
+Registration
 Attendee enrollment for conference. Includes booking option, personal info, billing profile. Can be individual or bulk (group). Linked to user account for portal access.
 
-**Registration Replacement**
+Registration Replacement
 Transferring a registration from one person to another. Original attendee cancelled, new attendee inherits booking option. Optionally add additional items with delta invoicing.
 
-**Replace Invoice**
+Replace Invoice
 Correction workflow for billing information errors. Cancels original (creates credit note) and creates new invoice with corrected billing. Status and registrations preserved.
 
-**Reverse Charge**
+Reverse Charge
 VAT mechanism where customer (not supplier) accounts for VAT. Applies to cross-border B2B services in EU. Requires valid VAT number. Invoice shows 0% VAT with notice.
 
-**RLS (Row-Level Security)**
+RLS (Row-Level Security)
 PostgreSQL feature restricting query results based on user context. Used in SaaSConf for tenant isolation. Queries automatically filtered by tenant_id.
 
 ### S
 
-**Screen Overlay**
+Screen Overlay
 Full-screen modal shown to portal users on login events. Supports text, animation, and image. Trigger types: first_registration, scheduled, always.
 
-**Session**
+Session
 Program schedule item representing a presentation, tutorial, or event. Can be marked separately_bookable for registration integration. Supports multi-slot sessions.
 
-**SPF (Sender Policy Framework)**
+SPF (Sender Policy Framework)
 Email authentication method specifying which servers can send email for a domain. Required for good deliverability. DNS TXT record.
 
-**Stripe**
+Stripe
 Payment processor integration for credit card invoices. Provides payment links, webhooks, refunds. Requires API keys and webhook configuration.
 
-**Super Admin**
+Super Admin
 System-level admin with access to all tenants and conferences. Can create tenants, manage global settings, access ops endpoints.
 
 ### T
 
-**Tenant**
+Tenant
 Top-level organization in multi-tenant system. Contains users, conferences, invoices. Data isolated from other tenants. Examples: conference organizing companies, universities.
 
-**Tenant Admin**
+Tenant Admin
 User role with full access to all data within their tenant. Can manage users, conferences, settings, billing.
 
-**Template Type**
+Template Type
 Invoice document type. Options: bank_transfer (manual payment), credit_card (Stripe payment), credit_note (cancellation). Determines workflow and payment handling.
 
-**TipTap**
+TipTap
 WYSIWYG rich text editor used for invoice templates, email templates, contract editing. Supports tables, images, formatting. Outputs HTML.
 
 ### U
 
-**User**
+User
 Admin system account with email, password, role. Separate from portal users. Roles: super_admin, tenant_admin, conference_admin, viewer.
 
 ### V
 
-**VAT (Value-Added Tax)**
+VAT (Value-Added Tax)
 Consumption tax collected on goods and services in EU and other regions. Rate varies by country and product type. Complex cross-border rules.
 
-**VAT Decision Table**
+VAT Decision Table
 24-rule matrix determining VAT treatment. Inputs: attendance type, customer type (B2B/B2C), customer location (domestic/EU/non-EU). Outputs: charge VAT, rate source, reverse charge.
 
-**VAT Number**
+VAT Number
 Business tax registration identifier. Format varies by country (e.g., DE123456789). Validated via python-stdnum library and VIES API. Required for reverse charge.
 
-**VIES (VAT Information Exchange System)**
+VIES (VAT Information Exchange System)
 EU-operated online database for VAT number validation. Accessed via ec.europa.eu API. May experience downtime. Used in 3-stage validation cascade.
 
-**Volunteer Assignment**
+Volunteer Assignment
 Linking a conference volunteer to a session task. Used in task scheduling system. Supports drag-and-drop interface and PDF export.
 
-**Volunteer Role (Task)**
+Volunteer Role (Task)
 Defined volunteer responsibility (e.g., Registration Desk, Session Chair). Created in Settings, assigned to sessions. Table name is volunteer_roles but UI says "Tasks".
 
 ### W
 
-**Webhook**
+Webhook
 HTTP callback for real-time event notifications. Stripe sends webhooks for payment events. Requires signature verification for security. Public endpoint (no auth).
 
-**WeasyPrint**
+WeasyPrint
 Python library converting HTML+CSS to PDF. Used for invoice PDF generation. Supports PDF/A-3 for ZUGFeRD. Handles complex layouts with headers/footers.
 
 ### Z
 
-**ZUGFeRD**
+ZUGFeRD
 German/EU e-invoicing standard. Combines PDF/A-3 with embedded CII XML. Profile levels: MINIMUM, BASIC, EN16931 (recommended), EXTENDED. Required for B2B in Germany from 2025.
 
 ---
@@ -16074,171 +16091,171 @@ German/EU e-invoicing standard. Combines PDF/A-3 with embedded CII XML. Profile 
 
 ### Invoices
 
-**Q: Can I edit an invoice after sending it?**
-A: No, sent invoices are read-only to maintain audit compliance. To correct billing information (name, address, VAT, PO number), use **Replace Invoice**. For other changes (amounts, line items), cancel the invoice and create a new one.
+Q: Can I edit an invoice after sending it?
+A: No, sent invoices are read-only to maintain audit compliance. To correct billing information (name, address, VAT, PO number), use Replace Invoice. For other changes (amounts, line items), cancel the invoice and create a new one.
 
-**Q: How do I fix a typo in a customer's company name on a sent invoice?**
-A: Use the **Replace Invoice** feature. This cancels the original invoice (creates credit note) and creates a new invoice with corrected billing information while preserving the paid status and any linked registrations.
+Q: How do I fix a typo in a customer's company name on a sent invoice?
+A: Use the Replace Invoice feature. This cancels the original invoice (creates credit note) and creates a new invoice with corrected billing information while preserving the paid status and any linked registrations.
 
-**Q: What's the difference between Replace Invoice and Cancel Invoice?**
-A: **Replace Invoice** is for billing corrections (wrong name, address, VAT number). It keeps registrations active and preserves payment status. **Cancel Invoice** is for true cancellations (event cancelled, refund needed). It can optionally cancel all linked registrations.
+Q: What's the difference between Replace Invoice and Cancel Invoice?
+A: Replace Invoice is for billing corrections (wrong name, address, VAT number). It keeps registrations active and preserves payment status. Cancel Invoice is for true cancellations (event cancelled, refund needed). It can optionally cancel all linked registrations.
 
-**Q: Why is the VAT number field marked as required?**
+Q: Why is the VAT number field marked as required?
 A: The system determines if a VAT number is legally required based on EU regulations. Red asterisk (*) = legally mandatory (virtual cross-border B2B). Yellow "Recommended" = best practice. You can proceed without it, but admin override may be required.
 
-**Q: Can I send an invoice without a VAT number?**
+Q: Can I send an invoice without a VAT number?
 A: Yes, but you'll see a warning banner. If VAT is legally required (red warning), admins can override. If just recommended (yellow warning), anyone can acknowledge and proceed.
 
-**Q: How long do Stripe payment links last?**
+Q: How long do Stripe payment links last?
 A: Stripe payment links generally don't expire. They remain active until the invoice is cancelled or payment is completed. If an invoice is cancelled, the payment link is automatically deactivated.
 
-**Q: Can I offer discounts or early-bird pricing on invoices?**
+Q: Can I offer discounts or early-bird pricing on invoices?
 A: Invoices are created with final pricing. For promotional pricing, configure booking options with different booking periods (early-bird, regular, late) in Settings > Booking. Each period can have different prices.
 
-**Q: What happens when I cancel a paid invoice?**
+Q: What happens when I cancel a paid invoice?
 A: For credit card invoices, the system automatically issues a full Stripe refund and creates a credit note. For bank transfer invoices, a credit note is created but refund must be processed manually outside the system.
 
-**Q: Can I issue partial refunds?**
+Q: Can I issue partial refunds?
 A: The system currently supports full refunds only. For partial refunds, process manually in the Stripe Dashboard and document in the invoice's internal comment field.
 
-**Q: Why isn't my invoice PDF generating?**
+Q: Why isn't my invoice PDF generating?
 A: Common causes: blank template, malformed HTML in template, missing company logo, or template using invalid placeholders. Test with the default template first, then check Settings > Finance > Invoice Templates for issues.
 
 ### Registration
 
-**Q: Can I replace an attendee who can't attend anymore?**
-A: Yes, use **Replace Attendee** feature. This cancels the original registration, creates a new one for the replacement, sends notifications to both, and optionally allows adding additional booking items for the new attendee.
+Q: Can I replace an attendee who can't attend anymore?
+A: Yes, use Replace Attendee feature. This cancels the original registration, creates a new one for the replacement, sends notifications to both, and optionally allows adding additional booking items for the new attendee.
 
-**Q: What happens to the original attendee when I replace them?**
+Q: What happens to the original attendee when I replace them?
 A: Their registration status changes to CANCELLED, they receive a cancellation email with your custom message, and they lose access to this conference. Their user account stays active for future events.
 
-**Q: Can I add extra items when replacing an attendee?**
+Q: Can I add extra items when replacing an attendee?
 A: Yes, the Replace Attendee modal allows adding additional booking options or tutorials. A new invoice will be created for only the additional items (delta invoicing), using the original registration's billing profile.
 
-**Q: Why can't I select custom pronouns in Replace Attendee?**
+Q: Why can't I select custom pronouns in Replace Attendee?
 A: Pronouns must be pre-configured in Conference Settings > General > Pronouns. The dropdown shows only configured options for consistency. Add pronouns in settings first, then use Replace Attendee.
 
-**Q: Why is the Tutorial option disabled when adding items?**
+Q: Why is the Tutorial option disabled when adding items?
 A: An attendee can only be in one tutorial at a time. If the registration already includes a tutorial, the Tutorial type is disabled in the additional items dropdown.
 
-**Q: Can I replace an attendee who was already replaced?**
+Q: Can I replace an attendee who was already replaced?
 A: No, the system prevents replacing already-replaced registrations to maintain a clean audit trail. Always work with the current active registration.
 
 ### VAT & Compliance
 
-**Q: What's reverse charge and when does it apply?**
+Q: What's reverse charge and when does it apply?
 A: Reverse charge is an EU VAT mechanism where the buyer (not supplier) accounts for VAT. It applies to cross-border B2B services (virtual conferences to EU business customers). Invoice shows 0% VAT with a legal notice, and the customer must self-account for VAT in their country.
 
-**Q: Do I need a VAT number for virtual events?**
+Q: Do I need a VAT number for virtual events?
 A: If you're selling virtual attendance to an EU business customer in a different country than yours, yes, VAT number is legally required for reverse charge. The system will show a red error warning if you try to proceed without it.
 
-**Q: What if the VIES validation service is down?**
+Q: What if the VIES validation service is down?
 A: The system will show "Unverified" status (yellow warning) but still allow you to proceed. The VAT number format and checksum are still validated offline. Document in invoice notes that VIES was unavailable.
 
-**Q: What's ZUGFeRD and do I need it?**
+Q: What's ZUGFeRD and do I need it?
 A: ZUGFeRD (also called Factur-X) is a European e-invoicing standard combining PDF with embedded XML data. It will be mandatory for B2B transactions in Germany starting 2025, with similar requirements rolling out across Europe. Enable in Settings > Finance > ZUGFeRD Settings.
 
-**Q: Why does my invoice fail ZUGFeRD validation?**
+Q: Why does my invoice fail ZUGFeRD validation?
 A: Common reasons: missing seller VAT ID, buyer country not in ISO code format (use "DE" not "Germany"), missing issue date or due date, or missing line items. Check the ZUGFeRD validation indicator in invoice details for specific missing fields.
 
-**Q: Can I disable ZUGFeRD for certain invoices?**
+Q: Can I disable ZUGFeRD for certain invoices?
 A: ZUGFeRD is enabled/disabled at the conference level in Settings. If enabled, all invoices meeting requirements will include ZUGFeRD XML. If an invoice doesn't meet requirements, it gracefully falls back to standard PDF.
 
 ### Email & Communication
 
-**Q: Why aren't my invoices sending via email?**
+Q: Why aren't my invoices sending via email?
 A: Check: (1) Email address is valid and no typos, (2) Email Sending Enabled toggle is on in Settings > General, (3) SMTP/Resend API is configured by admin, (4) Check spam folder. Also verify in invoice Events tab if email send was attempted.
 
-**Q: Can I customize the email sent with invoices?**
+Q: Can I customize the email sent with invoices?
 A: Yes, go to Settings > Communication > Email Templates. Edit the invoice email template. Use placeholders like [INVOICE_NUMBER], [COMPANY_NAME], etc. Test with "Send Test Email" before going live.
 
-**Q: How do I add my company logo to emails?**
+Q: How do I add my company logo to emails?
 A: Upload logo in Settings > Finance > Company Info. In email template, use the [COMPANY_LOGO] placeholder. Logo is embedded as base64 in emails.
 
-**Q: What if customers report emails are going to spam?**
+Q: What if customers report emails are going to spam?
 A: Ask them to mark as "Not Spam" and add sender to contacts. For widespread issues, check SPF/DKIM/DMARC DNS records are configured, verify sender reputation with Mail-Tester.com, and ensure content doesn't trigger spam filters (avoid ALL CAPS, excessive punctuation).
 
-**Q: Can I resend an invoice if the customer didn't receive it?**
+Q: Can I resend an invoice if the customer didn't receive it?
 A: Yes, open the invoice and click Send again. The system will resend using the same invoice number and payment link. Check invoice Events tab to confirm email was sent.
 
 ### Payments
 
-**Q: How do I know if a customer paid?**
+Q: How do I know if a customer paid?
 A: For credit card invoices, status automatically updates to "Paid" via Stripe webhook (usually within seconds). For bank transfer invoices, you must manually mark as paid after verifying receipt in your bank account.
 
-**Q: What if invoice status doesn't update after customer pays?**
-A: Wait 5 minutes, then refresh. If still not updated, use **Sync Stripe Payment** action on the invoice. If webhooks aren't configured, use the bulk **Sync Stripe Payments** button to check all pending invoices.
+Q: What if invoice status doesn't update after customer pays?
+A: Wait 5 minutes, then refresh. If still not updated, use Sync Stripe Payment action on the invoice. If webhooks aren't configured, use the bulk Sync Stripe Payments button to check all pending invoices.
 
-**Q: Can customers pay with PayPal or other methods?**
+Q: Can customers pay with PayPal or other methods?
 A: Currently only Stripe (credit card) and bank transfer are supported. Stripe supports credit/debit cards, Apple Pay, Google Pay (depending on your Stripe configuration).
 
-**Q: How do refunds work?**
+Q: How do refunds work?
 A: For paid credit card invoices, cancel the invoice and the system automatically issues a Stripe refund (5-10 business days to customer's bank). For bank transfer invoices, cancel creates a credit note but you must process the refund manually.
 
-**Q: Can I offer payment plans or installments?**
+Q: Can I offer payment plans or installments?
 A: Not currently supported in the invoice system. You would need to create separate invoices for each installment manually.
 
 ### Portal Access
 
-**Q: How do attendees access the portal?**
+Q: How do attendees access the portal?
 A: Attendees receive a registration confirmation email with portal login details. They use the email address from their registration and set their own password during first login.
 
-**Q: What if an attendee forgets their portal password?**
+Q: What if an attendee forgets their portal password?
 A: They can use "Forgot Password" link on portal login page. System sends password reset email with token valid for 1 hour.
 
-**Q: Can multiple attendees use the same email for portal access?**
+Q: Can multiple attendees use the same email for portal access?
 A: No, email addresses must be unique per conference. Each attendee needs their own email address for portal login and receiving conference communications.
 
-**Q: What can attendees see/do in the portal?**
+Q: What can attendees see/do in the portal?
 A: View conference program/schedule, manage their profile, view/update their registration details, and access any enabled portal modules (depends on conference configuration).
 
 ### Data Management
 
-**Q: Can I export all my invoice data?**
+Q: Can I export all my invoice data?
 A: Yes, use the Export button on the Invoices tab. Exports to CSV with UTF-8 encoding. Limited to 50,000 invoices per export. Open in Excel using Data > From Text/CSV > UTF-8.
 
-**Q: Can I import registrations in bulk?**
+Q: Can I import registrations in bulk?
 A: Yes, use CSV import in Registrations tab. Format: one row per attendee with columns for email, first_name, last_name, etc. Maximum 50,000 rows per file.
 
-**Q: How do I backup my data?**
+Q: How do I backup my data?
 A: Export each data type (invoices, registrations, alumni, etc.) to CSV. For complete backup, contact support to request full database export.
 
-**Q: Can I delete old conferences to free up space?**
+Q: Can I delete old conferences to free up space?
 A: Contact support for conference archival. Deleting conferences permanently removes all associated data (registrations, invoices, program). Export data first if needed for records.
 
-**Q: How long is data retained?**
+Q: How long is data retained?
 A: Data is retained indefinitely unless you delete it or request archival. Audit logs and invoice events are never deleted for compliance purposes.
 
 ### Performance
 
-**Q: Why is the system slow?**
+Q: Why is the system slow?
 A: Common causes: slow internet connection, too many browser tabs open, large dataset (try filtering/pagination), browser cache full (clear cache), or temporary server load. Try incognito mode to rule out extensions.
 
-**Q: Can I use the system on mobile devices?**
+Q: Can I use the system on mobile devices?
 A: The portal is mobile-responsive and works well on phones/tablets. The admin interface is desktop-first but usable on tablets. Phone screens may be cramped for admin tasks.
 
-**Q: Which browsers are supported?**
+Q: Which browsers are supported?
 A: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+. Internet Explorer is not supported. Mobile browsers also supported. Always use latest browser version for best performance.
 
 ### Account & Access
 
-**Q: How do I add team members to my tenant?**
+Q: How do I add team members to my tenant?
 A: Tenant Admins can add users in Settings > Team. Provide email, name, and role. New users receive an invite email to set their password.
 
-**Q: What's the difference between user roles?**
-A: **Super Admin** (all tenants), **Tenant Admin** (all conferences in your org), **Conference Admin** (assigned conferences only), **Viewer** (read-only).
+Q: What's the difference between user roles?
+A: Super Admin (all tenants), Tenant Admin (all conferences in your org), Conference Admin (assigned conferences only), Viewer (read-only).
 
-**Q: Can I limit a user to specific conferences only?**
+Q: Can I limit a user to specific conferences only?
 A: Yes, create user with Conference Admin role, then assign specific conferences in their user settings.
 
-**Q: How do I change my password?**
+Q: How do I change my password?
 A: Go to user menu (top right) > Profile > Change Password. Must provide current password for security.
 
-**Q: What if I forget my admin password?**
+Q: What if I forget my admin password?
 A: Use "Forgot Password" link on login page. System sends reset email with token valid for 1 hour. Link allows setting new password without knowing old one.
 
 ---
 
-**End of Troubleshooting & Resources**
+End of Troubleshooting & Resources
 
 For issues not covered in this guide, contact support@saasconf.com with detailed information about your problem.

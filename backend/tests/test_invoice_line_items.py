@@ -97,8 +97,9 @@ async def test_generate_line_items_no_session_selection(db_session, tenant, conf
 @pytest.mark.asyncio
 async def test_generate_line_items_with_session_selection(db_session, tenant, conference):
     """Test line item generation for registration with session selection (no double invoicing)."""
-    from app.models.program import ProgramDay, ProgramTimeSlot, ProgramSession
     from datetime import time as dt_time
+
+    from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot
 
     # Create booking option
     booking_option = BookingOption(
@@ -217,8 +218,9 @@ async def test_generate_line_items_with_session_selection(db_session, tenant, co
 @pytest.mark.asyncio
 async def test_generate_line_items_with_session_and_addons(db_session, tenant, conference):
     """Test line item generation for registration with session selection and additional items."""
-    from app.models.program import ProgramDay, ProgramTimeSlot, ProgramSession
     from datetime import time as dt_time
+
+    from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot
 
     # Create booking options
     tutorial_option = BookingOption(
@@ -399,8 +401,9 @@ async def test_generate_line_items_with_session_and_addons(db_session, tenant, c
 @pytest.mark.asyncio
 async def test_generate_line_items_bulk_no_duplicates(db_session, tenant, conference):
     """Test bulk line item generation doesn't create duplicates."""
-    from app.models.program import ProgramDay, ProgramTimeSlot, ProgramSession
     from datetime import time as dt_time
+
+    from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot
 
     # Create booking option
     tutorial_option = BookingOption(
@@ -535,8 +538,9 @@ async def test_generate_line_items_with_main_session_id(db_session, tenant, conf
     db_session.add(booking_option)
 
     # Create program day and time slot (required for ProgramSession)
-    from app.models.program import ProgramDay, ProgramTimeSlot
     from datetime import time as dt_time
+
+    from app.models.program import ProgramDay, ProgramTimeSlot
 
     program_day = ProgramDay(
         id=uuid4(),
@@ -728,7 +732,7 @@ async def test_generate_line_items_with_percentage_discount(db_session, tenant, 
     assert line_items[0].unit_price == 290.00
     assert line_items[0].discount == 58.00  # 20% of 290
     assert line_items[0].total == 232.00  # 290 - 58
-    assert subtotal == Decimal("290.00")
+    assert subtotal == Decimal("232.00")  # Sum of line totals AFTER discount
     assert total_discount == Decimal("58.00")
 
 
@@ -822,5 +826,171 @@ async def test_generate_line_items_with_fixed_discount(db_session, tenant, confe
     assert line_items[0].unit_price == 500.00
     assert line_items[0].discount == 50.00
     assert line_items[0].total == 450.00  # 500 - 50
-    assert subtotal == Decimal("500.00")
+    assert subtotal == Decimal("450.00")  # Sum of line totals AFTER discount
     assert total_discount == Decimal("50.00")
+
+
+@pytest.mark.asyncio
+async def test_generate_line_items_addon_with_session(db_session, tenant, conference):
+    """Test that add-on items with session selections display session name in invoice."""
+    from datetime import time as dt_time
+
+    from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot
+
+    # Create booking options
+    day1_option = BookingOption(
+        id=uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        name="Day 1",
+        description="Conference day 1",
+        is_active=True,
+        sort_order=1,
+    )
+    day2_option = BookingOption(
+        id=uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        name="Day 2",
+        description="Conference day 2",
+        is_active=True,
+        sort_order=2,
+    )
+    db_session.add_all([day1_option, day2_option])
+
+    # Create program infrastructure
+    program_day = ProgramDay(
+        id=uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        date=date(2026, 3, 15),
+        name="Day 1",
+        sort_order=1,
+    )
+    db_session.add(program_day)
+    await db_session.flush()
+
+    time_slot = ProgramTimeSlot(
+        id=uuid4(),
+        tenant_id=tenant.id,
+        program_day_id=program_day.id,
+        start_time=dt_time(9, 0),
+        end_time=dt_time(10, 0),
+        sort_order=1,
+    )
+    db_session.add(time_slot)
+    await db_session.flush()
+
+    # Create two program sessions
+    session1 = ProgramSession(
+        id=uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        title="Advanced Python Techniques",
+        description="Deep dive into Python",
+        start_slot_id=time_slot.id,
+        slot_span=1,
+        track_span=1,
+    )
+    session2 = ProgramSession(
+        id=uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        title="Microservices Architecture",
+        description="Building scalable systems",
+        start_slot_id=time_slot.id,
+        slot_span=1,
+        track_span=1,
+    )
+    db_session.add_all([session1, session2])
+    await db_session.flush()
+
+    # Create booking period with pricing
+    booking_period = BookingPeriod(
+        id=uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        name="Early Bird",
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 12, 31),
+        is_active=True,
+        sort_order=1,
+        prices={
+            str(day1_option.id): 290.00,
+            str(day2_option.id): 290.00,
+        },
+        currency="EUR",
+    )
+    db_session.add(booking_period)
+
+    # Create billing profile
+    billing_profile = BillingProfile(
+        id=uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        street="123 Main St",
+        postal_code="12345",
+        city="Test City",
+        country="US",
+        contact_first_name="Test",
+        contact_last_name="User",
+        contact_phone="+1234567890",
+        contact_email="test@example.com",
+    )
+    db_session.add(billing_profile)
+    await db_session.flush()
+
+    # Create registration with Day 1 as main option WITH session
+    registration = Registration(
+        id=uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        billing_profile_id=billing_profile.id,
+        booking_option_id=day1_option.id,
+        main_session_id=session1.id,  # Main session for Day 1
+        first_name="Test",
+        last_name="User",
+        email="test@example.com",
+        status="registered_pending_invoice",
+    )
+    db_session.add(registration)
+    await db_session.commit()
+
+    # Create add-on item: Day 2 WITH session selection
+    day2_item = RegistrationItem(
+        id=uuid4(),
+        tenant_id=tenant.id,
+        registration_id=registration.id,
+        item_type="booking_option",
+        booking_option_id=day2_option.id,
+        program_session_id=session2.id,  # KEY: Add-on has session selection
+        item_name="Day 2",
+        pending=False,
+    )
+    db_session.add(day2_item)
+    await db_session.commit()
+    await db_session.refresh(registration)
+
+    # Generate line items
+    line_items, subtotal, total_discount = await generate_line_items_from_registration(
+        db_session, registration, booking_period
+    )
+
+    # Should have 2 line items
+    assert len(line_items) == 2
+
+    # Check Day 1 line item (main option with session)
+    day1_line = next(item for item in line_items if "Day 1" in item.description)
+    assert day1_line.description == "Day 1 - Advanced Python Techniques"
+    assert day1_line.quantity == 1
+    assert day1_line.unit_price == 290.00
+
+    # Check Day 2 line item (add-on with session) - THIS IS THE KEY TEST
+    day2_line = next(item for item in line_items if "Day 2" in item.description)
+    assert day2_line.description == "Day 2 - Microservices Architecture"
+    assert day2_line.quantity == 1
+    assert day2_line.unit_price == 290.00
+
+    # Total should be 580.00
+    assert subtotal == Decimal("580.00")
+    assert total_discount == Decimal("0.00")

@@ -3,15 +3,18 @@
  *
  * Manages public registration portal settings:
  * - Enable/disable portal
- * - Custom CSS (file upload or inline editor)
+ * - Conference logo
+ * - Registration period
+ * - Color theme customization
  * - Portal URL display
  */
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
+import ConferenceLogo from '../../../../components/ConferenceLogo';
 import type { Conference } from '../../../../types';
 
 interface PortalCustomizationTabProps {
@@ -19,7 +22,15 @@ interface PortalCustomizationTabProps {
   isAdmin: boolean;
 }
 
-type CSSMode = 'file' | 'inline';
+// Default theme colors
+const DEFAULT_THEME = {
+  primary: '#2563eb', // blue-600
+  background: '#f9fafb', // gray-50
+  card: '#ffffff', // white
+  text: '#111827', // gray-900
+  border: '#e5e7eb', // gray-200
+  headerBg: '#ffffff', // white
+};
 
 function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabProps) {
   const queryClient = useQueryClient();
@@ -29,42 +40,52 @@ function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabP
   const portalSettings =
     (conference.settings?.public_registration_portal as {
       enabled?: boolean;
-      custom_css_attachment_id?: string | null;
-      inline_css?: string | null;
-      use_inline_css?: boolean;
+      registration_start_date?: string | null;
+      registration_end_date?: string | null;
+      success_message?: string | null;
+      theme?: {
+        primary?: string;
+        background?: string;
+        card?: string;
+        text?: string;
+        border?: string;
+        headerBg?: string;
+      };
     }) || {};
 
   const portalEnabled = portalSettings.enabled ?? false;
-  const useInlineCSS = portalSettings.use_inline_css ?? false;
-  const inlineCSS = portalSettings.inline_css || '';
+  const currentTheme = portalSettings.theme || DEFAULT_THEME;
 
-  const [cssMode, setCSSMode] = useState<CSSMode>(useInlineCSS ? 'inline' : 'file');
-  const [cssContent, setCSSContent] = useState(inlineCSS);
-  const [uploading, setUploading] = useState(false);
-  const [loadingDefaultCSS, setLoadingDefaultCSS] = useState(false);
+  const [registrationStartDate, setRegistrationStartDate] = useState(
+    portalSettings.registration_start_date || ''
+  );
+  const [registrationEndDate, setRegistrationEndDate] = useState(
+    portalSettings.registration_end_date || ''
+  );
 
-  // Fetch default CSS template on mount if no custom CSS exists
-  useEffect(() => {
-    if (!inlineCSS && cssMode === 'inline') {
-      setLoadingDefaultCSS(true);
-      fetch('/api/v1/portal-templates/default-registration-portal.css')
-        .then((res) => res.text())
-        .then((css) => {
-          setCSSContent(css);
-        })
-        .catch((error) => {
-          console.error('Failed to load default CSS template:', error);
-        })
-        .finally(() => {
-          setLoadingDefaultCSS(false);
-        });
-    }
-  }, [inlineCSS, cssMode]);
-
-  // Portal URL construction
+  // Portal URL construction (must be before defaultSuccessMessage)
   const tenantSlug = conference.tenant_slug || 'demo';
   const conferenceSlug = conference.abbreviation?.toLowerCase() || 'conference';
   const portalUrl = `${window.location.origin}/${tenantSlug}/register/${conferenceSlug}`;
+
+  // Build default success message with portal login link
+  const defaultSuccessMessage = `Thank you for registering! Please check your email for next steps.
+
+Each attendee will receive a welcome email with a link to set up their password. Once your password is set, you can log in to the attendee portal at:
+
+${window.location.origin}/${tenantSlug}/portal/user/login
+
+You'll be able to view your registration details, download your ticket, and access conference materials through the portal.`;
+
+  const [successMessage, setSuccessMessage] = useState(
+    portalSettings.success_message || defaultSuccessMessage
+  );
+  const [theme, setTheme] = useState(currentTheme);
+
+  // Logo upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoStatus, setLogoStatus] = useState<'idle' | 'uploading' | 'deleting' | 'error'>('idle');
+  const [logoError, setLogoError] = useState<string | null>(null);
 
   // Toggle portal enabled
   const togglePortal = useMutation({
@@ -89,15 +110,14 @@ function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabP
     },
   });
 
-  // Save inline CSS
-  const saveInlineCSS = useMutation({
+  // Save success message
+  const saveSuccessMessage = useMutation({
     mutationFn: async () => {
       const newSettings = {
         ...conference.settings,
         public_registration_portal: {
           ...portalSettings,
-          inline_css: cssContent,
-          use_inline_css: true,
+          success_message: successMessage,
         },
       };
       await api.put(`/conferences/${conference.id}`, { settings: newSettings });
@@ -106,79 +126,127 @@ function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabP
       queryClient.invalidateQueries({
         queryKey: queryKeys.conferences.detail(conference.id),
       });
-      showToast('Custom CSS saved', 'success');
+      showToast('Success message saved', 'success');
     },
     onError: (error) => {
-      showToast(parseApiError(error, 'Failed to save CSS'), 'error');
+      showToast(parseApiError(error, 'Failed to save success message'), 'error');
     },
   });
 
-  // Handle file upload
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith('.css')) {
-      showToast('Please upload a CSS file', 'error');
-      return;
-    }
-
-    if (file.size > 100 * 1024) {
-      // 100KB limit
-      showToast('CSS file must be less than 100KB', 'error');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      // TODO: Implement file upload to attachments API
-      // For now, read and save as inline CSS
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const content = e.target?.result as string;
-        const newSettings = {
-          ...conference.settings,
-          public_registration_portal: {
-            ...portalSettings,
-            inline_css: content,
-            use_inline_css: false, // Indicate it was uploaded as file
-          },
-        };
-        await api.put(`/conferences/${conference.id}`, { settings: newSettings });
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.conferences.detail(conference.id),
-        });
-        showToast('CSS file uploaded', 'success');
-        setUploading(false);
+  // Save registration dates
+  const saveDates = useMutation({
+    mutationFn: async () => {
+      const newSettings = {
+        ...conference.settings,
+        public_registration_portal: {
+          ...portalSettings,
+          registration_start_date: registrationStartDate || null,
+          registration_end_date: registrationEndDate || null,
+        },
       };
-      reader.onerror = () => {
-        showToast('Failed to read file', 'error');
-        setUploading(false);
+      await api.put(`/conferences/${conference.id}`, { settings: newSettings });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.conferences.detail(conference.id),
+      });
+      showToast('Registration dates saved', 'success');
+    },
+    onError: (error) => {
+      showToast(parseApiError(error, 'Failed to save dates'), 'error');
+    },
+  });
+
+  // Save theme colors
+  const saveTheme = useMutation({
+    mutationFn: async () => {
+      const newSettings = {
+        ...conference.settings,
+        public_registration_portal: {
+          ...portalSettings,
+          theme,
+        },
       };
-      reader.readAsText(file);
-    } catch (error) {
-      showToast(parseApiError(error, 'Failed to upload file'), 'error');
-      setUploading(false);
-    }
+      await api.put(`/conferences/${conference.id}`, { settings: newSettings });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.conferences.detail(conference.id),
+      });
+      showToast('Theme colors saved', 'success');
+    },
+    onError: (error) => {
+      showToast(parseApiError(error, 'Failed to save theme'), 'error');
+    },
+  });
+
+  // Reset theme to default
+  const resetTheme = () => {
+    setTheme(DEFAULT_THEME);
   };
 
-  // Download default template
-  const downloadDefaultTemplate = () => {
-    // Fetch from backend endpoint
-    fetch('/api/v1/portal-templates/default-registration-portal.css')
-      .then((res) => res.blob())
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'default-registration-portal.css';
-        a.click();
-        URL.revokeObjectURL(url);
-      })
-      .catch((error) => {
-        showToast('Failed to download template', 'error');
-        console.error('Failed to download default template:', error);
+  // Logo upload
+  const uploadLogoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post(`/conferences/${conference.id}/logo`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
+      return res.data;
+    },
+    onMutate: () => {
+      setLogoStatus('uploading');
+      setLogoError(null);
+    },
+    onSuccess: () => {
+      setLogoStatus('idle');
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.conferences.detail(conference.id),
+      });
+      showToast('Logo uploaded successfully', 'success');
+    },
+    onError: (err) => {
+      setLogoStatus('error');
+      setLogoError(parseApiError(err));
+      showToast(parseApiError(err, 'Failed to upload logo'), 'error');
+      setTimeout(() => setLogoStatus('idle'), 3000);
+    },
+  });
+
+  // Logo delete
+  const deleteLogoMutation = useMutation({
+    mutationFn: async () => {
+      await api.delete(`/conferences/${conference.id}/logo`);
+    },
+    onMutate: () => {
+      setLogoStatus('deleting');
+      setLogoError(null);
+    },
+    onSuccess: () => {
+      setLogoStatus('idle');
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.conferences.detail(conference.id),
+      });
+      showToast('Logo deleted successfully', 'success');
+    },
+    onError: (err) => {
+      setLogoStatus('error');
+      setLogoError(parseApiError(err));
+      showToast(parseApiError(err, 'Failed to delete logo'), 'error');
+      setTimeout(() => setLogoStatus('idle'), 3000);
+    },
+  });
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadLogoMutation.mutate(file);
+    }
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   // Copy portal URL to clipboard
@@ -187,10 +255,7 @@ function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabP
     showToast('Portal URL copied to clipboard', 'success');
   };
 
-  const charCount = cssContent.length;
-  const maxChars = 100 * 1024; // 100KB
-  const isNearLimit = charCount > maxChars * 0.9;
-  const isOverLimit = charCount > maxChars;
+  const hasThemeChanges = JSON.stringify(theme) !== JSON.stringify(currentTheme);
 
   return (
     <div className="space-y-6">
@@ -205,7 +270,7 @@ function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabP
           </p>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-6">
           {/* Enable/Disable Toggle */}
           <div className="flex items-start gap-4">
             <div className="flex items-center h-6">
@@ -232,9 +297,242 @@ function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabP
             </div>
           </div>
 
+          {/* Portal Logo */}
+          {portalEnabled && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+                Portal Logo
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                This logo will appear at the top of the public registration portal, before the
+                conference name.
+              </p>
+              <div className="flex items-start gap-4">
+                {/* Logo preview */}
+                <div className="min-w-24 max-w-48 h-24 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-2">
+                  <ConferenceLogo logoUrl={conference.logo_url} />
+                </div>
+
+                {/* Upload/Delete controls */}
+                {isAdmin && (
+                  <div className="flex flex-col gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                      id="portal-logo-upload"
+                    />
+                    <label
+                      htmlFor="portal-logo-upload"
+                      className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer ${
+                        logoStatus === 'uploading'
+                          ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-wait'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      {logoStatus === 'uploading' ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4 mr-1.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="h-4 w-4 mr-1.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                          {conference.logo_url ? 'Replace Logo' : 'Upload Logo'}
+                        </>
+                      )}
+                    </label>
+
+                    {conference.logo_url && (
+                      <button
+                        type="button"
+                        onClick={() => deleteLogoMutation.mutate()}
+                        disabled={logoStatus === 'deleting'}
+                        className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
+                          logoStatus === 'deleting'
+                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-wait'
+                            : 'bg-white dark:bg-gray-800 text-red-600 border border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'
+                        }`}
+                      >
+                        {logoStatus === 'deleting' ? (
+                          <>
+                            <svg
+                              className="animate-spin h-4 w-4 mr-1.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              />
+                            </svg>
+                            Deleting...
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="h-4 w-4 mr-1.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                            Delete Logo
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {logoError && (
+                      <p className="text-sm text-red-600 dark:text-red-400">{logoError}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Registration Period */}
+          {portalEnabled && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
+                Registration Period
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="registration-start"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Registration Opens
+                  </label>
+                  <input
+                    type="date"
+                    id="registration-start"
+                    value={registrationStartDate}
+                    onChange={(e) => setRegistrationStartDate(e.target.value)}
+                    disabled={!isAdmin}
+                    className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Leave empty to allow registration immediately
+                  </p>
+                </div>
+                <div>
+                  <label
+                    htmlFor="registration-end"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Registration Closes
+                  </label>
+                  <input
+                    type="date"
+                    id="registration-end"
+                    value={registrationEndDate}
+                    onChange={(e) => setRegistrationEndDate(e.target.value)}
+                    disabled={!isAdmin}
+                    className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Leave empty to keep registration open indefinitely
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => saveDates.mutate()}
+                  disabled={!isAdmin || saveDates.isPending}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  {saveDates.isPending ? 'Saving...' : 'Save Dates'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {portalEnabled && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                Success Message
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                This message will be displayed to users after they successfully complete their
+                registration.
+              </p>
+              <textarea
+                value={successMessage}
+                onChange={(e) => setSuccessMessage(e.target.value)}
+                disabled={!isAdmin}
+                rows={4}
+                className="block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                placeholder="Enter a custom message to show after successful registration..."
+              />
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {successMessage.length} characters
+              </p>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => saveSuccessMessage.mutate()}
+                  disabled={!isAdmin || saveSuccessMessage.isPending}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  {saveSuccessMessage.isPending ? 'Saving...' : 'Save Message'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Portal URL */}
           {portalEnabled && (
-            <div>
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
               <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                 Portal URL
               </label>
@@ -265,141 +563,220 @@ function PortalCustomizationTab({ conference, isAdmin }: PortalCustomizationTabP
         </div>
       </div>
 
-      {/* Custom CSS Settings */}
+      {/* Color Theme Customization */}
       {portalEnabled && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Custom CSS</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Color Theme</h2>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Customize the portal appearance with your own CSS.
+              Customize the portal colors to match your brand. Changes apply immediately.
             </p>
           </div>
 
           <div className="p-6 space-y-6">
-            {/* CSS Mode Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                CSS Source
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="css-mode"
-                    value="file"
-                    checked={cssMode === 'file'}
-                    onChange={() => setCSSMode('file')}
-                    disabled={!isAdmin}
-                    className="h-4 w-4 text-blue-600 border-gray-300 dark:border-gray-600 focus:ring-blue-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                    Upload CSS File
-                  </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Primary Color */}
+              <div>
+                <label
+                  htmlFor="color-primary"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Primary Color
                 </label>
-                <label className="flex items-center cursor-pointer">
+                <div className="flex gap-3 items-center">
                   <input
-                    type="radio"
-                    name="css-mode"
-                    value="inline"
-                    checked={cssMode === 'inline'}
-                    onChange={() => setCSSMode('inline')}
+                    type="color"
+                    id="color-primary"
+                    value={theme.primary}
+                    onChange={(e) => setTheme({ ...theme, primary: e.target.value })}
                     disabled={!isAdmin}
-                    className="h-4 w-4 text-blue-600 border-gray-300 dark:border-gray-600 focus:ring-blue-500"
+                    className="h-10 w-20 rounded border border-gray-300 dark:border-gray-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                   />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                    Inline Editor
-                  </span>
+                  <input
+                    type="text"
+                    value={theme.primary}
+                    onChange={(e) => setTheme({ ...theme, primary: e.target.value })}
+                    disabled={!isAdmin}
+                    placeholder="#2563eb"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm font-mono"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Used for buttons, links, and accents
+                </p>
+              </div>
+
+              {/* Background Color */}
+              <div>
+                <label
+                  htmlFor="color-background"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Background Color
                 </label>
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="color"
+                    id="color-background"
+                    value={theme.background}
+                    onChange={(e) => setTheme({ ...theme, background: e.target.value })}
+                    disabled={!isAdmin}
+                    className="h-10 w-20 rounded border border-gray-300 dark:border-gray-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <input
+                    type="text"
+                    value={theme.background}
+                    onChange={(e) => setTheme({ ...theme, background: e.target.value })}
+                    disabled={!isAdmin}
+                    placeholder="#f9fafb"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm font-mono"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Main page background
+                </p>
+              </div>
+
+              {/* Card Background */}
+              <div>
+                <label
+                  htmlFor="color-card"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Card Background
+                </label>
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="color"
+                    id="color-card"
+                    value={theme.card}
+                    onChange={(e) => setTheme({ ...theme, card: e.target.value })}
+                    disabled={!isAdmin}
+                    className="h-10 w-20 rounded border border-gray-300 dark:border-gray-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <input
+                    type="text"
+                    value={theme.card}
+                    onChange={(e) => setTheme({ ...theme, card: e.target.value })}
+                    disabled={!isAdmin}
+                    placeholder="#ffffff"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm font-mono"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Content cards and panels
+                </p>
+              </div>
+
+              {/* Text Color */}
+              <div>
+                <label
+                  htmlFor="color-text"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Text Color
+                </label>
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="color"
+                    id="color-text"
+                    value={theme.text}
+                    onChange={(e) => setTheme({ ...theme, text: e.target.value })}
+                    disabled={!isAdmin}
+                    className="h-10 w-20 rounded border border-gray-300 dark:border-gray-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <input
+                    type="text"
+                    value={theme.text}
+                    onChange={(e) => setTheme({ ...theme, text: e.target.value })}
+                    disabled={!isAdmin}
+                    placeholder="#111827"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm font-mono"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Primary text color</p>
+              </div>
+
+              {/* Border Color */}
+              <div>
+                <label
+                  htmlFor="color-border"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Border Color
+                </label>
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="color"
+                    id="color-border"
+                    value={theme.border}
+                    onChange={(e) => setTheme({ ...theme, border: e.target.value })}
+                    disabled={!isAdmin}
+                    className="h-10 w-20 rounded border border-gray-300 dark:border-gray-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <input
+                    type="text"
+                    value={theme.border}
+                    onChange={(e) => setTheme({ ...theme, border: e.target.value })}
+                    disabled={!isAdmin}
+                    placeholder="#e5e7eb"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm font-mono"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Card borders and dividers
+                </p>
+              </div>
+
+              {/* Header Background */}
+              <div>
+                <label
+                  htmlFor="color-header"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  Header Background
+                </label>
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="color"
+                    id="color-header"
+                    value={theme.headerBg}
+                    onChange={(e) => setTheme({ ...theme, headerBg: e.target.value })}
+                    disabled={!isAdmin}
+                    className="h-10 w-20 rounded border border-gray-300 dark:border-gray-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <input
+                    type="text"
+                    value={theme.headerBg}
+                    onChange={(e) => setTheme({ ...theme, headerBg: e.target.value })}
+                    disabled={!isAdmin}
+                    placeholder="#ffffff"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm font-mono"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Conference header section
+                </p>
               </div>
             </div>
 
-            {/* File Upload Mode */}
-            {cssMode === 'file' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    Upload CSS File (max 100KB)
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="file"
-                      accept=".css"
-                      onChange={handleFileUpload}
-                      disabled={!isAdmin || uploading}
-                      className="flex-1 text-sm text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 dark:hover:file:bg-blue-900/50"
-                    />
-                    <button
-                      onClick={downloadDefaultTemplate}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium whitespace-nowrap"
-                    >
-                      Download Template
-                    </button>
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Download the default template as a starting point for your custom CSS.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Inline Editor Mode */}
-            {cssMode === 'inline' && (
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
-                      CSS Code
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`text-xs ${
-                          isOverLimit
-                            ? 'text-red-600 dark:text-red-400 font-semibold'
-                            : isNearLimit
-                              ? 'text-yellow-600 dark:text-yellow-400'
-                              : 'text-gray-500 dark:text-gray-400'
-                        }`}
-                      >
-                        {charCount.toLocaleString()} / {maxChars.toLocaleString()} characters
-                      </span>
-                      <button
-                        onClick={downloadDefaultTemplate}
-                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        Download Template
-                      </button>
-                    </div>
-                  </div>
-                  {loadingDefaultCSS ? (
-                    <div className="flex justify-center items-center py-12 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    </div>
-                  ) : (
-                    <textarea
-                      value={cssContent}
-                      onChange={(e) => setCSSContent(e.target.value)}
-                      disabled={!isAdmin}
-                      rows={20}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="/* Enter your custom CSS here */"
-                    />
-                  )}
-                  {isOverLimit && (
-                    <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                      CSS content exceeds the 100KB limit. Please reduce the size.
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => saveInlineCSS.mutate()}
-                    disabled={!isAdmin || saveInlineCSS.isPending || isOverLimit}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-                  >
-                    {saveInlineCSS.isPending ? 'Saving...' : 'Save CSS'}
-                  </button>
-                </div>
+            {/* Action Buttons */}
+            {isAdmin && (
+              <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={resetTheme}
+                  disabled={JSON.stringify(theme) === JSON.stringify(DEFAULT_THEME)}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:bg-gray-100 disabled:dark:bg-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  Reset to Default
+                </button>
+                <button
+                  onClick={() => saveTheme.mutate()}
+                  disabled={!hasThemeChanges || saveTheme.isPending}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  {saveTheme.isPending ? 'Saving...' : 'Save Theme'}
+                </button>
               </div>
             )}
           </div>

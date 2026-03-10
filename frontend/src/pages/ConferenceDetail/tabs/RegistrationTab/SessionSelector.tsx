@@ -43,17 +43,21 @@ function SlotDropdown({
   typeName,
   selectedSessionId,
   onSelect,
+  compact = false,
 }: {
   slot: BookableSlot;
   typeName: string;
   selectedSessionId: string | undefined;
   onSelect: (sessionId: string) => void;
+  compact?: boolean;
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-        {slot.label}
-      </label>
+      {!compact && (
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          {slot.label}
+        </label>
+      )}
       <select
         className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
         value={selectedSessionId || ''}
@@ -74,18 +78,22 @@ function SessionTypeGroup({
   group,
   selections,
   onChange,
+  compact = false,
 }: {
   group: BookableSessionGroup;
   selections: Record<string, string>;
   onChange: (selections: Record<string, string>) => void;
+  compact?: boolean;
 }) {
   const allTba = group.slots.every((slot) => slot.sessions.every((s) => !s.has_paper));
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-        Choose a {group.session_type_name}:
-      </div>
+      {!compact && (
+        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          Choose a {group.session_type_name}:
+        </div>
+      )}
       {allTba ? (
         <p className="text-sm text-gray-500 dark:text-gray-400 italic">
           You can choose your sessions later. We will come back to you.
@@ -100,6 +108,7 @@ function SessionTypeGroup({
               typeName={group.session_type_name}
               selectedSessionId={selections[key]}
               onSelect={(sessionId) => onChange({ ...selections, [key]: sessionId })}
+              compact={compact}
             />
           );
         })
@@ -114,12 +123,14 @@ export function OptionSessions({
   selections,
   selectedSessionId,
   onChange,
+  compact = false,
 }: {
   conferenceId: string;
   optionId: string;
   selections: Record<string, string>;
   selectedSessionId?: string | null;
   onChange: (selections: Record<string, string>) => void;
+  compact?: boolean;
 }) {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.registrations.bookableSessions(conferenceId, optionId),
@@ -169,6 +180,7 @@ export function OptionSessions({
           group={group}
           selections={effectiveSelections}
           onChange={onChange}
+          compact={compact}
         />
       ))}
     </div>

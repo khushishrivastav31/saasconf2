@@ -474,6 +474,8 @@ export interface Invoice {
   recipient_country: string | null;
   recipient_vat_number: string | null;
   procurement_code: string | null;
+  discount_code: string | null;
+  discount_amount: number | null;
   line_items: InvoiceLineItem[];
   subtotal: number | null;
   tax_rate: number | null;
@@ -545,6 +547,8 @@ export interface InvoiceCreate {
   tax_amount?: number;
   total?: number;
   currency?: string;
+  discount_code?: string;
+  discount_amount?: number;
   attendance_type?: string;
   notes?: string;
   internal_comment?: string;
@@ -575,6 +579,8 @@ export interface InvoiceUpdate {
   tax_amount?: number;
   total?: number;
   currency?: string;
+  discount_code?: string;
+  discount_amount?: number;
   attendance_type?: string;
   notes?: string;
   internal_comment?: string;

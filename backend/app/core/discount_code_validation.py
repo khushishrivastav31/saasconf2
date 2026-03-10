@@ -59,6 +59,58 @@ async def validate_and_get_discount_code(
     return discount
 
 
+async def get_applicable_option_ids(db: AsyncSession, discount_code_id: UUID) -> list[UUID]:
+    """Get list of booking option IDs this discount applies to.
+
+    Returns empty list if no restrictions (applies to all options).
+    """
+    stmt = select(DiscountCodeOption.booking_option_id).where(DiscountCodeOption.discount_code_id == discount_code_id)
+    result = await db.execute(stmt)
+    return [row[0] for row in result.all()]
+
+
+async def get_applicable_period_ids(db: AsyncSession, discount_code_id: UUID) -> list[UUID]:
+    """Get list of booking period IDs this discount applies to.
+
+    Returns empty list if no restrictions (applies to all periods).
+    """
+    stmt = select(DiscountCodePeriod.booking_period_id).where(DiscountCodePeriod.discount_code_id == discount_code_id)
+    result = await db.execute(stmt)
+    return [row[0] for row in result.all()]
+
+
+def check_discount_applies(
+    applicable_option_ids: list[UUID],
+    applicable_period_ids: list[UUID],
+    option_id: UUID | None = None,
+    period_id: UUID | None = None,
+) -> bool:
+    """Check if discount applies to given option/period (frontend logic).
+
+    Mirrors the frontend applyDiscount() function logic exactly.
+
+    Args:
+        applicable_option_ids: List of option IDs discount applies to (empty = all)
+        applicable_period_ids: List of period IDs discount applies to (empty = all)
+        option_id: The booking option ID to check
+        period_id: The booking period ID to check
+
+    Returns:
+        True if discount applies, False otherwise
+    """
+    # Check if discount applies to this option (if restricted)
+    if applicable_option_ids and len(applicable_option_ids) > 0:
+        if option_id and option_id not in applicable_option_ids:
+            return False
+
+    # Check if discount applies to this period (if restricted)
+    if applicable_period_ids and len(applicable_period_ids) > 0:
+        if period_id and period_id not in applicable_period_ids:
+            return False
+
+    return True
+
+
 async def check_discount_applies_to_option(
     db: AsyncSession,
     discount_code_id: UUID,

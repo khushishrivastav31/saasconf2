@@ -27,6 +27,7 @@ ALLOWED_ENTITY_TYPES = {
     "sponsor_logo",
     "sponsor_package_contract",
     "screen_overlay_image",
+    "invoice",
 }
 
 

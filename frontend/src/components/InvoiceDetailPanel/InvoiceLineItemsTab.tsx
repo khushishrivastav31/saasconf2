@@ -160,6 +160,19 @@ export default function InvoiceLineItemsTab({
           </button>
         )}
 
+        {/* Discount Code Display */}
+        {formData.discount_code && (
+          <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded-md">
+            <span className="font-medium">Discount Code Applied:</span>{' '}
+            <span className="text-gray-900 dark:text-gray-100">{formData.discount_code}</span>
+            {formData.discount_amount && formData.discount_amount > 0 && (
+              <span className="ml-2 text-green-600 dark:text-green-400">
+                (Total Savings: {formData.discount_amount.toFixed(2)} {formData.currency || 'EUR'})
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Totals */}
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
           <div className="flex justify-between text-sm">

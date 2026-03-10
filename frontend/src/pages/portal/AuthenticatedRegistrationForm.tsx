@@ -5,11 +5,12 @@
  * Composes existing components: AttendeeSection, OrderSummary, InlineStripePayment, BillingFields
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import portalApi from '../../config/portalApi';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
+import { usePaymentIntent } from '../../hooks/usePaymentIntent';
 import AttendeeSection from '../PublicRegistration/components/AttendeeSection';
 import OrderSummary from '../PublicRegistration/components/OrderSummary';
 import InlineStripePayment from '../PublicRegistration/components/InlineStripePayment';
@@ -47,6 +48,7 @@ export default function AuthenticatedRegistrationForm({
   alumniInfo,
 }: AuthenticatedRegistrationFormProps) {
   const navigate = useNavigate();
+  const { companySlug } = useParams<{ companySlug: string }>();
   const { applicant } = useApplicantAuth();
   const { showToast } = useToast();
 
@@ -106,11 +108,7 @@ export default function AuthenticatedRegistrationForm({
   // Discount validation state (for ALUMNI discount)
   const [discountValidation, setDiscountValidation] = useState<DiscountCodeValidation | null>(null);
 
-  // PaymentIntent state for credit card payment
-  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [publishableKey, setPublishableKey] = useState<string | null>(null);
-  const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
+  // Payment attempt state
   const [attemptingPayment, setAttemptingPayment] = useState(false);
 
   // Auto-fetch ALUMNI discount validation on mount if eligible
@@ -160,101 +158,48 @@ export default function AuthenticatedRegistrationForm({
     [conferenceId, conference]
   );
 
+  // Calculate subtotal for VAT and payment
+  const subtotal = useMemo(() => {
+    if (!conference) return 0;
+
+    let total = 0;
+    attendees.forEach((att) => {
+      att.booking_option_ids?.forEach((optionId) => {
+        const option = conference.booking_options.find((opt) => opt.id === optionId);
+        if (option) {
+          total += option.price;
+        }
+      });
+    });
+
+    // Apply alumni discount
+    if (discountValidation?.valid && discountValidation.discount_type === 'percentage') {
+      total = total * (1 - (discountValidation.discount_value || 0) / 100);
+    }
+
+    return total;
+  }, [attendees, conference, discountValidation]);
+
+  // Calculate total with VAT
+  const totalWithVat = useMemo(() => {
+    return subtotal + (vatCalculation?.vat_amount || 0);
+  }, [subtotal, vatCalculation]);
+
   // Trigger VAT calculation when billing country/VAT number changes
   useEffect(() => {
     if (!conference) return;
-
-    // Calculate subtotal
-    let subtotal = 0;
-    attendees.forEach((att) => {
-      att.booking_option_ids?.forEach((optionId) => {
-        const option = conference.booking_options.find((opt) => opt.id === optionId);
-        if (option) {
-          subtotal += option.price;
-        }
-      });
-    });
-
-    // Apply alumni discount
-    if (discountValidation?.valid && discountValidation.discount_type === 'percentage') {
-      subtotal = subtotal * (1 - (discountValidation.discount_value || 0) / 100);
-    }
-
     calculateVat(subtotal, billing.country, billing.vat_number || null);
-  }, [
-    billing.country,
-    billing.vat_number,
-    attendees,
-    discountValidation,
-    conference,
-    calculateVat,
-  ]);
+  }, [billing.country, billing.vat_number, subtotal, conference, calculateVat]);
 
-  // Create or update payment intent when total changes (credit card only)
-  useEffect(() => {
-    if (billing.payment_method !== 'credit_card' || !conference) return;
-
-    // Calculate total with VAT
-    let subtotal = 0;
-    attendees.forEach((att) => {
-      att.booking_option_ids?.forEach((optionId) => {
-        const option = conference.booking_options.find((opt) => opt.id === optionId);
-        if (option) {
-          subtotal += option.price;
-        }
-      });
-    });
-
-    // Apply alumni discount
-    if (discountValidation?.valid && discountValidation.discount_type === 'percentage') {
-      subtotal = subtotal * (1 - (discountValidation.discount_value || 0) / 100);
-    }
-
-    const total = subtotal + (vatCalculation?.vat_amount || 0);
-
-    if (total > 0) {
-      createOrUpdatePaymentIntent(total);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [billing.payment_method, attendees, discountValidation, vatCalculation, conference]);
-
-  const createOrUpdatePaymentIntent = async (total: number) => {
-    if (creatingPaymentIntent) return;
-
-    setCreatingPaymentIntent(true);
-
-    try {
-      if (paymentIntentId) {
-        // Update existing payment intent
-        const response = await portalApi.post<{
-          client_secret: string;
-          publishable_key: string;
-        }>(`/portal/conferences/${conferenceId}/update-payment-intent`, {
-          payment_intent_id: paymentIntentId,
-          amount: Math.round(total * 100), // Convert to cents
-        });
-        setClientSecret(response.data.client_secret);
-        setPublishableKey(response.data.publishable_key);
-      } else {
-        // Create new payment intent
-        const response = await portalApi.post<{
-          payment_intent_id: string;
-          client_secret: string;
-          publishable_key: string;
-        }>(`/portal/conferences/${conferenceId}/create-payment-intent`, {
-          amount: Math.round(total * 100), // Convert to cents
-          currency: conference?.currency?.toLowerCase() || 'eur',
-        });
-        setPaymentIntentId(response.data.payment_intent_id);
-        setClientSecret(response.data.client_secret);
-        setPublishableKey(response.data.publishable_key);
-      }
-    } catch (error) {
-      showToast(parseApiError(error), 'error');
-    } finally {
-      setCreatingPaymentIntent(false);
-    }
-  };
+  // Use payment intent hook for credit card payments
+  const { paymentIntentId, clientSecret, publishableKey } = usePaymentIntent({
+    total: totalWithVat,
+    currency: conference?.currency || 'EUR',
+    enabled: billing.payment_method === 'credit_card',
+    createEndpoint: `/portal/conferences/${conferenceId}/create-payment-intent`,
+    updateEndpoint: (id) => `/portal/conferences/${conferenceId}/update-payment-intent/${id}`,
+    apiClient: portalApi,
+  });
 
   // Registration mutation
   const registrationMutation = useMutation<
@@ -288,33 +233,7 @@ export default function AuthenticatedRegistrationForm({
     },
   });
 
-  // Multi-attendee handlers
-  const addAttendee = () => {
-    setAttendees([
-      ...attendees,
-      {
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        job_title: '',
-        department: '',
-        pronouns: '',
-        booking_option_ids: [],
-        items: [],
-      },
-    ]);
-  };
-
-  const removeAttendee = (index: number) => {
-    if (attendees.length === 1) return;
-    setAttendees(attendees.filter((_, i) => i !== index));
-    // Remove session selections for this attendee
-    const newSelections = { ...sessionSelections };
-    delete newSelections[index];
-    setSessionSelections(newSelections);
-  };
-
+  // Single attendee handler (authenticated users can only register themselves)
   const updateAttendee = (index: number, updated: PortalAttendee) => {
     const newAttendees = [...attendees];
     newAttendees[index] = updated;
@@ -346,9 +265,19 @@ export default function AuthenticatedRegistrationForm({
       return;
     }
 
-    if (attendees.some((att) => !att.first_name || !att.last_name || !att.email)) {
-      showToast('Please fill in all required attendee fields', 'error');
-      return;
+    // Validate attendee required fields with specific error messages
+    for (let i = 0; i < attendees.length; i++) {
+      const att = attendees[i];
+      const missingAttendeeFields: string[] = [];
+      if (!att.first_name?.trim()) missingAttendeeFields.push('First Name');
+      if (!att.last_name?.trim()) missingAttendeeFields.push('Last Name');
+      if (!att.email?.trim()) missingAttendeeFields.push('Email');
+
+      if (missingAttendeeFields.length > 0) {
+        const fieldList = missingAttendeeFields.join(', ');
+        showToast(`Attendee ${i + 1}: Please fill in ${fieldList}`, 'error');
+        return;
+      }
     }
 
     if (attendees.some((att) => att.booking_option_ids.length === 0)) {
@@ -356,10 +285,85 @@ export default function AuthenticatedRegistrationForm({
       return;
     }
 
-    if (!billing.street || !billing.postal_code || !billing.city || !billing.country) {
-      showToast('Please fill in all required billing fields', 'error');
+    // Validate all required billing fields with specific error messages
+    const missingBillingFields: string[] = [];
+    if (!billing.street?.trim()) missingBillingFields.push('Street Address');
+    if (!billing.postal_code?.trim()) missingBillingFields.push('Postal Code');
+    if (!billing.city?.trim()) missingBillingFields.push('City');
+    if (!billing.country?.trim()) missingBillingFields.push('Country');
+    if (!billing.contact_first_name?.trim()) missingBillingFields.push('Contact First Name');
+    if (!billing.contact_last_name?.trim()) missingBillingFields.push('Contact Last Name');
+    if (!billing.contact_email?.trim()) missingBillingFields.push('Contact Email');
+    if (!billing.contact_phone?.trim()) missingBillingFields.push('Contact Phone');
+
+    if (missingBillingFields.length > 0) {
+      const fieldList = missingBillingFields.join(', ');
+      showToast(`Please fill in the following required fields: ${fieldList}`, 'error');
       return;
     }
+
+    // Transform attendees for backend (same as public registration)
+    // First booking option is primary, rest are items with their sessions
+    const transformedAttendees = attendees.map((att, attendeeIndex) => {
+      const bookingIds = att.booking_option_ids || [];
+      const [primaryId, ...additionalIds] = bookingIds;
+
+      // Collect all session selections for this attendee
+      const attendeeSessions = sessionSelections[attendeeIndex] || {};
+
+      // Find session for primary booking option (goes to main_session_id)
+      let mainSessionId: string | null = null;
+      if (primaryId && attendeeSessions[primaryId]) {
+        const primarySlots = attendeeSessions[primaryId];
+        // Get first selected session for primary option
+        const sessionId = Object.values(primarySlots).find((id) => id);
+        if (sessionId) {
+          mainSessionId = sessionId;
+        }
+      }
+
+      // Build items array for additional options and their sessions
+      const items: Array<{
+        item_type: 'booking_option';
+        booking_option_id: string;
+        program_session_id?: string;
+      }> = [];
+
+      // Add additional booking options (without sessions for now)
+      additionalIds.forEach((id) => {
+        const hasSession = attendeeSessions[id];
+        if (!hasSession) {
+          // No session for this option - add as simple item
+          items.push({
+            item_type: 'booking_option' as const,
+            booking_option_id: id,
+          });
+        }
+      });
+
+      // Add sessions for additional options
+      Object.entries(attendeeSessions).forEach(([optionId, slotSelections]) => {
+        // Skip primary option (already handled as main_session_id)
+        if (optionId === primaryId) return;
+
+        Object.entries(slotSelections).forEach(([, sessionId]) => {
+          if (sessionId) {
+            items.push({
+              item_type: 'booking_option' as const,
+              booking_option_id: optionId,
+              program_session_id: sessionId,
+            });
+          }
+        });
+      });
+
+      return {
+        ...att,
+        booking_option_id: primaryId,
+        main_session_id: mainSessionId,
+        items,
+      };
+    });
 
     if (billing.payment_method === 'credit_card') {
       // For credit card, trigger Stripe payment confirmation
@@ -369,17 +373,73 @@ export default function AuthenticatedRegistrationForm({
       // For bank transfer, submit directly
       registrationMutation.mutate({
         billing,
-        attendees,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        attendees: transformedAttendees as any,
       });
     }
   };
 
   // Payment success handler (for credit card)
   const handlePaymentSuccess = () => {
+    // Transform attendees for backend (same transformation as bank transfer)
+    const transformedAttendees = attendees.map((att, attendeeIndex) => {
+      const bookingIds = att.booking_option_ids || [];
+      const [primaryId, ...additionalIds] = bookingIds;
+
+      const attendeeSessions = sessionSelections[attendeeIndex] || {};
+
+      let mainSessionId: string | null = null;
+      if (primaryId && attendeeSessions[primaryId]) {
+        const primarySlots = attendeeSessions[primaryId];
+        const sessionId = Object.values(primarySlots).find((id) => id);
+        if (sessionId) {
+          mainSessionId = sessionId;
+        }
+      }
+
+      const items: Array<{
+        item_type: 'booking_option';
+        booking_option_id: string;
+        program_session_id?: string;
+      }> = [];
+
+      additionalIds.forEach((id) => {
+        const hasSession = attendeeSessions[id];
+        if (!hasSession) {
+          items.push({
+            item_type: 'booking_option' as const,
+            booking_option_id: id,
+          });
+        }
+      });
+
+      Object.entries(attendeeSessions).forEach(([optionId, slotSelections]) => {
+        if (optionId === primaryId) return;
+
+        Object.entries(slotSelections).forEach(([, sessionId]) => {
+          if (sessionId) {
+            items.push({
+              item_type: 'booking_option' as const,
+              booking_option_id: optionId,
+              program_session_id: sessionId,
+            });
+          }
+        });
+      });
+
+      return {
+        ...att,
+        booking_option_id: primaryId,
+        main_session_id: mainSessionId,
+        items,
+      };
+    });
+
     // Payment confirmed, now submit registration
     registrationMutation.mutate({
       billing,
-      attendees,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      attendees: transformedAttendees as any,
       payment_intent_id: paymentIntentId || undefined,
     });
   };
@@ -441,9 +501,11 @@ export default function AuthenticatedRegistrationForm({
         </div>
       )}
 
-      {/* Attendees Section */}
+      {/* Attendee Section */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Attendees</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          Your Registration
+        </h2>
         {attendees.map((attendee, index) => (
           <AttendeeSection
             key={index}
@@ -452,25 +514,16 @@ export default function AuthenticatedRegistrationForm({
             bookingOptions={conference.booking_options}
             bookingPeriods={conference.booking_periods}
             currency={conference.currency}
-            tenantSlug={conferenceId} // Using conferenceId as fallback
-            conferenceSlug={conferenceId}
-            sessionSelections={sessionSelections[index]}
+            tenantSlug={companySlug || ''}
+            conferenceSlug={conference.abbreviation}
+            sessionSelections={sessionSelections[index] || {}}
             onSessionChange={(optionId, selections) =>
               handleSessionChange(index, optionId, selections)
             }
             onChange={(updated) => updateAttendee(index, updated)}
-            onRemove={() => removeAttendee(index)}
-            canRemove={attendees.length > 1}
+            canRemove={false}
           />
         ))}
-
-        <button
-          type="button"
-          onClick={addAttendee}
-          className="w-full py-3 px-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-        >
-          + Add Another Attendee
-        </button>
       </div>
 
       {/* Order Summary */}
@@ -501,6 +554,8 @@ export default function AuthenticatedRegistrationForm({
               company_name: applicant?.company || null,
             }}
             readOnlyFields={['contact_email']}
+            hidePaymentMethod={true}
+            hideDiscountCode={true}
           />
 
           {/* Conditional Discount Code Field */}
@@ -566,17 +621,15 @@ export default function AuthenticatedRegistrationForm({
             </div>
 
             {/* Inline Stripe Payment - shows when credit card is selected */}
-            {billing.payment_method === 'credit_card' && clientSecret && publishableKey && (
-              <div className="mt-4 p-4 border border-gray-200 dark:border-gray-600 rounded-md">
-                <InlineStripePayment
-                  clientSecret={clientSecret}
-                  publishableKey={publishableKey}
-                  billingName={`${billing.contact_first_name} ${billing.contact_last_name}`}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                  isSubmitting={attemptingPayment}
-                />
-              </div>
+            {billing.payment_method === 'credit_card' && (
+              <InlineStripePayment
+                clientSecret={clientSecret}
+                publishableKey={publishableKey}
+                billingName={`${billing.contact_first_name} ${billing.contact_last_name}`.trim()}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+                isSubmitting={attemptingPayment}
+              />
             )}
           </div>
         </div>
@@ -587,7 +640,7 @@ export default function AuthenticatedRegistrationForm({
         <button
           type="submit"
           disabled={registrationMutation.isPending || attemptingPayment}
-          className="min-h-[44px] px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+          className="min-h-11 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
         >
           {registrationMutation.isPending || attemptingPayment
             ? 'Processing...'

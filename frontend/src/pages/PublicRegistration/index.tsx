@@ -1,53 +1,34 @@
 /**
  * Public Registration Portal
  *
- * Multi-step wizard for conference registration (no authentication required).
+ * Single-page form for conference registration (no authentication required).
  */
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useEffect } from 'react';
+import { useParams, useNavigate, Routes, Route, useLocation } from 'react-router';
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import { usePortalCSS } from './hooks/usePortalCSS';
 import { useConferencePublic } from './hooks/useConferencePublic';
-import type {
-  PortalAttendee,
-  PortalBilling,
-  PortalRegistrationResponse,
-} from '../../types/publicRegistration';
-
-import WelcomeStep from './Step1_Welcome';
-import AttendeesStep from './Step2_Attendees';
-import BillingStep from './Step3_Billing';
-import ReviewStep from './Step4_Review';
+import SinglePageForm from './SinglePageForm';
 import PaymentStep from './Step5_Payment';
 import ConfirmationStep from './Step6_Confirmation';
-import ProgressIndicator from './components/ProgressIndicator';
-
-type Step = 'welcome' | 'attendees' | 'billing' | 'review' | 'payment' | 'confirmation';
 
 // reCAPTCHA site key (public key, safe to expose)
 const RECAPTCHA_SITE_KEY =
   import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'; // Test key for development
 
-function RegistrationWizard() {
+function RegistrationPortal() {
   const { tenantSlug, conferenceSlug } = useParams<{
     tenantSlug: string;
     conferenceSlug: string;
   }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Load custom CSS
   usePortalCSS(tenantSlug!, conferenceSlug!);
 
   // Fetch conference data
   const { data: conference, isLoading, error } = useConferencePublic(tenantSlug!, conferenceSlug!);
-
-  // Wizard state
-  const [currentStep, setCurrentStep] = useState<Step>('welcome');
-  const [attendees, setAttendees] = useState<PortalAttendee[]>([]);
-  const [billing, setBilling] = useState<PortalBilling | null>(null);
-  const [registrationResponse, setRegistrationResponse] =
-    useState<PortalRegistrationResponse | null>(null);
-  const [formStartTime] = useState<number>(Date.now() / 1000);
 
   // Redirect if missing params
   useEffect(() => {
@@ -56,23 +37,11 @@ function RegistrationWizard() {
     }
   }, [tenantSlug, conferenceSlug, navigate]);
 
-  // Step navigation
-  const goToStep = (step: Step) => {
-    setCurrentStep(step);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   // Loading state
   if (isLoading) {
     return (
-      <div className="portal-registration portal-page">
-        <div className="portal-container">
-          <div className="portal-card">
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -80,100 +49,85 @@ function RegistrationWizard() {
   // Error state
   if (error || !conference) {
     return (
-      <div className="portal-registration portal-page">
-        <div className="portal-container">
-          <div className="portal-card">
-            <h1 className="portal-heading text-red-600">Conference Not Found</h1>
-            <p className="portal-text">
-              {error ? (error as Error).message : 'The requested conference could not be found.'}
-            </p>
-            <button
-              onClick={() => navigate('/')}
-              className="portal-button portal-button-secondary mt-4"
-            >
-              Return Home
-            </button>
-          </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8 max-w-md w-full">
+          <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">
+            Conference Not Found
+          </h1>
+          <p className="text-gray-700 dark:text-gray-300 mb-6">
+            {error ? (error as Error).message : 'The requested conference could not be found.'}
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            Return Home
+          </button>
         </div>
       </div>
     );
   }
 
+  const registrationResponse = location.state?.registrationResponse;
+
   return (
-    <div className="portal-registration portal-page">
-      <div className="portal-container">
-        {/* Progress Indicator (hide on welcome and confirmation) */}
-        {currentStep !== 'welcome' && currentStep !== 'confirmation' && (
-          <ProgressIndicator currentStep={currentStep} />
-        )}
-
-        {/* Wizard Steps */}
-        {currentStep === 'welcome' && (
-          <WelcomeStep conference={conference} onNext={() => goToStep('attendees')} />
-        )}
-
-        {currentStep === 'attendees' && (
-          <AttendeesStep
+    <Routes>
+      <Route
+        index
+        element={
+          <SinglePageForm
             conference={conference}
-            attendees={attendees}
-            onNext={(newAttendees) => {
-              setAttendees(newAttendees);
-              goToStep('billing');
-            }}
-            onBack={() => goToStep('welcome')}
+            tenantSlug={tenantSlug!}
+            conferenceSlug={conferenceSlug!}
           />
-        )}
-
-        {currentStep === 'billing' && (
-          <BillingStep
-            billing={billing}
-            onNext={(newBilling) => {
-              setBilling(newBilling);
-              goToStep('review');
-            }}
-            onBack={() => goToStep('attendees')}
-          />
-        )}
-
-        {currentStep === 'review' && billing && (
-          <ReviewStep
-            conference={conference}
-            attendees={attendees}
-            billing={billing}
-            formStartTime={formStartTime}
-            onNext={(response) => {
-              setRegistrationResponse(response);
-              if (response.payment_required) {
-                goToStep('payment');
-              } else {
-                goToStep('confirmation');
+        }
+      />
+      <Route
+        path="payment"
+        element={
+          registrationResponse ? (
+            <PaymentStep
+              registrationResponse={registrationResponse}
+              onSuccess={() =>
+                navigate('../confirmation', { state: { registrationResponse }, replace: true })
               }
-            }}
-            onBack={() => goToStep('billing')}
-          />
-        )}
-
-        {currentStep === 'payment' && registrationResponse && (
-          <PaymentStep
-            registrationResponse={registrationResponse}
-            onSuccess={() => goToStep('confirmation')}
-            onBack={() => goToStep('review')}
-          />
-        )}
-
-        {currentStep === 'confirmation' && registrationResponse && (
-          <ConfirmationStep conference={conference} registrationResponse={registrationResponse} />
-        )}
-      </div>
-    </div>
+              onBack={() => navigate(-1)}
+            />
+          ) : (
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+              <div className="text-gray-700 dark:text-gray-300">Invalid access</div>
+            </div>
+          )
+        }
+      />
+      <Route
+        path="confirmation"
+        element={
+          registrationResponse ? (
+            <ConfirmationStep conference={conference} registrationResponse={registrationResponse} />
+          ) : (
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+              <div className="text-gray-700 dark:text-gray-300">Invalid access</div>
+            </div>
+          )
+        }
+      />
+    </Routes>
   );
 }
 
 // Export with reCAPTCHA provider wrapper
 export default function PublicRegistrationPage() {
   return (
-    <GoogleReCaptchaProvider reCaptchaKey={RECAPTCHA_SITE_KEY}>
-      <RegistrationWizard />
+    <GoogleReCaptchaProvider
+      reCaptchaKey={RECAPTCHA_SITE_KEY}
+      scriptProps={{
+        async: true,
+        defer: true,
+        appendTo: 'head',
+      }}
+    >
+      <RegistrationPortal />
     </GoogleReCaptchaProvider>
   );
 }

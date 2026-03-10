@@ -1,8 +1,16 @@
 import { useState, useCallback, useRef } from 'react';
+import type { AxiosInstance } from 'axios';
 import api from '../config/api';
 import { EU_COUNTRY_CODES } from '../config/countries';
 
 export type VatStatus = 'idle' | 'checking' | 'valid' | 'invalid' | 'uncertain';
+
+interface UseVatValidationOptions {
+  /** Custom API client (e.g., publicApi for unauthenticated requests) */
+  apiClient?: AxiosInstance;
+  /** Custom endpoint path (defaults to '/my-company/validate-vat') */
+  endpoint?: string;
+}
 
 interface UseVatValidationReturn {
   status: VatStatus;
@@ -22,7 +30,9 @@ function extractCountryFromVat(vat: string): string | null {
   return EU_COUNTRY_CODES.has(country) ? country : null;
 }
 
-export function useVatValidation(): UseVatValidationReturn {
+export function useVatValidation(options: UseVatValidationOptions = {}): UseVatValidationReturn {
+  const { apiClient = api, endpoint = '/my-company/validate-vat' } = options;
+
   const [status, setStatus] = useState<VatStatus>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const requestId = useRef(0);
@@ -48,10 +58,8 @@ export function useVatValidation(): UseVatValidationReturn {
       setStatus('checking');
       setMessage(null);
 
-      const url = '/my-company/validate-vat';
-
       try {
-        const response = await api.post(url, null, {
+        const response = await apiClient.post(endpoint, null, {
           params: {
             vat_number: trimmed,
             country: resolvedCountry || trimmed.slice(0, 2).toUpperCase(),
@@ -81,7 +89,7 @@ export function useVatValidation(): UseVatValidationReturn {
         return null;
       }
     },
-    [reset]
+    [reset, apiClient, endpoint]
   );
 
   return { status, message, validate, reset };

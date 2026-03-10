@@ -425,7 +425,7 @@ export default function ConferenceInvoicesTab({
         updated_to_paid: number;
         payment_failures_logged: number;
         errors: Array<{ invoice_id: string; invoice_number: string; error: string }>;
-      }>(`/conferences/${conference.id}/invoices/sync-stripe-payments`);
+      }>(`/conferences/${conference.id}/invoices/sync-all-payments`);
       return response.data;
     },
     onSuccess: (result) => {

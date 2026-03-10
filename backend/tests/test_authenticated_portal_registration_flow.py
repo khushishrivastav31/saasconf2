@@ -18,13 +18,13 @@ Coverage Target: 90% of api/v1/cfp_portal/registration.py
 
 import pytest
 import pytest_asyncio
+from datetime import date
 from decimal import Decimal
 from sqlalchemy import select
 from app.models.cfp_applicants import CFPApplicant
-from app.models.registration import Registration, RegistrationStatus, RegistrationMode
+from app.models.registration import Registration, RegistrationStatus, RegistrationMode, BillingProfile
 from app.models.invoice import Invoice
-from app.models.discount_code import DiscountCode
-from app.models.user import User
+from app.models.booking import DiscountCode
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -37,50 +37,33 @@ async def cfp_applicant_user(db_session, tenant, conference):
     """Create a CFP applicant user (logged-in portal user)."""
     from app.core.security import hash_password
 
-    # Create user account
-    user = User(
-        tenant_id=tenant.id,
-        email="applicant@example.com",
-        hashed_password=hash_password("testpass123"),
-        first_name="John",
-        last_name="Applicant",
-        role="user",
-        is_active=True,
-    )
-    db_session.add(user)
-    await db_session.flush()
-
-    # Create CFP applicant profile
+    # Create CFP applicant
     applicant = CFPApplicant(
         tenant_id=tenant.id,
-        conference_id=conference.id,
-        user_id=user.id,
         first_name="John",
         last_name="Applicant",
         email="applicant@example.com",
+        password_hash=hash_password("testpass123"),
         phone="+491234567890",
         company="Test Company GmbH",
     )
     db_session.add(applicant)
     await db_session.commit()
-
-    await db_session.refresh(user)
     await db_session.refresh(applicant)
 
-    return {"user": user, "applicant": applicant}
+    return applicant
 
 
 @pytest_asyncio.fixture
 async def cfp_applicant_headers(cfp_applicant_user):
     """Generate auth headers for CFP applicant."""
-    from app.core.security import create_access_token
+    from app.core.applicant_security import create_applicant_access_token
 
-    user = cfp_applicant_user["user"]
-    token = create_access_token(data={
-        "sub": user.email,
-        "tenant_id": str(user.tenant_id),
-        "user_id": str(user.id),
-    })
+    applicant = cfp_applicant_user
+    token = create_applicant_access_token(
+        applicant_id=applicant.id,
+        tenant_id=applicant.tenant_id,
+    )
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -89,23 +72,42 @@ async def alumni_records(db_session, tenant, cfp_applicant_user):
     """Create alumni records for the applicant (past attendee)."""
     from app.models.conference import Conference
 
-    applicant = cfp_applicant_user["applicant"]
+    applicant = cfp_applicant_user
 
     # Create a past conference
     past_conference = Conference(
         tenant_id=tenant.id,
         name="PyCon 2025",
         abbreviation="PC25",
-        start_date="2025-07-01",
-        end_date="2025-07-03",
+        start_date=date(2025, 7, 1),
+        end_date=date(2025, 7, 3),
     )
     db_session.add(past_conference)
+    await db_session.flush()
+
+    # Create billing profile for past registration
+    billing = BillingProfile(
+        tenant_id=tenant.id,
+        conference_id=past_conference.id,
+        contact_first_name=applicant.first_name,
+        contact_last_name=applicant.last_name,
+        contact_email=applicant.email,
+        contact_phone=applicant.phone or "",
+        company_name=applicant.company or "",
+        street="Test Street 1",
+        postal_code="10115",
+        city="Berlin",
+        country="DE",
+        payment_method="credit_card",
+    )
+    db_session.add(billing)
     await db_session.flush()
 
     # Create registration for past conference (makes them alumni)
     past_registration = Registration(
         tenant_id=tenant.id,
         conference_id=past_conference.id,
+        billing_profile_id=billing.id,
         first_name=applicant.first_name,
         last_name=applicant.last_name,
         email=applicant.email,

@@ -235,6 +235,9 @@ async def calculate_vat_for_invoice(
         rate = Decimal("0.00")
 
     # Step 6: Calculate tax amount
+    # Subtotal already includes discounts (sum of line item totals after discount)
+    # DO NOT subtract discount_amount again - that would double-apply the discount
+    # The discount_amount field is purely informational (for showing discount code on invoice)
     subtotal = Decimal(str(invoice.subtotal)) if invoice.subtotal else Decimal("0.00")
     tax_amount = (subtotal * rate / Decimal("100")).quantize(Decimal("0.01"))
 

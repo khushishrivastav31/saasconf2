@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import type { AxiosInstance } from 'axios';
 import { useVatValidation, type VatStatus } from '../../hooks/useVatValidation';
 
 interface VatNumberInputProps {
@@ -18,6 +19,10 @@ interface VatNumberInputProps {
   level?: 'required' | 'recommended' | 'optional';
   /** Human-readable explanation of why VAT is needed. */
   requirementReason?: string;
+  /** Custom API client (e.g., publicApi for unauthenticated requests). */
+  apiClient?: AxiosInstance;
+  /** Custom endpoint path for VAT validation. */
+  endpoint?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -138,8 +143,10 @@ export default function VatNumberInput({
   required = false,
   level = 'optional',
   requirementReason,
+  apiClient,
+  endpoint,
 }: VatNumberInputProps) {
-  const { status, message, validate, reset } = useVatValidation();
+  const { status, message, validate, reset } = useVatValidation({ apiClient, endpoint });
 
   // Track the latest onValidationResult callback to avoid stale closures
   const onResultRef = useRef(onValidationResult);

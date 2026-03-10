@@ -132,7 +132,7 @@ export default function PaymentStep({ registrationResponse, onSuccess, onBack }:
 
   useEffect(() => {
     if (registrationResponse.stripe_publishable_key) {
-      setStripePromise(loadStripe(registrationResponse.stripe_publishable_key));
+      setStripePromise(loadStripe(registrationResponse.stripe_publishable_key, { locale: 'en' }));
     }
   }, [registrationResponse.stripe_publishable_key]);
 

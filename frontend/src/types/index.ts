@@ -16,3 +16,4 @@ export * from './invoice';
 export * from './program';
 export * from './messaging';
 export * from './registration';
+export type { DiscountCodeValidation, VatCalculation } from './publicRegistration';

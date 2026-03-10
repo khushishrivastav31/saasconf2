@@ -61,12 +61,9 @@ async def _build_attendee_notes(db: AsyncSession, registrations: list[Registrati
     notes_lines = ["Attendees:"]
 
     for reg in registrations:
-        # Build the line components
-        parts = []
-
-        # 1. Name
-        attendee_name = f"{reg.first_name} {reg.last_name}"
-        parts.append(attendee_name)
+        # 1. Name - starts on new line with bullet point
+        attendee_name = f"- {reg.first_name} {reg.last_name}"
+        notes_lines.append(attendee_name)
 
         # 2. Main package (with session if applicable)
         booking_option_stmt = select(BookingOption).where(BookingOption.id == reg.booking_option_id)
@@ -83,11 +80,11 @@ async def _build_attendee_notes(db: AsyncSession, registrations: list[Registrati
             if session:
                 session_name = session.title
 
-        # Format: "Package: Session" or just "Package"
+        # Format: "  Package: Session" or "  Package" (indented)
         if session_name:
-            parts.append(f"{package_name}: {session_name}")
+            notes_lines.append(f"  {package_name}: {session_name}")
         else:
-            parts.append(package_name)
+            notes_lines.append(f"  {package_name}")
 
         # 3. Get and sort add-on items by booking option sort_order
         items_stmt = (
@@ -104,10 +101,17 @@ async def _build_attendee_notes(db: AsyncSession, registrations: list[Registrati
             if item.booking_option_id == reg.booking_option_id:
                 continue
             if item.item_name:
-                parts.append(item.item_name)
+                # Check if this item has a session selection
+                item_text = item.item_name
+                if item.program_session_id:
+                    session_stmt = select(ProgramSession).where(ProgramSession.id == item.program_session_id)
+                    session_result = await db.execute(session_stmt)
+                    session = session_result.scalar_one_or_none()
+                    if session and session.title:
+                        item_text = f"{item.item_name}: {session.title}"
 
-        # Join all parts with ", "
-        notes_lines.append(", ".join(parts))
+                # Add each item on its own line, indented
+                notes_lines.append(f"  {item_text}")
 
     return "\n".join(notes_lines)
 
@@ -261,15 +265,15 @@ async def create_invoice_for_registrations(
         is_active=True,
     )
 
-    # Store discount amount on invoice
+    # Store discount amount on invoice (for informational purposes only - already applied to line items)
     invoice.discount_amount = total_discount
 
-    # Step 5: Auto-calculate VAT on discounted subtotal
-    discounted_subtotal = subtotal - total_discount
+    # Step 5: Auto-calculate VAT on subtotal (discounts already included in line item totals)
+    # Note: subtotal is sum of line_total from line items, which already have discounts applied
     tax_rate, tax_amount, notes_text = await calculate_vat_for_invoice(invoice, conference, db)
     invoice.tax_rate = tax_rate
     invoice.tax_amount = tax_amount
-    invoice.total = discounted_subtotal + tax_amount
+    invoice.total = subtotal + tax_amount
     invoice.vat_auto_calculated = True
 
     # Increment discount usage counter

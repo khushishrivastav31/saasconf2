@@ -616,3 +616,135 @@ async def test_calculate_vat_rounding(db_session, conference, tenant):
     # Assertions: 1000.33 * 0.19 = 190.0627 → 190.06
     assert rate == Decimal("19.00")
     assert tax_amount == Decimal("190.06")
+
+
+@pytest.mark.asyncio
+async def test_vat_calculated_on_discounted_subtotal(db_session, tenant, conference):
+    """Test that VAT is calculated on subtotal AFTER discount, not before.
+
+    Regression test for bug where VAT was calculated on subtotal before discounts.
+
+    Scenario from real invoice:
+    - Tutorial Day: 900.00 EUR - 0 discount = 900.00 EUR
+    - Day 1: 900.00 EUR - 180.00 EUR = 720.00 EUR
+    - Day 2: 900.00 EUR - 180.00 EUR = 720.00 EUR
+    - Day 3: 900.00 EUR - 180.00 EUR = 720.00 EUR
+
+    Correct calculation:
+    - Subtotal (before discount): 3,600.00 EUR
+    - Total discount: 540.00 EUR
+    - Subtotal (after discount): 3,060.00 EUR
+    - VAT (19% of 3,060): 581.40 EUR
+    - Total: 3,641.40 EUR
+
+    Bug was calculating VAT as 19% of 3,600 = 684.00 EUR (incorrect).
+    """
+    # Update conference country to Germany
+    conference.country = "DE"
+    db_session.add(conference)
+
+    # Create VAT rate for Germany (19%)
+    vat_rate = VatRateByCountry(
+        country_code="DE",
+        country_name="Germany",
+        standard_rate=Decimal("19.00"),
+        tenant_id=None,  # Global rate
+    )
+    db_session.add(vat_rate)
+    await db_session.commit()
+
+    # Create invoice with discount scenario
+    # Note: In actual invoice generation, line items have discounts applied individually:
+    # - Day 1: 900 - 180 = 720
+    # - Day 2: 900 - 180 = 720
+    # - Day 3: 900 - 180 = 720
+    # - Subtotal: 720 + 720 + 720 = 2160 (sum of discounted line item totals)
+    # Actually, let's use the correct values from test description:
+    # - Day 1: 900 - 180 = 720
+    # - Day 2: 900 - 180 = 720
+    # - Day 3: 1800 - 180 = 1620
+    # - Subtotal: 720 + 720 + 1620 = 3060
+    invoice = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        template_type="bank_transfer",
+        status="draft",
+        recipient_source_type="registration",
+        recipient_source_id=uuid.uuid4(),
+        recipient_name="Test Company GmbH",
+        recipient_email="test@example.de",
+        recipient_country="DE",  # Domestic B2C (will charge conference VAT)
+        recipient_vat_number=None,  # B2C customer
+        issue_date=date(2026, 3, 15),
+        due_date=date(2026, 4, 15),
+        subtotal=Decimal("3060.00"),  # Sum of line item totals AFTER discount (720+720+1620)
+        discount_amount=Decimal("540.00"),  # Total discount (informational only - 180*3)
+        currency="EUR",
+        attendance_type="in_person",
+    )
+    db_session.add(invoice)
+    await db_session.commit()
+
+    # Calculate VAT
+    tax_rate, tax_amount, notes_text = await calculate_vat_for_invoice(invoice, conference, db_session)
+
+    # Verify VAT is calculated on subtotal (which already includes discounts)
+    # Expected VAT: 3060 * 0.19 = 581.40
+    assert tax_rate == Decimal("19.00")
+    assert tax_amount == Decimal("581.40")
+    assert notes_text is None  # Domestic B2C, no special notes
+
+    # Verify total would be correct
+    # Note: discount_amount is informational - discount already applied in subtotal
+    discounted_subtotal = invoice.subtotal  # Already discounted!
+    total = discounted_subtotal + tax_amount
+    assert total == Decimal("3641.40")  # NOT 3744.00
+
+
+@pytest.mark.asyncio
+async def test_vat_with_no_discount(db_session, tenant, conference):
+    """Test that VAT calculation still works correctly when there's no discount."""
+    # Update conference country to Germany
+    conference.country = "DE"
+    db_session.add(conference)
+
+    # Create VAT rate for Germany
+    vat_rate = VatRateByCountry(
+        country_code="DE",
+        country_name="Germany",
+        standard_rate=Decimal("19.00"),
+        tenant_id=None,
+    )
+    db_session.add(vat_rate)
+    await db_session.commit()
+
+    # Create invoice WITHOUT discount
+    invoice = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        template_type="bank_transfer",
+        status="draft",
+        recipient_source_type="registration",
+        recipient_source_id=uuid.uuid4(),
+        recipient_name="Test Company",
+        recipient_email="test@example.de",
+        recipient_country="DE",
+        recipient_vat_number=None,
+        issue_date=date(2026, 3, 15),
+        due_date=date(2026, 4, 15),
+        subtotal=Decimal("1000.00"),
+        discount_amount=None,  # No discount
+        currency="EUR",
+        attendance_type="in_person",
+    )
+    db_session.add(invoice)
+    await db_session.commit()
+
+    # Calculate VAT
+    tax_rate, tax_amount, notes_text = await calculate_vat_for_invoice(invoice, conference, db_session)
+
+    # VAT should be 19% of 1000 = 190
+    assert tax_rate == Decimal("19.00")
+    assert tax_amount == Decimal("190.00")

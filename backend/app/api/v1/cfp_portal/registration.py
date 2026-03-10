@@ -8,11 +8,11 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from app.api.v1.registrations._helpers import _send_registration_emails
 from app.core.alumni_discount import validate_alumni_discount
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.invoice_auto_generation import create_invoice_for_registrations
-from app.core.registration_emails import send_attendee_welcome_email, send_registration_invoice_email
 from app.core.stripe_helper import create_payment_intent as create_stripe_payment_intent
 from app.core.user_auto_creation import create_user_for_registration
 from app.core.vat_calculation import classify_customer_location, classify_customer_type
@@ -99,6 +99,7 @@ async def get_authenticated_conference_details(
     Same schema as public endpoint but requires authentication.
     """
     from datetime import date
+
     from app.models.booking import BookingOption, BookingPeriod
     from app.models.registration import Registration, RegistrationStatus
     from app.schemas.portal_registration import PublicBookingOption, PublicBookingPeriod, PublicConference
@@ -406,21 +407,47 @@ async def create_payment_intent_authenticated(
     publishable_key = stripe_settings.get("publishable_key") or settings.STRIPE_PUBLISHABLE_KEY
     secret_key = stripe_settings.get("secret_key") or settings.STRIPE_SECRET_KEY
 
-    if not secret_key:
+    if not secret_key or not publishable_key:
         raise ValidationError("Stripe is not properly configured")
 
-    # Create PaymentIntent
-    payment_intent = await create_stripe_payment_intent(
-        amount=data.amount,
-        currency=data.currency,
-        stripe_secret_key=secret_key,
-    )
+    # Validate amount
+    if data.amount <= 0:
+        raise ValidationError("Amount must be greater than 0")
 
-    return {
-        "payment_intent_id": payment_intent["id"],
-        "client_secret": payment_intent["client_secret"],
-        "publishable_key": publishable_key,
-    }
+    # Create PaymentIntent using Stripe API
+    try:
+        import stripe
+
+        stripe.api_key = secret_key
+
+        payment_intent = stripe.PaymentIntent.create(
+            amount=int(data.amount),  # Already in cents from frontend
+            currency=data.currency.lower(),
+            metadata={
+                "system": "saasconf",
+                "tenant_id": str(tenant_id),
+                "conference_id": str(conference_id),
+                "applicant_id": str(current_applicant.applicant_id),
+                "preview": "true",  # Mark as preview (not linked to invoice yet)
+            },
+        )
+
+        if not payment_intent.client_secret:
+            raise HTTPException(status_code=500, detail="Failed to create payment intent")
+
+        logger.info(
+            f"Created preview PaymentIntent {payment_intent.id} for authenticated user {current_applicant.applicant.email}"
+        )
+
+        return {
+            "payment_intent_id": payment_intent.id,
+            "client_secret": payment_intent.client_secret,
+            "publishable_key": publishable_key,
+        }
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe PaymentIntent creation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Stripe error: {e!s}") from e
 
 
 @router.post("/portal/conferences/{conference_id}/update-payment-intent/{payment_intent_id}")
@@ -449,12 +476,17 @@ async def update_payment_intent_authenticated(
     if not conference:
         raise NotFoundError("Conference not found")
 
-    # Get Stripe secret key
+    # Get Stripe settings
     stripe_settings = (conference.settings or {}).get("stripe", {})
     secret_key = stripe_settings.get("secret_key") or settings.STRIPE_SECRET_KEY
+    publishable_key = stripe_settings.get("publishable_key") or settings.STRIPE_PUBLISHABLE_KEY
 
-    if not secret_key:
+    if not secret_key or not publishable_key:
         raise ValidationError("Stripe is not properly configured")
+
+    # Validate amount
+    if data.amount <= 0:
+        raise ValidationError("Amount must be greater than 0")
 
     # Update PaymentIntent using Stripe API
     try:
@@ -464,15 +496,17 @@ async def update_payment_intent_authenticated(
 
         payment_intent = stripe.PaymentIntent.modify(
             payment_intent_id,
-            amount=int(data.amount * 100),  # Convert to cents
+            amount=int(data.amount),  # Already in cents from frontend
         )
 
-        logger.info(f"Updated PaymentIntent {payment_intent_id} to {data.amount}")
+        if not payment_intent.client_secret:
+            raise HTTPException(status_code=500, detail="Failed to update payment intent")
+
+        logger.info(f"Updated PaymentIntent {payment_intent_id} to {data.amount / 100}")
 
         return {
-            "success": True,
-            "payment_intent_id": payment_intent.id,
-            "amount": data.amount,
+            "client_secret": payment_intent.client_secret,
+            "publishable_key": publishable_key,
         }
 
     except stripe.error.StripeError as e:
@@ -492,7 +526,8 @@ async def validate_discount_authenticated(
     For authenticated users, primarily used to validate ALUMNI discount.
     """
     from datetime import date
-    from app.models.booking import DiscountCode, DiscountCodeOption, DiscountCodePeriod, BookingPeriod
+
+    from app.models.booking import BookingPeriod, DiscountCode, DiscountCodeOption, DiscountCodePeriod
 
     tenant_id = current_applicant.tenant_id
     user_email = current_applicant.applicant.email
@@ -688,7 +723,7 @@ async def create_authenticated_registration(
     billing = BillingProfile(
         tenant_id=tenant_id,
         conference_id=conference_id,
-        **data.billing.model_dump(exclude={"payment_method", "payment_intent_id"}),
+        **data.billing.model_dump(exclude={"payment_method", "payment_intent_id", "discount_code"}),
         payment_method=data.billing.payment_method or "credit_card",
         discount_code=discount_code_str,
     )
@@ -700,20 +735,37 @@ async def create_authenticated_registration(
     responses: list[RegistrationResponse] = []
 
     for att in data.attendees:
+        # Check for duplicate registration
+        email_lower = att.email.lower()
+        existing_reg_stmt = select(Registration).where(
+            Registration.conference_id == conference_id,
+            Registration.email == email_lower,
+            Registration.status != RegistrationStatus.CANCELLED.value,
+        )
+        existing_reg_result = await db.execute(existing_reg_stmt)
+        existing_reg = existing_reg_result.scalar_one_or_none()
+
+        if existing_reg:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Email {att.email} is already registered for this conference. "
+                "Please use a different email address or contact support to modify your existing registration.",
+            )
+
         reg = Registration(
             tenant_id=tenant_id,
             conference_id=conference_id,
             billing_profile_id=billing.id,
             first_name=att.first_name,
             last_name=att.last_name,
-            email=att.email.lower(),
+            email=email_lower,
             pronouns=att.pronouns,
             job_title=att.job_title,
             department=att.department,
             phone=att.phone,
             booking_option_id=att.booking_option_id,
             main_session_id=att.main_session_id,
-            registration_mode=RegistrationMode.PORTAL_AUTHENTICATED.value,
+            registration_mode=RegistrationMode.PORTAL.value,
             status=RegistrationStatus.REGISTERED_PENDING_INVOICE.value,
             notes=att.notes,
         )
@@ -744,7 +796,6 @@ async def create_authenticated_registration(
         if items:
             await db.flush()
 
-        reg.billing_profile = billing
         registrations.append(reg)
         responses.append(
             RegistrationResponse(
@@ -841,7 +892,7 @@ async def create_authenticated_registration(
             if stripe_settings.get("is_enabled") and invoice:
                 stripe_publishable_key = stripe_settings.get("publishable_key")
                 try:
-                    new_payment_intent_id, client_secret = await create_payment_intent(
+                    new_payment_intent_id, client_secret = await create_stripe_payment_intent(
                         db=db,
                         conference=conference,
                         invoice=invoice,
@@ -859,33 +910,30 @@ async def create_authenticated_registration(
 
     await db.commit()
 
-    # Post-commit: send emails
+    # Post-commit: create users and send emails
+    # Create user accounts and collect password tokens
+    user_tokens: list[tuple[Registration, str]] = []
     for reg in registrations:
         try:
-            _user, password_token = await create_user_for_registration(
+            _user, raw_token = await create_user_for_registration(
                 db=db,
                 tenant_id=tenant_id,
                 registration=reg,
             )
-            await send_attendee_welcome_email(
-                db=db,
-                registration=reg,
-                conference=conference,
-                password_setup_token=password_token,
-            )
+            if raw_token:  # Only add if new user with token
+                user_tokens.append((reg, raw_token))
         except Exception as e:
-            logger.error(f"Failed to create user or send welcome email for registration {reg.id}: {e}")
+            logger.error(f"Failed to create user for registration {reg.id}: {e}")
 
-    # Send invoice email to billing contact
-    if invoice:
-        try:
-            await send_registration_invoice_email(
-                db=db,
-                invoice=invoice,
-                conference=conference,
-            )
-        except Exception as e:
-            logger.error(f"Failed to send invoice email: {e}")
+    # Build password_setup_tokens dict and send emails
+    password_setup_tokens = {reg.id: token for reg, token in user_tokens}
+    await _send_registration_emails(
+        db=db,
+        registrations=registrations,
+        conference=conference,
+        invoice=invoice,
+        password_setup_tokens=password_setup_tokens,
+    )
 
     # Build response
     success_url = f"/{conference.tenant.slug}/portal/{conference.abbreviation}/registration-success"

@@ -131,7 +131,8 @@ async def update_registration_item(
                     )
                     session = session_result.scalar_one_or_none()
                     if session and session.title:
-                        item.item_name = f"{option_name} - {session.title}"
+                        # Session is selected - just use option name (session shows in dropdown)
+                        item.item_name = option_name
                         item.pending = False
                     else:
                         item.item_name = f"{option_name} (session to be selected)"

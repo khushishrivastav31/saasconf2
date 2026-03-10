@@ -601,7 +601,21 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
                           <div className="font-medium">{reg.booking_option_name || '—'}</div>
                           {reg.items.length > 0 && (
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {reg.items.map((item) => item.item_name).join(', ')}
+                              {[...reg.items]
+                                .sort((a, b) => {
+                                  const optMap: Record<string, number> = {};
+                                  if (optionsData)
+                                    optionsData.forEach((o) => (optMap[o.id] = o.sort_order));
+                                  const sortA = a.booking_option_id
+                                    ? (optMap[a.booking_option_id] ?? 999)
+                                    : 999;
+                                  const sortB = b.booking_option_id
+                                    ? (optMap[b.booking_option_id] ?? 999)
+                                    : 999;
+                                  return sortA - sortB;
+                                })
+                                .map((item) => item.item_name)
+                                .join(', ')}
                             </div>
                           )}
                         </div>
@@ -737,6 +751,7 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
                                       sessionId,
                                     });
                                   }}
+                                  compact={true}
                                 />
                               )}
                               {!isAdmin && selectedReg.main_session_name && (
@@ -837,61 +852,72 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
                               <p className="text-sm text-gray-400 dark:text-gray-500">No items</p>
                             ) : (
                               <ul className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
-                                {selectedReg.items.map((item) => (
-                                  <li key={item.id} className="py-3 px-3">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <div>
-                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                          {item.item_name}
-                                        </span>
-                                        <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
-                                          {item.item_type === 'tutorial' ? 'Tutorial' : 'Option'}
-                                        </span>
-                                        {item.pending && (
-                                          <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
-                                            (to be selected)
+                                {[...selectedReg.items]
+                                  .sort((a, b) => {
+                                    const optMap: Record<string, number> = {};
+                                    if (optionsData)
+                                      optionsData.forEach((o) => (optMap[o.id] = o.sort_order));
+                                    const sortA = a.booking_option_id
+                                      ? (optMap[a.booking_option_id] ?? 999)
+                                      : 999;
+                                    const sortB = b.booking_option_id
+                                      ? (optMap[b.booking_option_id] ?? 999)
+                                      : 999;
+                                    return sortA - sortB;
+                                  })
+                                  .map((item) => (
+                                    <li key={item.id} className="py-3 px-3">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <div>
+                                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            {item.item_name}
                                           </span>
-                                        )}
+                                          <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+                                            {item.item_type === 'tutorial' ? 'Tutorial' : 'Option'}
+                                          </span>
+                                          {item.pending && (
+                                            <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                                              (to be selected)
+                                            </span>
+                                          )}
+                                        </div>
+                                        {isAdmin &&
+                                          selectedReg.status === 'registered_pending_invoice' && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                removeItemMutation.mutate({
+                                                  regId: selectedReg.id,
+                                                  itemId: item.id,
+                                                });
+                                              }}
+                                              className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                                            >
+                                              Remove
+                                            </button>
+                                          )}
                                       </div>
-                                      {isAdmin &&
-                                        selectedReg.status === 'registered_pending_invoice' && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              removeItemMutation.mutate({
-                                                regId: selectedReg.id,
-                                                itemId: item.id,
-                                              });
-                                            }}
-                                            className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                                          >
-                                            Remove
-                                          </button>
-                                        )}
-                                    </div>
-                                    {/* Session selector for this item */}
-                                    {isAdmin && item.booking_option_id && (
-                                      <OptionSessions
-                                        conferenceId={conference.id}
-                                        optionId={item.booking_option_id}
-                                        selections={
-                                          item.program_session_id
-                                            ? { default: item.program_session_id }
-                                            : {}
-                                        }
-                                        onChange={(selections) => {
-                                          const sessionId =
-                                            Object.values(selections).find(Boolean) || null;
-                                          updateItemSessionMutation.mutate({
-                                            regId: selectedReg.id,
-                                            itemId: item.id,
-                                            sessionId,
-                                          });
-                                        }}
-                                      />
-                                    )}
-                                  </li>
-                                ))}
+                                      {/* Session selector for this item */}
+                                      {isAdmin && item.booking_option_id && (
+                                        <OptionSessions
+                                          conferenceId={conference.id}
+                                          optionId={item.booking_option_id}
+                                          selections={{}}
+                                          selectedSessionId={item.program_session_id}
+                                          onChange={(selections) => {
+                                            const sessionId =
+                                              Object.values(selections).find(Boolean) || null;
+                                            updateItemSessionMutation.mutate({
+                                              regId: selectedReg.id,
+                                              itemId: item.id,
+                                              sessionId,
+                                            });
+                                          }}
+                                          compact={true}
+                                        />
+                                      )}
+                                    </li>
+                                  ))}
                               </ul>
                             )}
                           </div>

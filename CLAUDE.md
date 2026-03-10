@@ -10,11 +10,22 @@ SaaSConf is a **multi-tenant SaaS platform** for conference management. Each ten
 
 1. **Plan First** — Use plan mode for non-trivial features. Get user approval before implementing.
 2. **Develop + Write Tests** — Backend: pytest in `backend/tests/`. Frontend: vitest in `__tests__/` dirs.
-3. **Run All Tests** — Backend: `cd backend && venv/bin/python -m pytest tests/test_<feature>.py -v`. Frontend: `cd frontend && npm run test`. Fix failures before proceeding.
+3. **Run Feature Tests** — Backend: `cd backend && venv/bin/python -m pytest tests/test_<feature>.py -v`. Frontend: `cd frontend && npm run test`. Fix failures before proceeding.
 4. **Run Type Checks** — Backend: `cd backend && venv/bin/python -m mypy app/ --config-file=pyproject.toml`. Frontend: `cd frontend && npx tsc --noEmit`. **MANDATORY before committing** — CI will reject type errors.
 5. **Run Linters** — Backend: `cd backend && ruff check app/ && ruff format --check app/`. Frontend: `cd frontend && npx eslint src/`. **Always run before committing** — CI will reject unformatted code.
-6. **Ask Before Commit** — Do NOT automatically commit. User approval required.
-7. **Commit + Deploy** — Conventional commits (`feat:`, `fix:`, `refactor:`). Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>. Push to main triggers staging deploy.
+6. **Update Tenant UI Handbook** — **MANDATORY before committing** to keep documentation current:
+   - Review changes and determine if handbook updates are needed
+   - Update `docs/tenant-ui-handbook.md` with new features, settings, or workflows
+   - Document any changed UI, new fields, or modified behavior
+   - Add troubleshooting entries for common issues
+   - Update best practices if workflow changes
+   - This saves significant rework later and ensures users have current documentation
+7. **Run Complete Test Suite** — **MANDATORY before committing** to avoid CI/CD pipeline failures:
+   - Backend: `cd backend && venv/bin/python -m pytest tests/ -v` (all tests)
+   - Frontend: `cd frontend && npm run test` (all tests)
+   - Fix ALL failures before proceeding to commit
+8. **Ask Before Commit** — Do NOT automatically commit. User approval required.
+9. **Commit + Deploy** — Conventional commits (`feat:`, `fix:`, `refactor:`). Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>. Push to main triggers staging deploy.
 
 ## Architecture
 - **Backend**: FastAPI + SQLAlchemy async + PostgreSQL (port 8000)

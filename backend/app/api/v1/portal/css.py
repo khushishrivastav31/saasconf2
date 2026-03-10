@@ -1,7 +1,7 @@
 """
 Custom CSS Serving for Public Registration Portal
 
-Public endpoint to serve conference-specific custom CSS for branding.
+Public endpoint to serve conference-specific custom CSS for branding based on color theme.
 """
 
 import logging
@@ -10,12 +10,123 @@ from fastapi import APIRouter, HTTPException, Response
 from sqlalchemy import select
 
 from app.core.dependencies import DbSessionDep
-from app.models.attachment import Attachment
 from app.models.conference import Conference
 from app.models.tenant import Tenant
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Default theme colors
+DEFAULT_THEME = {
+    "primary": "#2563eb",  # blue-600
+    "background": "#f9fafb",  # gray-50
+    "card": "#ffffff",  # white
+    "text": "#111827",  # gray-900
+    "border": "#e5e7eb",  # gray-200
+    "headerBg": "#ffffff",  # white
+}
+
+
+def generate_css_from_theme(theme: dict) -> str:
+    """Generate CSS from theme colors."""
+    # Merge with defaults for any missing colors
+    colors = {**DEFAULT_THEME, **theme}
+
+    return f"""/* Auto-generated CSS from color theme */
+
+:root {{
+  --portal-primary: {colors["primary"]};
+  --portal-background: {colors["background"]};
+  --portal-card: {colors["card"]};
+  --portal-text: {colors["text"]};
+  --portal-border: {colors["border"]};
+  --portal-header-bg: {colors["headerBg"]};
+}}
+
+/* Page background */
+body,
+.min-h-screen {{
+  background-color: {colors["background"]} !important;
+}}
+
+/* Card backgrounds and borders */
+.bg-white,
+.rounded-lg.border,
+.bg-white.dark\\:bg-gray-800 {{
+  background-color: {colors["card"]} !important;
+  border-color: {colors["border"]} !important;
+}}
+
+/* All borders */
+.border-gray-200,
+.border-gray-300,
+.dark\\:border-gray-700 {{
+  border-color: {colors["border"]} !important;
+}}
+
+/* Text colors */
+.text-gray-900,
+.dark\\:text-gray-100,
+h1, h2, h3, h4, h5, h6 {{
+  color: {colors["text"]} !important;
+}}
+
+/* Primary color for submit buttons */
+button[type="submit"]:not(.bg-white):not(.bg-gray-200),
+.bg-blue-600,
+.bg-primary-600 {{
+  background-color: {colors["primary"]} !important;
+  border-color: {colors["primary"]} !important;
+}}
+
+button[type="submit"]:not(.bg-white):not(.bg-gray-200):hover,
+.bg-blue-600:hover,
+.hover\\:bg-blue-700:hover {{
+  background-color: {colors["primary"]} !important;
+  filter: brightness(0.9);
+}}
+
+/* Links */
+a,
+.text-blue-600,
+.text-primary-600 {{
+  color: {colors["primary"]} !important;
+}}
+
+a:hover {{
+  color: {colors["primary"]} !important;
+  filter: brightness(0.8);
+}}
+
+/* Input focus states */
+input:focus,
+select:focus,
+textarea:focus {{
+  border-color: {colors["primary"]} !important;
+  outline-color: {colors["primary"]} !important;
+  --tw-ring-color: {colors["primary"]} !important;
+}}
+
+/* Checkboxes and radios */
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {{
+  background-color: {colors["primary"]} !important;
+  border-color: {colors["primary"]} !important;
+}}
+
+/* Header/Conference info box */
+.rounded-lg.border.border-gray-200 {{
+  background-color: {colors["headerBg"]} !important;
+  border-color: {colors["border"]} !important;
+}}
+
+/* Responsive */
+@media (max-width: 640px) {{
+  body {{
+    background-color: {colors["background"]} !important;
+  }}
+}}
+"""
 
 
 @router.get("/{tenant_slug}/conferences/{conference_slug}/custom-css")
@@ -25,12 +136,10 @@ async def get_custom_css(
     db: DbSessionDep,
 ) -> Response:
     """
-    Serve custom CSS for public registration portal (public endpoint).
+    Serve dynamically-generated CSS for public registration portal based on theme colors.
 
-    Priority:
-    1. Inline CSS (if use_inline_css is true)
-    2. Uploaded CSS file
-    3. Empty response (frontend will use defaults)
+    This endpoint generates CSS from the color theme stored in conference settings.
+    If no theme is configured, uses default colors.
 
     Args:
         tenant_slug: Tenant URL slug
@@ -38,7 +147,7 @@ async def get_custom_css(
         db: Database session
 
     Returns:
-        Response with CSS content (Content-Type: text/css)
+        Response with generated CSS content (Content-Type: text/css)
 
     Raises:
         HTTPException: If tenant or conference not found
@@ -63,43 +172,15 @@ async def get_custom_css(
             detail=f"Conference '{conference_slug}' not found",
         )
 
-    # Get portal settings
-    portal_settings = conference.settings.get("public_registration_portal", {})
+    # Get theme colors from portal settings
+    portal_settings = conference.settings.get("public_registration_portal", {}) if conference.settings else {}
+    theme = portal_settings.get("theme", DEFAULT_THEME)
 
-    # Priority 1: Inline CSS
-    if portal_settings.get("use_inline_css") and portal_settings.get("inline_css"):
-        css_content = portal_settings["inline_css"]
-        return Response(
-            content=css_content,
-            media_type="text/css",
-            headers={"Cache-Control": "public, max-age=3600"},
-        )
+    # Generate CSS from theme
+    css_content = generate_css_from_theme(theme)
 
-    # Priority 2: Uploaded CSS file
-    attachment_id = portal_settings.get("custom_css_attachment_id")
-    if attachment_id:
-        result = await db.execute(
-            select(Attachment).where(
-                Attachment.id == attachment_id,
-                Attachment.tenant_id == tenant.id,
-            )
-        )
-        attachment = result.scalar_one_or_none()
-        if attachment and attachment.file_data:
-            # Decode bytes to string
-            try:
-                css_content = attachment.file_data.decode("utf-8")
-                return Response(
-                    content=css_content,
-                    media_type="text/css",
-                    headers={"Cache-Control": "public, max-age=3600"},
-                )
-            except UnicodeDecodeError:
-                logger.error(f"Failed to decode CSS file {attachment_id} for conference {conference.id}")
-
-    # Priority 3: Empty CSS (frontend will use defaults)
     return Response(
-        content="/* No custom CSS configured */",
+        content=css_content,
         media_type="text/css",
-        headers={"Cache-Control": "public, max-age=3600"},
+        headers={"Cache-Control": "no-cache"},  # No cache - always fetch fresh
     )
