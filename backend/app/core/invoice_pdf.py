@@ -167,6 +167,29 @@ DEFAULT_INVOICE_TEMPLATE_HTML = """
 """
 
 
+def _format_notes_for_html(notes: str | None) -> str:
+    """Format invoice notes for HTML display, preserving newlines and whitespace.
+
+    Args:
+        notes: Raw notes text (may contain newlines)
+
+    Returns:
+        HTML-formatted notes with preserved whitespace
+    """
+    if not notes:
+        return ""
+
+    # Check if notes already contain HTML tags
+    if "<" in notes and ">" in notes:
+        # Already HTML formatted, return as-is
+        return notes
+
+    # Plain text with newlines - wrap in <pre> to preserve formatting
+    # Use white-space: pre-wrap to preserve newlines AND allow text wrapping
+    escaped_notes = notes.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return f'<pre style="white-space: pre-wrap; font-family: inherit; font-size: inherit; margin: 0; padding: 0;">{escaped_notes}</pre>'
+
+
 def _resolve_bank_info(company_info: dict) -> tuple[str, str, str]:
     """Get bank info from array or legacy fields.
 
@@ -554,6 +577,11 @@ def _compute_fixed_block_padding(html: str, side: str) -> str:
     in the page margin) so they need less padding than footers which can
     contain multi-row bank-detail tables.
 
+    For footers, the padding is estimated from the actual content: table rows,
+    images, and text lines are each assigned an approximate height contribution.
+    This prevents long footer content from overlapping with body text (e.g.
+    lengthy invoice notes).
+
     Args:
         html: The processed header/footer HTML content
         side: "top" for header, "bottom" for footer
@@ -561,14 +589,37 @@ def _compute_fixed_block_padding(html: str, side: str) -> str:
     Returns:
         CSS rule string like ``body { padding-bottom: 5cm; }``
     """
-    has_tables = "<table" in html
-    has_images = "<img" in html
-    is_complex = has_tables or has_images
+    if side == "top":
+        # Headers are compact — simple heuristic is sufficient
+        is_complex = "<table" in html or "<img" in html
+        padding = "2cm" if is_complex else "1.5cm"
+        return f"body {{ padding-top: {padding}; }}"
 
-    # Headers: compact (images max 60px); footers: can be large (bank details, legal text)
-    padding_cm = ("2cm" if is_complex else "1.5cm") if side == "top" else ("5cm" if is_complex else "3cm")
+    # Footer: estimate height from content
+    html_lower = html.lower()
+    height_cm = 0.0
 
-    return f"body {{ padding-{side}: {padding_cm}; }}"
+    # Table rows (~0.6cm each)
+    height_cm += html_lower.count("<tr") * 0.6
+
+    # Images (max-height: 60px ≈ 1.6cm)
+    height_cm += html_lower.count("<img") * 1.6
+
+    # Block-level text elements (~0.35cm each at 9px font)
+    block_count = sum(html_lower.count(tag) for tag in ("<p", "<div", "<br", "<li"))
+    if block_count == 0:
+        # No block elements — estimate from plain text length (~80 chars/line)
+        text_only = re.sub(r"<[^>]+>", "", html)
+        block_count = max(1, len(text_only) // 80)
+    height_cm += block_count * 0.35
+
+    # Safety margin (accounts for border-top, padding, and rounding)
+    height_cm += 1.0
+
+    # Clamp to reasonable range
+    height_cm = max(2.0, min(height_cm, 8.0))
+
+    return f"body {{ padding-bottom: {height_cm:.1f}cm; }}"
 
 
 def _apply_placeholders(html: str, replacements: dict[str, str]) -> str:
@@ -756,7 +807,7 @@ async def generate_invoice_pdf(
         "[ORIGINAL_INVOICE_NUMBER]": "",
         "[ORIGINAL INVOICE NUMBER]": "",
         # Notes
-        "[NOTES]": invoice.notes or "",
+        "[NOTES]": _format_notes_for_html(invoice.notes),
     }
 
     # Resolve original invoice number if this is a credit note
@@ -1079,7 +1130,7 @@ async def generate_invoice_pdf_from_data(
         "[ORIGINAL_INVOICE_NUMBER]": invoice_data.get("original_invoice_number", ""),
         "[ORIGINAL INVOICE NUMBER]": invoice_data.get("original_invoice_number", ""),
         # Notes
-        "[NOTES]": invoice_data.get("notes", ""),
+        "[NOTES]": _format_notes_for_html(invoice_data.get("notes")),
     }
 
     # For credit notes: [INVOICE_NUMBER] = original invoice number
@@ -1236,17 +1287,18 @@ def _render_items_table(line_items: list, currency: str = "EUR", settings: dict 
 
     fmt_settings = settings or {}
     cell = "padding: 1px 4px;"
+    num = f"text-align: right; white-space: nowrap; {cell}"
     cur = f" {currency}" if currency else ""
     table = f"""
-    <table style="line-height: 1.1; border-collapse: collapse;">
+    <table style="line-height: 1.1; border-collapse: collapse; width: 100%;">
       <thead>
         <tr>
-          <th style="text-align: center; {cell}">Pos</th>
+          <th style="text-align: center; white-space: nowrap; {cell}">Pos</th>
           <th style="text-align: left; {cell}">Description</th>
-          <th style="text-align: right; {cell}">Qty</th>
-          <th style="text-align: right; {cell}">Unit Price</th>
-          <th style="text-align: right; {cell}">Discount</th>
-          <th style="text-align: right; {cell}">Total</th>
+          <th style="{num}">Qty</th>
+          <th style="{num}">Unit Price</th>
+          <th style="{num}">Discount</th>
+          <th style="{num}">Total</th>
         </tr>
       </thead>
       <tbody>
@@ -1267,12 +1319,12 @@ def _render_items_table(line_items: list, currency: str = "EUR", settings: dict 
 
         table += f"""
         <tr>
-          <td style="text-align: center; {cell}">{idx}</td>
+          <td style="text-align: center; white-space: nowrap; {cell}">{idx}</td>
           <td style="{cell}">{desc}</td>
-          <td style="text-align: right; {cell}">{qty_display}</td>
-          <td style="text-align: right; {cell}">{format_amount(unit_price, fmt_settings)}{cur}</td>
-          <td style="text-align: right; {cell}">{discount_display}</td>
-          <td style="text-align: right; {cell}"><strong>{format_amount(total, fmt_settings)}{cur}</strong></td>
+          <td style="{num}">{qty_display}</td>
+          <td style="{num}">{format_amount(unit_price, fmt_settings)}{cur}</td>
+          <td style="{num}">{discount_display}</td>
+          <td style="{num}"><strong>{format_amount(total, fmt_settings)}{cur}</strong></td>
         </tr>
         """
 

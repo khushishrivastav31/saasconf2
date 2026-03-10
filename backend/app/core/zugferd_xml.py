@@ -119,6 +119,12 @@ def _generate_cii_xml(data: dict) -> bytes:
     if data.get("issue_date"):
         issue_str.text = data["issue_date"].replace("-", "")
 
+    # Invoice-level notes (optional per EN 16931)
+    if data.get("notes"):
+        note_elem = etree.SubElement(doc, "{%s}IncludedNote" % nsmap["ram"])
+        note_content = etree.SubElement(note_elem, "{%s}Content" % nsmap["ram"])
+        note_content.text = data["notes"]
+
     # Supply chain trade transaction
     trade = etree.SubElement(root, "{%s}SupplyChainTradeTransaction" % nsmap["rsm"])
 
@@ -135,14 +141,39 @@ def _generate_cii_xml(data: dict) -> bytes:
         name.text = item.get("name", "Item")
 
         agreement = etree.SubElement(item_elem, "{%s}SpecifiedLineTradeAgreement" % nsmap["ram"])
-        net_price = etree.SubElement(agreement, "{%s}NetPriceProductTradePrice" % nsmap["ram"])
-        charge = etree.SubElement(net_price, "{%s}ChargeAmount" % nsmap["ram"])
-        charge.text = f"{item.get('unit_price', 0):.2f}"
+
+        # Per EN 16931: when a discount exists, include GrossPriceProductTradePrice
+        # with the original unit_price and an AllowanceCharge, then NetPriceProductTradePrice
+        # with the effective price after discount.
+        item_discount = item.get("discount", 0)
+        item_qty = item.get("quantity", 1)
+        if item_discount > 0 and item_qty > 0:
+            gross_price = etree.SubElement(agreement, "{%s}GrossPriceProductTradePrice" % nsmap["ram"])
+            gross_charge = etree.SubElement(gross_price, "{%s}ChargeAmount" % nsmap["ram"])
+            gross_charge.text = f"{item.get('unit_price', 0):.2f}"
+
+            # AllowanceCharge on GrossPrice (discount per unit)
+            allowance = etree.SubElement(gross_price, "{%s}AppliedTradeAllowanceCharge" % nsmap["ram"])
+            indicator = etree.SubElement(allowance, "{%s}ChargeIndicator" % nsmap["ram"])
+            indicator_val = etree.SubElement(indicator, "{%s}Indicator" % nsmap["udt"])
+            indicator_val.text = "false"  # false = allowance/discount
+            actual_amount = etree.SubElement(allowance, "{%s}ActualAmount" % nsmap["ram"])
+            actual_amount.text = f"{item_discount:.2f}"
+
+            # Net price = unit_price - discount (discount is already per-unit)
+            net_unit_price = item.get("unit_price", 0) - item_discount
+            net_price = etree.SubElement(agreement, "{%s}NetPriceProductTradePrice" % nsmap["ram"])
+            net_charge = etree.SubElement(net_price, "{%s}ChargeAmount" % nsmap["ram"])
+            net_charge.text = f"{net_unit_price:.2f}"
+        else:
+            net_price = etree.SubElement(agreement, "{%s}NetPriceProductTradePrice" % nsmap["ram"])
+            net_charge = etree.SubElement(net_price, "{%s}ChargeAmount" % nsmap["ram"])
+            net_charge.text = f"{item.get('unit_price', 0):.2f}"
 
         delivery = etree.SubElement(item_elem, "{%s}SpecifiedLineTradeDelivery" % nsmap["ram"])
         qty = etree.SubElement(delivery, "{%s}BilledQuantity" % nsmap["ram"])
         qty.set("unitCode", "C62")  # C62 = unit/piece (UN/ECE recommendation 20)
-        qty.text = f"{item.get('quantity', 1):.2f}"
+        qty.text = f"{item_qty:.2f}"
 
         settlement = etree.SubElement(item_elem, "{%s}SpecifiedLineTradeSettlement" % nsmap["ram"])
         tax = etree.SubElement(settlement, "{%s}ApplicableTradeTax" % nsmap["ram"])
@@ -161,37 +192,50 @@ def _generate_cii_xml(data: dict) -> bytes:
     agreement = etree.SubElement(trade, "{%s}ApplicableHeaderTradeAgreement" % nsmap["ram"])
 
     # Seller party (supplier)
+    # CII element order: Name, DefinedTradeContact, PostalTradeAddress, URIUniversalCommunication, SpecifiedTaxRegistration
     seller = etree.SubElement(agreement, "{%s}SellerTradeParty" % nsmap["ram"])
     seller_name = etree.SubElement(seller, "{%s}Name" % nsmap["ram"])
     seller_name.text = data.get("seller", {}).get("name", "Unknown")
 
-    # Seller postal address (required - must come before SpecifiedTaxRegistration)
-    # Element order: PostcodeCode, LineOne, LineTwo, LineThree, CityName, CountryID
+    # Seller contact info (must come before PostalTradeAddress per CII XSD)
+    seller_email = data.get("seller", {}).get("contact_email")
+    seller_phone = data.get("seller", {}).get("contact_phone")
+    if seller_email or seller_phone:
+        seller_contact = etree.SubElement(seller, "{%s}DefinedTradeContact" % nsmap["ram"])
+        contact_name = etree.SubElement(seller_contact, "{%s}PersonName" % nsmap["ram"])
+        contact_name.text = data.get("seller", {}).get("name", "")
+        if seller_phone:
+            phone_elem = etree.SubElement(seller_contact, "{%s}TelephoneUniversalCommunication" % nsmap["ram"])
+            phone_number = etree.SubElement(phone_elem, "{%s}CompleteNumber" % nsmap["ram"])
+            phone_number.text = seller_phone
+        if seller_email:
+            email_elem = etree.SubElement(seller_contact, "{%s}EmailURIUniversalCommunication" % nsmap["ram"])
+            email_uri = etree.SubElement(email_elem, "{%s}URIID" % nsmap["ram"])
+            email_uri.text = seller_email
+
+    # Seller postal address (must come after DefinedTradeContact, before SpecifiedTaxRegistration)
+    # Inner element order: PostcodeCode, LineOne, CityName, CountryID
     seller_address_data = data.get("seller", {}).get("address", {})
     if seller_address_data:
         seller_address = etree.SubElement(seller, "{%s}PostalTradeAddress" % nsmap["ram"])
 
-        # PostcodeCode must come first
         if seller_address_data.get("postal_code"):
             seller_postcode = etree.SubElement(seller_address, "{%s}PostcodeCode" % nsmap["ram"])
             seller_postcode.text = seller_address_data["postal_code"]
 
-        # Then street address lines
         if seller_address_data.get("street"):
             seller_street = etree.SubElement(seller_address, "{%s}LineOne" % nsmap["ram"])
             seller_street.text = seller_address_data["street"]
 
-        # Then city
         if seller_address_data.get("city"):
             seller_city = etree.SubElement(seller_address, "{%s}CityName" % nsmap["ram"])
             seller_city.text = seller_address_data["city"]
 
-        # Finally country code
         if data.get("seller", {}).get("country_code"):
             seller_country = etree.SubElement(seller_address, "{%s}CountryID" % nsmap["ram"])
             seller_country.text = data["seller"]["country_code"]
 
-    # Seller VAT ID (required for domestic sales - must come after address)
+    # Seller VAT ID (must come last in SellerTradeParty)
     seller_vat = data.get("seller", {}).get("vat_id")
     if seller_vat:
         seller_spec_tax = etree.SubElement(seller, "{%s}SpecifiedTaxRegistration" % nsmap["ram"])
@@ -296,11 +340,49 @@ def _generate_cii_xml(data: dict) -> bytes:
         tax_rate_percent = etree.SubElement(tax_elem, "{%s}RateApplicablePercent" % nsmap["ram"])
         tax_rate_percent.text = f"{tax_item.get('tax_percent', 0):.2f}"
 
-    # Monetary summation (MUST come after payment means and tax)
+    # Header-level AllowanceCharge for global discount (per EN 16931 BG-20)
+    header_discount = data.get("header_discount", 0)
+    if header_discount > 0:
+        header_allowance = etree.SubElement(settlement, "{%s}SpecifiedTradeAllowanceCharge" % nsmap["ram"])
+        h_indicator = etree.SubElement(header_allowance, "{%s}ChargeIndicator" % nsmap["ram"])
+        h_indicator_val = etree.SubElement(h_indicator, "{%s}Indicator" % nsmap["udt"])
+        h_indicator_val.text = "false"  # false = allowance/discount
+        h_actual = etree.SubElement(header_allowance, "{%s}ActualAmount" % nsmap["ram"])
+        h_actual.text = f"{header_discount:.2f}"
+        h_reason = etree.SubElement(header_allowance, "{%s}Reason" % nsmap["ram"])
+        h_reason.text = data.get("discount_reason", "Discount")
+        # Tax category on header allowance
+        h_tax = etree.SubElement(header_allowance, "{%s}CategoryTradeTax" % nsmap["ram"])
+        h_tax_type = etree.SubElement(h_tax, "{%s}TypeCode" % nsmap["ram"])
+        h_tax_type.text = "VAT"
+        h_tax_cat = etree.SubElement(h_tax, "{%s}CategoryCode" % nsmap["ram"])
+        h_tax_cat.text = data.get("tax_breakdown", [{}])[0].get("tax_category", "S")
+        h_tax_pct = etree.SubElement(h_tax, "{%s}RateApplicablePercent" % nsmap["ram"])
+        h_tax_pct.text = f"{data.get('tax_breakdown', [{}])[0].get('tax_percent', 0):.2f}"
+
+    # Payment terms with due date (per EN 16931 BT-9 / BG-22)
+    payment_terms_data = data.get("payment_terms", {})
+    if payment_terms_data:
+        terms_elem = etree.SubElement(settlement, "{%s}SpecifiedTradePaymentTerms" % nsmap["ram"])
+        terms_desc = etree.SubElement(terms_elem, "{%s}Description" % nsmap["ram"])
+        terms_desc.text = payment_terms_data.get("description", "Net 30 days")
+        if data.get("due_date"):
+            due_date_elem = etree.SubElement(terms_elem, "{%s}DueDateDateTime" % nsmap["ram"])
+            due_date_str = etree.SubElement(due_date_elem, "{%s}DateTimeString" % nsmap["udt"], format="102")
+            due_date_str.text = data["due_date"].replace("-", "")
+
+    # Monetary summation (MUST come after payment means, tax, and allowances)
+    # Per EN 16931: LineTotalAmount = sum of line totals (net of line discounts)
+    # AllowanceTotalAmount = sum of header-level allowances
+    # TaxBasisTotalAmount = LineTotalAmount - AllowanceTotalAmount
     summation = etree.SubElement(settlement, "{%s}SpecifiedTradeSettlementHeaderMonetarySummation" % nsmap["ram"])
 
     line_total = etree.SubElement(summation, "{%s}LineTotalAmount" % nsmap["ram"])
     line_total.text = f"{data.get('line_total', 0):.2f}"
+
+    if header_discount > 0:
+        allowance_total = etree.SubElement(summation, "{%s}AllowanceTotalAmount" % nsmap["ram"])
+        allowance_total.text = f"{header_discount:.2f}"
 
     tax_basis = etree.SubElement(summation, "{%s}TaxBasisTotalAmount" % nsmap["ram"])
     tax_basis.text = f"{data.get('tax_basis', 0):.2f}"
@@ -493,7 +575,6 @@ async def _map_invoice_to_zugferd(invoice: Any, conference: Any, db: AsyncSessio
     vat_rule = get_vat_rule(vat_rules, attendance_type, customer_type, customer_location)
 
     # Convert amounts to float (factur-x expects float, not Decimal)
-    subtotal = float(invoice.subtotal) if invoice.subtotal else 0.0
     tax_amount = float(invoice.tax_amount) if invoice.tax_amount else 0.0
     total = float(invoice.total) if invoice.total else 0.0
     tax_rate = float(invoice.tax_rate) if invoice.tax_rate else 0.0
@@ -501,7 +582,7 @@ async def _map_invoice_to_zugferd(invoice: Any, conference: Any, db: AsyncSessio
     # Determine tax category code from VAT rule
     tax_category_code = _determine_tax_category_code(vat_rule, tax_rate)
 
-    # ── BUILD LINE ITEMS ──
+    # ── BUILD LINE ITEMS (including per-line discounts) ──
     line_items = []
     for idx, item in enumerate(invoice.line_items or [], start=1):
         line_item = {
@@ -509,6 +590,7 @@ async def _map_invoice_to_zugferd(invoice: Any, conference: Any, db: AsyncSessio
             "name": item.get("description", f"Item {idx}"),
             "quantity": float(item.get("quantity", 1)),
             "unit_price": float(item.get("unit_price", 0)),
+            "discount": float(item.get("discount", 0)),
             "line_total": float(item.get("total", 0)),
             "tax_category": tax_category_code,
             "tax_percent": tax_rate,
@@ -541,6 +623,12 @@ async def _map_invoice_to_zugferd(invoice: Any, conference: Any, db: AsyncSessio
     # - invoice/bank_transfer/credit_card → "380" (Commercial invoice)
     invoice_type_code = "381" if invoice.template_type == "credit_note" else "380"
 
+    # ── LINE TOTALS ──
+    # Line totals are already net of per-line discounts (unit_price * qty - discount).
+    # invoice.discount_amount is purely informational (sum of per-line discounts) —
+    # it must NOT be subtracted again at the header level (see vat_calculation.py:239).
+    line_total_sum = sum(float(item.get("total", 0)) for item in (invoice.line_items or []))
+
     # ── BUILD COMPLETE FACTUR-X DATA STRUCTURE ──
     zugferd_data = {
         # Document metadata
@@ -549,20 +637,22 @@ async def _map_invoice_to_zugferd(invoice: Any, conference: Any, db: AsyncSessio
         "due_date": invoice.due_date.isoformat() if invoice.due_date else None,
         "invoice_type_code": invoice_type_code,
         "currency": invoice.currency or "EUR",
+        "notes": invoice.notes or "",
         # Parties
         "seller": seller_data,
         "buyer": buyer_data,
         # References
         "buyer_order_reference": invoice.procurement_code,  # PO number (optional)
-        # Amounts
-        "line_total": subtotal,
-        "tax_basis": subtotal,
+        # Amounts — per-line discounts already reflected in line totals, no header discount
+        "line_total": line_total_sum,
+        "header_discount": 0,
+        "tax_basis": line_total_sum,
         "tax_total": tax_amount,
         "grand_total": total,
         # Tax breakdown
         "tax_breakdown": [
             {
-                "tax_basis": subtotal,
+                "tax_basis": line_total_sum,
                 "tax_percent": tax_rate,
                 "tax_amount": tax_amount,
                 "tax_category": tax_category_code,
