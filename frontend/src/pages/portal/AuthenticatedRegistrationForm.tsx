@@ -118,6 +118,10 @@ export default function AuthenticatedRegistrationForm({
   // Payment attempt state
   const [attemptingPayment, setAttemptingPayment] = useState(false);
 
+  // Eagerly load Stripe when conference data is available (not when user selects credit card)
+  const stripePromiseRef = useRef<Promise<Stripe | null> | null>(null);
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+
   // Terms & Conditions consent (show when T&C or Privacy Policy is enabled)
   const hasTerms = !!(
     conference?.policies?.terms_and_conditions || conference?.policies?.privacy_policy
@@ -250,10 +254,7 @@ export default function AuthenticatedRegistrationForm({
     calculateVat(subtotal, billing.country, billing.vat_number || null);
   }, [billing.country, billing.vat_number, subtotal, conference, calculateVat]);
 
-  // Eagerly load Stripe when conference data is available (not when user selects credit card)
-  const stripePromiseRef = useRef<Promise<Stripe | null> | null>(null);
-  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
-
+  // Eagerly load Stripe when conference data is available
   useEffect(() => {
     if (
       conference?.stripe_enabled &&
