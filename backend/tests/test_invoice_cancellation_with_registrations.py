@@ -50,6 +50,8 @@ def _invoices_url(conference_id: uuid.UUID, invoice_id: uuid.UUID | None = None,
 @pytest.fixture(autouse=True)
 def mock_stripe_refund():
     """Mock Stripe refund for all tests."""
+    from unittest.mock import MagicMock
+
     mock_refund_obj = type(
         "Refund",
         (object,),
@@ -62,12 +64,13 @@ def mock_stripe_refund():
         },
     )()
 
-    with patch("stripe.Refund.create") as mock_create:
-        mock_create.return_value = mock_refund_obj
-        with patch("app.core.stripe_helper.get_stripe_client") as mock_get_client:
-            # Return a truthy mock client so Stripe is considered enabled
-            mock_get_client.return_value = True
-            yield mock_create
+    # Build a mock StripeClient with refunds.create() returning the mock refund
+    mock_client = MagicMock()
+    mock_client.refunds.create.return_value = mock_refund_obj
+
+    with patch("app.core.stripe_helper.get_stripe_client") as mock_get_client:
+        mock_get_client.return_value = mock_client
+        yield mock_client.refunds.create
 
 
 @pytest_asyncio.fixture()

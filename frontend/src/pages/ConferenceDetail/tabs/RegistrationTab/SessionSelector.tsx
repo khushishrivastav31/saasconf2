@@ -21,7 +21,7 @@ function formatSessionLabel(session: {
   current_count?: number;
   available_spots?: number | null;
 }): string {
-  let label = '';
+  let label: string;
   if (!session.has_paper) {
     label = 'To be announced';
   } else if (session.speaker_name) {

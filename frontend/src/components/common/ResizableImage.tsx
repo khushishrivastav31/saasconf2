@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- TipTap Node extension + React view must co-locate */
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
 import { useCallback, useEffect, useRef, useState } from 'react';

@@ -97,23 +97,20 @@ Detailed docs are in `.claude/docs/` and `docs/` — read on-demand when working
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Test coverage improvement sprint + follow-up improvements
-- **Feature**: Comprehensive test suite expansion — security, portal, CFP, reviewer workflow, shared utils
-- **New backend test files** (all passing, 2334 total):
-  - `test_cfp_portal_security.py`, `test_portal_registration_security.py`, `test_registration_security.py`
-  - `test_registration_replacement.py`, `test_csv_export.py`, `test_html_sanitize.py`
-  - `test_invoice_audit.py`, `test_invoice_email_helpers.py`, `test_invoice_validation.py`
-  - `test_payment_reminder_helpers.py`, `test_recaptcha.py`, `test_registration_email_helpers.py`
-  - `test_cross_tenant_isolation.py` — 22 tests: RLS + tenant boundary enforcement
-  - `test_cfp_auth_flows.py` — 36 tests: register, verify email, login, refresh, password reset
-  - `test_paper_submission.py` — 25 tests: full paper lifecycle
-  - `test_reviewer_workflow.py` — 23 tests: assignments, scoring, isolation, feedback
-- **Security fix**: `cfp_portal/reviews.py` — authors cannot review their own papers (403)
-- **New frontend test files** (all passing, 1534 total):
-  - `src/test-utils.tsx` — shared portal test utilities (QueryClient, auth context, render helper)
-  - `hooks/__tests__/useAttendeeManagement`, `usePaymentIntent`, `useSessionSelection`, `useVatCalculation`, `useVatValidation`
-  - `pages/portal/__tests__/SubmitPaperPage`, `DashboardPage`, `ProfilePage`, `MessagesPage`, `MyRegistrationsPage`, `InvitationsPage`
-  - `components/__tests__/InvoiceTemplateEditor.test.tsx` — 29 tests for 725-line component (was 0% coverage)
-  - `e2e/invoice-management.spec.ts`, `e2e/payment-reminders.spec.ts`, `e2e/public-registration.spec.ts`
+- **Last completed**: Full dependency upgrade sprint (all 6 phases)
+- **Feature**: Major dependency upgrades across backend and frontend
+- **Backend upgrades**: redis 5→7 (`aclose()` fix), pytest-asyncio 0.24→1.0 (pyproject.toml config), lxml 5→6, python-json-logger 3→4
+- **Frontend upgrades**: globals 16→17, jsdom 27→28, eslint-plugin-react-hooks 5→7 (new React Compiler rules disabled), eslint 9→10, @eslint/js 9→10, vite 6→7, @vitejs/plugin-react 4→5, @sentry/react 9→10
+- **Security fixes (same session)**: Stripe StripeClient refactor (thread-safe per-request client), XSS fix in ConferenceHeader.tsx, CFP author conflict-of-interest review block
+- **Files modified**:
+  - `backend/requirements.txt` — redis 7.3.0, pytest-asyncio 1.0.0, lxml 6.0.2, python-json-logger 4.0.0
+  - `backend/pyproject.toml` — asyncio_default_fixture_loop_scope = "function", pytest-asyncio ^1.0
+  - `backend/app/core/token_blacklist.py` — `aclose()` for redis 7
+  - `backend/tests/test_invoice_cancellation_with_registrations.py` — MagicMock for StripeClient
+  - `backend/tests/test_registration_invoice_replacement_flow.py` — MagicMock for StripeClient
+  - `frontend/package.json` / `package-lock.json` — all frontend package upgrades
+  - `frontend/eslint.config.js` — react-hooks v7 new rules disabled
+  - `frontend/src/pages/**/SessionSelector.tsx` (3 files) — `let label: string` (eslint 10 no-useless-assignment)
+- **Tests**: 2334 backend ✅ · 1534 frontend ✅
 - **Linting**: ✅ Ruff, ESLint, TypeScript, formatting all clean
 - **Status**: ⏳ Ready to commit — awaiting user approval

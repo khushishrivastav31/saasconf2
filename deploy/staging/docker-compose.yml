@@ -1,7 +1,7 @@
 services:
   # PostgreSQL Database
   db:
-    image: postgres:16.6-alpine
+    image: postgres:16.8-alpine
     container_name: saasconf_db_staging
     restart: unless-stopped
     environment:
@@ -136,7 +136,7 @@ services:
 
   # Nightly data retention cleanup (expired tokens, old audit logs)
   cleanup-cron:
-    image: curlimages/curl:8.5.0
+    image: curlimages/curl:8.17.0
     container_name: saasconf_cleanup_cron
     restart: unless-stopped
     depends_on:
@@ -154,7 +154,7 @@ services:
 
   # Hourly deadline reminder emails
   deadline-cron:
-    image: curlimages/curl:8.5.0
+    image: curlimages/curl:8.17.0
     container_name: saasconf_deadline_cron
     restart: unless-stopped
     depends_on:
@@ -170,9 +170,27 @@ services:
     networks:
       - saasconf_network
 
+  # Daily payment reminder emails (overdue invoices)
+  payment-reminder-cron:
+    image: curlimages/curl:8.17.0
+    container_name: saasconf_payment_reminder_cron
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      SUPER_ADMIN_PASSWORD: "Test1234"
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 86400; echo \"Sending payment reminders...\"; curl -sf -X POST -H \"Authorization: Bearer $${SUPER_ADMIN_PASSWORD}\" http://backend:8000/ops/send-payment-reminders || echo \"Payment reminders failed\"; done;'"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 32M
+    networks:
+      - saasconf_network
+
   # Certbot for SSL certificate renewal
   certbot:
-    image: certbot/certbot
+    image: certbot/certbot:v3.3.0
     container_name: saasconf_certbot_staging
     volumes:
       - ./certbot/conf:/etc/letsencrypt

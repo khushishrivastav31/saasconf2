@@ -82,7 +82,7 @@ function formatSessionLabel(session: {
   max_attendees?: number | null;
   available_spots?: number | null;
 }): string {
-  let label = '';
+  let label: string;
   if (!session.has_paper) {
     label = 'To be announced';
   } else if (session.speaker_name) {

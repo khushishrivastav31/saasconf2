@@ -21,6 +21,12 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // New in react-hooks v7 (React Compiler rules) — disable to maintain v5 status quo
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+      "react-hooks/globals": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/refs": "off",
       "react-refresh/only-export-components": [
         "warn",
         { allowConstantExport: true },

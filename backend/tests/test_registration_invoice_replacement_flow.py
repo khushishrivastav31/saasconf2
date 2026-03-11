@@ -63,18 +63,22 @@ def mock_stripe_operations():
         },
     )()
 
+    from unittest.mock import MagicMock
+
+    # Build a mock StripeClient with refunds.create() returning the mock refund
+    mock_client = MagicMock()
+    mock_client.refunds.create.return_value = mock_refund_obj
+
     with (
-        patch("stripe.Refund.create") as mock_refund_create,
         patch("app.core.stripe_helper.get_stripe_client") as mock_get_client,
         patch("app.core.invoice_replacement.create_payment_link", new_callable=AsyncMock) as mock_payment_link,
     ):
         # Configure mocks
-        mock_refund_create.return_value = mock_refund_obj
-        mock_get_client.return_value = True  # Truthy to indicate Stripe enabled
+        mock_get_client.return_value = mock_client
         mock_payment_link.return_value = (None, "https://buy.stripe.com/test_e2e_link")
 
         yield {
-            "refund": mock_refund_create,
+            "refund": mock_client.refunds.create,
             "get_client": mock_get_client,
             "payment_link": mock_payment_link,
         }
