@@ -41,7 +41,7 @@ export class ConferenceDetailPage {
 
   get conferenceName() { return this.page.locator('h1.text-2xl'); }
   get statusBadge() { return this.page.locator('.rounded-full').first(); }
-  get sidebar() { return this.page.locator('nav.flex-shrink-0'); }
+  get sidebar() { return this.page.locator('nav.shrink-0'); }
   get contentArea() { return this.page.locator('.flex-1.min-w-0').first(); }
 
   async navigateToSection(name: string, waitForContent = false) {
