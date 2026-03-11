@@ -122,7 +122,7 @@ export default function SinglePageForm({
     contact_phone: '',
     contact_email: '',
     vat_number: '',
-    payment_method: 'bank_transfer',
+    payment_method: conference.stripe_enabled ? 'credit_card' : 'bank_transfer',
   });
 
   // Validation errors
@@ -276,12 +276,41 @@ export default function SinglePageForm({
     calculateVat,
   ]);
 
-  // Create PaymentIntent when credit card is selected
+  // Calculate subtotal for PaymentIntent (same logic as VAT calculation effect)
+  const currentSubtotal = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const activePeriod = conference.booking_periods.find(
+      (p) => p.start_date <= today && p.end_date >= today
+    );
+
+    let total = 0;
+    attendees.forEach((attendee) => {
+      const bookingIds = attendee.booking_option_ids || [];
+      bookingIds.forEach((optionId) => {
+        const priceInfo = conference.booking_periods.find((p) => {
+          return p.start_date <= today && p.end_date >= today && p.prices[optionId];
+        });
+        const price = priceInfo?.prices[optionId] || 0;
+        const { discountedPrice } = applyDiscount(
+          price,
+          discountValidation || null,
+          optionId,
+          activePeriod?.id
+        );
+        total += discountedPrice;
+      });
+    });
+    return total;
+  }, [attendees, conference.booking_periods, discountValidation]);
+
+  // Determine the amount for PaymentIntent: use VAT total if available, otherwise subtotal
+  const paymentAmount = vatCalculation ? vatCalculation.total : currentSubtotal;
+
+  // Create PaymentIntent when credit card is selected and there's a positive amount
   useEffect(() => {
     const shouldCreatePaymentIntent =
       billing.payment_method === 'credit_card' &&
-      vatCalculation &&
-      vatCalculation.total > 0 &&
+      paymentAmount > 0 &&
       !paymentIntentId &&
       !creatingPaymentIntent;
 
@@ -297,7 +326,7 @@ export default function SinglePageForm({
           client_secret: string;
           publishable_key: string;
         }>(`/portal/${tenantSlug}/conferences/${conferenceSlug}/create-payment-intent`, {
-          total: vatCalculation.total,
+          total: paymentAmount,
         });
 
         setPaymentIntentId(response.data.payment_intent_id);
@@ -314,7 +343,7 @@ export default function SinglePageForm({
     createPaymentIntent();
   }, [
     billing.payment_method,
-    vatCalculation,
+    paymentAmount,
     paymentIntentId,
     creatingPaymentIntent,
     tenantSlug,
@@ -325,10 +354,7 @@ export default function SinglePageForm({
   // Update PaymentIntent when total changes
   useEffect(() => {
     const shouldUpdatePaymentIntent =
-      billing.payment_method === 'credit_card' &&
-      paymentIntentId &&
-      vatCalculation &&
-      vatCalculation.total > 0;
+      billing.payment_method === 'credit_card' && paymentIntentId && paymentAmount > 0;
 
     if (!shouldUpdatePaymentIntent) {
       return;
@@ -339,7 +365,7 @@ export default function SinglePageForm({
         await publicApi.put(
           `/portal/${tenantSlug}/conferences/${conferenceSlug}/update-payment-intent/${paymentIntentId}`,
           {
-            total: vatCalculation.total,
+            total: paymentAmount,
           }
         );
       } catch (err) {
@@ -349,7 +375,7 @@ export default function SinglePageForm({
     };
 
     updatePaymentIntent();
-  }, [billing.payment_method, paymentIntentId, vatCalculation, tenantSlug, conferenceSlug]);
+  }, [billing.payment_method, paymentIntentId, paymentAmount, tenantSlug, conferenceSlug]);
 
   // Clear PaymentIntent when switching away from credit card
   useEffect(() => {

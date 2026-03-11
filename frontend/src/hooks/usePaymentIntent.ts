@@ -44,21 +44,7 @@ export function usePaymentIntent({
   const createOrUpdatePaymentIntent = useCallback(
     async (amount: number) => {
       if (!enabled || amount <= 0 || isCreatingRef.current) {
-        if (import.meta.env.DEV) {
-          console.log('[PaymentIntent] Skipping:', {
-            enabled,
-            amount,
-            isCreating: isCreatingRef.current,
-          });
-        }
         return;
-      }
-      if (import.meta.env.DEV) {
-        console.log('[PaymentIntent] Creating/updating:', {
-          amount,
-          endpoint: createEndpoint,
-          hasExisting: !!paymentIntentId,
-        });
       }
 
       isCreatingRef.current = true;

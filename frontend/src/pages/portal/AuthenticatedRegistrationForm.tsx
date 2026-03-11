@@ -275,9 +275,13 @@ export default function AuthenticatedRegistrationForm({
     isBankTransferCountry(billing.country, conference?.bank_transfer_countries);
   const creditCardAvailable = stripeEnabled;
 
-  // Auto-switch payment method when availability changes
+  // Default to credit_card when stripe is enabled
   useEffect(() => {
-    if (!stripeEnabled && billing.payment_method === 'credit_card') {
+    if (stripeEnabled && billing.payment_method === 'bank_transfer' && !billing.country) {
+      // Stripe is enabled, no country selected yet — default to credit card
+      setBilling((prev) => ({ ...prev, payment_method: 'credit_card' }));
+    } else if (!stripeEnabled && billing.payment_method === 'credit_card') {
+      // Stripe not enabled — force bank transfer
       setBilling((prev) => ({ ...prev, payment_method: 'bank_transfer' }));
     } else if (
       stripeEnabled &&
@@ -285,18 +289,21 @@ export default function AuthenticatedRegistrationForm({
       !isBankTransferCountry(billing.country, conference?.bank_transfer_countries) &&
       billing.payment_method === 'bank_transfer'
     ) {
+      // Bank transfer not available for this country — switch to credit card
       setBilling((prev) => ({ ...prev, payment_method: 'credit_card' }));
     }
   }, [billing.country, stripeEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Use payment intent hook for credit card payments
+  // Pass subtotal as fallback when VAT calculation hasn't completed yet
+  const paymentAmount = totalWithVat > 0 ? totalWithVat : subtotal;
   const {
     paymentIntentId,
     clientSecret,
     publishableKey,
     error: paymentIntentError,
   } = usePaymentIntent({
-    total: totalWithVat,
+    total: paymentAmount,
     currency: conference?.currency || 'EUR',
     enabled: billing.payment_method === 'credit_card',
     createEndpoint: `/portal/conferences/${conferenceId}/create-payment-intent`,
