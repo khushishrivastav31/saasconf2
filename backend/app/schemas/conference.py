@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.html_sanitize import sanitize_html
 from app.core.validators import validate_email, validate_phone
 
 
@@ -50,6 +51,11 @@ class ConferenceBase(BaseModel):
     abbreviation: str | None = Field(None, max_length=50)
     description: str | None = None
     website: str | None = Field(None, max_length=500)
+
+    @field_validator("description")
+    @classmethod
+    def sanitize_description(cls, v: str | None) -> str | None:
+        return sanitize_html(v) if v else v
 
 
 class ConferenceCreate(ConferenceBase):

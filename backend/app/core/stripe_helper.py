@@ -18,7 +18,7 @@ from app.models.user import User
 logger = logging.getLogger(__name__)
 
 
-def get_stripe_client(conference: Conference) -> stripe.StripeClient | None:  # type: ignore[return-value]
+def get_stripe_client(conference: Conference) -> stripe.StripeClient | None:
     """Get initialized Stripe client for conference.
 
     Returns None if Stripe is not enabled or keys not configured.
@@ -39,10 +39,7 @@ def get_stripe_client(conference: Conference) -> stripe.StripeClient | None:  # 
     if not secret_key:
         return None
 
-    # Set API key globally (note: not thread-safe for multi-tenant)
-    # TODO: Use StripeClient(api_key=...) for better multi-tenant safety
-    stripe.api_key = secret_key
-    return stripe  # type: ignore[return-value]
+    return stripe.StripeClient(api_key=secret_key)
 
 
 def validate_stripe_enabled(conference: Conference) -> tuple[dict, str]:
@@ -90,8 +87,8 @@ async def deactivate_payment_link_for_invoice(
     if invoice.template_type != "credit_card":
         return True  # Not a credit card invoice, nothing to deactivate
 
-    stripe_settings = conference.settings.get("stripe", {})
-    if not stripe_settings.get("is_enabled") or not stripe_settings.get("secret_key"):
+    client = get_stripe_client(conference)
+    if not client:
         return True  # Stripe not configured
 
     # Find payment link ID from events
@@ -104,8 +101,7 @@ async def deactivate_payment_link_for_invoice(
         return True  # No payment link found
 
     try:
-        stripe.api_key = stripe_settings["secret_key"]
-        stripe.PaymentLink.modify(payment_link_event.stripe_object_id, active=False)
+        client.payment_links.update(payment_link_event.stripe_object_id, {"active": False})
         logger.info(
             f"Deactivated Stripe payment link {payment_link_event.stripe_object_id} "
             f"for invoice {invoice.invoice_number or invoice.id}"
@@ -152,18 +148,20 @@ async def create_payment_intent(
 
     try:
         # Create PaymentIntent
-        payment_intent = stripe.PaymentIntent.create(
-            amount=int(invoice.total * 100),
-            currency=invoice.currency.lower(),
-            metadata={
-                "system": "saasconf",
-                "tenant_id": str(invoice.tenant_id),
-                "conference_id": str(invoice.conference_id),
-                "invoice_id": str(invoice.id),
-                "invoice_number": invoice.invoice_number or "DRAFT",
-                "template_type": invoice.template_type,
+        payment_intent = client.payment_intents.create(
+            {
+                "amount": int(invoice.total * 100),
+                "currency": invoice.currency.lower(),
+                "metadata": {
+                    "system": "saasconf",
+                    "tenant_id": str(invoice.tenant_id),
+                    "conference_id": str(invoice.conference_id),
+                    "invoice_id": str(invoice.id),
+                    "invoice_number": invoice.invoice_number or "DRAFT",
+                    "template_type": invoice.template_type,
+                },
             },
-            idempotency_key=idempotency_key,
+            {"idempotency_key": idempotency_key},
         )
 
         # Store payment_intent_id on invoice
@@ -192,7 +190,7 @@ async def create_payment_intent(
 
         return (payment_intent.id, payment_intent.client_secret)
 
-    except stripe.error.StripeError as e:
+    except stripe.StripeError as e:
         logger.error(f"Stripe payment intent creation failed for invoice {invoice.id}: {e}")
         raise ValidationError(f"Stripe error: {e!s}") from e
 
@@ -232,31 +230,34 @@ async def create_payment_link(
         # Create Payment Link
         # NOTE: Payment Links create their own PaymentIntent when customer pays
         # We use payment_intent_data to pass metadata to the auto-created PaymentIntent
-        payment_link = stripe.PaymentLink.create(
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": invoice.currency.lower(),
-                        "product_data": {"name": f"Invoice {invoice.invoice_number or 'DRAFT'}"},
-                        "unit_amount": int(invoice.total * 100),
-                    },
-                    "quantity": 1,
-                }
-            ],
-            metadata={
-                "system": "saasconf",
-                "invoice_id": str(invoice.id),
-            },
-            payment_intent_data={
+        payment_link = client.payment_links.create(
+            {
+                "line_items": [
+                    {
+                        "price_data": {
+                            "currency": invoice.currency.lower(),
+                            "product_data": {"name": f"Invoice {invoice.invoice_number or 'DRAFT'}"},
+                            "unit_amount": int(invoice.total * 100),
+                        },
+                        "quantity": 1,
+                    }
+                ],
                 "metadata": {
                     "system": "saasconf",
-                    "tenant_id": str(invoice.tenant_id),
-                    "conference_id": str(invoice.conference_id),
                     "invoice_id": str(invoice.id),
-                    "invoice_number": invoice.invoice_number or "DRAFT",
-                    "template_type": invoice.template_type,
-                }
+                },
+                "payment_intent_data": {
+                    "metadata": {
+                        "system": "saasconf",
+                        "tenant_id": str(invoice.tenant_id),
+                        "conference_id": str(invoice.conference_id),
+                        "invoice_id": str(invoice.id),
+                        "invoice_number": invoice.invoice_number or "DRAFT",
+                        "template_type": invoice.template_type,
+                    }
+                },
             },
+            {"idempotency_key": idempotency_key},
         )
 
         # Log success
@@ -283,7 +284,7 @@ async def create_payment_link(
         # The sync logic will find it via metadata search
         return (None, payment_link.url)
 
-    except stripe.error.StripeError as e:
+    except stripe.StripeError as e:
         logger.error(f"Stripe payment link creation failed for invoice {invoice.id}: {e}")
         raise ValidationError(f"Stripe error: {e!s}") from e
 
@@ -359,7 +360,7 @@ async def refund_payment(
         if amount is not None:
             refund_params["amount"] = int(amount * 100)
 
-        refund = stripe.Refund.create(**refund_params, idempotency_key=idempotency_key)  # type: ignore[arg-type]
+        refund = client.refunds.create(refund_params, {"idempotency_key": idempotency_key})  # type: ignore[arg-type]
 
         # Log success
         success_event = await log_invoice_event(
@@ -389,7 +390,7 @@ async def refund_payment(
             "event_id": str(success_event.id),
         }
 
-    except stripe.error.StripeError as e:
+    except stripe.StripeError as e:
         # Log failure
         await log_invoice_event(
             db=db,
@@ -416,7 +417,7 @@ async def refund_payment(
 
 async def find_payment_intent_for_invoice(
     invoice: Invoice,
-    stripe_client: object,
+    stripe_client: stripe.StripeClient,
     logger_prefix: str = "",
 ) -> stripe.PaymentIntent | None:  # type: ignore[name-defined]
     """Find the payment intent for an invoice using multiple discovery strategies.
@@ -444,11 +445,11 @@ async def find_payment_intent_for_invoice(
     # Strategy 1: Retrieve stored payment_intent_id
     if invoice.stripe_payment_intent_id:
         try:
-            payment_intent = stripe_client.PaymentIntent.retrieve(invoice.stripe_payment_intent_id)  # type: ignore[attr-defined]
+            payment_intent = stripe_client.payment_intents.retrieve(invoice.stripe_payment_intent_id)
             logger.info(
                 f"{logger_prefix}Retrieved stored payment intent {payment_intent.id} - Status: {payment_intent.status}"
             )
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.warning(f"{logger_prefix}Failed to retrieve PaymentIntent {invoice.stripe_payment_intent_id}: {e}")
 
     # Strategy 2: Search by invoice_id metadata
@@ -460,7 +461,7 @@ async def find_payment_intent_for_invoice(
             search_query = f'metadata["invoice_id"]:"{invoice.id}" AND status:"succeeded"'
             logger.info(f"{logger_prefix}Search query: {search_query}")
 
-            search_results = stripe_client.PaymentIntent.search(query=search_query, limit=1)  # type: ignore[attr-defined]
+            search_results = stripe_client.payment_intents.search({"query": search_query, "limit": 1})
             logger.info(f"{logger_prefix}Search returned {len(search_results.data)} results")
 
             if search_results.data:
@@ -489,12 +490,13 @@ async def find_payment_intent_for_invoice(
                 logger.info(f"{logger_prefix}Found payment link {payment_link_id}, searching for checkout sessions...")
 
                 # Search for checkout sessions using this payment link
-                sessions = stripe_client.checkout.Session.list(payment_link=payment_link_id, limit=10)  # type: ignore[attr-defined]
+                sessions = stripe_client.checkout.sessions.list({"payment_link": payment_link_id, "limit": 10})
 
                 # Find completed session with payment intent
                 for session in sessions.data:
                     if session.payment_intent and session.status == "complete":
-                        pi = stripe_client.PaymentIntent.retrieve(session.payment_intent)  # type: ignore[attr-defined]
+                        pi_id = session.payment_intent if isinstance(session.payment_intent, str) else session.payment_intent.id
+                        pi = stripe_client.payment_intents.retrieve(pi_id)
                         if pi.status == "succeeded":
                             payment_intent = pi
                             invoice.stripe_payment_intent_id = payment_intent.id

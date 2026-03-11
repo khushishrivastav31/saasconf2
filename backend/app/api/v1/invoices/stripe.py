@@ -12,7 +12,11 @@ from app.core.dependencies import CurrentUserDep, DbSessionDep, require_module
 from app.core.exceptions import AuthorizationError
 from app.core.invoice_events import InvoiceEventType, log_invoice_event
 from app.core.invoice_queries import get_invoice_with_events, refresh_invoice_with_events
-from app.core.stripe_helper import find_payment_intent_for_invoice, refund_payment, validate_stripe_enabled
+from app.core.stripe_helper import (
+    find_payment_intent_for_invoice,
+    get_stripe_client,
+    refund_payment,
+)
 from app.models.audit import AuditLog
 from app.models.invoice import Invoice
 from app.schemas.invoice import InvoiceResponse
@@ -129,8 +133,9 @@ async def sync_all_stripe_payments(
     # Validate Stripe enabled and initialize client
     import stripe
 
-    _, secret_key = validate_stripe_enabled(conference)
-    stripe.api_key = secret_key
+    stripe_client = get_stripe_client(conference)
+    if not stripe_client:
+        raise HTTPException(status_code=400, detail="Stripe is not enabled for this conference")
 
     # Get all credit card invoices with events eagerly loaded
     result = await db.execute(
@@ -175,7 +180,7 @@ async def sync_all_stripe_payments(
             # Find payment intent using 3-tier discovery strategy
             payment_intent = await find_payment_intent_for_invoice(
                 invoice=invoice,
-                stripe_client=stripe,
+                stripe_client=stripe_client,
                 logger_prefix="[SYNC] ",
             )
 
@@ -275,7 +280,7 @@ async def sync_all_stripe_payments(
                     f"has status {payment_intent.status} - no action needed"
                 )
 
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.error(f"[SYNC] Failed to sync invoice {invoice.id}: {e}")
             errors.append({"invoice_id": str(invoice.id), "invoice_number": invoice.invoice_number, "error": str(e)})
 
@@ -313,12 +318,11 @@ async def sync_stripe_payment(
         raise HTTPException(status_code=400, detail="Only credit card invoices can be synced")
 
     # Initialize Stripe client
-    import stripe
+    stripe_client = get_stripe_client(conference)
+    if not stripe_client:
+        raise HTTPException(status_code=400, detail="Stripe is not enabled for this conference")
 
-    _, secret_key = validate_stripe_enabled(conference)
-    stripe.api_key = secret_key
-
-    payment_intent = await find_payment_intent_for_invoice(invoice, stripe, "[SYNC]")
+    payment_intent = await find_payment_intent_for_invoice(invoice, stripe_client, "[SYNC]")
     if payment_intent and payment_intent.status == "succeeded":
         invoice.status = "paid"
         invoice.stripe_payment_intent_id = payment_intent.id
@@ -344,13 +348,12 @@ async def debug_stripe_search(
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
-    import stripe
-
-    _, secret_key = validate_stripe_enabled(conference)
-    stripe.api_key = secret_key
+    stripe_client = get_stripe_client(conference)
+    if not stripe_client:
+        raise HTTPException(status_code=400, detail="Stripe is not enabled for this conference")
 
     search_query = f'metadata["invoice_id"]:"{invoice.id}"'
-    search_results = stripe.PaymentIntent.search(query=search_query, limit=10)
+    search_results = stripe_client.payment_intents.search({"query": search_query, "limit": 10})
 
     return {
         "invoice_id": str(invoice.id),

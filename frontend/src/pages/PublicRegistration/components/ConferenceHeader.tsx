@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '../../ConferenceDetail/icons';
 import type { PublicConference } from '../../../types/publicRegistration';
 import { formatDate } from '../../../utils/formatDate';
+import { sanitizeHtml } from '../../../utils/richText';
 import ConferenceLogo from '../../../components/ConferenceLogo';
 import publicApi from '../../../config/publicApi';
 
@@ -99,7 +100,7 @@ export default function ConferenceHeader({ conference }: ConferenceHeaderProps) 
                   </h3>
                   <div
                     className="text-gray-700 dark:text-gray-300 text-sm prose dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: conference.description }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(conference.description) }}
                   />
                 </div>
               )}
