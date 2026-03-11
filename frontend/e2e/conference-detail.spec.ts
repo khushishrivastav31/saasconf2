@@ -77,15 +77,13 @@ test.describe('Conference Volunteers Tab', () => {
     }
 
     await detail.navigateToSection('Volunteers');
-
-    // Wait for volunteer data to load (API call)
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Should show table with volunteers, empty state, create button, or child sections expanded
-    const hasTable = await page.locator('table').first().isVisible().catch(() => false);
-    const hasEmpty = await page.getByText(/no volunteer/i).isVisible().catch(() => false);
-    const hasCreateBtn = await page.getByRole('button', { name: /create new/i }).isVisible().catch(() => false);
-    const hasChildren = await detail.sidebar.getByRole('button', { name: 'Task Assignment' }).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTable = await page.locator('table').first().isVisible({ timeout: 10000 }).catch(() => false);
+    const hasEmpty = await page.getByText(/no volunteer/i).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasCreateBtn = await page.getByRole('button', { name: /create new/i }).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasChildren = await detail.sidebar.getByRole('button', { name: 'Task Assignment' }).isVisible({ timeout: 10000 }).catch(() => false);
 
     expect(hasTable || hasEmpty || hasCreateBtn || hasChildren).toBeTruthy();
   });

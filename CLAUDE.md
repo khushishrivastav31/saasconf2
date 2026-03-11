@@ -97,43 +97,30 @@ Detailed docs are in `.claude/docs/` and `docs/` — read on-demand when working
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Payment Reminder system
-- **Feature**: Automated payment reminders for overdue invoices
-- **Implementation scope**:
-  - Backend: PaymentReminder model + migration (128), RLS, indexes
-  - Backend: Payment reminder service (generate_and_send_reminders, resend)
-  - Backend: API endpoints (list, stats, detail, resend) + settings endpoint
-  - Backend: Cron endpoint `/ops/send-payment-reminders` (daily)
-  - Backend: Email templates (1st friendly, 2nd firm) with placeholders
-  - Backend: Audit trail (InvoiceEvent types for reminder sent/failed)
-  - Backend: Auto-transition invoices from "sent" → "overdue"
-  - Frontend: Payment Reminders tab with filters, stats, resend
-  - Frontend: Settings → Payment Reminders (enable/disable, timing, admin notify)
-  - Frontend: Email template types registered for editor
-- **Files created**:
-  - `backend/app/models/payment_reminder.py` — PaymentReminder model
-  - `backend/app/db/migrations/versions/128_payment_reminders.py` — Migration
-  - `backend/app/core/payment_reminder_service.py` — Core logic
-  - `backend/app/api/v1/payment_reminders.py` — API endpoints
-  - `backend/app/api/v1/settings/payment_reminder_settings.py` — Settings API
-  - `frontend/src/pages/ConferenceDetail/tabs/PaymentRemindersTab.tsx` — Tab UI
-  - `frontend/src/pages/ConferenceDetail/tabs/settings/PaymentReminderSettingsTab.tsx` — Settings UI
-- **Files modified**:
-  - `backend/app/models/__init__.py`, `backend/app/api/v1/router.py`, `backend/app/api/v1/settings/__init__.py`
-  - `backend/app/schemas/email_template.py`, `backend/app/schemas/settings.py`
-  - `backend/app/core/default_settings.py`, `backend/app/core/email_templates.py`
-  - `backend/app/api/v1/settings/email_templates.py`, `backend/app/models/invoice_event.py`
-  - `backend/app/main.py`
-  - `frontend/src/pages/ConferenceDetail/conferenceSections.ts`, `icons.tsx`, `index.tsx`
-  - `frontend/src/pages/ConferenceDetail/tabs/SettingsTab.tsx`
-  - `frontend/src/types/conference.ts`, `frontend/src/config/queryKeys.ts`
-  - `docs/tenant-ui-handbook.md`
-- **Tests**: All passing (1294/1294 frontend)
-- **Linting**: ✅ Ruff, ESLint, TypeScript, formatting all clean
-- **Status**: ✅ Committed and pushed to main
-- **CI fixes applied**:
-  - Ruff import sorting in migration 130 (I001)
-  - Frontend coverage threshold (added orderCalculations tests → 50%+)
-  - E2E sidebar selector (flex-shrink-0 → shrink-0)
-  - Stripe eager loading: load Stripe.js on page mount, not on payment method selection
-  - Added `stripe_publishable_key` to conference summary API for eager initialization
+- **Last completed**: Test coverage improvement sprint
+- **Feature**: Comprehensive test suite expansion — security, portal, CFP, reviewer workflow
+- **New backend test files** (all passing, 0 failures):
+  - `test_cfp_portal_security.py` — CFP portal token/auth security
+  - `test_portal_registration_security.py` — Public registration input validation + XSS
+  - `test_registration_security.py` — Registration endpoint security
+  - `test_registration_replacement.py` — Registration replacement workflow (557 lines)
+  - `test_csv_export.py` — CSV streaming response (async-aware)
+  - `test_html_sanitize.py` — HTML sanitization
+  - `test_invoice_audit.py`, `test_invoice_email_helpers.py`, `test_invoice_validation.py`
+  - `test_payment_reminder_helpers.py`, `test_recaptcha.py`, `test_registration_email_helpers.py`
+  - `test_cross_tenant_isolation.py` — 22 tests: RLS + tenant boundary enforcement
+  - `test_cfp_auth_flows.py` — 36 tests: register, verify email, login, refresh, password reset
+  - `test_paper_submission.py` — 25 tests: full paper lifecycle (draft→submit→withdraw→delete)
+  - `test_reviewer_workflow.py` — 23 tests: assignments, scoring, isolation, feedback
+- **New frontend test files** (all passing):
+  - `hooks/__tests__/useAttendeeManagement`, `usePaymentIntent`, `useSessionSelection`, `useVatCalculation`, `useVatValidation`
+  - `pages/portal/__tests__/SubmitPaperPage`, `DashboardPage`, `ProfilePage`, `MessagesPage`, `MyRegistrationsPage`, `InvitationsPage`
+  - `e2e/invoice-management.spec.ts`, `e2e/payment-reminders.spec.ts`, `e2e/public-registration.spec.ts`
+- **Coverage after** (was → now):
+  - Statements: 58.95% → 62.01%
+  - Branches: 63.48% → 65.00%
+  - Functions: 50.61% → 52.70%
+  - Lines: 59.43% → 62.45%
+  - Frontend tests: 1306 → 1505 (+199)
+- **Linting**: ✅ Ruff auto-fixed unused imports in new test files
+- **Status**: ⏳ Ready to commit — awaiting user approval

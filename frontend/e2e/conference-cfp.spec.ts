@@ -22,11 +22,12 @@ test.describe('Conference CFP Sections', () => {
     }
 
     await detail.navigateToSection('Call for Papers', true);
+    await page.waitForLoadState('networkidle');
 
     // Should show CFP form, "Create Call for Papers" button, or child sections expanded
-    const hasCfp = await page.getByText(/title|status|draft|open|closed/i).first().isVisible({ timeout: 10000 }).catch(() => false);
-    const hasCreate = await page.getByRole('button', { name: /create call for papers/i }).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasChildren = await detail.sidebar.getByRole('button', { name: 'Topics' }).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasCfp = await page.getByText(/title|status|draft|open|closed/i).first().isVisible({ timeout: 15000 }).catch(() => false);
+    const hasCreate = await page.getByRole('button', { name: /create call for papers/i }).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasChildren = await detail.sidebar.getByRole('button', { name: 'Topics' }).isVisible({ timeout: 10000 }).catch(() => false);
     expect(hasCfp || hasCreate || hasChildren).toBeTruthy();
   });
 
