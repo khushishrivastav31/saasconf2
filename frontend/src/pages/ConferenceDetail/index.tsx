@@ -21,6 +21,7 @@ const ConferenceCFPsTab = lazy(() => import('./tabs/CFPsTab'));
 const ConferenceSponsorsTab = lazy(() => import('./tabs/SponsorsTab'));
 const ConferenceBookingTab = lazy(() => import('./tabs/BookingTab'));
 const ConferenceInvoicesTab = lazy(() => import('./tabs/InvoicesTab'));
+const PaymentRemindersTab = lazy(() => import('./tabs/PaymentRemindersTab'));
 const ConferenceServiceProvidersTab = lazy(() => import('./tabs/ServiceProvidersTab'));
 const ConferenceSettingsTab = lazy(() => import('./tabs/SettingsTab'));
 const ProgramDesignTab = lazy(() => import('./tabs/ProgramDesignTab'));
@@ -36,6 +37,8 @@ const DeadlinesTab = lazy(() => import('./tabs/DeadlinesTab'));
 const RegistrationQuestionsAnalyticsTab = lazy(
   () => import('./tabs/analytics/RegistrationQuestionsAnalyticsTab')
 );
+const CostManagementTab = lazy(() => import('./tabs/CostManagementTab'));
+const ConferenceStatisticsTab = lazy(() => import('./tabs/analytics/ConferenceStatisticsTab'));
 const CFPTopics = lazy(() => import('../modules/cfp').then((m) => ({ default: m.CFPTopics })));
 const CFPProgramCommittee = lazy(() =>
   import('../modules/cfp').then((m) => ({ default: m.CFPProgramCommittee }))
@@ -89,7 +92,7 @@ function ConferenceDetailContent() {
     setSidebarCollapsed,
     expandedSections,
     setExpandedSections,
-    sections,
+    filteredGroups,
 
     // Router helpers
     navigate,
@@ -211,9 +214,7 @@ function ConferenceDetailContent() {
       <div className="flex gap-6">
         {/* Section navigation sidebar */}
         <nav
-          className={`flex-shrink-0 transition-all duration-200 ${
-            sidebarCollapsed ? 'w-14' : 'w-56'
-          }`}
+          className={`shrink-0 transition-all duration-200 ${sidebarCollapsed ? 'w-14' : 'w-56'}`}
         >
           <div
             className="bg-white dark:bg-gray-800 rounded-lg shadow p-2 sticky top-24 flex flex-col"
@@ -244,94 +245,113 @@ function ConferenceDetailContent() {
               </svg>
             </button>
             <div className="flex-1 overflow-y-auto">
-              {sections.map((section) => {
-                const isParentActive =
-                  activeSection === section.id ||
-                  (section.children?.some((c) => c.id === activeSection) ?? false);
-                return (
-                  <div key={section.id}>
-                    <div className="flex items-center">
-                      <button
-                        onClick={() => setActiveSection(section.id)}
-                        title={sidebarCollapsed ? section.name : undefined}
-                        className={`flex-1 flex items-center rounded-md mb-0.5 ${
-                          sidebarCollapsed ? 'justify-center px-2 py-2' : 'px-3 py-2'
-                        } text-sm font-medium ${
-                          isParentActive
-                            ? 'bg-primary-50 text-primary-700'
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
-                        }`}
-                      >
-                        <section.icon />
-                        {!sidebarCollapsed && <span className="ml-3">{section.name}</span>}
-                      </button>
-                      {section.children && !sidebarCollapsed && (
-                        <button
-                          onClick={() =>
-                            setExpandedSections((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(section.id)) {
-                                next.delete(section.id);
-                              } else {
-                                next.add(section.id);
-                              }
-                              return next;
-                            })
-                          }
-                          className="p-1 mr-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                          <svg
-                            className={`w-4 h-4 transition-transform ${
-                              expandedSections.has(section.id) ? 'rotate-90' : ''
-                            }`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                    {/* Expandable children (e.g. CFP sub-sections) */}
-                    {section.children && expandedSections.has(section.id) && !sidebarCollapsed && (
-                      <div className="ml-4 mb-1 space-y-0.5">
-                        {section.children.map((child) => (
+              {filteredGroups.map((group, groupIdx) => (
+                <div key={group.name}>
+                  {/* Group divider (thin line between groups, not before the first) */}
+                  {groupIdx > 0 && (
+                    <div
+                      className={`border-t border-gray-200 dark:border-gray-700 ${sidebarCollapsed ? 'my-1.5 mx-1' : 'my-2 mx-1'}`}
+                    />
+                  )}
+                  {/* Group label (hidden when collapsed) */}
+                  {!sidebarCollapsed && (
+                    <p className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                      {group.name}
+                    </p>
+                  )}
+                  {/* Sections within the group */}
+                  {group.sections.map((section) => {
+                    const isParentActive =
+                      activeSection === section.id ||
+                      (section.children?.some((c) => c.id === activeSection) ?? false);
+                    return (
+                      <div key={section.id}>
+                        <div className="flex items-center">
                           <button
-                            key={child.id}
-                            type="button"
-                            onClick={() => {
-                              setActiveSection(child.id);
-                              if (child.id === 'cfp-program-committee') {
-                                setSelectedCommitteeMemberId(null);
-                              }
-                              if (child.id === 'cfp-applicants') {
-                                setSelectedApplicantId(null);
-                              }
-                              if (child.id === 'cfp-papers') {
-                                setPapersKey((k) => k + 1);
-                              }
-                            }}
-                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                              activeSection === child.id
-                                ? 'bg-primary-50 text-primary-700 font-medium'
-                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            onClick={() => setActiveSection(section.id)}
+                            title={sidebarCollapsed ? section.name : undefined}
+                            className={`flex-1 flex items-center rounded-md mb-0.5 ${
+                              sidebarCollapsed ? 'justify-center px-2 py-2' : 'px-3 py-2'
+                            } text-sm font-medium ${
+                              isParentActive
+                                ? 'bg-primary-50 text-primary-700'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
                             }`}
                           >
-                            <child.icon />
-                            <span className="truncate text-left">{child.name}</span>
+                            <section.icon />
+                            {!sidebarCollapsed && <span className="ml-3">{section.name}</span>}
                           </button>
-                        ))}
+                          {section.children && !sidebarCollapsed && (
+                            <button
+                              onClick={() =>
+                                setExpandedSections((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(section.id)) {
+                                    next.delete(section.id);
+                                  } else {
+                                    next.add(section.id);
+                                  }
+                                  return next;
+                                })
+                              }
+                              className="p-1 mr-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                            >
+                              <svg
+                                className={`w-4 h-4 transition-transform ${
+                                  expandedSections.has(section.id) ? 'rotate-90' : ''
+                                }`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        {/* Expandable children (e.g. CFP sub-sections) */}
+                        {section.children &&
+                          expandedSections.has(section.id) &&
+                          !sidebarCollapsed && (
+                            <div className="ml-4 mb-1 space-y-0.5">
+                              {section.children.map((child) => (
+                                <button
+                                  key={child.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveSection(child.id);
+                                    if (child.id === 'cfp-program-committee') {
+                                      setSelectedCommitteeMemberId(null);
+                                    }
+                                    if (child.id === 'cfp-applicants') {
+                                      setSelectedApplicantId(null);
+                                    }
+                                    if (child.id === 'cfp-papers') {
+                                      setPapersKey((k) => k + 1);
+                                    }
+                                  }}
+                                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                    activeSection === child.id
+                                      ? 'bg-primary-50 text-primary-700 font-medium'
+                                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                  }`}
+                                >
+                                  <child.icon />
+                                  <span className="truncate text-left">{child.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
         </nav>
@@ -417,11 +437,20 @@ function ConferenceDetailContent() {
               {activeSection === 'analytics-questions' && (
                 <RegistrationQuestionsAnalyticsTab conference={conference} isAdmin={isAdmin} />
               )}
+              {activeSection === 'analytics-statistics' && (
+                <ConferenceStatisticsTab conference={conference} isAdmin={isAdmin} />
+              )}
               {activeSection === 'service_providers' && (
                 <ConferenceServiceProvidersTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'invoices' && (
                 <ConferenceInvoicesTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'payment-reminders' && (
+                <PaymentRemindersTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'cost-management' && (
+                <CostManagementTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'program' && (
                 <ProgramDesignTab conference={conference} isAdmin={isAdmin} />

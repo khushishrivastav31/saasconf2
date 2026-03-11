@@ -21,6 +21,7 @@ import InvoiceCompanyDataTab from './settings/InvoiceCompanyDataTab';
 import InvoiceBankAccountsTab from './settings/InvoiceBankAccountsTab';
 import InvoiceTemplateTab from './settings/InvoiceTemplateTab';
 import StripeSetupTab from './settings/StripeSetupTab';
+import PaymentReminderSettingsTab from './settings/PaymentReminderSettingsTab';
 import ZugferdSettingsTab from './settings/ZugferdSettingsTab';
 import FinancialSettingsTab from './settings/FinancialSettingsTab';
 import PortalCustomizationTab from './settings/PortalCustomizationTab';
@@ -52,7 +53,8 @@ type ConferenceSettingsActiveTab =
   | 'invoice-bank-accounts'
   | 'invoice-template'
   | 'zugferd-settings'
-  | 'stripe-setup';
+  | 'stripe-setup'
+  | 'payment-reminders';
 
 interface SettingsNavItem {
   key: ConferenceSettingsActiveTab;
@@ -457,6 +459,21 @@ const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
       </svg>
     ),
   },
+  {
+    key: 'payment-reminders',
+    label: 'Payment Reminders',
+    group: 'Finance',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"
+        />
+      </svg>
+    ),
+  },
 ];
 
 const GROUP_ORDER = [
@@ -546,6 +563,8 @@ function ConferenceSettingsTab({
         return <ZugferdSettingsTab conference={conference} isAdmin={isAdmin} />;
       case 'stripe-setup':
         return <StripeSetupTab conference={conference} isAdmin={isAdmin} />;
+      case 'payment-reminders':
+        return <PaymentReminderSettingsTab conference={conference} isAdmin={isAdmin} />;
       default:
         return null;
     }

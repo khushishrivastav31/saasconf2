@@ -97,31 +97,37 @@ Detailed docs are in `.claude/docs/` and `docs/` — read on-demand when working
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Mandatory VAT validation with business rules enforcement
-- **Feature**: VAT number validation based on EU VAT Directive with "warn but allow" pattern
+- **Last completed**: Payment Reminder system
+- **Feature**: Automated payment reminders for overdue invoices
 - **Implementation scope**:
-  - Backend: VAT requirement detection (REQUIRED/RECOMMENDED/OPTIONAL) based on reverse charge rules
-  - Backend: 3-stage VAT validation (python-stdnum → regex → VIES) with warning system
-  - Frontend: Dynamic VAT field requirement (red asterisk for required scenarios)
-  - Frontend: Warning banners in invoice detail panel (error/warning/info states)
-  - Documentation: Comprehensive tenant UI handbook with VAT compliance guide
-- **Files created/modified**:
-  - **New**: `backend/app/core/vat_requirements.py` — VAT requirement detection logic
-  - **New**: `backend/tests/test_vat_requirements.py` — 7 tests for requirement levels
-  - **New**: `docs/tenant-ui-handbook.md` — User guide for invoicing and VAT compliance
-  - **Modified**: `backend/app/core/invoice_validation.py` — Added validate_vat_requirements()
-  - **Modified**: `backend/app/schemas/invoice.py` — Added VatWarning, VatRequirement schemas
-  - **Modified**: `backend/app/api/v1/invoices.py` — Integrated VAT validation in create_invoice()
-  - **Modified**: `frontend/src/components/common/VatNumberInput.tsx` — Added required/level/requirementReason props
-  - **Modified**: `frontend/src/pages/ConferenceDetail/tabs/RegistrationTab/BillingFields.tsx` — Dynamic VAT requirement detection
-  - **Modified**: `frontend/src/components/InvoiceDetailPanel/index.tsx` — VAT warning banners
-  - **Modified**: `frontend/src/types/conference.ts` — Added VAT types to Invoice interface
-- **Tests**: All passing (56/56 invoice + VAT tests)
-- **Linting**: ✅ Ruff, ESLint, formatting all clean
-- **Key features**:
-  - ✅ Reverse charge detection (Virtual/Hybrid-Online + EU B2B → VAT REQUIRED)
-  - ✅ Admin override capability for warnings
-  - ✅ Article 196 VAT Directive references in error messages
-  - ✅ Visual feedback (red asterisk, yellow labels, colored banners)
-  - ✅ Dark mode support throughout
+  - Backend: PaymentReminder model + migration (128), RLS, indexes
+  - Backend: Payment reminder service (generate_and_send_reminders, resend)
+  - Backend: API endpoints (list, stats, detail, resend) + settings endpoint
+  - Backend: Cron endpoint `/ops/send-payment-reminders` (daily)
+  - Backend: Email templates (1st friendly, 2nd firm) with placeholders
+  - Backend: Audit trail (InvoiceEvent types for reminder sent/failed)
+  - Backend: Auto-transition invoices from "sent" → "overdue"
+  - Frontend: Payment Reminders tab with filters, stats, resend
+  - Frontend: Settings → Payment Reminders (enable/disable, timing, admin notify)
+  - Frontend: Email template types registered for editor
+- **Files created**:
+  - `backend/app/models/payment_reminder.py` — PaymentReminder model
+  - `backend/app/db/migrations/versions/128_payment_reminders.py` — Migration
+  - `backend/app/core/payment_reminder_service.py` — Core logic
+  - `backend/app/api/v1/payment_reminders.py` — API endpoints
+  - `backend/app/api/v1/settings/payment_reminder_settings.py` — Settings API
+  - `frontend/src/pages/ConferenceDetail/tabs/PaymentRemindersTab.tsx` — Tab UI
+  - `frontend/src/pages/ConferenceDetail/tabs/settings/PaymentReminderSettingsTab.tsx` — Settings UI
+- **Files modified**:
+  - `backend/app/models/__init__.py`, `backend/app/api/v1/router.py`, `backend/app/api/v1/settings/__init__.py`
+  - `backend/app/schemas/email_template.py`, `backend/app/schemas/settings.py`
+  - `backend/app/core/default_settings.py`, `backend/app/core/email_templates.py`
+  - `backend/app/api/v1/settings/email_templates.py`, `backend/app/models/invoice_event.py`
+  - `backend/app/main.py`
+  - `frontend/src/pages/ConferenceDetail/conferenceSections.ts`, `icons.tsx`, `index.tsx`
+  - `frontend/src/pages/ConferenceDetail/tabs/SettingsTab.tsx`
+  - `frontend/src/types/conference.ts`, `frontend/src/config/queryKeys.ts`
+  - `docs/tenant-ui-handbook.md`
+- **Tests**: All passing (1294/1294 frontend)
+- **Linting**: ✅ Ruff, ESLint, TypeScript, formatting all clean
 - **Status**: ✅ Feature complete, ready for commit

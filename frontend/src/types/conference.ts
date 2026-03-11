@@ -840,3 +840,38 @@ export interface NumberFormatPreset {
   currency_position: string;
   decimal_places: number;
 }
+
+// --- Payment Reminders ---
+
+export type PaymentReminderStatus = 'pending' | 'sent' | 'failed';
+
+export interface PaymentReminder {
+  id: string;
+  invoice_id: string;
+  reminder_number: 1 | 2;
+  status: PaymentReminderStatus;
+  scheduled_date: string;
+  sent_at: string | null;
+  error_message: string | null;
+  recipient_name: string | null;
+  recipient_email: string | null;
+  invoice_number: string | null;
+  invoice_amount: string | null;
+  currency: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentReminderStats {
+  pending: number;
+  sent: number;
+  failed: number;
+  total: number;
+}
+
+export interface PaymentReminderSettings {
+  payment_reminders_enabled: boolean;
+  first_reminder_days: number;
+  second_reminder_days: number;
+  notify_admin_after_second: boolean;
+}

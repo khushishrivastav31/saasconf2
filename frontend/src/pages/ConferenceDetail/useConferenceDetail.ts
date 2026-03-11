@@ -6,7 +6,7 @@ import { useConferenceAdmin } from '../../hooks/useConferenceAdmin';
 import api from '../../config/api';
 import { queryKeys } from '../../config/queryKeys';
 import type { Conference } from '../../types';
-import { SectionId, SectionDef, coreSections, moduleSections } from './conferenceSections';
+import { SectionId, SectionGroup, sectionGroups } from './conferenceSections';
 
 // ---------------------------------------------------------------------------
 // Delete Preview
@@ -62,7 +62,7 @@ export interface UseConferenceDetailReturn {
   setSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   expandedSections: Set<string>;
   setExpandedSections: React.Dispatch<React.SetStateAction<Set<string>>>;
-  sections: SectionDef[];
+  filteredGroups: SectionGroup[];
 
   // Router helpers
   navigate: ReturnType<typeof useNavigate>;
@@ -85,13 +85,15 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Collect all valid section IDs (including children)
+  // Collect all valid section IDs (including children) from groups
   const validSectionIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const s of [...coreSections, ...moduleSections]) {
-      ids.add(s.id);
-      if (s.children) {
-        for (const c of s.children) ids.add(c.id);
+    for (const group of sectionGroups) {
+      for (const s of group.sections) {
+        ids.add(s.id);
+        if (s.children) {
+          for (const c of s.children) ids.add(c.id);
+        }
       }
     }
     return ids;
@@ -128,29 +130,37 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
 
   // Auto-expand parent sections when a child is active
   useEffect(() => {
-    for (const section of moduleSections) {
-      if (
-        section.children &&
-        (activeSection === section.id || section.children.some((c) => c.id === activeSection))
-      ) {
-        setExpandedSections((prev) => {
-          if (prev.has(section.id)) return prev;
-          const next = new Set(prev);
-          next.add(section.id);
-          return next;
-        });
+    for (const group of sectionGroups) {
+      for (const section of group.sections) {
+        if (
+          section.children &&
+          (activeSection === section.id || section.children.some((c) => c.id === activeSection))
+        ) {
+          setExpandedSections((prev) => {
+            if (prev.has(section.id)) return prev;
+            const next = new Set(prev);
+            next.add(section.id);
+            return next;
+          });
+        }
       }
     }
   }, [activeSection]);
 
-  // Build sections: core sections are always visible, module sections depend on user's assigned modules
-  const sections = useMemo(() => {
+  // Build filtered groups: filter out sections the user doesn't have access to,
+  // then filter out empty groups
+  const filteredGroups = useMemo(() => {
     const userModules = user?.modules ?? [];
     const isSuperAdmin = user?.role === 'super_admin';
-    const available = moduleSections.filter(
-      (s) => !s.moduleCode || isSuperAdmin || userModules.includes(s.moduleCode)
-    );
-    return [...coreSections, ...available];
+
+    return sectionGroups
+      .map((group) => ({
+        ...group,
+        sections: group.sections.filter(
+          (s) => !s.moduleCode || isSuperAdmin || userModules.includes(s.moduleCode)
+        ),
+      }))
+      .filter((group) => group.sections.length > 0);
   }, [user?.modules, user?.role]);
 
   // -------------------------------------------------------------------------
@@ -189,7 +199,7 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
     setSidebarCollapsed,
     expandedSections,
     setExpandedSections,
-    sections,
+    filteredGroups,
 
     // Router helpers
     navigate,

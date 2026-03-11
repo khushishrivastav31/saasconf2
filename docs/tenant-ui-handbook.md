@@ -25,9 +25,10 @@ This comprehensive handbook covers all aspects of using the SaaSConf platform to
 6. Discount Codes
 7. Invoice Management
 8. Payment Integration (Stripe, Bank Transfer, ZUGFeRD)
+9. Payment Reminders
 
 ### Attendee Management
-9. Managing Attendees & Registrations
+10. Managing Attendees & Registrations
 
 ### Call for Papers (CFP)
 10. CFP Setup & Configuration
@@ -3710,6 +3711,58 @@ All invoice actions are logged in the `invoice_events` table:
 - See **Registration Management** for invoice impact when replacing attendees
 - See **Booking Options** for understanding how option attendance types affect invoices
 - See **Settings → Invoice Settings** for template customization and number formats
+
+---
+
+## 9. Payment Reminders
+
+### Overview
+
+Payment Reminders automate follow-up on overdue invoices. The system sends two reminders per invoice and notifies the admin when an invoice remains unpaid after the second reminder.
+
+### How It Works
+
+1. **Daily check**: The system scans all conferences daily for overdue invoices (status "sent" or "overdue").
+2. **1st Reminder** (default: 2 days after due date): A friendly payment reminder email is sent to the invoice recipient.
+3. **2nd Reminder** (default: 17 days after due date): A firmer reminder is sent.
+4. **Admin Notification**: After the 2nd reminder, the conference admin receives an email that the invoice remains unpaid.
+
+### Configuring Payment Reminders
+
+Go to **Settings → Payment Reminders** in your conference:
+
+- **Enable/Disable**: Toggle automatic reminders on or off.
+- **1st Reminder Days**: How many days after the due date the first reminder is sent (1–90, default: 2).
+- **2nd Reminder Days**: How many days after the due date the second reminder is sent (1–180, default: 17).
+- **Notify Admin**: Whether to email the admin after the 2nd reminder.
+
+Changes auto-save with a 800ms debounce.
+
+### Customizing Reminder Emails
+
+Go to **Settings → Email Templates** and edit:
+
+- **Payment Reminder (First)** — Friendly tone
+- **Payment Reminder (Second)** — Firmer tone
+
+Available placeholders: `[Recipient Name]`, `[Invoice Number]`, `[Invoice Amount]`, `[Currency]`, `[Due Date]`, `[Days Overdue]`, `[Conference Name]`, `[Support Email]`.
+
+### Viewing Payment Reminders
+
+The **Payment Reminders** tab (in the conference sidebar) shows all reminders:
+
+- **Stats bar**: Pending, sent, and failed counts at a glance.
+- **Filters**: Filter by status (pending/sent/failed), reminder number (1st/2nd), or search by invoice number or recipient.
+- **Resend**: Admins can manually resend failed or previously sent reminders.
+
+### Important Notes
+
+- Reminders are only sent for active invoices with status "sent" or "overdue".
+- Credit notes, paid invoices, and cancelled invoices are excluded.
+- Invoices without a recipient email are skipped.
+- Each invoice receives at most one 1st and one 2nd reminder.
+- Invoices are automatically transitioned from "sent" to "overdue" when past due.
+- All reminder activity is logged in the invoice audit trail (Events tab).
 
 ---
 
@@ -9854,6 +9907,42 @@ For developers integrating with the system, the alumni check endpoint is availab
 - Max uses reached
 - Discount not marked as Active
 - Discount created for wrong conference
+
+---
+
+### Portal: My Registration
+
+Portal users can view their conference registrations and select booking sessions from the **My Registration** page in the portal sidebar.
+
+#### Viewing Registrations
+
+After logging in to the portal, users see a "My Registration" link in the sidebar under the **Registration** section. Clicking it shows all their active registrations across conferences, including:
+
+- Conference name and registration status (Paid, Invoiced, Pending Invoice)
+- Booking option selected
+- Session selection (if applicable)
+- Additional items (tutorials, add-ons)
+- Registration date
+
+#### Session Selection
+
+If a registration's booking option has bookable sessions (e.g., tutorials linked to a conference day) and the user hasn't chosen one yet, they see a warning banner: **"You haven't selected a session yet"** with a dropdown to pick from available sessions.
+
+**Key Rules:**
+1. **One-time selection**: Once a session is chosen, it is locked. The user sees a message: *"Session locked. Contact the conference organizer if you need to change it."*
+2. **Admin override only**: Only admins can change a session after it has been selected, via the admin Registration tab.
+3. **Full sessions hidden**: Sessions that have reached their capacity limit are automatically hidden from the selection dropdown.
+4. **Capacity shown**: Available spots are displayed next to each session option (e.g., "Workshop A – Dr. Smith (5 spots left)").
+
+#### Troubleshooting
+
+**Issue**: User doesn't see the session selector
+- The booking option may not have a linked conference day (conference_day_id)
+- Sessions may not be published yet (all marked "To be announced")
+- All sessions may be fully booked
+
+**Issue**: User wants to change their session after selecting
+- Only an admin can change it. Go to the admin panel → Conference → Registration tab → find the attendee → change the session.
 
 ---
 

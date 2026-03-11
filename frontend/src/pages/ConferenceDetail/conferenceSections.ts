@@ -24,6 +24,7 @@ import {
   MessagingIcon,
   NewsIcon,
   RegistrationIcon,
+  PaymentRemindersIcon,
   CfpTagIcon,
   CfpUsersGroupIcon,
   CfpInboxIcon,
@@ -35,6 +36,8 @@ import {
   TaskAssignmentIcon,
   VolunteerAssignmentIcon,
   VolunteerScheduleIcon,
+  CostManagementIcon,
+  ConferenceStatisticsIcon,
 } from './icons';
 
 // ---------------------------------------------------------------------------
@@ -67,11 +70,14 @@ export type SectionId =
   | 'sponsors'
   | 'analytics'
   | 'analytics-questions'
+  | 'analytics-statistics'
   | 'service_providers'
   | 'program'
   | 'program-design'
   | 'program-build'
   | 'invoices'
+  | 'payment-reminders'
+  | 'cost-management'
   | 'registration'
   | 'volunteer-task-assignment'
   | 'volunteer-assignment'
@@ -92,136 +98,152 @@ export interface SectionDef {
   children?: SectionChild[];
 }
 
-export const coreSections: SectionDef[] = [
-  { id: 'details', name: 'Details', icon: InfoIcon },
-  { id: 'team', name: 'Team', icon: UsersIcon },
-  { id: 'social', name: 'Social Media', icon: ShareIcon },
-  { id: 'booking', name: 'Booking Options', icon: BookingIcon },
-  { id: 'messaging', name: 'Messages', icon: MessagingIcon },
-  { id: 'alumni', name: 'Alumni', icon: AlumniIcon },
-  { id: 'deadlines', name: 'Deadlines', icon: DeadlinesIcon },
-  { id: 'settings', name: 'Settings', icon: SettingsGearIcon },
-];
+export interface SectionGroup {
+  name: string;
+  sections: SectionDef[];
+}
 
-export const moduleSections: SectionDef[] = [
+// ---------------------------------------------------------------------------
+// Grouped section definitions
+// ---------------------------------------------------------------------------
+
+export const sectionGroups: SectionGroup[] = [
   {
-    id: 'news',
-    name: 'News',
-    icon: NewsIcon,
-    moduleCode: 'news',
+    name: 'Event Setup',
+    sections: [
+      { id: 'details', name: 'Details', icon: InfoIcon },
+      { id: 'team', name: 'Team', icon: UsersIcon },
+      { id: 'social', name: 'Social Media', icon: ShareIcon },
+      { id: 'settings', name: 'Settings', icon: SettingsGearIcon },
+      { id: 'deadlines', name: 'Deadlines', icon: DeadlinesIcon },
+      { id: 'locations', name: 'Locations', icon: MapIcon, moduleCode: 'locations' },
+    ],
   },
   {
-    id: 'cfp',
-    name: 'Call for Papers',
-    icon: PaperIcon,
-    moduleCode: 'cfp',
-    children: [
-      { id: 'cfp-topics', name: 'Topics', icon: CfpTagIcon },
+    name: 'Content',
+    sections: [
+      {
+        id: 'cfp',
+        name: 'Call for Papers',
+        icon: PaperIcon,
+        moduleCode: 'cfp',
+        children: [
+          { id: 'cfp-topics', name: 'Topics', icon: CfpTagIcon },
+          { id: 'cfp-papers', name: 'Papers', icon: CfpDocumentTextIcon },
+          { id: 'cfp-assignments', name: 'Assignments', icon: CfpAssignmentsIcon },
+          { id: 'cfp-evaluated-papers', name: 'Evaluated Papers', icon: CfpEvaluatedIcon },
+          { id: 'cfp-accepted-papers', name: 'Accepted Papers', icon: CfpThumbUpIcon },
+          { id: 'cfp-rejected-papers', name: 'Rejected Papers', icon: CfpThumbDownIcon },
+        ],
+      },
+      {
+        id: 'program',
+        name: 'Program',
+        icon: ProgramIcon,
+        moduleCode: 'program',
+        children: [
+          { id: 'program-design', name: 'Design', icon: ProgramDesignIcon },
+          { id: 'program-build', name: 'Build', icon: ProgramBuildIcon },
+        ],
+      },
+      { id: 'sessions', name: 'Sessions', icon: SessionsIcon, moduleCode: 'sessions' },
+    ],
+  },
+  {
+    name: 'People',
+    sections: [
       {
         id: 'cfp-program-committee',
         name: 'Program Committee',
         icon: CfpUsersGroupIcon,
+        moduleCode: 'cfp',
       },
-      { id: 'cfp-applicants', name: 'Users', icon: CfpInboxIcon },
-      { id: 'cfp-papers', name: 'Papers', icon: CfpDocumentTextIcon },
+      { id: 'speakers', name: 'Speakers', icon: SpeakerIcon, moduleCode: 'speakers' },
+      { id: 'cfp-applicants', name: 'Users', icon: CfpInboxIcon, moduleCode: 'cfp' },
+      { id: 'attendees', name: 'Attendees', icon: AttendeesIcon, moduleCode: 'attendees' },
       {
-        id: 'cfp-assignments',
-        name: 'Assignments',
-        icon: CfpAssignmentsIcon,
+        id: 'volunteers',
+        name: 'Volunteers',
+        icon: PeopleIcon,
+        moduleCode: 'volunteers',
+        children: [
+          { id: 'volunteer-task-assignment', name: 'Task Assignment', icon: TaskAssignmentIcon },
+          {
+            id: 'volunteer-assignment',
+            name: 'Volunteer Assignment',
+            icon: VolunteerAssignmentIcon,
+          },
+          { id: 'volunteer-schedule', name: 'Volunteer Schedule', icon: VolunteerScheduleIcon },
+        ],
       },
+      { id: 'alumni', name: 'Alumni', icon: AlumniIcon },
+    ],
+  },
+  {
+    name: 'Partnerships',
+    sections: [
+      { id: 'sponsors', name: 'Sponsors', icon: SponsorsIcon, moduleCode: 'sponsors' },
       {
-        id: 'cfp-evaluated-papers',
-        name: 'Evaluated Papers',
-        icon: CfpEvaluatedIcon,
-      },
-      {
-        id: 'cfp-accepted-papers',
-        name: 'Accepted Papers',
-        icon: CfpThumbUpIcon,
-      },
-      {
-        id: 'cfp-rejected-papers',
-        name: 'Rejected Papers',
-        icon: CfpThumbDownIcon,
+        id: 'service_providers',
+        name: 'Service Providers',
+        icon: ServiceProvidersIcon,
+        moduleCode: 'service_providers',
       },
     ],
   },
   {
-    id: 'sessions',
-    name: 'Sessions',
-    icon: SessionsIcon,
-    moduleCode: 'sessions',
-  },
-  {
-    id: 'program',
-    name: 'Program',
-    icon: ProgramIcon,
-    moduleCode: 'program',
-    children: [
-      { id: 'program-design', name: 'Design', icon: ProgramDesignIcon },
-      { id: 'program-build', name: 'Build', icon: ProgramBuildIcon },
+    name: 'Registration & Finance',
+    sections: [
+      { id: 'booking', name: 'Booking Options', icon: BookingIcon },
+      {
+        id: 'registration',
+        name: 'Registration',
+        icon: RegistrationIcon,
+        moduleCode: 'registration',
+      },
+      { id: 'invoices', name: 'Invoices', icon: InvoicesIcon, moduleCode: 'invoices' },
+      {
+        id: 'payment-reminders',
+        name: 'Payment Reminders',
+        icon: PaymentRemindersIcon,
+        moduleCode: 'invoices',
+      },
+      {
+        id: 'cost-management',
+        name: 'Cost Management',
+        icon: CostManagementIcon,
+        moduleCode: 'invoices',
+      },
     ],
   },
   {
-    id: 'speakers',
-    name: 'Speakers',
-    icon: SpeakerIcon,
-    moduleCode: 'speakers',
-  },
-  {
-    id: 'attendees',
-    name: 'Attendees',
-    icon: AttendeesIcon,
-    moduleCode: 'attendees',
-  },
-  {
-    id: 'volunteers',
-    name: 'Volunteers',
-    icon: PeopleIcon,
-    moduleCode: 'volunteers',
-    children: [
-      { id: 'volunteer-task-assignment', name: 'Task Assignment', icon: TaskAssignmentIcon },
-      { id: 'volunteer-assignment', name: 'Volunteer Assignment', icon: VolunteerAssignmentIcon },
-      { id: 'volunteer-schedule', name: 'Volunteer Schedule', icon: VolunteerScheduleIcon },
+    name: 'Communications',
+    sections: [
+      { id: 'messaging', name: 'Messages', icon: MessagingIcon },
+      { id: 'news', name: 'News', icon: NewsIcon, moduleCode: 'news' },
     ],
   },
   {
-    id: 'sponsors',
-    name: 'Sponsors',
-    icon: SponsorsIcon,
-    moduleCode: 'sponsors',
-  },
-  {
-    id: 'locations',
-    name: 'Locations',
-    icon: MapIcon,
-    moduleCode: 'locations',
-  },
-  {
-    id: 'service_providers',
-    name: 'Service Providers',
-    icon: ServiceProvidersIcon,
-    moduleCode: 'service_providers',
-  },
-  {
-    id: 'invoices',
-    name: 'Invoices',
-    icon: InvoicesIcon,
-    moduleCode: 'invoices',
-  },
-  {
-    id: 'registration',
-    name: 'Registration',
-    icon: RegistrationIcon,
-    moduleCode: 'registration',
-  },
-  {
-    id: 'analytics',
-    name: 'Analytics',
-    icon: AnalyticsIcon,
-    moduleCode: 'analytics',
-    children: [
-      { id: 'analytics-questions', name: 'Registration Questions', icon: AnalyticsQuestionsIcon },
+    name: 'Insights',
+    sections: [
+      {
+        id: 'analytics',
+        name: 'Analytics',
+        icon: AnalyticsIcon,
+        moduleCode: 'analytics',
+        children: [
+          {
+            id: 'analytics-questions',
+            name: 'Registration Questions',
+            icon: AnalyticsQuestionsIcon,
+          },
+          {
+            id: 'analytics-statistics',
+            name: 'Conference Statistics',
+            icon: ConferenceStatisticsIcon,
+          },
+        ],
+      },
     ],
   },
 ];

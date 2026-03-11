@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { AxiosInstance } from 'axios';
 import { COUNTRIES_BY_CONTINENT, EU_COUNTRY_CODES } from '../../../../config/countries';
 import { validateEmail } from '../../../../utils/validators';
 import VatNumberInput from '../../../../components/common/VatNumberInput';
@@ -17,6 +18,9 @@ interface BillingFieldsProps {
   // Hide fields when handled externally (e.g., in portal form):
   hidePaymentMethod?: boolean;
   hideDiscountCode?: boolean;
+  // Custom API client for VAT validation (portal uses portalApi instead of admin api)
+  vatApiClient?: AxiosInstance;
+  vatEndpoint?: string;
 }
 
 // Helper to determine VAT requirement client-side
@@ -62,6 +66,8 @@ export default function BillingFields({
   readOnlyFields,
   hidePaymentMethod = false,
   hideDiscountCode = false,
+  vatApiClient,
+  vatEndpoint,
 }: BillingFieldsProps) {
   const [emailError, setEmailError] = useState<string | null>(null);
 
@@ -192,6 +198,8 @@ export default function BillingFields({
             required={vatRequirement.level === 'required'}
             level={vatRequirement.level}
             requirementReason={vatRequirement.reason}
+            apiClient={vatApiClient}
+            endpoint={vatEndpoint}
           />
         </div>
       </div>
