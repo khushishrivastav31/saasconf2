@@ -5,7 +5,7 @@
  * authenticated portal and public registration flows.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface UsePaymentIntentOptions {
   total: number;
@@ -38,12 +38,14 @@ export function usePaymentIntent({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [publishableKey, setPublishableKey] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const isCreatingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const createOrUpdatePaymentIntent = useCallback(
     async (amount: number) => {
-      if (!enabled || amount <= 0 || isCreating) return;
+      if (!enabled || amount <= 0 || isCreatingRef.current) return;
 
+      isCreatingRef.current = true;
       setIsCreating(true);
       setError(null);
 
@@ -78,10 +80,11 @@ export function usePaymentIntent({
         console.error('PaymentIntent creation/update error:', err);
         setError(err instanceof Error ? err.message : 'Payment intent error');
       } finally {
+        isCreatingRef.current = false;
         setIsCreating(false);
       }
     },
-    [enabled, isCreating, paymentIntentId, createEndpoint, updateEndpoint, currency, apiClient]
+    [enabled, paymentIntentId, createEndpoint, updateEndpoint, currency, apiClient]
   );
 
   const clearPaymentIntent = useCallback(() => {

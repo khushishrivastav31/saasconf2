@@ -422,7 +422,7 @@ async def create_payment_intent_authenticated(
 
     # Check Stripe configuration
     stripe_settings = (conference.settings or {}).get("stripe", {})
-    if not stripe_settings.get("enabled"):
+    if not stripe_settings.get("is_enabled"):
         raise ValidationError("Credit card payments are not enabled for this conference")
 
     publishable_key = stripe_settings.get("publishable_key") or settings.STRIPE_PUBLISHABLE_KEY
