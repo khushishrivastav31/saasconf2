@@ -33,7 +33,7 @@ test.describe('Conference Program Deep Tests', () => {
     const dayTab = page.getByRole('button').filter({ hasText: /mon|tue|wed|thu|fri|sat|sun|day/i }).first();
     if (await dayTab.isVisible({ timeout: 5000 }).catch(() => false)) {
       await dayTab.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Should show grid with time slots and tracks
       const hasTime = await page.getByText(/\d{1,2}:\d{2}/i).first().isVisible({ timeout: 5000 }).catch(() => false);
@@ -54,7 +54,7 @@ test.describe('Conference Program Deep Tests', () => {
     const dayTab = page.getByRole('button').filter({ hasText: /mon|tue|wed|thu|fri|sat|sun|day/i }).first();
     if (await dayTab.isVisible({ timeout: 5000 }).catch(() => false)) {
       await dayTab.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const addTrack = page.getByRole('button', { name: /add track|new track/i });
       const hasAddTrack = await addTrack.isVisible({ timeout: 3000 }).catch(() => false);

@@ -25,7 +25,7 @@ test.describe('Replace Attendee Functionality', () => {
         await firstRow.click();
 
         // Wait for detail view to expand
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         // Replace Attendee button should be visible
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
@@ -50,7 +50,7 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -82,12 +82,12 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           // Check required fields
           await expect(page.getByLabel(/first name/i)).toBeVisible({ timeout: 5000 });
@@ -119,12 +119,12 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           // Pronouns field should be a select element
           const pronounsSelect = page.locator('select').filter({ hasText: /he\/him|she\/her|they\/them/i });
@@ -150,19 +150,19 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           const emailInput = page.getByLabel(/email/i);
 
           // Enter invalid email and blur
           await emailInput.fill('invalid-email');
           await emailInput.blur();
-          await page.waitForTimeout(500);
+          await page.waitForLoadState('domcontentloaded');
 
           // Should show validation error (red border or error message)
           const emailInputElement = await emailInput.elementHandle();
@@ -189,19 +189,19 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           const phoneInput = page.getByLabel(/phone/i);
           if (await phoneInput.isVisible({ timeout: 3000 }).catch(() => false)) {
             // Enter invalid phone and blur
             await phoneInput.fill('abc');
             await phoneInput.blur();
-            await page.waitForTimeout(500);
+            await page.waitForLoadState('domcontentloaded');
 
             // Should show validation error
             const phoneInputElement = await phoneInput.elementHandle();
@@ -229,12 +229,12 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           // Should show additional items section
           const additionalItemsSection = page.getByText(/additional items/i).first();
@@ -261,16 +261,15 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           const addItemBtn = page.getByRole('button', { name: /add additional item/i });
           await addItemBtn.click();
-          await page.waitForTimeout(500);
 
           // Type dropdown should appear
           const typeSelect = page.locator('select').filter({ hasText: /booking option|tutorial/i });
@@ -278,7 +277,7 @@ test.describe('Replace Attendee Functionality', () => {
 
           // Select type
           await typeSelect.selectOption('booking_option');
-          await page.waitForTimeout(500);
+          await page.waitForLoadState('domcontentloaded');
 
           // Item dropdown should appear
           const itemSelect = page.locator('select').nth(1);
@@ -309,16 +308,19 @@ test.describe('Replace Attendee Functionality', () => {
 
         if (rowText?.toLowerCase().includes('tutorial')) {
           await row.click();
-          await page.waitForTimeout(1000);
+          await page.waitForLoadState('networkidle');
 
           const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
           if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
             await replaceBtn.click();
-            await page.waitForTimeout(500);
+            await expect(page.getByRole('dialog')).toBeVisible();
 
             const addItemBtn = page.getByRole('button', { name: /add additional item/i });
             await addItemBtn.click();
-            await page.waitForTimeout(500);
+
+            // Type dropdown should appear before checking its options
+            const typeSelect = page.locator('select').filter({ hasText: /booking option|tutorial/i });
+            await expect(typeSelect).toBeVisible({ timeout: 3000 });
 
             // Tutorial option should be disabled
             const tutorialOption = page.locator('option[value="tutorial"]');
@@ -344,12 +346,12 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           // Summary section should show
           const summarySection = page.getByText(/summary/i).first();
@@ -377,33 +379,33 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           // Add an additional item
           const addItemBtn = page.getByRole('button', { name: /add additional item/i });
           await addItemBtn.click();
-          await page.waitForTimeout(500);
 
           const typeSelect = page.locator('select').filter({ hasText: /booking option|tutorial/i });
+          await expect(typeSelect).toBeVisible({ timeout: 3000 });
           await typeSelect.selectOption('booking_option');
-          await page.waitForTimeout(500);
+          await page.waitForLoadState('domcontentloaded');
 
           // Select first available booking option
           const itemSelect = page.locator('select').nth(1);
           const options = await itemSelect.locator('option').all();
           if (options.length > 1) {
             await itemSelect.selectOption({ index: 1 });
-            await page.waitForTimeout(500);
+            await page.waitForLoadState('domcontentloaded');
 
             // Click Add button
             const confirmAddBtn = page.getByRole('button', { name: /^add$/i });
             await confirmAddBtn.click();
-            await page.waitForTimeout(500);
+            await page.waitForLoadState('networkidle');
 
             // Should show invoice creation message
             const invoiceMessage = page.getByText(/invoice.*will be created/i);
@@ -428,12 +430,12 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           // Submit button should be disabled initially
           const submitBtn = page.getByRole('button', { name: /^replace$/i });
@@ -457,12 +459,12 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           // Modal should be visible
           const modalTitle = page.getByText(/replace attendee/i).first();
@@ -471,7 +473,7 @@ test.describe('Replace Attendee Functionality', () => {
           // Click Cancel
           const cancelBtn = page.getByRole('button', { name: /cancel/i });
           await cancelBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).not.toBeVisible();
 
           // Modal should be hidden
           const isModalVisible = await modalTitle.isVisible({ timeout: 2000 }).catch(() => false);
@@ -494,12 +496,12 @@ test.describe('Replace Attendee Functionality', () => {
       const firstRow = page.locator('table tbody tr').first();
       if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
         await firstRow.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
         if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await replaceBtn.click();
-          await page.waitForTimeout(500);
+          await expect(page.getByRole('dialog')).toBeVisible();
 
           // Fill required fields
           await page.getByLabel(/first name/i).fill('John');
@@ -507,7 +509,7 @@ test.describe('Replace Attendee Functionality', () => {
           await page.getByLabel(/email/i).fill('john.doe@example.com');
           await page.getByLabel(/replacement reason/i).fill('Employee transfer');
 
-          await page.waitForTimeout(500);
+          await page.waitForLoadState('domcontentloaded');
 
           // Submit button should now be enabled
           const submitBtn = page.getByRole('button', { name: /^replace$/i });

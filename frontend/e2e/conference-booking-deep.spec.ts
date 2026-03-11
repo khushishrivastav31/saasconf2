@@ -31,7 +31,7 @@ test.describe('Conference Booking Deep Tests', () => {
     await detail.navigateToSection('Booking Options');
 
     // Wait for the pricing matrix section to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     const optionBtn = page.getByRole('button', { name: /option/i });
     if (await optionBtn.isVisible().catch(() => false)) {

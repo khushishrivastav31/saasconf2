@@ -29,13 +29,13 @@ test.describe('Invoice VAT Validation - Required Scenario', () => {
     }
 
     await invoicesButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should show red asterisk for required VAT in virtual EU B2B scenario', async ({ page }) => {
     // Click create invoice button
     await page.getByRole('button', { name: /create invoice/i }).click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Fill in company name (B2B indicator)
     const companyNameInput = page.getByLabel(/company name/i);
@@ -46,7 +46,7 @@ test.describe('Invoice VAT Validation - Required Scenario', () => {
     await countrySelect.selectOption('FR');
 
     // Wait for VAT requirement detection
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     // VAT field should have red asterisk
     const vatLabel = page.getByText(/VAT Number/).first();
@@ -62,7 +62,7 @@ test.describe('Invoice VAT Validation - Required Scenario', () => {
   test('should create invoice with VAT error warning', async ({ page }) => {
     // Create invoice without VAT in required scenario
     await page.getByRole('button', { name: /create invoice/i }).click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Fill required fields
     await page.getByLabel(/company name/i).fill('Test Company SAS');
@@ -83,7 +83,7 @@ test.describe('Invoice VAT Validation - Required Scenario', () => {
 
     // Save invoice
     await page.getByRole('button', { name: /^save$/i }).click();
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Should show error warning banner
     await expect(page.getByText(/VAT Number Required/i).first()).toBeVisible({ timeout: 10000 });
@@ -107,12 +107,12 @@ test.describe('Invoice VAT Validation - Recommended Scenario', () => {
     }
 
     await invoicesButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should show recommended label for domestic B2B scenario', async ({ page }) => {
     await page.getByRole('button', { name: /create invoice/i }).click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Fill in company name (B2B indicator)
     await page.getByLabel(/company name/i).fill('Tech GmbH');
@@ -121,7 +121,7 @@ test.describe('Invoice VAT Validation - Recommended Scenario', () => {
     const countrySelect = page.getByLabel(/^country/i).first();
     await countrySelect.selectOption('DE'); // Assuming conference is in Germany
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     // Should show "(Recommended for B2B)" label
     await expect(page.getByText(/recommended for b2b/i).first()).toBeVisible({ timeout: 5000 });
@@ -148,16 +148,16 @@ test.describe('Invoice VAT Validation - Dynamic Detection', () => {
     }
 
     await invoicesButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should update VAT requirement when company name is added', async ({ page }) => {
     await page.getByRole('button', { name: /create invoice/i }).click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Select EU country first
     await page.getByLabel(/^country/i).first().selectOption('FR');
-    await page.waitForTimeout(300);
+    await page.waitForLoadState('domcontentloaded');
 
     // Initially no company name = B2C = optional
     let recommendedLabel = page.getByText(/recommended for b2b/i).first();
@@ -165,7 +165,7 @@ test.describe('Invoice VAT Validation - Dynamic Detection', () => {
 
     // Add company name = B2B = required (for virtual EU)
     await page.getByLabel(/company name/i).fill('Business Inc');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     // Now should show required (virtual + EU + B2B)
     const asterisk = page.locator('span[aria-label="required"]').first();
@@ -174,22 +174,22 @@ test.describe('Invoice VAT Validation - Dynamic Detection', () => {
 
   test('should update VAT requirement when country changes', async ({ page }) => {
     await page.getByRole('button', { name: /create invoice/i }).click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Add company name
     await page.getByLabel(/company name/i).fill('Test Corp');
-    await page.waitForTimeout(300);
+    await page.waitForLoadState('domcontentloaded');
 
     // Select non-EU country (optional)
     await page.getByLabel(/^country/i).first().selectOption('US');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     let asterisk = page.locator('span[aria-label="required"]').first();
     await expect(asterisk).not.toBeVisible().catch(() => true);
 
     // Change to EU country (required)
     await page.getByLabel(/^country/i).first().selectOption('FR');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     // Now should be required
     await expect(asterisk).toBeVisible({ timeout: 5000 });
@@ -212,17 +212,17 @@ test.describe('Invoice VAT Number Validation', () => {
     }
 
     await invoicesButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should validate VAT number on blur', async ({ page }) => {
     await page.getByRole('button', { name: /create invoice/i }).click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Fill in required fields
     await page.getByLabel(/company name/i).fill('Test GmbH');
     await page.getByLabel(/^country/i).first().selectOption('DE');
-    await page.waitForTimeout(300);
+    await page.waitForLoadState('domcontentloaded');
 
     // Enter valid German VAT number format
     const vatInput = page.getByLabel(/VAT Number/i).first();
@@ -230,7 +230,7 @@ test.describe('Invoice VAT Number Validation', () => {
 
     // Blur to trigger validation
     await vatInput.blur();
-    await page.waitForTimeout(2000); // Wait for API call
+    await page.waitForLoadState('networkidle'); // Wait for API call
 
     // Should show validation status (Valid, Invalid, or Unverified)
     const statusText = page.locator('text=/Valid|Invalid|Unverified/i').first();
@@ -239,17 +239,17 @@ test.describe('Invoice VAT Number Validation', () => {
 
   test('should show invalid status for malformed VAT number', async ({ page }) => {
     await page.getByRole('button', { name: /create invoice/i }).click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     await page.getByLabel(/company name/i).fill('Test Corp');
     await page.getByLabel(/^country/i).first().selectOption('DE');
-    await page.waitForTimeout(300);
+    await page.waitForLoadState('domcontentloaded');
 
     // Enter invalid VAT number
     const vatInput = page.getByLabel(/VAT Number/i).first();
     await vatInput.fill('INVALID');
     await vatInput.blur();
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Should show invalid status
     await expect(page.getByText(/invalid/i).first()).toBeVisible({ timeout: 10000 });

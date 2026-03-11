@@ -35,9 +35,7 @@ test.describe('Invoice Management', () => {
     }
 
     await detail.navigateToSection('Invoices');
-
-    // Wait for data to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Should show invoice list, empty state, or search controls
     const hasTable = await page
@@ -76,7 +74,7 @@ test.describe('Invoice Management', () => {
     }
 
     await detail.navigateToSection('Invoices');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Should show status filter dropdown or search
     const hasStatusFilter = await page
@@ -113,7 +111,7 @@ test.describe('Invoice Management', () => {
     }
 
     await detail.navigateToSection('Invoices');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Find the first clickable invoice row
     const firstInvoiceRow = page
@@ -154,7 +152,7 @@ test.describe('Invoice Management', () => {
     }
 
     await detail.navigateToSection('Invoices');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Check for status badges (Draft, Sent, Paid, Cancelled, Overdue)
     const hasStatusBadge = await page

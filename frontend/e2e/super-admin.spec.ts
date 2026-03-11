@@ -66,7 +66,7 @@ test.describe('Super Admin Pages', () => {
     const hasPronouns = await page.getByText(/pronoun/i).first().isVisible({ timeout: 5000 }).catch(() => false);
     if (hasPronouns) {
       await page.getByText(/pronoun/i).first().click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
   });
 });

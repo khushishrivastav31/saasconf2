@@ -42,7 +42,7 @@ test.describe('Public Registration Portal', () => {
     await page.goto(`/${tenantSlug}/register/${conferenceSlug}`);
 
     // Wait for page to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Look for attendee input fields (first name, last name, email)
     const hasFirstName = await page
@@ -69,7 +69,7 @@ test.describe('Public Registration Portal', () => {
     await page.goto(`/${tenantSlug}/register/${conferenceSlug}`);
 
     // Wait for page to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Look for billing section fields
     const hasStreet = await page
@@ -100,7 +100,7 @@ test.describe('Public Registration Portal', () => {
     await page.goto(`/${tenantSlug}/register/${conferenceSlug}`);
 
     // Wait for page and API to load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Look for booking options (checkboxes, radio buttons, or option cards)
     const hasCheckbox = await page
@@ -126,7 +126,7 @@ test.describe('Public Registration Portal', () => {
   test('should show payment method selection when Stripe is enabled', async ({ page }) => {
     await page.goto(`/${tenantSlug}/register/${conferenceSlug}`);
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Look for payment method options
     const hasCreditCard = await page
@@ -152,7 +152,7 @@ test.describe('Public Registration Portal', () => {
   test('should validate required fields on submit', async ({ page }) => {
     await page.goto(`/${tenantSlug}/register/${conferenceSlug}`);
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Try to submit without filling required fields
     const submitBtn = page.getByRole('button', { name: /submit|register|complete|pay/i }).first();
@@ -166,7 +166,7 @@ test.describe('Public Registration Portal', () => {
     await submitBtn.click();
 
     // Should show validation errors (browser native or custom)
-    await page.waitForTimeout(1000);
+    await expect(page.getByText(/required|please fill|invalid|must be/i).first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
     const hasError = await page
       .getByText(/required|please fill|invalid|must be/i)

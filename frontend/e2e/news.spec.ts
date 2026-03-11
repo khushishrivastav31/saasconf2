@@ -27,7 +27,7 @@ test.describe('Conference News Tab', () => {
     await detail.navigateToSection('News');
 
     // Wait for news data to load (API call)
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // News renders article cards (not HTML tables) or empty state
     const hasArticleCard = await page.locator('.border.border-gray-200.rounded-lg.shadow-sm').first().isVisible().catch(() => false);

@@ -61,7 +61,7 @@ test.describe('Conference CFP Sections', () => {
       const tabBtn = page.getByRole('button', { name: new RegExp(tab, 'i') });
       if (await tabBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
         await tabBtn.click();
-        await page.waitForTimeout(300);
+        await page.waitForLoadState('networkidle');
       }
     }
   });
@@ -113,7 +113,7 @@ test.describe('Conference CFP Sections', () => {
     await detail.navigateToChildSection('Call for Papers', 'Papers');
 
     // Wait for papers content to load (API call)
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Papers component uses div-based list (not HTML table), or shows empty state
     const hasPapers = await page.getByRole('button', { name: /add paper/i }).isVisible().catch(() => false);

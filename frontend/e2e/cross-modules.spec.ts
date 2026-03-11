@@ -47,7 +47,7 @@ test.describe('Cross-Conference Module Pages', () => {
       // Select a filter option
       if (options.length > 1) {
         await filterControl.selectOption({ index: 1 });
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
     }
   });
@@ -64,7 +64,7 @@ test.describe('Cross-Conference Module Pages', () => {
     await page.goto('/modules/cfp');
 
     // Wait for page to settle
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // The page should load without errors. CFP module may not be enabled,
     // in which case it redirects. Just verify no crash occurred.

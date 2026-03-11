@@ -116,7 +116,7 @@ test.describe('Conference Program Module', () => {
     await detail.navigateToSection('Program');
 
     // Wait for content to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // If days exist, check for grid elements
     const hasGrid = await page.getByText(/time/i).first().isVisible({ timeout: 5000 }).catch(() => false);

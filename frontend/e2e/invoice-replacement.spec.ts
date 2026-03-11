@@ -26,13 +26,13 @@ test.describe('Invoice Replacement Workflow', () => {
     }
 
     await invoicesButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should replace invoice with corrected billing information', async ({ page }) => {
     // Create a new invoice
     await page.getByRole('button', { name: /create invoice/i }).click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Fill in invoice details
     const timestamp = Date.now();
@@ -46,20 +46,20 @@ test.describe('Invoice Replacement Workflow', () => {
 
     // Add a line item
     await page.getByRole('button', { name: /add.*item/i }).click();
-    await page.waitForTimeout(300);
+    await expect(page.getByLabel(/description/i).first()).toBeVisible();
     await page.getByLabel(/description/i).first().fill('Conference Ticket');
     await page.getByLabel(/quantity/i).first().fill('1');
     await page.getByLabel(/unit.*price/i).first().fill('1000');
 
     // Save draft
     await page.getByRole('button', { name: /save.*draft/i }).click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Send invoice
     const sendButton = page.getByRole('button', { name: /^send$/i }).first();
     if (await sendButton.isVisible()) {
       await sendButton.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
     }
 
     // Now replace the invoice
@@ -71,7 +71,7 @@ test.describe('Invoice Replacement Workflow', () => {
     }
 
     await replaceButton.click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Fill in replacement reason
     await page.getByPlaceholder(/wrong company name/i).fill('Company name was incorrect');
@@ -88,7 +88,7 @@ test.describe('Invoice Replacement Workflow', () => {
 
     // Submit replacement
     await page.getByRole('button', { name: /replace.*invoice.*create.*credit/i }).click();
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Verify success message
     await expect(
@@ -109,7 +109,7 @@ test.describe('Invoice Replacement Workflow', () => {
     }
 
     await invoiceRow.click();
-    await page.waitForTimeout(1000);
+    await expect(page.getByRole('button', { name: /replace.*invoice/i }).first()).toBeVisible();
 
     // Click replace button
     const replaceButton = page.getByRole('button', { name: /replace.*invoice/i }).first();
@@ -120,11 +120,10 @@ test.describe('Invoice Replacement Workflow', () => {
     }
 
     await replaceButton.click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Fill reason but don't change any fields
     await page.getByPlaceholder(/wrong company name/i).fill('Test reason');
-    await page.waitForTimeout(500);
 
     // Should show warning
     await expect(
@@ -147,12 +146,12 @@ test.describe('Invoice Replacement Workflow', () => {
     }
 
     await paidInvoice.click();
-    await page.waitForTimeout(1000);
+    await expect(page.getByRole('button', { name: /replace.*invoice/i }).first()).toBeVisible();
 
     // Click replace button
     const replaceButton = page.getByRole('button', { name: /replace.*invoice/i }).first();
     await replaceButton.click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Verify status inheritance message
     await expect(

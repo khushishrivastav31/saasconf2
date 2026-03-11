@@ -27,7 +27,7 @@ test.describe('Conference Settings', () => {
 
     await detail.navigateToSection('Settings');
     await page.getByRole('button', { name: /volunteer tasks/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should show role list or create button
     await expect(detail.contentArea.getByText(/volunteer|role/i).first()).toBeVisible();
@@ -40,7 +40,7 @@ test.describe('Conference Settings', () => {
 
     await detail.navigateToSection('Settings');
     await page.getByRole('button', { name: /committee roles/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     await expect(detail.contentArea.getByText(/committee|role/i).first()).toBeVisible();
   });
@@ -52,7 +52,7 @@ test.describe('Conference Settings', () => {
 
     await detail.navigateToSection('Settings');
     await page.getByRole('button', { name: /session types/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     await expect(detail.contentArea.getByText(/session|type/i).first()).toBeVisible();
   });
@@ -64,7 +64,7 @@ test.describe('Conference Settings', () => {
 
     await detail.navigateToSection('Settings');
     await page.getByRole('button', { name: /score scales/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     await expect(detail.contentArea.getByText(/score|scale/i).first()).toBeVisible();
   });
@@ -76,7 +76,7 @@ test.describe('Conference Settings', () => {
 
     await detail.navigateToSection('Settings');
     await page.getByRole('button', { name: /paper form/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     await expect(detail.contentArea.getByText(/form|field|paper/i).first()).toBeVisible();
   });
@@ -88,7 +88,7 @@ test.describe('Conference Settings', () => {
 
     await detail.navigateToSection('Settings');
     await page.getByRole('button', { name: /email templates/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     await expect(detail.contentArea.getByText(/email|template/i).first()).toBeVisible();
   });
@@ -100,7 +100,7 @@ test.describe('Conference Settings', () => {
 
     await detail.navigateToSection('Settings');
     await page.getByRole('button', { name: /currency & tax/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     await expect(detail.contentArea.getByText(/currency|tax/i).first()).toBeVisible();
   });

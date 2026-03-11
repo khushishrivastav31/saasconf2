@@ -101,7 +101,7 @@ test.describe('Admin Settings Deep Tests', () => {
     const pronounsTab = page.getByRole('button', { name: /pronoun/i });
     if (await pronounsTab.isVisible({ timeout: 3000 }).catch(() => false)) {
       await pronounsTab.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Should show pronoun options
       const hasPronouns = await page.getByText(/he\/him|she\/her|they\/them/i).first().isVisible({ timeout: 5000 }).catch(() => false);

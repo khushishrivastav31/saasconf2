@@ -27,7 +27,7 @@ test.describe('Invoice Cancellation Workflow', () => {
     }
 
     await invoicesButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should cancel invoice and create credit note', async ({ page }) => {
@@ -40,7 +40,7 @@ test.describe('Invoice Cancellation Workflow', () => {
     }
 
     await invoiceRow.click();
-    await page.waitForTimeout(1000);
+    await expect(page.getByRole('button', { name: /cancel.*invoice/i }).first()).toBeVisible();
 
     // Click cancel button
     const cancelButton = page.getByRole('button', { name: /cancel.*invoice/i }).first();
@@ -51,7 +51,7 @@ test.describe('Invoice Cancellation Workflow', () => {
     }
 
     await cancelButton.click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Fill cancellation reason
     await page.getByPlaceholder(/reason.*cancel/i).fill('Customer requested refund');
@@ -69,7 +69,7 @@ test.describe('Invoice Cancellation Workflow', () => {
 
     // Submit cancellation
     await page.getByRole('button', { name: /confirm.*cancel/i }).click();
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Verify success message
     await expect(
@@ -90,7 +90,7 @@ test.describe('Invoice Cancellation Workflow', () => {
     }
 
     await invoiceRow.click();
-    await page.waitForTimeout(1000);
+    await expect(page.getByRole('button', { name: /cancel.*invoice/i }).first()).toBeVisible();
 
     // Click cancel button
     const cancelButton = page.getByRole('button', { name: /cancel.*invoice/i }).first();
@@ -101,7 +101,7 @@ test.describe('Invoice Cancellation Workflow', () => {
     }
 
     await cancelButton.click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Check if registration cancellation checkbox is available
     const cancelRegsCheckbox = page.getByLabel(/cancel.*all.*registrations/i);
@@ -114,7 +114,6 @@ test.describe('Invoice Cancellation Workflow', () => {
 
       // Cancellation message field should appear when checked
       await cancelRegsCheckbox.check();
-      await page.waitForTimeout(300);
 
       const messageField = page.getByPlaceholder(/message.*attendees/i);
       await expect(messageField).toBeVisible({ timeout: 2000 });
@@ -134,7 +133,7 @@ test.describe('Invoice Cancellation Workflow', () => {
     }
 
     await invoiceRow.click();
-    await page.waitForTimeout(1000);
+    await expect(page.getByRole('button', { name: /cancel.*invoice/i }).first()).toBeVisible();
 
     // Click cancel button
     const cancelButton = page.getByRole('button', { name: /cancel.*invoice/i }).first();
@@ -145,7 +144,7 @@ test.describe('Invoice Cancellation Workflow', () => {
     }
 
     await cancelButton.click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Don't fill reason - submit button should be disabled
     const submitButton = page.getByRole('button', { name: /confirm.*cancel/i });
@@ -162,7 +161,7 @@ test.describe('Invoice Cancellation Workflow', () => {
     }
 
     await paidInvoice.click();
-    await page.waitForTimeout(1000);
+    await expect(page.getByRole('button', { name: /cancel.*invoice/i }).first()).toBeVisible();
 
     // Check if it's a credit card invoice by looking for payment details
     const isCreditCard = await page.getByText(/credit.*card|stripe|payment.*link/i).isVisible().catch(() => false);
@@ -174,7 +173,7 @@ test.describe('Invoice Cancellation Workflow', () => {
     // Click cancel button
     const cancelButton = page.getByRole('button', { name: /cancel.*invoice/i }).first();
     await cancelButton.click();
-    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog')).toBeVisible();
 
     // Should show refund information
     await expect(

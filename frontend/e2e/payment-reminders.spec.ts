@@ -37,7 +37,7 @@ test.describe('Payment Reminders Tab', () => {
     await detail.navigateToSection('Payment Reminders');
 
     // Wait for content to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Should show reminder list, stats, empty state, or loading
     const hasStats = await page
@@ -73,7 +73,7 @@ test.describe('Payment Reminders Tab', () => {
     }
 
     await detail.navigateToSection('Payment Reminders');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Should show filter controls or empty state
     const hasStatusFilter = await page
