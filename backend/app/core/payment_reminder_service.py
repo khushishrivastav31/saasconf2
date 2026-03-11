@@ -1,7 +1,7 @@
 """Payment reminder service — core logic for generating and sending reminders."""
 
 import logging
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, tzinfo
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -166,7 +166,7 @@ async def _create_and_send_reminder(
     days_overdue: int,
     template_type: str,
     support_email: str,
-    tz: ZoneInfo | UTC.__class__,
+    tz: tzinfo,
 ) -> str:
     """Create a reminder record and send the email.
 

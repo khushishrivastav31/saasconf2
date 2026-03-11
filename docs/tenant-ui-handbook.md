@@ -149,10 +149,10 @@ Define venue/location categories (e.g., "Main Hall", "Breakout Room", "Virtual R
 
 ##### Session Types
 
-Define session format types (e.g., "Keynote", "Workshop", "Panel", "Tutorial", "Poster").
+Define session format templates (e.g., "Keynote", "Workshop", "Panel", "Tutorial", "Poster"). Each type has a name, default duration, color, and flags for `separately_bookable` and `is_tutorial`. See **Sessions (2.3)** for detailed documentation of how session types work.
 
 **Dependencies:** Must be configured before creating Sessions (2.3).
-**Consequences:** Session types appear when creating sessions and in the program grid.
+**Consequences:** Session types control display in Program Design, color-coding, and whether sessions appear as selectable options during registration.
 
 ##### Sponsor Packages
 
@@ -431,25 +431,89 @@ Manage venues and rooms for the conference. **Requires: `locations` module.**
 
 Manage the entire CFP lifecycle from topic definition through paper decisions. **Requires: `cfp` module.**
 
-The CFP tab has 6 sub-tabs representing the paper review pipeline:
+The Call for Papers is a structured multi-phase process that guides papers from submission through peer review to final decisions. It is designed around the academic conference model where an independent program committee evaluates submissions through blind or open review.
 
-**Dependencies:**
-- Paper Form, Score Scales, and Review Criteria must be configured in Settings (1.4.3) before opening the CFP
-- Topics should be defined before accepting submissions
-- Program Committee members should be added (3.1) before assigning reviews
+The CFP tab has 6 sub-tabs, each representing one stage of the review pipeline. Papers flow through these stages sequentially:
 
-**Overall CFP workflow:**
-Topics → Papers submitted → Assignments (papers to reviewers) → Evaluated Papers → Accept/Reject decisions
+<cfp-flow>
+SETUP → SUBMISSION → ASSIGNMENT → REVIEW → DECISION → OUTCOME
+</cfp-flow>
+
+**Paper status lifecycle — each paper transitions through these statuses:**
+
+<status-flow>
+Submitted|blue → Under Review|amber → Evaluated|purple → Accepted|green
+Evaluated|purple → Rejected|red
+</status-flow>
+
+- **Submitted**: Paper received from author via the portal. Author can still edit until the submission deadline.
+- **Under Review**: At least one reviewer has been assigned. Paper is locked for author edits.
+- **Evaluated**: All assigned reviewers have completed their reviews. Scores are aggregated.
+- **Accepted**: Admin has accepted the paper. Author receives acceptance email. Paper can become a Session.
+- **Rejected**: Admin has rejected the paper. Author receives rejection email.
+
+**Phase 1 — Setup (before opening the CFP):**
+- Define Topics/tracks that authors can submit to (sub-tab: Topics)
+- Configure the Paper Form fields in Settings (1.4.3)
+- Set up Score Scales and Review Criteria in Settings (1.4.3)
+- Add Program Committee members (3.1) with topic expertise and COI declarations
+- Share the portal URL with potential authors
+
+**Phase 2 — Submission (portal-side):**
+- Authors register on the portal and submit papers selecting a topic
+- Papers arrive in the Papers sub-tab with status "Submitted"
+- Authors can update their submissions until the deadline (configurable via Deadlines 1.5)
+
+**Phase 3 — Assignment:**
+- Admin assigns papers to committee reviewers in the Assignments sub-tab
+- The system respects COI declarations — conflicted reviewers cannot be assigned
+- Each paper can have multiple reviewers for balanced evaluation
+- Reviewers receive email notification with their assigned papers
+
+**Phase 4 — Review (portal-side):**
+- Committee members review assigned papers through their portal
+- They score papers using the configured Score Scales and Review Criteria
+- Papers move to "Evaluated" status once all assigned reviews are complete
+
+**Phase 5 — Decision:**
+- Admin reviews aggregated scores and comments in the Evaluated Papers sub-tab
+- Papers can be compared side-by-side
+- Admin makes Accept or Reject decisions (individually or in bulk)
+
+**Phase 6 — Outcome:**
+- Accepted papers appear in the Accepted Papers sub-tab; authors receive acceptance email
+- Rejected papers appear in the Rejected Papers sub-tab; authors receive rejection email
+- Accepted papers can be converted into Sessions (2.3) for the conference program
+
+**Dependencies (must be set up before opening the CFP):**
+- Paper Form, Score Scales, and Review Criteria in Settings (1.4.3)
+- Topics defined (sub-tab: Topics)
+- Program Committee members added (3.1) with topic expertise
+
+**Key constraints:**
+- COI-flagged reviewers cannot be assigned to conflicted papers
+- Paper status transitions are sequential — you cannot skip phases
+- Once a decision (accept/reject) is made, the paper cannot return to evaluation
+
+**Email templates used:**
+- `reviewer_assignment` — sent to reviewers when papers are assigned
+- `cfp_acceptance` — sent to authors when their paper is accepted
+- `cfp_rejection` — sent to authors when their paper is rejected
+
+**Interdependencies:**
+- Accepted papers → Sessions (2.3) → Program Design (2.2.1): the content pipeline from submission to published schedule
+- Topics → Committee expertise matching: topics help suggest appropriate reviewers
+- Deadlines (1.5): set submission deadlines and review deadlines to keep the process on track
 
 #### 2.1.1 Topics
 
-Define submission topics/tracks for the CFP (e.g., "Machine Learning", "Security", "DevOps").
+Define submission topics/tracks for the CFP (e.g., "Machine Learning", "Security", "DevOps"). Topics categorize papers and help match reviewers with relevant expertise.
 
 **Consequences:** Topics appear on the CFP portal submission form. Papers are categorized by topic. Topics can be used to match reviewers with relevant expertise.
 
 #### 2.1.2 Papers
 
-View and manage all submitted papers. Search, filter by status/topic, view paper details, download attachments.
+View and manage all submitted papers. Search, filter by status/topic, view paper details, download attachments. Papers support multiple authors (co-speakers).
 
 **Paper statuses:** Submitted → Under Review → Evaluated → Accepted/Rejected
 
@@ -459,7 +523,7 @@ View and manage all submitted papers. Search, filter by status/topic, view paper
 
 Assign papers to Program Committee reviewers. The system supports manual assignment and can suggest assignments based on topic expertise.
 
-**Constraints:** Reviewers with conflict-of-interest (COI) flags cannot be assigned to those papers.
+**Constraints:** Reviewers with conflict-of-interest (COI) flags cannot be assigned to those papers. Each paper should have multiple independent reviewers.
 
 **Email template used:** `reviewer_assignment`
 
@@ -467,7 +531,7 @@ Assign papers to Program Committee reviewers. The system supports manual assignm
 
 #### 2.1.4 Evaluated Papers
 
-View papers that have completed the review process with aggregated scores and reviewer comments. Compare papers side-by-side.
+View papers that have completed the review process with aggregated scores and reviewer comments. Compare papers side-by-side to make informed accept/reject decisions.
 
 **Dependencies:** Reviews must be completed by assigned committee members.
 
@@ -497,25 +561,67 @@ Design and build the conference schedule. **Requires: `program` module.**
 
 #### 2.2.1 Design
 
-Visual grid editor for designing the program structure:
-- Define time slots and tracks on a day-by-day grid
-- Drag and drop sessions into slots
-- Assign locations and speakers to sessions
-- Configure parallel tracks
+Visual CSS Grid editor for building the conference schedule day by day. Each day displays a grid where:
+
+- **Rows** = time slots (e.g., 09:00–10:00, 10:30–12:00)
+- **Columns** = tracks (e.g., "Main Hall", "Room A", "Workshop Room")
+- **Cells** = sessions placed at a specific time and track
+
+**Building the grid:**
+
+1. **Create Program Days** — each maps to a conference date. Days appear as tabs.
+2. **Add Time Slots** — define start/end times for each day. Slots can span multiple rows (e.g., a 3-hour tutorial).
+3. **Add Tracks** — parallel streams within a day. Each track gets a column.
+4. **Place Sessions** — drag existing sessions into cells, or create new ones inline. A session can span multiple time slots (multi-slot duration).
+
+**Special slot types:**
+- **Break slots** — non-session time (coffee, lunch). Span all tracks with a label.
+- **General events** — plenary sessions that span all tracks (opening ceremony, keynote).
+- **Regular sessions** — placed in a single track column.
+
+**What you can do:**
+- Reorder tracks and time slots by dragging
+- Resize time slots by adjusting start/end times
+- Assign a location to each track
+- Color-code sessions by session type
+- View speaker assignments per session
 
 **Dependencies:** Sessions (2.3), Locations (1.6), and Session Types (Settings 1.4.2) should be created first.
 
-**Consequences:** The program grid is the published schedule visible on the portal. Time slots determine when sessions appear.
+**Consequences:** The program grid becomes the published schedule. Time slot definitions determine when sessions appear on the portal and in registration session selection.
 
 #### 2.2.2 Build
 
-Finalize and publish the program:
-- Review the complete schedule across all days
-- Validate for conflicts (double-booked rooms, speakers)
-- Publish or unpublish the program
+Assign papers to sessions and publish the program to attendees.
 
-**Dependencies:** Program Design must be complete.
-**Consequences:** Publishing makes the program visible on the attendee portal.
+**Paper assignment:**
+- Open a session in the grid to see its paper list
+- Search and add accepted papers (from CFP Accepted Papers, 2.1.5)
+- Set paper order within a session (presentation sequence)
+- Each paper can only be assigned to one session
+
+**Publishing workflow:**
+
+<status-flow>
+Draft → Preview → Publish
+Published → Update (re-publish)
+</status-flow>
+
+1. **Preview** — generates a read-only preview of the full schedule. Review for gaps, conflicts, or missing assignments.
+2. **Publish** — makes the program visible on the attendee portal. Triggers acceptance/rejection emails to paper authors.
+3. **Update** — after initial publish, changes can be re-published. Only **new** assignments trigger notifications (differential publishing — authors already notified are not emailed again).
+
+**Email templates used:**
+- `Paper Acceptance` — sent to authors whose papers are assigned to a session on publish
+- `Paper Rejection` — sent to authors whose papers were not assigned (if configured)
+
+**Dependencies:** Program Design (2.2.1) must have the grid structure. Accepted Papers (2.1.5) must exist for assignment.
+
+**Consequences:**
+- Publishing makes the schedule visible on the portal
+- Authors receive acceptance/rejection emails on first publish
+- Subsequent re-publishes only notify newly assigned authors
+- Assigned papers appear in the session detail on the portal
 
 ---
 
@@ -530,17 +636,43 @@ Manage individual conference sessions. **Requires: `sessions` module.**
 - Set session capacity limits
 - Link sessions to program days
 
-**Dependencies:** Session Types (Settings 1.4.2) must be defined. Speakers (3.2) and Locations (1.6) should exist for assignment.
+#### Session Types
+
+Session types are format templates defined in **Settings > Conference Setup > Session Types** (1.4.2). Every session must have a type. Types control display and behavior across the platform.
+
+**Built-in examples:** Keynote, Workshop, Panel Discussion, Tutorial, Poster Session, Hackathon, Bonus Session, Networking, Social Event.
+
+**Key fields on a session type:**
+
+| Field | Purpose |
+|---|---|
+| **Name** | Display label (e.g., "Tutorial", "Keynote") |
+| **Default Duration** | Pre-fills duration when creating a session of this type (e.g., 90 min) |
+| **Separately Bookable** | If enabled, sessions of this type appear as selectable options during registration |
+| **Is Tutorial** | Marks the type as a tutorial format — used for filtering and display grouping |
+| **Color** | Color-codes sessions of this type in the Program Design grid |
+
+**How `separately_bookable` works:**
+1. A booking option is linked to a program day
+2. That day has sessions marked with a `separately_bookable` session type
+3. During registration, the registrant sees dropdown menus grouped by session type to choose from
+4. Parallel sessions in the same time slot: choose **one** via dropdown
+5. Non-parallel sessions (different time slots): choose from **each** independently
+6. Sessions without papers assigned show: *"You can choose your sessions later"*
+7. Full sessions (at capacity) are hidden from dropdowns
+
+**Dependencies:** Session Types (Settings 1.4.2) must be defined first. Speakers (3.2) and Locations (1.6) should exist for assignment.
 
 **Consequences:**
 - Sessions appear in Program Design (2.2.1) for scheduling
 - **Separately bookable sessions** appear as selection options during registration when linked to a booking option's program day
 - Session capacity limits hide full sessions from registration dropdowns
-- Sessions without assigned papers show "You can choose your sessions later" in registration
+- Session type colors appear in the program grid for visual identification
 
 **Interdependencies:**
 - Booking Options (5.1) link options to program days; if that day has bookable sessions, registrants choose one per time slot
 - Attendees (3.4) shows which session each registrant selected
+- Program Design (2.2.1) uses session types for color-coding and grouping
 
 ---
 
