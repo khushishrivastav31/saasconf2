@@ -18,6 +18,10 @@ interface ComposeModalProps {
     screen_overlay_id?: string | null;
   }) => void;
   sending: boolean;
+  /** Pre-fill recipient when opening from another view (e.g. speaker expenses) */
+  initialRecipient?: { id: string; first_name: string; last_name: string; email: string } | null;
+  /** Pre-fill subject */
+  initialSubject?: string;
 }
 
 interface Applicant {
@@ -33,6 +37,8 @@ export default function ComposeModal({
   onClose,
   onSend,
   sending,
+  initialRecipient,
+  initialSubject,
 }: ComposeModalProps) {
   const [selectedRecipients, setSelectedRecipients] = useState<Applicant[]>([]);
   const [subject, setSubject] = useState('');
@@ -65,6 +71,7 @@ export default function ComposeModal({
     );
   });
 
+  // Reset on close; pre-fill on open with initialRecipient/initialSubject
   useEffect(() => {
     if (!open) {
       setSelectedRecipients([]);
@@ -73,8 +80,15 @@ export default function ComposeModal({
       setSearch('');
       setAttachments([]);
       setScreenOverlayId(null);
+    } else {
+      if (initialRecipient) {
+        setSelectedRecipients([initialRecipient]);
+      }
+      if (initialSubject) {
+        setSubject(initialSubject);
+      }
     }
-  }, [open]);
+  }, [open, initialRecipient, initialSubject]);
 
   if (!open) return null;
 

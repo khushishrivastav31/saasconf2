@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { queryKeys } from '../../../config/queryKeys';
 import { formatCurrency } from '../../../utils/formatCurrency';
+import { useToast } from '../../../components/Toast';
+import ComposeModal from './MessagingTab/ComposeModal';
 import type { Conference } from '../../../types';
 import type {
   SpeakerExpense,
@@ -84,6 +86,16 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
   });
 
   const currency = conference.currency || 'EUR';
+  const { showToast } = useToast();
+
+  // ── Messaging state ──
+  const [messageRecipient, setMessageRecipient] = useState<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null>(null);
+  const [messageSending, setMessageSending] = useState(false);
 
   // ── Queries ──
 
@@ -141,6 +153,29 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
     }
     return map;
   }, [allowances]);
+
+  // ── Send message to speaker ──
+  const handleSendMessage = useCallback(
+    async (data: {
+      recipient_applicant_ids: string[];
+      subject: string;
+      body_html: string;
+      attachment_ids: string[];
+      screen_overlay_id?: string | null;
+    }) => {
+      setMessageSending(true);
+      try {
+        await api.post(`/conferences/${conference.id}/messaging/threads`, data);
+        showToast('Message sent successfully', 'success');
+        setMessageRecipient(null);
+      } catch {
+        showToast('Failed to send message', 'error');
+      } finally {
+        setMessageSending(false);
+      }
+    },
+    [conference.id, showToast]
+  );
 
   const { data: allowanceDefaults } = useQuery({
     queryKey: queryKeys.speakerExpenses.allowanceDefaults(conference.id),
@@ -402,13 +437,45 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
                       ))}
                     </div>
                   </div>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {formatCurrency(
-                      allowanceByApplicant.get(group.speakerName)?.total_approved ??
-                        group.totalAmount,
-                      group.currency
+                  <div className="flex items-center gap-3">
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const nameParts = group.speakerName.split(' ');
+                          setMessageRecipient({
+                            id: group.cfpApplicantId,
+                            first_name: nameParts[0] || '',
+                            last_name: nameParts.slice(1).join(' ') || '',
+                            email: '',
+                          });
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                        title={`Send message to ${group.speakerName}`}
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
+                          />
+                        </svg>
+                      </button>
                     )}
-                  </span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {formatCurrency(
+                        allowanceByApplicant.get(group.speakerName)?.total_approved ??
+                          group.totalAmount,
+                        group.currency
+                      )}
+                    </span>
+                  </div>
                 </button>
 
                 {/* Tier/Budget bar */}
@@ -1082,6 +1149,17 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
           </div>
         </div>
       )}
+
+      {/* Send message modal */}
+      <ComposeModal
+        conferenceId={conference.id}
+        open={!!messageRecipient}
+        onClose={() => setMessageRecipient(null)}
+        onSend={handleSendMessage}
+        sending={messageSending}
+        initialRecipient={messageRecipient}
+        initialSubject="Regarding your speaker expenses"
+      />
     </div>
   );
 }

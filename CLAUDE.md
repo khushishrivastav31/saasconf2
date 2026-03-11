@@ -130,4 +130,10 @@ Detailed docs are in `.claude/docs/` and `docs/` — read on-demand when working
   - `docs/tenant-ui-handbook.md`
 - **Tests**: All passing (1294/1294 frontend)
 - **Linting**: ✅ Ruff, ESLint, TypeScript, formatting all clean
-- **Status**: ✅ Feature complete, ready for commit
+- **Status**: ✅ Committed and pushed to main
+- **CI fixes applied**:
+  - Ruff import sorting in migration 130 (I001)
+  - Frontend coverage threshold (added orderCalculations tests → 50%+)
+  - E2E sidebar selector (flex-shrink-0 → shrink-0)
+  - Stripe eager loading: load Stripe.js on page mount, not on payment method selection
+  - Added `stripe_publishable_key` to conference summary API for eager initialization

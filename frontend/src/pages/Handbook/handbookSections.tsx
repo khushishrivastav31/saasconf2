@@ -1081,7 +1081,23 @@ export const handbookCategories: HandbookCategory[] = [
         content: () => (
           <div
             dangerouslySetInnerHTML={{
-              __html: `<em>Coming soon.</em> This tab will provide tools for tracking and managing conference costs and budgets.`,
+              __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Track and manage conference costs and budgets. <strong>Requires: <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">invoices</code> module.</strong></p>
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">5.5.1 Budget Planning</h4>
+<em>Coming soon.</em>
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">5.5.2 Speaker Expenses</h4>
+<p class="text-gray-700 dark:text-gray-300 my-2">Manage speaker expense allowances and track spending per speaker.</p>
+<strong>What you can do:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">Set expense tiers with allowance amounts (e.g., Keynote: €1,500, Regular: €800)</li>
+<li class="text-gray-700 dark:text-gray-300">Assign tiers to speakers</li>
+<li class="text-gray-700 dark:text-gray-300">View submitted expenses with status (pending, approved, paid, rejected)</li>
+<li class="text-gray-700 dark:text-gray-300">Approve or reject individual expenses</li>
+<li class="text-gray-700 dark:text-gray-300">Track spending per speaker — the header shows the <strong>approved total</strong> (approved + paid expenses only)</li>
+<li class="text-gray-700 dark:text-gray-300">Progress bar shows approved amount vs. tier allowance</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Send message to speaker</strong> — click the envelope icon next to a speaker to open a compose modal pre-filled with the speaker as recipient and "Regarding your speaker expenses" as subject</li>
+</ul>
+<strong>Dependencies:</strong> Speakers (3.2) must exist. Expense tiers must be configured.
+<strong>Consequences:</strong> Approved expenses contribute to the total shown in the speaker header. Messages sent via the envelope icon appear in the Messages tab (6.1).`,
             }}
           />
         ),
@@ -1156,7 +1172,14 @@ export const handbookCategories: HandbookCategory[] = [
             dangerouslySetInnerHTML={{
               __html: `<p class="text-gray-700 dark:text-gray-300 my-2">View conference data analytics and reports. <strong>Requires: <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">analytics</code> module.</strong></p>
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">7.1.1 Registration Questions</h4>
-<p class="text-gray-700 dark:text-gray-300 my-2">View aggregated responses to custom registration questions. Displays charts and tables showing how attendees answered each question configured in Settings (1.4.2 > Registration Questions).</p>
+<p class="text-gray-700 dark:text-gray-300 my-2">View aggregated responses to custom registration questions. Displays horizontal bar charts showing how attendees answered each question configured in Settings (1.4.2 > Registration Questions).</p>
+<strong>What you see:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">Each question is displayed as a card with a horizontal bar chart</li>
+<li class="text-gray-700 dark:text-gray-300">Each bar shows the <strong>answer label</strong> on the left and the count on the right</li>
+<li class="text-gray-700 dark:text-gray-300">Bar width is proportional to the response count relative to the most popular answer</li>
+<li class="text-gray-700 dark:text-gray-300">Total response count is shown per question</li>
+</ul>
 <strong>Dependencies:</strong> Registration Questions must be configured in Settings. Registrations with answers must exist.
 <strong>Consequences:</strong> Read-only analytics view — does not modify any data.
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">7.1.2 Conference Statistics</h4>

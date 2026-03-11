@@ -1121,6 +1121,8 @@ Review, approve, and track speaker expense claims. Located under **Cost Manageme
 
 **What you can do:**
 - View all expense claims grouped by speaker with search and filtering by status
+- **Speaker summary header** shows the approved total (approved + paid expenses) next to each speaker name, matching the "Approved" amount in the tier/budget bar
+- **Send message to speaker** — Click the envelope icon next to a speaker's name to open a compose modal pre-filled with the speaker as recipient and "Regarding your speaker expenses" as subject. Uses the existing messaging system (email notification sent if configured).
 - **Assign expense tiers** to speakers directly from the expenses view (expand a speaker to see the tier dropdown and budget summary)
 - **Add expenses on behalf of a speaker** — Use the "Add Expense" button under a speaker's section to record costs the organizer pays directly (e.g., hotel rooms, flights). Select a category, enter the amount, date, and description.
 - **Approve** submitted expenses to authorize payment
@@ -1212,7 +1214,9 @@ View conference data analytics and reports. **Requires: `analytics` module.**
 
 #### 7.1.1 Registration Questions
 
-View aggregated responses to custom registration questions. Displays charts and tables showing how attendees answered each question configured in Settings (1.4.2 > Registration Questions).
+View aggregated responses to custom registration questions. Each question is displayed as a card with:
+- **Dropdown/Radio questions** — Horizontal bar chart showing each answer option label, a colored bar proportional to the percentage, and the count with percentage (e.g., "12 (60%)"). Labels take 40% of the width for readability.
+- **Text questions** — Expandable list of individual text answers with the respondent name.
 
 **Dependencies:** Registration Questions must be configured in Settings. Registrations with answers must exist.
 
