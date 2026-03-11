@@ -1056,7 +1056,111 @@ View and manage automated payment reminders for overdue invoices. **Requires: `i
 
 ### 5.5 Cost Management
 
-*Coming soon.* This tab will provide tools for tracking and managing conference costs and budgets.
+Manage conference budgets and speaker expenses from a single hub. The Cost Management section contains three areas: **Budgets**, **Speaker Expenses** (admin view), and the **Speaker Expenses portal** (speaker view).
+
+---
+
+#### 5.5.1 Budget Planning & Tracking
+
+Create and track conference budgets with detailed line items.
+
+**How it works:**
+1. Navigate to **Cost Management > Budgets**
+2. Create a budget (starts in **draft** status)
+3. Add line items with title, planned amount, actual amount, category, and vendor
+4. Activate the budget when ready — only one budget can be active at a time (activating a new budget automatically archives the previous one)
+
+**Budget statuses:** `draft` | `active` | `archived`
+
+**What you can do:**
+- Create budgets with descriptive titles and line items
+- Assign each line item a **category** and **vendor** for organized tracking
+- Track planned vs. actual spending per line item
+- View summary cards: **Total Budget**, **Spent**, **Remaining**, and **% Used**
+- Create and manage **categories** for organizing line items
+- **Revise a budget** — creates a new version (deep copy of all line items) while archiving the current version, preserving a full revision history
+
+**Color coding for budget utilization:**
+- **Green** — under 75% spent (on track)
+- **Amber** — 75%–90% spent (approaching limit)
+- **Red** — over 90% spent (at or over budget)
+
+**Constraints:**
+- Only one budget can be active per conference at any time
+- Archiving is automatic when a new budget is activated or a revision is created
+- Draft budgets do not appear in summary calculations until activated
+
+---
+
+#### 5.5.2 Speaker Expense Settings
+
+Configure speaker expenses in **Settings > Finance > Speaker Expenses**.
+
+**Settings:**
+- **Enable/Disable toggle** — When enabled, accepted speakers see the "My Expenses" tab in the portal. When disabled, the tab is hidden.
+- **Expense Tiers** — Define named budget tiers (e.g., "Speaker 700 EUR", "Keynote 1500 EUR") that can be assigned to individual speakers to track their budget.
+
+**How expense tiers work:**
+1. Create tiers in settings with a name, amount, and currency
+2. In the Speaker Expenses tab, expand a speaker to see the tier/budget bar
+3. Use the tier dropdown to assign a tier — this automatically sets the speaker's allowance to the tier's amount
+4. The budget bar shows: **Budget** (from tier), **Approved** (total approved expenses), **Remaining** (budget minus approved)
+
+---
+
+#### 5.5.3 Speaker Expense Management (Admin)
+
+Review, approve, and track speaker expense claims. Located under **Cost Management > Speaker Expenses**.
+
+**Three views available:**
+1. **Expenses list** — All submitted expense claims grouped by speaker, with tier/budget info per speaker
+2. **Allowances** — Per-speaker allowance summary with tier assignment, claimed, approved, and remaining amounts
+3. **Allowance Defaults** — Configure maximum expense amounts per session type
+
+**Expense workflow:** `draft` → `submitted` → `approved` / `rejected` → `paid`
+
+**What you can do:**
+- View all expense claims grouped by speaker with search and filtering by status
+- **Assign expense tiers** to speakers directly from the expenses view (expand a speaker to see the tier dropdown and budget summary)
+- **Add expenses on behalf of a speaker** — Use the "Add Expense" button under a speaker's section to record costs the organizer pays directly (e.g., hotel rooms, flights). Select a category, enter the amount, date, and description.
+- **Approve** submitted expenses to authorize payment
+- **Reject** expenses with a reason (visible to the speaker)
+- **Mark as paid** once payment is processed
+- View a stats bar showing counts per status (draft, submitted, approved, rejected, paid)
+- Set **Allowance Defaults** per session type (e.g., Keynote: 2,000 EUR, Workshop: 1,000 EUR) to control maximum claimable amounts
+- Review **Speaker Allowances** to see each speaker's tier, total allowance, amount claimed, amount approved, and remaining balance
+
+**Constraints:**
+- Speakers can only claim up to their allowance limit
+- Rejected expenses include a reason that the speaker can view in the portal
+- Only submitted expenses can be approved or rejected
+- Only approved expenses can be marked as paid
+- Assigning a tier overrides the speaker's allowance amount; manual edits clear the tier assignment
+
+---
+
+#### 5.5.4 Speaker Expenses (Portal — Speaker View)
+
+Speakers access their own expenses through the portal sidebar under **Registration > My Expenses**.
+
+**What speakers see:**
+- **Allowance summary cards** showing maximum amount, claimed, and remaining per conference
+- **Progress bars** with color coding (green/amber/red matching the budget utilization thresholds)
+- A list of their own expense claims with current status
+
+**What speakers can do:**
+- **Create expenses** with title, date, amount, currency, and description
+- **Upload receipts** via the attachment system
+- **Submit** draft expenses for admin review
+- **Delete** draft expenses (submitted or later-stage expenses cannot be deleted)
+- **View rejection reasons** on any rejected expenses
+
+**Multi-currency support:** Speakers can submit expenses in any supported currency.
+
+**Constraints:**
+- Only draft expenses can be edited or deleted
+- Submitted expenses are locked and await admin action
+- The allowance remaining reflects approved amounts against the configured maximum
 
 ---
 

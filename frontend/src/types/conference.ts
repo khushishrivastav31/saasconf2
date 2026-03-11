@@ -875,3 +875,131 @@ export interface PaymentReminderSettings {
   second_reminder_days: number;
   notify_admin_after_second: boolean;
 }
+
+// ── Budget Planning ──
+
+export interface BudgetCategory {
+  id: string;
+  name: string;
+  color: string | null;
+  sort_order: number;
+  conference_id: string;
+}
+
+export interface BudgetLineItem {
+  id: string;
+  budget_id: string;
+  category_id: string | null;
+  category_name: string | null;
+  description: string;
+  planned_amount: number;
+  actual_amount: number;
+  variance: number;
+  vendor_name: string | null;
+  notes: string | null;
+  sort_order: number;
+}
+
+export interface Budget {
+  id: string;
+  conference_id: string;
+  name: string;
+  status: string;
+  total_planned: number;
+  total_actual: number;
+  total_remaining: number;
+  percent_used: number;
+  currency: string;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  items_count: number;
+  items?: BudgetLineItem[];
+}
+
+export interface BudgetSummary {
+  total_planned: number;
+  total_actual: number;
+  total_remaining: number;
+  percent_used: number;
+  by_category: {
+    category_id: string | null;
+    category_name: string;
+    color: string | null;
+    planned: number;
+    actual: number;
+    remaining: number;
+    percent_used: number;
+  }[];
+}
+
+// ── Speaker Expenses ──
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+  conference_id: string;
+}
+
+export interface SpeakerExpense {
+  id: string;
+  conference_id: string;
+  cfp_applicant_id: string;
+  speaker_name: string;
+  category_id: string | null;
+  category_name: string | null;
+  title: string;
+  description: string | null;
+  expense_date: string;
+  original_amount: number;
+  original_currency: string;
+  converted_amount: number | null;
+  conference_currency: string | null;
+  exchange_rate: number | null;
+  session_id: string | null;
+  session_title: string | null;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'paid';
+  approved_by: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
+  paid_at: string | null;
+  payment_reference: string | null;
+  notes: string | null;
+  attachment_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SpeakerAllowance {
+  id: string;
+  cfp_applicant_id: string;
+  speaker_name: string | null;
+  expense_tier_id: string | null;
+  expense_tier_name: string | null;
+  max_amount: number;
+  currency: string;
+  source: 'auto' | 'manual' | 'tier';
+  notes: string | null;
+  total_claimed: number;
+  total_approved: number;
+  remaining: number;
+}
+
+export interface AllowanceDefault {
+  id: string;
+  session_type_id: string;
+  session_type_name: string | null;
+  max_amount: number;
+  currency: string;
+  conference_id: string;
+}
+
+export interface ExpenseStats {
+  by_status: { status: string; count: number; total_amount: number }[];
+  total_expenses: number;
+  total_amount: number;
+  currency: string | null;
+}

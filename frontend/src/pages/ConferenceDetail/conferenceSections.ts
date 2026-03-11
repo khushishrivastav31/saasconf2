@@ -37,6 +37,8 @@ import {
   VolunteerAssignmentIcon,
   VolunteerScheduleIcon,
   CostManagementIcon,
+  BudgetPlanningIcon,
+  SpeakerExpensesIcon,
   ConferenceStatisticsIcon,
 } from './icons';
 
@@ -78,6 +80,8 @@ export type SectionId =
   | 'invoices'
   | 'payment-reminders'
   | 'cost-management'
+  | 'budget-planning'
+  | 'speaker-expenses'
   | 'registration'
   | 'volunteer-task-assignment'
   | 'volunteer-assignment'
@@ -213,6 +217,10 @@ export const sectionGroups: SectionGroup[] = [
         name: 'Cost Management',
         icon: CostManagementIcon,
         moduleCode: 'invoices',
+        children: [
+          { id: 'budget-planning', name: 'Budget Planning', icon: BudgetPlanningIcon },
+          { id: 'speaker-expenses', name: 'Speaker Expenses', icon: SpeakerExpensesIcon },
+        ],
       },
     ],
   },

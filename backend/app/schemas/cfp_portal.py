@@ -173,6 +173,9 @@ class PortalConferenceSummary(BaseModel):
     logo_url: str | None = None
     cfps: list[PortalCFPResponse] = []
     registration_open: bool = False
+    is_registered: bool = False
+    is_speaker: bool = False
+    expenses_enabled: bool = False
 
 
 class PortalTenantResponse(BaseModel):

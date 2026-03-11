@@ -22,6 +22,7 @@ import InvoiceBankAccountsTab from './settings/InvoiceBankAccountsTab';
 import InvoiceTemplateTab from './settings/InvoiceTemplateTab';
 import StripeSetupTab from './settings/StripeSetupTab';
 import PaymentReminderSettingsTab from './settings/PaymentReminderSettingsTab';
+import SpeakerExpenseSettingsTab from './settings/SpeakerExpenseSettingsTab';
 import ZugferdSettingsTab from './settings/ZugferdSettingsTab';
 import FinancialSettingsTab from './settings/FinancialSettingsTab';
 import PortalCustomizationTab from './settings/PortalCustomizationTab';
@@ -54,7 +55,8 @@ type ConferenceSettingsActiveTab =
   | 'invoice-template'
   | 'zugferd-settings'
   | 'stripe-setup'
-  | 'payment-reminders';
+  | 'payment-reminders'
+  | 'speaker-expenses';
 
 interface SettingsNavItem {
   key: ConferenceSettingsActiveTab;
@@ -474,6 +476,21 @@ const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
       </svg>
     ),
   },
+  {
+    key: 'speaker-expenses',
+    label: 'Speaker Expenses',
+    group: 'Finance',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"
+        />
+      </svg>
+    ),
+  },
 ];
 
 const GROUP_ORDER = [
@@ -565,6 +582,8 @@ function ConferenceSettingsTab({
         return <StripeSetupTab conference={conference} isAdmin={isAdmin} />;
       case 'payment-reminders':
         return <PaymentReminderSettingsTab conference={conference} isAdmin={isAdmin} />;
+      case 'speaker-expenses':
+        return <SpeakerExpenseSettingsTab conference={conference} isAdmin={isAdmin} />;
       default:
         return null;
     }
@@ -574,7 +593,10 @@ function ConferenceSettingsTab({
     <div className="flex gap-6">
       {/* Vertical Sidebar Navigation */}
       <nav className={`flex-shrink-0 transition-all duration-200 ${isCollapsed ? 'w-14' : 'w-56'}`}>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden sticky top-24 flex flex-col"
+          style={{ maxHeight: 'calc(100vh - 120px)' }}
+        >
           {/* Collapse Toggle */}
           <div className="flex items-center justify-end px-2 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
             <button
@@ -600,46 +622,50 @@ function ConferenceSettingsTab({
             </button>
           </div>
 
-          {GROUP_ORDER.map((group, groupIndex) => (
-            <div key={group}>
-              {groupIndex > 0 && <div className="border-t border-gray-200 dark:border-gray-700" />}
-              {!isCollapsed && (
-                <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900">
-                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {group}
-                  </h3>
-                </div>
-              )}
-              <ul className="py-1">
-                {groupedItems[group]?.map((item) => (
-                  <li key={item.key}>
-                    <button
-                      onClick={() => setActiveTab(item.key)}
-                      title={isCollapsed ? item.label : undefined}
-                      className={`w-full flex items-center gap-3 py-2 text-sm transition-colors ${
-                        isCollapsed ? 'justify-center px-2' : 'px-3'
-                      } ${
-                        activeTab === item.key
-                          ? 'bg-primary-50 text-primary-700 border-l-2 border-primary-600'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-l-2 border-transparent'
-                      }`}
-                    >
-                      <span
-                        className={
+          <div className="flex-1 overflow-y-auto">
+            {GROUP_ORDER.map((group, groupIndex) => (
+              <div key={group}>
+                {groupIndex > 0 && (
+                  <div className="border-t border-gray-200 dark:border-gray-700" />
+                )}
+                {!isCollapsed && (
+                  <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900">
+                    <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {group}
+                    </h3>
+                  </div>
+                )}
+                <ul className="py-1">
+                  {groupedItems[group]?.map((item) => (
+                    <li key={item.key}>
+                      <button
+                        onClick={() => setActiveTab(item.key)}
+                        title={isCollapsed ? item.label : undefined}
+                        className={`w-full flex items-center gap-3 py-2 text-sm transition-colors ${
+                          isCollapsed ? 'justify-center px-2' : 'px-3'
+                        } ${
                           activeTab === item.key
-                            ? 'text-primary-600'
-                            : 'text-gray-400 dark:text-gray-500'
-                        }
+                            ? 'bg-primary-50 text-primary-700 border-l-2 border-primary-600'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-l-2 border-transparent'
+                        }`}
                       >
-                        {item.icon}
-                      </span>
-                      {!isCollapsed && <span className="font-medium truncate">{item.label}</span>}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                        <span
+                          className={
+                            activeTab === item.key
+                              ? 'text-primary-600'
+                              : 'text-gray-400 dark:text-gray-500'
+                          }
+                        >
+                          {item.icon}
+                        </span>
+                        {!isCollapsed && <span className="font-medium truncate">{item.label}</span>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
       </nav>
 

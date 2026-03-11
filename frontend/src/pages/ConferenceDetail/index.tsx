@@ -38,6 +38,8 @@ const RegistrationQuestionsAnalyticsTab = lazy(
   () => import('./tabs/analytics/RegistrationQuestionsAnalyticsTab')
 );
 const CostManagementTab = lazy(() => import('./tabs/CostManagementTab'));
+const BudgetPlanningTab = lazy(() => import('./tabs/BudgetPlanningTab'));
+const SpeakerExpensesTab = lazy(() => import('./tabs/SpeakerExpensesTab'));
 const ConferenceStatisticsTab = lazy(() => import('./tabs/analytics/ConferenceStatisticsTab'));
 const CFPTopics = lazy(() => import('../modules/cfp').then((m) => ({ default: m.CFPTopics })));
 const CFPProgramCommittee = lazy(() =>
@@ -268,7 +270,11 @@ function ConferenceDetailContent() {
                       <div key={section.id}>
                         <div className="flex items-center">
                           <button
-                            onClick={() => setActiveSection(section.id)}
+                            onClick={() =>
+                              setActiveSection(
+                                section.children ? section.children[0].id : section.id
+                              )
+                            }
                             title={sidebarCollapsed ? section.name : undefined}
                             className={`flex-1 flex items-center rounded-md mb-0.5 ${
                               sidebarCollapsed ? 'justify-center px-2 py-2' : 'px-3 py-2'
@@ -451,6 +457,12 @@ function ConferenceDetailContent() {
               )}
               {activeSection === 'cost-management' && (
                 <CostManagementTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'budget-planning' && (
+                <BudgetPlanningTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'speaker-expenses' && (
+                <SpeakerExpensesTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'program' && (
                 <ProgramDesignTab conference={conference} isAdmin={isAdmin} />

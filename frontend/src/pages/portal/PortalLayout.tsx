@@ -63,6 +63,19 @@ function InformationCircleIcon() {
   );
 }
 
+function WalletIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+      />
+    </svg>
+  );
+}
+
 function TicketIcon() {
   return (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -305,10 +318,6 @@ function PortalLayout() {
         ]
       : []),
     {
-      label: 'Registration',
-      items: [{ name: 'My Registration', href: `${basePath}/my-registrations`, icon: TicketIcon }],
-    },
-    {
       label: 'Account',
       items: [{ name: 'My Profile', href: `${basePath}/profile`, icon: UserIcon }],
     },
@@ -332,8 +341,10 @@ function PortalLayout() {
   const isActive = (href: string) =>
     location.pathname === href || location.pathname.startsWith(href + '/');
 
-  // Conferences with at least one CFP
-  const conferencesWithCfps = (conferences ?? []).filter((c) => c.cfps.length > 0);
+  // Conferences relevant to the user (has CFPs, is registered, or is a speaker)
+  const relevantConferences = (conferences ?? []).filter(
+    (c) => c.cfps.length > 0 || c.is_registered || c.is_speaker
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -520,7 +531,7 @@ function PortalLayout() {
             ))}
 
             {/* Conference sections */}
-            {conferencesWithCfps.length > 0 && (
+            {relevantConferences.length > 0 && (
               <div className={`mt-4 ${sidebarCollapsed ? '' : 'pt-3 border-t border-gray-700'}`}>
                 {!sidebarCollapsed && (
                   <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
@@ -528,11 +539,39 @@ function PortalLayout() {
                   </p>
                 )}
                 <div className="space-y-3">
-                  {conferencesWithCfps.map((conf) => {
+                  {relevantConferences.map((conf) => {
                     const infoHref = `${basePath}/info/${conf.id}`;
-                    const infoActive = isActive(infoHref);
                     const registerHref = `${basePath}/register/${conf.id}`;
-                    const registerActive = isActive(registerHref);
+                    const myRegHref = `${basePath}/my-registrations`;
+                    const myExpensesHref = `${basePath}/my-expenses/${conf.id}`;
+
+                    const confLinks: {
+                      href: string;
+                      label: string;
+                      icon: () => React.JSX.Element;
+                      show: boolean;
+                    }[] = [
+                      { href: infoHref, label: 'Info', icon: InformationCircleIcon, show: true },
+                      {
+                        href: registerHref,
+                        label: 'Register',
+                        icon: TicketIcon,
+                        show: conf.registration_open && !conf.is_registered,
+                      },
+                      {
+                        href: myRegHref,
+                        label: 'My Registration',
+                        icon: TicketIcon,
+                        show: conf.is_registered,
+                      },
+                      {
+                        href: myExpensesHref,
+                        label: 'My Expenses',
+                        icon: WalletIcon,
+                        show: conf.is_speaker && conf.expenses_enabled,
+                      },
+                    ];
+
                     return (
                       <div key={conf.id}>
                         {!sidebarCollapsed && (
@@ -543,39 +582,29 @@ function PortalLayout() {
                             {conf.name}
                           </p>
                         )}
-                        <div className={`space-y-0.5 ${sidebarCollapsed ? '' : ''}`}>
-                          <Link
-                            to={infoHref}
-                            onClick={closeMobileSidebar}
-                            title={sidebarCollapsed ? `${conf.name} — Info` : undefined}
-                            className={`flex items-center py-1.5 text-sm font-medium rounded-md ${
-                              sidebarCollapsed ? 'justify-center px-2' : 'px-3 pl-6'
-                            } ${
-                              infoActive
-                                ? 'bg-gray-800 text-white'
-                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                            }`}
-                          >
-                            <InformationCircleIcon />
-                            {!sidebarCollapsed && <span className="ml-2">Info</span>}
-                          </Link>
-                          {conf.registration_open && (
-                            <Link
-                              to={registerHref}
-                              onClick={closeMobileSidebar}
-                              title={sidebarCollapsed ? `${conf.name} — Register` : undefined}
-                              className={`flex items-center py-1.5 text-sm font-medium rounded-md ${
-                                sidebarCollapsed ? 'justify-center px-2' : 'px-3 pl-6'
-                              } ${
-                                registerActive
-                                  ? 'bg-gray-800 text-white'
-                                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                              }`}
-                            >
-                              <TicketIcon />
-                              {!sidebarCollapsed && <span className="ml-2">Register</span>}
-                            </Link>
-                          )}
+                        <div className="space-y-0.5">
+                          {confLinks
+                            .filter((l) => l.show)
+                            .map((link) => (
+                              <Link
+                                key={link.href}
+                                to={link.href}
+                                onClick={closeMobileSidebar}
+                                title={
+                                  sidebarCollapsed ? `${conf.name} — ${link.label}` : undefined
+                                }
+                                className={`flex items-center py-1.5 text-sm font-medium rounded-md ${
+                                  sidebarCollapsed ? 'justify-center px-2' : 'px-3 pl-6'
+                                } ${
+                                  isActive(link.href)
+                                    ? 'bg-gray-800 text-white'
+                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                }`}
+                              >
+                                <link.icon />
+                                {!sidebarCollapsed && <span className="ml-2">{link.label}</span>}
+                              </Link>
+                            ))}
                         </div>
                       </div>
                     );

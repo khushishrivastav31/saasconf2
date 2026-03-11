@@ -28,6 +28,7 @@ ALLOWED_ENTITY_TYPES = {
     "sponsor_package_contract",
     "screen_overlay_image",
     "invoice",
+    "speaker_expense",
 }
 
 

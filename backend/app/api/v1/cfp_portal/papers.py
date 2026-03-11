@@ -100,6 +100,41 @@ async def list_conferences(
         for conference_id, cfp in cfp_result.all():
             cfps_by_conf[conference_id].append(cfp)
 
+    # Check registration status per conference (matched by email)
+    from app.models.registration import Registration, RegistrationStatus
+
+    user_email = current.applicant.email.lower()
+    registered_conf_ids: set = set()
+    if conf_ids:
+        reg_result = await db.execute(
+            select(Registration.conference_id)
+            .where(
+                Registration.tenant_id == current.tenant_id,
+                Registration.email == user_email,
+                Registration.conference_id.in_(conf_ids),
+                Registration.status != RegistrationStatus.CANCELLED.value,
+            )
+            .distinct()
+        )
+        registered_conf_ids = set(reg_result.scalars().all())
+
+    # Check speaker status per conference (has accepted/confirmed papers)
+    speaker_conf_ids: set = set()
+    if conf_ids:
+        from app.models.cfp_papers import CFPPaper
+
+        speaker_result = await db.execute(
+            select(ConferenceCFP.conference_id)
+            .join(CFPPaper, CFPPaper.cfp_id == ConferenceCFP.cfp_id)
+            .where(
+                CFPPaper.main_speaker_id == current.applicant_id,
+                ConferenceCFP.conference_id.in_(conf_ids),
+                CFPPaper.status == "accepted",
+            )
+            .distinct()
+        )
+        speaker_conf_ids = set(speaker_result.scalars().all())
+
     today = date.today()
     items = []
     for conf in conferences:
@@ -127,6 +162,9 @@ async def list_conferences(
                 logo_url=conf.logo_url,
                 cfps=[PortalCFPResponse.model_validate(cfp) for cfp in cfps_by_conf.get(conf.id, [])],
                 registration_open=reg_open,
+                is_registered=conf.id in registered_conf_ids,
+                is_speaker=conf.id in speaker_conf_ids,
+                expenses_enabled=(conf.settings or {}).get("speaker_expenses", {}).get("expenses_enabled", False),
             )
         )
 
@@ -546,7 +584,7 @@ async def decline_invitation(
 
 # --- Attachments ---
 
-PORTAL_ALLOWED_ENTITY_TYPES = {"applicant_picture", "applicant_video", "paper_video"}
+PORTAL_ALLOWED_ENTITY_TYPES = {"applicant_picture", "applicant_video", "paper_video", "speaker_expense"}
 
 
 @router.post("/portal/attachments")
@@ -570,6 +608,18 @@ async def upload_portal_attachment(
         paper = await _get_applicant_or_cospeaker_paper(db, entity_id, current.applicant_id, current.tenant_id)
         if paper.status != PaperStatus.DRAFT.value:
             raise ValidationError("Can only upload video for draft papers")
+    elif entity_type == "speaker_expense":
+        from app.models.speaker_expense import SpeakerExpense
+
+        exp_result = await db.execute(
+            select(SpeakerExpense).where(
+                SpeakerExpense.id == entity_id,
+                SpeakerExpense.cfp_applicant_id == current.applicant_id,
+                SpeakerExpense.tenant_id == current.tenant_id,
+            )
+        )
+        if not exp_result.scalar_one_or_none():
+            raise AuthorizationError("Expense not found or not yours")
 
     file_data = await file.read()
     file_size = len(file_data)
@@ -591,15 +641,17 @@ async def upload_portal_attachment(
     safe_filename = sanitize_filename(file.filename or "upload")
 
     # Delete existing attachment of same type for this entity (only keep latest)
-    existing_result = await db.execute(
-        select(Attachment).where(
-            Attachment.tenant_id == current.tenant_id,
-            Attachment.entity_type == entity_type,
-            Attachment.entity_id == entity_id,
+    # Exception: speaker_expense allows multiple receipts
+    if entity_type != "speaker_expense":
+        existing_result = await db.execute(
+            select(Attachment).where(
+                Attachment.tenant_id == current.tenant_id,
+                Attachment.entity_type == entity_type,
+                Attachment.entity_id == entity_id,
+            )
         )
-    )
-    for old in existing_result.scalars().all():
-        await db.delete(old)
+        for old in existing_result.scalars().all():
+            await db.delete(old)
 
     attachment = Attachment(
         tenant_id=current.tenant_id,

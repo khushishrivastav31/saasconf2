@@ -619,6 +619,21 @@ class PaymentReminderSettingsResponse(PaymentReminderSettings):
     pass
 
 
+# --- Speaker Expense Settings Schemas ---
+
+
+class SpeakerExpenseSettings(BaseModel):
+    """Speaker expense configuration for a conference."""
+
+    expenses_enabled: bool = False
+
+
+class SpeakerExpenseSettingsResponse(SpeakerExpenseSettings):
+    """Response schema for speaker expense settings."""
+
+    pass
+
+
 # --- Policy Settings Schemas ---
 
 

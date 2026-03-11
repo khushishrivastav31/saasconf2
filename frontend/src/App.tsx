@@ -66,6 +66,7 @@ const AuthenticatedRegistrationPage = lazy(
   () => import('./pages/portal/AuthenticatedRegistrationPage')
 );
 const MyRegistrationsPage = lazy(() => import('./pages/portal/MyRegistrationsPage'));
+const MyExpensesPage = lazy(() => import('./pages/portal/PortalExpensesTab'));
 
 // Lazy-loaded public registration portal
 const PublicRegistrationPage = lazy(() => import('./pages/PublicRegistration'));
@@ -408,6 +409,7 @@ function App() {
           <Route path="info/:conferenceId" element={<InfoPage />} />
           <Route path="register/:conferenceId" element={<AuthenticatedRegistrationPage />} />
           <Route path="my-registrations" element={<MyRegistrationsPage />} />
+          <Route path="my-expenses/:conferenceId" element={<MyExpensesPage />} />
         </Route>
 
         {/* Legacy redirects for old URLs / emailed links */}

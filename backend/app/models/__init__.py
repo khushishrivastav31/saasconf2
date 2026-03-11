@@ -14,6 +14,7 @@ from app.models.booking import (
     DiscountCode,
     DiscountCodeOption,
 )
+from app.models.budget import Budget, BudgetCategory, BudgetLineItem
 from app.models.cfp import CallForPapers, CFPCommitteeMember, CFPTopic, Submission
 from app.models.cfp_applicants import CFPApplicant
 from app.models.cfp_papers import (
@@ -76,6 +77,13 @@ from app.models.settings import (
     TenantLocationType,
     VolunteerRole,
 )
+from app.models.speaker_expense import (
+    ExpenseCategory,
+    ExpenseTier,
+    SpeakerExpense,
+    SpeakerExpenseAllowance,
+    SpeakerExpenseAllowanceDefault,
+)
 from app.models.sponsor import Sponsor
 from app.models.sponsor_contract import SponsorContract, SponsorContractVersion
 from app.models.tenant import Tenant
@@ -100,6 +108,9 @@ __all__ = [
     "BookingPackage",
     "BookingPackageOption",
     "BookingPeriod",
+    "Budget",
+    "BudgetCategory",
+    "BudgetLineItem",
     "CFPApplicant",
     "CFPCommitteeMember",
     "CFPCommitteeRole",
@@ -120,6 +131,8 @@ __all__ = [
     "DiscountCode",
     "DiscountCodeOption",
     "EmailTemplate",
+    "ExpenseCategory",
+    "ExpenseTier",
     "FiscalRepresentative",
     "Invoice",
     "InvoiceEvent",
@@ -160,6 +173,9 @@ __all__ = [
     "ServiceProvider",
     "SessionType",
     "SessionVolunteerTask",
+    "SpeakerExpense",
+    "SpeakerExpenseAllowance",
+    "SpeakerExpenseAllowanceDefault",
     "Sponsor",
     "SponsorContract",
     "SponsorContractVersion",

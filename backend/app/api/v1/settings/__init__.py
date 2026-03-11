@@ -21,6 +21,7 @@ from .review_form_settings import router as review_form_settings_router
 from .review_questions import router as review_questions_router
 from .score_scales import router as score_scales_router
 from .session_types import router as session_types_router
+from .speaker_expense_settings import router as speaker_expense_settings_router
 from .sponsor_packages import router as sponsor_packages_router
 from .stripe_settings import router as stripe_settings_router
 from .volunteer_roles import router as volunteer_roles_router
@@ -49,3 +50,4 @@ router.include_router(payment_reminder_settings_router)
 router.include_router(stripe_settings_router)
 router.include_router(policies_router)
 router.include_router(registration_questions_router)
+router.include_router(speaker_expense_settings_router)

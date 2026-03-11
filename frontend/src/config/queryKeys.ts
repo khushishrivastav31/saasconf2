@@ -180,6 +180,24 @@ export const queryKeys = {
   // Use this for invoice settings
   invoiceSettings: (conferenceId: string) => ['invoice-settings', conferenceId] as const,
   stripeSettings: (conferenceId: string) => ['stripe-settings', conferenceId] as const,
+  budgets: {
+    byConference: (conferenceId: string) => ['conference-budgets', conferenceId] as const,
+    detail: (conferenceId: string, budgetId: string) =>
+      ['budget-detail', conferenceId, budgetId] as const,
+    summary: (conferenceId: string, budgetId: string) =>
+      ['budget-summary', conferenceId, budgetId] as const,
+    categories: (conferenceId: string) => ['budget-categories', conferenceId] as const,
+  },
+  speakerExpenses: {
+    byConference: (conferenceId: string) => ['speaker-expenses', conferenceId] as const,
+    stats: (conferenceId: string) => ['speaker-expense-stats', conferenceId] as const,
+    categories: (conferenceId: string) => ['expense-categories', conferenceId] as const,
+    allowanceDefaults: (conferenceId: string) =>
+      ['expense-allowance-defaults', conferenceId] as const,
+    allowances: (conferenceId: string) => ['speaker-allowances', conferenceId] as const,
+    tiers: (conferenceId: string) => ['expense-tiers', conferenceId] as const,
+    settings: (conferenceId: string) => ['speaker-expense-settings', conferenceId] as const,
+  },
   paymentReminders: {
     byConference: (conferenceId: string) => ['payment-reminders', conferenceId] as const,
     stats: (conferenceId: string) => ['payment-reminder-stats', conferenceId] as const,

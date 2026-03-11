@@ -9,6 +9,7 @@ from app.api.v1 import (
     attachments,
     audit,
     auth,
+    budgets,
     cfp,
     cfp_portal,
     conferences,
@@ -28,6 +29,7 @@ from app.api.v1 import (
     screen_overlays,
     service_providers,
     settings,
+    speaker_expenses,
     sponsor_contracts,
     sponsors,
     stripe_webhooks,
@@ -118,6 +120,20 @@ api_router.include_router(
     payment_reminders.router,
     prefix="/conferences/{conference_id}/payment-reminders",
     tags=["Payment Reminders"],
+)
+
+# Budget planning (conference-scoped)
+api_router.include_router(
+    budgets.router,
+    prefix="/conferences/{conference_id}/budgets",
+    tags=["Budgets"],
+)
+
+# Speaker expenses (conference-scoped, admin)
+api_router.include_router(
+    speaker_expenses.router,
+    prefix="/conferences/{conference_id}/speaker-expenses",
+    tags=["Speaker Expenses"],
 )
 
 # VAT rates (global, public for reads, superadmin for updates)

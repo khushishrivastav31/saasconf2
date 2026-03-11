@@ -158,6 +158,12 @@ BANK_TRANSFER_COUNTRIES: list[str] = [
 ]
 
 
+# Default speaker expense settings (stored in conference.settings["speaker_expenses"])
+DEFAULT_SPEAKER_EXPENSE_SETTINGS: dict[str, bool] = {
+    "expenses_enabled": False,
+}
+
+
 # Default payment reminder settings (stored in conference.settings["payment_reminders"])
 DEFAULT_PAYMENT_REMINDER_SETTINGS: dict[str, bool | int] = {
     "payment_reminders_enabled": True,

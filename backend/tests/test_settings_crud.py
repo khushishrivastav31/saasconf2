@@ -1000,8 +1000,8 @@ class TestEmailTemplates:
         items = list_resp.json()["items"]
         types = {item["template_type"] for item in items}
 
-        # Should have all 12 conference types
-        assert len(types) == 12
+        # Should have all 14 conference types (12 original + 2 payment reminders)
+        assert len(types) == 14
 
         # The saved one should have an id
         saved = [i for i in items if i["template_type"] == "paper_acceptance"]

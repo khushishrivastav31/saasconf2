@@ -95,6 +95,9 @@ export interface PortalConferenceSummary {
   logo_url: string | null;
   cfps: PortalCFP[];
   registration_open: boolean;
+  is_registered: boolean;
+  is_speaker: boolean;
+  expenses_enabled: boolean;
 }
 
 export interface PortalLandingData {
