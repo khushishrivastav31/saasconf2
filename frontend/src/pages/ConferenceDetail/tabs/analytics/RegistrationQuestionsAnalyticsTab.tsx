@@ -17,7 +17,7 @@ import type { Conference } from '../../../../types';
 // ---------------------------------------------------------------------------
 
 interface OptionStat {
-  option: string;
+  label: string;
   count: number;
   percentage: number;
 }
@@ -94,12 +94,12 @@ function QuestionStatCard({ question }: { question: QuestionStat }) {
       {hasOptions && question.option_stats && (
         <div className="space-y-2">
           {question.option_stats.map((opt) => (
-            <div key={opt.option} className="flex items-center gap-3">
+            <div key={opt.label} className="flex items-center gap-3">
               <span
-                className="text-sm text-gray-700 dark:text-gray-300 w-32 truncate flex-shrink-0"
-                title={opt.option}
+                className="text-sm text-gray-700 dark:text-gray-300 min-w-35 w-2/5 shrink-0"
+                title={opt.label}
               >
-                {opt.option}
+                {opt.label}
               </span>
               <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-5 overflow-hidden">
                 <div

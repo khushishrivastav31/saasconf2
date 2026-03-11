@@ -55,7 +55,9 @@ function groupBySpeaker(expenses: SpeakerExpense[]): SpeakerGroup[] {
       };
     }
     groups[key].expenses.push(expense);
-    groups[key].totalAmount += expense.original_amount;
+    if (expense.status === 'approved' || expense.status === 'paid') {
+      groups[key].totalAmount += expense.original_amount;
+    }
     groups[key].statusCounts[expense.status] = (groups[key].statusCounts[expense.status] || 0) + 1;
   }
   return Object.values(groups).sort((a, b) => a.speakerName.localeCompare(b.speakerName));
@@ -401,7 +403,11 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
                     </div>
                   </div>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {formatCurrency(group.totalAmount, group.currency)}
+                    {formatCurrency(
+                      allowanceByApplicant.get(group.speakerName)?.total_approved ??
+                        group.totalAmount,
+                      group.currency
+                    )}
                   </span>
                 </button>
 
