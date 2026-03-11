@@ -4,9 +4,11 @@
  * Complete registration form on a single scrollable page.
  * Integrates attendees, billing, and booking options with real-time pricing.
  */
-import { useState, useEffect, useCallback, useMemo, FormEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+import { loadStripe } from '@stripe/stripe-js';
+import type { Stripe } from '@stripe/stripe-js';
 import { useMutation } from '@tanstack/react-query';
 import publicApi from '../../config/publicApi';
 import type {
@@ -152,6 +154,20 @@ export default function SinglePageForm({
   const [publishableKey, setPublishableKey] = useState<string | null>(null);
   const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
   const [attemptingPayment, setAttemptingPayment] = useState(false); // For credit card payment confirmation
+
+  // Eagerly load Stripe when page mounts (not when user selects credit card)
+  // This eliminates the race condition between Stripe initialization and PaymentIntent creation
+  const stripePromiseRef = useRef<Promise<Stripe | null> | null>(null);
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const stripeEnabled = conference.stripe_enabled ?? false;
+
+  useEffect(() => {
+    if (stripeEnabled && conference.stripe_publishable_key && !stripePromiseRef.current) {
+      const promise = loadStripe(conference.stripe_publishable_key, { locale: 'en' });
+      stripePromiseRef.current = promise;
+      setStripePromise(promise);
+    }
+  }, [stripeEnabled, conference.stripe_publishable_key]);
 
   // Determine VAT requirement level
   const vatRequirement = useMemo(() => {
@@ -345,7 +361,6 @@ export default function SinglePageForm({
   }, [billing.payment_method, paymentIntentId]);
 
   // Payment method availability based on Stripe status and country
-  const stripeEnabled = conference.stripe_enabled ?? false;
   const bankTransferAvailable =
     !stripeEnabled ||
     !billing.country ||
@@ -1356,6 +1371,7 @@ export default function SinglePageForm({
                 <InlineStripePayment
                   clientSecret={clientSecret}
                   publishableKey={publishableKey}
+                  stripePromise={stripePromise}
                   billingName={`${billing.contact_first_name} ${billing.contact_last_name}`.trim()}
                   onSuccess={handlePaymentComplete}
                   onError={(msg) => {

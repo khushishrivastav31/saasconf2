@@ -5,9 +5,11 @@
  * Composes existing components: AttendeeSection, OrderSummary, InlineStripePayment, BillingFields
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { loadStripe } from '@stripe/stripe-js';
+import type { Stripe } from '@stripe/stripe-js';
 import portalApi from '../../config/portalApi';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
 import { usePaymentIntent } from '../../hooks/usePaymentIntent';
@@ -247,6 +249,22 @@ export default function AuthenticatedRegistrationForm({
     if (!conference) return;
     calculateVat(subtotal, billing.country, billing.vat_number || null);
   }, [billing.country, billing.vat_number, subtotal, conference, calculateVat]);
+
+  // Eagerly load Stripe when conference data is available (not when user selects credit card)
+  const stripePromiseRef = useRef<Promise<Stripe | null> | null>(null);
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+
+  useEffect(() => {
+    if (
+      conference?.stripe_enabled &&
+      conference?.stripe_publishable_key &&
+      !stripePromiseRef.current
+    ) {
+      const promise = loadStripe(conference.stripe_publishable_key, { locale: 'en' });
+      stripePromiseRef.current = promise;
+      setStripePromise(promise);
+    }
+  }, [conference?.stripe_enabled, conference?.stripe_publishable_key]);
 
   // Payment method availability based on Stripe status and country
   const stripeEnabled = conference?.stripe_enabled ?? false;
@@ -779,6 +797,7 @@ export default function AuthenticatedRegistrationForm({
               <InlineStripePayment
                 clientSecret={clientSecret}
                 publishableKey={publishableKey}
+                stripePromise={stripePromise}
                 billingName={`${billing.contact_first_name} ${billing.contact_last_name}`.trim()}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}

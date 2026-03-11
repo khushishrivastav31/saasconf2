@@ -31,6 +31,7 @@ export interface PublicConference {
   success_message?: string | null;
   policies?: Record<string, PolicyEntry> | null;
   stripe_enabled?: boolean;
+  stripe_publishable_key?: string | null;
   bank_transfer_countries?: string[] | null;
 }
 

@@ -243,6 +243,7 @@ async def get_authenticated_conference_details(
         success_message=success_message,
         policies=public_policies or None,
         stripe_enabled=(conference.settings or {}).get("stripe", {}).get("is_enabled", False),
+        stripe_publishable_key=(conference.settings or {}).get("stripe", {}).get("publishable_key"),
         bank_transfer_countries=(conference.settings or {}).get("bank_transfer_countries"),
     ).model_dump()
 

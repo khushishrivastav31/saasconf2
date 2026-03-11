@@ -65,6 +65,7 @@ class PublicConference(BaseModel):
     success_message: str | None = None  # Custom success message for confirmation page
     policies: dict[str, dict] | None = None  # Enabled policies (type, url, content)
     stripe_enabled: bool = False  # Whether Stripe (credit card) payment is active
+    stripe_publishable_key: str | None = None  # Stripe public key for eager loading
     bank_transfer_countries: list[str] | None = None  # ISO codes where bank transfer is allowed
 
     model_config = {"from_attributes": True}

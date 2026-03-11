@@ -11,6 +11,7 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 interface InlineStripePaymentProps {
   clientSecret: string | null;
   publishableKey: string | null;
+  stripePromise?: ReturnType<typeof loadStripe> | null; // Pre-loaded Stripe instance
   billingName?: string; // Cardholder name from billing contact
   onSuccess: () => void;
   onError: (message: string) => void;
@@ -94,19 +95,25 @@ function PaymentForm({
 export default function InlineStripePayment({
   clientSecret,
   publishableKey,
+  stripePromise: externalStripePromise,
   billingName,
   onSuccess,
   onError,
   isSubmitting,
 }: InlineStripePaymentProps) {
-  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
+  const [localStripePromise, setLocalStripePromise] = useState<ReturnType<
+    typeof loadStripe
+  > | null>(null);
 
-  // Initialize Stripe with English locale
+  // Use pre-loaded Stripe if provided, otherwise load on demand (fallback)
+  const stripePromise = externalStripePromise ?? localStripePromise;
+
+  // Initialize Stripe with English locale (only if no external promise provided)
   useEffect(() => {
-    if (publishableKey) {
-      setStripePromise(loadStripe(publishableKey, { locale: 'en' }));
+    if (publishableKey && !externalStripePromise) {
+      setLocalStripePromise(loadStripe(publishableKey, { locale: 'en' }));
     }
-  }, [publishableKey]);
+  }, [publishableKey, externalStripePromise]);
 
   if (!clientSecret || !publishableKey) {
     // Show loading state while creating payment intent
