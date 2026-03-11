@@ -99,3 +99,6 @@ class InvoiceEventType:
     CONVERTED_TO_CREDIT_CARD = "converted_to_credit_card"
     MANUAL_PAYMENT_RECORDED = "manual_payment_recorded"
     INVOICE_REOPENED = "invoice_reopened"
+    PAYMENT_REMINDER_1_SENT = "payment_reminder_1_sent"
+    PAYMENT_REMINDER_2_SENT = "payment_reminder_2_sent"
+    PAYMENT_REMINDER_FAILED = "payment_reminder_failed"

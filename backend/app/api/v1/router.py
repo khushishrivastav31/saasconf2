@@ -19,6 +19,7 @@ from app.api.v1 import (
     messaging,
     modules,
     news,
+    payment_reminders,
     portal,
     portal_templates,
     program,
@@ -111,6 +112,13 @@ api_router.include_router(
 
 # Invoices (conference-scoped)
 api_router.include_router(invoices.router, prefix="/conferences/{conference_id}/invoices", tags=["Invoices"])
+
+# Payment reminders (conference-scoped)
+api_router.include_router(
+    payment_reminders.router,
+    prefix="/conferences/{conference_id}/payment-reminders",
+    tags=["Payment Reminders"],
+)
 
 # VAT rates (global, public for reads, superadmin for updates)
 api_router.include_router(vat_rates.router, tags=["VAT Rates"])

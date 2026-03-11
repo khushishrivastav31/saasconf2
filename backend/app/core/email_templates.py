@@ -349,6 +349,30 @@ def build_attendee_welcome_context(
     }
 
 
+def build_payment_reminder_context(
+    *,
+    recipient_name: str = "",
+    conference_name: str = "",
+    invoice_number: str = "",
+    invoice_amount: str = "",
+    currency: str = "",
+    due_date: str = "",
+    days_overdue: str = "",
+    support_email: str = "",
+) -> dict[str, str]:
+    """Build context for payment reminder emails."""
+    return {
+        "Recipient Name": recipient_name or "Sir or Madam",
+        "Conference Name": conference_name,
+        "Invoice Number": invoice_number,
+        "Invoice Amount": invoice_amount,
+        "Currency": currency,
+        "Due Date": due_date,
+        "Days Overdue": days_overdue,
+        "Support Email": support_email,
+    }
+
+
 def build_registration_cancellation_context(
     *,
     registration_name: str = "",

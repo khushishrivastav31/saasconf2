@@ -601,6 +601,24 @@ class BankTransferCountriesUpdate(BaseModel):
         return sorted(set(v))
 
 
+# --- Payment Reminder Settings Schemas ---
+
+
+class PaymentReminderSettings(BaseModel):
+    """Payment reminder configuration for a conference."""
+
+    payment_reminders_enabled: bool = True
+    first_reminder_days: int = Field(2, ge=1, le=90, description="Days after due date for 1st reminder")
+    second_reminder_days: int = Field(17, ge=1, le=180, description="Days after due date for 2nd reminder")
+    notify_admin_after_second: bool = True
+
+
+class PaymentReminderSettingsResponse(PaymentReminderSettings):
+    """Response schema for payment reminder settings."""
+
+    pass
+
+
 # --- Policy Settings Schemas ---
 
 

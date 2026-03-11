@@ -472,5 +472,74 @@ async def send_deadline_reminders(
         return JSONResponse(status_code=500, content={"detail": "Failed to send deadline reminders"})
 
 
+@app.post("/ops/send-payment-reminders")
+@limiter.limit("5/hour")
+async def send_payment_reminders(
+    request: Request,
+) -> JSONResponse:
+    """Send payment reminders for overdue invoices across all conferences.
+
+    Called daily by the payment-reminder-cron container.
+    Checks active conferences and sends 1st/2nd payment reminders as configured.
+    """
+    import logging
+
+    from sqlalchemy import select
+
+    from app.core.payment_reminder_service import generate_and_send_reminders
+    from app.db.session import async_session_maker
+    from app.models.conference import Conference
+
+    logger = logging.getLogger("saasconf.ops")
+
+    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD
+    auth_header = request.headers.get("Authorization", "")
+    expected = f"Bearer {settings.SUPER_ADMIN_PASSWORD}"
+    if auth_header != expected:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    total_sent = 0
+    total_errors = 0
+    conferences_checked = 0
+
+    try:
+        async with async_session_maker() as session:
+            # Get all active conferences
+            result = await session.execute(select(Conference).where(Conference.is_active.is_(True)))
+            conferences = list(result.scalars().all())
+
+            for conference in conferences:
+                try:
+                    counts = await generate_and_send_reminders(session, conference)
+                    total_sent += counts["sent"]
+                    total_errors += counts["errors"]
+                    conferences_checked += 1
+                except Exception as e:
+                    logger.error(
+                        "Payment reminder failed for conference %s: %s",
+                        conference.id,
+                        e,
+                    )
+                    total_errors += 1
+
+        logger.info(
+            "Payment reminders: sent=%d, errors=%d, conferences=%d",
+            total_sent,
+            total_errors,
+            conferences_checked,
+        )
+        return JSONResponse(
+            content={
+                "status": "completed",
+                "sent": total_sent,
+                "errors": total_errors,
+                "conferences_checked": conferences_checked,
+            }
+        )
+    except Exception as e:
+        logger.error("Payment reminder job failed: %s", e, exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": "Failed to send payment reminders"})
+
+
 # Include API router
 app.include_router(api_router, prefix="/api/v1")

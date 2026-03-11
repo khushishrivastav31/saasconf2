@@ -76,6 +76,8 @@ class EmailTemplateType:
     REGISTRATION_INVOICE = "registration_invoice"
     ATTENDEE_WELCOME = "attendee_welcome"
     REGISTRATION_CANCELLATION = "registration_cancellation"
+    PAYMENT_REMINDER_FIRST = "payment_reminder_first"
+    PAYMENT_REMINDER_SECOND = "payment_reminder_second"
 
     # System templates (no tenant_id)
     SYSTEM_TYPES: ClassVar[list[str]] = [TENANT_USER_WELCOME]
@@ -94,6 +96,8 @@ class EmailTemplateType:
         REGISTRATION_INVOICE,
         ATTENDEE_WELCOME,
         REGISTRATION_CANCELLATION,
+        PAYMENT_REMINDER_FIRST,
+        PAYMENT_REMINDER_SECOND,
     ]
 
     ALL_TYPES: ClassVar[list[str]] = SYSTEM_TYPES + CONFERENCE_TYPES

@@ -43,6 +43,7 @@ from app.models.messaging import (
 )
 from app.models.module import Module, TenantModule
 from app.models.news import NewsArticle
+from app.models.payment_reminder import PaymentReminder
 from app.models.platform_currency import PlatformCurrency
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
 from app.models.registration import (
@@ -133,6 +134,7 @@ __all__ = [
     "PaperLevel",
     "PaperReview",
     "PaperStatus",
+    "PaymentReminder",
     "PlatformCurrency",
     "ProgramDay",
     "ProgramSession",

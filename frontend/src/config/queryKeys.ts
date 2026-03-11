@@ -180,6 +180,11 @@ export const queryKeys = {
   // Use this for invoice settings
   invoiceSettings: (conferenceId: string) => ['invoice-settings', conferenceId] as const,
   stripeSettings: (conferenceId: string) => ['stripe-settings', conferenceId] as const,
+  paymentReminders: {
+    byConference: (conferenceId: string) => ['payment-reminders', conferenceId] as const,
+    stats: (conferenceId: string) => ['payment-reminder-stats', conferenceId] as const,
+    settings: (conferenceId: string) => ['payment-reminder-settings', conferenceId] as const,
+  },
 
   // ── Team & Users ────────────────────────────────────────────────
   team: {

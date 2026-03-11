@@ -158,6 +158,15 @@ BANK_TRANSFER_COUNTRIES: list[str] = [
 ]
 
 
+# Default payment reminder settings (stored in conference.settings["payment_reminders"])
+DEFAULT_PAYMENT_REMINDER_SETTINGS: dict[str, bool | int] = {
+    "payment_reminders_enabled": True,
+    "first_reminder_days": 2,
+    "second_reminder_days": 17,
+    "notify_admin_after_second": True,
+}
+
+
 # Map bare language codes to their most common regional variant so that
 # callers can pass either "de" or "de-DE".
 _LANGUAGE_TO_LOCALE: dict[str, str] = {

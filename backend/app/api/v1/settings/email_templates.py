@@ -347,6 +347,70 @@ Your user account remains active. If you believe this cancellation was made in e
 Warm regards,
 The [Conference Name] Team""",
     },
+    EmailTemplateType.PAYMENT_REMINDER_FIRST: {
+        "subject": "Payment Reminder — Invoice [Invoice Number] for [Conference Name]",
+        "body_html": """<h2>Payment Reminder</h2>
+<p>Dear [Recipient Name],</p>
+<p>This is a friendly reminder that invoice <strong>[Invoice Number]</strong> for <strong>[Invoice Amount] [Currency]</strong> was due on <strong>[Due Date]</strong>.</p>
+<div style="margin: 20px 0; padding: 16px; background-color: #f3f4f6; border-radius: 8px;">
+    <p style="margin: 0;"><strong>Invoice Number:</strong> [Invoice Number]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Amount Due:</strong> [Invoice Amount] [Currency]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Due Date:</strong> [Due Date]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Days Overdue:</strong> [Days Overdue]</p>
+</div>
+<p>Please arrange payment at your earliest convenience. If you have already made payment, please disregard this message.</p>
+<p>If you have any questions regarding this invoice, please contact us at [Support Email].</p>
+<p>Warm regards,<br>The [Conference Name] Team</p>""",
+        "body_text": """Payment Reminder
+
+Dear [Recipient Name],
+
+This is a friendly reminder that invoice [Invoice Number] for [Invoice Amount] [Currency] was due on [Due Date].
+
+Invoice Number: [Invoice Number]
+Amount Due: [Invoice Amount] [Currency]
+Due Date: [Due Date]
+Days Overdue: [Days Overdue]
+
+Please arrange payment at your earliest convenience. If you have already made payment, please disregard this message.
+
+If you have any questions regarding this invoice, please contact us at [Support Email].
+
+Warm regards,
+The [Conference Name] Team""",
+    },
+    EmailTemplateType.PAYMENT_REMINDER_SECOND: {
+        "subject": "Second Payment Reminder — Invoice [Invoice Number] for [Conference Name]",
+        "body_html": """<h2>Second Payment Reminder</h2>
+<p>Dear [Recipient Name],</p>
+<p>This is a second reminder regarding the outstanding invoice <strong>[Invoice Number]</strong> for <strong>[Invoice Amount] [Currency]</strong>, which was due on <strong>[Due Date]</strong>.</p>
+<div style="margin: 20px 0; padding: 16px; background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px;">
+    <p style="margin: 0;"><strong>Invoice Number:</strong> [Invoice Number]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Amount Due:</strong> [Invoice Amount] [Currency]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Due Date:</strong> [Due Date]</p>
+    <p style="margin: 8px 0 0 0;"><strong>Days Overdue:</strong> [Days Overdue]</p>
+</div>
+<p>We kindly ask you to settle this invoice as soon as possible. If payment has already been made, please let us know so we can update our records.</p>
+<p>For any questions or to discuss payment arrangements, please contact us at [Support Email].</p>
+<p>Warm regards,<br>The [Conference Name] Team</p>""",
+        "body_text": """Second Payment Reminder
+
+Dear [Recipient Name],
+
+This is a second reminder regarding the outstanding invoice [Invoice Number] for [Invoice Amount] [Currency], which was due on [Due Date].
+
+Invoice Number: [Invoice Number]
+Amount Due: [Invoice Amount] [Currency]
+Due Date: [Due Date]
+Days Overdue: [Days Overdue]
+
+We kindly ask you to settle this invoice as soon as possible. If payment has already been made, please let us know so we can update our records.
+
+For any questions or to discuss payment arrangements, please contact us at [Support Email].
+
+Warm regards,
+The [Conference Name] Team""",
+    },
     # System-level template (no conference context)
     EmailTemplateType.TENANT_USER_WELCOME: {
         "subject": "Welcome to [Company Name] — Set up your password",

@@ -12,6 +12,7 @@ from .discount_codes import router as discount_codes_router
 from .email_templates import router as email_templates_router
 from .invoice_settings import router as invoice_settings_router
 from .location_types import router as location_types_router
+from .payment_reminder_settings import router as payment_reminder_settings_router
 from .policies import router as policies_router
 from .pronouns import router as pronouns_router
 from .registration_questions import router as registration_questions_router
@@ -44,6 +45,7 @@ router.include_router(review_form_settings_router)
 router.include_router(pronouns_router)
 router.include_router(email_templates_router)
 router.include_router(invoice_settings_router)
+router.include_router(payment_reminder_settings_router)
 router.include_router(stripe_settings_router)
 router.include_router(policies_router)
 router.include_router(registration_questions_router)
