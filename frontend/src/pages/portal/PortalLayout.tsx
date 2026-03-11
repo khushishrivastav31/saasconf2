@@ -305,6 +305,10 @@ function PortalLayout() {
         ]
       : []),
     {
+      label: 'Registration',
+      items: [{ name: 'My Registration', href: `${basePath}/my-registrations`, icon: TicketIcon }],
+    },
+    {
       label: 'Account',
       items: [{ name: 'My Profile', href: `${basePath}/profile`, icon: UserIcon }],
     },

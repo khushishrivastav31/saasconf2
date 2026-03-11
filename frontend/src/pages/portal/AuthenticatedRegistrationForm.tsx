@@ -108,8 +108,10 @@ export default function AuthenticatedRegistrationForm({
   // VAT calculation state
   const [vatCalculation, setVatCalculation] = useState<VatCalculation | null>(null);
 
-  // Discount validation state (for ALUMNI discount)
+  // Discount validation state (for ALUMNI and manual discount codes)
   const [discountValidation, setDiscountValidation] = useState<DiscountCodeValidation | null>(null);
+  const [discountMessage, setDiscountMessage] = useState<string | null>(null);
+  const [discountLoading, setDiscountLoading] = useState(false);
 
   // Payment attempt state
   const [attemptingPayment, setAttemptingPayment] = useState(false);
@@ -142,6 +144,50 @@ export default function AuthenticatedRegistrationForm({
       console.error('Failed to fetch ALUMNI discount:', error);
     }
   };
+
+  // Validate a manually-entered discount code (mirrors public form behaviour)
+  const validateDiscountCode = useCallback(
+    async (code: string) => {
+      if (!code || code.trim() === '' || !conferenceId) {
+        // If alumni discount is active, keep it; otherwise clear
+        if (!alumniInfo?.has_discount) {
+          setDiscountValidation(null);
+        }
+        setDiscountMessage(null);
+        return;
+      }
+
+      setDiscountLoading(true);
+      setDiscountMessage(null);
+
+      try {
+        const response = await portalApi.get<DiscountCodeValidation>(
+          `/portal/conferences/${conferenceId}/validate-discount/${encodeURIComponent(code.trim())}`
+        );
+
+        if (response.data.valid) {
+          setDiscountValidation(response.data);
+          setDiscountMessage(
+            `\u2713 Discount applied: ${response.data.description || 'Valid code'}`
+          );
+        } else {
+          // Keep alumni discount if present, only clear manual
+          if (!alumniInfo?.has_discount) {
+            setDiscountValidation(null);
+          }
+          setDiscountMessage(`\u2717 ${response.data.message || 'Invalid discount code'}`);
+        }
+      } catch {
+        if (!alumniInfo?.has_discount) {
+          setDiscountValidation(null);
+        }
+        setDiscountMessage('\u2717 Error validating discount code');
+      } finally {
+        setDiscountLoading(false);
+      }
+    },
+    [conferenceId, alumniInfo?.has_discount]
+  );
 
   // Calculate VAT based on billing info
   const calculateVat = useCallback(
@@ -248,9 +294,12 @@ export default function AuthenticatedRegistrationForm({
       const response = await portalApi.post<PortalRegistrationResponse>(
         `/portal/conferences/${conferenceId}/register`,
         {
-          billing: payload.billing,
+          billing: {
+            ...payload.billing,
+            payment_intent_id: payload.payment_intent_id,
+          },
           attendees: payload.attendees,
-          payment_intent_id: payload.payment_intent_id,
+          discount_code: payload.billing.discount_code || undefined,
         }
       );
       return response.data;
@@ -258,7 +307,7 @@ export default function AuthenticatedRegistrationForm({
     onSuccess: () => {
       showToast('Registration successful!', 'success');
       // Navigate to confirmation or success page
-      navigate(`/portal/conferences/${conferenceId}/registration-success`);
+      navigate(`/${companySlug}/portal/my-registrations`);
     },
     onError: (error) => {
       showToast(parseApiError(error), 'error');
@@ -595,6 +644,8 @@ export default function AuthenticatedRegistrationForm({
             readOnlyFields={['contact_email']}
             hidePaymentMethod={true}
             hideDiscountCode={true}
+            vatApiClient={portalApi}
+            vatEndpoint={`/portal/conferences/${conferenceId}/validate-vat`}
           />
 
           {/* Conditional Discount Code Field */}
@@ -606,16 +657,65 @@ export default function AuthenticatedRegistrationForm({
               >
                 Discount Code
               </label>
-              <input
-                id="discount_code"
-                type="text"
-                placeholder="Enter code if applicable"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
-                value={billing.discount_code || ''}
-                onChange={(e) => {
-                  setBilling({ ...billing, discount_code: e.target.value });
-                }}
-              />
+              <div className="relative">
+                <input
+                  id="discount_code"
+                  type="text"
+                  placeholder="Enter code if applicable"
+                  className={`mt-1 block w-full rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100 ${
+                    discountValidation?.valid && discountMessage
+                      ? 'border-green-300 dark:border-green-600'
+                      : discountMessage && !discountValidation?.valid
+                        ? 'border-red-300 dark:border-red-600'
+                        : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  value={billing.discount_code || ''}
+                  onChange={(e) => {
+                    setBilling({ ...billing, discount_code: e.target.value });
+                    if (!e.target.value.trim()) {
+                      setDiscountMessage(null);
+                      if (!alumniInfo?.has_discount) {
+                        setDiscountValidation(null);
+                      }
+                    }
+                  }}
+                  onBlur={(e) => validateDiscountCode(e.target.value)}
+                />
+                {discountLoading && (
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                    <svg
+                      className="animate-spin h-4 w-4 text-gray-400"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              {discountMessage && (
+                <p
+                  className={`mt-1 text-xs ${
+                    discountValidation?.valid
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {discountMessage}
+                </p>
+              )}
             </div>
           )}
 

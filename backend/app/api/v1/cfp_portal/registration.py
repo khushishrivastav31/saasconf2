@@ -4,11 +4,16 @@ import logging
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from app.api.v1.registrations._helpers import _send_registration_emails
+from app.api.v1.registrations._helpers import (
+    _build_response,
+    _check_email_unique,
+    _create_items,
+    _send_registration_emails,
+)
 from app.core.alumni_discount import validate_alumni_discount
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.exceptions import NotFoundError, ValidationError
@@ -19,10 +24,11 @@ from app.core.vat_calculation import classify_customer_location, classify_custom
 from app.core.vat_rules import get_vat_rule
 from app.models.booking import BookingOption
 from app.models.conference import Conference
-from app.models.registration import BillingProfile, Registration, RegistrationItem, RegistrationMode, RegistrationStatus
+from app.models.registration import BillingProfile, Registration, RegistrationMode, RegistrationStatus
+from app.models.tenant import Tenant
 from app.models.vat_rate_by_country import VatRateByCountry
 from app.schemas.portal_registration import PortalRegistrationRequest, PortalRegistrationResponse
-from app.schemas.registration import RegistrationItemResponse, RegistrationResponse
+from app.schemas.registration import RegistrationResponse
 
 logger = logging.getLogger(__name__)
 
@@ -528,6 +534,33 @@ async def update_payment_intent_authenticated(
         raise HTTPException(status_code=500, detail=f"Stripe error: {e!s}") from e
 
 
+@router.post("/portal/conferences/{conference_id}/validate-vat")
+async def validate_vat_authenticated(
+    conference_id: UUID,
+    current_applicant: CurrentApplicantDep,
+    db: DbSessionDep,
+    vat_number: str = Query(..., min_length=2),
+    country: str = Query(..., min_length=2, max_length=2),
+) -> dict:  # type: ignore[type-arg]
+    """Validate a VAT number for authenticated portal users."""
+    from app.core.vat_validation import validate_vat_number
+
+    tenant_id = current_applicant.tenant_id
+
+    # Verify conference exists
+    result = await db.execute(
+        select(Conference).where(
+            Conference.id == conference_id,
+            Conference.tenant_id == tenant_id,
+            Conference.is_active.is_(True),
+        )
+    )
+    if not result.scalar_one_or_none():
+        raise NotFoundError("Conference not found")
+
+    return await validate_vat_number(vat_number, country)
+
+
 @router.get("/portal/conferences/{conference_id}/validate-discount/{code}")
 async def validate_discount_authenticated(
     conference_id: UUID,
@@ -661,12 +694,12 @@ async def create_authenticated_registration(
     current_applicant: CurrentApplicantDep,
     db: DbSessionDep,
 ) -> PortalRegistrationResponse:
-    """Create registration for authenticated user with alumni discount auto-application.
+    """Create registration for authenticated user with discount code support.
 
     Business Rules:
     - User must be logged in (CurrentApplicantDep)
     - If user is alumni, ALUMNI discount auto-applies (if exists and valid)
-    - No other discount codes allowed
+    - Any valid discount code can be applied via the discount_code field
     - Pre-filled billing from user profile (frontend responsibility)
     - Same payment flow as public registration (Stripe Elements or bank transfer)
     """
@@ -685,6 +718,10 @@ async def create_authenticated_registration(
     if not conference:
         raise NotFoundError("Conference not found")
 
+    # Eagerly resolve tenant slug before session commit (avoids MissingGreenlet)
+    tenant_result = await db.execute(select(Tenant.slug).where(Tenant.id == tenant_id))
+    tenant_slug = tenant_result.scalar_one()
+
     # Check alumni status and auto-apply discount
     is_alumni, alumni_discount, alumni_conferences = await validate_alumni_discount(
         db=db,
@@ -696,19 +733,42 @@ async def create_authenticated_registration(
     # Validate discount code in request
     discount_code_str = None
     if data.discount_code:
-        # Only ALUMNI discount allowed for authenticated users
-        if data.discount_code.upper() != "ALUMNI":
-            raise ValidationError("Only ALUMNI discount code is allowed for authenticated registrations")
+        if data.discount_code.upper() == "ALUMNI":
+            # Special ALUMNI discount: verify user is actually alumni
+            if not is_alumni:
+                raise ValidationError("ALUMNI discount code is only for past attendees")
+            if not alumni_discount:
+                raise ValidationError("ALUMNI discount code is not currently available")
+            discount_code_str = "ALUMNI"
+        else:
+            # Regular discount code — validate it exists and is active
+            from datetime import date as date_type
 
-        # Verify user is actually alumni
-        if not is_alumni:
-            raise ValidationError("ALUMNI discount code is only for past attendees")
+            from app.models.booking import DiscountCode
 
-        # Verify discount exists
-        if not alumni_discount:
-            raise ValidationError("ALUMNI discount code is not currently available")
+            dc_result = await db.execute(
+                select(DiscountCode).where(
+                    DiscountCode.conference_id == conference_id,
+                    DiscountCode.code == data.discount_code.upper(),
+                    DiscountCode.is_active == True,
+                )
+            )
+            dc = dc_result.scalar_one_or_none()
+            if not dc:
+                raise ValidationError(f"Invalid discount code: {data.discount_code}")
 
-        discount_code_str = "ALUMNI"
+            # Check date range
+            today = date_type.today()
+            if dc.start_date and today < dc.start_date:
+                raise ValidationError("This discount code is not valid yet")
+            if dc.end_date and today > dc.end_date:
+                raise ValidationError("This discount code has expired")
+
+            # Check usage limit
+            if dc.max_uses > 0 and dc.usage_count >= dc.max_uses:
+                raise ValidationError("This discount code has reached its maximum usage limit")
+
+            discount_code_str = dc.code
     elif is_alumni and alumni_discount:
         # Auto-apply ALUMNI discount if user is alumni
         discount_code_str = "ALUMNI"
@@ -765,22 +825,8 @@ async def create_authenticated_registration(
     responses: list[RegistrationResponse] = []
 
     for att in data.attendees:
-        # Check for duplicate registration
-        email_lower = att.email.lower()
-        existing_reg_stmt = select(Registration).where(
-            Registration.conference_id == conference_id,
-            Registration.email == email_lower,
-            Registration.status != RegistrationStatus.CANCELLED.value,
-        )
-        existing_reg_result = await db.execute(existing_reg_stmt)
-        existing_reg = existing_reg_result.scalar_one_or_none()
-
-        if existing_reg:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Email {att.email} is already registered for this conference. "
-                "Please use a different email address or contact support to modify your existing registration.",
-            )
+        # Check for duplicate registration (matches DB unique constraint)
+        await _check_email_unique(db, conference_id, att.email)
 
         reg = Registration(
             tenant_id=tenant_id,
@@ -788,7 +834,7 @@ async def create_authenticated_registration(
             billing_profile_id=billing.id,
             first_name=att.first_name,
             last_name=att.last_name,
-            email=email_lower,
+            email=att.email.lower(),
             pronouns=att.pronouns,
             job_title=att.job_title,
             department=att.department,
@@ -802,68 +848,14 @@ async def create_authenticated_registration(
         db.add(reg)
         await db.flush()
 
-        # Create items (tutorials, add-ons)
-        items = []
-        for item_data in att.items or []:
-            if item_data.item_type == "booking_option":
-                # Find the booking option
-                option = opt_map.get(item_data.booking_option_id)
-                if not option:
-                    continue
-
-                item = RegistrationItem(
-                    tenant_id=tenant_id,
-                    conference_id=conference_id,
-                    registration_id=reg.id,
-                    item_type=item_data.item_type,
-                    item_name=option.name,
-                    booking_option_id=item_data.booking_option_id,
-                    program_session_id=item_data.program_session_id,
-                )
-                db.add(item)
-                items.append(item)
-
+        # Create items (tutorials, add-ons) using shared helper
+        items = await _create_items(db, reg, att.items or [], conference_id, tenant_id, conference)
         if items:
             await db.flush()
 
         registrations.append(reg)
-        responses.append(
-            RegistrationResponse(
-                id=reg.id,
-                tenant_id=reg.tenant_id,
-                conference_id=reg.conference_id,
-                billing_profile_id=reg.billing_profile_id,
-                first_name=reg.first_name,
-                last_name=reg.last_name,
-                email=reg.email,
-                pronouns=reg.pronouns,
-                job_title=reg.job_title,
-                department=reg.department,
-                phone=reg.phone,
-                booking_option_id=reg.booking_option_id,
-                booking_option_name=opt_map[att.booking_option_id].name,
-                main_session_id=reg.main_session_id,
-                registration_mode=reg.registration_mode,
-                status=reg.status,
-                notes=reg.notes,
-                created_by=None,  # Portal registrations have no created_by
-                created_at=reg.created_at,
-                updated_at=reg.updated_at,
-                items=[
-                    RegistrationItemResponse(
-                        id=item.id,
-                        item_type=item.item_type,
-                        item_name=item.item_name,
-                        booking_option_id=item.booking_option_id,
-                        program_session_id=item.program_session_id,
-                        pending=False,
-                        notes=item.notes,
-                        created_at=item.created_at,
-                    )
-                    for item in items
-                ],
-            )
-        )
+        option_name = opt_map[att.booking_option_id].name if att.booking_option_id in opt_map else None
+        responses.append(_build_response(reg, option_name=option_name, items=items))
 
     # Create invoice
     try:
@@ -966,7 +958,7 @@ async def create_authenticated_registration(
     )
 
     # Build response
-    success_url = f"/{conference.tenant.slug}/portal/{conference.abbreviation}/registration-success"
+    success_url = f"/{tenant_slug}/portal/{conference.abbreviation}/registration-success"
 
     return PortalRegistrationResponse(
         billing_profile_id=billing.id,

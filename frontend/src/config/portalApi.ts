@@ -1,37 +1,33 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
  * Extract the company slug from the current URL pathname.
  * Expects URLs of the form `/:companySlug/portal/...`.
  */
 export function getCompanySlugFromUrl(): string {
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  if (parts.length >= 2 && parts[1] === "portal") {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  if (parts.length >= 2 && parts[1] === 'portal') {
     return parts[0];
   }
-  return "";
+  return '';
 }
 
 export const portalApi = axios.create({
   baseURL: `${API_URL}/api/v1`,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
 });
 
-const TOKEN_KEY = "applicant_access_token";
-const REFRESH_TOKEN_KEY = "applicant_refresh_token";
+const TOKEN_KEY = 'applicant_access_token';
+const REFRESH_TOKEN_KEY = 'applicant_refresh_token';
 
 export const getApplicantAccessToken = () => localStorage.getItem(TOKEN_KEY);
-export const getApplicantRefreshToken = () =>
-  localStorage.getItem(REFRESH_TOKEN_KEY);
+export const getApplicantRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY);
 
-export const setApplicantTokens = (
-  accessToken: string,
-  refreshToken: string,
-) => {
+export const setApplicantTokens = (accessToken: string, refreshToken: string) => {
   localStorage.setItem(TOKEN_KEY, accessToken);
   localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
 };
@@ -50,7 +46,7 @@ portalApi.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error),
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor — handle token refresh
@@ -78,17 +74,17 @@ portalApi.interceptors.response.use(
       _retry?: boolean;
     };
 
-    const isAuthEndpoint = originalRequest.url?.includes("/portal/") &&
-      (originalRequest.url?.includes("/login") ||
-        originalRequest.url?.includes("/register") ||
-        originalRequest.url?.includes("/refresh") ||
-        originalRequest.url?.includes("/verify-email"));
+    // Only skip token refresh for actual auth endpoints (user account management),
+    // not conference registration endpoints like /portal/conferences/{id}/register
+    const url = originalRequest.url || '';
+    const isAuthEndpoint =
+      url.includes('/portal/') &&
+      (url.includes('/login') ||
+        url.includes('/user/register') ||
+        url.includes('/refresh') ||
+        url.includes('/verify-email'));
 
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      !isAuthEndpoint
-    ) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -112,10 +108,9 @@ portalApi.interceptors.response.use(
       }
 
       try {
-        const response = await axios.post(
-          `${API_URL}/api/v1/portal/${slug}/refresh`,
-          { refresh_token: refreshToken },
-        );
+        const response = await axios.post(`${API_URL}/api/v1/portal/${slug}/refresh`, {
+          refresh_token: refreshToken,
+        });
 
         const { access_token, refresh_token: newRefreshToken } = response.data;
         setApplicantTokens(access_token, newRefreshToken);
@@ -134,7 +129,7 @@ portalApi.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  },
+  }
 );
 
 export default portalApi;

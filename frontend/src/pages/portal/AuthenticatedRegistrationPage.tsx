@@ -70,8 +70,9 @@ export default function AuthenticatedRegistrationPage() {
   }
 
   if (!applicant) {
-    // Not logged in - redirect to login
-    navigate(`/login`);
+    // Not logged in - redirect to portal login
+    const slug = window.location.pathname.split('/').filter(Boolean)[0] || '';
+    navigate(`/${slug}/portal/user/login`, { replace: true });
     return null;
   }
 
