@@ -405,7 +405,6 @@ async def create_payment_intent_authenticated(
     """Create Stripe PaymentIntent for authenticated portal registration."""
     from app.config import get_settings
 
-
     settings = get_settings()
     tenant_id = current_applicant.tenant_id
 
