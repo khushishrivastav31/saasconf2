@@ -97,30 +97,23 @@ Detailed docs are in `.claude/docs/` and `docs/` — read on-demand when working
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Test coverage improvement sprint
-- **Feature**: Comprehensive test suite expansion — security, portal, CFP, reviewer workflow
-- **New backend test files** (all passing, 0 failures):
-  - `test_cfp_portal_security.py` — CFP portal token/auth security
-  - `test_portal_registration_security.py` — Public registration input validation + XSS
-  - `test_registration_security.py` — Registration endpoint security
-  - `test_registration_replacement.py` — Registration replacement workflow (557 lines)
-  - `test_csv_export.py` — CSV streaming response (async-aware)
-  - `test_html_sanitize.py` — HTML sanitization
+- **Last completed**: Test coverage improvement sprint + follow-up improvements
+- **Feature**: Comprehensive test suite expansion — security, portal, CFP, reviewer workflow, shared utils
+- **New backend test files** (all passing, 2334 total):
+  - `test_cfp_portal_security.py`, `test_portal_registration_security.py`, `test_registration_security.py`
+  - `test_registration_replacement.py`, `test_csv_export.py`, `test_html_sanitize.py`
   - `test_invoice_audit.py`, `test_invoice_email_helpers.py`, `test_invoice_validation.py`
   - `test_payment_reminder_helpers.py`, `test_recaptcha.py`, `test_registration_email_helpers.py`
   - `test_cross_tenant_isolation.py` — 22 tests: RLS + tenant boundary enforcement
   - `test_cfp_auth_flows.py` — 36 tests: register, verify email, login, refresh, password reset
-  - `test_paper_submission.py` — 25 tests: full paper lifecycle (draft→submit→withdraw→delete)
+  - `test_paper_submission.py` — 25 tests: full paper lifecycle
   - `test_reviewer_workflow.py` — 23 tests: assignments, scoring, isolation, feedback
-- **New frontend test files** (all passing):
+- **Security fix**: `cfp_portal/reviews.py` — authors cannot review their own papers (403)
+- **New frontend test files** (all passing, 1534 total):
+  - `src/test-utils.tsx` — shared portal test utilities (QueryClient, auth context, render helper)
   - `hooks/__tests__/useAttendeeManagement`, `usePaymentIntent`, `useSessionSelection`, `useVatCalculation`, `useVatValidation`
   - `pages/portal/__tests__/SubmitPaperPage`, `DashboardPage`, `ProfilePage`, `MessagesPage`, `MyRegistrationsPage`, `InvitationsPage`
+  - `components/__tests__/InvoiceTemplateEditor.test.tsx` — 29 tests for 725-line component (was 0% coverage)
   - `e2e/invoice-management.spec.ts`, `e2e/payment-reminders.spec.ts`, `e2e/public-registration.spec.ts`
-- **Coverage after** (was → now):
-  - Statements: 58.95% → 62.01%
-  - Branches: 63.48% → 65.00%
-  - Functions: 50.61% → 52.70%
-  - Lines: 59.43% → 62.45%
-  - Frontend tests: 1306 → 1505 (+199)
-- **Linting**: ✅ Ruff auto-fixed unused imports in new test files
+- **Linting**: ✅ Ruff, ESLint, TypeScript, formatting all clean
 - **Status**: ⏳ Ready to commit — awaiting user approval

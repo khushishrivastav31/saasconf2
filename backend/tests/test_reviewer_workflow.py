@@ -887,7 +887,7 @@ class TestAuthorCannotReviewOwnPaper:
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
 
-    async def test_author_made_committee_member_gets_assignment_but_would_be_conflict(
+    async def test_author_made_committee_member_cannot_review_own_paper(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
@@ -898,11 +898,8 @@ class TestAuthorCannotReviewOwnPaper:
         paper: CFPPaper,
     ) -> None:
         """If author is added as a committee member AND assigned their own paper,
-        they can technically submit a review (DB-level: no FK prevents it),
-        but this test documents that the business logic does not block it at the
-        API layer — the prevention is an admin-facing responsibility.
-        The test verifies the current API behaviour: author can review if assigned,
-        which confirms no extra DB-level guard is silently blocking it."""
+        the API must return 403 when they attempt to access or submit a review.
+        This enforces the conflict-of-interest rule at the API layer."""
         # Make the author a committee member
         cm = CFPCommitteeMember(
             id=uuid.uuid4(),
@@ -924,7 +921,8 @@ class TestAuthorCannotReviewOwnPaper:
         db_session.add(self_assignment)
         await db_session.commit()
 
-        # Author can see their own paper in the assigned-papers list
+        # Author can still see their own paper in the assigned-papers list
+        # (the list endpoint is not gated; only the review access/submit are)
         resp = await client.get(
             f"{PORTAL_BASE}/assigned-papers",
             headers=auth_headers(author_token),
@@ -932,6 +930,24 @@ class TestAuthorCannotReviewOwnPaper:
         assert resp.status_code == 200
         ids = [item["id"] for item in resp.json()["items"]]
         assert str(paper.id) in ids
+
+        # Attempting to access the review config must return 403
+        resp_config = await client.get(
+            f"{PORTAL_BASE}/assignments/{self_assignment.id}/review-config",
+            headers=auth_headers(author_token),
+        )
+        assert resp_config.status_code == 403
+        assert "cannot review your own paper" in resp_config.json()["detail"]
+
+        # Attempting to submit a review must also return 403
+        resp_submit = await client.post(
+            f"{PORTAL_BASE}/assignments/{self_assignment.id}/review",
+            json={"answers": [], "speaker_feedback": None, "must_have": False},
+            params={"submit": "false"},
+            headers=auth_headers(author_token),
+        )
+        assert resp_submit.status_code == 403
+        assert "cannot review your own paper" in resp_submit.json()["detail"]
 
 
 # ── 6. Draft update cycle ─────────────────────────────────────────────────────

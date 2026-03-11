@@ -1,18 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import MessagesPage from '../MessagesPage';
+import type { PortalThreadListResponse, PortalThreadDetailResponse } from '../../../types/portal';
+import {
+  mockApplicant,
+  makeApplicantAuthContext,
+  renderWithPortalProviders,
+} from '../../../test-utils';
 
 // jsdom does not implement scrollIntoView — mock it globally
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
-import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router';
-import MessagesPage from '../MessagesPage';
-import { ApplicantAuthContext } from '../../../contexts/ApplicantAuthContext';
-import type {
-  ApplicantProfile,
-  PortalThreadListResponse,
-  PortalThreadDetailResponse,
-} from '../../../types/portal';
 
 // Mock portalApi
 vi.mock('../../../config/portalApi', () => ({
@@ -56,66 +54,14 @@ vi.mock('../../../components/MessageFileAttach', () => ({
   default: () => <div data-testid="message-file-attach" />,
 }));
 
-// Minimal mock applicant
-const mockApplicant: ApplicantProfile = {
-  id: 'applicant-abc',
-  email: 'speaker@example.com',
-  first_name: 'Alex',
-  last_name: 'Speaker',
-  pronouns: null,
-  phone: null,
-  title: null,
-  company: null,
-  bio: null,
-  social_links: {},
-  needs_accessibility: false,
-  accessibility_details: null,
-  agrees_to_recording: false,
-  message_notifications_enabled: true,
-  theme_preference: null,
-  picture_url: null,
-  video_url: null,
-  created_at: '2025-01-01T00:00:00Z',
-};
-
-function buildAuthContext(applicant: ApplicantProfile | null = mockApplicant) {
-  return {
-    applicant,
-    isLoading: false,
-    tenantSlug: 'acme',
-    login: vi.fn(),
-    register: vi.fn(),
-    logout: vi.fn(),
-    refreshApplicant: vi.fn().mockResolvedValue(undefined),
-  };
-}
-
-function createTestQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-}
-
 function renderWithProviders(
   ui: React.ReactElement,
-  {
-    applicant = mockApplicant,
-    initialPath = '/acme/portal/messages',
-  }: { applicant?: ApplicantProfile | null; initialPath?: string } = {}
+  { initialPath = '/acme/portal/messages' }: { initialPath?: string } = {}
 ) {
-  const queryClient = createTestQueryClient();
-  return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <QueryClientProvider client={queryClient}>
-        <ApplicantAuthContext.Provider value={buildAuthContext(applicant)}>
-          {ui}
-        </ApplicantAuthContext.Provider>
-      </QueryClientProvider>
-    </MemoryRouter>
-  );
+  return renderWithPortalProviders(ui, {
+    authContext: makeApplicantAuthContext(),
+    route: initialPath,
+  });
 }
 
 // --- Fixtures ---

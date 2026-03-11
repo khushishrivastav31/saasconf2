@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes } from 'react-router';
-import { ApplicantAuthContext } from '../../../contexts/ApplicantAuthContext';
 import SubmitPaperPage from '../SubmitPaperPage';
-import type { ApplicantProfile } from '../../../types/portal';
+import {
+  screen,
+  waitFor,
+  makeApplicantAuthContext,
+  renderWithPortalProviders,
+} from '../../../test-utils';
 
 // Mock the portalApi module
 vi.mock('../../../config/portalApi', () => ({
@@ -40,27 +41,6 @@ vi.mock('../../../components/common/RichTextEditor', () => ({
 }));
 
 // ----- Fixtures -----
-
-const mockApplicant: ApplicantProfile = {
-  id: 'applicant-1',
-  email: 'speaker@example.com',
-  first_name: 'Jane',
-  last_name: 'Speaker',
-  pronouns: null,
-  phone: '555-0100',
-  title: 'Engineer',
-  company: 'Acme Corp',
-  bio: 'A seasoned conference speaker.',
-  social_links: {},
-  needs_accessibility: false,
-  accessibility_details: null,
-  agrees_to_recording: true,
-  message_notifications_enabled: true,
-  theme_preference: null,
-  picture_url: 'https://example.com/pic.jpg',
-  video_url: null,
-  created_at: '2025-01-01T00:00:00Z',
-};
 
 const mockConferences = [
   {
@@ -122,40 +102,15 @@ const mockConferenceDetail = {
 
 // ----- Helpers -----
 
-function createTestQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
+function renderWithProviders(
+  ui: React.ReactElement,
+  { authContext = makeApplicantAuthContext() } = {}
+) {
+  return renderWithPortalProviders(ui, {
+    authContext,
+    route: '/acme/portal/papers/new',
+    path: '/:companySlug/portal/papers/new',
   });
-}
-
-function makeAuthContext(overrides?: Partial<ApplicantProfile>) {
-  return {
-    applicant: { ...mockApplicant, ...overrides },
-    isLoading: false,
-    tenantSlug: 'acme',
-    login: vi.fn(),
-    register: vi.fn(),
-    logout: vi.fn(),
-    refreshApplicant: vi.fn(),
-  };
-}
-
-function renderWithProviders(ui: React.ReactElement, { authContext = makeAuthContext() } = {}) {
-  const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ApplicantAuthContext.Provider value={authContext}>
-        <MemoryRouter initialEntries={['/acme/portal/papers/new']}>
-          <Routes>
-            <Route path="/:companySlug/portal/papers/new" element={ui} />
-          </Routes>
-        </MemoryRouter>
-      </ApplicantAuthContext.Provider>
-    </QueryClientProvider>
-  );
 }
 
 // ----- Tests -----
@@ -587,7 +542,7 @@ describe('SubmitPaperPage', () => {
 
       // Render with an applicant that has no bio
       renderWithProviders(<SubmitPaperPage />, {
-        authContext: makeAuthContext({ bio: null }),
+        authContext: makeApplicantAuthContext({ bio: null }),
       });
 
       await waitFor(() => {

@@ -1,0 +1,151 @@
+/**
+ * Shared test utilities for portal page tests.
+ *
+ * Usage:
+ *   import { createTestQueryClient, mockApplicant, makeApplicantAuthContext,
+ *            renderWithPortalProviders, render, screen, waitFor, fireEvent }
+ *     from '../../../test-utils';
+ */
+
+import React from 'react';
+import { render as rtlRender } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { vi } from 'vitest';
+import { ApplicantAuthContext } from './contexts/ApplicantAuthContext';
+import type {
+  ApplicantProfile,
+  ApplicantLoginRequest,
+  ApplicantRegisterRequest,
+} from './types/portal';
+
+// ── Re-exports from @testing-library/react ──────────────────────────────────
+
+export { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+
+// ── QueryClient factory ──────────────────────────────────────────────────────
+
+/** Returns a QueryClient with retry disabled — suitable for unit tests. */
+export function createTestQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+}
+
+// ── Canonical applicant fixture ──────────────────────────────────────────────
+
+/** A complete ApplicantProfile fixture usable in any portal test. */
+export const mockApplicant: ApplicantProfile = {
+  id: 'applicant-1',
+  email: 'speaker@example.com',
+  first_name: 'Jane',
+  last_name: 'Speaker',
+  pronouns: null,
+  phone: '555-0100',
+  title: 'Engineer',
+  company: 'Acme Corp',
+  bio: 'A seasoned conference speaker.',
+  social_links: {},
+  needs_accessibility: false,
+  accessibility_details: null,
+  agrees_to_recording: true,
+  message_notifications_enabled: true,
+  theme_preference: null,
+  picture_url: 'https://example.com/pic.jpg',
+  video_url: null,
+  created_at: '2025-01-01T00:00:00Z',
+};
+
+// ── Auth context builder ─────────────────────────────────────────────────────
+
+/** The shape returned by makeApplicantAuthContext — matches ApplicantAuthContextType. */
+export interface ApplicantAuthContextValue {
+  applicant: ApplicantProfile | null;
+  isLoading: boolean;
+  tenantSlug: string;
+  login: (credentials: ApplicantLoginRequest) => Promise<void>;
+  register: (data: ApplicantRegisterRequest) => Promise<string>;
+  logout: () => void;
+  refreshApplicant: () => Promise<void>;
+}
+
+/**
+ * Builds a full ApplicantAuthContext value with vi.fn() stubs for all methods.
+ *
+ * @param overrides  Partial overrides applied on top of mockApplicant, or pass
+ *                   `null` explicitly to simulate a logged-out state.
+ */
+export function makeApplicantAuthContext(
+  overrides?: Partial<ApplicantProfile> | null
+): ApplicantAuthContextValue {
+  const applicant = overrides === null ? null : { ...mockApplicant, ...overrides };
+  return {
+    applicant,
+    isLoading: false,
+    tenantSlug: 'acme',
+    login: vi.fn() as unknown as (credentials: ApplicantLoginRequest) => Promise<void>,
+    register: vi.fn() as unknown as (data: ApplicantRegisterRequest) => Promise<string>,
+    logout: vi.fn() as unknown as () => void,
+    refreshApplicant: vi.fn().mockResolvedValue(undefined) as unknown as () => Promise<void>,
+  };
+}
+
+// ── renderWithPortalProviders ────────────────────────────────────────────────
+
+export interface RenderWithPortalProvidersOptions {
+  /**
+   * Override the full auth context value.
+   * Defaults to makeApplicantAuthContext() (logged-in as mockApplicant).
+   */
+  authContext?: ApplicantAuthContextValue;
+  /**
+   * The initial URL for MemoryRouter.
+   * Defaults to '/acme/portal'.
+   */
+  route?: string;
+  /**
+   * A react-router <Route path> to match the `route`.
+   * When provided, the UI is rendered inside:
+   *   <Routes><Route path={path} element={ui} /></Routes>
+   * When omitted, the UI is rendered directly inside MemoryRouter.
+   */
+  path?: string;
+}
+
+/**
+ * Renders `ui` wrapped with:
+ *   QueryClientProvider → ApplicantAuthContext.Provider → MemoryRouter (→ optional Routes)
+ *
+ * This is the standard wrapper for portal pages that consume ApplicantAuthContext.
+ * For pages that don't need ApplicantAuthContext or a Router, use `render` from
+ * @testing-library/react directly (wrapping with QueryClientProvider as needed).
+ */
+export function renderWithPortalProviders(
+  ui: React.ReactElement,
+  {
+    authContext = makeApplicantAuthContext(),
+    route = '/acme/portal',
+    path,
+  }: RenderWithPortalProvidersOptions = {}
+) {
+  const queryClient = createTestQueryClient();
+
+  const content = path ? (
+    <Routes>
+      <Route path={path} element={ui} />
+    </Routes>
+  ) : (
+    ui
+  );
+
+  return rtlRender(
+    <QueryClientProvider client={queryClient}>
+      <ApplicantAuthContext.Provider value={authContext}>
+        <MemoryRouter initialEntries={[route]}>{content}</MemoryRouter>
+      </ApplicantAuthContext.Provider>
+    </QueryClientProvider>
+  );
+}

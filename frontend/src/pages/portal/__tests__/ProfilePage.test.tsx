@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import ProfilePage from '../ProfilePage';
 import { ApplicantAuthContext } from '../../../contexts/ApplicantAuthContext';
 import type { ApplicantProfile } from '../../../types/portal';
+import { createTestQueryClient } from '../../../test-utils';
 
 // Mock portalApi
 vi.mock('../../../config/portalApi', () => ({
@@ -98,15 +99,6 @@ function buildAuthContext(applicant: ApplicantProfile | null = mockApplicant) {
     logout: vi.fn(),
     refreshApplicant: mockRefreshApplicant,
   };
-}
-
-function createTestQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
 }
 
 function renderWithProviders(

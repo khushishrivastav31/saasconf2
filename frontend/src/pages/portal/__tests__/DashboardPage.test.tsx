@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import DashboardPage from '../DashboardPage';
 import type { PortalPaper } from '../../../types/portal';
+import { createTestQueryClient } from '../../../test-utils';
 
 // Mock the portalApi module
 vi.mock('../../../config/portalApi', () => ({
@@ -61,15 +62,6 @@ function createPaper(
 }
 
 // ----- Helpers -----
-
-function createTestQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-}
 
 function renderWithProviders(ui: React.ReactElement) {
   const queryClient = createTestQueryClient();
