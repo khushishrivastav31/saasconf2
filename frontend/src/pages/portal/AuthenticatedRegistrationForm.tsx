@@ -290,7 +290,12 @@ export default function AuthenticatedRegistrationForm({
   }, [billing.country, stripeEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Use payment intent hook for credit card payments
-  const { paymentIntentId, clientSecret, publishableKey } = usePaymentIntent({
+  const {
+    paymentIntentId,
+    clientSecret,
+    publishableKey,
+    error: paymentIntentError,
+  } = usePaymentIntent({
     total: totalWithVat,
     currency: conference?.currency || 'EUR',
     enabled: billing.payment_method === 'credit_card',
@@ -795,15 +800,24 @@ export default function AuthenticatedRegistrationForm({
 
             {/* Inline Stripe Payment - shows when credit card is selected */}
             {billing.payment_method === 'credit_card' && (
-              <InlineStripePayment
-                clientSecret={clientSecret}
-                publishableKey={publishableKey}
-                stripePromise={stripePromise}
-                billingName={`${billing.contact_first_name} ${billing.contact_last_name}`.trim()}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-                isSubmitting={attemptingPayment}
-              />
+              <>
+                {paymentIntentError && (
+                  <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      Payment initialization failed: {paymentIntentError}
+                    </p>
+                  </div>
+                )}
+                <InlineStripePayment
+                  clientSecret={clientSecret}
+                  publishableKey={publishableKey}
+                  stripePromise={stripePromise}
+                  billingName={`${billing.contact_first_name} ${billing.contact_last_name}`.trim()}
+                  onSuccess={handlePaymentSuccess}
+                  onError={handlePaymentError}
+                  isSubmitting={attemptingPayment}
+                />
+              </>
             )}
           </div>
         </div>
