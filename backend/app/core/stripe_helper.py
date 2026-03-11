@@ -495,7 +495,11 @@ async def find_payment_intent_for_invoice(
                 # Find completed session with payment intent
                 for session in sessions.data:
                     if session.payment_intent and session.status == "complete":
-                        pi_id = session.payment_intent if isinstance(session.payment_intent, str) else session.payment_intent.id
+                        pi_id = (
+                            session.payment_intent
+                            if isinstance(session.payment_intent, str)
+                            else session.payment_intent.id
+                        )
                         pi = stripe_client.payment_intents.retrieve(pi_id)
                         if pi.status == "succeeded":
                             payment_intent = pi

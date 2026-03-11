@@ -84,9 +84,7 @@ async def get_review_config(
         raise NotFoundError("Assignment not found")
 
     # Conflict-of-interest check: author cannot review their own paper
-    author_check_result = await db.execute(
-        select(CFPPaper.main_speaker_id).where(CFPPaper.id == assignment.paper_id)
-    )
+    author_check_result = await db.execute(select(CFPPaper.main_speaker_id).where(CFPPaper.id == assignment.paper_id))
     main_speaker_id = author_check_result.scalar_one_or_none()
     if main_speaker_id == current.applicant_id:
         raise HTTPException(status_code=403, detail="You cannot review your own paper")
@@ -256,9 +254,7 @@ async def submit_or_save_review(
         raise NotFoundError("Assignment not found")
 
     # Conflict-of-interest check: author cannot review their own paper
-    author_check_result2 = await db.execute(
-        select(CFPPaper.main_speaker_id).where(CFPPaper.id == assignment.paper_id)
-    )
+    author_check_result2 = await db.execute(select(CFPPaper.main_speaker_id).where(CFPPaper.id == assignment.paper_id))
     main_speaker_id2 = author_check_result2.scalar_one_or_none()
     if main_speaker_id2 == current.applicant_id:
         raise HTTPException(status_code=403, detail="You cannot review your own paper")
