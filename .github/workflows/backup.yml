@@ -9,6 +9,7 @@ on:
 env:
   STAGING_HOST: 46.225.88.254
   STAGING_USER: deploy
+  STAGING_PATH: /opt/saasconf/app
 
 jobs:
   backup:
@@ -26,13 +27,47 @@ jobs:
       - name: Run backup
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'ENDSSH'
-            cd /opt/saasconf/app/deploy/staging
+            cd ${{ env.STAGING_PATH }}/deploy/staging
             ./backup.sh
           ENDSSH
 
-      - name: Verify backup
+      - name: Collect backup report
+        id: report
         run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'ENDSSH'
+          ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'ENDSSH' > backup_report.txt 2>&1
             echo "=== Recent Backups ==="
-            ls -lht /opt/saasconf/backups/*.sql.gz 2>/dev/null | head -5 || echo "No backups found"
+            ls -lht /opt/saasconf/backups/ 2>/dev/null | head -20 || echo "No backups found"
+            echo ""
+            echo "=== Disk Usage ==="
+            du -sh /opt/saasconf/backups/ 2>/dev/null || echo "N/A"
+            echo ""
+            echo "=== Host Disk Space ==="
+            df -h /opt/saasconf/ 2>/dev/null || df -h / 2>/dev/null
           ENDSSH
+          cat backup_report.txt
+
+      - name: Upload backup report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backup-report-${{ github.run_id }}
+          path: backup_report.txt
+          retention-days: 30
+
+      - name: Alert on backup failure
+        if: failure()
+        run: |
+          echo "::error::Backup failed! Check logs above for details."
+          echo "Backup failure at $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "Review the workflow run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Backup summary
+        if: success()
+        run: |
+          echo "## Backup Successful ✅" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Recent Backups" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat backup_report.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

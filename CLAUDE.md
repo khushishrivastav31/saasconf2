@@ -97,20 +97,10 @@ Detailed docs are in `.claude/docs/` and `docs/` — read on-demand when working
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Full dependency upgrade sprint (all 6 phases)
-- **Feature**: Major dependency upgrades across backend and frontend
-- **Backend upgrades**: redis 5→7 (`aclose()` fix), pytest-asyncio 0.24→1.0 (pyproject.toml config), lxml 5→6, python-json-logger 3→4
-- **Frontend upgrades**: globals 16→17, jsdom 27→28, eslint-plugin-react-hooks 5→7 (new React Compiler rules disabled), eslint 9→10, @eslint/js 9→10, vite 6→7, @vitejs/plugin-react 4→5, @sentry/react 9→10
-- **Security fixes (same session)**: Stripe StripeClient refactor (thread-safe per-request client), XSS fix in ConferenceHeader.tsx, CFP author conflict-of-interest review block
-- **Files modified**:
-  - `backend/requirements.txt` — redis 7.3.0, pytest-asyncio 1.0.0, lxml 6.0.2, python-json-logger 4.0.0
-  - `backend/pyproject.toml` — asyncio_default_fixture_loop_scope = "function", pytest-asyncio ^1.0
-  - `backend/app/core/token_blacklist.py` — `aclose()` for redis 7
-  - `backend/tests/test_invoice_cancellation_with_registrations.py` — MagicMock for StripeClient
-  - `backend/tests/test_registration_invoice_replacement_flow.py` — MagicMock for StripeClient
-  - `frontend/package.json` / `package-lock.json` — all frontend package upgrades
-  - `frontend/eslint.config.js` — react-hooks v7 new rules disabled
-  - `frontend/src/pages/**/SessionSelector.tsx` (3 files) — `let label: string` (eslint 10 no-useless-assignment)
-- **Tests**: 2334 backend ✅ · 1534 frontend ✅
-- **Linting**: ✅ Ruff, ESLint, TypeScript, formatting all clean
-- **Status**: ⏳ Ready to commit — awaiting user approval
+- **Last completed**: Production backup strategy + documentation
+- **What was done**:
+  - Rewrote `deploy/staging/backup.sh` — GFS retention (7d/4w/12m), AES-256 encryption, S3 offsite, uploads backup, integrity check, dry-run mode
+  - Created `deploy/staging/restore.sh` — full restore with decryption, DB drop/recreate, uploads restore, container restart
+  - Updated `.github/workflows/backup.yml` — artifact upload (30d), job summary, failure alerts
+  - Documented everything in `.claude/docs/devops.md` (Backup & Restore section)
+- **Status**: ✅ Complete — ready to commit if desired

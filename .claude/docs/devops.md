@@ -32,7 +32,69 @@
 - `GET /health/ready` — readiness probe (DB + Redis)
 - `POST /ops/data-retention-cleanup` — cron cleanup (nightly)
 - `POST /ops/send-deadline-reminders` — cron reminders (hourly)
-- Both ops endpoints auth via `Authorization: Bearer <SUPER_ADMIN_PASSWORD>`
+- `POST /ops/send-payment-reminders` — cron payment reminders (daily)
+- All ops endpoints auth via `Authorization: Bearer <SUPER_ADMIN_PASSWORD>`
+
+## Backup & Restore
+
+### Scripts
+| File | Purpose |
+|---|---|
+| `deploy/staging/backup.sh` | Run a backup (DB + optional uploads) |
+| `deploy/staging/restore.sh` | Restore DB (+ optional uploads) from a backup file |
+
+### Running a Backup
+```bash
+cd /opt/saasconf/app/deploy/staging
+./backup.sh                    # normal run
+BACKUP_DRY_RUN=1 ./backup.sh  # dry-run (prints what it would do, no changes)
+```
+
+### Restoring from a Backup
+```bash
+cd /opt/saasconf/app/deploy/staging
+
+# List available backups
+./restore.sh --list
+
+# Restore DB (plain)
+./restore.sh /opt/saasconf/backups/db_20260301_030000.sql.gz
+
+# Restore DB (encrypted)
+BACKUP_ENCRYPTION_PASSPHRASE=secret ./restore.sh /opt/saasconf/backups/db_20260301_030000.sql.gz.enc
+
+# Restore DB + uploads together
+BACKUP_ENCRYPTION_PASSPHRASE=secret \
+RESTORE_UPLOADS_FILE=/opt/saasconf/backups/uploads_20260301_030000.tar.gz.enc \
+./restore.sh /opt/saasconf/backups/db_20260301_030000.sql.gz.enc
+```
+Restore stops app containers, drops/recreates the DB, streams the dump in, then restarts everything.
+
+### Backup Features
+- **GFS local retention**: 7 daily + 4 weekly (Sundays) + 12 monthly (1st of month)
+- **Integrity check**: every dump is validated with `gzip -t` immediately after creation
+- **Encryption**: set `BACKUP_ENCRYPTION_PASSPHRASE` → files get AES-256-CBC `.enc` suffix
+- **Offsite / S3**: set `BACKUP_S3_URI=s3://bucket/prefix` + AWS credentials → uploaded via `aws s3 cp`
+- **Uploads backup**: set `BACKUP_UPLOADS_DIR=/path/to/uploads` → creates a `uploads_DATE.tar.gz`
+- **Storage class**: S3 uploads use `STANDARD_IA` (Infrequent Access) to reduce cost
+
+### Environment Variables (set in `deploy/staging/.env`)
+| Variable | Required | Description |
+|---|---|---|
+| `DB_USER`, `DB_NAME`, `DB_PASSWORD` | Yes | PostgreSQL credentials |
+| `BACKUP_ENCRYPTION_PASSPHRASE` | Optional | Enables AES-256 encryption |
+| `BACKUP_S3_URI` | Optional | e.g. `s3://mybucket/saasconf-backups` |
+| `AWS_ACCESS_KEY_ID` | With S3 | AWS credentials |
+| `AWS_SECRET_ACCESS_KEY` | With S3 | AWS credentials |
+| `AWS_DEFAULT_REGION` | With S3 | Default: `eu-central-1` |
+| `BACKUP_UPLOADS_DIR` | Optional | Host path to uploads/media directory |
+
+### Automation (GitHub Actions)
+- Workflow: `.github/workflows/backup.yml`
+- Schedule: daily at **03:00 UTC** (also triggerable manually via `workflow_dispatch`)
+- On success: writes a file listing + disk usage summary to the GitHub Actions job summary
+- On failure: sets `::error::` annotation; check the workflow run for logs
+- Artifact: `backup-report-<run_id>` uploaded with **30-day** retention
 
 ## Deployment
 - CI tags images as `:previous` before rebuilding for rollback
