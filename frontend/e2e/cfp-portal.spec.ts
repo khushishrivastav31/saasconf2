@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { PortalDashboardPage } from './pages/portal-dashboard.page';
 
+import { softVisible } from './helpers/navigation';
 test.describe('CFP Portal', () => {
   test.beforeEach(async () => {
     if (!process.env.E2E_PORTAL_EMAIL || !process.env.E2E_PORTAL_PASSWORD) {
@@ -19,8 +20,8 @@ test.describe('CFP Portal', () => {
     await expect(formElement).toBeVisible({ timeout: 10000 });
 
     // Check for conference dropdown
-    const hasSelect = await page.locator('select').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasForm = await page.locator('form').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSelect = await softVisible(page.locator('select').first(), 5000);
+    const hasForm = await softVisible(page.locator('form').first(), 3000);
     expect(hasSelect || hasForm).toBeTruthy();
   });
 
@@ -31,12 +32,12 @@ test.describe('CFP Portal', () => {
     await expect(page).toHaveURL(/papers\/new/i, { timeout: 10000 });
 
     // If form is rendered (conference may be pre-selected or only one conference)
-    const hasTitle = await page.getByLabel(/title/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTitle = await softVisible(page.getByLabel(/title/i).first(), 5000);
     if (hasTitle) {
       // Verify form structure
-      const hasAbstract = await page.getByText(/abstract/i).first().isVisible({ timeout: 3000 }).catch(() => false);
-      const hasSaveDraft = await page.getByRole('button', { name: /save as draft|save/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
-      const hasCancel = await page.getByRole('button', { name: /cancel/i }).isVisible({ timeout: 3000 }).catch(() => false);
+      const hasAbstract = await softVisible(page.getByText(/abstract/i).first(), 3000);
+      const hasSaveDraft = await softVisible(page.getByRole('button', { name: /save as draft|save/i }).first(), 3000);
+      const hasCancel = await softVisible(page.getByRole('button', { name: /cancel/i }), 3000);
 
       expect(hasAbstract || hasSaveDraft || hasCancel).toBeTruthy();
     }
@@ -49,7 +50,7 @@ test.describe('CFP Portal', () => {
     await expect(page).toHaveURL(/papers\/new/i, { timeout: 10000 });
 
     // Check for co-speakers section (may only be visible when form is fully rendered)
-    const hasCoSpeakers = await page.getByText(/co-speaker/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasCoSpeakers = await softVisible(page.getByText(/co-speaker/i).first(), 5000);
     if (hasCoSpeakers) {
       // Should show email input for adding co-speakers
       const emailInput = page.getByPlaceholder(/co-speaker email/i);

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 
+import { softVisible } from './helpers/navigation';
 /**
  * E2E tests for invoice replacement workflow.
  *
@@ -64,7 +65,7 @@ test.describe('Invoice Replacement Workflow', () => {
 
     // Now replace the invoice
     const replaceButton = page.getByRole('button', { name: /replace.*invoice/i }).first();
-    const isReplaceAvailable = await replaceButton.isVisible({ timeout: 2000 }).catch(() => false);
+    const isReplaceAvailable = await softVisible(replaceButton, 2000);
 
     if (!isReplaceAvailable) {
       test.skip(true, 'Replace Invoice button not visible (invoice may not be sent)');
@@ -102,7 +103,7 @@ test.describe('Invoice Replacement Workflow', () => {
   test('should show validation error when no fields changed', async ({ page }) => {
     // Find a sent invoice to replace
     const invoiceRow = page.locator('tr').filter({ hasText: /sent|paid/i }).first();
-    const isInvoiceAvailable = await invoiceRow.isVisible({ timeout: 3000 }).catch(() => false);
+    const isInvoiceAvailable = await softVisible(invoiceRow, 3000);
 
     if (!isInvoiceAvailable) {
       test.skip(true, 'No sent/paid invoices available for testing');
@@ -113,7 +114,7 @@ test.describe('Invoice Replacement Workflow', () => {
 
     // Click replace button
     const replaceButton = page.getByRole('button', { name: /replace.*invoice/i }).first();
-    const isReplaceAvailable = await replaceButton.isVisible({ timeout: 2000 }).catch(() => false);
+    const isReplaceAvailable = await softVisible(replaceButton, 2000);
 
     if (!isReplaceAvailable) {
       test.skip(true, 'Replace Invoice button not visible');
@@ -139,7 +140,7 @@ test.describe('Invoice Replacement Workflow', () => {
     // This test would require marking an invoice as paid first
     // For now, we'll skip if no paid invoices are available
     const paidInvoice = page.locator('tr').filter({ hasText: /paid/i }).first();
-    const isPaidInvoiceAvailable = await paidInvoice.isVisible({ timeout: 3000 }).catch(() => false);
+    const isPaidInvoiceAvailable = await softVisible(paidInvoice, 3000);
 
     if (!isPaidInvoiceAvailable) {
       test.skip(true, 'No paid invoices available for testing');

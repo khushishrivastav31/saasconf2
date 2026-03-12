@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 /**
  * Invoice Management E2E Tests
  *
@@ -26,9 +27,7 @@ test.describe('Invoice Management', () => {
     const invoicesBtn = detail.sidebar
       .getByRole('button', { name: 'Invoices' })
       .first();
-    const hasInvoicesSection = await invoicesBtn
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+    const hasInvoicesSection = await softVisible(invoicesBtn, 5000);
     if (!hasInvoicesSection) {
       test.skip(true, 'Invoices module not enabled');
       return;
@@ -68,7 +67,7 @@ test.describe('Invoice Management', () => {
     const invoicesBtn = detail.sidebar
       .getByRole('button', { name: 'Invoices' })
       .first();
-    if (!(await invoicesBtn.isVisible({ timeout: 5000 }).catch(() => false))) {
+    if (!(await softVisible(invoicesBtn, 5000))) {
       test.skip(true, 'Invoices module not enabled');
       return;
     }
@@ -105,7 +104,7 @@ test.describe('Invoice Management', () => {
     const invoicesBtn = detail.sidebar
       .getByRole('button', { name: 'Invoices' })
       .first();
-    if (!(await invoicesBtn.isVisible({ timeout: 5000 }).catch(() => false))) {
+    if (!(await softVisible(invoicesBtn, 5000))) {
       test.skip(true, 'Invoices module not enabled');
       return;
     }
@@ -117,9 +116,7 @@ test.describe('Invoice Management', () => {
     const firstInvoiceRow = page
       .locator('tr[class*="cursor"], div[class*="cursor"]')
       .first();
-    const hasInvoice = await firstInvoiceRow
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+    const hasInvoice = await softVisible(firstInvoiceRow, 5000);
 
     if (!hasInvoice) {
       test.skip(true, 'No invoices to click');
@@ -129,11 +126,9 @@ test.describe('Invoice Management', () => {
     await firstInvoiceRow.click();
 
     // Detail panel should open showing invoice details
-    const hasPanel = await page
+    const hasPanel = await softVisible(page
       .getByText(/invoice details|line items|recipient|INV-/i)
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+      .first(), 5000);
 
     expect(hasPanel).toBeTruthy();
   });
@@ -146,7 +141,7 @@ test.describe('Invoice Management', () => {
     const invoicesBtn = detail.sidebar
       .getByRole('button', { name: 'Invoices' })
       .first();
-    if (!(await invoicesBtn.isVisible({ timeout: 5000 }).catch(() => false))) {
+    if (!(await softVisible(invoicesBtn, 5000))) {
       test.skip(true, 'Invoices module not enabled');
       return;
     }
@@ -155,11 +150,9 @@ test.describe('Invoice Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Check for status badges (Draft, Sent, Paid, Cancelled, Overdue)
-    const hasStatusBadge = await page
+    const hasStatusBadge = await softVisible(page
       .getByText(/draft|sent|paid|cancelled|overdue/i)
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+      .first(), 5000);
     const hasEmpty = await page
       .getByText(/no invoice/i)
       .isVisible()

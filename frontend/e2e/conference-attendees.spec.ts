@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Conference Attendees Tab', () => {
@@ -25,8 +26,8 @@ test.describe('Conference Attendees Tab', () => {
 
     await detail.navigateToSection('Attendees');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no attendee/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no attendee/i), 5000);
     const hasContent = await detail.contentArea.isVisible();
 
     expect(hasTable || hasEmpty || hasContent).toBeTruthy();
@@ -39,7 +40,7 @@ test.describe('Conference Attendees Tab', () => {
 
     await detail.navigateToSection('Attendees');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       const table = page.locator('table').first();
       await expect(table.getByText(/name/i).first()).toBeVisible();

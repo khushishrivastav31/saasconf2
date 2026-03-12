@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 
+import { softVisible } from './helpers/navigation';
 /**
  * Public Registration Portal E2E Tests
  *
@@ -19,21 +20,15 @@ test.describe('Public Registration Portal', () => {
     await page.goto(`/${tenantSlug}/register/${conferenceSlug}`);
 
     // Should show conference name or registration form
-    const hasConferenceName = await page
+    const hasConferenceName = await softVisible(page
       .locator('h1, h2')
-      .first()
-      .isVisible({ timeout: 15000 })
-      .catch(() => false);
-    const hasForm = await page
+      .first(), 15000);
+    const hasForm = await softVisible(page
       .locator('form, [role="form"]')
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-    const hasWelcome = await page
+      .first(), 5000);
+    const hasWelcome = await softVisible(page
       .getByText(/welcome|register|registration/i)
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+      .first(), 5000);
 
     expect(hasConferenceName || hasForm || hasWelcome).toBeTruthy();
   });
@@ -45,21 +40,15 @@ test.describe('Public Registration Portal', () => {
     await page.waitForLoadState('networkidle');
 
     // Look for attendee input fields (first name, last name, email)
-    const hasFirstName = await page
+    const hasFirstName = await softVisible(page
       .getByLabel(/first name/i)
-      .first()
-      .isVisible({ timeout: 10000 })
-      .catch(() => false);
-    const hasLastName = await page
+      .first(), 10000);
+    const hasLastName = await softVisible(page
       .getByLabel(/last name/i)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
-    const hasEmail = await page
+      .first(), 3000);
+    const hasEmail = await softVisible(page
       .getByLabel(/email/i)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
+      .first(), 3000);
 
     // At least some form fields should be visible
     expect(hasFirstName || hasLastName || hasEmail).toBeTruthy();
@@ -72,26 +61,18 @@ test.describe('Public Registration Portal', () => {
     await page.waitForLoadState('networkidle');
 
     // Look for billing section fields
-    const hasStreet = await page
+    const hasStreet = await softVisible(page
       .getByLabel(/street|address/i)
-      .first()
-      .isVisible({ timeout: 10000 })
-      .catch(() => false);
-    const hasCity = await page
+      .first(), 10000);
+    const hasCity = await softVisible(page
       .getByLabel(/city/i)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
-    const hasCountry = await page
+      .first(), 3000);
+    const hasCountry = await softVisible(page
       .getByLabel(/country/i)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
-    const hasPostalCode = await page
+      .first(), 3000);
+    const hasPostalCode = await softVisible(page
       .getByLabel(/postal|zip/i)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
+      .first(), 3000);
 
     expect(hasStreet || hasCity || hasCountry || hasPostalCode).toBeTruthy();
   });
@@ -103,21 +84,15 @@ test.describe('Public Registration Portal', () => {
     await page.waitForLoadState('networkidle');
 
     // Look for booking options (checkboxes, radio buttons, or option cards)
-    const hasCheckbox = await page
+    const hasCheckbox = await softVisible(page
       .locator('input[type="checkbox"]')
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-    const hasRadio = await page
+      .first(), 5000);
+    const hasRadio = await softVisible(page
       .locator('input[type="radio"]')
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
-    const hasOptionCard = await page
+      .first(), 3000);
+    const hasOptionCard = await softVisible(page
       .getByText(/option|ticket|pass|registration/i)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
+      .first(), 3000);
 
     // At least some booking selection should be visible
     expect(hasCheckbox || hasRadio || hasOptionCard).toBeTruthy();
@@ -129,16 +104,12 @@ test.describe('Public Registration Portal', () => {
     await page.waitForLoadState('networkidle');
 
     // Look for payment method options
-    const hasCreditCard = await page
+    const hasCreditCard = await softVisible(page
       .getByText(/credit card|card payment/i)
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-    const hasBankTransfer = await page
+      .first(), 5000);
+    const hasBankTransfer = await softVisible(page
       .getByText(/bank transfer/i)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
+      .first(), 3000);
 
     // At least one payment method should be visible (if registration is open)
     if (!hasCreditCard && !hasBankTransfer) {
@@ -156,7 +127,7 @@ test.describe('Public Registration Portal', () => {
 
     // Try to submit without filling required fields
     const submitBtn = page.getByRole('button', { name: /submit|register|complete|pay/i }).first();
-    const hasSubmit = await submitBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasSubmit = await softVisible(submitBtn, 5000);
 
     if (!hasSubmit) {
       test.skip(true, 'No submit button visible');
@@ -168,21 +139,15 @@ test.describe('Public Registration Portal', () => {
     // Should show validation errors (browser native or custom)
     await expect(page.getByText(/required|please fill|invalid|must be/i).first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
-    const hasError = await page
+    const hasError = await softVisible(page
       .getByText(/required|please fill|invalid|must be/i)
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-    const hasInvalidInput = await page
+      .first(), 5000);
+    const hasInvalidInput = await softVisible(page
       .locator('input:invalid, select:invalid')
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
-    const hasBorderError = await page
+      .first(), 3000);
+    const hasBorderError = await softVisible(page
       .locator('.border-red-500, .border-red-300, [aria-invalid="true"]')
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
+      .first(), 3000);
 
     expect(hasError || hasInvalidInput || hasBorderError).toBeTruthy();
   });

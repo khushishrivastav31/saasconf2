@@ -1,11 +1,27 @@
-import { Page, expect } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
+
+/**
+ * Wait for a locator to become visible, then return true.
+ * Returns false if the element doesn't appear within the timeout.
+ *
+ * Unlike `locator.isVisible({ timeout })` (which checks instantly and ignores
+ * the timeout), this properly polls via Playwright's `expect` assertions.
+ */
+export async function softVisible(locator: Locator, timeout = 5000): Promise<boolean> {
+  try {
+    await expect(locator).toBeVisible({ timeout });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Wait for the loading spinner to disappear.
  */
 export async function waitForLoadingToFinish(page: Page, timeout = 15000) {
   const spinner = page.locator('.animate-spin');
-  if (await spinner.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await softVisible(spinner, 2000)) {
     await expect(spinner).toBeHidden({ timeout });
   }
 }
@@ -28,7 +44,7 @@ export async function expandSection(page: Page, sectionName: string) {
   // Find the section row, then click its chevron button
   const sectionRow = sidebar.locator('div').filter({ hasText: sectionName }).first();
   const chevron = sectionRow.locator('button:has(svg[class*="transition-transform"])');
-  if (await chevron.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await softVisible(chevron, 2000)) {
     await chevron.click();
     await page.waitForTimeout(300);
   }

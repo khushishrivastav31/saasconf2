@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Conference Booking Module', () => {
@@ -21,12 +22,12 @@ test.describe('Conference Booking Module', () => {
     // Should show + Period and + Option buttons (for admin)
     const periodBtn = page.getByRole('button', { name: /period/i });
     const optionBtn = page.getByRole('button', { name: /option/i });
-    const hasPeriodBtn = await periodBtn.isVisible({ timeout: 5000 }).catch(() => false);
-    const hasOptionBtn = await optionBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPeriodBtn = await softVisible(periodBtn, 5000);
+    const hasOptionBtn = await softVisible(optionBtn, 3000);
 
     // Either has admin buttons or shows the matrix/empty state
-    const hasEmptyState = await page.getByText(/no booking options defined yet/i).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEmptyState = await softVisible(page.getByText(/no booking options defined yet/i), 3000);
+    const hasTable = await softVisible(page.locator('table').first(), 3000);
 
     expect(hasPeriodBtn || hasOptionBtn || hasEmptyState || hasTable).toBeTruthy();
   });
@@ -40,13 +41,13 @@ test.describe('Conference Booking Module', () => {
 
     // Scroll down to find Packages section
     const packagesHeading = page.getByRole('heading', { name: /booking packages/i });
-    const hasPackages = await packagesHeading.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasPackages = await softVisible(packagesHeading, 5000);
 
     if (hasPackages) {
       // Should show + Package button or empty state
       const packageBtn = page.getByRole('button', { name: /package/i });
-      const hasPackageBtn = await packageBtn.isVisible({ timeout: 3000 }).catch(() => false);
-      const hasEmpty = await page.getByText(/no booking packages defined yet/i).isVisible({ timeout: 3000 }).catch(() => false);
+      const hasPackageBtn = await softVisible(packageBtn, 3000);
+      const hasEmpty = await softVisible(page.getByText(/no booking packages defined yet/i), 3000);
 
       expect(hasPackageBtn || hasEmpty).toBeTruthy();
     }
@@ -61,20 +62,20 @@ test.describe('Conference Booking Module', () => {
 
     // Scroll to Discount Codes section
     const discountHeading = page.getByRole('heading', { name: /discount codes/i });
-    const hasDiscount = await discountHeading.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasDiscount = await softVisible(discountHeading, 5000);
 
     if (hasDiscount) {
       // Should show + Discount Code button
       const discountBtn = page.getByRole('button', { name: /discount code/i });
-      const hasBtn = await discountBtn.isVisible({ timeout: 3000 }).catch(() => false);
-      const hasEmpty = await page.getByText(/no discount codes yet/i).isVisible({ timeout: 3000 }).catch(() => false);
+      const hasBtn = await softVisible(discountBtn, 3000);
+      const hasEmpty = await softVisible(page.getByText(/no discount codes yet/i), 3000);
 
       expect(hasBtn || hasEmpty).toBeTruthy();
 
       // If there are discount codes, verify table columns
       if (!hasEmpty) {
         const table = page.locator('table').last();
-        const hasTable = await table.isVisible({ timeout: 3000 }).catch(() => false);
+        const hasTable = await softVisible(table, 3000);
         if (hasTable) {
           await expect(table.getByText(/code/i).first()).toBeVisible();
           await expect(table.getByText(/discount/i).first()).toBeVisible();
@@ -100,10 +101,10 @@ test.describe('Conference Program Module', () => {
     await expect(page.getByRole('heading', { name: /program design/i })).toBeVisible({ timeout: 10000 });
 
     // Should show day tabs, "+ Add Day" button, or "No Program Days" message
-    const hasAddDay = await page.getByRole('button', { name: /add day/i }).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasDayTabs = await page.getByRole('button').filter({ hasText: /mon|tue|wed|thu|fri|sat|sun|day/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmptyState = await page.getByText(/no program days/i).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasGrid = await page.getByText(/time/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAddDay = await softVisible(page.getByRole('button', { name: /add day/i }), 5000);
+    const hasDayTabs = await softVisible(page.getByRole('button').filter({ hasText: /mon|tue|wed|thu|fri|sat|sun|day/i }).first(), 3000);
+    const hasEmptyState = await softVisible(page.getByText(/no program days/i), 3000);
+    const hasGrid = await softVisible(page.getByText(/time/i).first(), 3000);
 
     expect(hasAddDay || hasDayTabs || hasEmptyState || hasGrid).toBeTruthy();
   });
@@ -119,7 +120,7 @@ test.describe('Conference Program Module', () => {
     await page.waitForLoadState('networkidle');
 
     // If days exist, check for grid elements
-    const hasGrid = await page.getByText(/time/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasGrid = await softVisible(page.getByText(/time/i).first(), 5000);
     if (hasGrid) {
       // Grid should have time column and track headers
       const gridArea = detail.contentArea;
@@ -150,8 +151,8 @@ test.describe('Conference Invoices Module', () => {
     await detail.navigateToSection('Invoices');
 
     // Should show invoice-related content
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no invoice/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no invoice/i), 5000);
     const hasContent = await detail.contentArea.isVisible();
 
     expect(hasTable || hasEmpty || hasContent).toBeTruthy();

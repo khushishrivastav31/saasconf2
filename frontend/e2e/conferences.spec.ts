@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferencesPage } from './pages/conferences.page';
 
+import { softVisible } from './helpers/navigation';
 test.describe('Conferences', () => {
   test('should load conferences page with heading', async ({ page }) => {
     const conferencesPage = new ConferencesPage(page);
@@ -39,8 +40,8 @@ test.describe('Conferences', () => {
     // Wait for page content to fully load before checking
     await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
     // Create button is only visible to tenant_admin+ users
-    const hasCreateBtn = await conferencesPage.createButton.isVisible({ timeout: 5000 }).catch(() => false);
-    const hasConferences = await page.locator('[class*="cursor-pointer"]').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasCreateBtn = await softVisible(conferencesPage.createButton, 5000);
+    const hasConferences = await softVisible(page.locator('[class*="cursor-pointer"]').first(), 5000);
     // At minimum, the page should show conferences or the create button
     expect(hasCreateBtn || hasConferences).toBeTruthy();
   });

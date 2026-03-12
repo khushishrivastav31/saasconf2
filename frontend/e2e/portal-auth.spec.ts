@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { PortalLoginPage } from './pages/portal-login.page';
 
+import { softVisible } from './helpers/navigation';
 const tenantSlug = process.env.E2E_TENANT_SLUG || 'demo';
 
 test.describe('Portal Authentication', () => {
@@ -9,9 +10,9 @@ test.describe('Portal Authentication', () => {
     await portalLogin.goto();
 
     // Portal login should show email input (via label or placeholder) and sign in button
-    const hasEmailLabel = await page.getByLabel(/email/i).isVisible({ timeout: 10000 }).catch(() => false);
-    const hasEmailPlaceholder = await page.getByPlaceholder(/email|you@/i).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasSignIn = await page.getByRole('button', { name: /sign in/i }).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEmailLabel = await softVisible(page.getByLabel(/email/i), 10000);
+    const hasEmailPlaceholder = await softVisible(page.getByPlaceholder(/email|you@/i), 3000);
+    const hasSignIn = await softVisible(page.getByRole('button', { name: /sign in/i }), 3000);
 
     // If none are visible, tenant portal may not exist on staging
     if (!hasEmailLabel && !hasEmailPlaceholder && !hasSignIn) {
@@ -25,9 +26,9 @@ test.describe('Portal Authentication', () => {
     const portalLogin = new PortalLoginPage(page);
     await portalLogin.gotoRegister();
 
-    const hasEmail = await page.getByLabel(/email/i).isVisible({ timeout: 10000 }).catch(() => false);
-    const hasFirstName = await page.getByLabel(/first name/i).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasCreateBtn = await page.getByRole('button', { name: /create account/i }).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEmail = await softVisible(page.getByLabel(/email/i), 10000);
+    const hasFirstName = await softVisible(page.getByLabel(/first name/i), 3000);
+    const hasCreateBtn = await softVisible(page.getByRole('button', { name: /create account/i }), 3000);
 
     if (!hasEmail && !hasFirstName && !hasCreateBtn) {
       test.skip(true, 'Portal registration page not available for this tenant');
@@ -41,8 +42,8 @@ test.describe('Portal Authentication', () => {
     await portalLogin.goto();
 
     // Check if portal login page is available
-    const hasEmailInput = await page.getByLabel(/email/i).isVisible({ timeout: 10000 }).catch(() => false);
-    const hasPlaceholder = await page.getByPlaceholder(/email|you@/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEmailInput = await softVisible(page.getByLabel(/email/i), 10000);
+    const hasPlaceholder = await softVisible(page.getByPlaceholder(/email|you@/i), 3000);
 
     if (!hasEmailInput && !hasPlaceholder) {
       test.skip(true, 'Portal login page not available for this tenant');
@@ -55,7 +56,7 @@ test.describe('Portal Authentication', () => {
       await page.getByPlaceholder(/email|you@/i).fill('nonexistent@example.com');
     }
 
-    const hasPasswordLabel = await page.getByLabel(/password/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPasswordLabel = await softVisible(page.getByLabel(/password/i), 3000);
     if (hasPasswordLabel) {
       await page.getByLabel(/password/i).fill('wrongpassword');
     }
@@ -68,14 +69,14 @@ test.describe('Portal Authentication', () => {
     const portalLogin = new PortalLoginPage(page);
     await portalLogin.goto();
 
-    const hasEmailInput = await page.getByLabel(/email/i).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasEmailInput = await softVisible(page.getByLabel(/email/i), 10000);
     if (!hasEmailInput) {
       test.skip(true, 'Portal login page not available for this tenant');
     }
 
     // Should have a link to register
     const registerLink = page.getByRole('link', { name: /register|sign up|create account/i });
-    if (await registerLink.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await softVisible(registerLink, 3000)) {
       await registerLink.click();
       await expect(page).toHaveURL(/register/i, { timeout: 5000 });
     }

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Conference CFP Sections', () => {
@@ -15,7 +16,7 @@ test.describe('Conference CFP Sections', () => {
 
     // CFP requires the cfp module — skip if section not visible
     const cfpBtn = detail.sidebar.getByRole('button', { name: 'Call for Papers' }).first();
-    const hasCfpSection = await cfpBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasCfpSection = await softVisible(cfpBtn, 5000);
     if (!hasCfpSection) {
       test.skip();
       return;
@@ -25,9 +26,9 @@ test.describe('Conference CFP Sections', () => {
     await page.waitForLoadState('networkidle');
 
     // Should show CFP form, "Create Call for Papers" button, or child sections expanded
-    const hasCfp = await page.getByText(/title|status|draft|open|closed/i).first().isVisible({ timeout: 15000 }).catch(() => false);
-    const hasCreate = await page.getByRole('button', { name: /create call for papers/i }).isVisible({ timeout: 10000 }).catch(() => false);
-    const hasChildren = await detail.sidebar.getByRole('button', { name: 'Topics' }).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasCfp = await softVisible(page.getByText(/title|status|draft|open|closed/i).first(), 15000);
+    const hasCreate = await softVisible(page.getByRole('button', { name: /create call for papers/i }), 10000);
+    const hasChildren = await softVisible(detail.sidebar.getByRole('button', { name: 'Topics' }), 10000);
     expect(hasCfp || hasCreate || hasChildren).toBeTruthy();
   });
 
@@ -39,7 +40,7 @@ test.describe('Conference CFP Sections', () => {
     await detail.navigateToSection('Call for Papers');
 
     // If CFP exists, check for form fields
-    const hasTitle = await page.getByLabel(/title/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTitle = await softVisible(page.getByLabel(/title/i).first(), 5000);
     if (hasTitle) {
       // Status dropdown should exist
       await expect(page.locator('select').first()).toBeVisible();
@@ -59,7 +60,7 @@ test.describe('Conference CFP Sections', () => {
     const tabs = ['Code of Conduct', 'Guidelines'];
     for (const tab of tabs) {
       const tabBtn = page.getByRole('button', { name: new RegExp(tab, 'i') });
-      if (await tabBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await softVisible(tabBtn, 2000)) {
         await tabBtn.click();
         await page.waitForLoadState('networkidle');
       }
@@ -74,8 +75,8 @@ test.describe('Conference CFP Sections', () => {
     await detail.navigateToChildSection('Call for Papers', 'Topics');
 
     // Should show topics heading or create button
-    const hasTopics = await page.getByText(/topic/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasCreate = await page.getByRole('button', { name: /add|create|new/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTopics = await softVisible(page.getByText(/topic/i).first(), 5000);
+    const hasCreate = await softVisible(page.getByRole('button', { name: /add|create|new/i }).first(), 3000);
     expect(hasTopics || hasCreate).toBeTruthy();
   });
 
@@ -98,10 +99,10 @@ test.describe('Conference CFP Sections', () => {
     await detail.navigateToChildSection('Call for Papers', 'Users');
 
     // Should show search/filter controls, add button, or empty state
-    const hasSearch = await page.getByPlaceholder(/search/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasFilter = await page.locator('select').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasAddBtn = await page.getByRole('button', { name: /add user/i }).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no users/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSearch = await softVisible(page.getByPlaceholder(/search/i), 5000);
+    const hasFilter = await softVisible(page.locator('select').first(), 3000);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /add user/i }), 3000);
+    const hasEmpty = await softVisible(page.getByText(/no users/i), 3000);
     expect(hasSearch || hasFilter || hasAddBtn || hasEmpty).toBeTruthy();
   });
 

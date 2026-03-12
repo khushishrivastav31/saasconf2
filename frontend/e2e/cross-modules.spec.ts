@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 
+import { softVisible } from './helpers/navigation';
 test.describe('Cross-Conference Module Pages', () => {
   test('should load volunteers page with heading and description', async ({ page }) => {
     await page.goto('/modules/volunteers');
@@ -11,9 +12,9 @@ test.describe('Cross-Conference Module Pages', () => {
     await expect(page.getByText(/manage.*volunteer/i)).toBeVisible({ timeout: 5000 });
 
     // Should show stat cards (Total, Pending, Approved, etc.)
-    const hasStats = await page.getByText(/total|pending|approved|active/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasAddBtn = await page.getByRole('button', { name: /add volunteer/i }).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasStats = await softVisible(page.getByText(/total|pending|approved|active/i).first(), 5000);
+    const hasTable = await softVisible(page.locator('table').first(), 3000);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /add volunteer/i }), 3000);
 
     expect(hasStats || hasTable || hasAddBtn).toBeTruthy();
   });
@@ -23,7 +24,7 @@ test.describe('Cross-Conference Module Pages', () => {
 
     await expect(page.getByRole('heading', { name: /volunteer/i })).toBeVisible({ timeout: 10000 });
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       const table = page.locator('table').first();
       await expect(table.getByText(/name/i).first()).toBeVisible();
@@ -39,7 +40,7 @@ test.describe('Cross-Conference Module Pages', () => {
 
     // Should have status filter dropdown
     const filterControl = page.locator('select').first();
-    if (await filterControl.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await softVisible(filterControl, 3000)) {
       // Should have status options
       const options = await filterControl.locator('option').allTextContents();
       expect(options.length).toBeGreaterThan(1);
@@ -69,8 +70,8 @@ test.describe('Cross-Conference Module Pages', () => {
     // The page should load without errors. CFP module may not be enabled,
     // in which case it redirects. Just verify no crash occurred.
     const currentUrl = page.url();
-    const hasCfpContent = await page.getByText(/call for papers|cfp|paper|no.*cfp/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasAnyContent = await page.locator('main, [role="main"], h1, h2').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasCfpContent = await softVisible(page.getByText(/call for papers|cfp|paper|no.*cfp/i).first(), 5000);
+    const hasAnyContent = await softVisible(page.locator('main, [role="main"], h1, h2').first(), 3000);
 
     // Page loaded (either CFP content, redirect, or any rendered page)
     expect(currentUrl).toBeTruthy();

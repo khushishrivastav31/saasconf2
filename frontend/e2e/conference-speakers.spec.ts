@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Conference Speakers Tab', () => {
@@ -25,9 +26,9 @@ test.describe('Conference Speakers Tab', () => {
 
     await detail.navigateToSection('Speakers');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no speakers/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasCards = await page.locator('[class*="border"][class*="rounded"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no speakers/i), 5000);
+    const hasCards = await softVisible(page.locator('[class*="border"][class*="rounded"]').first(), 3000);
 
     expect(hasTable || hasEmpty || hasCards).toBeTruthy();
   });
@@ -39,7 +40,7 @@ test.describe('Conference Speakers Tab', () => {
 
     await detail.navigateToSection('Speakers');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       const table = page.locator('table').first();
       await expect(table.getByText(/name/i).first()).toBeVisible();
@@ -55,7 +56,7 @@ test.describe('Conference Speakers Tab', () => {
     await detail.navigateToSection('Speakers');
 
     const searchInput = page.getByPlaceholder(/search/i);
-    const hasSearch = await searchInput.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasSearch = await softVisible(searchInput, 5000);
     // Search may not exist if no speakers
     expect(typeof hasSearch).toBe('boolean');
   });

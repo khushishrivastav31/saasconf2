@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Replace Attendee Functionality', () => {
@@ -16,12 +17,12 @@ test.describe('Replace Attendee Functionality', () => {
     await detail.navigateToSection('Registration');
 
     // Check if there are any registrations
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       // Click on first registration row to open detail view
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
 
         // Wait for detail view to expand
@@ -29,7 +30,7 @@ test.describe('Replace Attendee Functionality', () => {
 
         // Replace Attendee button should be visible
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        const hasReplaceBtn = await replaceBtn.isVisible({ timeout: 5000 }).catch(() => false);
+        const hasReplaceBtn = await softVisible(replaceBtn, 5000);
 
         // Button may not be visible if registration is cancelled or already replaced
         expect(typeof hasReplaceBtn).toBe('boolean');
@@ -44,16 +45,16 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
 
           // Modal should appear with title
@@ -76,16 +77,16 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -96,9 +97,9 @@ test.describe('Replace Attendee Functionality', () => {
           await expect(page.getByLabel(/replacement reason/i)).toBeVisible();
 
           // Check optional fields
-          const hasPhone = await page.getByLabel(/phone/i).isVisible({ timeout: 3000 }).catch(() => false);
-          const hasJobTitle = await page.getByLabel(/job title/i).isVisible({ timeout: 3000 }).catch(() => false);
-          const hasDepartment = await page.getByLabel(/department/i).isVisible({ timeout: 3000 }).catch(() => false);
+          const hasPhone = await softVisible(page.getByLabel(/phone/i), 3000);
+          const hasJobTitle = await softVisible(page.getByLabel(/job title/i), 3000);
+          const hasDepartment = await softVisible(page.getByLabel(/department/i), 3000);
 
           expect(hasPhone || hasJobTitle || hasDepartment).toBeTruthy();
         }
@@ -113,22 +114,22 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 
           // Pronouns field should be a select element
           const pronounsSelect = page.locator('select').filter({ hasText: /he\/him|she\/her|they\/them/i });
-          const hasPronounsDropdown = await pronounsSelect.isVisible({ timeout: 3000 }).catch(() => false);
+          const hasPronounsDropdown = await softVisible(pronounsSelect, 3000);
 
           // Field visibility depends on conference settings
           expect(typeof hasPronounsDropdown).toBe('boolean');
@@ -144,16 +145,16 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -183,21 +184,21 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 
           const phoneInput = page.getByLabel(/phone/i);
-          if (await phoneInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+          if (await softVisible(phoneInput, 3000)) {
             // Enter invalid phone and blur
             await phoneInput.fill('abc');
             await phoneInput.blur();
@@ -223,16 +224,16 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -255,16 +256,16 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -281,7 +282,7 @@ test.describe('Replace Attendee Functionality', () => {
 
           // Item dropdown should appear
           const itemSelect = page.locator('select').nth(1);
-          const hasItemSelect = await itemSelect.isVisible({ timeout: 3000 }).catch(() => false);
+          const hasItemSelect = await softVisible(itemSelect, 3000);
           expect(hasItemSelect).toBeTruthy();
         }
       }
@@ -295,7 +296,7 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       // Find a registration that has tutorial in the name or items
@@ -311,7 +312,7 @@ test.describe('Replace Attendee Functionality', () => {
           await page.waitForLoadState('networkidle');
 
           const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-          if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+          if (await softVisible(replaceBtn, 3000)) {
             await replaceBtn.click();
             await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -340,16 +341,16 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -359,7 +360,7 @@ test.describe('Replace Attendee Functionality', () => {
 
           // Should show message about replacement without invoice
           const noInvoiceMessage = page.getByText(/will be replaced.*no additional items/i);
-          const hasNoInvoiceMessage = await noInvoiceMessage.isVisible({ timeout: 3000 }).catch(() => false);
+          const hasNoInvoiceMessage = await softVisible(noInvoiceMessage, 3000);
           expect(hasNoInvoiceMessage).toBeTruthy();
         }
       }
@@ -373,16 +374,16 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -409,7 +410,7 @@ test.describe('Replace Attendee Functionality', () => {
 
             // Should show invoice creation message
             const invoiceMessage = page.getByText(/invoice.*will be created/i);
-            const hasInvoiceMessage = await invoiceMessage.isVisible({ timeout: 3000 }).catch(() => false);
+            const hasInvoiceMessage = await softVisible(invoiceMessage, 3000);
             expect(hasInvoiceMessage).toBeTruthy();
           }
         }
@@ -424,16 +425,16 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -453,16 +454,16 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 
@@ -476,7 +477,7 @@ test.describe('Replace Attendee Functionality', () => {
           await expect(page.getByRole('dialog')).not.toBeVisible();
 
           // Modal should be hidden
-          const isModalVisible = await modalTitle.isVisible({ timeout: 2000 }).catch(() => false);
+          const isModalVisible = await softVisible(modalTitle, 2000);
           expect(isModalVisible).toBeFalsy();
         }
       }
@@ -490,16 +491,16 @@ test.describe('Replace Attendee Functionality', () => {
 
     await detail.navigateToSection('Registration');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
 
     if (hasTable) {
       const firstRow = page.locator('table tbody tr').first();
-      if (await firstRow.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await softVisible(firstRow, 3000)) {
         await firstRow.click();
         await page.waitForLoadState('networkidle');
 
         const replaceBtn = page.getByRole('button', { name: /replace attendee/i });
-        if (await replaceBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await softVisible(replaceBtn, 3000)) {
           await replaceBtn.click();
           await expect(page.getByRole('dialog')).toBeVisible();
 

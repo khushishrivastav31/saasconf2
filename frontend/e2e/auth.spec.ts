@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { LoginPage } from './pages/login.page';
 import { PortalLoginPage } from './pages/portal-login.page';
 
+import { softVisible } from './helpers/navigation';
 test.describe('Authentication', () => {
   test('should show admin login page with form elements', async ({ page }) => {
     const loginPage = new LoginPage(page);
@@ -28,9 +29,9 @@ test.describe('Authentication', () => {
     const portalLogin = new PortalLoginPage(page);
     await portalLogin.goto();
     // Portal login should show a form with email input or placeholder
-    const hasLabel = await page.getByLabel(/email/i).isVisible({ timeout: 10000 }).catch(() => false);
-    const hasPlaceholder = await page.getByPlaceholder(/email|you@/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasSignIn = await page.getByRole('button', { name: /sign in/i }).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasLabel = await softVisible(page.getByLabel(/email/i), 10000);
+    const hasPlaceholder = await softVisible(page.getByPlaceholder(/email|you@/i), 5000);
+    const hasSignIn = await softVisible(page.getByRole('button', { name: /sign in/i }), 5000);
     expect(hasLabel || hasPlaceholder || hasSignIn).toBeTruthy();
   });
 
@@ -38,9 +39,9 @@ test.describe('Authentication', () => {
     const portalLogin = new PortalLoginPage(page);
     await portalLogin.gotoRegister();
     // Registration should show form with name/email fields or create account button
-    const hasEmail = await page.getByLabel(/email/i).isVisible({ timeout: 10000 }).catch(() => false);
-    const hasFirstName = await page.getByLabel(/first name/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasCreateBtn = await page.getByRole('button', { name: /create account/i }).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasEmail = await softVisible(page.getByLabel(/email/i), 10000);
+    const hasFirstName = await softVisible(page.getByLabel(/first name/i), 5000);
+    const hasCreateBtn = await softVisible(page.getByRole('button', { name: /create account/i }), 5000);
     expect(hasEmail || hasFirstName || hasCreateBtn).toBeTruthy();
   });
 });

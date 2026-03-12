@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 /**
  * Payment Reminders Tab E2E Tests
  *
@@ -26,9 +27,7 @@ test.describe('Payment Reminders Tab', () => {
     const remindersBtn = detail.sidebar
       .getByRole('button', { name: 'Payment Reminders' })
       .first();
-    const hasSection = await remindersBtn
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+    const hasSection = await softVisible(remindersBtn, 5000);
     if (!hasSection) {
       test.skip(true, 'Payment Reminders section not visible');
       return;
@@ -40,11 +39,9 @@ test.describe('Payment Reminders Tab', () => {
     await page.waitForLoadState('networkidle');
 
     // Should show reminder list, stats, empty state, or loading
-    const hasStats = await page
+    const hasStats = await softVisible(page
       .getByText(/pending|sent|failed/i)
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+      .first(), 5000);
     const hasEmpty = await page
       .getByText(/no payment reminder|no reminder/i)
       .isVisible()
@@ -67,7 +64,7 @@ test.describe('Payment Reminders Tab', () => {
     const remindersBtn = detail.sidebar
       .getByRole('button', { name: 'Payment Reminders' })
       .first();
-    if (!(await remindersBtn.isVisible({ timeout: 5000 }).catch(() => false))) {
+    if (!(await softVisible(remindersBtn, 5000))) {
       test.skip(true, 'Payment Reminders section not visible');
       return;
     }

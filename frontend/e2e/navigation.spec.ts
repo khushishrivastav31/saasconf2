@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 
+import { softVisible } from './helpers/navigation';
 test.describe('Navigation', () => {
   test('should show sidebar navigation with correct links', async ({ page }) => {
     await page.goto('/dashboard');
@@ -19,8 +20,8 @@ test.describe('Navigation', () => {
     // Admin section is only visible to super_admin; management is visible to tenant_admin+
     const companiesLink = page.getByRole('link', { name: /companies/i });
     const teamLink = page.getByRole('link', { name: /team/i });
-    const hasAdmin = await companiesLink.isVisible({ timeout: 3000 }).catch(() => false);
-    const hasManagement = await teamLink.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAdmin = await softVisible(companiesLink, 3000);
+    const hasManagement = await softVisible(teamLink, 3000);
 
     if (hasAdmin) {
       await companiesLink.click();

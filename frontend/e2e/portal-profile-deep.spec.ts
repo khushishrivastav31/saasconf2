@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { PortalDashboardPage } from './pages/portal-dashboard.page';
 
+import { softVisible } from './helpers/navigation';
 test.describe('Portal Profile Deep Tests', () => {
   test.beforeEach(async () => {
     if (!process.env.E2E_PORTAL_EMAIL || !process.env.E2E_PORTAL_PASSWORD) {
@@ -15,9 +16,9 @@ test.describe('Portal Profile Deep Tests', () => {
     await expect(page).toHaveURL(/profile/i, { timeout: 10000 });
 
     // Should show form fields for personal information
-    const hasFirstName = await page.getByLabel(/first name/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasLastName = await page.getByLabel(/last name/i).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmail = await page.getByLabel(/email/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasFirstName = await softVisible(page.getByLabel(/first name/i), 5000);
+    const hasLastName = await softVisible(page.getByLabel(/last name/i), 3000);
+    const hasEmail = await softVisible(page.getByLabel(/email/i).first(), 3000);
 
     expect(hasFirstName || hasLastName || hasEmail).toBeTruthy();
   });
@@ -28,7 +29,7 @@ test.describe('Portal Profile Deep Tests', () => {
 
     await expect(page).toHaveURL(/profile/i, { timeout: 10000 });
 
-    const hasSaveBtn = await page.getByRole('button', { name: /save|update/i }).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasSaveBtn = await softVisible(page.getByRole('button', { name: /save|update/i }), 5000);
     expect(hasSaveBtn).toBeTruthy();
   });
 
@@ -39,9 +40,9 @@ test.describe('Portal Profile Deep Tests', () => {
     await expect(page).toHaveURL(/profile/i, { timeout: 10000 });
 
     // Check for extended profile fields
-    const hasAffiliation = await page.getByLabel(/affiliation|organization|company/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasBio = await page.getByLabel(/bio|about/i).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasPhone = await page.getByLabel(/phone/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAffiliation = await softVisible(page.getByLabel(/affiliation|organization|company/i), 5000);
+    const hasBio = await softVisible(page.getByLabel(/bio|about/i), 3000);
+    const hasPhone = await softVisible(page.getByLabel(/phone/i), 3000);
 
     // At least one extended field should exist
     expect(typeof hasAffiliation === 'boolean' && typeof hasBio === 'boolean').toBeTruthy();
@@ -62,9 +63,9 @@ test.describe('Portal Messages Deep Tests', () => {
     await expect(page).toHaveURL(/messages/i, { timeout: 10000 });
 
     // Should show message list or empty state
-    const hasMessages = await page.locator('[class*="border-b"], table, tr').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no message/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasContent = await page.locator('main, [role="main"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasMessages = await softVisible(page.locator('[class*="border-b"], table, tr').first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no message/i), 5000);
+    const hasContent = await softVisible(page.locator('main, [role="main"]').first(), 3000);
 
     expect(hasMessages || hasEmpty || hasContent).toBeTruthy();
   });
@@ -75,10 +76,10 @@ test.describe('Portal Messages Deep Tests', () => {
 
     await expect(page).toHaveURL(/messages/i, { timeout: 10000 });
 
-    const hasMessages = await page.locator('[class*="border-b"]').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasMessages = await softVisible(page.locator('[class*="border-b"]').first(), 5000);
     if (hasMessages) {
       // Messages should show date or subject text
-      const hasDate = await page.getByText(/\d{1,2}[\/.-]\d{1,2}/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+      const hasDate = await softVisible(page.getByText(/\d{1,2}[\/.-]\d{1,2}/i).first(), 3000);
       expect(typeof hasDate).toBe('boolean');
     }
   });
@@ -98,9 +99,9 @@ test.describe('Portal Invitations Deep Tests', () => {
     await expect(page).toHaveURL(/invitations/i, { timeout: 10000 });
 
     // Should show invitations or empty state
-    const hasInvitations = await page.locator('table, [class*="border-b"]').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no invitation/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasContent = await page.locator('main, [role="main"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasInvitations = await softVisible(page.locator('table, [class*="border-b"]').first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no invitation/i), 5000);
+    const hasContent = await softVisible(page.locator('main, [role="main"]').first(), 3000);
 
     expect(hasInvitations || hasEmpty || hasContent).toBeTruthy();
   });
@@ -111,10 +112,10 @@ test.describe('Portal Invitations Deep Tests', () => {
 
     await expect(page).toHaveURL(/invitations/i, { timeout: 10000 });
 
-    const hasInvitations = await page.locator('[class*="border"]').nth(1).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasInvitations = await softVisible(page.locator('[class*="border"]').nth(1), 5000);
     if (hasInvitations) {
-      const hasAccept = await page.getByRole('button', { name: /accept/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
-      const hasDecline = await page.getByRole('button', { name: /decline|reject/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
+      const hasAccept = await softVisible(page.getByRole('button', { name: /accept/i }).first(), 3000);
+      const hasDecline = await softVisible(page.getByRole('button', { name: /decline|reject/i }).first(), 3000);
       expect(typeof hasAccept === 'boolean' && typeof hasDecline === 'boolean').toBeTruthy();
     }
   });

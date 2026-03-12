@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 
+import { softVisible } from './helpers/navigation';
 test.describe('Super Admin Pages', () => {
   // Super admin pages require super_admin role.
   // If the test user is only tenant_admin, these pages will redirect to /dashboard.
@@ -7,7 +8,7 @@ test.describe('Super Admin Pages', () => {
 
   test('should load Companies page or skip if not super_admin', async ({ page }) => {
     await page.goto('/admin/tenants');
-    const hasHeading = await page.getByRole('heading', { name: /companies|tenants/i }).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasHeading = await softVisible(page.getByRole('heading', { name: /companies|tenants/i }), 10000);
 
     if (!hasHeading) {
       // User is not super_admin — page redirected away
@@ -15,13 +16,13 @@ test.describe('Super Admin Pages', () => {
     }
 
     // Should have create/add button
-    const hasCreateBtn = await page.getByRole('button', { name: /create|add|new/i }).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasCreateBtn = await softVisible(page.getByRole('button', { name: /create|add|new/i }), 5000);
     expect(hasCreateBtn).toBeTruthy();
   });
 
   test('should load Modules page with module names', async ({ page }) => {
     await page.goto('/admin/modules');
-    const hasHeading = await page.getByRole('heading', { name: /modules/i }).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasHeading = await softVisible(page.getByRole('heading', { name: /modules/i }), 10000);
     if (!hasHeading) {
       test.skip(true, 'User is not super_admin - admin pages not accessible');
     }
@@ -30,7 +31,7 @@ test.describe('Super Admin Pages', () => {
 
   test('should load Audit Logs page with table and filters', async ({ page }) => {
     await page.goto('/admin/audit-logs');
-    const hasHeading = await page.getByRole('heading', { name: /audit/i }).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasHeading = await softVisible(page.getByRole('heading', { name: /audit/i }), 10000);
     if (!hasHeading) {
       test.skip(true, 'User is not super_admin - admin pages not accessible');
     }
@@ -46,7 +47,7 @@ test.describe('Super Admin Pages', () => {
 
   test('should load Settings page with currencies', async ({ page }) => {
     await page.goto('/admin/settings');
-    const hasHeading = await page.getByRole('heading', { name: /settings/i }).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasHeading = await softVisible(page.getByRole('heading', { name: /settings/i }), 10000);
     if (!hasHeading) {
       test.skip(true, 'User is not super_admin - admin pages not accessible');
     }
@@ -57,13 +58,13 @@ test.describe('Super Admin Pages', () => {
 
   test('should show pronoun options in admin settings', async ({ page }) => {
     await page.goto('/admin/settings');
-    const hasHeading = await page.getByRole('heading', { name: /settings/i }).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasHeading = await softVisible(page.getByRole('heading', { name: /settings/i }), 10000);
     if (!hasHeading) {
       test.skip(true, 'User is not super_admin - admin pages not accessible');
     }
 
     // Should show pronouns section or tab
-    const hasPronouns = await page.getByText(/pronoun/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasPronouns = await softVisible(page.getByText(/pronoun/i).first(), 5000);
     if (hasPronouns) {
       await page.getByText(/pronoun/i).first().click();
       await page.waitForLoadState('networkidle');

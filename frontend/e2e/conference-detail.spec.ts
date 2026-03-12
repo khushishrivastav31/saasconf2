@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Conference Detail', () => {
@@ -70,7 +71,7 @@ test.describe('Conference Volunteers Tab', () => {
 
     // Volunteers requires the volunteers module — skip if section not visible
     const volBtn = detail.sidebar.getByRole('button', { name: 'Volunteers' }).first();
-    const hasVolSection = await volBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasVolSection = await softVisible(volBtn, 5000);
     if (!hasVolSection) {
       test.skip();
       return;
@@ -80,10 +81,10 @@ test.describe('Conference Volunteers Tab', () => {
     await page.waitForLoadState('networkidle');
 
     // Should show table with volunteers, empty state, create button, or child sections expanded
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 10000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no volunteer/i).isVisible({ timeout: 10000 }).catch(() => false);
-    const hasCreateBtn = await page.getByRole('button', { name: /create new/i }).isVisible({ timeout: 10000 }).catch(() => false);
-    const hasChildren = await detail.sidebar.getByRole('button', { name: 'Task Assignment' }).isVisible({ timeout: 10000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 10000);
+    const hasEmpty = await softVisible(page.getByText(/no volunteer/i), 10000);
+    const hasCreateBtn = await softVisible(page.getByRole('button', { name: /create new/i }), 10000);
+    const hasChildren = await softVisible(detail.sidebar.getByRole('button', { name: 'Task Assignment' }), 10000);
 
     expect(hasTable || hasEmpty || hasCreateBtn || hasChildren).toBeTruthy();
   });
@@ -95,7 +96,7 @@ test.describe('Conference Volunteers Tab', () => {
 
     await detail.navigateToSection('Volunteers');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       const table = page.locator('table').first();
       // Verify key column headers exist
@@ -121,9 +122,9 @@ test.describe('Conference Sponsors Tab', () => {
     await expect(page.getByRole('heading', { name: /sponsors/i })).toBeVisible({ timeout: 10000 });
 
     // Should show + Add Sponsor button or table or empty state
-    const hasAddBtn = await page.getByRole('button', { name: /add sponsor/i }).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no sponsors yet/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /add sponsor/i }), 5000);
+    const hasTable = await softVisible(page.locator('table').first(), 3000);
+    const hasEmpty = await softVisible(page.getByText(/no sponsors yet/i), 3000);
 
     expect(hasAddBtn || hasTable || hasEmpty).toBeTruthy();
   });
@@ -135,7 +136,7 @@ test.describe('Conference Sponsors Tab', () => {
 
     await detail.navigateToSection('Sponsors');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       const table = page.locator('table').first();
       await expect(table.getByText(/company name/i).first()).toBeVisible();
@@ -158,10 +159,10 @@ test.describe('Conference Locations Tab', () => {
     await detail.navigateToSection('Locations');
 
     // Should show linked locations heading, create button, or empty state
-    const hasLinked = await page.getByText(/linked locations/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasCreate = await page.getByRole('button', { name: /create new|link existing/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no locations linked/i).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasLocations = await page.getByText(/locations/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasLinked = await softVisible(page.getByText(/linked locations/i), 5000);
+    const hasCreate = await softVisible(page.getByRole('button', { name: /create new|link existing/i }).first(), 3000);
+    const hasEmpty = await softVisible(page.getByText(/no locations linked/i), 3000);
+    const hasLocations = await softVisible(page.getByText(/locations/i).first(), 3000);
 
     expect(hasLinked || hasCreate || hasEmpty || hasLocations).toBeTruthy();
   });
@@ -174,8 +175,8 @@ test.describe('Conference Locations Tab', () => {
     await detail.navigateToSection('Locations');
 
     // Check for location list panel or empty state
-    const hasLocationPanel = await page.getByText(/locations/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no locations linked|select a location/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasLocationPanel = await softVisible(page.getByText(/locations/i).first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no locations linked|select a location/i), 5000);
 
     expect(hasLocationPanel || hasEmpty).toBeTruthy();
   });
@@ -197,9 +198,9 @@ test.describe('Conference Service Providers Tab', () => {
     await expect(page.getByRole('heading', { name: /service providers/i })).toBeVisible({ timeout: 10000 });
 
     // Should show + Add Provider button or empty state
-    const hasAddBtn = await page.getByRole('button', { name: /add provider/i }).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no service providers yet/i).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasProviders = await page.getByText(/providers/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /add provider/i }), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no service providers yet/i), 3000);
+    const hasProviders = await softVisible(page.getByText(/providers/i).first(), 3000);
 
     expect(hasAddBtn || hasEmpty || hasProviders).toBeTruthy();
   });
@@ -221,8 +222,8 @@ test.describe('Conference Sessions Tab', () => {
     await expect(page.getByRole('heading', { name: 'Sessions', exact: true })).toBeVisible({ timeout: 10000 });
 
     // Should show table or empty state
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no sessions yet/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no sessions yet/i), 5000);
 
     expect(hasTable || hasEmpty).toBeTruthy();
   });
@@ -234,7 +235,7 @@ test.describe('Conference Sessions Tab', () => {
 
     await detail.navigateToSection('Sessions');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       const table = page.locator('table').first();
       // Default visible columns
@@ -254,7 +255,7 @@ test.describe('Conference Sessions Tab', () => {
 
     await detail.navigateToSection('Sessions');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       // Click the Columns button to open the picker
       const columnsBtn = page.getByRole('button', { name: /columns/i });
@@ -277,7 +278,7 @@ test.describe('Conference Sessions Tab', () => {
 
     await detail.navigateToSection('Sessions');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       // Search input should exist
       const searchInput = page.getByPlaceholder(/search/i);
@@ -300,7 +301,7 @@ test.describe('Conference Sessions Tab', () => {
 
     await detail.navigateToSection('Sessions');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       const exportBtn = page.getByRole('button', { name: /export csv/i });
       await expect(exportBtn).toBeVisible({ timeout: 5000 });
@@ -324,9 +325,9 @@ test.describe('Conference Deadlines Tab', () => {
     await expect(page.getByRole('heading', { name: 'Deadlines', exact: true })).toBeVisible({ timeout: 10000 });
 
     // Should show deadline cards, New Deadline button, or empty state
-    const hasCards = await page.locator('.border-l-4').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasAddBtn = await page.getByRole('button', { name: /new deadline/i }).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no deadlines yet/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasCards = await softVisible(page.locator('.border-l-4').first(), 5000);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /new deadline/i }), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no deadlines yet/i), 5000);
 
     expect(hasCards || hasAddBtn || hasEmpty).toBeTruthy();
   });
@@ -389,7 +390,7 @@ test.describe('Conference Deadlines Tab', () => {
     await expect(card.getByText('E2E test deadline')).toBeVisible();
 
     // Status badge should show Active or Due soon
-    const hasBadge = await card.getByText(/active|due soon/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasBadge = await softVisible(card.getByText(/active|due soon/i).first(), 3000);
     expect(hasBadge).toBeTruthy();
 
     // Delete it to clean up

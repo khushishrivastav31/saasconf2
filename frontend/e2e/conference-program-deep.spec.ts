@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Conference Program Deep Tests', () => {
@@ -17,9 +18,9 @@ test.describe('Conference Program Deep Tests', () => {
 
     await expect(page.getByRole('heading', { name: /program design/i })).toBeVisible({ timeout: 10000 });
 
-    const hasAddDay = await page.getByRole('button', { name: /add day/i }).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasDays = await page.getByRole('button').filter({ hasText: /mon|tue|wed|thu|fri|sat|sun|day|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i }).first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no program days/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAddDay = await softVisible(page.getByRole('button', { name: /add day/i }), 5000);
+    const hasDays = await softVisible(page.getByRole('button').filter({ hasText: /mon|tue|wed|thu|fri|sat|sun|day|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i }).first(), 3000);
+    const hasEmpty = await softVisible(page.getByText(/no program days/i), 3000);
     expect(hasAddDay || hasDays || hasEmpty).toBeTruthy();
   });
 
@@ -31,14 +32,14 @@ test.describe('Conference Program Deep Tests', () => {
     await detail.navigateToSection('Program');
 
     const dayTab = page.getByRole('button').filter({ hasText: /mon|tue|wed|thu|fri|sat|sun|day/i }).first();
-    if (await dayTab.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(dayTab, 5000)) {
       await dayTab.click();
       await page.waitForLoadState('networkidle');
 
       // Should show grid with time slots and tracks
-      const hasTime = await page.getByText(/\d{1,2}:\d{2}/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-      const hasTrack = await page.getByText(/track|room|hall/i).first().isVisible({ timeout: 3000 }).catch(() => false);
-      const hasGrid = await page.locator('[class*="grid"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+      const hasTime = await softVisible(page.getByText(/\d{1,2}:\d{2}/i).first(), 5000);
+      const hasTrack = await softVisible(page.getByText(/track|room|hall/i).first(), 3000);
+      const hasGrid = await softVisible(page.locator('[class*="grid"]').first(), 3000);
 
       expect(hasTime || hasTrack || hasGrid).toBeTruthy();
     }
@@ -52,13 +53,13 @@ test.describe('Conference Program Deep Tests', () => {
     await detail.navigateToSection('Program');
 
     const dayTab = page.getByRole('button').filter({ hasText: /mon|tue|wed|thu|fri|sat|sun|day/i }).first();
-    if (await dayTab.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(dayTab, 5000)) {
       await dayTab.click();
       await page.waitForLoadState('networkidle');
 
       const addTrack = page.getByRole('button', { name: /add track|new track/i });
-      const hasAddTrack = await addTrack.isVisible({ timeout: 3000 }).catch(() => false);
-      const hasAddSession = await page.getByRole('button', { name: /add session/i }).isVisible({ timeout: 3000 }).catch(() => false);
+      const hasAddTrack = await softVisible(addTrack, 3000);
+      const hasAddSession = await softVisible(page.getByRole('button', { name: /add session/i }), 3000);
 
       // At least one action button should be visible when viewing a day
       expect(typeof hasAddTrack).toBe('boolean');
@@ -73,7 +74,7 @@ test.describe('Conference Program Deep Tests', () => {
     await detail.navigateToChildSection('Program', 'Build');
 
     // Build tab should show drag-and-drop area or paper assignment UI
-    const hasBuild = await page.getByText(/build|assign|drag|paper/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasBuild = await softVisible(page.getByText(/build|assign|drag|paper/i).first(), 5000);
     const hasContent = await detail.contentArea.isVisible();
 
     expect(hasBuild || hasContent).toBeTruthy();
@@ -87,8 +88,8 @@ test.describe('Conference Program Deep Tests', () => {
     await detail.navigateToChildSection('Program', 'Build');
 
     // Should show unassigned papers or assigned papers section
-    const hasUnassigned = await page.getByText(/unassigned|available|paper/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasTimeline = await page.getByText(/timeline|schedule/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUnassigned = await softVisible(page.getByText(/unassigned|available|paper/i).first(), 5000);
+    const hasTimeline = await softVisible(page.getByText(/timeline|schedule/i).first(), 3000);
     const hasContent = await detail.contentArea.isVisible();
 
     expect(hasUnassigned || hasTimeline || hasContent).toBeTruthy();

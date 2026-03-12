@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { PortalDashboardPage } from './pages/portal-dashboard.page';
 
+import { softVisible } from './helpers/navigation';
 test.describe('Portal Dashboard', () => {
   test.beforeEach(async () => {
     if (!process.env.E2E_PORTAL_EMAIL || !process.env.E2E_PORTAL_PASSWORD) {
@@ -27,9 +28,9 @@ test.describe('Portal Dashboard', () => {
     await expect(sidebar).toBeVisible();
 
     // Verify key navigation links exist
-    const hasSubmitPaper = await page.getByText(/submit paper|new paper/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasProfile = await page.getByText(/profile/i).first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasMessages = await page.getByText(/messages/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSubmitPaper = await softVisible(page.getByText(/submit paper|new paper/i).first(), 5000);
+    const hasProfile = await softVisible(page.getByText(/profile/i).first(), 3000);
+    const hasMessages = await softVisible(page.getByText(/messages/i).first(), 3000);
 
     expect(hasSubmitPaper || hasProfile || hasMessages).toBeTruthy();
   });
@@ -55,15 +56,15 @@ test.describe('Portal Dashboard', () => {
     await expect(page).toHaveURL(/papers\/new/i, { timeout: 10000 });
 
     // Check for form fields (they may be visible if conference is pre-selected)
-    const hasTitle = await page.getByLabel(/title/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasConferenceSelect = await page.locator('select').first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTitle = await softVisible(page.getByLabel(/title/i).first(), 5000);
+    const hasConferenceSelect = await softVisible(page.locator('select').first(), 3000);
 
     expect(hasTitle || hasConferenceSelect).toBeTruthy();
 
     // If title field is visible, check for other form fields
     if (hasTitle) {
-      const hasSessionType = await page.getByText(/session type/i).first().isVisible({ timeout: 3000 }).catch(() => false);
-      const hasAbstract = await page.getByText(/abstract/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+      const hasSessionType = await softVisible(page.getByText(/session type/i).first(), 3000);
+      const hasAbstract = await softVisible(page.getByText(/abstract/i).first(), 3000);
       expect(hasSessionType || hasAbstract).toBeTruthy();
     }
   });
@@ -78,7 +79,7 @@ test.describe('Portal Dashboard', () => {
     await expect(page.getByText(/profile|account|email/i).first()).toBeVisible({ timeout: 10000 });
 
     // Should show form fields for profile
-    const hasInput = await page.locator('input').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasInput = await softVisible(page.locator('input').first(), 5000);
     expect(hasInput).toBeTruthy();
   });
 

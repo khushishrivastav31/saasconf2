@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Registration Tab', () => {
@@ -16,8 +17,8 @@ test.describe('Registration Tab', () => {
     await detail.navigateToSection('Registration');
 
     // Should show "Registrations" heading or empty state
-    const hasHeading = await page.getByRole('heading', { name: /registration/i }).isVisible({ timeout: 10000 }).catch(() => false);
-    const hasContent = await page.getByText(/registration/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasHeading = await softVisible(page.getByRole('heading', { name: /registration/i }), 10000);
+    const hasContent = await softVisible(page.getByText(/registration/i).first(), 5000);
     expect(hasHeading || hasContent).toBeTruthy();
   });
 
@@ -29,9 +30,9 @@ test.describe('Registration Tab', () => {
     await detail.navigateToSection('Registration');
 
     // Either a table with registrations or an empty state / add button
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no registration/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasAddBtn = await page.getByRole('button', { name: /new registration|add registration/i }).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no registration/i), 5000);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /new registration|add registration/i }), 5000);
 
     expect(hasTable || hasEmpty || hasAddBtn).toBeTruthy();
   });
@@ -45,12 +46,12 @@ test.describe('Registration Tab', () => {
 
     // Click "New Registration" button
     const addBtn = page.getByRole('button', { name: /new registration|add registration/i });
-    if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(addBtn, 5000)) {
       await addBtn.click();
 
       // Should show "Add Another Attendee" button (unified flow, no mode toggle)
-      const hasAddAttendee = await page.getByRole('button', { name: /add another attendee/i }).isVisible({ timeout: 5000 }).catch(() => false);
-      const hasAttendeeSection = await page.getByText(/attendee/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+      const hasAddAttendee = await softVisible(page.getByRole('button', { name: /add another attendee/i }), 5000);
+      const hasAttendeeSection = await softVisible(page.getByText(/attendee/i).first(), 5000);
       expect(hasAddAttendee || hasAttendeeSection).toBeTruthy();
     }
   });
@@ -63,7 +64,7 @@ test.describe('Registration Tab', () => {
     await detail.navigateToSection('Registration');
 
     const addBtn = page.getByRole('button', { name: /new registration|add registration/i });
-    if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(addBtn, 5000)) {
       await addBtn.click();
 
       // Should show billing fields
@@ -81,7 +82,7 @@ test.describe('Registration Tab', () => {
     await detail.navigateToSection('Registration');
 
     const addBtn = page.getByRole('button', { name: /new registration|add registration/i });
-    if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(addBtn, 5000)) {
       await addBtn.click();
 
       // Should show contact person section with first/last name
@@ -99,7 +100,7 @@ test.describe('Registration Tab', () => {
     await detail.navigateToSection('Registration');
 
     const addBtn = page.getByRole('button', { name: /new registration|add registration/i });
-    if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(addBtn, 5000)) {
       await addBtn.click();
 
       // Country should be a select element
@@ -120,7 +121,7 @@ test.describe('Registration Tab', () => {
     await detail.navigateToSection('Registration');
 
     const addBtn = page.getByRole('button', { name: /new registration|add registration/i });
-    if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(addBtn, 5000)) {
       await addBtn.click();
 
       // Attendee section should show first name / last name / email
@@ -130,7 +131,7 @@ test.describe('Registration Tab', () => {
       await expect(page.getByLabel(/email/i).first()).toBeVisible();
 
       // Pronouns dropdown is visible only if conference has pronoun options configured
-      const hasPronounsSelect = await page.getByLabel(/pronouns/i).isVisible({ timeout: 3000 }).catch(() => false);
+      const hasPronounsSelect = await softVisible(page.getByLabel(/pronouns/i), 3000);
       // Just verify the field either exists or doesn't error out — it depends on settings
       expect(typeof hasPronounsSelect).toBe('boolean');
     }
@@ -144,12 +145,12 @@ test.describe('Registration Tab', () => {
     await detail.navigateToSection('Registration');
 
     const addBtn = page.getByRole('button', { name: /new registration|add registration/i });
-    if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(addBtn, 5000)) {
       await addBtn.click();
 
       // Should show booking option section
-      const hasBooking = await page.getByText(/booking option|select.*option/i).isVisible({ timeout: 5000 }).catch(() => false);
-      const hasCards = await page.locator('[class*="border"][class*="rounded"]').first().isVisible({ timeout: 3000 }).catch(() => false);
+      const hasBooking = await softVisible(page.getByText(/booking option|select.*option/i), 5000);
+      const hasCards = await softVisible(page.locator('[class*="border"][class*="rounded"]').first(), 3000);
       expect(hasBooking || hasCards).toBeTruthy();
     }
   });
@@ -162,7 +163,7 @@ test.describe('Registration Tab', () => {
     await detail.navigateToSection('Registration');
 
     const addBtn = page.getByRole('button', { name: /new registration|add registration/i });
-    if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(addBtn, 5000)) {
       await addBtn.click();
 
       // VAT number input should be visible
@@ -178,7 +179,7 @@ test.describe('Registration Tab', () => {
     await detail.navigateToSection('Registration');
 
     const addBtn = page.getByRole('button', { name: /new registration|add registration/i });
-    if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(addBtn, 5000)) {
       await addBtn.click();
 
       // Select Germany as country
@@ -191,7 +192,7 @@ test.describe('Registration Tab', () => {
       await vatInput.blur();
 
       // Should show "Checking..." then a result (Valid/Invalid/Unverified)
-      const hasResult = await page.getByText(/valid|invalid|unverified|checking/i).isVisible({ timeout: 10000 }).catch(() => false);
+      const hasResult = await softVisible(page.getByText(/valid|invalid|unverified|checking/i), 10000);
       expect(hasResult).toBeTruthy();
     }
   });

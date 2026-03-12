@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 
+import { softVisible } from './helpers/navigation';
 /**
  * E2E tests for invoice cancellation workflow.
  *
@@ -33,7 +34,7 @@ test.describe('Invoice Cancellation Workflow', () => {
   test('should cancel invoice and create credit note', async ({ page }) => {
     // Find a sent invoice to cancel
     const invoiceRow = page.locator('tr').filter({ hasText: /sent|paid/i }).first();
-    const isInvoiceAvailable = await invoiceRow.isVisible({ timeout: 3000 }).catch(() => false);
+    const isInvoiceAvailable = await softVisible(invoiceRow, 3000);
 
     if (!isInvoiceAvailable) {
       test.skip(true, 'No sent/paid invoices available for testing');
@@ -44,7 +45,7 @@ test.describe('Invoice Cancellation Workflow', () => {
 
     // Click cancel button
     const cancelButton = page.getByRole('button', { name: /cancel.*invoice/i }).first();
-    const isCancelAvailable = await cancelButton.isVisible({ timeout: 2000 }).catch(() => false);
+    const isCancelAvailable = await softVisible(cancelButton, 2000);
 
     if (!isCancelAvailable) {
       test.skip(true, 'Cancel Invoice button not visible');
@@ -83,7 +84,7 @@ test.describe('Invoice Cancellation Workflow', () => {
   test('should show registration cancellation option when invoice has registrations', async ({ page }) => {
     // Find an invoice (sent or paid)
     const invoiceRow = page.locator('tr').filter({ hasText: /sent|paid/i }).first();
-    const isInvoiceAvailable = await invoiceRow.isVisible({ timeout: 3000 }).catch(() => false);
+    const isInvoiceAvailable = await softVisible(invoiceRow, 3000);
 
     if (!isInvoiceAvailable) {
       test.skip(true, 'No sent/paid invoices available for testing');
@@ -94,7 +95,7 @@ test.describe('Invoice Cancellation Workflow', () => {
 
     // Click cancel button
     const cancelButton = page.getByRole('button', { name: /cancel.*invoice/i }).first();
-    const isCancelAvailable = await cancelButton.isVisible({ timeout: 2000 }).catch(() => false);
+    const isCancelAvailable = await softVisible(cancelButton, 2000);
 
     if (!isCancelAvailable) {
       test.skip(true, 'Cancel Invoice button not visible');
@@ -126,7 +127,7 @@ test.describe('Invoice Cancellation Workflow', () => {
   test('should require cancellation reason', async ({ page }) => {
     // Find a sent invoice to cancel
     const invoiceRow = page.locator('tr').filter({ hasText: /sent|paid/i }).first();
-    const isInvoiceAvailable = await invoiceRow.isVisible({ timeout: 3000 }).catch(() => false);
+    const isInvoiceAvailable = await softVisible(invoiceRow, 3000);
 
     if (!isInvoiceAvailable) {
       test.skip(true, 'No sent/paid invoices available for testing');
@@ -137,7 +138,7 @@ test.describe('Invoice Cancellation Workflow', () => {
 
     // Click cancel button
     const cancelButton = page.getByRole('button', { name: /cancel.*invoice/i }).first();
-    const isCancelAvailable = await cancelButton.isVisible({ timeout: 2000 }).catch(() => false);
+    const isCancelAvailable = await softVisible(cancelButton, 2000);
 
     if (!isCancelAvailable) {
       test.skip(true, 'Cancel Invoice button not visible');
@@ -154,7 +155,7 @@ test.describe('Invoice Cancellation Workflow', () => {
   test('should show refund information for paid credit card invoices', async ({ page }) => {
     // Find a paid invoice
     const paidInvoice = page.locator('tr').filter({ hasText: /paid/i }).first();
-    const isPaidInvoiceAvailable = await paidInvoice.isVisible({ timeout: 3000 }).catch(() => false);
+    const isPaidInvoiceAvailable = await softVisible(paidInvoice, 3000);
 
     if (!isPaidInvoiceAvailable) {
       test.skip(true, 'No paid invoices available for testing');

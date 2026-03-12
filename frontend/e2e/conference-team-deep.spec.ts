@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Conference Team Deep Tests', () => {
@@ -16,8 +17,8 @@ test.describe('Conference Team Deep Tests', () => {
     await detail.navigateToSection('Team');
 
     // Should show team heading or content
-    const hasHeading = await page.getByRole('heading', { name: /team/i }).isVisible({ timeout: 10000 }).catch(() => false);
-    const hasContent = await detail.contentArea.getByText(/team|member|role/i).first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasHeading = await softVisible(page.getByRole('heading', { name: /team/i }), 10000);
+    const hasContent = await softVisible(detail.contentArea.getByText(/team|member|role/i).first(), 5000);
 
     expect(hasHeading || hasContent).toBeTruthy();
   });
@@ -29,9 +30,9 @@ test.describe('Conference Team Deep Tests', () => {
 
     await detail.navigateToSection('Team');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasList = await page.locator('[class*="border-b"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no team member/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
+    const hasList = await softVisible(page.locator('[class*="border-b"]').first(), 3000);
+    const hasEmpty = await softVisible(page.getByText(/no team member/i), 3000);
 
     expect(hasTable || hasList || hasEmpty).toBeTruthy();
   });
@@ -43,7 +44,7 @@ test.describe('Conference Team Deep Tests', () => {
 
     await detail.navigateToSection('Team');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       const table = page.locator('table').first();
       await expect(table.getByText(/name/i).first()).toBeVisible();
@@ -58,7 +59,7 @@ test.describe('Conference Team Deep Tests', () => {
 
     await detail.navigateToSection('Team');
 
-    const hasAddBtn = await page.getByRole('button', { name: /add.*member|invite|add/i }).first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /add.*member|invite|add/i }).first(), 5000);
     const hasContent = await detail.contentArea.isVisible();
 
     expect(hasAddBtn || hasContent).toBeTruthy();

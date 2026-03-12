@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Conference Booking Deep Tests', () => {
@@ -15,7 +16,7 @@ test.describe('Conference Booking Deep Tests', () => {
 
     await detail.navigateToSection('Booking Options');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
     if (hasTable) {
       const table = page.locator('table').first();
       // Matrix should show option names in rows and period columns
@@ -62,7 +63,7 @@ test.describe('Conference Booking Deep Tests', () => {
     await detail.navigateToSection('Booking Options');
 
     const periodBtn = page.getByRole('button', { name: /period/i });
-    if (await periodBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(periodBtn, 5000)) {
       await periodBtn.click();
 
       // Modal should appear
@@ -70,13 +71,13 @@ test.describe('Conference Booking Deep Tests', () => {
       await expect(modal).toBeVisible({ timeout: 5000 });
 
       // Should have date fields
-      const hasDate = await modal.getByText(/date|from|to|start|end/i).first().isVisible({ timeout: 3000 }).catch(() => false);
-      const hasName = await modal.getByLabel(/name|label/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+      const hasDate = await softVisible(modal.getByText(/date|from|to|start|end/i).first(), 3000);
+      const hasName = await softVisible(modal.getByLabel(/name|label/i).first(), 3000);
       expect(hasDate || hasName).toBeTruthy();
 
       // Close modal
       const closeBtn = modal.getByRole('button', { name: /cancel|close/i }).first();
-      if (await closeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await softVisible(closeBtn, 2000)) {
         await closeBtn.click();
       }
     }
@@ -91,13 +92,13 @@ test.describe('Conference Booking Deep Tests', () => {
 
     // Scroll to packages section
     const packagesHeading = page.getByRole('heading', { name: /booking packages/i });
-    if (await packagesHeading.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(packagesHeading, 5000)) {
       await packagesHeading.scrollIntoViewIfNeeded();
 
       const packageBtn = page.getByRole('button', { name: /package/i });
-      const hasBtn = await packageBtn.isVisible({ timeout: 3000 }).catch(() => false);
-      const hasCards = await page.locator('[class*="border"][class*="rounded"]').nth(1).isVisible({ timeout: 3000 }).catch(() => false);
-      const hasEmpty = await page.getByText(/no booking packages/i).isVisible({ timeout: 3000 }).catch(() => false);
+      const hasBtn = await softVisible(packageBtn, 3000);
+      const hasCards = await softVisible(page.locator('[class*="border"][class*="rounded"]').nth(1), 3000);
+      const hasEmpty = await softVisible(page.getByText(/no booking packages/i), 3000);
 
       expect(hasBtn || hasCards || hasEmpty).toBeTruthy();
     }
@@ -111,12 +112,12 @@ test.describe('Conference Booking Deep Tests', () => {
     await detail.navigateToSection('Booking Options');
 
     const discountHeading = page.getByRole('heading', { name: /discount codes/i });
-    if (await discountHeading.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await softVisible(discountHeading, 5000)) {
       await discountHeading.scrollIntoViewIfNeeded();
 
       const addBtn = page.getByRole('button', { name: /discount code/i });
-      const hasBtn = await addBtn.isVisible({ timeout: 3000 }).catch(() => false);
-      const hasEmpty = await page.getByText(/no discount codes/i).isVisible({ timeout: 3000 }).catch(() => false);
+      const hasBtn = await softVisible(addBtn, 3000);
+      const hasEmpty = await softVisible(page.getByText(/no discount codes/i), 3000);
 
       expect(hasBtn || hasEmpty).toBeTruthy();
     }

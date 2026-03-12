@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Conference CFP Deep Tests', () => {
@@ -16,9 +17,9 @@ test.describe('Conference CFP Deep Tests', () => {
     await detail.navigateToChildSection('Call for Papers', 'Assignments');
 
     // Should show assignment-related content
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasAssign = await page.getByText(/assign|reviewer|committee/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no assignment/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
+    const hasAssign = await softVisible(page.getByText(/assign|reviewer|committee/i).first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no assignment/i), 3000);
     const hasContent = await detail.contentArea.isVisible();
 
     expect(hasTable || hasAssign || hasEmpty || hasContent).toBeTruthy();
@@ -31,12 +32,12 @@ test.describe('Conference CFP Deep Tests', () => {
 
     await detail.navigateToChildSection('Call for Papers', 'Papers');
 
-    const hasTable = await page.locator('table, tr').first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table, tr').first(), 5000);
     if (hasTable) {
       // Table should have columns for paper info
       const table = page.locator('table').first();
-      const hasTitle = await table.getByText(/title/i).first().isVisible({ timeout: 3000 }).catch(() => false);
-      const hasStatus = await table.getByText(/status/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+      const hasTitle = await softVisible(table.getByText(/title/i).first(), 3000);
+      const hasStatus = await softVisible(table.getByText(/status/i).first(), 3000);
       expect(hasTitle || hasStatus).toBeTruthy();
     }
   });
@@ -49,10 +50,10 @@ test.describe('Conference CFP Deep Tests', () => {
     await detail.navigateToChildSection('Call for Papers', 'Users');
 
     // Should show search/filter controls, add button, or empty state
-    const hasSearch = await page.getByPlaceholder(/search/i).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasFilter = await page.locator('select').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasAddBtn = await page.getByRole('button', { name: /add user/i }).isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no users/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSearch = await softVisible(page.getByPlaceholder(/search/i), 5000);
+    const hasFilter = await softVisible(page.locator('select').first(), 3000);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /add user/i }), 3000);
+    const hasEmpty = await softVisible(page.getByText(/no users/i), 3000);
 
     expect(hasSearch || hasFilter || hasAddBtn || hasEmpty).toBeTruthy();
   });
@@ -64,8 +65,8 @@ test.describe('Conference CFP Deep Tests', () => {
 
     await detail.navigateToChildSection('Call for Papers', 'Evaluated Papers');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no evaluated|no paper/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no evaluated|no paper/i), 5000);
     const hasContent = await detail.contentArea.isVisible();
 
     expect(hasTable || hasEmpty || hasContent).toBeTruthy();
@@ -78,8 +79,8 @@ test.describe('Conference CFP Deep Tests', () => {
 
     await detail.navigateToChildSection('Call for Papers', 'Accepted Papers');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no accepted|no paper/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no accepted|no paper/i), 5000);
     const hasContent = await detail.contentArea.isVisible();
 
     expect(hasTable || hasEmpty || hasContent).toBeTruthy();
@@ -92,8 +93,8 @@ test.describe('Conference CFP Deep Tests', () => {
 
     await detail.navigateToChildSection('Call for Papers', 'Rejected Papers');
 
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no rejected|no paper/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasTable = await softVisible(page.locator('table').first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no rejected|no paper/i), 5000);
     const hasContent = await detail.contentArea.isVisible();
 
     expect(hasTable || hasEmpty || hasContent).toBeTruthy();
@@ -106,9 +107,9 @@ test.describe('Conference CFP Deep Tests', () => {
 
     await detail.navigateToChildSection('Call for Papers', 'Topics');
 
-    const hasAddBtn = await page.getByRole('button', { name: /add|create|new/i }).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasTopics = await page.getByText(/topic/i).first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no topic/i).isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /add|create|new/i }).first(), 5000);
+    const hasTopics = await softVisible(page.getByText(/topic/i).first(), 3000);
+    const hasEmpty = await softVisible(page.getByText(/no topic/i), 3000);
 
     expect(hasAddBtn || hasTopics || hasEmpty).toBeTruthy();
   });
@@ -120,9 +121,9 @@ test.describe('Conference CFP Deep Tests', () => {
 
     await detail.navigateToChildSection('Call for Papers', 'Program Committee');
 
-    const hasAddBtn = await page.getByRole('button', { name: /add|invite|new/i }).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasTable = await page.locator('table').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasMembers = await page.getByText(/member|committee/i).first().isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /add|invite|new/i }).first(), 5000);
+    const hasTable = await softVisible(page.locator('table').first(), 3000);
+    const hasMembers = await softVisible(page.getByText(/member|committee/i).first(), 3000);
 
     expect(hasAddBtn || hasTable || hasMembers).toBeTruthy();
   });

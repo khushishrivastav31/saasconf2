@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ConferenceDetailPage } from './pages/conference-detail.page';
 
+import { softVisible } from './helpers/navigation';
 const conferenceId = process.env.E2E_CONFERENCE_ID;
 
 test.describe('Conference News Tab', () => {
@@ -45,8 +46,8 @@ test.describe('Conference News Tab', () => {
     await detail.navigateToSection('News');
 
     // Should show a button to create/add a new article
-    const hasCreateBtn = await page.getByRole('button', { name: /create article|add article|new article|create post|add post/i }).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasAddBtn = await page.getByRole('button', { name: /add|create|new/i }).first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasCreateBtn = await softVisible(page.getByRole('button', { name: /create article|add article|new article|create post|add post/i }), 5000);
+    const hasAddBtn = await softVisible(page.getByRole('button', { name: /add|create|new/i }).first(), 5000);
 
     expect(hasCreateBtn || hasAddBtn).toBeTruthy();
   });

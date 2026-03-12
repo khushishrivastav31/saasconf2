@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { PortalDashboardPage } from './pages/portal-dashboard.page';
 
+import { softVisible } from './helpers/navigation';
 test.describe('Portal News', () => {
   test.beforeEach(async () => {
     if (!process.env.E2E_PORTAL_EMAIL || !process.env.E2E_PORTAL_PASSWORD) {
@@ -32,8 +33,8 @@ test.describe('Portal News', () => {
     await expect(page.locator('main, [role="main"], .content').first()).toBeVisible({ timeout: 5000 });
 
     // Should show articles list or empty state
-    const hasArticles = await page.getByText(/article|news|post|announcement/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no articles|no news|no posts|nothing here/i).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasArticles = await softVisible(page.getByText(/article|news|post|announcement/i).first(), 5000);
+    const hasEmpty = await softVisible(page.getByText(/no articles|no news|no posts|nothing here/i), 5000);
 
     expect(hasArticles || hasEmpty).toBeTruthy();
   });
