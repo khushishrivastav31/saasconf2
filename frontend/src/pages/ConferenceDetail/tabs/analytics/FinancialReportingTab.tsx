@@ -283,7 +283,7 @@ export default function FinancialReportingTab({ conference }: Props) {
             </tr>
 
             {/* Per booking-option rows */}
-            {data.revenue.by_booking_option.map((opt) => (
+            {(data.revenue.by_booking_option ?? []).map((opt) => (
               <Fragment key={opt.booking_option_id}>
                 <tr
                   className="bg-gray-50 dark:bg-gray-900/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"

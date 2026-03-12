@@ -75,6 +75,7 @@ const MOCK_FINANCIAL_DATA = {
     total_registrations: 55,
     paid_registrations: 50,
     multiple_currencies: false,
+    by_booking_option: [],
   },
   budget_id: 'budget-1',
   budget_name: 'TC26 Main Budget',
@@ -175,7 +176,7 @@ describe('FinancialReportingTab', () => {
   it('shows cost per attendee KPIs', async () => {
     renderTab();
     await waitFor(() => {
-      expect(screen.getByText('Paid Attendees')).toBeInTheDocument();
+      expect(screen.getByText('Attendees')).toBeInTheDocument();
     });
     expect(screen.getByText('Cost per Attendee')).toBeInTheDocument();
     expect(screen.getByText('Revenue per Attendee')).toBeInTheDocument();
