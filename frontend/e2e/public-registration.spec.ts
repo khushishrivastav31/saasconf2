@@ -192,11 +192,15 @@ test.describe('Public Registration - Invalid Routes', () => {
   test('should show error for non-existent conference slug', async ({ page }) => {
     await page.goto(`/${tenantSlug}/register/nonexistent-conference-xyz`);
 
-    // Should show a "not found" or error message, or redirect
+    // Wait for either the error text to appear or a redirect
+    await expect(
+      page.getByText(/not found|does not exist|error|unavailable/i).first(),
+    ).toBeVisible({ timeout: 15000 }).catch(() => {});
+
     const hasNotFound = await page
       .getByText(/not found|does not exist|error|unavailable/i)
       .first()
-      .isVisible({ timeout: 10000 })
+      .isVisible()
       .catch(() => false);
     const hasRedirect = page.url().includes('login') || page.url().includes('404');
 
@@ -206,10 +210,14 @@ test.describe('Public Registration - Invalid Routes', () => {
   test('should show error for non-existent tenant slug', async ({ page }) => {
     await page.goto(`/nonexistent-tenant-xyz/register/some-conference`);
 
+    await expect(
+      page.getByText(/not found|does not exist|error|unavailable/i).first(),
+    ).toBeVisible({ timeout: 15000 }).catch(() => {});
+
     const hasNotFound = await page
       .getByText(/not found|does not exist|error|unavailable/i)
       .first()
-      .isVisible({ timeout: 10000 })
+      .isVisible()
       .catch(() => false);
     const hasRedirect = page.url().includes('login') || page.url().includes('404');
 
