@@ -116,9 +116,7 @@ async def duplicate_conference(
     await _copy_simple_rows(
         db, ConferenceCurrency, source_id, new_id, tenant_id, ["code", "name", "symbol", "is_active"]
     )
-    await _copy_simple_rows(
-        db, BudgetCategory, source_id, new_id, tenant_id, ["name", "color", "sort_order"]
-    )
+    await _copy_simple_rows(db, BudgetCategory, source_id, new_id, tenant_id, ["name", "color", "sort_order"])
     await _copy_simple_rows(
         db,
         SessionType,
