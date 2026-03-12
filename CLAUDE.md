@@ -6,31 +6,23 @@ SaaSConf is a **multi-tenant SaaS platform** for conference management. Each ten
 
 ## Development Workflow
 
-**ALWAYS follow this process:**
+**ALWAYS follow this process in order — no skipping:**
 
 1. **Plan First** — Use plan mode for non-trivial features. Get user approval before implementing.
 2. **Develop + Write Tests** — Backend: pytest in `backend/tests/`. Frontend: vitest in `__tests__/` dirs.
-3. **Run Feature Tests** — Backend: `cd backend && venv/bin/python -m pytest tests/test_<feature>.py -v`. Frontend: `cd frontend && npm run test`. Fix failures before proceeding.
-4. **Run Type Checks** — Backend: `cd backend && venv/bin/python -m mypy app/ --config-file=pyproject.toml`. Frontend: `cd frontend && npx tsc --noEmit`. **MANDATORY before committing** — CI will reject type errors.
-5. **Run Linters** — Backend: `cd backend && ruff check app/ && ruff format --check app/`. Frontend: `cd frontend && npx eslint src/`. **Always run before committing** — CI will reject unformatted code.
-6. **Update Tenant UI Handbook** — **MANDATORY before committing** to keep documentation current:
-   - Review changes and determine if handbook updates are needed
-   - Update `docs/tenant-ui-handbook.md` with new features, settings, or workflows
-   - Document any changed UI, new fields, or modified behavior
-   - Add troubleshooting entries for common issues
-   - Update best practices if workflow changes
-   - This saves significant rework later and ensures users have current documentation
-7. **Run Complete Test Suite** — **MANDATORY before committing** to avoid CI/CD pipeline failures:
-   - Backend: `cd backend && venv/bin/python -m pytest tests/ -v` (all tests)
-   - Frontend: `cd frontend && npm run test` (all tests)
-   - Fix ALL failures before proceeding to commit
-8. **Ask Before Commit** — Do NOT automatically commit. User approval required.
-9. **Commit + Deploy** — Conventional commits (`feat:`, `fix:`, `refactor:`). Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>. Push to main triggers staging deploy.
+3. **Run Feature Tests** — `cd backend && venv/bin/python -m pytest tests/test_<feature>.py -v`. Fix failures before proceeding.
+4. **Run mypy** — `cd backend && venv/bin/python -m mypy app/ --config-file=pyproject.toml`. **MANDATORY — CI rejects type errors.**
+5. **Run Ruff** — `cd backend && ruff check app/ && ruff format --check app/`. **MANDATORY — CI rejects unformatted code.**
+6. **Run Frontend checks** — `cd frontend && npx tsc --noEmit && npx eslint src/`. **MANDATORY.**
+7. **Run Complete Test Suite** — `cd backend && venv/bin/python -m pytest tests/ -v` + `cd frontend && npm run test`. Fix ALL failures.
+8. **Update In-App Handbook** — Update `frontend/src/pages/Handbook/handbookSections.tsx` for any UI/behaviour changes visible to users.
+9. **Ask Before Commit** — Do NOT automatically commit. User approval required.
+10. **Commit + Push** — Conventional commits (`feat:`, `fix:`, `refactor:`). Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>. Push to main triggers staging deploy.
 
 ## Architecture
 - **Backend**: FastAPI + SQLAlchemy async + PostgreSQL (port 8000)
 - **Frontend**: React + TypeScript + TanStack Query + Tailwind CSS (port 3000)
-- **Migrations**: Alembic (sequential: `001_`, `002_`, etc.)
+- **Migrations**: Alembic (sequential: `001_`, `002_`, etc.) — commit migration files alongside code changes
 - **Multi-tenancy**: Shared DB, shared schema, RLS isolation (`tenant_id` on every table)
 - **Async throughout**: `AsyncSession`, `asyncio.to_thread()` for blocking I/O, async generators for streaming
 
@@ -70,55 +62,24 @@ SaaSConf is a **multi-tenant SaaS platform** for conference management. Each ten
   - Protect endpoints: `CurrentUserDep`, `TenantAdminDep`, `SuperAdminDep`, or `require_module()`
   - New tables: `tenant_id` FK + RLS policy
   - File uploads: `validate_upload()` from `app/core/file_validation.py`
-- **Validation** — Use `validators.ts` / `validators.py` functions. Never write ad-hoc regex. See `.claude/docs/security.md` for full field validation rules.
+- **Validation** — Use `validators.ts` / `validators.py` functions. Never write ad-hoc regex.
 - **Country fields** — Always `<select>` dropdown with `COUNTRY_OPTIONS`. Store ISO codes.
 - **VAT fields** — Always use `<VatNumberInput>` component.
 
 ## Extended Documentation
 
-Detailed docs are in `.claude/docs/` and `docs/` — read on-demand when working on specific areas:
-
-**Developer Documentation** (`.claude/docs/`):
-- **`.claude/docs/modules.md`** — Registration, Screen Overlays, Booking, Volunteers, Alumni, Deadlines, Sponsor Contracts
-- **`.claude/docs/invoices.md`** — Invoice PDF generation, number generation, settings, frontend
-- **`.claude/docs/security.md`** — Full OWASP guidelines, field validation patterns, auth/authz rules
-- **`.claude/docs/devops.md`** — CI/CD, Docker, Nginx, testing config, email, rate limiting, CSV exports
-- **`.claude/docs/auth-flows.md`** — User invite flow, admin password reset
-- **`.claude/docs/refactoring.md`** — Refactoring guidelines, improvement progress, hook extraction patterns
-
-**User Documentation** (`docs/`):
-- **`docs/tenant-ui-handbook.md`** — Tenant/conference organizer guide: invoicing, VAT validation, best practices
+Detailed docs are in `.claude/docs/` — read on-demand when working on specific areas:
+- **`modules.md`** — Registration, Screen Overlays, Booking, Volunteers, Alumni, Deadlines, Sponsor Contracts
+- **`invoices.md`** — Invoice PDF generation, number generation, settings, frontend
+- **`security.md`** — Full OWASP guidelines, field validation patterns, auth/authz rules
+- **`devops.md`** — CI/CD, Docker, Nginx, testing config, email, rate limiting, CSV exports
+- **`auth-flows.md`** — User invite flow, admin password reset
+- **`refactoring.md`** — Refactoring guidelines, improvement progress, hook extraction patterns
 
 ## Session Continuity
 
-**After every response**, keep this section updated with current work state:
-- What feature/fix is in progress
-- Which files were modified and why
-- What remains to be done
+**After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Analytics — Revenue Tracking + Financial Reports tabs
-- **Feature**: Two new Analytics subtabs with charts, KPIs, and exports
-- **Files created**:
-  - `backend/app/schemas/analytics.py` — Pydantic v2 schemas
-  - `backend/app/api/v1/analytics.py` — Revenue, financial report + CSV/XLSX/PDF export endpoints
-  - `backend/app/core/analytics_excel.py` — openpyxl workbook builder
-  - `backend/app/core/analytics_pdf.py` — WeasyPrint HTML→PDF financial report
-  - `backend/app/db/migrations/versions/131_analytics_indexes.py` — Invoice query index
-  - `backend/tests/test_analytics.py` — 13 backend tests (all passing)
-  - `frontend/src/pages/ConferenceDetail/tabs/analytics/RevenueTrackingTab.tsx`
-  - `frontend/src/pages/ConferenceDetail/tabs/analytics/FinancialReportingTab.tsx`
-  - `frontend/src/pages/ConferenceDetail/tabs/analytics/__tests__/RevenueTrackingTab.test.tsx`
-  - `frontend/src/pages/ConferenceDetail/tabs/analytics/__tests__/FinancialReportingTab.test.tsx`
-- **Files modified**:
-  - `backend/requirements.txt` — added openpyxl==3.1.5, types-openpyxl==3.1.5.20250919
-  - `backend/app/api/v1/router.py` — registered analytics router
-  - `frontend/package.json` — added recharts ^2.15.3
-  - `frontend/src/pages/ConferenceDetail/conferenceSections.ts` — added SectionIds + nav entries
-  - `frontend/src/pages/ConferenceDetail/icons.tsx` — added RevenueTrackingIcon + FinancialReportIcon
-  - `frontend/src/pages/ConferenceDetail/index.tsx` — lazy imports + routing
-  - `frontend/src/config/queryKeys.ts` — added analytics namespace
-  - `docs/tenant-ui-handbook.md` — documented 7.1.3 + 7.1.4
-- **Tests**: 2347 backend + 1550 frontend — all passing
-- **Linting**: ✅ Ruff, mypy, ESLint, TypeScript, formatting all clean
-- **Status**: ✅ Implementation complete — ready to commit if desired
+- **Last completed**: Analytics correctness fixes + attendee/budget/financial report fixes — all committed and pushed (`ef5342f`)
+- **Status**: ✅ Clean — all tests passing, mypy/ruff/tsc/eslint clean, migrations applied
