@@ -17,14 +17,27 @@ variant (e.g. "de-DE") automatically.
 
 from __future__ import annotations
 
+from datetime import timedelta
+from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.models.booking import BookingPeriod
+from app.models.budget import Budget, BudgetCategory
+from app.models.form_schema import ConferencePaperFormSchema
 from app.models.review import ReviewCriterion, ReviewQuestion, ReviewScaleOption, ReviewScoreScale
-from app.models.settings import CFPCommitteeRole, PronounOption, VolunteerRole
+from app.models.settings import (
+    CFPCommitteeRole,
+    ConferenceCurrency,
+    EmailTemplate,
+    PronounOption,
+    SponsorPackage,
+    TenantLocationType,
+    VolunteerRole,
+)
 
 # ---------------------------------------------------------------------------
 # Locale-aware formatting defaults
@@ -638,6 +651,95 @@ DEFAULT_REVIEW_CRITERIA = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# New seed data constants
+# ---------------------------------------------------------------------------
+
+# Default Budget Categories (8 categories with colors for chart display)
+DEFAULT_BUDGET_CATEGORIES: list[dict[str, str | int]] = [
+    {"name": "Venue", "color": "#3B82F6", "sort_order": 1},
+    {"name": "Catering", "color": "#10B981", "sort_order": 2},
+    {"name": "AV/Technology", "color": "#8B5CF6", "sort_order": 3},
+    {"name": "Marketing", "color": "#F59E0B", "sort_order": 4},
+    {"name": "Travel", "color": "#EF4444", "sort_order": 5},
+    {"name": "Speakers", "color": "#6366F1", "sort_order": 6},
+    {"name": "Staffing", "color": "#EC4899", "sort_order": 7},
+    {"name": "Miscellaneous", "color": "#6B7280", "sort_order": 8},
+]
+
+# Default Location Types
+DEFAULT_LOCATION_TYPES: list[dict[str, str]] = [
+    {"name": "Main Hall", "slug": "main_hall", "description": "Primary conference hall for keynotes and plenaries"},
+    {"name": "Breakout Room", "slug": "breakout", "description": "Smaller room for parallel sessions"},
+    {"name": "Workshop Room", "slug": "workshop", "description": "Hands-on workshop and tutorial space"},
+    {"name": "Lobby/Foyer", "slug": "lobby", "description": "Common area for networking and sponsor booths"},
+    {"name": "Outdoor Area", "slug": "outdoor", "description": "Outdoor space for breaks or social events"},
+    {"name": "Virtual Room", "slug": "virtual", "description": "Online meeting room for remote participants"},
+]
+
+# Default Sponsor Packages (5 tiers)
+DEFAULT_SPONSOR_PACKAGES: list[dict[str, str | int]] = [
+    {"name": "Platinum", "description": "Top-tier sponsorship with maximum visibility", "price": 10000},
+    {"name": "Gold", "description": "Premium sponsorship with prominent branding", "price": 5000},
+    {"name": "Silver", "description": "Mid-tier sponsorship with good exposure", "price": 2500},
+    {"name": "Bronze", "description": "Entry-level sponsorship", "price": 1000},
+    {"name": "Community Partner", "description": "Non-monetary community partnership", "price": 0},
+]
+
+# Default Booking Periods (offsets relative to conference.start_date)
+# Only seeded when the conference has a start_date set.
+DEFAULT_BOOKING_PERIODS: list[dict[str, str | int]] = [
+    {"name": "Super Early Bird", "sort_order": 1, "start_offset_days": -180, "end_offset_days": -91},
+    {"name": "Early Bird", "sort_order": 2, "start_offset_days": -90, "end_offset_days": -31},
+    {"name": "Regular", "sort_order": 3, "start_offset_days": -30, "end_offset_days": -1},
+]
+
+# Default Registration Questions (stored in conference.settings, disabled by default)
+DEFAULT_REGISTRATION_QUESTIONS: list[dict] = [
+    {
+        "id": "dietary_requirements",
+        "label": "Dietary Requirements",
+        "type": "dropdown",
+        "required": False,
+        "enabled": False,
+        "options": ["None", "Vegetarian", "Vegan", "Gluten-free", "Halal", "Kosher", "Other"],
+    },
+    {
+        "id": "tshirt_size",
+        "label": "T-Shirt Size",
+        "type": "dropdown",
+        "required": False,
+        "enabled": False,
+        "options": ["XS", "S", "M", "L", "XL", "XXL", "3XL"],
+    },
+    {
+        "id": "accessibility_needs",
+        "label": "Accessibility Needs",
+        "type": "text",
+        "required": False,
+        "enabled": False,
+        "placeholder": "Please describe any accessibility requirements",
+    },
+]
+
+# Default Paper Form Built-in Fields Configuration
+DEFAULT_PAPER_FORM_BUILTIN_FIELDS: dict[str, dict[str, bool]] = {
+    "title": {"visible": True, "required": True},
+    "abstract_short": {"visible": True, "required": True},
+    "abstract_long": {"visible": True, "required": False},
+    "level": {"visible": True, "required": False},
+    "learning_objectives": {"visible": True, "required": False},
+}
+
+# Fallback currency info when PlatformCurrency lookup fails
+_FALLBACK_CURRENCIES: dict[str, dict[str, str]] = {
+    "EUR": {"name": "Euro", "symbol": "€"},
+    "USD": {"name": "US Dollar", "symbol": "$"},
+    "GBP": {"name": "British Pound", "symbol": "£"},
+    "CHF": {"name": "Swiss Franc", "symbol": "CHF"},
+}
+
+
 async def seed_default_settings(
     db: AsyncSession,
     tenant_id: UUID,
@@ -660,15 +762,16 @@ async def seed_default_settings(
         conference_id: The newly created conference ID
         locale: Optional BCP 47 locale tag (e.g. ``"de-DE"``).
     """
+    # Always fetch the conference (needed for currency, start_date, settings writes)
+    from app.models.conference import Conference  # local import to avoid circular deps
+
+    result = await db.execute(select(Conference).where(Conference.id == conference_id))
+    conference = result.scalar_one()
+
     # Merge locale-aware format defaults into the conference settings JSONB
     if locale is not None:
-        from app.models.conference import Conference  # local import to avoid circular deps
-
         format_defaults = get_default_settings(locale)
-        result = await db.execute(select(Conference).where(Conference.id == conference_id))
-        conference = result.scalar_one()
         existing = conference.settings or {}
-        # Only set keys that are not already explicitly provided
         merged = {**format_defaults, **existing}
         conference.settings = merged
         flag_modified(conference, "settings")
@@ -755,6 +858,156 @@ async def seed_default_settings(
                 display_order=question_data["display_order"],
             )
             db.add(question)
+
+    # Seed Budget Categories
+    for cat_data in DEFAULT_BUDGET_CATEGORIES:
+        db.add(
+            BudgetCategory(
+                tenant_id=tenant_id,
+                conference_id=conference_id,
+                name=cat_data["name"],  # type: ignore[arg-type]
+                color=cat_data["color"],  # type: ignore[arg-type]
+                sort_order=cat_data["sort_order"],  # type: ignore[arg-type]
+            )
+        )
+
+    # Seed Initial Draft Budget
+    currency = getattr(conference, "currency", None) or "EUR"
+    db.add(
+        Budget(
+            tenant_id=tenant_id,
+            conference_id=conference_id,
+            name="Main Budget",
+            status="draft",
+            currency=currency,
+        )
+    )
+
+    # Seed Location Types
+    for loc_data in DEFAULT_LOCATION_TYPES:
+        db.add(
+            TenantLocationType(
+                tenant_id=tenant_id,
+                conference_id=conference_id,
+                name=loc_data["name"],
+                slug=loc_data["slug"],
+                description=loc_data["description"],
+            )
+        )
+
+    # Seed Sponsor Packages
+    for pkg_data in DEFAULT_SPONSOR_PACKAGES:
+        db.add(
+            SponsorPackage(
+                tenant_id=tenant_id,
+                conference_id=conference_id,
+                name=pkg_data["name"],  # type: ignore[arg-type]
+                description=pkg_data["description"],  # type: ignore[arg-type]
+                price=Decimal(str(pkg_data["price"])),
+                currency=currency,
+            )
+        )
+
+    # Seed Booking Periods (only if conference has a start_date)
+    start_date = getattr(conference, "start_date", None)
+    if start_date is not None:
+        for period_data in DEFAULT_BOOKING_PERIODS:
+            db.add(
+                BookingPeriod(
+                    tenant_id=tenant_id,
+                    conference_id=conference_id,
+                    name=period_data["name"],  # type: ignore[arg-type]
+                    sort_order=period_data["sort_order"],  # type: ignore[arg-type]
+                    start_date=start_date + timedelta(days=int(period_data["start_offset_days"])),
+                    end_date=start_date + timedelta(days=int(period_data["end_offset_days"])),
+                    is_active=True,
+                )
+            )
+
+    # Seed Email Templates (all 14 conference types)
+    from app.api.v1.settings.email_templates import DEFAULT_TEMPLATES  # local import
+    from app.schemas.email_template import EmailTemplateType
+
+    for template_type in EmailTemplateType.CONFERENCE_TYPES:
+        defaults = DEFAULT_TEMPLATES.get(template_type)
+        if defaults:
+            db.add(
+                EmailTemplate(
+                    tenant_id=tenant_id,
+                    conference_id=conference_id,
+                    template_type=template_type,
+                    subject=defaults["subject"],
+                    body_html=defaults["body_html"],
+                    body_text=defaults.get("body_text"),
+                )
+            )
+
+    # Seed Registration Questions in conference.settings
+    settings = conference.settings or {}
+    if "registration_questions" not in settings:
+        settings["registration_questions"] = DEFAULT_REGISTRATION_QUESTIONS
+        conference.settings = settings
+        flag_modified(conference, "settings")
+
+    # Seed Standard Paper Form Schema
+    db.add(
+        ConferencePaperFormSchema(
+            tenant_id=tenant_id,
+            conference_id=conference_id,
+            version=1,
+            builtin_fields_config=DEFAULT_PAPER_FORM_BUILTIN_FIELDS,
+        )
+    )
+
+    # Seed single Conference Currency from PlatformCurrency
+    from app.models.platform_currency import PlatformCurrency
+
+    platform_result = await db.execute(select(PlatformCurrency).where(PlatformCurrency.code == currency))
+    platform_cur = platform_result.scalar_one_or_none()
+    if platform_cur:
+        cur_name = platform_cur.name
+        cur_symbol = platform_cur.symbol
+    else:
+        fallback = _FALLBACK_CURRENCIES.get(currency, {"name": currency, "symbol": currency})
+        cur_name = fallback["name"]
+        cur_symbol = fallback["symbol"]
+
+    db.add(
+        ConferenceCurrency(
+            tenant_id=tenant_id,
+            conference_id=conference_id,
+            code=currency,
+            name=cur_name,
+            symbol=cur_symbol,
+        )
+    )
+
+    # Seed Currency & Tax settings into conference.settings JSONB
+    settings = conference.settings or {}
+    if "vat_rules" not in settings:
+        settings["vat_rules"] = DEFAULT_VAT_RULES
+    if "eu_countries" not in settings:
+        settings["eu_countries"] = DEFAULT_EU_COUNTRIES
+    if "bank_transfer_countries" not in settings:
+        settings["bank_transfer_countries"] = BANK_TRANSFER_COUNTRIES
+    if "speaker_expenses" not in settings:
+        settings["speaker_expenses"] = DEFAULT_SPEAKER_EXPENSE_SETTINGS
+    if "payment_reminders" not in settings:
+        settings["payment_reminders"] = DEFAULT_PAYMENT_REMINDER_SETTINGS
+    conference.settings = settings
+    flag_modified(conference, "settings")
+
+    # Seed Invoice Template settings into conference.settings JSONB
+    for key, value in DEFAULT_INVOICE_SETTINGS.items():
+        if key not in settings:
+            settings[key] = value
+    # Add invoice template HTML
+    if "invoice_template_html" not in settings:
+        from app.core.invoice_pdf import DEFAULT_INVOICE_TEMPLATE_HTML
+
+        settings["invoice_template_html"] = DEFAULT_INVOICE_TEMPLATE_HTML
+    conference.settings = settings
+    flag_modified(conference, "settings")
 
     # Note: We don't commit here - the calling code will commit
     # after all operations are complete
