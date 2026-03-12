@@ -85,8 +85,10 @@ async def list_invoices(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     status: str | None = None,
+    recipient_source_type: str | None = None,
+    recipient_source_id: UUID | None = None,
 ) -> InvoiceListResponse:
-    """List invoices for conference with pagination and optional status filter."""
+    """List invoices for conference with pagination and optional filters."""
     await _require_invoice_admin(db, current_user, conference_id)
 
     query = (
@@ -102,6 +104,10 @@ async def list_invoices(
 
     if status:
         query = query.where(Invoice.status == status)
+    if recipient_source_type:
+        query = query.where(Invoice.recipient_source_type == recipient_source_type)
+    if recipient_source_id:
+        query = query.where(Invoice.recipient_source_id == recipient_source_id)
 
     # Convert skip/limit to page/page_size for paginate function
     page = (skip // limit) + 1 if limit > 0 else 1
