@@ -270,6 +270,14 @@ class ConferenceStats(BaseModel):
     past: int
 
 
+class DuplicateConferenceRequest(BaseModel):
+    """Schema for duplicating a conference."""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    abbreviation: str = Field(..., min_length=1, max_length=20)
+    start_date: date | None = None
+
+
 class ConferenceAssociationRequest(BaseModel):
     """Schema for linking an entity to a conference."""
 

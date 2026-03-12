@@ -8,6 +8,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.core.conference_duplicate import duplicate_conference
 from app.core.default_settings import seed_default_settings
 from app.core.dependencies import (
     CurrentUserDep,
@@ -33,6 +34,7 @@ from app.schemas.conference import (
     ConferenceResponse,
     ConferenceStats,
     ConferenceUpdate,
+    DuplicateConferenceRequest,
 )
 
 from ._delete_helpers import compute_conference_delete_data
@@ -187,6 +189,61 @@ async def create_conference(
     tenant_slug = tenant_result.scalar_one_or_none()
 
     return _build_conference_response(conference, tenant_slug)
+
+
+@router.post(
+    "/{conference_id}/duplicate",
+    response_model=ConferenceResponse,
+    status_code=201,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def duplicate_conference_endpoint(
+    conference_id: UUID,
+    body: DuplicateConferenceRequest,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> ConferenceResponse:
+    """
+    Duplicate a conference with all structural configuration data.
+
+    Creates a new inactive conference with all settings, config models,
+    booking matrix, review system, email templates, etc. copied from the source.
+    Instance data (registrations, invoices, papers, sponsors) is not copied.
+    """
+    if not current_user.tenant_id:
+        raise ValidationError("A tenant context is required to duplicate a conference")
+
+    # Verify source exists and belongs to tenant
+    result = await db.execute(
+        select(Conference).where(Conference.id == conference_id, Conference.tenant_id == current_user.tenant_id)
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise NotFoundError("Conference not found")
+
+    new_conf = await duplicate_conference(db, conference_id, current_user.tenant_id, body)
+
+    # Audit log
+    audit_log = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action=AuditAction.CONFERENCE_CREATE,
+        resource_type="conference",
+        resource_id=new_conf.id,
+        details={"name": new_conf.name, "duplicated_from": str(conference_id)},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(new_conf)
+
+    tenant_result = await db.execute(select(Tenant.slug).where(Tenant.id == new_conf.tenant_id))
+    tenant_slug = tenant_result.scalar_one_or_none()
+
+    return _build_conference_response(new_conf, tenant_slug)
 
 
 @router.get("/stats", response_model=ConferenceStats, dependencies=[Depends(require_module(MODULE_CODE))])

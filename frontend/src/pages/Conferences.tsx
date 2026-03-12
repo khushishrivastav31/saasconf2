@@ -7,6 +7,7 @@ import { formatDate } from '../utils/formatDate';
 import { useAuth } from '../hooks/useAuth';
 import { useIsTenantAdmin } from '../hooks/useIsAdmin';
 import CreateConferenceModal from '../components/CreateConferenceModal';
+import DuplicateConferenceModal from '../components/modals/DuplicateConferenceModal';
 import ConferenceLogo from '../components/ConferenceLogo';
 import Modal from '../components/Modal';
 import type { Conference, ConferenceCreate, ConferenceStats, PaginatedResponse } from '../types';
@@ -20,6 +21,33 @@ export default function Conferences() {
   const { user } = useAuth();
   const isTenantAdmin = useIsTenantAdmin();
   const canDelete = user?.role === 'super_admin' || user?.is_tenant_super_user;
+
+  // Duplicate state
+  const [duplicateTarget, setDuplicateTarget] = useState<Conference | null>(null);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+
+  const duplicateMutation = useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: { name: string; abbreviation: string; start_date?: string };
+    }) => {
+      const response = await api.post<Conference>(`/conferences/${id}/duplicate`, data);
+      return response.data;
+    },
+    onSuccess: (newConference) => {
+      queryClient.invalidateQueries({ queryKey: ['conferences'] });
+      queryClient.invalidateQueries({ queryKey: ['conference-stats'] });
+      setDuplicateError(null);
+      setDuplicateTarget(null);
+      navigate(`/modules/conferences/${newConference.id}`);
+    },
+    onError: (error: unknown) => {
+      setDuplicateError(parseApiError(error, 'Failed to duplicate conference'));
+    },
+  });
 
   // Delete state
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -312,16 +340,16 @@ export default function Conferences() {
                       </span>
                     )}
                   </div>
-                  {canDelete && (
-                    <button
-                      onClick={(e) => handleDeleteClick(e, conference.id)}
-                      disabled={deleteLoading && deleteTargetId === conference.id}
-                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
-                      title="Delete conference"
-                    >
-                      {deleteLoading && deleteTargetId === conference.id ? (
-                        <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600" />
-                      ) : (
+                  <div className="flex items-center gap-1">
+                    {isTenantAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDuplicateTarget(conference);
+                        }}
+                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/30"
+                        title="Duplicate conference"
+                      >
                         <svg
                           className="w-4 h-4"
                           fill="none"
@@ -332,12 +360,38 @@ export default function Conferences() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                           />
                         </svg>
-                      )}
-                    </button>
-                  )}
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={(e) => handleDeleteClick(e, conference.id)}
+                        disabled={deleteLoading && deleteTargetId === conference.id}
+                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
+                        title="Delete conference"
+                      >
+                        {deleteLoading && deleteTargetId === conference.id ? (
+                          <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600" />
+                        ) : (
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -385,6 +439,24 @@ export default function Conferences() {
         onSubmit={(data) => createMutation.mutate(data)}
         isLoading={createMutation.isPending}
         error={createError}
+      />
+
+      {/* Duplicate Modal */}
+      <DuplicateConferenceModal
+        open={!!duplicateTarget}
+        onClose={() => {
+          setDuplicateError(null);
+          setDuplicateTarget(null);
+        }}
+        onSubmit={(data) => {
+          if (duplicateTarget) {
+            duplicateMutation.mutate({ id: duplicateTarget.id, data });
+          }
+        }}
+        isLoading={duplicateMutation.isPending}
+        error={duplicateError}
+        sourceName={duplicateTarget?.name ?? ''}
+        sourceAbbreviation={duplicateTarget?.abbreviation ?? ''}
       />
 
       {/* Delete Confirmation Modal */}
