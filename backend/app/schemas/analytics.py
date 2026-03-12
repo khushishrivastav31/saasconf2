@@ -96,3 +96,83 @@ class FinancialReportResponse(BaseModel):
     budget_id: UUID | None
     budget_name: str | None
     generated_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Conference Statistics schemas
+# ---------------------------------------------------------------------------
+
+
+class RegistrationTimePoint(BaseModel):
+    date: str
+    count: int
+    cumulative: int
+
+
+class RegistrationsOverTimeResponse(BaseModel):
+    data_points: list[RegistrationTimePoint]
+
+
+class CityLocation(BaseModel):
+    city: str
+    country: str
+    country_code: str
+    count: int
+    lat: float | None
+    lng: float | None
+
+
+class CountryCount(BaseModel):
+    country: str
+    country_code: str
+    count: int
+
+
+class AttendeesLocationResponse(BaseModel):
+    by_country: list[CountryCount]
+    by_city: list[CityLocation]
+
+
+class CompanyCount(BaseModel):
+    company: str
+    count: int
+
+
+class AttendeesCompanyResponse(BaseModel):
+    companies: list[CompanyCount]
+    total_unique_companies: int
+
+
+class PaperTimePoint(BaseModel):
+    month: str
+    count: int
+    cumulative: int
+
+
+class PapersOverTimeResponse(BaseModel):
+    data_points: list[PaperTimePoint]
+    has_cfp: bool
+
+
+class DayAttendance(BaseModel):
+    day_label: str
+    date: str
+    count: int
+
+
+class AttendeesPerDayResponse(BaseModel):
+    days: list[DayAttendance]
+    has_program_days: bool
+
+
+class TutorialStats(BaseModel):
+    tutorial_name: str
+    session_title: str | None
+    attendee_count: int
+    revenue: float
+
+
+class TutorialsResponse(BaseModel):
+    tutorials: list[TutorialStats]
+    has_tutorials: bool
+    total_revenue: float

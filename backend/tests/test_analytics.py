@@ -17,11 +17,16 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.associations import ConferenceCFP
 from app.models.booking import BookingOption, BookingPeriod
+from app.models.cfp import CallForPapers
+from app.models.cfp_applicants import CFPApplicant
+from app.models.cfp_papers import CFPPaper
 from app.models.conference import Conference
 from app.models.invoice import Invoice
 from app.models.module import Module, TenantModule
-from app.models.registration import BillingProfile, Registration, RegistrationStatus
+from app.models.program import ProgramDay
+from app.models.registration import BillingProfile, Registration, RegistrationItem, RegistrationStatus
 from app.models.speaker_expense import SpeakerExpense
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -832,3 +837,266 @@ class TestPeriodBreakdown:
         assert data["total_registrations"] == 2
         assert data["cancelled_registrations"] == 1
         assert data["active_registrations"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Conference Statistics tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+class TestConferenceStatistics:
+    async def test_registrations_over_time(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_analytics: Tenant,
+        conference: Conference,
+        booking_option: BookingOption,
+        billing_profile: BillingProfile,
+    ):
+        """Registrations over time returns daily data points with cumulative totals."""
+        # Create 3 registrations
+        for _ in range(3):
+            await _make_registration(db_session, conference, billing_profile, booking_option)
+
+        token = _analytics_token(tenant_admin_user)
+        resp = await client.get(
+            f"/api/v1/conferences/{conference.id}/analytics/stats/registrations-over-time",
+            headers=auth_headers(token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "data_points" in data
+        total = sum(p["count"] for p in data["data_points"])
+        assert total == 3
+        # cumulative of last point equals total
+        if data["data_points"]:
+            assert data["data_points"][-1]["cumulative"] == total
+
+    async def test_registrations_over_time_excludes_cancelled(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_analytics: Tenant,
+        conference: Conference,
+        booking_option: BookingOption,
+        billing_profile: BillingProfile,
+    ):
+        """Cancelled registrations are not counted."""
+        await _make_registration(db_session, conference, billing_profile, booking_option, status=RegistrationStatus.PAID)
+        await _make_registration(db_session, conference, billing_profile, booking_option, status=RegistrationStatus.CANCELLED)
+
+        token = _analytics_token(tenant_admin_user)
+        resp = await client.get(
+            f"/api/v1/conferences/{conference.id}/analytics/stats/registrations-over-time",
+            headers=auth_headers(token),
+        )
+        assert resp.status_code == 200
+        total = sum(p["count"] for p in resp.json()["data_points"])
+        assert total == 1
+
+    async def test_attendees_location_by_country(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_analytics: Tenant,
+        conference: Conference,
+        booking_option: BookingOption,
+        billing_profile: BillingProfile,
+    ):
+        """Attendees location groups by country code and returns sorted list."""
+        # billing_profile fixture has country="DE"
+        await _make_registration(db_session, conference, billing_profile, booking_option)
+
+        # Second attendee from NL
+        bp_nl = BillingProfile(
+            id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
+            street="Dam 1", postal_code="1012", city="Amsterdam", country="NL",
+            contact_first_name="Hans", contact_last_name="M",
+            contact_phone="+311234", contact_email="hans@example.com",
+        )
+        db_session.add(bp_nl)
+        await db_session.commit()
+        await _make_registration(db_session, conference, bp_nl, booking_option)
+
+        token = _analytics_token(tenant_admin_user)
+        resp = await client.get(
+            f"/api/v1/conferences/{conference.id}/analytics/stats/attendees-location",
+            headers=auth_headers(token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "by_country" in data
+        assert "by_city" in data
+        country_codes = {c["country_code"] for c in data["by_country"]}
+        assert "DE" in country_codes
+        assert "NL" in country_codes
+
+    async def test_attendees_company_sorted_by_count(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_analytics: Tenant,
+        conference: Conference,
+        booking_option: BookingOption,
+    ):
+        """Companies are sorted by attendee count descending."""
+        # Company A: 2 attendees
+        for i in range(2):
+            bp = BillingProfile(
+                id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
+                company_name="Company A",
+                street=f"{i} St", postal_code="10115", city="Berlin", country="DE",
+                contact_first_name=f"A{i}", contact_last_name="X",
+                contact_phone="+49111", contact_email=f"a{i}@company-a.com",
+            )
+            db_session.add(bp)
+            await db_session.commit()
+            await _make_registration(db_session, conference, bp, booking_option)
+
+        # Company B: 1 attendee
+        bp_b = BillingProfile(
+            id=uuid.uuid4(), tenant_id=conference.tenant_id, conference_id=conference.id,
+            company_name="Company B",
+            street="2 St", postal_code="10115", city="Berlin", country="DE",
+            contact_first_name="B", contact_last_name="X",
+            contact_phone="+49222", contact_email="b@company-b.com",
+        )
+        db_session.add(bp_b)
+        await db_session.commit()
+        await _make_registration(db_session, conference, bp_b, booking_option)
+
+        token = _analytics_token(tenant_admin_user)
+        resp = await client.get(
+            f"/api/v1/conferences/{conference.id}/analytics/stats/attendees-company",
+            headers=auth_headers(token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_unique_companies"] == 2
+        assert data["companies"][0]["company"] == "Company A"
+        assert data["companies"][0]["count"] == 2
+        assert data["companies"][1]["company"] == "Company B"
+
+    async def test_papers_over_time_no_cfp(
+        self,
+        client: AsyncClient,
+        tenant_admin_user: User,
+        tenant_with_analytics: Tenant,
+        conference: Conference,
+    ):
+        """Conference with no CFP returns has_cfp=False."""
+        token = _analytics_token(tenant_admin_user)
+        resp = await client.get(
+            f"/api/v1/conferences/{conference.id}/analytics/stats/papers-over-time",
+            headers=auth_headers(token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["has_cfp"] is False
+        assert data["data_points"] == []
+
+    async def test_papers_over_time_with_submissions(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        tenant_admin_user: User,
+        tenant_with_analytics: Tenant,
+        conference: Conference,
+    ):
+        """Conference with CFP papers returns monthly grouped data."""
+        # Create CFP and link to conference
+        cfp = CallForPapers(
+            id=uuid.uuid4(),
+            tenant_id=conference.tenant_id,
+            title="Test CFP",
+        )
+        db_session.add(cfp)
+        await db_session.commit()
+
+        link = ConferenceCFP(
+            id=uuid.uuid4(),
+            conference_id=conference.id,
+            cfp_id=cfp.id,
+        )
+        db_session.add(link)
+        await db_session.commit()
+
+        # Create a CFP applicant (required by CFPPaper.main_speaker_id FK)
+        applicant = CFPApplicant(
+            id=uuid.uuid4(),
+            tenant_id=conference.tenant_id,
+            first_name="Test",
+            last_name="Speaker",
+            email=f"speaker-{uuid.uuid4().hex[:6]}@example.com",
+            password_hash="x",
+        )
+        db_session.add(applicant)
+        await db_session.commit()
+
+        # Create 2 papers with submitted_at set
+        for _ in range(2):
+            paper = CFPPaper(
+                id=uuid.uuid4(),
+                tenant_id=conference.tenant_id,
+                cfp_id=cfp.id,
+                main_speaker_id=applicant.id,
+                title="Test Paper",
+                submitted_at=datetime.now(UTC),
+            )
+            db_session.add(paper)
+        await db_session.commit()
+
+        token = _analytics_token(tenant_admin_user)
+        resp = await client.get(
+            f"/api/v1/conferences/{conference.id}/analytics/stats/papers-over-time",
+            headers=auth_headers(token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["has_cfp"] is True
+        assert len(data["data_points"]) >= 1
+        total = sum(p["count"] for p in data["data_points"])
+        assert total == 2
+
+    async def test_attendees_per_day_no_program_days(
+        self,
+        client: AsyncClient,
+        tenant_admin_user: User,
+        tenant_with_analytics: Tenant,
+        conference: Conference,
+    ):
+        """Conference with no program days returns has_program_days=False."""
+        token = _analytics_token(tenant_admin_user)
+        resp = await client.get(
+            f"/api/v1/conferences/{conference.id}/analytics/stats/attendees-per-day",
+            headers=auth_headers(token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["has_program_days"] is False
+        assert data["days"] == []
+
+    async def test_tutorials_no_tutorials(
+        self,
+        client: AsyncClient,
+        tenant_admin_user: User,
+        tenant_with_analytics: Tenant,
+        conference: Conference,
+    ):
+        """Conference with no tutorial registrations returns has_tutorials=False."""
+        token = _analytics_token(tenant_admin_user)
+        resp = await client.get(
+            f"/api/v1/conferences/{conference.id}/analytics/stats/tutorials",
+            headers=auth_headers(token),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["has_tutorials"] is False
+        assert data["tutorials"] == []
+        assert data["total_revenue"] == 0.0

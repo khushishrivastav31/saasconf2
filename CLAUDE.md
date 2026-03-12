@@ -81,5 +81,16 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Analytics correctness fixes + attendee/budget/financial report fixes — all committed and pushed (`ef5342f`)
-- **Status**: ✅ Clean — all tests passing, mypy/ruff/tsc/eslint clean, migrations applied
+- **Feature**: Conference Statistics — 6 sub-tabs in ConferenceStatisticsTab
+- **Files modified/created**:
+  - `backend/app/schemas/analytics.py` — 6 new response schemas (RegistrationsOverTime, AttendeesLocation, AttendeesCompany, PapersOverTime, AttendeesPerDay, Tutorials)
+  - `backend/app/api/v1/analytics.py` — 6 new stat endpoints + static city/country lookup dicts
+  - `frontend/src/pages/ConferenceDetail/tabs/analytics/ConferenceStatisticsTab.tsx` — full implementation replacing "Coming Soon"
+  - `frontend/src/config/queryKeys.ts` — 6 new analytics stats query keys
+  - `frontend/src/types/react-simple-maps.d.ts` — TypeScript declaration for react-simple-maps
+  - `backend/tests/test_analytics.py` — 8 new statistics tests (26 total, all passing)
+  - `frontend/src/pages/ConferenceDetail/tabs/analytics/__tests__/ConferenceStatisticsTab.test.tsx` — 9 frontend tests
+  - `frontend/package.json` — react-simple-maps added
+- **Tests**: 26 backend (analytics), 1560 frontend — all passing
+- **Linting**: ✅ mypy, ruff, tsc, eslint all clean
+- **Status**: Ready to commit

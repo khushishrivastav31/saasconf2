@@ -209,6 +209,17 @@ export const queryKeys = {
     revenue: (conferenceId: string) => ['analytics-revenue', conferenceId] as const,
     financialReport: (conferenceId: string) =>
       ['analytics-financial-report', conferenceId] as const,
+    statsRegistrationsOverTime: (conferenceId: string) =>
+      ['analytics-stats-registrations-over-time', conferenceId] as const,
+    statsAttendeesLocation: (conferenceId: string) =>
+      ['analytics-stats-attendees-location', conferenceId] as const,
+    statsAttendeesCompany: (conferenceId: string) =>
+      ['analytics-stats-attendees-company', conferenceId] as const,
+    statsPapersOverTime: (conferenceId: string) =>
+      ['analytics-stats-papers-over-time', conferenceId] as const,
+    statsAttendeesPerDay: (conferenceId: string) =>
+      ['analytics-stats-attendees-per-day', conferenceId] as const,
+    statsTutorials: (conferenceId: string) => ['analytics-stats-tutorials', conferenceId] as const,
   },
 
   // ── Team & Users ────────────────────────────────────────────────

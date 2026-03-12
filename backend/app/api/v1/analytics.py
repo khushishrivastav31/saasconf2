@@ -16,18 +16,34 @@ from app.core.conference_helpers import check_conference_admin, get_conference_f
 from app.core.csv_export import csv_response
 from app.core.dependencies import CurrentUserDep, DbSessionDep, require_module
 from app.core.file_validation import safe_content_disposition
+from app.models.associations import ConferenceCFP
 from app.models.booking import BookingOption, BookingPeriod
 from app.models.budget import Budget, BudgetCategory, BudgetLineItem
+from app.models.cfp_papers import CFPPaper
 from app.models.invoice import Invoice
-from app.models.registration import Registration, RegistrationItem, RegistrationStatus
+from app.models.program import ProgramDay
+from app.models.registration import BillingProfile, Registration, RegistrationItem, RegistrationStatus
 from app.models.speaker_expense import SpeakerExpense
 from app.schemas.analytics import (
+    AttendeesCompanyResponse,
+    AttendeesLocationResponse,
+    AttendeesPerDayResponse,
     BookingOptionRevenue,
+    CityLocation,
+    CompanyCount,
     CostPerAttendee,
+    CountryCount,
+    DayAttendance,
     FinancialReportResponse,
+    PapersOverTimeResponse,
+    PaperTimePoint,
     PeriodBreakdown,
     PLSummary,
+    RegistrationsOverTimeResponse,
+    RegistrationTimePoint,
     RevenueTrackingResponse,
+    TutorialsResponse,
+    TutorialStats,
     VarianceLine,
 )
 
@@ -693,3 +709,552 @@ async def export_financial_report_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": safe_content_disposition(filename)},
     )
+
+
+# ---------------------------------------------------------------------------
+# Conference Statistics — shared city lat/lng lookup
+# ---------------------------------------------------------------------------
+
+# Major world cities with approximate lat/lng coordinates.
+# Keys are lowercase city names for case-insensitive lookup.
+_CITY_COORDS: dict[str, tuple[float, float]] = {
+    "amsterdam": (52.3676, 4.9041),
+    "ankara": (39.9334, 32.8597),
+    "athens": (37.9838, 23.7275),
+    "atlanta": (33.749, -84.388),
+    "auckland": (-36.8485, 174.7633),
+    "barcelona": (41.3851, 2.1734),
+    "beijing": (39.9042, 116.4074),
+    "berlin": (52.52, 13.405),
+    "bogota": (4.711, -74.0721),
+    "brussels": (50.8503, 4.3517),
+    "buenos aires": (-34.6037, -58.3816),
+    "cairo": (30.0444, 31.2357),
+    "cape town": (-33.9249, 18.4241),
+    "chicago": (41.8781, -87.6298),
+    "copenhagen": (55.6761, 12.5683),
+    "dallas": (32.7767, -96.797),
+    "delhi": (28.6139, 77.209),
+    "denver": (39.7392, -104.9903),
+    "dubai": (25.2048, 55.2708),
+    "dublin": (53.3498, -6.2603),
+    "edinburgh": (55.9533, -3.1883),
+    "frankfurt": (50.1109, 8.6821),
+    "hamburg": (53.5753, 10.0153),
+    "helsinki": (60.1699, 24.9384),
+    "hong kong": (22.3193, 114.1694),
+    "houston": (29.7604, -95.3698),
+    "istanbul": (41.0082, 28.9784),
+    "jakarta": (-6.2088, 106.8456),
+    "johannesburg": (-26.2041, 28.0473),
+    "karachi": (24.8607, 67.0011),
+    "kuala lumpur": (3.139, 101.6869),
+    "lagos": (6.5244, 3.3792),
+    "lima": (-12.0464, -77.0428),
+    "lisbon": (38.7223, -9.1393),
+    "london": (51.5074, -0.1278),
+    "los angeles": (34.0522, -118.2437),
+    "madrid": (40.4168, -3.7038),
+    "manila": (14.5995, 120.9842),
+    "melbourne": (-37.8136, 144.9631),
+    "mexico city": (19.4326, -99.1332),
+    "miami": (25.7617, -80.1918),
+    "milan": (45.4654, 9.1859),
+    "montreal": (45.5017, -73.5673),
+    "moscow": (55.7558, 37.6173),
+    "mumbai": (19.076, 72.8777),
+    "munich": (48.1351, 11.582),
+    "nairobi": (-1.2921, 36.8219),
+    "new york": (40.7128, -74.006),
+    "oslo": (59.9139, 10.7522),
+    "paris": (48.8566, 2.3522),
+    "prague": (50.0755, 14.4378),
+    "rome": (41.9028, 12.4964),
+    "san francisco": (37.7749, -122.4194),
+    "santiago": (-33.4489, -70.6693),
+    "sao paulo": (-23.5505, -46.6333),
+    "seattle": (47.6062, -122.3321),
+    "seoul": (37.5665, 126.978),
+    "shanghai": (31.2304, 121.4737),
+    "singapore": (1.3521, 103.8198),
+    "stockholm": (59.3293, 18.0686),
+    "sydney": (-33.8688, 151.2093),
+    "taipei": (25.0330, 121.5654),
+    "tel aviv": (32.0853, 34.7818),
+    "tokyo": (35.6762, 139.6503),
+    "toronto": (43.6532, -79.3832),
+    "vienna": (48.2082, 16.3738),
+    "warsaw": (52.2297, 21.0122),
+    "washington": (38.9072, -77.0369),
+    "zurich": (47.3769, 8.5417),
+}
+
+# ISO-2 code → country name mapping for display
+_ISO2_TO_NAME: dict[str, str] = {
+    "AT": "Austria",
+    "AU": "Australia",
+    "BE": "Belgium",
+    "BR": "Brazil",
+    "CA": "Canada",
+    "CH": "Switzerland",
+    "CN": "China",
+    "CZ": "Czech Republic",
+    "DE": "Germany",
+    "DK": "Denmark",
+    "EG": "Egypt",
+    "ES": "Spain",
+    "FI": "Finland",
+    "FR": "France",
+    "GB": "United Kingdom",
+    "GR": "Greece",
+    "HK": "Hong Kong",
+    "HU": "Hungary",
+    "ID": "Indonesia",
+    "IE": "Ireland",
+    "IL": "Israel",
+    "IN": "India",
+    "IT": "Italy",
+    "JP": "Japan",
+    "KE": "Kenya",
+    "KR": "South Korea",
+    "MX": "Mexico",
+    "MY": "Malaysia",
+    "NG": "Nigeria",
+    "NL": "Netherlands",
+    "NO": "Norway",
+    "NZ": "New Zealand",
+    "PH": "Philippines",
+    "PL": "Poland",
+    "PT": "Portugal",
+    "RO": "Romania",
+    "RU": "Russia",
+    "SE": "Sweden",
+    "SG": "Singapore",
+    "TR": "Turkey",
+    "TW": "Taiwan",
+    "UA": "Ukraine",
+    "US": "United States",
+    "ZA": "South Africa",
+    "AR": "Argentina",
+    "CL": "Chile",
+    "CO": "Colombia",
+    "PE": "Peru",
+    "AE": "United Arab Emirates",
+    "SA": "Saudi Arabia",
+    "PK": "Pakistan",
+    "BD": "Bangladesh",
+    "VN": "Vietnam",
+    "TH": "Thailand",
+}
+
+
+def _country_name(code: str) -> str:
+    return _ISO2_TO_NAME.get(code.upper(), code)
+
+
+def _city_coords(city: str) -> tuple[float, float] | None:
+    return _CITY_COORDS.get(city.strip().lower())
+
+
+# ---------------------------------------------------------------------------
+# Statistics: Registrations Over Time
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/stats/registrations-over-time",
+    response_model=RegistrationsOverTimeResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def get_registrations_over_time(
+    conference_id: UUID,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> RegistrationsOverTimeResponse:
+    """Daily registration counts with running cumulative total."""
+    await check_conference_admin(conference_id, current_user, db)
+
+    stmt = (
+        select(
+            func.cast(Registration.created_at, Date).label("reg_date"),
+            func.count(Registration.id).label("cnt"),
+        )
+        .where(
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == current_user.tenant_id,
+            Registration.status != RegistrationStatus.CANCELLED,
+        )
+        .group_by(func.cast(Registration.created_at, Date))
+        .order_by(func.cast(Registration.created_at, Date))
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    data_points: list[RegistrationTimePoint] = []
+    cumulative = 0
+    for row in rows:
+        cumulative += int(row.cnt)
+        data_points.append(
+            RegistrationTimePoint(
+                date=str(row.reg_date),
+                count=int(row.cnt),
+                cumulative=cumulative,
+            )
+        )
+    return RegistrationsOverTimeResponse(data_points=data_points)
+
+
+# ---------------------------------------------------------------------------
+# Statistics: Attendees Location
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/stats/attendees-location",
+    response_model=AttendeesLocationResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def get_attendees_location(
+    conference_id: UUID,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> AttendeesLocationResponse:
+    """Attendee counts grouped by country and city (from billing profiles)."""
+    await check_conference_admin(conference_id, current_user, db)
+
+    # Country grouping
+    country_stmt = (
+        select(
+            BillingProfile.country.label("country_code"),
+            func.count(Registration.id).label("cnt"),
+        )
+        .join(BillingProfile, Registration.billing_profile_id == BillingProfile.id)
+        .where(
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == current_user.tenant_id,
+            Registration.status != RegistrationStatus.CANCELLED,
+            BillingProfile.country.is_not(None),
+            BillingProfile.country != "",
+        )
+        .group_by(BillingProfile.country)
+        .order_by(func.count(Registration.id).desc())
+    )
+
+    # City grouping
+    city_stmt = (
+        select(
+            BillingProfile.city.label("city"),
+            BillingProfile.country.label("country_code"),
+            func.count(Registration.id).label("cnt"),
+        )
+        .join(BillingProfile, Registration.billing_profile_id == BillingProfile.id)
+        .where(
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == current_user.tenant_id,
+            Registration.status != RegistrationStatus.CANCELLED,
+            BillingProfile.city.is_not(None),
+            BillingProfile.city != "",
+        )
+        .group_by(BillingProfile.city, BillingProfile.country)
+        .order_by(func.count(Registration.id).desc())
+    )
+
+    country_result, city_result = await asyncio.gather(
+        db.execute(country_stmt),
+        db.execute(city_stmt),
+    )
+
+    by_country: list[CountryCount] = [
+        CountryCount(
+            country=_country_name(row.country_code),
+            country_code=row.country_code.upper(),
+            count=int(row.cnt),
+        )
+        for row in country_result.all()
+    ]
+
+    by_city: list[CityLocation] = []
+    for row in city_result.all():
+        coords = _city_coords(row.city)
+        by_city.append(
+            CityLocation(
+                city=row.city,
+                country=_country_name(row.country_code),
+                country_code=row.country_code.upper(),
+                count=int(row.cnt),
+                lat=coords[0] if coords else None,
+                lng=coords[1] if coords else None,
+            )
+        )
+
+    return AttendeesLocationResponse(by_country=by_country, by_city=by_city)
+
+
+# ---------------------------------------------------------------------------
+# Statistics: Attendees Company
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/stats/attendees-company",
+    response_model=AttendeesCompanyResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def get_attendees_company(
+    conference_id: UUID,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> AttendeesCompanyResponse:
+    """Companies sorted by number of attendees (from billing profiles)."""
+    await check_conference_admin(conference_id, current_user, db)
+
+    stmt = (
+        select(
+            BillingProfile.company_name.label("company"),
+            func.count(Registration.id).label("cnt"),
+        )
+        .join(BillingProfile, Registration.billing_profile_id == BillingProfile.id)
+        .where(
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == current_user.tenant_id,
+            Registration.status != RegistrationStatus.CANCELLED,
+            BillingProfile.company_name.is_not(None),
+            BillingProfile.company_name != "",
+        )
+        .group_by(BillingProfile.company_name)
+        .order_by(func.count(Registration.id).desc())
+        .limit(50)
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    companies = [CompanyCount(company=row.company, count=int(row.cnt)) for row in rows]
+    return AttendeesCompanyResponse(
+        companies=companies,
+        total_unique_companies=len(companies),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Statistics: Papers Over Time
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/stats/papers-over-time",
+    response_model=PapersOverTimeResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def get_papers_over_time(
+    conference_id: UUID,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> PapersOverTimeResponse:
+    """Monthly CFP paper submission counts with running cumulative total."""
+    await check_conference_admin(conference_id, current_user, db)
+
+    # Find CFP IDs linked to this conference
+    cfp_ids_stmt = select(ConferenceCFP.cfp_id).where(
+        ConferenceCFP.conference_id == conference_id,
+    )
+    cfp_ids_result = await db.execute(cfp_ids_stmt)
+    cfp_ids = [row[0] for row in cfp_ids_result.all()]
+
+    if not cfp_ids:
+        return PapersOverTimeResponse(data_points=[], has_cfp=False)
+
+    month_expr = func.to_char(
+        func.coalesce(CFPPaper.submitted_at, CFPPaper.created_at),
+        "YYYY-MM",
+    )
+    stmt = (
+        select(
+            month_expr.label("month"),
+            func.count(CFPPaper.id).label("cnt"),
+        )
+        .where(
+            CFPPaper.cfp_id.in_(cfp_ids),
+            CFPPaper.tenant_id == current_user.tenant_id,
+        )
+        .group_by(month_expr)
+        .order_by(month_expr)
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    if not rows:
+        return PapersOverTimeResponse(data_points=[], has_cfp=True)
+
+    data_points: list[PaperTimePoint] = []
+    cumulative = 0
+    for row in rows:
+        cumulative += int(row.cnt)
+        data_points.append(PaperTimePoint(month=row.month, count=int(row.cnt), cumulative=cumulative))
+    return PapersOverTimeResponse(data_points=data_points, has_cfp=True)
+
+
+# ---------------------------------------------------------------------------
+# Statistics: Attendees per Day
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/stats/attendees-per-day",
+    response_model=AttendeesPerDayResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def get_attendees_per_day(
+    conference_id: UUID,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> AttendeesPerDayResponse:
+    """Number of distinct registered attendees per conference day (via RegistrationItem→BookingOption→ProgramDay)."""
+    await check_conference_admin(conference_id, current_user, db)
+
+    # Check if any program days exist for this conference
+    days_check_stmt = select(ProgramDay.id).where(
+        ProgramDay.conference_id == conference_id,
+        ProgramDay.tenant_id == current_user.tenant_id,
+    )
+    days_check_result = await db.execute(days_check_stmt)
+    if not days_check_result.first():
+        return AttendeesPerDayResponse(days=[], has_program_days=False)
+
+    stmt = (
+        select(
+            ProgramDay.id.label("day_id"),
+            ProgramDay.date.label("day_date"),
+            ProgramDay.name.label("day_name"),
+            func.count(func.distinct(RegistrationItem.registration_id)).label("cnt"),
+        )
+        .join(BookingOption, BookingOption.conference_day_id == ProgramDay.id)
+        .join(RegistrationItem, RegistrationItem.booking_option_id == BookingOption.id)
+        .join(Registration, Registration.id == RegistrationItem.registration_id)
+        .where(
+            ProgramDay.conference_id == conference_id,
+            ProgramDay.tenant_id == current_user.tenant_id,
+            Registration.status != RegistrationStatus.CANCELLED,
+        )
+        .group_by(ProgramDay.id, ProgramDay.date, ProgramDay.name, ProgramDay.sort_order)
+        .order_by(ProgramDay.sort_order, ProgramDay.date)
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    # Include days with 0 if they exist but no registrations — use full day list
+    if not rows:
+        # Return days with 0 count
+        all_days_stmt = (
+            select(ProgramDay.id, ProgramDay.date, ProgramDay.name, ProgramDay.sort_order)
+            .where(
+                ProgramDay.conference_id == conference_id,
+                ProgramDay.tenant_id == current_user.tenant_id,
+            )
+            .order_by(ProgramDay.sort_order, ProgramDay.date)
+        )
+        all_days_result = await db.execute(all_days_stmt)
+        all_rows = all_days_result.all()
+        days = [
+            DayAttendance(
+                day_label=f"{row.name or f'Day {i + 1}'} – {row.date}",
+                date=str(row.date),
+                count=0,
+            )
+            for i, row in enumerate(all_rows)
+        ]
+        return AttendeesPerDayResponse(days=days, has_program_days=True)
+
+    days = [
+        DayAttendance(
+            day_label=f"{row.day_name or f'Day {i + 1}'} – {row.day_date}",
+            date=str(row.day_date),
+            count=int(row.cnt),
+        )
+        for i, row in enumerate(rows)
+    ]
+    return AttendeesPerDayResponse(days=days, has_program_days=True)
+
+
+# ---------------------------------------------------------------------------
+# Statistics: Tutorials
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/stats/tutorials",
+    response_model=TutorialsResponse,
+    dependencies=[Depends(require_module(MODULE_CODE))],
+)
+async def get_tutorials_stats(
+    conference_id: UUID,
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+) -> TutorialsResponse:
+    """Attendee count and revenue per tutorial booking option."""
+    await check_conference_admin(conference_id, current_user, db)
+
+    # Tutorials = booking options linked to a ProgramSession (session-linked options)
+    # In the data model, tutorial options are booking options where a RegistrationItem
+    # carries a program_session_id. We group by booking_option + session.
+    from app.models.program import ProgramSession
+
+    stmt = (
+        select(
+            BookingOption.id.label("option_id"),
+            BookingOption.name.label("option_name"),
+            ProgramSession.title.label("session_title"),
+            func.count(func.distinct(RegistrationItem.registration_id)).label("attendee_count"),
+        )
+        .join(RegistrationItem, RegistrationItem.booking_option_id == BookingOption.id)
+        .join(Registration, Registration.id == RegistrationItem.registration_id)
+        .outerjoin(ProgramSession, ProgramSession.id == RegistrationItem.program_session_id)
+        .where(
+            BookingOption.conference_id == conference_id,
+            BookingOption.tenant_id == current_user.tenant_id,
+            RegistrationItem.program_session_id.is_not(None),
+            Registration.status != RegistrationStatus.CANCELLED,
+        )
+        .group_by(BookingOption.id, BookingOption.name, ProgramSession.title)
+        .order_by(func.count(func.distinct(RegistrationItem.registration_id)).desc())
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    if not rows:
+        return TutorialsResponse(tutorials=[], has_tutorials=False, total_revenue=0.0)
+
+    # Get active booking period for pricing
+    period_stmt = (
+        select(BookingPeriod)
+        .where(
+            BookingPeriod.conference_id == conference_id,
+            BookingPeriod.tenant_id == current_user.tenant_id,
+        )
+        .order_by(BookingPeriod.end_date.desc())
+        .limit(1)
+    )
+    period_result = await db.execute(period_stmt)
+    booking_period = period_result.scalar_one_or_none()
+
+    tutorials: list[TutorialStats] = []
+    total_revenue = 0.0
+
+    for row in rows:
+        # Get price from booking period
+        unit_price = 0.0
+        if booking_period and booking_period.prices:
+            price_val = booking_period.prices.get(str(row.option_id))
+            if price_val is not None:
+                unit_price = float(price_val)
+        revenue = unit_price * int(row.attendee_count)
+        total_revenue += revenue
+        tutorials.append(
+            TutorialStats(
+                tutorial_name=row.option_name,
+                session_title=row.session_title,
+                attendee_count=int(row.attendee_count),
+                revenue=revenue,
+            )
+        )
+
+    return TutorialsResponse(tutorials=tutorials, has_tutorials=True, total_revenue=total_revenue)
