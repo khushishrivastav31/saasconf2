@@ -16,6 +16,6 @@ export function useConferencePublic(tenantSlug: string, conferenceSlug: string) 
     },
     enabled: Boolean(tenantSlug && conferenceSlug),
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2,
+    retry: false, // 404/403 responses should not be retried — conference either exists or not
   });
 }

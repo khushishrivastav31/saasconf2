@@ -247,7 +247,7 @@ async def create_budget(
         tenant_id=current_user.tenant_id,
         conference_id=conference.id,
         name=data.name,
-        status="draft",
+        status="active",
         currency=data.currency,
         notes=data.notes,
         created_by=current_user.user_id,

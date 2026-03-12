@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     admin_settings,
     alumni,
+    analytics,
     applicant_activity,
     attachments,
     audit,
@@ -134,6 +135,13 @@ api_router.include_router(
     speaker_expenses.router,
     prefix="/conferences/{conference_id}/speaker-expenses",
     tags=["Speaker Expenses"],
+)
+
+# Analytics (conference-scoped)
+api_router.include_router(
+    analytics.router,
+    prefix="/conferences/{conference_id}/analytics",
+    tags=["Analytics"],
 )
 
 # VAT rates (global, public for reads, superadmin for updates)

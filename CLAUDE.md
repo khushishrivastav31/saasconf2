@@ -97,10 +97,28 @@ Detailed docs are in `.claude/docs/` and `docs/` — read on-demand when working
 - What remains to be done
 
 ### Current Work State
-- **Last completed**: Production backup strategy + documentation
-- **What was done**:
-  - Rewrote `deploy/staging/backup.sh` — GFS retention (7d/4w/12m), AES-256 encryption, S3 offsite, uploads backup, integrity check, dry-run mode
-  - Created `deploy/staging/restore.sh` — full restore with decryption, DB drop/recreate, uploads restore, container restart
-  - Updated `.github/workflows/backup.yml` — artifact upload (30d), job summary, failure alerts
-  - Documented everything in `.claude/docs/devops.md` (Backup & Restore section)
-- **Status**: ✅ Complete — ready to commit if desired
+- **Last completed**: Analytics — Revenue Tracking + Financial Reports tabs
+- **Feature**: Two new Analytics subtabs with charts, KPIs, and exports
+- **Files created**:
+  - `backend/app/schemas/analytics.py` — Pydantic v2 schemas
+  - `backend/app/api/v1/analytics.py` — Revenue, financial report + CSV/XLSX/PDF export endpoints
+  - `backend/app/core/analytics_excel.py` — openpyxl workbook builder
+  - `backend/app/core/analytics_pdf.py` — WeasyPrint HTML→PDF financial report
+  - `backend/app/db/migrations/versions/131_analytics_indexes.py` — Invoice query index
+  - `backend/tests/test_analytics.py` — 13 backend tests (all passing)
+  - `frontend/src/pages/ConferenceDetail/tabs/analytics/RevenueTrackingTab.tsx`
+  - `frontend/src/pages/ConferenceDetail/tabs/analytics/FinancialReportingTab.tsx`
+  - `frontend/src/pages/ConferenceDetail/tabs/analytics/__tests__/RevenueTrackingTab.test.tsx`
+  - `frontend/src/pages/ConferenceDetail/tabs/analytics/__tests__/FinancialReportingTab.test.tsx`
+- **Files modified**:
+  - `backend/requirements.txt` — added openpyxl==3.1.5, types-openpyxl==3.1.5.20250919
+  - `backend/app/api/v1/router.py` — registered analytics router
+  - `frontend/package.json` — added recharts ^2.15.3
+  - `frontend/src/pages/ConferenceDetail/conferenceSections.ts` — added SectionIds + nav entries
+  - `frontend/src/pages/ConferenceDetail/icons.tsx` — added RevenueTrackingIcon + FinancialReportIcon
+  - `frontend/src/pages/ConferenceDetail/index.tsx` — lazy imports + routing
+  - `frontend/src/config/queryKeys.ts` — added analytics namespace
+  - `docs/tenant-ui-handbook.md` — documented 7.1.3 + 7.1.4
+- **Tests**: 2347 backend + 1550 frontend — all passing
+- **Linting**: ✅ Ruff, mypy, ESLint, TypeScript, formatting all clean
+- **Status**: ✅ Implementation complete — ready to commit if desired

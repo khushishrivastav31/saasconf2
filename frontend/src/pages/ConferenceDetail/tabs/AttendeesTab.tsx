@@ -24,7 +24,6 @@ const STATUS_COLORS: Record<string, string> = {
     'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300',
   invoiced: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
   paid: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
-  cancelled: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -178,11 +177,9 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
       stats[opt.id] = { name: opt.name, count: 0 };
     });
 
-    // Count attendees per booking option (only non-cancelled)
+    // Count attendees per booking option (cancelled excluded by backend)
     // Count both main booking option AND add-on items
     data.items.forEach((reg) => {
-      if (reg.status === 'cancelled') return;
-
       // Count main booking option
       if (stats[reg.booking_option_id]) {
         stats[reg.booking_option_id].count++;
@@ -199,7 +196,7 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
     // Convert to array and sort by count (descending), include zero counts
     const sortedStats = Object.values(stats).sort((a, b) => b.count - a.count);
 
-    const totalActive = data.items.filter((r) => r.status !== 'cancelled').length;
+    const totalActive = data.items.length;
 
     return { total: totalActive, byOption: sortedStats };
   }, [data, optionsData]);
@@ -215,10 +212,8 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
       sessionStats[session.id] = { name: session.name, count: 0 };
     });
 
-    // Count actual bookings
+    // Count actual bookings (cancelled excluded by backend)
     data.items.forEach((reg) => {
-      if (reg.status === 'cancelled') return;
-
       // Count main session (if exists)
       if (reg.main_session_id && reg.main_session_name) {
         if (!sessionStats[reg.main_session_id]) {
@@ -518,7 +513,6 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
           <option value="registered_pending_invoice">Registered (Pending Invoice)</option>
           <option value="invoiced">Invoiced</option>
           <option value="paid">Paid</option>
-          <option value="cancelled">Cancelled</option>
         </select>
 
         {/* Booking option filter */}

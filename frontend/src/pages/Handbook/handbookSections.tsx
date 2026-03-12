@@ -691,10 +691,11 @@ export const handbookCategories: HandbookCategory[] = [
 <strong>What you can do:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300">View attendee list with registration details, booking options, session selections</li>
-<li class="text-gray-700 dark:text-gray-300">Search and filter by name, email, status, booking option</li>
+<li class="text-gray-700 dark:text-gray-300">Search and filter by name, email, status (Pending Invoice / Invoiced / Paid), booking option</li>
 <li class="text-gray-700 dark:text-gray-300">Export attendee data to CSV</li>
 <li class="text-gray-700 dark:text-gray-300">View registration statistics (total, by booking option, by status)</li>
 </ul>
+<p class="text-gray-700 dark:text-gray-300 my-2"><strong>Who appears here:</strong> Only active registrations — Pending Invoice, Invoiced, and Paid. <strong>Cancelled registrations are excluded.</strong> A person whose registration was cancelled is no longer an attendee. If they re-register with the same email, a new registration is created and they appear again.</p>
 <strong>Dependencies:</strong> Registration (5.2) and Booking Options (5.1) must be configured. Attendees appear here after registering.
 <strong>Consequences:</strong> Attendee data feeds into Alumni records (3.6) when registration is paid.
 <strong>Interdependencies:</strong>
@@ -1083,7 +1084,16 @@ export const handbookCategories: HandbookCategory[] = [
             dangerouslySetInnerHTML={{
               __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Track and manage conference costs and budgets. <strong>Requires: <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">invoices</code> module.</strong></p>
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">5.5.1 Budget Planning</h4>
-<em>Coming soon.</em>
+<p class="text-gray-700 dark:text-gray-300 my-2">Each conference has exactly <strong>one budget</strong>, which is always active and feeds directly into the Financial Reports tab.</p>
+<strong>What you can do:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">Add line items with description, planned amount, actual amount, category, and vendor</li>
+<li class="text-gray-700 dark:text-gray-300">Create and manage <strong>categories</strong> with colors for organized tracking</li>
+<li class="text-gray-700 dark:text-gray-300">Track planned vs. actual spending per line item and category</li>
+<li class="text-gray-700 dark:text-gray-300">View summary cards: <strong>Total Budget</strong>, <strong>Spent</strong>, <strong>Remaining</strong>, and <strong>% Used</strong></li>
+</ul>
+<strong>How costs flow into Financial Reports:</strong> The budget's planned and actual amounts are automatically included in the Financial Reports tab under "Budget Variance by Category". If you have entered actual amounts, those are used; otherwise planned amounts are used as the cost estimate. Approved speaker expenses are added on top.
+<strong>Best practice:</strong> Enter planned amounts when budgeting, then update actual amounts as costs are incurred. This gives you a live variance view in Financial Reports.
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">5.5.2 Speaker Expenses</h4>
 <p class="text-gray-700 dark:text-gray-300 my-2">Manage speaker expense allowances and track spending per speaker.</p>
 <strong>What you can do:</strong>
@@ -1183,7 +1193,33 @@ export const handbookCategories: HandbookCategory[] = [
 <strong>Dependencies:</strong> Registration Questions must be configured in Settings. Registrations with answers must exist.
 <strong>Consequences:</strong> Read-only analytics view — does not modify any data.
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">7.1.2 Conference Statistics</h4>
-<em>Coming soon.</em> This sub-tab will provide statistics and insights across conference data (registrations, revenue, attendance patterns).`,
+<em>Coming soon.</em> This sub-tab will provide statistics and insights across conference data (registrations, revenue, attendance patterns).
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">7.1.3 Revenue Tracking</h4>
+<p class="text-gray-700 dark:text-gray-300 my-2">Real-time revenue analytics using invoices as the authoritative source of truth. Credit notes and cancelled invoices are excluded from all totals.</p>
+<strong>KPI Cards:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Total Revenue</strong> — Sum of all active (non-cancelled) registration and sponsor invoices</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Registration Revenue</strong> — Total from registration invoices (direct from invoice totals)</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Sponsor Revenue</strong> — Total from sponsor invoices</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Outstanding</strong> — Receivables from sent-but-not-yet-paid invoices (excludes credit notes)</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Attendees</strong> — Active registrations (cancelled registrations excluded)</li>
+</ul>
+<strong>Revenue Streams table:</strong> Breaks down revenue by source — Sponsors, Registrations (per booking option with attendee counts and period drill-down), and any unattributed amounts. Grand Total always matches the sum of actual invoices.
+<strong>Exports:</strong> CSV and XLSX.
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">7.1.4 Financial Reports</h4>
+<p class="text-gray-700 dark:text-gray-300 my-2">P&amp;L summary combining revenue, budget costs, and speaker expenses.</p>
+<strong>P&amp;L Summary KPIs:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Total Revenue</strong> — All invoice revenue (same as Revenue Tracking)</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Outstanding</strong> — Receivables</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Total Costs</strong> — Budget amounts (actual if entered, else planned) + approved/paid speaker expenses</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Net Result</strong> — Revenue minus costs (green = profit, red = loss)</li>
+</ul>
+<strong>Revenue Streams section:</strong> Same breakdown as Revenue Tracking — Sponsors, per-booking-option registration revenue, and unattributed amounts.
+<strong>Budget Variance by Category:</strong> For each budget category shows Planned, Actual, Variance, and % — requires a budget with line items.
+<strong>Cost Per Attendee:</strong> Total costs and revenue divided by active attendee count.
+<strong>Export:</strong> PDF with full P&amp;L, variance table, and revenue breakdown.
+<strong>Note:</strong> The budget is always included automatically — there is no need to activate it. Speaker expenses are included if the expenses module is enabled.`,
             }}
           />
         ),

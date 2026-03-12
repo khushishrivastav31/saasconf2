@@ -41,6 +41,8 @@ const CostManagementTab = lazy(() => import('./tabs/CostManagementTab'));
 const BudgetPlanningTab = lazy(() => import('./tabs/BudgetPlanningTab'));
 const SpeakerExpensesTab = lazy(() => import('./tabs/SpeakerExpensesTab'));
 const ConferenceStatisticsTab = lazy(() => import('./tabs/analytics/ConferenceStatisticsTab'));
+const RevenueTrackingTab = lazy(() => import('./tabs/analytics/RevenueTrackingTab'));
+const FinancialReportingTab = lazy(() => import('./tabs/analytics/FinancialReportingTab'));
 const CFPTopics = lazy(() => import('../modules/cfp').then((m) => ({ default: m.CFPTopics })));
 const CFPProgramCommittee = lazy(() =>
   import('../modules/cfp').then((m) => ({ default: m.CFPProgramCommittee }))
@@ -445,6 +447,12 @@ function ConferenceDetailContent() {
               )}
               {activeSection === 'analytics-statistics' && (
                 <ConferenceStatisticsTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'analytics-revenue' && (
+                <RevenueTrackingTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'analytics-financial' && (
+                <FinancialReportingTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'service_providers' && (
                 <ConferenceServiceProvidersTab conference={conference} isAdmin={isAdmin} />

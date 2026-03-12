@@ -204,6 +204,13 @@ export const queryKeys = {
     settings: (conferenceId: string) => ['payment-reminder-settings', conferenceId] as const,
   },
 
+  // ── Analytics ────────────────────────────────────────────────────
+  analytics: {
+    revenue: (conferenceId: string) => ['analytics-revenue', conferenceId] as const,
+    financialReport: (conferenceId: string) =>
+      ['analytics-financial-report', conferenceId] as const,
+  },
+
   // ── Team & Users ────────────────────────────────────────────────
   team: {
     users: ['team-users'] as const,

@@ -15,6 +15,7 @@ from app.models.registration import (
     Registration,
     RegistrationItem,
     RegistrationItemType,
+    RegistrationStatus,
 )
 from app.schemas.registration import (
     RegistrationItemCreate,
@@ -231,10 +232,15 @@ def _build_response(
 
 
 async def _check_email_unique(db, conference_id: UUID, email: str, exclude_id: UUID | None = None) -> None:
-    """Check that an email is not already registered for this conference."""
+    """Check that an email is not already registered for this conference.
+
+    Cancelled registrations are excluded — a person whose registration was
+    cancelled is no longer an attendee and must be able to re-register.
+    """
     query = select(Registration.id).where(
         Registration.conference_id == conference_id,
         Registration.email == email.lower(),
+        Registration.status != RegistrationStatus.CANCELLED,
     )
     if exclude_id:
         query = query.where(Registration.id != exclude_id)

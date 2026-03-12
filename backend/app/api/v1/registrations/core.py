@@ -300,6 +300,11 @@ async def list_registrations(
     if status:
         count_q = count_q.where(Registration.status == status)
         data_q = data_q.where(Registration.status == status)
+    else:
+        # Cancelled registrations are not attendees — exclude by default.
+        # A cancelled person's record is preserved on invoices/credit notes only.
+        count_q = count_q.where(Registration.status != RegistrationStatus.CANCELLED)
+        data_q = data_q.where(Registration.status != RegistrationStatus.CANCELLED)
 
     total = (await db.execute(count_q)).scalar() or 0
     pages = max(1, math.ceil(total / page_size))

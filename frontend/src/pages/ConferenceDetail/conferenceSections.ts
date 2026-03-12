@@ -40,6 +40,8 @@ import {
   BudgetPlanningIcon,
   SpeakerExpensesIcon,
   ConferenceStatisticsIcon,
+  RevenueTrackingIcon,
+  FinancialReportIcon,
 } from './icons';
 
 // ---------------------------------------------------------------------------
@@ -73,6 +75,8 @@ export type SectionId =
   | 'analytics'
   | 'analytics-questions'
   | 'analytics-statistics'
+  | 'analytics-revenue'
+  | 'analytics-financial'
   | 'service_providers'
   | 'program'
   | 'program-design'
@@ -250,6 +254,8 @@ export const sectionGroups: SectionGroup[] = [
             name: 'Conference Statistics',
             icon: ConferenceStatisticsIcon,
           },
+          { id: 'analytics-revenue', name: 'Revenue Tracking', icon: RevenueTrackingIcon },
+          { id: 'analytics-financial', name: 'Financial Reports', icon: FinancialReportIcon },
         ],
       },
     ],

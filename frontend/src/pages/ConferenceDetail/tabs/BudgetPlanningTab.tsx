@@ -88,16 +88,6 @@ export default function BudgetPlanningTab({ conference, isAdmin }: BudgetPlannin
     },
   });
 
-  const deleteBudget = useMutation({
-    mutationFn: async (budgetId: string) => {
-      await api.delete(`/conferences/${conference.id}/budgets/${budgetId}`);
-    },
-    onSuccess: () => {
-      invalidate();
-      setSelectedBudgetId(null);
-    },
-  });
-
   const createItem = useMutation({
     mutationFn: async () => {
       await api.post(`/conferences/${conference.id}/budgets/${activeBudget!.id}/items`, {
@@ -250,7 +240,7 @@ export default function BudgetPlanningTab({ conference, isAdmin }: BudgetPlannin
               ))}
             </select>
           )}
-          {isAdmin && (
+          {isAdmin && !activeBudget && (
             <button
               onClick={() => setShowNewForm(true)}
               className="text-sm px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
@@ -340,21 +330,6 @@ export default function BudgetPlanningTab({ conference, isAdmin }: BudgetPlannin
               <p className={`text-xl font-semibold mt-1 ${pctColor}`}>{pctUsed.toFixed(1)}%</p>
             </div>
           </div>
-
-          {/* Budget actions */}
-          {isAdmin && (
-            <div className="flex justify-end">
-              <button
-                onClick={() => {
-                  if (confirm(`Delete budget "${activeBudget.name}"?`))
-                    deleteBudget.mutate(activeBudget.id);
-                }}
-                className="text-sm px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
-              >
-                Delete Budget
-              </button>
-            </div>
-          )}
 
           {/* Category management */}
           {isAdmin && (
