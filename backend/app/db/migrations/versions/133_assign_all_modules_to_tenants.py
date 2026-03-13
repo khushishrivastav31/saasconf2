@@ -18,13 +18,12 @@ depends_on = None
 def upgrade() -> None:
     op.execute(
         """
-        INSERT INTO tenant_modules (id, tenant_id, module_id, is_enabled, created_at, updated_at)
+        INSERT INTO tenant_modules (id, tenant_id, module_id, is_enabled, granted_at)
         SELECT
             gen_random_uuid(),
             t.id,
             m.id,
             TRUE,
-            NOW(),
             NOW()
         FROM tenants t
         CROSS JOIN modules m
