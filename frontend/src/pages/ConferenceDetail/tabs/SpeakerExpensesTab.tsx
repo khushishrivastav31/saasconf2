@@ -399,9 +399,17 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
                 className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
               >
                 {/* Speaker header row */}
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggleSpeaker(group.speakerName)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleSpeaker(group.speakerName);
+                    }
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <svg
@@ -476,7 +484,7 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
                       )}
                     </span>
                   </div>
-                </button>
+                </div>
 
                 {/* Tier/Budget bar */}
                 {expandedSpeaker === group.speakerName &&

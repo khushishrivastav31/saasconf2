@@ -117,8 +117,9 @@ export default function BulkDiscountModal({
     queryKey: queryKeys.sponsors.byConference(conferenceId),
     queryFn: async () => {
       const res = await api.get<{ items: Sponsor[] }>(`/conferences/${conferenceId}/sponsors`);
-      return res.data.items;
+      return res.data;
     },
+    select: (data) => (Array.isArray(data) ? data : (data?.items ?? [])),
     enabled: open && source === 'sponsors',
   });
 
