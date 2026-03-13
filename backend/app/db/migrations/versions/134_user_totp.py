@@ -1,7 +1,7 @@
 """Add user_totp table for MFA.
 
-Revision ID: 134_user_totp
-Revises: 133_assign_all_modules_to_tenants
+Revision ID: 134
+Revises: 133
 Create Date: 2026-03-13
 """
 
@@ -9,8 +9,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "134_user_totp"
-down_revision = "133_assign_all_modules_to_tenants"
+revision = "134"
+down_revision = "133"
 branch_labels = None
 depends_on = None
 
