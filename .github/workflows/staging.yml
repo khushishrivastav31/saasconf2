@@ -301,12 +301,13 @@ jobs:
       - name: Rebuild and restart containers
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ env.STAGING_USER }}@${{ env.STAGING_HOST }} << 'EOF'
+            set -e
             cd ${{ env.STAGING_PATH }}/deploy/staging
 
             # Ensure infrastructure services are running and healthy
             docker compose up -d --wait db redis
 
-            # Rebuild application containers
+            # Rebuild application containers — fail deploy if build fails
             docker compose build --no-cache backend frontend
 
             # Restart app services only (--no-deps prevents recreating db/redis)
