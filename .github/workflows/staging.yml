@@ -17,11 +17,37 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # Backend Tests
+  # Detect which areas changed
+  # ─────────────────────────────────────────────────────────────
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/src/**'
+              - 'frontend/package*.json'
+              - 'frontend/tsconfig*.json'
+              - 'frontend/vite.config.*'
+              - 'frontend/eslint.config.*'
+
+  # ─────────────────────────────────────────────────────────────
+  # Backend Tests (only when backend/ changed)
   # ─────────────────────────────────────────────────────────────
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
 
     services:
       postgres:
@@ -106,11 +132,13 @@ jobs:
           retention-days: 14
 
   # ─────────────────────────────────────────────────────────────
-  # Frontend Tests
+  # Frontend Tests (only when frontend src/config changed)
   # ─────────────────────────────────────────────────────────────
   frontend-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
 
     steps:
       - name: Checkout code
@@ -154,7 +182,7 @@ jobs:
         run: npm run build
 
   # ─────────────────────────────────────────────────────────────
-  # Dependency Security Audit
+  # Dependency Security Audit (always runs — fast)
   # ─────────────────────────────────────────────────────────────
   security-audit:
     name: Security Audit
@@ -196,7 +224,7 @@ jobs:
           exit-code: '1'
 
   # ─────────────────────────────────────────────────────────────
-  # Secrets Scanning
+  # Secrets Scanning (always runs — fast)
   # ─────────────────────────────────────────────────────────────
   secrets-scan:
     name: Secrets Scan
@@ -219,8 +247,14 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests, security-audit, secrets-scan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [changes, backend-tests, frontend-tests, security-audit, secrets-scan]
+    if: |
+      always() &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      (needs.backend-tests.result == 'success' || needs.backend-tests.result == 'skipped') &&
+      (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') &&
+      needs.security-audit.result == 'success' &&
+      needs.secrets-scan.result == 'success'
 
     steps:
       - name: Checkout code
