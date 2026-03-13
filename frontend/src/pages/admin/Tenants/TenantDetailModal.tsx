@@ -1,12 +1,10 @@
-import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import Modal from "../../../components/Modal";
-import type { Tenant } from "../../../types";
-import CompanyInfoTab from "./components/CompanyInfoTab";
-import ModulesTab from "./components/ModulesTab";
-import { AssignModuleModal } from "./components/ModulesTab";
-import UsersTab from "./components/UsersTab";
-import { AddUserModal } from "./components/UsersTab";
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import Modal from '../../../components/Modal';
+import type { Tenant } from '../../../types';
+import CompanyInfoTab from './components/CompanyInfoTab';
+import UsersTab from './components/UsersTab';
+import { AddUserModal } from './components/UsersTab';
 
 export default function TenantDetailModal({
   tenant,
@@ -15,17 +13,13 @@ export default function TenantDetailModal({
   tenant: Tenant;
   onClose: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"info" | "modules" | "users">(
-    "info",
-  );
-  const [isAssignModuleOpen, setIsAssignModuleOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'info' | 'users'>('info');
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const tabs = [
-    { id: "info" as const, name: "Company Info" },
-    { id: "modules" as const, name: "Modules" },
-    { id: "users" as const, name: "Users" },
+    { id: 'info' as const, name: 'Company Info' },
+    { id: 'users' as const, name: 'Users' },
   ];
 
   return (
@@ -41,8 +35,8 @@ export default function TenantDetailModal({
               onClick={() => setActiveTab(tab.id)}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
-                  ? "border-primary-500 text-primary-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
               {tab.name}
@@ -53,45 +47,26 @@ export default function TenantDetailModal({
 
       {/* Content */}
       <div className="p-6">
-        {activeTab === "info" && (
+        {activeTab === 'info' && (
           <CompanyInfoTab
             tenant={tenant}
             onUpdate={() => {
-              queryClient.invalidateQueries({ queryKey: ["tenants"] });
+              queryClient.invalidateQueries({ queryKey: ['tenants'] });
             }}
             onClose={onClose}
           />
         )}
-        {activeTab === "modules" && (
-          <ModulesTab
-            tenantId={tenant.id}
-            onAssignModule={() => setIsAssignModuleOpen(true)}
-          />
-        )}
-        {activeTab === "users" && (
+        {activeTab === 'users' && (
           <UsersTab
             tenantId={tenant.id}
             superUserId={tenant.super_user_id}
             onAddUser={() => setIsAddUserOpen(true)}
             onSuperUserChange={() => {
-              queryClient.invalidateQueries({ queryKey: ["tenants"] });
+              queryClient.invalidateQueries({ queryKey: ['tenants'] });
             }}
           />
         )}
       </div>
-
-      {/* Assign Module Modal */}
-      {isAssignModuleOpen && (
-        <AssignModuleModal
-          tenantId={tenant.id}
-          onClose={() => {
-            setIsAssignModuleOpen(false);
-            queryClient.invalidateQueries({
-              queryKey: ["tenant-modules", tenant.id],
-            });
-          }}
-        />
-      )}
 
       {/* Add User Modal */}
       {isAddUserOpen && (
@@ -100,7 +75,7 @@ export default function TenantDetailModal({
           onClose={() => {
             setIsAddUserOpen(false);
             queryClient.invalidateQueries({
-              queryKey: ["tenant-users", tenant.id],
+              queryKey: ['tenant-users', tenant.id],
             });
           }}
         />

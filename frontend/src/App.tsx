@@ -11,7 +11,6 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 // Lazy-loaded admin pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Tenants = lazy(() => import('./pages/admin/Tenants'));
-const Modules = lazy(() => import('./pages/admin/Modules'));
 const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
 const Settings = lazy(() => import('./pages/admin/Settings'));
 const Volunteers = lazy(() => import('./pages/modules/Volunteers'));
@@ -198,14 +197,6 @@ function App() {
             element={
               <AdminRoute>
                 <Tenants />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="admin/modules"
-            element={
-              <AdminRoute>
-                <Modules />
               </AdminRoute>
             }
           />

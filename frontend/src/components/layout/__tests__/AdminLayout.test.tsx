@@ -123,10 +123,10 @@ describe('AdminLayout', () => {
       expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument();
     });
 
-    it('renders Dashboard navigation link', () => {
+    it('renders Welcome navigation link', () => {
       renderWithProviders();
 
-      expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /welcome/i })).toBeInTheDocument();
     });
   });
 
@@ -137,21 +137,10 @@ describe('AdminLayout', () => {
       expect(screen.getByRole('link', { name: /conferences/i })).toBeInTheDocument();
     });
 
-    it('hides module navigation links when user has no module access', () => {
+    it('shows module navigation regardless of module assignment', () => {
       mockUser = {
         ...mockUser!,
         modules: [],
-      };
-
-      renderWithProviders();
-
-      expect(screen.queryByRole('link', { name: /conferences/i })).not.toBeInTheDocument();
-    });
-
-    it('shows only modules the user has access to', () => {
-      mockUser = {
-        ...mockUser!,
-        modules: ['conferences'],
       };
 
       renderWithProviders();
@@ -190,7 +179,6 @@ describe('AdminLayout', () => {
       renderWithProviders();
 
       expect(screen.getByRole('link', { name: /companies/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /modules/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /audit logs/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument();
     });
@@ -207,10 +195,9 @@ describe('AdminLayout', () => {
       expect(screen.queryByRole('link', { name: /audit logs/i })).not.toBeInTheDocument();
     });
 
-    it('super_admin sees all modules regardless of module assignment', () => {
+    it('all users see module navigation regardless of module assignment', () => {
       mockUser = {
         ...mockUser!,
-        role: 'super_admin',
         modules: [],
       };
 
@@ -315,13 +302,13 @@ describe('AdminLayout', () => {
   });
 
   describe('active link highlighting', () => {
-    it('highlights Dashboard link when on dashboard path', () => {
+    it('highlights Welcome link when on dashboard path', () => {
       mockLocation.pathname = '/dashboard';
 
       renderWithProviders();
 
-      const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
-      expect(dashboardLink.className).toContain('bg-gray-800');
+      const welcomeLink = screen.getByRole('link', { name: /welcome/i });
+      expect(welcomeLink.className).toContain('bg-gray-800');
     });
 
     it('highlights module link when on module path', () => {

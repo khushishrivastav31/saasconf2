@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../../hooks/useAuth';
 import { useConferenceAdmin } from '../../hooks/useConferenceAdmin';
 import api from '../../config/api';
 import { queryKeys } from '../../config/queryKeys';
@@ -76,7 +75,6 @@ export interface UseConferenceDetailReturn {
 export function useConferenceDetail(conferenceId: string | undefined): UseConferenceDetailReturn {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const { isAdmin } = useConferenceAdmin(conferenceId);
 
   // -------------------------------------------------------------------------
@@ -147,21 +145,10 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
     }
   }, [activeSection]);
 
-  // Build filtered groups: filter out sections the user doesn't have access to,
-  // then filter out empty groups
-  const filteredGroups = useMemo(() => {
-    const userModules = user?.modules ?? [];
-    const isSuperAdmin = user?.role === 'super_admin';
-
-    return sectionGroups
-      .map((group) => ({
-        ...group,
-        sections: group.sections.filter(
-          (s) => !s.moduleCode || isSuperAdmin || userModules.includes(s.moduleCode)
-        ),
-      }))
-      .filter((group) => group.sections.length > 0);
-  }, [user?.modules, user?.role]);
+  const filteredGroups = useMemo(
+    () => sectionGroups.filter((group) => group.sections.length > 0),
+    []
+  );
 
   // -------------------------------------------------------------------------
   // Conference data

@@ -41,10 +41,10 @@ describe('Dashboard', () => {
   });
 
   describe('rendering', () => {
-    it('renders the Dashboard heading', () => {
+    it('renders the Welcome heading', () => {
       render(<Dashboard />);
 
-      expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Welcome' })).toBeInTheDocument();
     });
 
     it("renders a welcome message with the user's full name", () => {
@@ -104,14 +104,6 @@ describe('Dashboard', () => {
       expect(companiesLink).toHaveAttribute('href', '/admin/tenants');
     });
 
-    it('renders Modules card with correct link', () => {
-      render(<Dashboard />);
-
-      const modulesLink = screen.getByRole('link', { name: /modules/i });
-      expect(modulesLink).toBeInTheDocument();
-      expect(modulesLink).toHaveAttribute('href', '/admin/modules');
-    });
-
     it('renders Audit Logs card with correct link', () => {
       render(<Dashboard />);
 
@@ -126,14 +118,7 @@ describe('Dashboard', () => {
       render(<Dashboard />);
 
       expect(screen.getByText('Manage tenant companies')).toBeInTheDocument();
-      expect(screen.getByText('Manage platform modules')).toBeInTheDocument();
       expect(screen.getByText('View system activity')).toBeInTheDocument();
-    });
-
-    it('does not render the Your Modules section', () => {
-      render(<Dashboard />);
-
-      expect(screen.queryByText('Your Modules')).not.toBeInTheDocument();
     });
   });
 
@@ -142,39 +127,13 @@ describe('Dashboard', () => {
       mockUser = {
         ...mockUser!,
         role: 'tenant_admin',
-        modules: ['conferences', 'cfp'],
       };
     });
 
-    it('renders the Your Modules heading', () => {
+    it('renders getting started section', () => {
       render(<Dashboard />);
 
-      expect(screen.getByRole('heading', { name: 'Your Modules' })).toBeInTheDocument();
-    });
-
-    it('renders module cards for assigned modules', () => {
-      render(<Dashboard />);
-
-      expect(screen.getByText('conferences')).toBeInTheDocument();
-      expect(screen.getByText('cfp')).toBeInTheDocument();
-    });
-
-    it('renders module names with underscores replaced by spaces', () => {
-      mockUser = {
-        ...mockUser!,
-        modules: ['call_for_papers'],
-      };
-
-      render(<Dashboard />);
-
-      expect(screen.getByText('call for_papers')).toBeInTheDocument();
-    });
-
-    it("renders 'Module available' text for each module", () => {
-      render(<Dashboard />);
-
-      const availableTexts = screen.getAllByText('Module available');
-      expect(availableTexts).toHaveLength(2);
+      expect(screen.getByRole('heading', { name: 'Getting Started' })).toBeInTheDocument();
     });
 
     it('does not render super_admin cards', () => {
@@ -183,17 +142,6 @@ describe('Dashboard', () => {
       expect(screen.queryByRole('link', { name: /companies/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: /audit logs/i })).not.toBeInTheDocument();
     });
-
-    it('renders no modules message when user has no modules', () => {
-      mockUser = {
-        ...mockUser!,
-        modules: [],
-      };
-
-      render(<Dashboard />);
-
-      expect(screen.getByText('No modules assigned to your account yet.')).toBeInTheDocument();
-    });
   });
 
   describe('regular user view', () => {
@@ -201,27 +149,19 @@ describe('Dashboard', () => {
       mockUser = {
         ...mockUser!,
         role: 'user',
-        modules: ['conferences'],
       };
     });
 
-    it('renders the Your Modules section for regular users', () => {
+    it('renders getting started section for regular users', () => {
       render(<Dashboard />);
 
-      expect(screen.getByRole('heading', { name: 'Your Modules' })).toBeInTheDocument();
-    });
-
-    it('renders assigned modules for regular users', () => {
-      render(<Dashboard />);
-
-      expect(screen.getByText('conferences')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Getting Started' })).toBeInTheDocument();
     });
 
     it('does not render super_admin navigation cards', () => {
       render(<Dashboard />);
 
       expect(screen.queryByText('Manage tenant companies')).not.toBeInTheDocument();
-      expect(screen.queryByText('Manage platform modules')).not.toBeInTheDocument();
       expect(screen.queryByText('View system activity')).not.toBeInTheDocument();
     });
   });

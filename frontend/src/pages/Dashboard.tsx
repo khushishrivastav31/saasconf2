@@ -8,7 +8,7 @@ export default function Dashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Welcome back, {`${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || user?.email}
         </p>
@@ -37,26 +37,6 @@ export default function Dashboard() {
             }
           />
           <DashboardCard
-            title="Modules"
-            description="Manage platform modules"
-            href="/admin/modules"
-            icon={
-              <svg
-                className="w-8 h-8 text-primary-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                />
-              </svg>
-            }
-          />
-          <DashboardCard
             title="Audit Logs"
             description="View system activity"
             href="/admin/audit-logs"
@@ -78,31 +58,55 @@ export default function Dashboard() {
           />
         </div>
       ) : (
-        <div>
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-            Your Modules
-          </h2>
-          {user?.modules && user.modules.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {user.modules.map((module) => (
-                <div
-                  key={module}
-                  className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-6"
-                >
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 capitalize">
-                    {module.replace('_', ' ')}
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Module available</p>
-                </div>
-              ))}
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-3">
+              Getting Started
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Select a conference from the sidebar to manage it, or create a new one from the
+              Conferences page. Each conference gives you access to:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-600 dark:text-gray-300">
+              <div className="flex items-start gap-2">
+                <span className="text-primary-600 font-medium mt-0.5">&#8226;</span>
+                <span>
+                  <strong>Call for Papers</strong> &mdash; manage submissions, reviews, and
+                  decisions
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-primary-600 font-medium mt-0.5">&#8226;</span>
+                <span>
+                  <strong>Registration</strong> &mdash; attendee sign-up, tickets, and payments
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-primary-600 font-medium mt-0.5">&#8226;</span>
+                <span>
+                  <strong>Program</strong> &mdash; sessions, speakers, and schedules
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-primary-600 font-medium mt-0.5">&#8226;</span>
+                <span>
+                  <strong>Sponsors</strong> &mdash; contracts, logos, and invoicing
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-primary-600 font-medium mt-0.5">&#8226;</span>
+                <span>
+                  <strong>Volunteers</strong> &mdash; recruitment and task assignment
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-primary-600 font-medium mt-0.5">&#8226;</span>
+                <span>
+                  <strong>Analytics</strong> &mdash; reports and insights across your conference
+                </span>
+              </div>
             </div>
-          ) : (
-            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-6">
-              <p className="text-gray-500 dark:text-gray-400">
-                No modules assigned to your account yet.
-              </p>
-            </div>
-          )}
+          </div>
         </div>
       )}
     </div>

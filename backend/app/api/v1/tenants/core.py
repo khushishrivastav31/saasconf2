@@ -17,7 +17,7 @@ from app.core.search import unaccent_ilike
 from app.core.security import hash_password
 from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
-from app.models.module import TenantModule
+from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.models.user_password_reset import UserPasswordReset
@@ -115,6 +115,11 @@ async def create_tenant(
     db.add(tenant)
     await db.flush()  # Get tenant ID
 
+    # Auto-assign all active modules to the new tenant
+    all_modules = (await db.execute(select(Module).where(Module.is_active.is_(True)))).scalars().all()
+    for mod in all_modules:
+        db.add(TenantModule(tenant_id=tenant.id, module_id=mod.id, is_enabled=True))
+
     # Optionally create admin user
     admin_user = None
     if tenant_data.admin_email:
@@ -193,7 +198,7 @@ async def create_tenant(
     return _build_tenant_response(
         tenant,
         user_count=1 if tenant_data.admin_email else 0,
-        module_count=0,
+        module_count=len(all_modules),
     )
 
 
