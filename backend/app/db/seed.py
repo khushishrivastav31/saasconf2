@@ -1,6 +1,7 @@
 """Database seeding script for initial data."""
 
 import asyncio
+import logging
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +15,7 @@ from app.models.platform_currency import PlatformCurrency
 from app.models.settings import PronounOption
 from app.models.user import User, UserRole
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
@@ -27,9 +29,9 @@ async def seed_super_admin(session: AsyncSession) -> None:
         if not verify_password(settings.SUPER_ADMIN_PASSWORD, existing.password_hash):
             existing.password_hash = hash_password(settings.SUPER_ADMIN_PASSWORD)
             await session.commit()
-            print(f"Super admin password updated: {settings.SUPER_ADMIN_EMAIL}")
+            logger.info(f"Super admin password updated: {settings.SUPER_ADMIN_EMAIL}")
         else:
-            print(f"Super admin already exists: {settings.SUPER_ADMIN_EMAIL}")
+            logger.info(f"Super admin already exists: {settings.SUPER_ADMIN_EMAIL}")
         return
 
     admin = User(
@@ -43,7 +45,7 @@ async def seed_super_admin(session: AsyncSession) -> None:
     )
     session.add(admin)
     await session.commit()
-    print(f"Created super admin: {settings.SUPER_ADMIN_EMAIL}")
+    logger.info(f"Created super admin: {settings.SUPER_ADMIN_EMAIL}")
 
 
 async def seed_default_modules(session: AsyncSession) -> None:
@@ -126,12 +128,12 @@ async def seed_default_modules(session: AsyncSession) -> None:
         existing = result.scalar_one_or_none()
 
         if existing:
-            print(f"Module already exists: {module_data['code']}")
+            logger.info(f"Module already exists: {module_data['code']}")
             continue
 
         module = Module(**module_data)
         session.add(module)
-        print(f"Created module: {module_data['code']}")
+        logger.info(f"Created module: {module_data['code']}")
 
     await session.commit()
 
@@ -166,12 +168,12 @@ async def seed_default_currencies(session: AsyncSession) -> None:
         existing = result.scalar_one_or_none()
 
         if existing:
-            print(f"Currency already exists: {currency_data['code']}")
+            logger.info(f"Currency already exists: {currency_data['code']}")
             continue
 
         currency = PlatformCurrency(**currency_data)
         session.add(currency)
-        print(f"Created currency: {currency_data['code']}")
+        logger.info(f"Created currency: {currency_data['code']}")
 
     await session.commit()
 
@@ -191,11 +193,11 @@ async def seed_conference_defaults(session: AsyncSession) -> None:
     conferences = result.scalars().all()
 
     if not conferences:
-        print("All conferences already have default settings.")
+        logger.info("All conferences already have default settings.")
         return
 
     for conf in conferences:
-        print(f"Seeding defaults for conference: {conf.name} ({conf.id})")
+        logger.info(f"Seeding defaults for conference: {conf.name} ({conf.id})")
         await seed_default_settings(
             session,
             tenant_id=conf.tenant_id,
@@ -204,12 +206,12 @@ async def seed_conference_defaults(session: AsyncSession) -> None:
         )
 
     await session.commit()
-    print(f"Seeded defaults for {len(conferences)} conference(s).")
+    logger.info(f"Seeded defaults for {len(conferences)} conference(s).")
 
 
 async def seed_database() -> None:
     """Run all seed functions."""
-    print("Starting database seeding...")
+    logger.info("Starting database seeding...")
 
     async with async_session_maker() as session:
         await seed_super_admin(session)
@@ -217,7 +219,7 @@ async def seed_database() -> None:
         await seed_default_currencies(session)
         await seed_conference_defaults(session)
 
-    print("Database seeding complete!")
+    logger.info("Database seeding complete!")
 
 
 if __name__ == "__main__":

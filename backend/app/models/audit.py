@@ -81,6 +81,10 @@ class AuditAction:
     USER_PASSWORD_RESET_REQUESTED = "user.password_reset_requested"
     USER_PASSWORD_RESET_COMPLETED = "user.password_reset_completed"
 
+    # MFA
+    MFA_ENABLED = "user.mfa_enabled"
+    MFA_DISABLED = "user.mfa_disabled"
+
     # Module management
     MODULE_CREATE = "module.create"
     MODULE_UPDATE = "module.update"

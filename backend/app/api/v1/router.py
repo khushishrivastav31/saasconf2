@@ -19,6 +19,7 @@ from app.api.v1 import (
     invoices,
     locations,
     messaging,
+    mfa,
     modules,
     news,
     payment_reminders,
@@ -48,6 +49,7 @@ api_router = APIRouter()
 
 # Authentication endpoints
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+api_router.include_router(mfa.router, prefix="/auth", tags=["MFA"])
 
 # Admin endpoints (super admin only)
 api_router.include_router(tenants.router, prefix="/admin/tenants", tags=["Tenants"])

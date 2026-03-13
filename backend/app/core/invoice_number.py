@@ -35,12 +35,15 @@ async def generate_invoice_number(
     3. Replacing template variables: [ConferenceSlug], [YYYY], [MM], [DD], [Count]
     4. Incrementing counter and updating settings
     """
-    # 1. Load conference settings
+    # 1. Load conference settings with row-level lock to prevent race conditions
+    # (two concurrent requests generating the same invoice number).
     result = await db.execute(
-        select(Conference).where(
+        select(Conference)
+        .where(
             Conference.id == conference_id,
             Conference.tenant_id == tenant_id,
         )
+        .with_for_update()
     )
     conference = result.scalar_one()
     settings = conference.settings or {}
@@ -82,7 +85,7 @@ async def generate_invoice_number(
     number = number.replace("[DD]", str(now.day).zfill(2))
     number = number.replace("[Count]", str(counter).zfill(5))  # Zero-pad to 5 digits
 
-    # 5. Update counter in settings
+    # 5. Update counter in settings (lock released on commit)
     conference.settings = {
         **settings,
         "invoice_counter_value": counter + 1,
@@ -104,11 +107,14 @@ async def generate_cancellation_number(
     (cancellation_number_template, cancellation_counter_*) so cancellation
     numbers have their own independent counter.
     """
+    # Row-level lock prevents concurrent duplicate cancellation numbers
     result = await db.execute(
-        select(Conference).where(
+        select(Conference)
+        .where(
             Conference.id == conference_id,
             Conference.tenant_id == tenant_id,
         )
+        .with_for_update()
     )
     conference = result.scalar_one()
     settings = conference.settings or {}

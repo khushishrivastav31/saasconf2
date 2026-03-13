@@ -19,6 +19,7 @@ from app.core.dependencies import (
 )
 from app.core.email import send_password_reset_email
 from app.core.exceptions import AuthenticationError
+from app.core.mfa import decrypt_secret, verify_recovery_code, verify_totp_code
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -27,7 +28,7 @@ from app.core.security import (
     hash_token,
     verify_password,
 )
-from app.core.token_blacklist import blacklist_token
+from app.core.token_blacklist import blacklist_token, clear_failed_logins, is_account_locked, record_failed_login
 from app.core.utils import utcnow
 from app.models.audit import AuditAction, AuditLog
 from app.models.module import TenantModule
@@ -35,9 +36,12 @@ from app.models.tenant import Tenant
 from app.models.token import RefreshToken
 from app.models.user import User
 from app.models.user_password_reset import UserPasswordReset
+from app.models.user_totp import UserTOTP
 from app.schemas.auth import (
     ForgotPasswordRequest,
     LoginRequest,
+    MFALoginResponse,
+    MFAVerifyRequest,
     RefreshRequest,
     ResetPasswordRequest,
     TokenResponse,
@@ -61,15 +65,23 @@ async def login(
     Authenticate user and return access/refresh tokens.
 
     Rate limited to prevent brute force attacks.
+    Account locked for 15 minutes after 5 consecutive failures.
     """
+    client_ip = get_client_ip(request)
+    user_agent = request.headers.get("User-Agent")
+
+    # Check account lockout before expensive password verification
+    if await is_account_locked(login_data.email):
+        raise AuthenticationError("Account temporarily locked due to too many failed login attempts. Try again later.")
+
     # Find user by email
     result = await db.execute(select(User).where(func.lower(User.email) == login_data.email.strip().lower()))
     user = result.scalar_one_or_none()
 
-    client_ip = get_client_ip(request)
-    user_agent = request.headers.get("User-Agent")
-
     if not user or not verify_password(login_data.password, user.password_hash):
+        # Track failed attempt for lockout
+        await record_failed_login(login_data.email)
+
         # Log failed login attempt
         audit_log = AuditLog(
             tenant_id=None,
@@ -97,6 +109,9 @@ async def login(
         # Check if user is the designated tenant super user
         is_tenant_super_user = tenant.super_user_id == user.id
 
+    # Clear lockout counter on successful authentication
+    await clear_failed_logins(login_data.email)
+
     # Get user's modules if they belong to a tenant
     modules: list[str] = []
     if user.tenant_id:
@@ -110,7 +125,21 @@ async def login(
             if tm.module:
                 modules.append(tm.module.code)
 
-    # Create tokens
+    # Check if MFA is enabled — if so, return a temporary MFA token
+    totp_result = await db.execute(select(UserTOTP).where(UserTOTP.user_id == user.id, UserTOTP.is_verified.is_(True)))
+    if totp_result.scalar_one_or_none():
+        mfa_token = create_access_token(
+            user_id=user.id,
+            tenant_id=user.tenant_id,
+            role=user.role,
+            modules=modules,
+            is_tenant_super_user=is_tenant_super_user,
+            token_type="mfa_pending",
+            expires_minutes=5,
+        )
+        return MFALoginResponse(mfa_token=mfa_token)  # type: ignore[return-value]
+
+    # Create tokens (no MFA)
     access_token = create_access_token(
         user_id=user.id,
         tenant_id=user.tenant_id,
@@ -149,6 +178,85 @@ async def login(
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+
+@router.post("/mfa/verify-login", response_model=TokenResponse)
+@limiter.limit("5/minute")
+async def mfa_verify_login(
+    request: Request,
+    data: MFAVerifyRequest,
+    db: DbSessionDep,
+) -> TokenResponse:
+    """Complete login by verifying a TOTP code (or recovery code).
+
+    Accepts the ``mfa_token`` returned by ``/auth/login`` when MFA is required.
+    """
+    # Decode the mfa_pending token
+    try:
+        payload = decode_token(data.mfa_token, token_type="mfa_pending")
+    except Exception as exc:
+        raise AuthenticationError("Invalid or expired MFA token. Please log in again.") from exc
+
+    user_id = payload["sub"]
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise AuthenticationError("Invalid MFA token")
+
+    # Load TOTP record
+    totp_result = await db.execute(select(UserTOTP).where(UserTOTP.user_id == user.id, UserTOTP.is_verified.is_(True)))
+    totp_record = totp_result.scalar_one_or_none()
+    if not totp_record:
+        raise AuthenticationError("MFA is not enabled for this account")
+
+    # Try TOTP code first, then recovery code
+    raw_secret = decrypt_secret(totp_record.encrypted_secret)
+    code_valid = verify_totp_code(raw_secret, data.code)
+
+    if not code_valid and totp_record.recovery_codes:
+        matched, remaining = verify_recovery_code(data.code, totp_record.recovery_codes)
+        if matched:
+            code_valid = True
+            totp_record.recovery_codes = remaining
+
+    if not code_valid:
+        raise AuthenticationError("Invalid MFA code")
+
+    # MFA verified — issue full tokens
+    access_token = create_access_token(
+        user_id=user.id,
+        tenant_id=payload.get("tenant_id"),
+        role=payload["role"],
+        modules=payload.get("modules", []),
+        is_tenant_super_user=payload.get("is_tenant_super_user", False),
+    )
+
+    refresh_tok, tok_hash, expires_at = create_refresh_token(user_id=user.id)
+    db.add(RefreshToken(user_id=user.id, token_hash=tok_hash, expires_at=expires_at))
+
+    user.last_login = utcnow()
+
+    client_ip = get_client_ip(request)
+    db.add(
+        AuditLog(
+            tenant_id=user.tenant_id,
+            user_id=user.id,
+            action=AuditAction.USER_LOGIN,
+            resource_type="user",
+            resource_id=user.id,
+            details={"mfa": True},
+            ip_address=client_ip,
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
+
+    await db.commit()
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_tok,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
@@ -303,6 +411,10 @@ async def get_current_user_info(
     if not user:
         raise AuthenticationError("User not found")
 
+    # Check MFA status
+    totp_result = await db.execute(select(UserTOTP).where(UserTOTP.user_id == user.id, UserTOTP.is_verified.is_(True)))
+    mfa_enabled = totp_result.scalar_one_or_none() is not None
+
     # Get tenant name, super user status, and fresh modules from database
     tenant_name = None
     is_tenant_super_user = False
@@ -336,6 +448,7 @@ async def get_current_user_info(
         modules=modules,
         is_active=user.is_active,
         is_tenant_super_user=is_tenant_super_user,
+        mfa_enabled=mfa_enabled,
         message_notifications_enabled=user.message_notifications_enabled,
         theme_preference=user.theme_preference,
         last_login=user.last_login,
@@ -368,7 +481,7 @@ async def update_user_preferences(
 
 
 @router.post("/forgot-password")
-@limiter.limit("3/minute")
+@limiter.limit("1/minute")
 async def forgot_password(
     request: Request,
     data: ForgotPasswordRequest,

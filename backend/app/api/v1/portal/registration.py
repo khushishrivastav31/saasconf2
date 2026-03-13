@@ -926,7 +926,7 @@ async def create_public_registration(
             pass  # Ignore invalid dates
 
     # Set RLS context for multi-tenant isolation
-    await db.execute(text(f"SET app.current_tenant_id = '{tenant_id}'"))
+    await db.execute(text("SET app.current_tenant_id = :tid"), {"tid": str(tenant_id)})
 
     # Security validations
     recaptcha_settings = conference.settings.get("recaptcha", {})

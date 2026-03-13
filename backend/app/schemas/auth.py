@@ -45,6 +45,7 @@ class UserResponse(BaseModel):
     modules: list[str] = []  # List of module codes the user has access to
     is_active: bool
     is_tenant_super_user: bool = False
+    mfa_enabled: bool = False
     message_notifications_enabled: bool = True
     theme_preference: str | None = None
     last_login: datetime | None
@@ -87,3 +88,48 @@ class UserPreferencesUpdate(BaseModel):
         if v is not None and v not in ("light", "dark"):
             return None
         return v
+
+
+# ---------------------------------------------------------------------------
+# MFA schemas
+# ---------------------------------------------------------------------------
+
+
+class MFALoginResponse(BaseModel):
+    """Returned instead of TokenResponse when MFA is required."""
+
+    mfa_required: bool = True
+    mfa_token: str  # short-lived token to present to /auth/mfa/verify
+
+
+class MFAVerifyRequest(BaseModel):
+    """Verify a TOTP code (or recovery code) during login."""
+
+    mfa_token: str
+    code: str = Field(..., min_length=6, max_length=12)
+
+
+class MFASetupResponse(BaseModel):
+    """Returned when initiating MFA setup."""
+
+    secret: str
+    provisioning_uri: str
+    qr_code_svg: str  # inline SVG for QR code
+
+
+class MFAVerifySetupRequest(BaseModel):
+    """Confirm MFA setup with a valid TOTP code."""
+
+    code: str = Field(..., min_length=6, max_length=6)
+
+
+class MFARecoveryCodesResponse(BaseModel):
+    """One-time display of recovery codes after MFA setup."""
+
+    recovery_codes: list[str]
+
+
+class MFAStatusResponse(BaseModel):
+    """Current MFA status for the authenticated user."""
+
+    mfa_enabled: bool

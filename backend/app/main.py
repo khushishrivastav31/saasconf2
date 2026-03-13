@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import secrets
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -163,6 +164,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        # CSP: 'unsafe-inline' for style-src is required by Tailwind CSS / React
+        # inline styles. Mitigated by DOMPurify + nh3 HTML sanitization (defense-in-depth).
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self'; "
@@ -190,7 +193,7 @@ app.add_middleware(
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With", "sentry-trace", "baggage"],
 )
 
 # Origin validation (CSRF defense)
@@ -354,10 +357,10 @@ async def data_retention_cleanup(
 
     logger = logging.getLogger("saasconf.ops")
 
-    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD
+    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD (timing-safe)
     auth_header = request.headers.get("Authorization", "")
     expected = f"Bearer {settings.SUPER_ADMIN_PASSWORD}"
-    if auth_header != expected:
+    if not secrets.compare_digest(auth_header, expected):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     try:
@@ -395,10 +398,10 @@ async def send_deadline_reminders(
 
     logger = logging.getLogger("saasconf.ops")
 
-    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD
+    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD (timing-safe)
     auth_header = request.headers.get("Authorization", "")
     expected = f"Bearer {settings.SUPER_ADMIN_PASSWORD}"
-    if auth_header != expected:
+    if not secrets.compare_digest(auth_header, expected):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     now = datetime.now(UTC)
@@ -492,10 +495,10 @@ async def send_payment_reminders(
 
     logger = logging.getLogger("saasconf.ops")
 
-    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD
+    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD (timing-safe)
     auth_header = request.headers.get("Authorization", "")
     expected = f"Bearer {settings.SUPER_ADMIN_PASSWORD}"
-    if auth_header != expected:
+    if not secrets.compare_digest(auth_header, expected):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     total_sent = 0

@@ -11,6 +11,7 @@ export interface User {
   modules: string[];
   is_active: boolean;
   is_tenant_super_user: boolean;
+  mfa_enabled: boolean;
   message_notifications_enabled: boolean;
   theme_preference: 'light' | 'dark' | null;
   last_login: string | null;
@@ -28,4 +29,9 @@ export interface TokenResponse {
   refresh_token: string;
   token_type: string;
   expires_in: number;
+}
+
+export interface MFALoginResponse {
+  mfa_required: boolean;
+  mfa_token: string;
 }

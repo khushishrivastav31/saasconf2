@@ -30,6 +30,9 @@ from app.schemas.platform_currency import (
 router = APIRouter()
 
 
+# Currency list/format endpoints use CurrentUserDep intentionally: tenant admins
+# need currency data when configuring invoice settings.  The data (currency names,
+# codes, symbols, format presets) is non-sensitive reference data.
 @router.get("/currencies", response_model=PlatformCurrencyListResponse)
 async def list_platform_currencies(
     current_user: CurrentUserDep,

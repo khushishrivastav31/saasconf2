@@ -91,6 +91,7 @@ from app.models.token import RefreshToken
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
 from app.models.user_password_reset import UserPasswordReset
+from app.models.user_totp import UserTOTP
 from app.models.volunteer import Volunteer
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 
@@ -188,6 +189,7 @@ __all__ = [
     "User",
     "UserConferenceAccess",
     "UserPasswordReset",
+    "UserTOTP",
     "Volunteer",
     "VolunteerAssignment",
     "VolunteerRole",

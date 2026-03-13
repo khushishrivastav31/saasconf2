@@ -1,13 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import api, { clearTokens, setTokens, getAccessToken } from '../config/api';
-import type { User, LoginRequest, TokenResponse } from '../types';
+import type { User, LoginRequest, TokenResponse, MFALoginResponse } from '../types';
 import { ThemeContext } from './ThemeContext';
+
+// eslint-disable-next-line react-refresh/only-export-components
+export class MFARequiredError extends Error {
+  mfaToken: string;
+  constructor(mfaToken: string) {
+    super('MFA required');
+    this.mfaToken = mfaToken;
+  }
+}
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
+  verifyMFA: (mfaToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -59,7 +69,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (credentials: LoginRequest) => {
     // Clear any cached data from previous user session
     queryClient.clear();
-    const response = await api.post<TokenResponse>('/auth/login', credentials);
+    const response = await api.post<TokenResponse | MFALoginResponse>('/auth/login', credentials);
+
+    // Check if MFA is required
+    if ('mfa_required' in response.data && response.data.mfa_required) {
+      throw new MFARequiredError((response.data as MFALoginResponse).mfa_token);
+    }
+
+    const { access_token, refresh_token } = response.data as TokenResponse;
+    setTokens(access_token, refresh_token);
+    await fetchUser();
+  };
+
+  const verifyMFA = async (mfaToken: string, code: string) => {
+    const response = await api.post<TokenResponse>('/auth/mfa/verify-login', {
+      mfa_token: mfaToken,
+      code,
+    });
     const { access_token, refresh_token } = response.data;
     setTokens(access_token, refresh_token);
     await fetchUser();
@@ -77,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, verifyMFA, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

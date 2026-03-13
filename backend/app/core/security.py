@@ -62,6 +62,8 @@ def create_access_token(
     role: str,
     modules: list[str] | None = None,
     is_tenant_super_user: bool = False,
+    token_type: str = "access",
+    expires_minutes: int | None = None,
 ) -> str:
     """
     Create a JWT access token.
@@ -72,11 +74,14 @@ def create_access_token(
         role: User's role
         modules: List of module codes the user has access to
         is_tenant_super_user: Whether the user is the designated super user for their tenant
+        token_type: Token type claim (default ``"access"``, also ``"mfa_pending"``)
+        expires_minutes: Override default expiry (for short-lived MFA tokens)
 
     Returns:
         Encoded JWT token
     """
-    expire = utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    minutes = expires_minutes if expires_minutes is not None else settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    expire = utcnow() + timedelta(minutes=minutes)
 
     payload = {
         "sub": str(user_id),
@@ -86,7 +91,7 @@ def create_access_token(
         "is_tenant_super_user": is_tenant_super_user,
         "exp": expire,
         "iat": utcnow(),
-        "type": "access",
+        "type": token_type,
         "jti": secrets.token_urlsafe(16),
     }
 
