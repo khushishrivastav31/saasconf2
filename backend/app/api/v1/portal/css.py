@@ -190,9 +190,7 @@ async def get_custom_css(
         HTTPException: If tenant or conference not found
     """
     # Find tenant (case-insensitive, matching registration.py)
-    result = await db.execute(
-        select(Tenant).where(func.lower(Tenant.slug) == tenant_slug.lower())
-    )
+    result = await db.execute(select(Tenant).where(func.lower(Tenant.slug) == tenant_slug.lower()))
     tenant = result.scalar_one_or_none()
     if not tenant:
         raise HTTPException(status_code=404, detail=f"Tenant '{tenant_slug}' not found")

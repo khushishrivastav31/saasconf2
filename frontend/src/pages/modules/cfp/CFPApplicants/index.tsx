@@ -129,10 +129,15 @@ export default function CFPApplicants({
 
   const effectiveConferenceId = conferenceId || filterConferenceId || undefined;
 
+  // For the list query, only filter by conference when the user explicitly
+  // selects one in standalone mode.  When embedded inside a conference page,
+  // show ALL tenant applicants so newly-created ones are immediately visible.
+  const listFilterId = isStandalone ? filterConferenceId || undefined : undefined;
+
   const { data, isLoading } = useQuery({
-    queryKey: ['cfp-applicants', effectiveConferenceId ?? 'all'],
+    queryKey: ['cfp-applicants', listFilterId ?? 'all'],
     queryFn: async () => {
-      const params = effectiveConferenceId ? { conference_id: effectiveConferenceId } : {};
+      const params = listFilterId ? { conference_id: listFilterId } : {};
       const response = await api.get<ApplicantListResponse>('/cfp/applicants', { params });
       return response.data;
     },
@@ -283,13 +288,7 @@ export default function CFPApplicants({
       }
       setError(null);
       setIsAdding(false);
-      // Add the new applicant to the cache so it's visible even when
-      // the list is filtered by conference (new applicants have no papers yet)
-      const queryKey = ['cfp-applicants', effectiveConferenceId ?? 'all'];
-      queryClient.setQueryData<ApplicantListResponse>(queryKey, (old) => {
-        if (!old) return { items: [applicant], total: 1 };
-        return { items: [...old.items, applicant], total: old.total + 1 };
-      });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
       setSelectedApplicantId(applicant.id);
     } catch {
       // error is handled by onError

@@ -135,9 +135,7 @@ api_router.include_router(
 )
 
 # Badges (conference-scoped)
-api_router.include_router(
-    badges.router, prefix="/conferences/{conference_id}/badges", tags=["Badges"]
-)
+api_router.include_router(badges.router, prefix="/conferences/{conference_id}/badges", tags=["Badges"])
 
 # Budget planning (conference-scoped)
 api_router.include_router(
