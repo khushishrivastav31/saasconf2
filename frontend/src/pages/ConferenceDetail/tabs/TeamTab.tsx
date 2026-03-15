@@ -282,10 +282,10 @@ function ConferenceTeamTab({
                       className={`w-full border ${editPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                       value={editForm.phone || ''}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        setEditForm({ ...editForm, phone: value });
-                        setEditPhoneError(validatePhone(value));
+                        setEditForm({ ...editForm, phone: e.target.value });
+                        if (editPhoneError) setEditPhoneError(null);
                       }}
+                      onBlur={(e) => setEditPhoneError(validatePhone(e.target.value))}
                     />
                     {editPhoneError && (
                       <p className="mt-1 text-xs text-red-600">{editPhoneError}</p>
@@ -464,10 +464,10 @@ function ConferenceTeamTab({
                 className={`w-full border ${newPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 value={newMember.phone}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  setNewMember({ ...newMember, phone: value });
-                  setNewPhoneError(validatePhone(value));
+                  setNewMember({ ...newMember, phone: e.target.value });
+                  if (newPhoneError) setNewPhoneError(null);
                 }}
+                onBlur={(e) => setNewPhoneError(validatePhone(e.target.value))}
               />
               {newPhoneError && <p className="mt-1 text-xs text-red-600">{newPhoneError}</p>}
             </div>

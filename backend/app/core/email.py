@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.email_templates import (
+    build_conference_team_invitation_context,
     build_cospeaker_context,
     build_new_message_context,
     build_password_reset_context,
@@ -332,6 +333,45 @@ async def send_tenant_user_welcome_email(
     )
 
     return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text, from_email=from_email)
+
+
+async def send_conference_team_invitation_email(
+    db: AsyncSession,
+    *,
+    email: str,
+    first_name: str,
+    last_name: str,
+    conference_name: str,
+    company_name: str,
+    access_level: str,
+    conference_id: UUID,
+    tenant_id: UUID,
+    support_email: str = "",
+    base_url: str = "http://localhost:3000",
+) -> bool:
+    """Send an email notifying a user they've been added to a conference team."""
+    settings = get_settings()
+    dashboard_link = f"{base_url}/conferences/{conference_id}"
+
+    context = build_conference_team_invitation_context(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        conference_name=conference_name,
+        company_name=company_name,
+        access_level=access_level,
+        dashboard_link=dashboard_link,
+        support_email=support_email or settings.RESEND_FROM_EMAIL,
+    )
+
+    rendered = await render_email(
+        db,
+        EmailTemplateType.CONFERENCE_TEAM_INVITATION,
+        context,
+        tenant_id=tenant_id,
+    )
+
+    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
 
 
 async def send_deadline_reminder(

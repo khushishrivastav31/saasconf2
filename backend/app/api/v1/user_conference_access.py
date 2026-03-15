@@ -1,20 +1,24 @@
 """User conference access management endpoints."""
 
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Request
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
+from app.config import get_settings
 from app.core.dependencies import (
     CurrentUserDep,
     DbSessionDep,
     TenantAdminDep,
     get_client_ip,
 )
+from app.core.email import send_conference_team_invitation_email
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
 from app.models.conference import Conference
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.user_conference_access import ConferenceAccessLevel, UserConferenceAccess
 from app.schemas.user_conference_access import (
@@ -27,6 +31,8 @@ from app.schemas.user_conference_access import (
     UserConferenceAccessUpdate,
     UserConferenceAccessWithDetails,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -140,6 +146,27 @@ async def grant_conference_access(
 
     await db.commit()
     await db.refresh(access)
+
+    # Send conference team invitation email (best-effort, don't fail the grant)
+    try:
+        settings = get_settings()
+        tenant_result = await db.execute(select(Tenant.name).where(Tenant.id == current_user.tenant_id))
+        tenant_name = tenant_result.scalar_one_or_none() or ""
+        access_label = "Admin" if access_data.access_level == "admin" else "Read Only"
+        await send_conference_team_invitation_email(
+            db,
+            email=user.email,
+            first_name=user.first_name or "",
+            last_name=user.last_name or "",
+            conference_name=conference.name,
+            company_name=tenant_name,
+            access_level=access_label,
+            conference_id=conference.id,
+            tenant_id=current_user.tenant_id,
+            base_url=settings.FRONTEND_BASE_URL,
+        )
+    except Exception:
+        logger.exception("Failed to send conference team invitation email")
 
     return UserConferenceAccessResponse.model_validate(access)
 

@@ -10,12 +10,14 @@ import portalApi from '../../config/portalApi';
 import { useToast } from '../Toast';
 import { parseApiError } from '../../utils/apiError';
 import ConferenceLogo from '../ConferenceLogo';
+import RichTextDisplay from '../common/RichTextDisplay';
 
 interface PendingQuestion {
   id: string;
   text: string;
   type: 'checkbox' | 'text' | 'radio' | 'dropdown';
   required: boolean;
+  help_text?: string;
   options: string[];
 }
 
@@ -237,6 +239,13 @@ export default function RegistrationQuestionnaire({
                   </select>
                 </div>
               ) : null}
+              {q.help_text && (
+                <RichTextDisplay
+                  content={q.help_text}
+                  className="text-xs text-gray-400 dark:text-gray-500 mt-1 [&_a]:text-primary-600 [&_a]:underline"
+                  fallback=""
+                />
+              )}
               {validationErrors[q.id] && (
                 <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                   {validationErrors[q.id]}

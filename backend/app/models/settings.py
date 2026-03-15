@@ -3,8 +3,9 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import ClassVar
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -297,6 +298,101 @@ class PronounOption(Base):
         return f"<PronounOption {self.name}>"
 
 
+class UserRole(Base):
+    """
+    Conference-scoped user role definitions.
+
+    Each conference has its own set of user roles (e.g. Keynote, Speaker, Tutorial).
+    These roles can be assigned to users for filtering, email targeting, etc.
+    """
+
+    __tablename__ = "user_roles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    conference_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("conferences.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_system: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Fixed system role names — cannot be renamed or deleted
+    SYSTEM_ROLES: ClassVar[list[str]] = [
+        "Keynote",
+        "Tutorial",
+        "Speaker",
+        "Social Event",
+        "Bonus Session",
+        "Active Session",
+    ]
+
+    __table_args__ = (
+        Index("idx_user_roles_tenant", "tenant_id"),
+        Index("idx_user_roles_conference", "conference_id"),
+        Index("idx_user_roles_name", "tenant_id", "conference_id", "name", unique=True),
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserRole {self.name}>"
+
+
+class UserRoleAssignment(Base):
+    """
+    Many-to-many assignment of CFP applicants to conference roles.
+
+    An applicant can have zero or more roles within a conference.
+    Roles are defined in the UserRole table; this table links applicants to those roles.
+    """
+
+    __tablename__ = "user_role_assignments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_role_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("user_roles.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    applicant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("cfp_applicants.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    assigned_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("user_role_id", "applicant_id", name="uq_user_role_assignment"),
+        Index("idx_ura_tenant", "tenant_id"),
+        Index("idx_ura_role", "user_role_id"),
+        Index("idx_ura_applicant", "applicant_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserRoleAssignment role={self.user_role_id} applicant={self.applicant_id}>"
+
+
 class EmailTemplate(Base):
     """
     Email templates for system and conference communications.
@@ -344,6 +440,7 @@ class EmailTemplate(Base):
         nullable=True,
     )
     template_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     subject: Mapped[str] = mapped_column(String(255), nullable=False)
     body_html: Mapped[str] = mapped_column(Text, nullable=False)
     body_text: Mapped[str | None] = mapped_column(Text, nullable=True)

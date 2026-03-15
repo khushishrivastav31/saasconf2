@@ -14,7 +14,7 @@ import RichTextEditor from '../../../../components/common/RichTextEditor';
 import MediaPreviewModal from '../../../../components/MediaPreviewModal';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import { DeleteIcon } from '../../../ConferenceDetail/icons';
-import type { Applicant, PronounOption } from '../../../../types';
+import type { Applicant, PronounOption, UserRole } from '../../../../types';
 import { SPEAKER_SOCIAL_PLATFORMS } from '../../../../config/socialPlatforms';
 
 export interface ApplicantFormData {
@@ -32,6 +32,7 @@ export interface ApplicantFormData {
   needs_accessibility: boolean;
   accessibility_details: string;
   agrees_to_recording: boolean;
+  role_ids: string[];
 }
 
 const emptyForm: ApplicantFormData = {
@@ -49,6 +50,7 @@ const emptyForm: ApplicantFormData = {
   needs_accessibility: false,
   accessibility_details: '',
   agrees_to_recording: false,
+  role_ids: [],
 };
 
 // Convert ApplicantSocialLinks (with nullable values) to Record<string, string>
@@ -100,6 +102,17 @@ export function ApplicantForm({
     enabled: !!conferenceId,
   });
 
+  const { data: userRoles } = useQuery({
+    queryKey: ['user-roles-active', conferenceId],
+    queryFn: async () => {
+      const response = await api.get<{ items: UserRole[] }>(
+        `/conferences/${conferenceId}/settings/user-roles`
+      );
+      return response.data.items.filter((r) => r.is_active);
+    },
+    enabled: !!conferenceId,
+  });
+
   const [formData, setFormData] = useState<ApplicantFormData>(
     applicant
       ? {
@@ -117,6 +130,7 @@ export function ApplicantForm({
           needs_accessibility: applicant.needs_accessibility,
           accessibility_details: applicant.accessibility_details || '',
           agrees_to_recording: applicant.agrees_to_recording,
+          role_ids: applicant.roles?.map((r) => r.id) || [],
         }
       : emptyForm
   );
@@ -163,6 +177,7 @@ export function ApplicantForm({
             needs_accessibility: applicant.needs_accessibility,
             accessibility_details: applicant.accessibility_details || '',
             agrees_to_recording: applicant.agrees_to_recording,
+            role_ids: applicant.roles?.map((r) => r.id) || [],
           }
         : emptyForm
     );
@@ -528,6 +543,59 @@ export function ApplicantForm({
           rows={4}
         />
       </div>
+
+      {/* User Roles */}
+      {conferenceId && userRoles && userRoles.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Roles
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {userRoles.map((role) => {
+              const isSelected = formData.role_ids.includes(role.id);
+              return (
+                <button
+                  key={role.id}
+                  type="button"
+                  onClick={() =>
+                    setFormData((d) => ({
+                      ...d,
+                      role_ids: isSelected
+                        ? d.role_ids.filter((id) => id !== role.id)
+                        : [...d.role_ids, role.id],
+                    }))
+                  }
+                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    isSelected
+                      ? 'bg-primary-100 text-primary-800 border-primary-300 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-700'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {isSelected && (
+                    <svg
+                      className="w-3.5 h-3.5 mr-1.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                  {role.name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            Click to toggle role assignment
+          </p>
+        </div>
+      )}
 
       {/* Social Media Links - Dynamic Add/Remove */}
       <div>

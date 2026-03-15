@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.settings.email_templates import DEFAULT_TEMPLATES
+from app.models.conference import Conference
 from app.models.settings import EmailTemplate
 from app.schemas.email_template import EmailTemplateType
 
@@ -68,7 +69,21 @@ async def get_template(
         if template:
             return template.subject, template.body_html, template.body_text
 
-    # Try system-level template (for system types like tenant_user_welcome)
+    # Try tenant-level system template (customized per tenant)
+    if template_type in EmailTemplateType.SYSTEM_TYPES and tenant_id:
+        result = await db.execute(
+            select(EmailTemplate).where(
+                EmailTemplate.tenant_id == tenant_id,
+                EmailTemplate.conference_id.is_(None),
+                EmailTemplate.template_type == template_type,
+                EmailTemplate.is_active == True,
+            )
+        )
+        template = result.scalar_one_or_none()
+        if template:
+            return template.subject, template.body_html, template.body_text
+
+    # Try global system-level template (tenant_id=NULL, for backwards compat)
     if template_type in EmailTemplateType.SYSTEM_TYPES:
         result = await db.execute(
             select(EmailTemplate).where(
@@ -89,6 +104,41 @@ async def get_template(
         default.get("body_html", ""),
         default.get("body_text"),
     )
+
+
+async def _get_email_header_footer(
+    db: AsyncSession,
+    conference_id: UUID | None,
+) -> tuple[str, str]:
+    """Load email header/footer HTML from conference settings.
+
+    Returns (header_html, footer_html) — empty strings when not configured.
+    """
+    if not conference_id:
+        return "", ""
+    result = await db.execute(select(Conference.settings).where(Conference.id == conference_id))
+    settings = result.scalar_one_or_none()
+    if not settings:
+        return "", ""
+    return (
+        settings.get("email_header_html", "") or "",
+        settings.get("email_footer_html", "") or "",
+    )
+
+
+def _wrap_with_header_footer(body_html: str, header_html: str, footer_html: str) -> str:
+    """Wrap email body HTML with header and footer if configured."""
+    if not header_html and not footer_html:
+        return body_html
+    parts: list[str] = []
+    if header_html:
+        parts.append(f'<div style="margin-bottom: 16px;">{header_html}</div>')
+    parts.append(body_html)
+    if footer_html:
+        parts.append(
+            f'<div style="margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 16px;">{footer_html}</div>'
+        )
+    return "\n".join(parts)
 
 
 async def render_email(
@@ -116,6 +166,13 @@ async def render_email(
     rendered_subject = replace_placeholders(subject, context)
     rendered_html = replace_placeholders(body_html, context, is_html=True)
     rendered_text = replace_placeholders(body_text, context) if body_text else None
+
+    # Wrap with conference-level email header/footer (replace placeholders in them too)
+    header_html, footer_html = await _get_email_header_footer(db, conference_id)
+    if header_html or footer_html:
+        rendered_header = replace_placeholders(header_html, context, is_html=True) if header_html else ""
+        rendered_footer = replace_placeholders(footer_html, context, is_html=True) if footer_html else ""
+        rendered_html = _wrap_with_header_footer(rendered_html, rendered_header, rendered_footer)
 
     return RenderedEmail(rendered_subject, rendered_html, rendered_text)
 
@@ -247,6 +304,32 @@ def build_tenant_welcome_context(
         "Company Name": company_name,
         "User Type": user_type,
         "Verify Link": verify_link,
+        "Support Email": support_email,
+    }
+
+
+def build_conference_team_invitation_context(
+    *,
+    first_name: str = "",
+    last_name: str = "",
+    email: str = "",
+    conference_name: str = "",
+    company_name: str = "",
+    access_level: str = "",
+    dashboard_link: str = "",
+    support_email: str = "",
+) -> dict[str, str]:
+    """Build context for conference team invitation emails."""
+    full_name = f"{first_name} {last_name}".strip() or email.split("@")[0]
+    return {
+        "First Name": first_name or full_name,
+        "Last Name": last_name,
+        "Full Name": full_name,
+        "Email": email,
+        "Conference Name": conference_name,
+        "Company Name": company_name,
+        "Access Level": access_level,
+        "Dashboard Link": dashboard_link,
         "Support Email": support_email,
     }
 

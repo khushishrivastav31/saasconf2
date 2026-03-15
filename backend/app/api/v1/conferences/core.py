@@ -19,6 +19,7 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
+from app.core.html_sanitize import sanitize_html
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.models.attachment import Attachment
@@ -411,6 +412,12 @@ async def update_conference(
             tm_dict.pop("user_id", None)
             team_members_data.append(tm_dict)
         update_data["team_members"] = team_members_data
+
+    # Sanitize HTML fields in settings
+    if "settings" in update_data and isinstance(update_data["settings"], dict):
+        for html_key in ("email_header_html", "email_footer_html"):
+            if html_key in update_data["settings"] and update_data["settings"][html_key]:
+                update_data["settings"][html_key] = sanitize_html(update_data["settings"][html_key])
 
     for field, value in update_data.items():
         setattr(conference, field, value)

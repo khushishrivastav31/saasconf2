@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import get_settings
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.email import send_cospeaker_invitation_email
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
@@ -1062,6 +1063,7 @@ async def _sync_cospeakers(
                 tenant_slug = row[0]
                 company_name = row[1]
 
+            cospeaker_settings = get_settings()
             await send_cospeaker_invitation_email(
                 db,
                 email=applicant.email,
@@ -1074,6 +1076,7 @@ async def _sync_cospeakers(
                 last_name=applicant.last_name,
                 tenant_slug=tenant_slug,
                 support_email=conf_support_email or "",
+                base_url=cospeaker_settings.PORTAL_BASE_URL,
             )
 
     await db.flush()

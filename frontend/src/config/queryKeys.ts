@@ -179,6 +179,7 @@ export const queryKeys = {
 
   // Use this for invoice settings
   invoiceSettings: (conferenceId: string) => ['invoice-settings', conferenceId] as const,
+  badgeSettings: (conferenceId: string) => ['badge-settings', conferenceId] as const,
   stripeSettings: (conferenceId: string) => ['stripe-settings', conferenceId] as const,
   budgets: {
     byConference: (conferenceId: string) => ['conference-budgets', conferenceId] as const,

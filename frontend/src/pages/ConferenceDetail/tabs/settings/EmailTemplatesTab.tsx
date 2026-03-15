@@ -8,7 +8,7 @@ import type {
   EmailTemplateUpdate,
   EmailTemplateType,
 } from '../../../../types';
-import { EMAIL_TEMPLATE_LABELS } from '../../../../types';
+import { EMAIL_TEMPLATE_LABELS, EMAIL_TEMPLATE_DESCRIPTIONS } from '../../../../types';
 import { queryKeys } from '../../../../config/queryKeys';
 import { parseApiError } from '../../../../utils/apiError';
 import Modal from '../../../../components/Modal';
@@ -97,7 +97,9 @@ function EmailTemplatesTab({ conference, isAdmin }: { conference: Conference; is
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-4">
         <div>
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Email Templates</h2>
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            System Email Templates
+          </h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Customize email templates sent to speakers and committee members
           </p>
@@ -139,11 +141,23 @@ function EmailTemplatesTab({ conference, isAdmin }: { conference: Conference; is
                     <div className="flex items-center">
                       <div>
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {EMAIL_TEMPLATE_LABELS[template.template_type as EmailTemplateType] ||
+                          {template.display_name ||
+                            EMAIL_TEMPLATE_LABELS[template.template_type as EmailTemplateType] ||
                             template.template_type}
                         </div>
+                        {EMAIL_TEMPLATE_DESCRIPTIONS[
+                          template.template_type as EmailTemplateType
+                        ] && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {
+                              EMAIL_TEMPLATE_DESCRIPTIONS[
+                                template.template_type as EmailTemplateType
+                              ]
+                            }
+                          </div>
+                        )}
                         {!template.id && (
-                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                             Using default template
                           </div>
                         )}
@@ -243,6 +257,15 @@ const VALID_PLACEHOLDERS = [
   'Package Name',
   'Custom Message',
   'Contract Content',
+  'Invoice Number',
+  'Total Amount',
+  'Invoice Amount',
+  'Currency',
+  'Due Date',
+  'Days Overdue',
+  'Booking Option Name',
+  'Password Setup Link',
+  'Cancellation Reason',
 ];
 
 // Extract all placeholders from text (anything in [brackets])
@@ -272,6 +295,11 @@ function EmailTemplateForm({
   isSubmitting,
   error,
 }: EmailTemplateFormProps) {
+  const [displayName, setDisplayName] = useState(
+    template.display_name ||
+      EMAIL_TEMPLATE_LABELS[template.template_type as EmailTemplateType] ||
+      template.template_type
+  );
   const [subject, setSubject] = useState(template.subject);
   const [bodyHtml, setBodyHtml] = useState(template.body_html);
   const [bodyText, setBodyText] = useState(template.body_text || '');
@@ -322,6 +350,7 @@ function EmailTemplateForm({
 
     setPlaceholderWarning(null);
     onSubmit({
+      display_name: displayName,
       subject,
       body_html: bodyHtml,
       body_text: bodyText || undefined,
@@ -333,6 +362,7 @@ function EmailTemplateForm({
   const handleSaveAnyway = () => {
     setPlaceholderWarning(null);
     onSubmit({
+      display_name: displayName,
       subject,
       body_html: bodyHtml,
       body_text: bodyText || undefined,
@@ -402,6 +432,22 @@ function EmailTemplateForm({
       </Modal>
 
       <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Template Name
+          </label>
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+            placeholder={
+              EMAIL_TEMPLATE_LABELS[template.template_type as EmailTemplateType] ||
+              template.template_type
+            }
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Subject

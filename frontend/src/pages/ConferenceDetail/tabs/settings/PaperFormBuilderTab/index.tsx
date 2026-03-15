@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -288,6 +288,24 @@ function PaperFormBuilderTab({
     });
   };
 
+  const handleBuiltinFieldHelpText = (fieldKey: string, helpText: string) => {
+    if (!schema) return;
+    checkVersioningAndExecute(() => {
+      const existing = schema.builtin_fields_config[fieldKey] || { visible: true, required: false };
+      const newConfig = {
+        ...schema.builtin_fields_config,
+        [fieldKey]: { ...existing, help_text: helpText || null },
+      };
+      updateSchemaMutation.mutate({ builtin_fields_config: newConfig });
+    });
+  };
+
+  // Get selected built-in field info for help text editing
+  const selectedBuiltinKey = useMemo(() => {
+    if (!selectedFieldId?.startsWith('builtin_') || !schema) return null;
+    return selectedFieldId.replace('builtin_', '');
+  }, [selectedFieldId, schema]);
+
   const handleAddField = (fieldType: PaperFormFieldType) => {
     // New custom fields go at the end
     const nextOrder = unifiedFields.length;
@@ -534,11 +552,19 @@ function PaperFormBuilderTab({
 
             {/* Right: Field Properties */}
             <div className="col-span-3">
-              <FieldPropertyEditor
-                field={selectedCustomField}
-                onUpdate={handleUpdateField}
-                isAdmin={isAdmin}
-              />
+              {selectedBuiltinKey ? (
+                <BuiltinHelpTextPanel
+                  fieldKey={selectedBuiltinKey}
+                  initialValue={schema?.builtin_fields_config[selectedBuiltinKey]?.help_text || ''}
+                  onSave={handleBuiltinFieldHelpText}
+                />
+              ) : (
+                <FieldPropertyEditor
+                  field={selectedCustomField}
+                  onUpdate={handleUpdateField}
+                  isAdmin={isAdmin}
+                />
+              )}
             </div>
           </div>
 
@@ -580,6 +606,64 @@ function PaperFormBuilderTab({
   );
 }
 
+// --- Built-in Field Help Text Panel ------------------------------------------
+
+function BuiltinHelpTextPanel({
+  fieldKey,
+  initialValue,
+  onSave,
+}: {
+  fieldKey: string;
+  initialValue: string;
+  onSave: (fieldKey: string, helpText: string) => void;
+}) {
+  const [value, setValue] = useState(initialValue);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync when switching fields
+  useEffect(() => {
+    setValue(initialValue);
+  }, [fieldKey, initialValue]);
+
+  const handleChange = useCallback(
+    (text: string) => {
+      setValue(text);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => onSave(fieldKey, text), 600);
+    },
+    [fieldKey, onSave]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  return (
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+        Built-in Field Settings
+      </h3>
+      <div>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          Help Text
+        </label>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder="Optional help text shown below the field..."
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+        />
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+          Displayed below the field on the submission form.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // --- Form Preview Component --------------------------------------------------
 
 function FormPreview({ unifiedFields }: { unifiedFields: UnifiedField[] }) {
@@ -597,7 +681,14 @@ function FormPreview({ unifiedFields }: { unifiedFields: UnifiedField[] }) {
                 {field.is_required && <span className="text-red-500 ml-1">*</span>}
               </label>
               {field.type === 'builtin' ? (
-                renderBuiltinPreviewField(field.key)
+                <>
+                  {renderBuiltinPreviewField(field.key)}
+                  {field.builtinConfig?.help_text && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {field.builtinConfig.help_text}
+                    </p>
+                  )}
+                </>
               ) : field.customField ? (
                 <>
                   {field.customField.description && (

@@ -227,6 +227,7 @@ describe('ServiceProviderDetailPanel', () => {
 
       const phoneInput = screen.getByPlaceholderText('+491234545 or 00491234566');
       await user.type(phoneInput, 'invalid');
+      fireEvent.blur(phoneInput);
       expect(screen.getByText('Phone must start with + or 00')).toBeInTheDocument();
     });
 
@@ -236,6 +237,7 @@ describe('ServiceProviderDetailPanel', () => {
 
       const phoneInput = screen.getByPlaceholderText('+491234545 or 00491234566');
       await user.type(phoneInput, 'invalid');
+      fireEvent.blur(phoneInput);
       expect(screen.getByTestId('save-disabled')).toHaveTextContent('true');
     });
 
@@ -261,6 +263,7 @@ describe('ServiceProviderDetailPanel', () => {
 
       const phoneInput = screen.getByPlaceholderText('+491234545 or 00491234566');
       await user.type(phoneInput, 'invalid');
+      fireEvent.blur(phoneInput);
 
       const form = screen.getByTestId('tab-details').querySelector('form');
       fireEvent.submit(form!);

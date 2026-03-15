@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from .badge_settings import router as badge_settings_router
 from .booking_matrix import router as booking_matrix_router
 from .booking_options import router as booking_options_router
 from .booking_packages import router as booking_packages_router
@@ -24,11 +25,13 @@ from .session_types import router as session_types_router
 from .speaker_expense_settings import router as speaker_expense_settings_router
 from .sponsor_packages import router as sponsor_packages_router
 from .stripe_settings import router as stripe_settings_router
+from .user_roles import router as user_roles_router
 from .volunteer_roles import router as volunteer_roles_router
 
 router = APIRouter()
 
 router.include_router(volunteer_roles_router)
+router.include_router(user_roles_router)
 router.include_router(location_types_router)
 router.include_router(currencies_router)
 router.include_router(sponsor_packages_router)
@@ -51,3 +54,4 @@ router.include_router(stripe_settings_router)
 router.include_router(policies_router)
 router.include_router(registration_questions_router)
 router.include_router(speaker_expense_settings_router)
+router.include_router(badge_settings_router)

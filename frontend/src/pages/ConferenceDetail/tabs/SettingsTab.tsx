@@ -28,8 +28,12 @@ import FinancialSettingsTab from './settings/FinancialSettingsTab';
 import PortalCustomizationTab from './settings/PortalCustomizationTab';
 import PoliciesTab from './settings/PoliciesTab';
 import RegistrationQuestionsTab from './settings/RegistrationQuestionsTab';
+import BadgeDesignerTab from './settings/BadgeDesignerTab';
+import ConferenceUserRolesTab from './settings/UserRolesTab';
+import PendingVerificationsTab from './settings/PendingVerificationsTab';
 
 type ConferenceSettingsActiveTab =
+  | 'user-roles'
   | 'volunteer-roles'
   | 'location-types'
   | 'sponsor-packages'
@@ -56,7 +60,9 @@ type ConferenceSettingsActiveTab =
   | 'zugferd-settings'
   | 'stripe-setup'
   | 'payment-reminders'
-  | 'speaker-expenses';
+  | 'speaker-expenses'
+  | 'badge-designer'
+  | 'pending-verifications';
 
 interface SettingsNavItem {
   key: ConferenceSettingsActiveTab;
@@ -68,6 +74,21 @@ interface SettingsNavItem {
 
 const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   // People & Roles
+  {
+    key: 'user-roles',
+    label: 'User Roles',
+    group: 'People & Roles',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    ),
+  },
   {
     key: 'volunteer-roles',
     label: 'Volunteer Tasks',
@@ -210,6 +231,18 @@ const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
       </svg>
     ),
   },
+  {
+    key: 'badge-designer',
+    label: 'Badge Designer',
+    group: 'Conference Setup',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <rect x="4" y="2" width="16" height="20" rx="2" strokeWidth={1.5} />
+        <circle cx="12" cy="10" r="3" strokeWidth={1.5} />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 18h8M9 14h6" />
+      </svg>
+    ),
+  },
   // CFP & Reviews
   {
     key: 'paper-form-builder',
@@ -280,7 +313,7 @@ const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   },
   {
     key: 'email-templates',
-    label: 'Email Templates',
+    label: 'System Email Templates',
     group: 'Communication',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -289,6 +322,21 @@ const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
           strokeLinejoin="round"
           strokeWidth={1.5}
           d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+        />
+      </svg>
+    ),
+  },
+  {
+    key: 'pending-verifications',
+    label: 'Pending Verifications',
+    group: 'Communication',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
         />
       </svg>
     ),
@@ -525,11 +573,13 @@ function ConferenceSettingsTab({
     );
   }, [canAccessRestricted]);
 
-  const [activeTab, setActiveTab] = useState<ConferenceSettingsActiveTab>('volunteer-roles');
+  const [activeTab, setActiveTab] = useState<ConferenceSettingsActiveTab>('user-roles');
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'user-roles':
+        return <ConferenceUserRolesTab conference={conference} isAdmin={isAdmin} />;
       case 'volunteer-roles':
         return <ConferenceVolunteerRolesTab conference={conference} isAdmin={isAdmin} />;
       case 'location-types':
@@ -584,6 +634,10 @@ function ConferenceSettingsTab({
         return <PaymentReminderSettingsTab conference={conference} isAdmin={isAdmin} />;
       case 'speaker-expenses':
         return <SpeakerExpenseSettingsTab conference={conference} isAdmin={isAdmin} />;
+      case 'badge-designer':
+        return <BadgeDesignerTab conference={conference} isAdmin={isAdmin} />;
+      case 'pending-verifications':
+        return <PendingVerificationsTab conference={conference} isAdmin={isAdmin} />;
       default:
         return null;
     }

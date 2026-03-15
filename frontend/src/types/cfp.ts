@@ -1,12 +1,12 @@
 // Call for Papers types
-export type CFPStatus = "draft" | "open" | "closed" | "review" | "completed";
+export type CFPStatus = 'draft' | 'open' | 'closed' | 'review' | 'completed';
 export type SubmissionStatus =
-  | "submitted"
-  | "under_review"
-  | "accepted"
-  | "rejected"
-  | "waitlisted"
-  | "withdrawn";
+  | 'submitted'
+  | 'under_review'
+  | 'accepted'
+  | 'rejected'
+  | 'waitlisted'
+  | 'withdrawn';
 
 export interface CallForPapers {
   id: string;
@@ -220,6 +220,11 @@ export interface ApplicantSocialLinks {
   website?: string | null;
 }
 
+export interface ApplicantRoleInfo {
+  id: string;
+  name: string;
+}
+
 export interface Applicant {
   id: string;
   tenant_id: string;
@@ -236,6 +241,7 @@ export interface Applicant {
   needs_accessibility: boolean;
   accessibility_details: string | null;
   agrees_to_recording: boolean;
+  roles: ApplicantRoleInfo[];
   picture_url: string | null;
   video_url: string | null;
   created_at: string;
@@ -257,25 +263,22 @@ export interface ApplicantCreate {
   accessibility_details?: string;
   agrees_to_recording?: boolean;
   password: string;
+  role_ids?: string[];
 }
 
 // Paper types
 export type PaperStatus =
-  | "draft"
-  | "submitted"
-  | "in_evaluation"
-  | "evaluated"
-  | "final_consideration"
-  | "rejected"
-  | "accepted";
+  | 'draft'
+  | 'submitted'
+  | 'in_evaluation'
+  | 'evaluated'
+  | 'final_consideration'
+  | 'rejected'
+  | 'accepted';
 
-export type PaperLevel =
-  | "beginner"
-  | "intermediate"
-  | "advanced"
-  | "all_levels";
+export type PaperLevel = 'beginner' | 'intermediate' | 'advanced' | 'all_levels';
 
-export type CospeakerInvitationStatus = "pending" | "accepted" | "declined";
+export type CospeakerInvitationStatus = 'pending' | 'accepted' | 'declined';
 
 export interface Cospeaker {
   applicant: Applicant;

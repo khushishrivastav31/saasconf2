@@ -49,6 +49,7 @@ class BuiltinFieldConfig(BaseModel):
     visible: bool = True
     required: bool = False
     display_order: int | None = None
+    help_text: str | None = None
 
 
 # --- Paper Form Field Schemas ---

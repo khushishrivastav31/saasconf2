@@ -197,6 +197,9 @@ export default function CFPApplicants({
       if (Object.keys(socialLinks).length > 0) {
         payload.social_links = socialLinks;
       }
+      if (data.role_ids.length > 0) {
+        payload.role_ids = data.role_ids;
+      }
       const response = await api.post<Applicant>('/cfp/applicants', payload);
       return response.data;
     },
@@ -232,6 +235,7 @@ export default function CFPApplicants({
         }
       });
       payload.social_links = socialLinks;
+      payload.role_ids = data.role_ids;
       const response = await api.put<Applicant>(`/cfp/applicants/${id}`, payload);
       return response.data;
     },
@@ -279,7 +283,13 @@ export default function CFPApplicants({
       }
       setError(null);
       setIsAdding(false);
-      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
+      // Add the new applicant to the cache so it's visible even when
+      // the list is filtered by conference (new applicants have no papers yet)
+      const queryKey = ['cfp-applicants', effectiveConferenceId ?? 'all'];
+      queryClient.setQueryData<ApplicantListResponse>(queryKey, (old) => {
+        if (!old) return { items: [applicant], total: 1 };
+        return { items: [...old.items, applicant], total: old.total + 1 };
+      });
       setSelectedApplicantId(applicant.id);
     } catch {
       // error is handled by onError

@@ -9,6 +9,7 @@ from .paper_assignments import router as paper_assignments_router
 from .paper_cospeakers import router as paper_cospeakers_router
 from .paper_reviews import router as paper_reviews_router
 from .papers import router as papers_router
+from .pending_verifications import router as pending_verifications_router
 from .submissions import router as submissions_router
 from .topics import router as topics_router
 
@@ -22,6 +23,7 @@ router = APIRouter()
 # must come BEFORE papers_router because paper_cospeakers_router contains the
 # literal /papers/my-invitations path that would be shadowed by /papers/{paper_id}.
 router.include_router(committee_router)
+router.include_router(pending_verifications_router)
 router.include_router(applicants_router)
 router.include_router(paper_assignments_router)
 router.include_router(paper_cospeakers_router)

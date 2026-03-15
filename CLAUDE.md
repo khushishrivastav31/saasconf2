@@ -81,6 +81,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: OWASP security hardening — MFA, account lockout, SQL injection fix, timing-safe auth, CORS/CSP headers, invoice race condition fix. Also fixed staging deploy (Dockerfile peer deps + set -e) and E2E nav tests (`1bf7625`)
-- **Status**: ✅ Clean — all 2419 backend tests + 1552 frontend tests passing, mypy/ruff/tsc/eslint clean
+- **Last completed**: User Roles feature — conference-scoped role definitions (Settings > User Roles) + role assignment on CFP applicant profiles (toggle chips). Roles assigned via `user_role_assignments` table (applicant_id FK to cfp_applicants).
+- **Status**: All 2419 backend tests + 1552 frontend tests passing, mypy/ruff/tsc/eslint clean
 - **Note**: H2 (require current password for password change) deferred for later

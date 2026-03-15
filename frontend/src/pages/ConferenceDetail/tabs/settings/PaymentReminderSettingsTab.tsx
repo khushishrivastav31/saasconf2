@@ -210,7 +210,7 @@ export default function PaymentReminderSettingsTab({ conference, isAdmin }: Prop
             &quot;overdue&quot;.
           </li>
           <li>Credit notes and paid/cancelled invoices are excluded.</li>
-          <li>You can customize the email templates under Settings &gt; Email Templates.</li>
+          <li>You can customize the email templates under Settings &gt; System Email Templates.</li>
         </ul>
       </div>
     </div>

@@ -666,7 +666,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
   };
 
   return (
-    <Modal open={true} onClose={onClose} title="Edit Team Member" size="max-w-2xl">
+    <Modal open={true} onClose={onClose} title="Edit Team Member" size="max-w-4xl">
       <div className="px-6 py-4">
         {errorMessage && (
           <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-3 text-sm text-red-700 dark:text-red-300 mb-4">
@@ -674,7 +674,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-[2fr_3fr] gap-6">
           {/* Left column - User details */}
           <div className="space-y-3">
             <div>
@@ -789,7 +789,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
           </div>
 
           {/* Right column - Conference access */}
-          <div className="border-l border-gray-200 dark:border-gray-700 pl-6">
+          <div className="border-l border-gray-200 dark:border-gray-700 pl-6 min-w-0">
             <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
               Conference Access
             </h4>
@@ -887,7 +887,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
                       <div className="flex items-center gap-1.5">
                         <select
                           id="add-conference-select"
-                          className="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                          className="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
                           defaultValue=""
                         >
                           <option value="" disabled>
@@ -914,7 +914,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
                             }
                           }}
                           disabled={grantAccessMutation.isPending}
-                          className="px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700 disabled:opacity-50"
+                          className="shrink-0 px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700 disabled:opacity-50"
                         >
                           Add
                         </button>

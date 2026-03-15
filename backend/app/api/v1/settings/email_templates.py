@@ -438,6 +438,29 @@ If you have questions or need help, contact us at [Support Email].
 Warm regards,
 The [Company Name] Team""",
     },
+    EmailTemplateType.CONFERENCE_TEAM_INVITATION: {
+        "subject": "You've been added to the [Conference Name] team",
+        "body_html": """<h2>You've been added to a conference team</h2>
+<p>Hi [First Name],</p>
+<p>You have been added to the <strong>[Conference Name]</strong> team with <strong>[Access Level]</strong> access.</p>
+<p>You can now access the conference dashboard and start collaborating with your team:</p>
+<p><a href="[Dashboard Link]" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Go to Conference Dashboard</a></p>
+<p>If you have questions or need help, contact us at [Support Email].</p>
+<p>Warm regards,<br>The [Company Name] Team</p>""",
+        "body_text": """You've been added to a conference team
+
+Hi [First Name],
+
+You have been added to the [Conference Name] team with [Access Level] access.
+
+You can now access the conference dashboard and start collaborating with your team:
+[Dashboard Link]
+
+If you have questions or need help, contact us at [Support Email].
+
+Warm regards,
+The [Company Name] Team""",
+    },
 }
 
 

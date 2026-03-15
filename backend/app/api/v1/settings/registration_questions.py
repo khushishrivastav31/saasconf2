@@ -13,6 +13,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.core.conference_helpers import check_conference_admin, get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.core.exceptions import ValidationError
+from app.core.html_sanitize import sanitize_html
 from app.models.conference import Conference
 from app.schemas.registration_questions import (
     RegistrationQuestionsSettings,
@@ -82,6 +83,10 @@ async def update_registration_questions_settings(
                 options = q.get("options", [])
                 if len(options) < 2:
                     raise ValidationError(f"Radio/dropdown question '{q.get('text', '')}' must have at least 2 options")
+
+            # Sanitize help_text HTML
+            if q.get("help_text"):
+                q["help_text"] = sanitize_html(q["help_text"])
 
     # Merge into existing settings
     settings = conference.settings or {}

@@ -13,12 +13,15 @@ import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
 import { useSaveStatus } from '../../../../hooks/useSaveStatus';
 import type { Conference } from '../../../../types';
+import MiniRichTextEditor from '../../../../components/common/MiniRichTextEditor';
+import RichTextDisplay from '../../../../components/common/RichTextDisplay';
 
 interface RegistrationQuestion {
   id: string;
   text: string;
   type: 'checkbox' | 'text' | 'radio' | 'dropdown';
   required: boolean;
+  help_text: string;
   options: string[];
   sort_order: number;
   is_active: boolean;
@@ -44,6 +47,7 @@ function createEmptyQuestion(sortOrder: number): RegistrationQuestion {
     text: '',
     type: 'text',
     required: false,
+    help_text: '',
     options: [],
     sort_order: sortOrder,
     is_active: true,
@@ -232,6 +236,13 @@ function QuestionPreview({
                   </select>
                 </div>
               ) : null}
+              {q.help_text && (
+                <RichTextDisplay
+                  content={q.help_text}
+                  className="text-xs text-gray-400 dark:text-gray-500 mt-1 [&_a]:text-primary-600 [&_a]:underline"
+                  fallback=""
+                />
+              )}
             </div>
           ))}
 
@@ -402,6 +413,17 @@ function QuestionCard({
           />
           <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
         </label>
+      </div>
+
+      <div className="mt-3">
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          Help Text
+        </label>
+        <MiniRichTextEditor
+          value={question.help_text || ''}
+          onChange={(html) => onChange({ ...question, help_text: html })}
+          placeholder="Optional help text shown below the question..."
+        />
       </div>
 
       {(question.type === 'radio' || question.type === 'dropdown') && (

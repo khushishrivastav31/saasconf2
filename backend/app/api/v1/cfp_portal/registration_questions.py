@@ -98,6 +98,7 @@ async def get_pending_questions_summary(
                         text=q["text"],
                         type=q["type"],
                         required=q.get("required", False),
+                        help_text=q.get("help_text", ""),
                         options=q.get("options", []),
                     )
                 )

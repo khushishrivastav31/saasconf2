@@ -125,6 +125,19 @@ function ActivityIcon() {
   );
 }
 
+function EmailTemplateIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+      />
+    </svg>
+  );
+}
+
 function BookIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -397,6 +410,25 @@ export default function AdminLayout() {
                     >
                       <ActivityIcon />
                       {!sidebarCollapsed && <span className="ml-3">Activity Log</span>}
+                    </Link>
+                  )}
+                  {/* Email Templates - tenant admin only */}
+                  {user?.role === 'tenant_admin' && (
+                    <Link
+                      to="/email-templates"
+                      onClick={() => setSidebarOpen(false)}
+                      title={sidebarCollapsed ? 'Email Templates' : undefined}
+                      aria-current={location.pathname === '/email-templates' ? 'page' : undefined}
+                      className={`flex items-center py-2 text-sm font-medium rounded-md ${
+                        sidebarCollapsed ? 'justify-center px-2' : 'px-3'
+                      } ${
+                        location.pathname === '/email-templates'
+                          ? 'bg-gray-800 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      }`}
+                    >
+                      <EmailTemplateIcon />
+                      {!sidebarCollapsed && <span className="ml-3">Email Templates</span>}
                     </Link>
                   )}
                 </div>

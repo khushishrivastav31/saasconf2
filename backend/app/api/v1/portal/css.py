@@ -7,7 +7,7 @@ Public endpoint to serve conference-specific custom CSS for branding based on co
 import logging
 
 from fastapi import APIRouter, HTTPException, Response
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.dependencies import DbSessionDep
 from app.models.conference import Conference
@@ -27,10 +27,52 @@ DEFAULT_THEME = {
 }
 
 
+def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    """Convert hex color to RGB tuple."""
+    hex_color = hex_color.lstrip("#")
+    return (int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16))
+
+
+def _rgb_to_hex(r: int, g: int, b: int) -> str:
+    """Convert RGB to hex color."""
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def _mix_color(color: tuple[int, int, int], target: tuple[int, int, int], factor: float) -> str:
+    """Mix a color towards a target by factor (0=color, 1=target)."""
+    r = int(color[0] + (target[0] - color[0]) * factor)
+    g = int(color[1] + (target[1] - color[1]) * factor)
+    b = int(color[2] + (target[2] - color[2]) * factor)
+    return _rgb_to_hex(max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b)))
+
+
+def _generate_primary_shades(primary_hex: str) -> dict[str, str]:
+    """Generate Tailwind-style color shades (50-900) from a primary color."""
+    rgb = _hex_to_rgb(primary_hex)
+    white = (255, 255, 255)
+    black = (0, 0, 0)
+
+    return {
+        "50": _mix_color(rgb, white, 0.95),
+        "100": _mix_color(rgb, white, 0.88),
+        "200": _mix_color(rgb, white, 0.75),
+        "300": _mix_color(rgb, white, 0.55),
+        "400": _mix_color(rgb, white, 0.30),
+        "500": _mix_color(rgb, white, 0.10),
+        "600": primary_hex,
+        "700": _mix_color(rgb, black, 0.20),
+        "800": _mix_color(rgb, black, 0.35),
+        "900": _mix_color(rgb, black, 0.50),
+    }
+
+
 def generate_css_from_theme(theme: dict) -> str:
     """Generate CSS from theme colors."""
     # Merge with defaults for any missing colors
     colors = {**DEFAULT_THEME, **theme}
+
+    # Generate primary color shades for Tailwind CSS variable overrides
+    shades = _generate_primary_shades(colors["primary"])
 
     return f"""/* Auto-generated CSS from color theme */
 
@@ -41,6 +83,18 @@ def generate_css_from_theme(theme: dict) -> str:
   --portal-text: {colors["text"]};
   --portal-border: {colors["border"]};
   --portal-header-bg: {colors["headerBg"]};
+
+  /* Override Tailwind primary color palette */
+  --color-primary-50: {shades["50"]};
+  --color-primary-100: {shades["100"]};
+  --color-primary-200: {shades["200"]};
+  --color-primary-300: {shades["300"]};
+  --color-primary-400: {shades["400"]};
+  --color-primary-500: {shades["500"]};
+  --color-primary-600: {shades["600"]};
+  --color-primary-700: {shades["700"]};
+  --color-primary-800: {shades["800"]};
+  --color-primary-900: {shades["900"]};
 }}
 
 /* Page background */
@@ -72,30 +126,13 @@ h1, h2, h3, h4, h5, h6 {{
 }}
 
 /* Primary color for submit buttons */
-button[type="submit"]:not(.bg-white):not(.bg-gray-200),
-.bg-blue-600,
-.bg-primary-600 {{
+button[type="submit"]:not(.bg-white):not(.bg-gray-200) {{
   background-color: {colors["primary"]} !important;
   border-color: {colors["primary"]} !important;
 }}
 
-button[type="submit"]:not(.bg-white):not(.bg-gray-200):hover,
-.bg-blue-600:hover,
-.hover\\:bg-blue-700:hover {{
-  background-color: {colors["primary"]} !important;
-  filter: brightness(0.9);
-}}
-
-/* Links */
-a,
-.text-blue-600,
-.text-primary-600 {{
-  color: {colors["primary"]} !important;
-}}
-
-a:hover {{
-  color: {colors["primary"]} !important;
-  filter: brightness(0.8);
+button[type="submit"]:not(.bg-white):not(.bg-gray-200):hover {{
+  background-color: {shades["700"]} !important;
 }}
 
 /* Input focus states */
@@ -152,17 +189,19 @@ async def get_custom_css(
     Raises:
         HTTPException: If tenant or conference not found
     """
-    # Find tenant
-    result = await db.execute(select(Tenant).where(Tenant.slug == tenant_slug))
+    # Find tenant (case-insensitive, matching registration.py)
+    result = await db.execute(
+        select(Tenant).where(func.lower(Tenant.slug) == tenant_slug.lower())
+    )
     tenant = result.scalar_one_or_none()
     if not tenant:
         raise HTTPException(status_code=404, detail=f"Tenant '{tenant_slug}' not found")
 
-    # Find conference
+    # Find conference (case-insensitive, matching registration.py)
     result = await db.execute(
         select(Conference).where(
             Conference.tenant_id == tenant.id,
-            Conference.abbreviation == conference_slug,
+            func.lower(Conference.abbreviation) == conference_slug.lower(),
         )
     )
     conference = result.scalar_one_or_none()

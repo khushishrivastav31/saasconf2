@@ -87,13 +87,13 @@ test.describe('Conference Settings Deep Tests', () => {
     expect(hasField || hasToggle || hasSave).toBeTruthy();
   });
 
-  test('should show Email Templates with template list', async ({ page }) => {
+  test('should show System Email Templates with template list', async ({ page }) => {
     const detail = new ConferenceDetailPage(page);
     await detail.goto(conferenceId!);
     await detail.expectLoaded();
 
     await detail.navigateToSection('Settings');
-    await page.getByRole('button', { name: /email templates/i }).click();
+    await page.getByRole('button', { name: /system email templates/i }).click();
     await page.waitForLoadState('networkidle');
 
     const hasTemplates = await softVisible(page.getByText(/template|email/i).first(), 5000);
@@ -125,7 +125,7 @@ test.describe('Conference Settings Deep Tests', () => {
 
     await detail.navigateToSection('Settings');
 
-    const tabs = ['Volunteer Tasks', 'Committee Roles', 'Session Types', 'Score Scales', 'Paper Form', 'Email Templates', 'Currency & Tax'];
+    const tabs = ['Volunteer Tasks', 'Committee Roles', 'Session Types', 'Score Scales', 'Paper Form', 'System Email Templates', 'Currency & Tax'];
     for (const tab of tabs) {
       const tabBtn = page.getByRole('button', { name: new RegExp(tab, 'i') });
       if (await softVisible(tabBtn, 2000)) {

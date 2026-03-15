@@ -161,6 +161,31 @@ export interface VolunteerRoleUpdate {
   is_active?: boolean;
 }
 
+export interface UserRole {
+  id: string;
+  tenant_id: string;
+  conference_id: string;
+  name: string;
+  description: string | null;
+  is_system: boolean;
+  is_active: boolean;
+  assignment_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserRoleCreate {
+  name: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+export interface UserRoleUpdate {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+}
+
 export interface TenantLocationType {
   id: string;
   tenant_id: string;

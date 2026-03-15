@@ -33,6 +33,7 @@ const NewsTab = lazy(() => import('./tabs/NewsTab'));
 const RegistrationTab = lazy(() => import('./tabs/RegistrationTab'));
 const AttendeesTab = lazy(() => import('./tabs/AttendeesTab'));
 const AlumniTab = lazy(() => import('./tabs/AlumniTab'));
+const BadgesTab = lazy(() => import('./tabs/BadgesTab'));
 const DeadlinesTab = lazy(() => import('./tabs/DeadlinesTab'));
 const RegistrationQuestionsAnalyticsTab = lazy(
   () => import('./tabs/analytics/RegistrationQuestionsAnalyticsTab')
@@ -272,11 +273,7 @@ function ConferenceDetailContent() {
                       <div key={section.id}>
                         <div className="flex items-center">
                           <button
-                            onClick={() =>
-                              setActiveSection(
-                                section.children ? section.children[0].id : section.id
-                              )
-                            }
+                            onClick={() => setActiveSection(section.id)}
                             title={sidebarCollapsed ? section.name : undefined}
                             className={`flex-1 flex items-center rounded-md mb-0.5 ${
                               sidebarCollapsed ? 'justify-center px-2 py-2' : 'px-3 py-2'
@@ -435,6 +432,9 @@ function ConferenceDetailContent() {
               )}
               {activeSection === 'attendees' && (
                 <AttendeesTab conference={conference} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'badges' && conference && (
+                <BadgesTab conference={conference} isAdmin={isAdmin} />
               )}
               {activeSection === 'sponsors' && (
                 <ConferenceSponsorsTab conference={conference} isAdmin={isAdmin} />

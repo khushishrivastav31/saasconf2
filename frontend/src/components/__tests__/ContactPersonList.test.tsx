@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ContactPersonList from '../ContactPersonList';
 import type { LocationContactPerson } from '../../types';
@@ -373,40 +373,46 @@ describe('ContactPersonList', () => {
       expect(addButton).toBeDisabled();
     });
 
-    it('disables add button when phone has validation error', async () => {
-      const user = userEvent.setup();
-      const contactWithPhone: LocationContactPerson = {
+    it('disables add button when phone has validation error', () => {
+      const contactWithInvalidPhone: LocationContactPerson = {
         first_name: 'Test',
         last_name: 'User',
         email: '',
-        phone: '',
+        phone: '123456',
         comment: '',
       };
 
       render(
         <ContactPersonList
           contacts={[]}
-          newContact={contactWithPhone}
+          newContact={contactWithInvalidPhone}
           setNewContact={mockSetNewContact}
           addContact={mockAddContact}
           removeContact={mockRemoveContact}
         />
       );
 
-      // Type an invalid phone number (doesn't start with + or 00)
+      // Blur the phone field to trigger validation
       const phoneInput = screen.getByPlaceholderText('+491234545 or 00491234566');
-      await user.type(phoneInput, '123456');
+      fireEvent.blur(phoneInput);
 
       const addButton = screen.getByRole('button', { name: '+ Add Contact' });
       expect(addButton).toBeDisabled();
     });
 
-    it('shows phone validation error message', async () => {
-      const user = userEvent.setup();
+    it('shows phone validation error message', () => {
+      const contactWithInvalidPhone: LocationContactPerson = {
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: 'invalid',
+        comment: '',
+      };
+
       render(
         <ContactPersonList
           contacts={[]}
-          newContact={emptyContact}
+          newContact={contactWithInvalidPhone}
           setNewContact={mockSetNewContact}
           addContact={mockAddContact}
           removeContact={mockRemoveContact}
@@ -414,7 +420,7 @@ describe('ContactPersonList', () => {
       );
 
       const phoneInput = screen.getByPlaceholderText('+491234545 or 00491234566');
-      await user.type(phoneInput, 'invalid');
+      fireEvent.blur(phoneInput);
 
       expect(screen.getByText('Phone must start with + or 00')).toBeInTheDocument();
     });
@@ -677,8 +683,8 @@ describe('ContactPersonList', () => {
         (input) => (input as HTMLInputElement).value === '+491234567890'
       ) as HTMLInputElement;
 
-      await user.clear(editPhoneInput);
-      await user.type(editPhoneInput, 'invalid');
+      fireEvent.change(editPhoneInput, { target: { value: 'invalid' } });
+      fireEvent.blur(editPhoneInput);
 
       expect(screen.getByText('Phone must start with + or 00')).toBeInTheDocument();
     });
@@ -706,6 +712,7 @@ describe('ContactPersonList', () => {
 
       await user.clear(editPhoneInput);
       await user.type(editPhoneInput, 'invalid');
+      fireEvent.blur(editPhoneInput);
 
       const saveButton = screen.getByRole('button', { name: 'Save' });
       expect(saveButton).toBeDisabled();

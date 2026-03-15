@@ -385,6 +385,7 @@ export interface PortalBuiltinFieldConfig {
   visible: boolean;
   required: boolean;
   display_order?: number;
+  help_text?: string | null;
 }
 
 export interface PortalPaperFormField {

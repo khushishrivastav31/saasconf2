@@ -10,6 +10,7 @@ from app.api.v1 import (
     attachments,
     audit,
     auth,
+    badges,
     budgets,
     cfp,
     cfp_portal,
@@ -35,6 +36,7 @@ from app.api.v1 import (
     sponsor_contracts,
     sponsors,
     stripe_webhooks,
+    system_email_templates,
     tenant_company,
     tenants,
     user_conference_access,
@@ -67,6 +69,13 @@ api_router.include_router(
 
 # Tenant company management (tenant admin)
 api_router.include_router(tenant_company.router, prefix="/my-company", tags=["My Company"])
+
+# System email templates (tenant admin)
+api_router.include_router(
+    system_email_templates.router,
+    prefix="/system-email-templates",
+    tags=["System Email Templates"],
+)
 
 # Applicant activity logs (tenant admin)
 api_router.include_router(
@@ -123,6 +132,11 @@ api_router.include_router(
     payment_reminders.router,
     prefix="/conferences/{conference_id}/payment-reminders",
     tags=["Payment Reminders"],
+)
+
+# Badges (conference-scoped)
+api_router.include_router(
+    badges.router, prefix="/conferences/{conference_id}/badges", tags=["Badges"]
 )
 
 # Budget planning (conference-scoped)

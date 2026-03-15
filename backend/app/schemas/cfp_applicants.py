@@ -40,6 +40,7 @@ class ApplicantCreate(BaseModel):
     needs_accessibility: bool = False
     accessibility_details: str | None = None
     agrees_to_recording: bool = False
+    role_ids: list[UUID] | None = None
 
     @field_validator("phone")
     @classmethod
@@ -64,11 +65,19 @@ class ApplicantUpdate(BaseModel):
     needs_accessibility: bool | None = None
     accessibility_details: str | None = None
     agrees_to_recording: bool | None = None
+    role_ids: list[UUID] | None = None
 
     @field_validator("phone")
     @classmethod
     def check_phone(cls, v: str | None) -> str | None:
         return validate_phone(v)
+
+
+class ApplicantRoleInfo(BaseModel):
+    """Minimal role info included in applicant responses."""
+
+    id: UUID
+    name: str
 
 
 class ApplicantResponse(BaseModel):
@@ -91,6 +100,7 @@ class ApplicantResponse(BaseModel):
     needs_accessibility: bool = False
     accessibility_details: str | None = None
     agrees_to_recording: bool = False
+    roles: list[ApplicantRoleInfo] = []
     picture_url: str | None = None
     video_url: str | None = None
     created_at: datetime

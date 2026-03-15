@@ -52,6 +52,13 @@ class ConferenceBase(BaseModel):
     description: str | None = None
     website: str | None = Field(None, max_length=500)
 
+    @field_validator("abbreviation")
+    @classmethod
+    def check_no_spaces(cls, v: str | None) -> str | None:
+        if v and " " in v:
+            raise ValueError("Abbreviation must not contain spaces")
+        return v
+
     @field_validator("description")
     @classmethod
     def sanitize_description(cls, v: str | None) -> str | None:
@@ -171,6 +178,13 @@ class ConferenceUpdate(BaseModel):
     is_active: bool | None = None
     is_published: bool | None = None
 
+    @field_validator("abbreviation")
+    @classmethod
+    def check_no_spaces(cls, v: str | None) -> str | None:
+        if v and " " in v:
+            raise ValueError("Abbreviation must not contain spaces")
+        return v
+
     @field_validator("support_email", "contact_email")
     @classmethod
     def check_emails(cls, v: str | None) -> str | None:
@@ -276,6 +290,13 @@ class DuplicateConferenceRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     abbreviation: str = Field(..., min_length=1, max_length=20)
     start_date: date | None = None
+
+    @field_validator("abbreviation")
+    @classmethod
+    def check_no_spaces(cls, v: str) -> str:
+        if " " in v:
+            raise ValueError("Abbreviation must not contain spaces")
+        return v
 
 
 class ConferenceAssociationRequest(BaseModel):

@@ -22,12 +22,14 @@ from app.models.cfp import (
     CFPPaper,
     CFPPaperCospeaker,
 )
+from app.models.settings import UserRole, UserRoleAssignment
 from app.schemas.cfp import (
     ApplicantCreate,
     ApplicantListResponse,
     ApplicantResponse,
     ApplicantUpdate,
 )
+from app.schemas.settings import ApplicantRoleInfo
 
 from .shared import (
     MODULE_CODE,
@@ -37,6 +39,83 @@ from .shared import (
 )
 
 router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# Role helpers
+# ---------------------------------------------------------------------------
+
+
+async def _get_applicant_roles(
+    db: DbSessionDep,
+    applicant_id: UUID,
+) -> list[ApplicantRoleInfo]:
+    """Fetch roles assigned to an applicant."""
+    result = await db.execute(
+        select(UserRole.id, UserRole.name)
+        .join(UserRoleAssignment, UserRole.id == UserRoleAssignment.user_role_id)
+        .where(UserRoleAssignment.applicant_id == applicant_id)
+        .order_by(UserRole.name)
+    )
+    return [ApplicantRoleInfo(id=row.id, name=row.name) for row in result.all()]
+
+
+async def _batch_get_applicant_roles(
+    db: DbSessionDep,
+    applicant_ids: list[UUID],
+) -> dict[UUID, list[ApplicantRoleInfo]]:
+    """Batch-fetch roles for multiple applicants to avoid N+1."""
+    if not applicant_ids:
+        return {}
+    result = await db.execute(
+        select(UserRoleAssignment.applicant_id, UserRole.id, UserRole.name)
+        .join(UserRole, UserRole.id == UserRoleAssignment.user_role_id)
+        .where(UserRoleAssignment.applicant_id.in_(applicant_ids))
+        .order_by(UserRole.name)
+    )
+    roles_map: dict[UUID, list[ApplicantRoleInfo]] = {}
+    for row in result.all():
+        roles_map.setdefault(row.applicant_id, []).append(ApplicantRoleInfo(id=row.id, name=row.name))
+    return roles_map
+
+
+async def _sync_role_assignments(
+    db: DbSessionDep,
+    applicant_id: UUID,
+    tenant_id: UUID,
+    role_ids: list[UUID],
+    assigned_by: UUID,
+) -> None:
+    """Replace an applicant's role assignments with the given role_ids."""
+    # Validate all role_ids exist and belong to tenant
+    if role_ids:
+        result = await db.execute(
+            select(UserRole.id).where(
+                UserRole.id.in_(role_ids),
+                UserRole.tenant_id == tenant_id,
+            )
+        )
+        valid_ids = {row.id for row in result.all()}
+        invalid = set(role_ids) - valid_ids
+        if invalid:
+            raise ValidationError(f"Invalid role IDs: {', '.join(str(i) for i in invalid)}")
+
+    # Delete existing assignments
+    existing = await db.execute(select(UserRoleAssignment).where(UserRoleAssignment.applicant_id == applicant_id))
+    for assignment in existing.scalars().all():
+        await db.delete(assignment)
+
+    # Create new assignments
+    for role_id in role_ids:
+        db.add(
+            UserRoleAssignment(
+                tenant_id=tenant_id,
+                user_role_id=role_id,
+                applicant_id=applicant_id,
+                assigned_by=assigned_by,
+            )
+        )
+    await db.flush()
 
 
 @router.get("/applicants", response_model=ApplicantListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
@@ -79,10 +158,11 @@ async def list_applicants(
     result = await db.execute(query)
     applicants = list(result.scalars().all())
 
-    # Batch-fetch picture and video URLs to avoid N+1
+    # Batch-fetch picture URLs, video URLs, and roles to avoid N+1
     applicant_ids = [a.id for a in applicants]
     picture_urls = await _batch_get_attachment_urls(db, applicant_ids, "applicant_picture", current_user.tenant_id)
     video_urls = await _batch_get_attachment_urls(db, applicant_ids, "applicant_video", current_user.tenant_id)
+    roles_map = await _batch_get_applicant_roles(db, applicant_ids)
 
     items = [
         ApplicantResponse(
@@ -100,6 +180,7 @@ async def list_applicants(
             needs_accessibility=a.needs_accessibility,
             accessibility_details=a.accessibility_details,
             agrees_to_recording=a.agrees_to_recording,
+            roles=roles_map.get(a.id, []),
             picture_url=picture_urls.get(a.id),
             video_url=video_urls.get(a.id),
             created_at=a.created_at,
@@ -141,6 +222,16 @@ async def create_applicant(
         password_hash=hash_password(applicant_data.password),
     )
     db.add(applicant)
+    await db.flush()
+
+    # Sync role assignments if provided
+    roles: list[ApplicantRoleInfo] = []
+    if applicant_data.role_ids:
+        await _sync_role_assignments(
+            db, applicant.id, current_user.tenant_id, applicant_data.role_ids, current_user.user_id
+        )
+        roles = await _get_applicant_roles(db, applicant.id)
+
     await db.commit()
     await db.refresh(applicant)
 
@@ -159,6 +250,7 @@ async def create_applicant(
         needs_accessibility=applicant.needs_accessibility,
         accessibility_details=applicant.accessibility_details,
         agrees_to_recording=applicant.agrees_to_recording,
+        roles=roles,
         picture_url=None,
         video_url=None,
         created_at=applicant.created_at,
@@ -201,6 +293,11 @@ async def update_applicant(
         if social_links is not None:
             applicant.social_links = social_links if isinstance(social_links, dict) else social_links.model_dump()
 
+    # Handle role_ids separately — sync assignments
+    role_ids = update_data.pop("role_ids", None)
+    if role_ids is not None:
+        await _sync_role_assignments(db, applicant.id, current_user.tenant_id, role_ids, current_user.user_id)
+
     for field, value in update_data.items():
         setattr(applicant, field, value)
 
@@ -209,6 +306,7 @@ async def update_applicant(
 
     picture_url = await _get_applicant_picture_url(db, applicant.id, current_user.tenant_id)
     video_url = await _get_applicant_video_url(db, applicant.id, current_user.tenant_id)
+    roles = await _get_applicant_roles(db, applicant.id)
 
     return ApplicantResponse(
         id=applicant.id,
@@ -225,6 +323,7 @@ async def update_applicant(
         needs_accessibility=applicant.needs_accessibility,
         accessibility_details=applicant.accessibility_details,
         agrees_to_recording=applicant.agrees_to_recording,
+        roles=roles,
         picture_url=picture_url,
         video_url=video_url,
         created_at=applicant.created_at,

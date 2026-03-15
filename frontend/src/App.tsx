@@ -22,6 +22,7 @@ const ComingSoon = lazy(() => import('./pages/modules/ComingSoon'));
 const Team = lazy(() => import('./pages/Team'));
 const MyCompany = lazy(() => import('./pages/MyCompany'));
 const ApplicantActivityLog = lazy(() => import('./pages/ApplicantActivityLog'));
+const SystemEmailTemplates = lazy(() => import('./pages/SystemEmailTemplates'));
 const Handbook = lazy(() => import('./pages/Handbook'));
 
 // Lazy-loaded CFP module pages
@@ -243,6 +244,16 @@ function App() {
             element={
               <TenantOnlyRoute>
                 <ApplicantActivityLog />
+              </TenantOnlyRoute>
+            }
+          />
+
+          {/* System Email Templates (tenant admin only) */}
+          <Route
+            path="email-templates"
+            element={
+              <TenantOnlyRoute>
+                <SystemEmailTemplates />
               </TenantOnlyRoute>
             }
           />

@@ -1,12 +1,12 @@
 // Paper Form Schema types
 export type PaperFormFieldType =
-  | "text"
-  | "textarea"
-  | "richtext"
-  | "checkbox"
-  | "checkbox_group"
-  | "dropdown"
-  | "file_upload";
+  | 'text'
+  | 'textarea'
+  | 'richtext'
+  | 'checkbox'
+  | 'checkbox_group'
+  | 'dropdown'
+  | 'file_upload';
 
 export interface FieldOption {
   value: string;
@@ -24,6 +24,7 @@ export interface BuiltinFieldConfig {
   visible: boolean;
   required: boolean;
   display_order?: number;
+  help_text?: string | null;
 }
 
 export interface PaperFormField {

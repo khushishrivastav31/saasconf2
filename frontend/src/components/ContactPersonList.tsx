@@ -124,10 +124,10 @@ export default function ContactPersonList({
                           className={`${inputClass} ${editPhoneError ? 'border-red-300' : ''}`}
                           value={editData.phone}
                           onChange={(e) => {
-                            const value = e.target.value;
-                            setEditData({ ...editData, phone: value });
-                            setEditPhoneError(validatePhone(value));
+                            setEditData({ ...editData, phone: e.target.value });
+                            if (editPhoneError) setEditPhoneError(null);
                           }}
+                          onBlur={(e) => setEditPhoneError(validatePhone(e.target.value))}
                         />
                         {editPhoneError && (
                           <p className="mt-1 text-xs text-red-600">{editPhoneError}</p>
@@ -314,10 +314,10 @@ export default function ContactPersonList({
                 className={`${inputClass} ${newPhoneError ? 'border-red-300' : ''}`}
                 value={newContact.phone}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  setNewContact({ ...newContact, phone: value });
-                  setNewPhoneError(validatePhone(value));
+                  setNewContact({ ...newContact, phone: e.target.value });
+                  if (newPhoneError) setNewPhoneError(null);
                 }}
+                onBlur={(e) => setNewPhoneError(validatePhone(e.target.value))}
               />
               {newPhoneError && <p className="mt-1 text-xs text-red-600">{newPhoneError}</p>}
             </div>

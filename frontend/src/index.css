@@ -83,6 +83,12 @@ body {
   @apply bg-gray-100 dark:bg-gray-700 font-semibold;
 }
 
+/* Badge template editor: let users fully control table header styling */
+.ProseMirror.prose-tight th {
+  background: transparent;
+  font-weight: inherit;
+}
+
 /* Selected cell highlight for merge/split operations */
 .ProseMirror .selectedCell {
   background-color: rgba(59, 130, 246, 0.15) !important;

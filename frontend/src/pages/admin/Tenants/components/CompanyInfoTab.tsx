@@ -692,10 +692,10 @@ export default function CompanyInfoTab({
                             className={`w-full border ${editContactPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                             value={contact.phone || ''}
                             onChange={(e) => {
-                              const value = e.target.value;
-                              updateContact(index, { ...contact, phone: value });
-                              setEditContactPhoneError(validatePhone(value));
+                              updateContact(index, { ...contact, phone: e.target.value });
+                              if (editContactPhoneError) setEditContactPhoneError(null);
                             }}
+                            onBlur={(e) => setEditContactPhoneError(validatePhone(e.target.value))}
                           />
                           {editContactPhoneError && (
                             <p className="mt-1 text-xs text-red-600">{editContactPhoneError}</p>
@@ -858,10 +858,10 @@ export default function CompanyInfoTab({
                   className={`w-full border ${newContactPhoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                   value={newContact.phone}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    setNewContact({ ...newContact, phone: value });
-                    setNewContactPhoneError(validatePhone(value));
+                    setNewContact({ ...newContact, phone: e.target.value });
+                    if (newContactPhoneError) setNewContactPhoneError(null);
                   }}
+                  onBlur={(e) => setNewContactPhoneError(validatePhone(e.target.value))}
                 />
                 {newContactPhoneError && (
                   <p className="mt-1 text-xs text-red-600">{newContactPhoneError}</p>

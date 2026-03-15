@@ -81,13 +81,13 @@ test.describe('Conference Settings', () => {
     await expect(detail.contentArea.getByText(/form|field|paper/i).first()).toBeVisible();
   });
 
-  test('should navigate to Email Templates sub-tab', async ({ page }) => {
+  test('should navigate to System Email Templates sub-tab', async ({ page }) => {
     const detail = new ConferenceDetailPage(page);
     await detail.goto(conferenceId!);
     await detail.expectLoaded();
 
     await detail.navigateToSection('Settings');
-    await page.getByRole('button', { name: /email templates/i }).click();
+    await page.getByRole('button', { name: /system email templates/i }).click();
     await page.waitForLoadState('networkidle');
 
     await expect(detail.contentArea.getByText(/email|template/i).first()).toBeVisible();

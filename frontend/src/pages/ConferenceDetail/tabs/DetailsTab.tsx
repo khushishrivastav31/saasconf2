@@ -233,8 +233,12 @@ function ConferenceDetailsTab({
       setEmailErrors((prev) => ({ ...prev, [field]: error }));
       if (error) return; // Don't auto-save while email is still invalid
     }
-    if (field === 'phone' && emailErrors.phone) {
-      setEmailErrors((prev) => ({ ...prev, phone: null }));
+    if (field === 'phone') {
+      if (emailErrors.phone) {
+        setEmailErrors((prev) => ({ ...prev, phone: null }));
+      }
+      // Don't auto-save while typing a phone number — wait for blur
+      if (value && validatePhone(value as string)) return;
     }
 
     // Don't auto-save if any email field has a validation error
@@ -251,59 +255,61 @@ function ConferenceDetailsTab({
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Conference Details</h4>
-        {isAdmin && (
-          <div className="flex items-center gap-2">
-            {saveStatus === 'saving' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md">
-                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Saving...
-              </span>
-            )}
-            {saveStatus === 'saved' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-md">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                Saved
-              </span>
-            )}
-            {saveStatus === 'error' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-md">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                Save failed
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
+        Conference Details
+      </h4>
+
+      {/* Floating save status indicator */}
+      {saveStatus !== 'idle' && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 animate-fade-in">
+          {saveStatus === 'saving' && (
+            <span className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-lg">
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Saving...
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-800 rounded-full shadow-lg">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Saved
+            </span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-full shadow-lg">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+              Save failed
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="space-y-4">
         {/* Logo */}
@@ -461,8 +467,9 @@ function ConferenceDetailsTab({
             <input
               type="text"
               className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              placeholder="e.g., ICML_2026"
               value={formData.abbreviation}
-              onChange={(e) => handleFieldChange('abbreviation', e.target.value)}
+              onChange={(e) => handleFieldChange('abbreviation', e.target.value.replace(/\s/g, ''))}
               disabled={!isAdmin}
             />
           </div>
@@ -641,12 +648,14 @@ function ConferenceDetailsTab({
                 className={`mt-1 block w-full border ${emailErrors.phone ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100`}
                 value={formData.phone || ''}
                 onChange={(e) => handleFieldChange('phone', e.target.value)}
-                onBlur={(e) =>
-                  setEmailErrors((prev) => ({
-                    ...prev,
-                    phone: validatePhone(e.target.value),
-                  }))
-                }
+                onBlur={(e) => {
+                  const phoneError = validatePhone(e.target.value);
+                  setEmailErrors((prev) => ({ ...prev, phone: phoneError }));
+                  // Save on blur if phone is valid (auto-save was skipped during typing)
+                  if (!phoneError) {
+                    updateMutation.mutate({ ...formData, phone: e.target.value });
+                  }
+                }}
                 disabled={!isAdmin}
               />
               {emailErrors.phone && (

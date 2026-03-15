@@ -159,10 +159,10 @@ export default function ServiceProviderDetailPanel({
               className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 ${phoneError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
               value={formData.phone || ''}
               onChange={(e) => {
-                const value = e.target.value;
-                setFormData({ ...formData, phone: value });
-                setPhoneError(validatePhone(value));
+                setFormData({ ...formData, phone: e.target.value });
+                if (phoneError) setPhoneError(null);
               }}
+              onBlur={(e) => setPhoneError(validatePhone(e.target.value))}
               placeholder="+491234545 or 00491234566"
             />
             {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}

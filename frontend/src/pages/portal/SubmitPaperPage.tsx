@@ -229,6 +229,7 @@ function SubmitPaperPage() {
     display_order: number;
     is_visible: boolean;
     is_required: boolean;
+    help_text?: string | null;
     customField?: PortalPaperFormField;
   };
 
@@ -249,6 +250,7 @@ function SubmitPaperPage() {
         display_order: config?.display_order ?? defaultIdx,
         is_visible: config?.visible !== false,
         is_required: bf.alwaysRequired || config?.required || requiredPaperFields.includes(bf.key),
+        help_text: config?.help_text,
       };
     });
 
@@ -489,6 +491,11 @@ function SubmitPaperPage() {
                         className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                         placeholder="Your paper title"
                       />
+                      {field.help_text && (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {field.help_text}
+                        </p>
+                      )}
                     </div>
                   );
 
@@ -512,6 +519,11 @@ function SubmitPaperPage() {
                           </option>
                         ))}
                       </select>
+                      {field.help_text && (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {field.help_text}
+                        </p>
+                      )}
                     </div>
                   );
 
@@ -529,6 +541,11 @@ function SubmitPaperPage() {
                         rows={3}
                         maxLength={800}
                       />
+                      {field.help_text && (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {field.help_text}
+                        </p>
+                      )}
                     </div>
                   );
 
@@ -546,6 +563,11 @@ function SubmitPaperPage() {
                         rows={6}
                         maxLength={8000}
                       />
+                      {field.help_text && (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {field.help_text}
+                        </p>
+                      )}
                     </div>
                   );
 
@@ -567,6 +589,11 @@ function SubmitPaperPage() {
                         <option value="advanced">Advanced</option>
                         <option value="all_levels">All Levels</option>
                       </select>
+                      {field.help_text && (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {field.help_text}
+                        </p>
+                      )}
                     </div>
                   );
 
@@ -584,6 +611,11 @@ function SubmitPaperPage() {
                         rows={3}
                         maxLength={600}
                       />
+                      {field.help_text && (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {field.help_text}
+                        </p>
+                      )}
                     </div>
                   );
 
@@ -601,6 +633,11 @@ function SubmitPaperPage() {
                         rows={3}
                         maxLength={600}
                       />
+                      {field.help_text && (
+                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {field.help_text}
+                        </p>
+                      )}
                     </div>
                   );
 

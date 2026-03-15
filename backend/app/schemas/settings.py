@@ -316,6 +316,59 @@ class PronounOptionListResponse(BaseModel):
     total: int
 
 
+# --- User Role Schemas ---
+
+
+class UserRoleCreate(BaseModel):
+    """Schema for creating a user role."""
+
+    name: str = Field(..., min_length=1, max_length=100)
+    description: str | None = None
+    is_active: bool = True
+
+
+class UserRoleUpdate(BaseModel):
+    """Schema for updating a user role."""
+
+    name: str | None = Field(None, min_length=1, max_length=100)
+    description: str | None = None
+    is_active: bool | None = None
+
+
+class UserRoleResponse(BaseModel):
+    """User role response schema."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tenant_id: UUID
+    conference_id: UUID
+    name: str
+    description: str | None
+    is_system: bool
+    is_active: bool
+    assignment_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserRoleListResponse(BaseModel):
+    """List of user roles."""
+
+    items: list[UserRoleResponse]
+    total: int
+
+
+# --- User Role Assignment Schemas (used on applicant endpoints) ---
+
+
+class ApplicantRoleInfo(BaseModel):
+    """Minimal role info included in applicant responses."""
+
+    id: UUID
+    name: str
+
+
 # --- Invoice Settings Schemas ---
 
 

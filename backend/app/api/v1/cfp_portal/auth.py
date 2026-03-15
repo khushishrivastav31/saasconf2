@@ -141,6 +141,7 @@ async def register_applicant(
     )
 
     # In debug mode, auto-verify the email so developers can log in immediately
+    settings = get_settings()
     if settings.DEBUG:
         applicant.email_verified_at = utcnow()
         # Log auto-verification in debug mode
@@ -186,6 +187,7 @@ async def register_applicant(
         first_name=data.first_name,
         last_name=data.last_name,
         company_name=tenant.name,
+        base_url=settings.PORTAL_BASE_URL,
     )
 
     return {"message": "Registration successful. Please check your email to verify your account."}
@@ -286,6 +288,7 @@ async def forgot_password(
         )
         await db.commit()
 
+        portal_settings = get_settings()
         await send_password_reset_email(
             db,
             email=applicant.email,
@@ -295,6 +298,7 @@ async def forgot_password(
             first_name=applicant.first_name,
             last_name=applicant.last_name,
             tenant_slug=tenant_slug,
+            base_url=portal_settings.PORTAL_BASE_URL,
         )
 
     # Always return success to prevent email enumeration

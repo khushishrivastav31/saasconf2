@@ -10,6 +10,7 @@ vi.mock('../../../../hooks/useAuth', () => ({
 }));
 
 // Mock all child tab components to avoid complex rendering
+vi.mock('../settings/UserRolesTab', () => ({ default: () => <div>UserRolesTab</div> }));
 vi.mock('../settings/VolunteerRolesTab', () => ({ default: () => <div>VolunteerRolesTab</div> }));
 vi.mock('../settings/LocationTypesTab', () => ({ default: () => <div>LocationTypesTab</div> }));
 vi.mock('../settings/SponsorPackagesTab', () => ({ default: () => <div>SponsorPackagesTab</div> }));
@@ -141,14 +142,14 @@ describe('SettingsTab', () => {
       expect(screen.getByText('Finance')).toBeInTheDocument();
     });
 
-    it('renders default tab content (Volunteer Tasks)', () => {
+    it('renders default tab content (User Roles)', () => {
       mockUseAuth.mockReturnValue({
         user: { id: 'u1', role: 'super_admin', modules: [] },
       });
 
       render(<SettingsTab conference={mockConference} isAdmin={true} />);
 
-      expect(screen.getByText('VolunteerRolesTab')).toBeInTheDocument();
+      expect(screen.getByText('UserRolesTab')).toBeInTheDocument();
     });
   });
 });

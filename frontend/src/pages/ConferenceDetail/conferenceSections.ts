@@ -1,6 +1,7 @@
 import type React from 'react';
 import {
   AlumniIcon,
+  BadgesIcon,
   DeadlinesIcon,
   InfoIcon,
   UsersIcon,
@@ -86,6 +87,7 @@ export type SectionId =
   | 'cost-management'
   | 'budget-planning'
   | 'speaker-expenses'
+  | 'badges'
   | 'registration'
   | 'volunteer-task-assignment'
   | 'volunteer-assignment'
@@ -169,6 +171,7 @@ export const sectionGroups: SectionGroup[] = [
       { id: 'speakers', name: 'Speakers', icon: SpeakerIcon, moduleCode: 'speakers' },
       { id: 'cfp-applicants', name: 'Users', icon: CfpInboxIcon, moduleCode: 'cfp' },
       { id: 'attendees', name: 'Attendees', icon: AttendeesIcon, moduleCode: 'attendees' },
+      { id: 'badges', name: 'Badges', icon: BadgesIcon },
       {
         id: 'volunteers',
         name: 'Volunteers',

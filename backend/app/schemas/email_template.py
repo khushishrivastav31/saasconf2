@@ -11,6 +11,7 @@ class EmailTemplateBase(BaseModel):
     """Base schema for email templates."""
 
     template_type: str = Field(..., description="Type of email template")
+    display_name: str | None = Field(None, max_length=100, description="Custom display name for the template")
     subject: str = Field(..., max_length=255, description="Email subject line")
     body_html: str = Field(..., description="HTML email body")
     body_text: str | None = Field(None, description="Plain text email body")
@@ -27,6 +28,7 @@ class EmailTemplateCreate(EmailTemplateBase):
 class EmailTemplateUpdate(BaseModel):
     """Schema for updating an email template."""
 
+    display_name: str | None = Field(None, max_length=100)
     subject: str | None = Field(None, max_length=255)
     body_html: str | None = None
     body_text: str | None = None
@@ -62,6 +64,7 @@ class EmailTemplateType:
 
     # System level (super admin)
     TENANT_USER_WELCOME = "tenant_user_welcome"
+    CONFERENCE_TEAM_INVITATION = "conference_team_invitation"
 
     # Conference level (tenant admin)
     APPLICANT_VERIFICATION = "applicant_verification"
@@ -80,7 +83,7 @@ class EmailTemplateType:
     PAYMENT_REMINDER_SECOND = "payment_reminder_second"
 
     # System templates (no tenant_id)
-    SYSTEM_TYPES: ClassVar[list[str]] = [TENANT_USER_WELCOME]
+    SYSTEM_TYPES: ClassVar[list[str]] = [TENANT_USER_WELCOME, CONFERENCE_TEAM_INVITATION]
 
     # Conference templates (require tenant_id + conference_id)
     CONFERENCE_TYPES: ClassVar[list[str]] = [
