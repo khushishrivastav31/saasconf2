@@ -9,6 +9,7 @@ Revises: 138
 Create Date: 2026-03-16
 """
 
+import json
 import uuid
 
 import sqlalchemy as sa
@@ -203,7 +204,8 @@ def upgrade() -> None:
                     "(id, tenant_id, conference_id, applicant_id, tshirt_size, "
                     "emergency_contact_name, emergency_contact_phone, skills, availability, "
                     "notes, color, total_hours, created_at, updated_at) "
-                    "VALUES (:id, :tid, :cid, :aid, :ts, :ecn, :ecp, :skills, :avail, "
+                    "VALUES (:id, :tid, :cid, :aid, :ts, :ecn, :ecp, "
+                    ":skills\\:\\:jsonb, :avail\\:\\:jsonb, "
                     ":notes, :color, :hours, now(), now())"
                 ),
                 {
@@ -214,8 +216,8 @@ def upgrade() -> None:
                     "ts": vol_data.tshirt_size if vol_data else None,
                     "ecn": vol_data.emergency_contact_name if vol_data else None,
                     "ecp": vol_data.emergency_contact_phone if vol_data else None,
-                    "skills": vol_data.skills if vol_data else "[]",
-                    "avail": vol_data.availability if vol_data else "{}",
+                    "skills": json.dumps(vol_data.skills if vol_data else []),
+                    "avail": json.dumps(vol_data.availability if vol_data else {}),
                     "notes": vol_data.notes if vol_data else None,
                     "color": cv.color,
                     "hours": vol_data.total_hours if vol_data else 0.0,
