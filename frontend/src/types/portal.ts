@@ -390,6 +390,8 @@ export interface PortalBuiltinFieldConfig {
   required: boolean;
   display_order?: number;
   help_text?: string | null;
+  min_chars?: number | null;
+  max_chars?: number | null;
 }
 
 export interface PortalPaperFormField {

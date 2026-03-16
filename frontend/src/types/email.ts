@@ -15,10 +15,14 @@ export type EmailTemplateType =
   | 'attendee_welcome'
   | 'registration_cancellation'
   | 'payment_reminder_first'
-  | 'payment_reminder_second';
+  | 'payment_reminder_second'
+  | 'invoice_send'
+  | 'direct_message'
+  | 'deadline_reminder'
+  | 'payment_overdue_admin';
 
 export const EMAIL_TEMPLATE_TYPES = {
-  SYSTEM: ['tenant_user_welcome', 'conference_team_invitation'] as const,
+  SYSTEM: ['tenant_user_welcome'] as const,
   CONFERENCE: [
     'applicant_verification',
     'committee_verification',
@@ -34,6 +38,11 @@ export const EMAIL_TEMPLATE_TYPES = {
     'registration_cancellation',
     'payment_reminder_first',
     'payment_reminder_second',
+    'conference_team_invitation',
+    'invoice_send',
+    'direct_message',
+    'deadline_reminder',
+    'payment_overdue_admin',
   ] as const,
 };
 
@@ -54,6 +63,10 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateType, string> = {
   registration_cancellation: 'Registration Cancellation',
   payment_reminder_first: 'Payment Reminder (1st)',
   payment_reminder_second: 'Payment Reminder (2nd)',
+  invoice_send: 'Invoice Email',
+  direct_message: 'Direct Message (Email-Only Mode)',
+  deadline_reminder: 'Deadline Reminder',
+  payment_overdue_admin: 'Overdue Invoice Admin Alert',
 };
 
 export const EMAIL_TEMPLATE_DESCRIPTIONS: Record<EmailTemplateType, string> = {
@@ -73,6 +86,10 @@ export const EMAIL_TEMPLATE_DESCRIPTIONS: Record<EmailTemplateType, string> = {
   registration_cancellation: 'Sent when a registration is cancelled',
   payment_reminder_first: 'First reminder for overdue invoice payment',
   payment_reminder_second: 'Second reminder for overdue invoice payment',
+  invoice_send: 'Sent when an invoice or credit note is emailed to a recipient',
+  direct_message: 'Wraps admin messages sent via email-only messaging mode',
+  deadline_reminder: 'Automated reminder for approaching conference deadlines',
+  payment_overdue_admin: 'Sent to conference admins when invoices remain unpaid after reminders',
 };
 
 export interface EmailTemplate {

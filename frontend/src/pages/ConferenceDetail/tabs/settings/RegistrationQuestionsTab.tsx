@@ -15,6 +15,7 @@ import { useSaveStatus } from '../../../../hooks/useSaveStatus';
 import type { Conference } from '../../../../types';
 import MiniRichTextEditor from '../../../../components/common/MiniRichTextEditor';
 import RichTextDisplay from '../../../../components/common/RichTextDisplay';
+import { stripHtml } from '../../../../utils/richText';
 
 interface RegistrationQuestion {
   id: string;
@@ -57,11 +58,13 @@ function createEmptyQuestion(sortOrder: number): RegistrationQuestion {
 /** Validates settings and returns error message or null if valid */
 function validateSettings(settings: RegistrationQuestionsSettings): string | null {
   for (const q of settings.questions) {
-    if (!q.text.trim()) return 'All questions must have text';
+    if (!stripHtml(q.text).trim()) return 'All questions must have text';
+    const label = stripHtml(q.text).trim() || 'Untitled';
     if (q.type === 'radio' || q.type === 'dropdown') {
       if (q.options.length < 2)
-        return `${q.type === 'radio' ? 'Radio' : 'Dropdown'} question "${q.text}" needs at least 2 options`;
-      if (q.options.some((o) => !o.trim())) return `All options must have text for "${q.text}"`;
+        return `${q.type === 'radio' ? 'Radio' : 'Dropdown'} question "${label}" needs at least 2 options`;
+      if (q.options.some((o) => !stripHtml(o).trim()))
+        return `All options must have text for "${label}"`;
     }
   }
   return null;
@@ -171,16 +174,24 @@ function QuestionPreview({
                     className="mt-0.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {q.text || 'Untitled question'}
+                    <RichTextDisplay
+                      content={q.text || 'Untitled question'}
+                      className="inline [&_p]:inline"
+                      fallback="Untitled question"
+                    />
                     {q.required && <span className="text-red-500 ml-0.5">*</span>}
                   </span>
                 </label>
               ) : q.type === 'text' ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {q.text || 'Untitled question'}
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <RichTextDisplay
+                      content={q.text || 'Untitled question'}
+                      className="inline [&_p]:inline"
+                      fallback="Untitled question"
+                    />
                     {q.required && <span className="text-red-500 ml-0.5">*</span>}
-                  </label>
+                  </div>
                   <input
                     type="text"
                     value={demoAnswers[q.id] || ''}
@@ -190,15 +201,19 @@ function QuestionPreview({
                 </div>
               ) : q.type === 'radio' ? (
                 <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {q.text || 'Untitled question'}
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <RichTextDisplay
+                      content={q.text || 'Untitled question'}
+                      className="inline [&_p]:inline"
+                      fallback="Untitled question"
+                    />
                     {q.required && <span className="text-red-500 ml-0.5">*</span>}
-                  </p>
+                  </div>
                   <div className="space-y-2 pl-1">
                     {q.options
-                      .filter((o) => o.trim())
-                      .map((option) => (
-                        <label key={option} className="flex items-center gap-2 cursor-pointer">
+                      .filter((o) => stripHtml(o).trim())
+                      .map((option, idx) => (
+                        <label key={idx} className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
                             name={`preview-${q.id}`}
@@ -207,17 +222,25 @@ function QuestionPreview({
                             onChange={() => updateDemo(q.id, option)}
                             className="border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                           />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{option}</span>
+                          <RichTextDisplay
+                            content={option}
+                            className="text-sm text-gray-700 dark:text-gray-300 [&_p]:inline"
+                            fallback=""
+                          />
                         </label>
                       ))}
                   </div>
                 </div>
               ) : q.type === 'dropdown' ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {q.text || 'Untitled question'}
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <RichTextDisplay
+                      content={q.text || 'Untitled question'}
+                      className="inline [&_p]:inline"
+                      fallback="Untitled question"
+                    />
                     {q.required && <span className="text-red-500 ml-0.5">*</span>}
-                  </label>
+                  </div>
                   <select
                     value={demoAnswers[q.id] || ''}
                     onChange={(e) => updateDemo(q.id, e.target.value)}
@@ -227,10 +250,10 @@ function QuestionPreview({
                       Select an option...
                     </option>
                     {q.options
-                      .filter((o) => o.trim())
-                      .map((option) => (
-                        <option key={option} value={option}>
-                          {option}
+                      .filter((o) => stripHtml(o).trim())
+                      .map((option, idx) => (
+                        <option key={idx} value={option}>
+                          {stripHtml(option)}
                         </option>
                       ))}
                   </select>
@@ -308,12 +331,10 @@ function QuestionCard({
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1">
-          <input
-            type="text"
+          <MiniRichTextEditor
             value={question.text}
-            onChange={(e) => onChange({ ...question, text: e.target.value })}
+            onChange={(html) => onChange({ ...question, text: html })}
             placeholder="Enter your question..."
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
@@ -432,14 +453,14 @@ function QuestionCard({
           <div className="space-y-2">
             {question.options.map((option, idx) => (
               <div key={idx} className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full border-2 border-gray-300 dark:border-gray-500 flex-shrink-0" />
-                <input
-                  type="text"
-                  value={option}
-                  onChange={(e) => handleOptionChange(idx, e.target.value)}
-                  placeholder={`Option ${idx + 1}`}
-                  className="flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 text-sm dark:bg-gray-800 dark:text-gray-100"
-                />
+                <span className="w-3 h-3 rounded-full border-2 border-gray-300 dark:border-gray-500 flex-shrink-0 mt-2" />
+                <div className="flex-1">
+                  <MiniRichTextEditor
+                    value={option}
+                    onChange={(html) => handleOptionChange(idx, html)}
+                    placeholder={`Option ${idx + 1}`}
+                  />
+                </div>
                 {question.options.length > 2 && (
                   <button
                     type="button"

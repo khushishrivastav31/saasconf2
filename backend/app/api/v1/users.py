@@ -220,10 +220,20 @@ async def create_tenant_user(
     # Send invite email after commit
     if raw_token:
         settings = get_settings()
-        frontend_base = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
-        # Look up tenant name and email domain
-        tenant_result = await db.execute(select(Tenant.name).where(Tenant.id == target_tenant_id))
-        tenant_name = tenant_result.scalar_one_or_none() or "SaaSConf"
+        frontend_base = settings.FRONTEND_BASE_URL
+        # Look up tenant name, email domain, and contact email
+        tenant_result = await db.execute(
+            select(Tenant.name, Tenant.contact_persons).where(Tenant.id == target_tenant_id)
+        )
+        tenant_row = tenant_result.one_or_none()
+        tenant_name = tenant_row[0] if tenant_row else "SaaSConf"
+        # Use first contact person's email as support email
+        tenant_support_email = ""
+        if tenant_row and tenant_row[1]:
+            for cp in tenant_row[1]:
+                if isinstance(cp, dict) and cp.get("email"):
+                    tenant_support_email = cp["email"]
+                    break
         from_email = await _get_tenant_from_email(db, target_tenant_id)
         user_type = "Administrator" if user.role == UserRole.TENANT_ADMIN.value else "Team Member"
         await send_tenant_user_welcome_email(
@@ -234,6 +244,7 @@ async def create_tenant_user(
             user_type=user_type,
             first_name=user.first_name or "",
             last_name=user.last_name or "",
+            support_email=tenant_support_email,
             base_url=frontend_base,
             from_email=from_email,
         )
@@ -497,10 +508,18 @@ async def resend_invite(
 
     # Send invite email
     settings = get_settings()
-    frontend_base = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
+    frontend_base = settings.FRONTEND_BASE_URL
     from_email = await _get_tenant_from_email(db, user.tenant_id)
-    tenant_result = await db.execute(select(Tenant.name).where(Tenant.id == user.tenant_id))
-    tenant_name = tenant_result.scalar_one_or_none() or "SaaSConf"
+    tenant_result = await db.execute(select(Tenant.name, Tenant.contact_persons).where(Tenant.id == user.tenant_id))
+    tenant_row = tenant_result.one_or_none()
+    tenant_name = tenant_row[0] if tenant_row else "SaaSConf"
+    # Use first contact person's email as support email
+    tenant_support_email = ""
+    if tenant_row and tenant_row[1]:
+        for cp in tenant_row[1]:
+            if isinstance(cp, dict) and cp.get("email"):
+                tenant_support_email = cp["email"]
+                break
     user_type = "Administrator" if user.role == UserRole.TENANT_ADMIN.value else "Team Member"
     await send_tenant_user_welcome_email(
         db,
@@ -510,6 +529,7 @@ async def resend_invite(
         user_type=user_type,
         first_name=user.first_name or "",
         last_name=user.last_name or "",
+        support_email=tenant_support_email,
         base_url=frontend_base,
         from_email=from_email,
     )

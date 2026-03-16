@@ -10,6 +10,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
+from app.config import get_settings as _get_settings
 from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import (
     CurrentUserDep,
@@ -494,6 +495,8 @@ async def create_thread(
     tenant_obj = tenant_result.scalar_one_or_none()
     tenant_slug = tenant_obj.slug if tenant_obj else ""
 
+    _settings = _get_settings()
+
     if messaging_mode == "email_only":
         # Send actual message content directly via email
         user_result = await db.execute(select(User).where(User.id == current_user.user_id))
@@ -507,6 +510,8 @@ async def create_thread(
             conference.name,
             sender_name,
             reply_to=conference.contact_email,
+            conference_id=conference_id,
+            tenant_id=tenant_id,
         )
     else:
         # Send notification emails with link to message
@@ -527,6 +532,7 @@ async def create_thread(
                 conference.name,
                 tenant_slug,
                 conference_id,
+                base_url=_settings.PORTAL_BASE_URL,
             )
 
     first_thread_detail = await get_thread(conference_id, first_thread.id, current_user, db)
@@ -637,8 +643,11 @@ async def reply_to_thread(
                 conference.name,
                 sender_name,
                 reply_to=conference.contact_email,
+                conference_id=conference_id,
+                tenant_id=tenant_id,
             )
     else:
+        _reply_settings = _get_settings()
         await _notify_participants(
             db,
             thread,
@@ -647,6 +656,7 @@ async def reply_to_thread(
             conference.name,
             tenant_slug,
             conference_id,
+            base_url=_reply_settings.PORTAL_BASE_URL,
         )
 
     # Resolve sender

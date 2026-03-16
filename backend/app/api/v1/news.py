@@ -314,11 +314,14 @@ async def send_article(
 
     for applicant in applicants:
         sent = await send_direct_message_email(
+            db,
             email=applicant.email,
             first_name=applicant.first_name or "",
             subject=article.title,
             body_html=article.body_html,
             conference_name=conference_name,
+            conference_id=conference_id,
+            tenant_id=current_user.tenant_id,
             sender_name=sender_name,
         )
         if sent:

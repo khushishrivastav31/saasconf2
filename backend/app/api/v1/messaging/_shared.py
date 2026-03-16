@@ -37,7 +37,7 @@ async def _notify_participants(
     conference_name: str,
     tenant_slug: str,
     conference_id: UUID,
-    base_url: str = "http://localhost:3002",
+    base_url: str = "",
 ) -> None:
     """Send email notifications to other participants if they have notifications enabled."""
     from app.core.email import send_new_message_notification
@@ -76,8 +76,11 @@ async def _notify_participants(
             user = user_result.scalar_one_or_none()
             if not user or not user.message_notifications_enabled:
                 continue
+            from app.config import get_settings as _get_settings
+
+            _s = _get_settings()
             messages_link = (
-                f"http://localhost:3001/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
+                f"{_s.FRONTEND_BASE_URL}/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
             )
             try:
                 await send_new_message_notification(
@@ -202,6 +205,8 @@ async def _send_direct_emails(
     conference_name: str,
     sender_name: str,
     reply_to: str | None = None,
+    conference_id: UUID | None = None,
+    tenant_id: UUID | None = None,
 ) -> int:
     """Send direct email messages (for email-only mode).
 
@@ -215,11 +220,14 @@ async def _send_direct_emails(
     for r in recipients:
         try:
             await send_direct_message_email(
+                db,
                 email=r.email,
                 first_name=getattr(r, "first_name", ""),
                 subject=subject,
                 body_html=body_html,
                 conference_name=conference_name,
+                conference_id=conference_id,
+                tenant_id=tenant_id,
                 sender_name=sender_name,
                 reply_to=reply_to,
             )

@@ -51,10 +51,6 @@ vi.mock('../ProgramCommitteeTab', () => ({
   default: () => <div data-testid="program-committee-tab" />,
 }));
 
-vi.mock('../PortalInvoicesTab', () => ({
-  default: () => <div data-testid="portal-invoices-tab" />,
-}));
-
 vi.mock('../../../hooks/usePortalAuthMedia', () => ({
   usePortalAuthMedia: () => null,
 }));
@@ -178,7 +174,6 @@ describe('ProfilePage', () => {
       renderWithProviders(<ProfilePage />);
       expect(screen.getByRole('button', { name: /personal info/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /program committee/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /invoices/i })).toBeInTheDocument();
     });
 
     it('renders the accessibility checkbox unchecked by default', () => {
@@ -300,15 +295,6 @@ describe('ProfilePage', () => {
 
       expect(screen.getByTestId('program-committee-tab')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /save profile/i })).not.toBeInTheDocument();
-    });
-
-    it('switches to Invoices tab when clicked', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<ProfilePage />);
-
-      await user.click(screen.getByRole('button', { name: /invoices/i }));
-
-      expect(screen.getByTestId('portal-invoices-tab')).toBeInTheDocument();
     });
 
     it('returns to Personal Info tab when clicked after switching', async () => {

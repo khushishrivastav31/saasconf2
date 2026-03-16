@@ -8,8 +8,11 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.core.email import send_email
+from app.core.email_templates import build_invoice_send_context, render_email
 from app.core.invoice_pdf import generate_invoice_pdf
+from app.schemas.email_template import EmailTemplateType
 
 if TYPE_CHECKING:
     from app.models.conference import Conference
@@ -113,18 +116,43 @@ async def send_invoice_email(
         # Build attachment
         attachment = build_pdf_attachment(pdf_bytes, invoice)
 
-        # Build email content
+        # Get conference support email
+        settings = get_settings()
+        support_email = conference.support_email or conference.contact_email or settings.RESEND_FROM_EMAIL
+
+        # Build template context
         is_credit_note = invoice.template_type == "credit_note"
         doc_label = "Credit Note" if is_credit_note else "Invoice"
+        total_str = f"{invoice.currency or 'EUR'} {invoice.total or 0:.2f}"
+        due_str = invoice.due_date.strftime("%B %d, %Y") if invoice.due_date else "N/A"
 
-        subject = custom_subject or f"{doc_label} {invoice.invoice_number}"
-        html = build_invoice_email_html(invoice, payment_link_url, custom_message)
+        context = build_invoice_send_context(
+            recipient_name=invoice.recipient_name or "",
+            conference_name=conference.name,
+            invoice_number=invoice.invoice_number or "DRAFT",
+            total_amount=total_str,
+            due_date=due_str,
+            support_email=support_email,
+            custom_message=custom_message or f"Please find attached {doc_label.lower()} {invoice.invoice_number}.",
+            payment_link=payment_link_url or "",
+        )
+
+        rendered = await render_email(
+            db,
+            EmailTemplateType.INVOICE_SEND,
+            context,
+            conference_id=conference.id,
+            tenant_id=conference.tenant_id,
+        )
+
+        subject = custom_subject or rendered.subject
 
         # Send email
         return await send_email(
             to=invoice.recipient_email,
             subject=subject,
-            html=html,
+            html=rendered.body_html,
+            text=rendered.body_text,
             attachments=[attachment],
         )
 

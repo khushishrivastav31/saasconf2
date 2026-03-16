@@ -2,21 +2,45 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { PaperFormField, PaperFormVariantField } from '../../../../../types';
 import type { UnifiedField } from './UnifiedFieldCard';
 
+// Fields that support min/max character limits
+const CHAR_LIMIT_FIELDS = new Set([
+  'title',
+  'abstract_short',
+  'abstract_long',
+  'learning_objectives',
+  'importance',
+]);
+
 export function BuiltinHelpTextPanel({
   fieldKey,
   initialValue,
+  initialMinChars,
+  initialMaxChars,
   onSave,
+  onSaveCharLimits,
 }: {
   fieldKey: string;
   initialValue: string;
+  initialMinChars?: number | null;
+  initialMaxChars?: number | null;
   onSave: (fieldKey: string, helpText: string) => void;
+  onSaveCharLimits?: (fieldKey: string, minChars: number | null, maxChars: number | null) => void;
 }) {
   const [value, setValue] = useState(initialValue);
+  const [minChars, setMinChars] = useState<string>(
+    initialMinChars != null ? String(initialMinChars) : ''
+  );
+  const [maxChars, setMaxChars] = useState<string>(
+    initialMaxChars != null ? String(initialMaxChars) : ''
+  );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const charDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setValue(initialValue);
-  }, [fieldKey, initialValue]);
+    setMinChars(initialMinChars != null ? String(initialMinChars) : '');
+    setMaxChars(initialMaxChars != null ? String(initialMaxChars) : '');
+  }, [fieldKey, initialValue, initialMinChars, initialMaxChars]);
 
   const handleChange = useCallback(
     (text: string) => {
@@ -27,31 +51,91 @@ export function BuiltinHelpTextPanel({
     [fieldKey, onSave]
   );
 
+  const handleCharLimitChange = useCallback(
+    (newMin: string, newMax: string) => {
+      if (charDebounceRef.current) clearTimeout(charDebounceRef.current);
+      charDebounceRef.current = setTimeout(() => {
+        onSaveCharLimits?.(
+          fieldKey,
+          newMin ? parseInt(newMin, 10) : null,
+          newMax ? parseInt(newMax, 10) : null
+        );
+      }, 600);
+    },
+    [fieldKey, onSaveCharLimits]
+  );
+
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (charDebounceRef.current) clearTimeout(charDebounceRef.current);
     };
   }, []);
+
+  const supportsCharLimits = CHAR_LIMIT_FIELDS.has(fieldKey);
 
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
       <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
         Built-in Field Settings
       </h3>
-      <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-          Help Text
-        </label>
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => handleChange(e.target.value)}
-          placeholder="Optional help text shown below the field..."
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-        />
-        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-          Displayed below the field on the submission form.
-        </p>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            Help Text
+          </label>
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder="Optional help text shown below the field..."
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+          />
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            Displayed below the field on the submission form.
+          </p>
+        </div>
+
+        {supportsCharLimits && (
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+              Character Limits
+            </label>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Min</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={minChars}
+                  onChange={(e) => {
+                    setMinChars(e.target.value);
+                    handleCharLimitChange(e.target.value, maxChars);
+                  }}
+                  placeholder="—"
+                  className="w-20 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded focus:ring-primary-500 focus:border-primary-500"
+                />
+              </label>
+              <label className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Max</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={maxChars}
+                  onChange={(e) => {
+                    setMaxChars(e.target.value);
+                    handleCharLimitChange(minChars, e.target.value);
+                  }}
+                  placeholder="—"
+                  className="w-20 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded focus:ring-primary-500 focus:border-primary-500"
+                />
+              </label>
+            </div>
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Enforced on submission. Leave empty for no limit.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

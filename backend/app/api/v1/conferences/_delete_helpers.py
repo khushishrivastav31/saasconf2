@@ -10,6 +10,7 @@ from app.models.associations import ConferenceCFP, ConferenceLocation
 from app.models.cfp import CFPPaper
 from app.models.invoice import Invoice
 from app.models.sponsor import Sponsor
+from app.models.volunteer_profile import VolunteerProfile
 
 
 @dataclass
@@ -38,6 +39,7 @@ class ConferenceDeleteData:
     total_cfps: int = 0
 
     # Direct child counts
+    volunteer_count: int = 0
     invoice_count: int = 0
     paper_count: int = 0
     sponsor_count: int = 0
@@ -56,6 +58,11 @@ async def compute_conference_delete_data(
     computing aggregate counts.
     """
     data = ConferenceDeleteData()
+
+    # --- Volunteer count (directly owned by conference) ---
+    data.volunteer_count = (
+        await db.execute(select(func.count()).where(VolunteerProfile.conference_id == conference_id))
+    ).scalar() or 0
 
     # --- Sponsor IDs & count ---
     sponsor_ids_result = await db.execute(select(Sponsor.id).where(Sponsor.conference_id == conference_id))

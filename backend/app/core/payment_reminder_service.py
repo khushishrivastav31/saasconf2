@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.default_settings import DEFAULT_PAYMENT_REMINDER_SETTINGS
 from app.core.email import send_email
-from app.core.email_templates import build_payment_reminder_context, render_email
+from app.core.email_templates import build_payment_overdue_admin_context, build_payment_reminder_context, render_email
 from app.models.conference import Conference
 from app.models.invoice import Invoice
 from app.models.invoice_event import InvoiceEvent, InvoiceEventType
@@ -146,7 +146,7 @@ async def generate_and_send_reminders(
                 sent += 1
                 # Send admin notification after 2nd reminder
                 if settings.get("notify_admin_after_second", True):
-                    await _notify_admin(conference, invoice, support_email)
+                    await _notify_admin(db, conference, invoice, support_email)
             elif result_2 == "error":
                 errors += 1
             else:
@@ -277,24 +277,38 @@ async def _create_and_send_reminder(
         return "error"
 
 
-async def _notify_admin(conference: Conference, invoice: Invoice, support_email: str) -> None:
+async def _notify_admin(db: AsyncSession, conference: Conference, invoice: Invoice, support_email: str) -> None:
     """Send admin notification that invoice remains unpaid after 2nd reminder."""
     admin_email = conference.contact_email or conference.support_email
     if not admin_email:
         return
 
-    subject = f"Invoice {invoice.invoice_number or 'N/A'} still unpaid after 2nd reminder"
-    html = (
-        f"<p>Invoice <strong>{invoice.invoice_number}</strong> "
-        f"for <strong>{invoice.recipient_name}</strong> "
-        f"({_format_amount(invoice)} {invoice.currency or ''}) "
-        f"remains unpaid after the second payment reminder was sent.</p>"
-        f"<p>Please review this invoice and take appropriate action.</p>"
-        f"<p>— {conference.name or 'Conference'} System</p>"
+    # Calculate days overdue
+    days_overdue = 0
+    if invoice.due_date:
+        due = invoice.due_date.date() if hasattr(invoice.due_date, "date") else invoice.due_date
+        days_overdue = (date.today() - due).days if isinstance(due, date) else 0
+
+    context = build_payment_overdue_admin_context(
+        conference_name=conference.name or "Conference",
+        recipient_name=invoice.recipient_name or "",
+        invoice_number=invoice.invoice_number or "N/A",
+        invoice_amount=_format_amount(invoice),
+        currency=invoice.currency or "",
+        days_overdue=str(max(days_overdue, 0)),
+        support_email=support_email,
+    )
+
+    rendered = await render_email(
+        db,
+        EmailTemplateType.PAYMENT_OVERDUE_ADMIN,
+        context,
+        conference_id=conference.id,
+        tenant_id=conference.tenant_id,
     )
 
     try:
-        await send_email(to=admin_email, subject=subject, html=html)
+        await send_email(to=admin_email, subject=rendered.subject, html=rendered.body_html, text=rendered.body_text)
     except Exception as e:
         logger.error("Failed to send admin notification for invoice %s: %s", invoice.id, e)
 

@@ -522,8 +522,8 @@ async def forgot_password(
     )
     db.add(reset)
 
-    # Build admin reset URL (use first CORS origin as frontend base)
-    frontend_base = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
+    # Build admin reset URL
+    frontend_base = settings.FRONTEND_BASE_URL
     admin_reset_url = f"{frontend_base}/reset-password?token={raw_token}"
 
     # Get tenant name for email context

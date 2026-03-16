@@ -64,7 +64,6 @@ class EmailTemplateType:
 
     # System level (super admin)
     TENANT_USER_WELCOME = "tenant_user_welcome"
-    CONFERENCE_TEAM_INVITATION = "conference_team_invitation"
 
     # Conference level (tenant admin)
     APPLICANT_VERIFICATION = "applicant_verification"
@@ -81,9 +80,14 @@ class EmailTemplateType:
     REGISTRATION_CANCELLATION = "registration_cancellation"
     PAYMENT_REMINDER_FIRST = "payment_reminder_first"
     PAYMENT_REMINDER_SECOND = "payment_reminder_second"
+    CONFERENCE_TEAM_INVITATION = "conference_team_invitation"
+    INVOICE_SEND = "invoice_send"
+    DIRECT_MESSAGE = "direct_message"
+    DEADLINE_REMINDER = "deadline_reminder"
+    PAYMENT_OVERDUE_ADMIN = "payment_overdue_admin"
 
     # System templates (no tenant_id)
-    SYSTEM_TYPES: ClassVar[list[str]] = [TENANT_USER_WELCOME, CONFERENCE_TEAM_INVITATION]
+    SYSTEM_TYPES: ClassVar[list[str]] = [TENANT_USER_WELCOME]
 
     # Conference templates (require tenant_id + conference_id)
     CONFERENCE_TYPES: ClassVar[list[str]] = [
@@ -101,6 +105,11 @@ class EmailTemplateType:
         REGISTRATION_CANCELLATION,
         PAYMENT_REMINDER_FIRST,
         PAYMENT_REMINDER_SECOND,
+        CONFERENCE_TEAM_INVITATION,
+        INVOICE_SEND,
+        DIRECT_MESSAGE,
+        DEADLINE_REMINDER,
+        PAYMENT_OVERDUE_ADMIN,
     ]
 
     ALL_TYPES: ClassVar[list[str]] = SYSTEM_TYPES + CONFERENCE_TYPES

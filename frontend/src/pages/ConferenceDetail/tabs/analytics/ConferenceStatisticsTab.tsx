@@ -297,7 +297,7 @@ function AttendeesLocationView({ conferenceId }: { conferenceId: string }) {
               }
             </Geographies>
             {citiesWithCoords.map((city) => {
-              const r = Math.max(4, Math.sqrt(city.count / maxCount) * 20);
+              const r = Math.max(3, Math.sqrt(city.count / maxCount) * 12);
               return (
                 <Marker
                   key={`${city.city}-${city.country_code}`}

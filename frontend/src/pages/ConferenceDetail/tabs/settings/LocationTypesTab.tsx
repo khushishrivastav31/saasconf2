@@ -11,6 +11,7 @@ import StatusBadge from '../../../../components/common/StatusBadge';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import ModalFooter from '../../../../components/common/ModalFooter';
 import CRUDSettingsTab, { type ColumnConfig, type DeleteConfig } from './CRUDSettingsTab';
+import { slugifyUnderscore } from '../../../../utils/validators';
 
 // --- Column definitions -----------------------------------------------------
 
@@ -92,21 +93,11 @@ function LocationTypeForm({
     });
   }, [item]);
 
-  const generateSlug = (name: string): string => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s_]/g, '')
-      .replace(/[\s]+/g, '_')
-      .replace(/^[^a-z]/, '')
-      .replace(/_+/g, '_')
-      .replace(/_$/, '');
-  };
-
   const handleNameChange = (name: string) => {
     const updates: Partial<TenantLocationTypeCreate> = { name };
     // Auto-generate slug only when creating (not editing)
     if (!item) {
-      updates.slug = generateSlug(name);
+      updates.slug = slugifyUnderscore(name);
     }
     setFormData({ ...formData, ...updates });
   };

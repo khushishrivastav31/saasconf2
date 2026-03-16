@@ -13,12 +13,10 @@ import StatusBadge from '../components/common/StatusBadge';
 
 const SYSTEM_TEMPLATE_LABELS: Record<string, string> = {
   tenant_user_welcome: 'User Invitation',
-  conference_team_invitation: 'Conference Team Invitation',
 };
 
 const SYSTEM_TEMPLATE_DESCRIPTIONS: Record<string, string> = {
   tenant_user_welcome: 'Sent when a new user is invited to the organization',
-  conference_team_invitation: 'Sent when a team member is added to a conference',
 };
 
 const VALID_PLACEHOLDERS = [
@@ -30,9 +28,6 @@ const VALID_PLACEHOLDERS = [
   'User Type',
   'Verify Link',
   'Support Email',
-  'Conference Name',
-  'Access Level',
-  'Dashboard Link',
 ];
 
 function extractPlaceholders(text: string): string[] {

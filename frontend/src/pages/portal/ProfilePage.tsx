@@ -7,7 +7,6 @@ import type { ApplicantProfile, ApplicantProfileUpdate } from '../../types/porta
 import RichTextEditor from '../../components/common/RichTextEditor';
 import MediaPreviewModal from '../../components/MediaPreviewModal';
 import ProgramCommitteeTab from './ProgramCommitteeTab';
-import PortalInvoicesTab from './PortalInvoicesTab';
 import VolunteerProfileSection from '../../components/portal/VolunteerProfileSection';
 import { SPEAKER_SOCIAL_PLATFORMS } from '../../config/socialPlatforms';
 import {
@@ -31,7 +30,7 @@ function convertSocialLinks(
   return result;
 }
 
-type ProfileTab = 'personal-info' | 'program-committee' | 'invoices';
+type ProfileTab = 'personal-info' | 'program-committee';
 
 function ProfilePage() {
   const { applicant, refreshApplicant } = useApplicantAuth();
@@ -304,23 +303,11 @@ function ProfilePage() {
           >
             Program Committee
           </button>
-          <button
-            onClick={() => setActiveTab('invoices')}
-            className={`py-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'invoices'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            Invoices
-          </button>
         </nav>
       </div>
 
       {activeTab === 'program-committee' ? (
         <ProgramCommitteeTab />
-      ) : activeTab === 'invoices' ? (
-        <PortalInvoicesTab />
       ) : (
         <>
           <form

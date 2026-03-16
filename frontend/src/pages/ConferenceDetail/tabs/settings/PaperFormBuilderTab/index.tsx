@@ -297,6 +297,22 @@ function PaperFormBuilderTab({
     return selectedFieldId.replace('builtin_', '');
   }, [selectedFieldId, schema]);
 
+  const handleBuiltinFieldCharLimits = (
+    fieldKey: string,
+    minChars: number | null,
+    maxChars: number | null
+  ) => {
+    if (!schema) return;
+    checkVersioningAndExecute(() => {
+      const existing = schema.builtin_fields_config[fieldKey] || { visible: true, required: false };
+      const newConfig = {
+        ...schema.builtin_fields_config,
+        [fieldKey]: { ...existing, min_chars: minChars, max_chars: maxChars },
+      };
+      updateSchemaMutation.mutate({ builtin_fields_config: newConfig });
+    });
+  };
+
   const handleAddField = (fieldType: PaperFormFieldType) => {
     // New custom fields go at the end
     const nextOrder = unifiedFields.length;
@@ -621,7 +637,10 @@ function PaperFormBuilderTab({
                       initialValue={
                         schema?.builtin_fields_config[selectedBuiltinKey]?.help_text || ''
                       }
+                      initialMinChars={schema?.builtin_fields_config[selectedBuiltinKey]?.min_chars}
+                      initialMaxChars={schema?.builtin_fields_config[selectedBuiltinKey]?.max_chars}
                       onSave={handleBuiltinFieldHelpText}
+                      onSaveCharLimits={handleBuiltinFieldCharLimits}
                     />
                   ) : (
                     <FieldPropertyEditor

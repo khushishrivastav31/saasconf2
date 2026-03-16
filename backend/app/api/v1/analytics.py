@@ -16,6 +16,7 @@ from app.core.conference_helpers import check_conference_admin, get_conference_f
 from app.core.csv_export import csv_response
 from app.core.dependencies import CurrentUserDep, DbSessionDep, require_module
 from app.core.file_validation import safe_content_disposition
+from app.core.geocoding import geocode_city, get_country_name
 from app.models.associations import ConferenceCFP
 from app.models.booking import BookingOption, BookingPeriod
 from app.models.budget import Budget, BudgetCategory, BudgetLineItem
@@ -712,148 +713,12 @@ async def export_financial_report_pdf(
 
 
 # ---------------------------------------------------------------------------
-# Conference Statistics — shared city lat/lng lookup
+# Conference Statistics — city geocoding & country names
 # ---------------------------------------------------------------------------
-
-# Major world cities with approximate lat/lng coordinates.
-# Keys are lowercase city names for case-insensitive lookup.
-_CITY_COORDS: dict[str, tuple[float, float]] = {
-    "amsterdam": (52.3676, 4.9041),
-    "ankara": (39.9334, 32.8597),
-    "athens": (37.9838, 23.7275),
-    "atlanta": (33.749, -84.388),
-    "auckland": (-36.8485, 174.7633),
-    "barcelona": (41.3851, 2.1734),
-    "beijing": (39.9042, 116.4074),
-    "berlin": (52.52, 13.405),
-    "bogota": (4.711, -74.0721),
-    "brussels": (50.8503, 4.3517),
-    "buenos aires": (-34.6037, -58.3816),
-    "cairo": (30.0444, 31.2357),
-    "cape town": (-33.9249, 18.4241),
-    "chicago": (41.8781, -87.6298),
-    "copenhagen": (55.6761, 12.5683),
-    "dallas": (32.7767, -96.797),
-    "delhi": (28.6139, 77.209),
-    "denver": (39.7392, -104.9903),
-    "dubai": (25.2048, 55.2708),
-    "dublin": (53.3498, -6.2603),
-    "edinburgh": (55.9533, -3.1883),
-    "frankfurt": (50.1109, 8.6821),
-    "hamburg": (53.5753, 10.0153),
-    "helsinki": (60.1699, 24.9384),
-    "hong kong": (22.3193, 114.1694),
-    "houston": (29.7604, -95.3698),
-    "istanbul": (41.0082, 28.9784),
-    "jakarta": (-6.2088, 106.8456),
-    "johannesburg": (-26.2041, 28.0473),
-    "karachi": (24.8607, 67.0011),
-    "kuala lumpur": (3.139, 101.6869),
-    "lagos": (6.5244, 3.3792),
-    "lima": (-12.0464, -77.0428),
-    "lisbon": (38.7223, -9.1393),
-    "london": (51.5074, -0.1278),
-    "los angeles": (34.0522, -118.2437),
-    "madrid": (40.4168, -3.7038),
-    "manila": (14.5995, 120.9842),
-    "melbourne": (-37.8136, 144.9631),
-    "mexico city": (19.4326, -99.1332),
-    "miami": (25.7617, -80.1918),
-    "milan": (45.4654, 9.1859),
-    "montreal": (45.5017, -73.5673),
-    "moscow": (55.7558, 37.6173),
-    "mumbai": (19.076, 72.8777),
-    "munich": (48.1351, 11.582),
-    "nairobi": (-1.2921, 36.8219),
-    "new york": (40.7128, -74.006),
-    "oslo": (59.9139, 10.7522),
-    "paris": (48.8566, 2.3522),
-    "prague": (50.0755, 14.4378),
-    "rome": (41.9028, 12.4964),
-    "san francisco": (37.7749, -122.4194),
-    "santiago": (-33.4489, -70.6693),
-    "sao paulo": (-23.5505, -46.6333),
-    "seattle": (47.6062, -122.3321),
-    "seoul": (37.5665, 126.978),
-    "shanghai": (31.2304, 121.4737),
-    "singapore": (1.3521, 103.8198),
-    "stockholm": (59.3293, 18.0686),
-    "sydney": (-33.8688, 151.2093),
-    "taipei": (25.0330, 121.5654),
-    "tel aviv": (32.0853, 34.7818),
-    "tokyo": (35.6762, 139.6503),
-    "toronto": (43.6532, -79.3832),
-    "vienna": (48.2082, 16.3738),
-    "warsaw": (52.2297, 21.0122),
-    "washington": (38.9072, -77.0369),
-    "zurich": (47.3769, 8.5417),
-}
-
-# ISO-2 code → country name mapping for display
-_ISO2_TO_NAME: dict[str, str] = {
-    "AT": "Austria",
-    "AU": "Australia",
-    "BE": "Belgium",
-    "BR": "Brazil",
-    "CA": "Canada",
-    "CH": "Switzerland",
-    "CN": "China",
-    "CZ": "Czech Republic",
-    "DE": "Germany",
-    "DK": "Denmark",
-    "EG": "Egypt",
-    "ES": "Spain",
-    "FI": "Finland",
-    "FR": "France",
-    "GB": "United Kingdom",
-    "GR": "Greece",
-    "HK": "Hong Kong",
-    "HU": "Hungary",
-    "ID": "Indonesia",
-    "IE": "Ireland",
-    "IL": "Israel",
-    "IN": "India",
-    "IT": "Italy",
-    "JP": "Japan",
-    "KE": "Kenya",
-    "KR": "South Korea",
-    "MX": "Mexico",
-    "MY": "Malaysia",
-    "NG": "Nigeria",
-    "NL": "Netherlands",
-    "NO": "Norway",
-    "NZ": "New Zealand",
-    "PH": "Philippines",
-    "PL": "Poland",
-    "PT": "Portugal",
-    "RO": "Romania",
-    "RU": "Russia",
-    "SE": "Sweden",
-    "SG": "Singapore",
-    "TR": "Turkey",
-    "TW": "Taiwan",
-    "UA": "Ukraine",
-    "US": "United States",
-    "ZA": "South Africa",
-    "AR": "Argentina",
-    "CL": "Chile",
-    "CO": "Colombia",
-    "PE": "Peru",
-    "AE": "United Arab Emirates",
-    "SA": "Saudi Arabia",
-    "PK": "Pakistan",
-    "BD": "Bangladesh",
-    "VN": "Vietnam",
-    "TH": "Thailand",
-}
 
 
 def _country_name(code: str) -> str:
-    return _ISO2_TO_NAME.get(code.upper(), code)
-
-
-def _city_coords(city: str) -> tuple[float, float] | None:
-    return _CITY_COORDS.get(city.strip().lower())
+    return get_country_name(code) or code
 
 
 # ---------------------------------------------------------------------------
@@ -975,7 +840,7 @@ async def get_attendees_location(
 
     by_city: list[CityLocation] = []
     for row in city_result.all():
-        coords = _city_coords(row.city)
+        coords = geocode_city(row.city, row.country_code)
         by_city.append(
             CityLocation(
                 city=row.city,

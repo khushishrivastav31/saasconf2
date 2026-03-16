@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { useSaveStatus } from '../../../../hooks/useSaveStatus';
@@ -158,7 +158,17 @@ export function ApplicantForm({
   const picturePreviewSrc = picturePreview || existingPictureSrc;
   const videoPreviewSrc = videoPreview || existingVideoSrc;
 
-  // Reset form when the applicant changes (switching between applicants in sidebar)
+  // Stable key for roles — triggers form reset when roles change externally (e.g. via RoleMembers)
+  const applicantRolesKey = useMemo(
+    () =>
+      applicant?.roles
+        ?.map((r) => r.id)
+        .sort()
+        .join(',') ?? '',
+    [applicant?.roles]
+  );
+
+  // Reset form when the applicant changes or roles are updated externally
   useEffect(() => {
     setFormData(
       applicant
@@ -193,7 +203,7 @@ export function ApplicantForm({
     setAddPlatform('');
     setCustomPlatformName('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applicant?.id]);
+  }, [applicant?.id, applicantRolesKey]);
 
   useEffect(() => {
     return () => {

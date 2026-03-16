@@ -11,6 +11,8 @@ import type {
   CallForPapers,
   CFPTopic,
   SessionType,
+  PaperFormSchema,
+  BuiltinFieldConfig,
 } from '../../../../types';
 import type { PaperAssignmentListResponse } from '../../../../types/review';
 import { ACCEPTED_VIDEO_FORMATS, validateVideo } from '../../../../utils/mediaValidation';
@@ -228,6 +230,20 @@ export function PaperForm({
   });
   const assignments = assignmentsData?.items || [];
 
+  // Load form schema for character limits
+  const { data: formSchemaData } = useQuery({
+    queryKey: ['paper-form-schema', conferenceId],
+    queryFn: async () => {
+      const res = await api.get<PaperFormSchema>(`/conferences/${conferenceId}/paper-form-schema`);
+      return res.data;
+    },
+    staleTime: 60_000,
+  });
+
+  const getFieldConfig = (fieldKey: string): BuiltinFieldConfig | undefined => {
+    return formSchemaData?.builtin_fields_config?.[fieldKey];
+  };
+
   const applicants = useMemo(() => applicantsData?.items || [], [applicantsData?.items]);
   const topics = topicsData?.items || [];
   const sessionTypes = useMemo(() => {
@@ -376,10 +392,36 @@ export function PaperForm({
           value={formData.title}
           onChange={(e) => setFormData((d) => ({ ...d, title: e.target.value }))}
           disabled={!canEdit}
-          maxLength={500}
+          maxLength={getFieldConfig('title')?.max_chars ?? undefined}
+          minLength={getFieldConfig('title')?.min_chars ?? undefined}
           className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
           required
         />
+        {(getFieldConfig('title')?.min_chars != null ||
+          getFieldConfig('title')?.max_chars != null) && (
+          <div className="flex justify-end mt-1">
+            <span
+              className={`text-xs ${
+                getFieldConfig('title')?.max_chars != null &&
+                formData.title.length > getFieldConfig('title')!.max_chars!
+                  ? 'text-red-600 font-medium'
+                  : getFieldConfig('title')?.min_chars != null &&
+                      formData.title.length > 0 &&
+                      formData.title.length < getFieldConfig('title')!.min_chars!
+                    ? 'text-red-600 font-medium'
+                    : 'text-gray-400 dark:text-gray-500'
+              }`}
+            >
+              {formData.title.length}
+              {getFieldConfig('title')?.min_chars != null && (
+                <span> (min {getFieldConfig('title')!.min_chars})</span>
+              )}
+              {getFieldConfig('title')?.max_chars != null && (
+                <span> / {getFieldConfig('title')!.max_chars}</span>
+              )}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Session Type */}
@@ -473,7 +515,8 @@ export function PaperForm({
           placeholder="Brief summary of your talk..."
           rows={3}
           disabled={!canEdit}
-          maxLength={800}
+          minLength={getFieldConfig('abstract_short')?.min_chars ?? undefined}
+          maxLength={getFieldConfig('abstract_short')?.max_chars ?? undefined}
         />
       </div>
 
@@ -488,7 +531,8 @@ export function PaperForm({
           placeholder="Detailed description of your talk..."
           rows={6}
           disabled={!canEdit}
-          maxLength={8000}
+          minLength={getFieldConfig('abstract_long')?.min_chars ?? undefined}
+          maxLength={getFieldConfig('abstract_long')?.max_chars ?? undefined}
         />
       </div>
 
@@ -503,7 +547,8 @@ export function PaperForm({
           placeholder="What will attendees learn from this talk?"
           rows={4}
           disabled={!canEdit}
-          maxLength={600}
+          minLength={getFieldConfig('learning_objectives')?.min_chars ?? undefined}
+          maxLength={getFieldConfig('learning_objectives')?.max_chars ?? undefined}
         />
       </div>
 
@@ -518,7 +563,8 @@ export function PaperForm({
           placeholder="Explain why this topic matters..."
           rows={4}
           disabled={!canEdit}
-          maxLength={600}
+          minLength={getFieldConfig('importance')?.min_chars ?? undefined}
+          maxLength={getFieldConfig('importance')?.max_chars ?? undefined}
         />
       </div>
 

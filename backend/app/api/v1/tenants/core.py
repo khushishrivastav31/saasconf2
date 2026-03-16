@@ -181,8 +181,15 @@ async def create_tenant(
     # Send invite email after commit (so user exists in DB)
     if admin_user:
         settings = get_settings()
-        frontend_base = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
+        frontend_base = settings.FRONTEND_BASE_URL
         from_email = f"noreply@{tenant.email_domain}" if tenant.email_domain else None
+        # Use first contact person's email as support email
+        tenant_support_email = ""
+        if tenant.contact_persons:
+            for cp in tenant.contact_persons:
+                if isinstance(cp, dict) and cp.get("email"):
+                    tenant_support_email = cp["email"]
+                    break
         await send_tenant_user_welcome_email(
             db,
             email=admin_user.email,
@@ -191,6 +198,7 @@ async def create_tenant(
             user_type="Administrator",
             first_name=admin_user.first_name or "",
             last_name=admin_user.last_name or "",
+            support_email=tenant_support_email,
             base_url=frontend_base,
             from_email=from_email,
         )

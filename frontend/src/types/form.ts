@@ -25,6 +25,8 @@ export interface BuiltinFieldConfig {
   required: boolean;
   display_order?: number;
   help_text?: string | null;
+  min_chars?: number | null;
+  max_chars?: number | null;
 }
 
 export interface PaperFormField {

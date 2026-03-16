@@ -248,6 +248,8 @@ function SubmitPaperPage() {
     is_visible: boolean;
     is_required: boolean;
     help_text?: string | null;
+    min_chars?: number | null;
+    max_chars?: number | null;
     customField?: PortalPaperFormField;
   };
 
@@ -272,6 +274,8 @@ function SubmitPaperPage() {
         is_visible: config?.visible !== false,
         is_required: bf.alwaysRequired || config?.required || requiredPaperFields.includes(bf.key),
         help_text: config?.help_text,
+        min_chars: config?.min_chars,
+        max_chars: config?.max_chars,
       };
     });
 
@@ -540,14 +544,37 @@ function SubmitPaperPage() {
                         required={field.is_required}
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
+                        maxLength={field.max_chars ?? undefined}
+                        minLength={field.min_chars ?? undefined}
                         className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                         placeholder="Your paper title"
                       />
-                      {field.help_text && (
-                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                          {field.help_text}
-                        </p>
-                      )}
+                      <div className="flex justify-between mt-1">
+                        {field.help_text ? (
+                          <p className="text-xs text-gray-400 dark:text-gray-500">
+                            {field.help_text}
+                          </p>
+                        ) : (
+                          <span />
+                        )}
+                        {(field.min_chars != null || field.max_chars != null) && (
+                          <span
+                            className={`text-xs ${
+                              field.max_chars != null && title.length > field.max_chars
+                                ? 'text-red-600 font-medium'
+                                : field.min_chars != null &&
+                                    title.length > 0 &&
+                                    title.length < field.min_chars
+                                  ? 'text-red-600 font-medium'
+                                  : 'text-gray-400 dark:text-gray-500'
+                            }`}
+                          >
+                            {title.length}
+                            {field.min_chars != null && <span> (min {field.min_chars})</span>}
+                            {field.max_chars != null && <span> / {field.max_chars}</span>}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
 
@@ -591,7 +618,8 @@ function SubmitPaperPage() {
                         onChange={(html) => setAbstractShort(html)}
                         placeholder="Brief summary of your talk..."
                         rows={3}
-                        maxLength={800}
+                        minLength={field.min_chars ?? undefined}
+                        maxLength={field.max_chars ?? undefined}
                       />
                       {field.help_text && (
                         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
@@ -613,7 +641,8 @@ function SubmitPaperPage() {
                         onChange={(html) => setAbstractLong(html)}
                         placeholder="Detailed description of your paper..."
                         rows={6}
-                        maxLength={8000}
+                        minLength={field.min_chars ?? undefined}
+                        maxLength={field.max_chars ?? undefined}
                       />
                       {field.help_text && (
                         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
@@ -661,7 +690,8 @@ function SubmitPaperPage() {
                         onChange={(html) => setLearningObjectives(html)}
                         placeholder="What will attendees learn?"
                         rows={3}
-                        maxLength={600}
+                        minLength={field.min_chars ?? undefined}
+                        maxLength={field.max_chars ?? undefined}
                       />
                       {field.help_text && (
                         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
@@ -683,7 +713,8 @@ function SubmitPaperPage() {
                         onChange={(html) => setImportance(html)}
                         placeholder="Why should this talk be selected?"
                         rows={3}
-                        maxLength={600}
+                        minLength={field.min_chars ?? undefined}
+                        maxLength={field.max_chars ?? undefined}
                       />
                       {field.help_text && (
                         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">

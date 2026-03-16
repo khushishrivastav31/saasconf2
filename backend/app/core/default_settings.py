@@ -723,12 +723,12 @@ DEFAULT_REGISTRATION_QUESTIONS: list[dict] = [
 ]
 
 # Default Paper Form Built-in Fields Configuration
-DEFAULT_PAPER_FORM_BUILTIN_FIELDS: dict[str, dict[str, bool]] = {
-    "title": {"visible": True, "required": True},
-    "abstract_short": {"visible": True, "required": True},
-    "abstract_long": {"visible": True, "required": False},
+DEFAULT_PAPER_FORM_BUILTIN_FIELDS: dict[str, dict] = {
+    "title": {"visible": True, "required": True, "max_chars": 500},
+    "abstract_short": {"visible": True, "required": True, "max_chars": 800},
+    "abstract_long": {"visible": True, "required": False, "max_chars": 8000},
     "level": {"visible": True, "required": False},
-    "learning_objectives": {"visible": True, "required": False},
+    "learning_objectives": {"visible": True, "required": False, "max_chars": 600},
 }
 
 # Fallback currency info when PlatformCurrency lookup fails

@@ -61,7 +61,7 @@ async def send_registration_invoice_email(
         attachment = build_pdf_attachment(pdf_bytes, invoice)
 
         # Get conference support email (fallback to settings)
-        support_email = (conference.settings or {}).get("support_email", settings.RESEND_FROM_EMAIL)
+        support_email = conference.support_email or conference.contact_email or settings.RESEND_FROM_EMAIL
 
         # Build context for email template
         context = build_registration_invoice_context(
@@ -129,8 +129,8 @@ async def send_attendee_welcome_email(
         return False
 
     try:
-        # Build password setup URL (use first CORS origin as frontend base)
-        frontend_base = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
+        # Build password setup URL
+        frontend_base = settings.FRONTEND_BASE_URL
         password_setup_url = f"{frontend_base}/reset-password?token={password_setup_token}"
 
         # Get booking option name
@@ -143,7 +143,7 @@ async def send_attendee_welcome_email(
                 booking_option_name = option_name
 
         # Get conference support email (fallback to settings)
-        support_email = (conference.settings or {}).get("support_email", settings.RESEND_FROM_EMAIL)
+        support_email = conference.support_email or conference.contact_email or settings.RESEND_FROM_EMAIL
 
         # Build context for email template
         context = build_attendee_welcome_context(

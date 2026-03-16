@@ -322,6 +322,10 @@ export default function CFPApplicants({
       }
       setError(null);
       queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
+      // Keep role assignment views in sync when roles are toggled here
+      queryClient.invalidateQueries({ queryKey: ['role-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['role-assignable'] });
+      queryClient.invalidateQueries({ queryKey: ['user-roles', conferenceId] });
     } catch {
       // error is handled by onError
     }

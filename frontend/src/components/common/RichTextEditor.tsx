@@ -10,6 +10,7 @@ interface RichTextEditorProps {
   rows?: number;
   className?: string;
   disabled?: boolean;
+  minLength?: number;
   maxLength?: number;
   /** Extra CSS classes for the ProseMirror editor element (e.g. 'prose-tight') */
   editorClassName?: string;
@@ -24,6 +25,7 @@ export default function RichTextEditor({
   rows = 3,
   className = '',
   disabled = false,
+  minLength,
   maxLength,
   editorClassName = '',
 }: RichTextEditorProps) {
@@ -241,18 +243,22 @@ export default function RichTextEditor({
       </div>
 
       {/* Character counter */}
-      {maxLength != null && (
+      {(minLength != null || maxLength != null) && (
         <div className="flex justify-end px-3 py-1 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
           <span
             className={`text-xs ${
-              charCount > maxLength
+              maxLength != null && charCount > maxLength
                 ? 'text-red-600 font-medium'
-                : charCount > maxLength * 0.9
-                  ? 'text-yellow-600'
-                  : 'text-gray-400 dark:text-gray-500'
+                : minLength != null && charCount > 0 && charCount < minLength
+                  ? 'text-red-600 font-medium'
+                  : maxLength != null && charCount > maxLength * 0.9
+                    ? 'text-yellow-600'
+                    : 'text-gray-400 dark:text-gray-500'
             }`}
           >
-            {charCount} / {maxLength}
+            {charCount}
+            {minLength != null && <span> (min {minLength})</span>}
+            {maxLength != null && <span> / {maxLength}</span>}
           </span>
         </div>
       )}

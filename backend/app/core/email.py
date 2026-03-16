@@ -15,6 +15,8 @@ from app.config import get_settings
 from app.core.email_templates import (
     build_conference_team_invitation_context,
     build_cospeaker_context,
+    build_deadline_reminder_context,
+    build_direct_message_context,
     build_new_message_context,
     build_password_reset_context,
     build_submission_context,
@@ -136,11 +138,12 @@ async def send_verification_email(
     last_name: str = "",
     is_committee: bool = False,
     support_email: str = "",
-    base_url: str = "http://localhost:3002",
+    base_url: str = "",
 ) -> bool:
     """Send an email verification link to a new applicant or committee member."""
     # NOTE: Verification emails are always sent regardless of the email_sending_enabled setting
     settings = get_settings()
+    base_url = base_url or settings.PORTAL_BASE_URL
     verification_url = f"{base_url}/{tenant_slug}/portal/user/verify-email?token={token}"
 
     template_type = (
@@ -180,7 +183,7 @@ async def send_submission_confirmation_email(
     last_name: str = "",
     tenant_slug: str,
     support_email: str = "",
-    base_url: str = "http://localhost:3002",
+    base_url: str = "",
 ) -> bool:
     """Send a submission confirmation email."""
     if not await _is_email_enabled_for_conference(db, conference_id):
@@ -190,6 +193,7 @@ async def send_submission_confirmation_email(
         return False
 
     settings = get_settings()
+    base_url = base_url or settings.PORTAL_BASE_URL
     portal_url = f"{base_url}/{tenant_slug}/portal/dashboard"
 
     context = build_submission_context(
@@ -227,7 +231,7 @@ async def send_cospeaker_invitation_email(
     last_name: str = "",
     tenant_slug: str,
     support_email: str = "",
-    base_url: str = "http://localhost:3002",
+    base_url: str = "",
 ) -> bool:
     """Send a co-speaker invitation email."""
     if not await _is_email_enabled_for_conference(db, conference_id):
@@ -235,6 +239,7 @@ async def send_cospeaker_invitation_email(
         return False
 
     settings = get_settings()
+    base_url = base_url or settings.PORTAL_BASE_URL
     portal_url = f"{base_url}/{tenant_slug}/portal/invitations"
 
     context = build_cospeaker_context(
@@ -271,11 +276,12 @@ async def send_password_reset_email(
     last_name: str = "",
     tenant_slug: str = "",
     support_email: str = "",
-    base_url: str = "http://localhost:3002",
+    base_url: str = "",
     reset_url: str | None = None,
 ) -> bool:
     """Send a password reset email."""
     settings = get_settings()
+    base_url = base_url or settings.PORTAL_BASE_URL
     if not reset_url:
         reset_url = f"{base_url}/{tenant_slug}/portal/user/reset-password?token={token}"
 
@@ -309,11 +315,12 @@ async def send_tenant_user_welcome_email(
     first_name: str = "",
     last_name: str = "",
     support_email: str = "",
-    base_url: str = "http://localhost:3000",
+    base_url: str = "",
     from_email: str | None = None,
 ) -> bool:
     """Send a welcome/invite email to a new tenant user with a setup-password link."""
     settings = get_settings()
+    base_url = base_url or settings.FRONTEND_BASE_URL
     setup_url = f"{base_url}/setup-password?token={token}"
 
     context = build_tenant_welcome_context(
@@ -347,10 +354,11 @@ async def send_conference_team_invitation_email(
     conference_id: UUID,
     tenant_id: UUID,
     support_email: str = "",
-    base_url: str = "http://localhost:3000",
+    base_url: str = "",
 ) -> bool:
     """Send an email notifying a user they've been added to a conference team."""
     settings = get_settings()
+    base_url = base_url or settings.FRONTEND_BASE_URL
     dashboard_link = f"{base_url}/conferences/{conference_id}"
 
     context = build_conference_team_invitation_context(
@@ -368,6 +376,7 @@ async def send_conference_team_invitation_email(
         db,
         EmailTemplateType.CONFERENCE_TEAM_INVITATION,
         context,
+        conference_id=conference_id,
         tenant_id=tenant_id,
     )
 
@@ -375,9 +384,12 @@ async def send_conference_team_invitation_email(
 
 
 async def send_deadline_reminder(
+    db: AsyncSession,
     *,
     to: str,
     conference_name: str,
+    conference_id: UUID | None = None,
+    tenant_id: UUID | None = None,
     deadline_title: str,
     description: str | None,
     due_date_formatted: str,
@@ -388,71 +400,49 @@ async def send_deadline_reminder(
     Args:
         to: Recipient email address (conference contact email).
         conference_name: Name of the conference.
+        conference_id: Conference ID for template lookup.
+        tenant_id: Tenant ID for template lookup.
         deadline_title: Title of the deadline.
         description: Optional description.
         due_date_formatted: Human-readable due date string.
         reminder_type: One of "7 days", "1 day", "today".
     """
-    from html import escape as html_escape
-
-    safe_conf = html_escape(conference_name)
-    safe_title = html_escape(deadline_title)
-    safe_desc = html_escape(description) if description else ""
-
     if reminder_type == "today":
-        badge_color = "#dc2626"
         badge_text = "Due today"
     elif reminder_type == "1 day":
-        badge_color = "#d97706"
         badge_text = "Due tomorrow"
     else:
-        badge_color = "#2563eb"
         badge_text = "Due in 7 days"
 
-    desc_block = ""
-    if safe_desc:
-        desc_block = f"""
-        <p style="color: #374151; margin: 8px 0;">{safe_desc}</p>"""
-
-    html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #111827;">Deadline Reminder</h2>
-        <span style="display: inline-block; padding: 4px 12px; border-radius: 12px;
-                      background-color: {badge_color}; color: white; font-size: 13px;
-                      font-weight: 600; margin-bottom: 12px;">{badge_text}</span>
-        <div style="padding: 16px; background-color: #f9fafb; border-radius: 8px;
-                    border-left: 4px solid {badge_color}; margin: 12px 0;">
-            <h3 style="color: #111827; margin: 0 0 8px 0;">{safe_title}</h3>{desc_block}
-            <p style="color: #6b7280; font-size: 14px; margin: 8px 0 0 0;">
-                Due: {html_escape(due_date_formatted)}
-            </p>
-        </div>
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
-        <p style="color: #6b7280; font-size: 13px;">
-            This is an automated reminder from {safe_conf}.
-        </p>
-    </div>
-    """
-
-    text = (
-        f"Deadline Reminder - {badge_text}\n\n"
-        f"{deadline_title}\n"
-        f"{description or ''}\n\n"
-        f"Due: {due_date_formatted}\n\n"
-        f"This is an automated reminder from {conference_name}."
+    context = build_deadline_reminder_context(
+        conference_name=conference_name,
+        deadline_title=deadline_title,
+        deadline_description=description or "",
+        due_date=due_date_formatted,
+        reminder_status=badge_text,
     )
 
-    subject = f"[{conference_name}] Deadline Reminder: {deadline_title} ({badge_text})"
-    return await send_email(to, subject, html, text)
+    rendered = await render_email(
+        db,
+        EmailTemplateType.DEADLINE_REMINDER,
+        context,
+        conference_id=conference_id,
+        tenant_id=tenant_id,
+    )
+
+    return await send_email(to, rendered.subject, rendered.body_html, rendered.body_text)
 
 
 async def send_direct_message_email(
+    db: AsyncSession,
     *,
     email: str,
     first_name: str = "",
     subject: str = "",
     body_html: str = "",
     conference_name: str = "",
+    conference_id: UUID | None = None,
+    tenant_id: UUID | None = None,
     sender_name: str = "",
     reply_to: str | None = None,
 ) -> bool:
@@ -462,41 +452,23 @@ async def send_direct_message_email(
     this sends the actual message content directly.
     The reply_to address is typically the conference's contact email.
     """
-    import re
-    from html import escape as html_escape
-
-    body_text = re.sub(r"<[^>]+>", "", body_html)
-    body_text = re.sub(r"\s+", " ", body_text).strip()
-
-    safe_first = html_escape(first_name) if first_name else "there"
-    safe_conf = html_escape(conference_name)
-    safe_sender = html_escape(sender_name)
-
-    full_html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <p>Hi {safe_first},</p>
-        <p>You have received a message regarding <strong>{safe_conf}</strong> from {safe_sender}:</p>
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
-        <div style="padding: 16px; background-color: #f9fafb; border-radius: 8px;">
-            {body_html}
-        </div>
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
-        <p style="color: #6b7280; font-size: 14px;">
-            This message was sent via email because in-app messaging is disabled for this conference.
-            Please reply directly to this email if needed.
-        </p>
-    </div>
-    """
-
-    full_text = (
-        f"Hi {first_name or 'there'},\n\n"
-        f"You have received a message regarding {conference_name} from {sender_name}:\n\n"
-        f"---\n{body_text}\n---\n\n"
-        f"This message was sent via email because in-app messaging is disabled for this conference."
+    context = build_direct_message_context(
+        first_name=first_name,
+        conference_name=conference_name,
+        sender_name=sender_name,
+        message_subject=subject,
+        message_content=body_html,
     )
 
-    email_subject = f"[{conference_name}] {subject}" if conference_name else subject
-    return await send_email(email, email_subject, full_html, full_text, reply_to=reply_to)
+    rendered = await render_email(
+        db,
+        EmailTemplateType.DIRECT_MESSAGE,
+        context,
+        conference_id=conference_id,
+        tenant_id=tenant_id,
+    )
+
+    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text, reply_to=reply_to)
 
 
 async def send_new_message_notification(

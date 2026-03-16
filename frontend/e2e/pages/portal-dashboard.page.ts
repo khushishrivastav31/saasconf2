@@ -27,6 +27,10 @@ export class PortalDashboardPage {
     await this.page.goto(`/${this.tenantSlug}/portal/invitations`);
   }
 
+  async gotoInvoices() {
+    await this.page.goto(`/${this.tenantSlug}/portal/invoices`);
+  }
+
   async expectVisible() {
     await expect(this.page).toHaveURL(/portal\/dashboard/, { timeout: 10000 });
   }

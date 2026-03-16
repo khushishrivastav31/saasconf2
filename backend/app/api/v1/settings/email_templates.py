@@ -461,6 +461,98 @@ If you have questions or need help, contact us at [Support Email].
 Warm regards,
 The [Company Name] Team""",
     },
+    EmailTemplateType.INVOICE_SEND: {
+        "subject": "[Invoice Number] from [Conference Name]",
+        "body_html": """<h2>Invoice from [Conference Name]</h2>
+<p>Dear [Recipient Name],</p>
+<p>Please find attached the invoice <strong>[Invoice Number]</strong> for <strong>[Total Amount]</strong>.</p>
+[Custom Message]
+<p><strong>Due date:</strong> [Due Date]</p>
+[Payment Link]
+<p>If you have any questions regarding this invoice, please contact us at [Support Email].</p>
+<p>Warm regards,<br>The [Conference Name] Team</p>""",
+        "body_text": """Invoice from [Conference Name]
+
+Dear [Recipient Name],
+
+Please find attached the invoice [Invoice Number] for [Total Amount].
+
+[Custom Message]
+
+Due date: [Due Date]
+
+[Payment Link]
+
+If you have any questions regarding this invoice, please contact us at [Support Email].
+
+Warm regards,
+The [Conference Name] Team""",
+    },
+    EmailTemplateType.DIRECT_MESSAGE: {
+        "subject": "[[Conference Name]] [Message Subject]",
+        "body_html": """<p>Hi [First Name],</p>
+<p>You have received a message regarding <strong>[Conference Name]</strong> from [Sender Name]:</p>
+<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+<div style="padding: 16px; background-color: #f9fafb; border-radius: 8px;">
+[Message Content]
+</div>
+<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+<p style="color: #6b7280; font-size: 14px;">This message was sent via email. Please reply directly to this email if needed.</p>""",
+        "body_text": """Hi [First Name],
+
+You have received a message regarding [Conference Name] from [Sender Name]:
+
+---
+[Message Content]
+---
+
+This message was sent via email. Please reply directly to this email if needed.""",
+    },
+    EmailTemplateType.DEADLINE_REMINDER: {
+        "subject": "[[Conference Name]] Deadline Reminder: [Deadline Title] ([Reminder Status])",
+        "body_html": """<h2>Deadline Reminder</h2>
+<p>This is a reminder for the following deadline in <strong>[Conference Name]</strong>:</p>
+<div style="padding: 16px; background-color: #f9fafb; border-radius: 8px; border-left: 4px solid #2563eb; margin: 12px 0;">
+<h3 style="color: #111827; margin: 0 0 8px 0;">[Deadline Title]</h3>
+[Deadline Description]
+<p style="color: #6b7280; font-size: 14px; margin: 8px 0 0 0;">Due: [Due Date]</p>
+<p style="font-weight: 600;">[Reminder Status]</p>
+</div>
+<p style="color: #6b7280; font-size: 13px;">This is an automated reminder from [Conference Name].</p>""",
+        "body_text": """Deadline Reminder — [Reminder Status]
+
+Conference: [Conference Name]
+
+[Deadline Title]
+[Deadline Description]
+
+Due: [Due Date]
+
+This is an automated reminder from [Conference Name].""",
+    },
+    EmailTemplateType.PAYMENT_OVERDUE_ADMIN: {
+        "subject": "[Conference Name] — Overdue invoice requires attention",
+        "body_html": """<h2>Overdue Invoice Alert</h2>
+<p>The following invoice for <strong>[Conference Name]</strong> requires attention:</p>
+<div style="padding: 16px; background-color: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626; margin: 12px 0;">
+<p><strong>Recipient:</strong> [Recipient Name]</p>
+<p><strong>Invoice:</strong> [Invoice Number]</p>
+<p><strong>Amount:</strong> [Currency] [Invoice Amount]</p>
+<p><strong>Days overdue:</strong> [Days Overdue]</p>
+</div>
+<p>Please review this invoice and take appropriate action.</p>
+<p>If you have questions, contact support at [Support Email].</p>""",
+        "body_text": """Overdue Invoice Alert — [Conference Name]
+
+Recipient: [Recipient Name]
+Invoice: [Invoice Number]
+Amount: [Currency] [Invoice Amount]
+Days overdue: [Days Overdue]
+
+Please review this invoice and take appropriate action.
+
+If you have questions, contact support at [Support Email].""",
+    },
 }
 
 

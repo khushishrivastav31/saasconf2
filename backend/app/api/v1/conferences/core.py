@@ -652,6 +652,11 @@ async def delete_conference_preview(
         "is_active": conference.is_active,
         "can_delete": can_delete,
         "must_deactivate_first": conference.is_active,
+        "volunteers": {
+            "total_linked": dd.volunteer_count,
+            "will_delete": dd.volunteer_count,
+            "will_unlink": 0,
+        },
         "locations": {
             "total_linked": dd.total_locs,
             "will_delete": len(dd.exclusive_loc_ids),

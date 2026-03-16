@@ -77,6 +77,10 @@ export default function Conferences() {
     try {
       setDeleteLoading(true);
       setDeleteError(null);
+      // Deactivate first if conference is still active
+      if (deletePreview?.must_deactivate_first) {
+        await api.put(`/conferences/${deleteTargetId}`, { is_active: false });
+      }
       await api.delete(`/conferences/${deleteTargetId}`);
       queryClient.invalidateQueries({ queryKey: ['conferences'] });
       queryClient.invalidateQueries({ queryKey: ['conference-stats'] });
@@ -562,6 +566,13 @@ export default function Conferences() {
               </div>
             )}
 
+            {deletePreview.must_deactivate_first && (
+              <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-700 dark:text-amber-300">
+                This conference is still active. It will be deactivated automatically before
+                deletion.
+              </div>
+            )}
+
             {deleteError && (
               <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
                 {deleteError}
@@ -581,7 +592,11 @@ export default function Conferences() {
                 disabled={deleteLoading}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 disabled:opacity-50"
               >
-                {deleteLoading ? 'Deleting...' : 'Delete Conference'}
+                {deleteLoading
+                  ? 'Deleting...'
+                  : deletePreview?.must_deactivate_first
+                    ? 'Deactivate & Delete'
+                    : 'Delete Conference'}
               </button>
             </div>
           </div>

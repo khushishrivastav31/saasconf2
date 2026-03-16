@@ -11,6 +11,7 @@ import { useToast } from '../Toast';
 import { parseApiError } from '../../utils/apiError';
 import ConferenceLogo from '../ConferenceLogo';
 import RichTextDisplay from '../common/RichTextDisplay';
+import { stripHtml } from '../../utils/richText';
 
 interface PendingQuestion {
   id: string;
@@ -178,16 +179,24 @@ export default function RegistrationQuestionnaire({
                     className="mt-0.5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {q.text}
+                    <RichTextDisplay
+                      content={q.text}
+                      className="inline [&_p]:inline"
+                      fallback={q.text}
+                    />
                     {q.required && <span className="text-red-500 ml-0.5">*</span>}
                   </span>
                 </label>
               ) : q.type === 'text' ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {q.text}
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <RichTextDisplay
+                      content={q.text}
+                      className="inline [&_p]:inline"
+                      fallback={q.text}
+                    />
                     {q.required && <span className="text-red-500 ml-0.5">*</span>}
-                  </label>
+                  </div>
                   <input
                     type="text"
                     value={answers[q.id]}
@@ -197,13 +206,17 @@ export default function RegistrationQuestionnaire({
                 </div>
               ) : q.type === 'radio' ? (
                 <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {q.text}
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <RichTextDisplay
+                      content={q.text}
+                      className="inline [&_p]:inline"
+                      fallback={q.text}
+                    />
                     {q.required && <span className="text-red-500 ml-0.5">*</span>}
-                  </p>
+                  </div>
                   <div className="space-y-2 pl-1">
-                    {q.options.map((option) => (
-                      <label key={option} className="flex items-center gap-2 cursor-pointer">
+                    {q.options.map((option, idx) => (
+                      <label key={idx} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
                           name={q.id}
@@ -212,17 +225,25 @@ export default function RegistrationQuestionnaire({
                           onChange={() => updateAnswer(q.id, option)}
                           className="border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                         />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{option}</span>
+                        <RichTextDisplay
+                          content={option}
+                          className="text-sm text-gray-700 dark:text-gray-300 [&_p]:inline"
+                          fallback=""
+                        />
                       </label>
                     ))}
                   </div>
                 </div>
               ) : q.type === 'dropdown' ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {q.text}
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <RichTextDisplay
+                      content={q.text}
+                      className="inline [&_p]:inline"
+                      fallback={q.text}
+                    />
                     {q.required && <span className="text-red-500 ml-0.5">*</span>}
-                  </label>
+                  </div>
                   <select
                     value={answers[q.id]}
                     onChange={(e) => updateAnswer(q.id, e.target.value)}
@@ -231,9 +252,9 @@ export default function RegistrationQuestionnaire({
                     <option value="" disabled>
                       Select an option...
                     </option>
-                    {q.options.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
+                    {q.options.map((option, idx) => (
+                      <option key={idx} value={option}>
+                        {stripHtml(option)}
                       </option>
                     ))}
                   </select>

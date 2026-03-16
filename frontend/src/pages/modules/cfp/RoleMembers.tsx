@@ -200,6 +200,7 @@ export default function RoleMembers({
       queryClient.invalidateQueries({ queryKey: ['role-assignments', conferenceId, roleId] });
       queryClient.invalidateQueries({ queryKey: ['role-assignable', conferenceId, roleId] });
       queryClient.invalidateQueries({ queryKey: ['user-roles', conferenceId] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
       if (roleName === 'Volunteer' && conferenceId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.volunteers.profiles(conferenceId),
@@ -224,6 +225,7 @@ export default function RoleMembers({
       queryClient.invalidateQueries({ queryKey: ['role-assignments', conferenceId, roleId] });
       queryClient.invalidateQueries({ queryKey: ['role-assignable', conferenceId, roleId] });
       queryClient.invalidateQueries({ queryKey: ['user-roles', conferenceId] });
+      queryClient.invalidateQueries({ queryKey: ['cfp-applicants'] });
       if (roleName === 'Volunteer' && conferenceId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.volunteers.profiles(conferenceId),

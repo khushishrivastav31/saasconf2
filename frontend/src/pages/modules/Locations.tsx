@@ -276,7 +276,7 @@ function CreateLocationModal({
   const [formData, setFormData] = useState<LocationCreate>({
     name: '',
     code: '',
-    location_type: 'room',
+    location_type: '',
     description: '',
     capacity: undefined,
     building: '',
@@ -417,6 +417,7 @@ function CreateLocationModal({
                 value={formData.location_type}
                 onChange={(e) => setFormData({ ...formData, location_type: e.target.value })}
               >
+                <option value="">Select type...</option>
                 {locationTypesData?.items
                   ?.filter((t) => t.is_active)
                   .map((t) => (

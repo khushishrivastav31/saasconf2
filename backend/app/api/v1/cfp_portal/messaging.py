@@ -106,8 +106,9 @@ async def _notify_other_participants(
             if not user or not user.message_notifications_enabled:
                 continue
             settings = get_settings()
-            frontend_base = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
-            link = f"{frontend_base}/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
+            link = (
+                f"{settings.FRONTEND_BASE_URL}/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
+            )
             try:
                 await send_new_message_notification(
                     db,
@@ -125,7 +126,7 @@ async def _notify_other_participants(
             applicant = app_result.scalar_one_or_none()
             if not applicant or not applicant.message_notifications_enabled:
                 continue
-            portal_base = settings.CORS_ORIGINS[1] if len(settings.CORS_ORIGINS) > 1 else frontend_base
+            portal_base = settings.PORTAL_BASE_URL
             link = f"{portal_base}/{tenant_slug}/portal/messages/{thread.id}"
             try:
                 await send_new_message_notification(

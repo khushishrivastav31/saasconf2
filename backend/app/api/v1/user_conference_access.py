@@ -163,6 +163,7 @@ async def grant_conference_access(
             access_level=access_label,
             conference_id=conference.id,
             tenant_id=current_user.tenant_id,
+            support_email=conference.support_email or conference.contact_email or "",
             base_url=settings.FRONTEND_BASE_URL,
         )
     except Exception:

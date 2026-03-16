@@ -12,6 +12,8 @@ import type {
   PortalPaperUpdateRequest,
   PortalConferenceDetail,
   PortalSpeakerFeedbackListResponse,
+  PortalPaperFormSchema,
+  PortalBuiltinFieldConfig,
 } from '../../types/portal';
 import RichTextEditor from '../../components/common/RichTextEditor';
 import RichTextDisplay from '../../components/common/RichTextDisplay';
@@ -97,6 +99,31 @@ function PaperDetailPage() {
     },
     enabled: !!paper?.conference_id && (isEditing || paper?.status === 'draft'),
   });
+
+  // Load form schema for character limits
+  const { data: formSchema } = useQuery({
+    queryKey: ['portal-paper-form-schema', paper?.cfp_id],
+    queryFn: async () => {
+      const res = await portalApi.get<PortalPaperFormSchema>(
+        `/portal/cfp/${paper!.cfp_id}/paper-form-schema`
+      );
+      return res.data;
+    },
+    enabled: !!paper?.cfp_id && (isEditing || paper?.status === 'draft'),
+    staleTime: 60_000,
+  });
+
+  // Get effective builtin config (variant or base schema)
+  const getFieldConfig = (fieldKey: string): PortalBuiltinFieldConfig | undefined => {
+    if (!formSchema) return undefined;
+    if (paper?.form_variant_id) {
+      const variant = formSchema.variants?.find((v) => v.id === paper.form_variant_id);
+      if (variant?.builtin_fields_config?.[fieldKey]) {
+        return variant.builtin_fields_config[fieldKey];
+      }
+    }
+    return formSchema.builtin_fields_config?.[fieldKey];
+  };
 
   useEffect(() => {
     return () => {
@@ -188,6 +215,9 @@ function PaperDetailPage() {
         const missingFields = (detail as { missing_fields: string[] }).missing_fields;
         const names = missingFields.map((f: string) => fieldLabels[f] || f);
         setError(`Missing required fields: ${names.join(', ')}`);
+      } else if (detail && typeof detail === 'object' && 'char_errors' in detail) {
+        const charErrors = (detail as { char_errors: string[] }).char_errors;
+        setError(charErrors.join('. '));
       } else {
         setError(typeof detail === 'string' ? detail : 'Failed to submit paper.');
       }
@@ -419,9 +449,35 @@ function PaperDetailPage() {
                 type="text"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                maxLength={500}
+                maxLength={getFieldConfig('title')?.max_chars ?? undefined}
+                minLength={getFieldConfig('title')?.min_chars ?? undefined}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               />
+              {(getFieldConfig('title')?.min_chars != null ||
+                getFieldConfig('title')?.max_chars != null) && (
+                <div className="flex justify-end mt-1">
+                  <span
+                    className={`text-xs ${
+                      getFieldConfig('title')?.max_chars != null &&
+                      editTitle.length > getFieldConfig('title')!.max_chars!
+                        ? 'text-red-600 font-medium'
+                        : getFieldConfig('title')?.min_chars != null &&
+                            editTitle.length > 0 &&
+                            editTitle.length < getFieldConfig('title')!.min_chars!
+                          ? 'text-red-600 font-medium'
+                          : 'text-gray-400 dark:text-gray-500'
+                    }`}
+                  >
+                    {editTitle.length}
+                    {getFieldConfig('title')?.min_chars != null && (
+                      <span> (min {getFieldConfig('title')!.min_chars})</span>
+                    )}
+                    {getFieldConfig('title')?.max_chars != null && (
+                      <span> / {getFieldConfig('title')!.max_chars}</span>
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Session Type */}
@@ -473,7 +529,8 @@ function PaperDetailPage() {
                 onChange={(html) => setEditAbstractShort(html)}
                 placeholder="Brief summary of your talk..."
                 rows={3}
-                maxLength={800}
+                minLength={getFieldConfig('abstract_short')?.min_chars ?? undefined}
+                maxLength={getFieldConfig('abstract_short')?.max_chars ?? undefined}
               />
             </div>
 
@@ -487,7 +544,8 @@ function PaperDetailPage() {
                 onChange={(html) => setEditAbstractLong(html)}
                 placeholder="Detailed description of your talk..."
                 rows={6}
-                maxLength={8000}
+                minLength={getFieldConfig('abstract_long')?.min_chars ?? undefined}
+                maxLength={getFieldConfig('abstract_long')?.max_chars ?? undefined}
               />
             </div>
 
@@ -501,7 +559,8 @@ function PaperDetailPage() {
                 onChange={(html) => setEditLearningObjectives(html)}
                 placeholder="What will attendees learn from this talk?"
                 rows={4}
-                maxLength={600}
+                minLength={getFieldConfig('learning_objectives')?.min_chars ?? undefined}
+                maxLength={getFieldConfig('learning_objectives')?.max_chars ?? undefined}
               />
             </div>
 
@@ -515,7 +574,8 @@ function PaperDetailPage() {
                 onChange={(html) => setEditImportance(html)}
                 placeholder="Explain why this topic matters..."
                 rows={4}
-                maxLength={600}
+                minLength={getFieldConfig('importance')?.min_chars ?? undefined}
+                maxLength={getFieldConfig('importance')?.max_chars ?? undefined}
               />
             </div>
 

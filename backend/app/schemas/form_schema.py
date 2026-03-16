@@ -50,6 +50,8 @@ class BuiltinFieldConfig(BaseModel):
     required: bool = False
     display_order: int | None = None
     help_text: str | None = None
+    min_chars: int | None = Field(None, ge=0, description="Minimum character count for text/richtext fields")
+    max_chars: int | None = Field(None, ge=1, description="Maximum character count for text/richtext fields")
 
 
 # --- Paper Form Field Schemas ---

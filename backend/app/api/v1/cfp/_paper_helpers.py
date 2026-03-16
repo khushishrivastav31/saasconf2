@@ -1,5 +1,6 @@
 """Shared validation and sync helpers for paper create / update endpoints."""
 
+import re
 from uuid import UUID
 
 from sqlalchemy import delete, select
@@ -13,6 +14,23 @@ from app.models.cfp import (
     cfp_paper_topics,
 )
 from app.models.settings import SessionType
+
+# Regex to strip HTML tags for plain-text character counting
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def strip_html_for_char_count(html: str | None) -> str:
+    """Strip HTML tags and return plain text for character counting.
+
+    Args:
+        html: HTML string (or None).
+
+    Returns:
+        Plain text with tags removed and whitespace trimmed.
+    """
+    if not html:
+        return ""
+    return _HTML_TAG_RE.sub("", html).strip()
 
 
 async def validate_main_speaker(db: AsyncSession, speaker_id: UUID, tenant_id: UUID) -> None:

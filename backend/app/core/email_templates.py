@@ -481,3 +481,109 @@ def build_registration_cancellation_context(
         "Invoice Number": invoice_number,
         "Cancellation Message": message_block,
     }
+
+
+def build_invoice_send_context(
+    *,
+    recipient_name: str = "",
+    conference_name: str = "",
+    invoice_number: str = "",
+    total_amount: str = "",
+    due_date: str = "",
+    support_email: str = "",
+    custom_message: str = "",
+    payment_link: str = "",
+) -> dict[str, str]:
+    """Build context for manual invoice send emails."""
+    # Format custom message as HTML block if provided
+    message_block = ""
+    if custom_message:
+        message_block = (
+            '<div style="margin: 16px 0; padding: 16px; background-color: #f0f9ff; '
+            'border-left: 4px solid #3b82f6; border-radius: 8px;">'
+            f'<p style="margin: 0;">{custom_message}</p>'
+            "</div>"
+        )
+
+    # Format payment link as button if provided
+    link_block = ""
+    if payment_link:
+        link_block = (
+            '<p><a href="' + payment_link + '" style="display: inline-block; padding: 12px 24px; '
+            'background-color: #16a34a; color: white; text-decoration: none; border-radius: 6px;">'
+            "Pay Online</a></p>"
+        )
+
+    return {
+        "Recipient Name": recipient_name or "Sir or Madam",
+        "Conference Name": conference_name,
+        "Invoice Number": invoice_number,
+        "Total Amount": total_amount,
+        "Due Date": due_date,
+        "Support Email": support_email,
+        "Custom Message": message_block,
+        "Payment Link": link_block,
+    }
+
+
+def build_direct_message_context(
+    *,
+    first_name: str = "",
+    conference_name: str = "",
+    sender_name: str = "",
+    message_subject: str = "",
+    message_content: str = "",
+) -> dict[str, str]:
+    """Build context for direct message emails (email-only messaging mode)."""
+    return {
+        "First Name": first_name or "there",
+        "Conference Name": conference_name,
+        "Sender Name": sender_name,
+        "Message Subject": message_subject,
+        "Message Content": message_content,
+    }
+
+
+def build_deadline_reminder_context(
+    *,
+    conference_name: str = "",
+    deadline_title: str = "",
+    deadline_description: str = "",
+    due_date: str = "",
+    reminder_status: str = "",
+) -> dict[str, str]:
+    """Build context for deadline reminder emails."""
+    # Format description as HTML paragraph if provided
+    desc_block = ""
+    if deadline_description:
+        desc_block = f'<p style="color: #374151; margin: 8px 0;">{deadline_description}</p>'
+
+    return {
+        "Conference Name": conference_name,
+        "Deadline Title": deadline_title,
+        "Deadline Description": desc_block,
+        "Due Date": due_date,
+        "Reminder Status": reminder_status,
+    }
+
+
+def build_payment_overdue_admin_context(
+    *,
+    conference_name: str = "",
+    recipient_name: str = "",
+    invoice_number: str = "",
+    invoice_amount: str = "",
+    currency: str = "",
+    days_overdue: str = "",
+    support_email: str = "",
+) -> dict[str, str]:
+    """Build context for payment overdue admin notification emails."""
+    return {
+        "Conference Name": conference_name,
+        "Recipient Name": recipient_name,
+        "Invoice Number": invoice_number,
+        "Invoice Amount": invoice_amount,
+        "Currency": currency,
+        "Days Overdue": days_overdue,
+        "Support Email": support_email,
+    }

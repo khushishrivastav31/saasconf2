@@ -128,6 +128,19 @@ function UserIcon() {
   );
 }
 
+function InvoiceIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"
+      />
+    </svg>
+  );
+}
+
 function NewspaperIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -221,6 +234,18 @@ function PortalLayout() {
   });
   const isCommitteeMember = (committeeMemberships?.items.length ?? 0) > 0;
 
+  // Invoice check (for sidebar visibility)
+  const { data: invoiceData } = useQuery({
+    queryKey: ['portal-invoices'],
+    queryFn: async () => {
+      const res = await portalApi.get('/portal/invoices');
+      return res.data as { items: unknown[]; total: number };
+    },
+    enabled: !!applicant,
+    staleTime: 60000,
+  });
+  const hasInvoices = (invoiceData?.total ?? 0) > 0;
+
   // Pending registration questions gate
   interface PendingQuestionData {
     id: string;
@@ -288,15 +313,27 @@ function PortalLayout() {
   };
   type NavSection = { label: string; items: NavItem[] };
 
+  // Show Papers section if any conference has CFPs or user can submit out-of-timeframe
+  const hasCfpAccess =
+    (conferences ?? []).some((c) => c.cfps.length > 0) || applicant.allow_out_of_timeframe;
+
   const navSections: NavSection[] = [
-    {
-      label: 'Papers',
-      items: [
-        { name: 'My Papers', href: `${basePath}/dashboard`, icon: DocumentIcon },
-        { name: 'Submit Paper', href: `${basePath}/papers/new`, icon: PlusIcon },
-        { name: 'Co-Speaker Invitations', href: `${basePath}/invitations`, icon: MailIcon },
-      ],
-    },
+    ...(hasCfpAccess
+      ? [
+          {
+            label: 'Papers',
+            items: [
+              { name: 'My Papers', href: `${basePath}/dashboard`, icon: DocumentIcon },
+              { name: 'Submit Paper', href: `${basePath}/papers/new`, icon: PlusIcon },
+              {
+                name: 'Co-Speaker Invitations',
+                href: `${basePath}/invitations`,
+                icon: MailIcon,
+              },
+            ],
+          },
+        ]
+      : []),
     ...(isCommitteeMember
       ? [
           {
@@ -319,7 +356,12 @@ function PortalLayout() {
       : []),
     {
       label: 'Account',
-      items: [{ name: 'My Profile', href: `${basePath}/profile`, icon: UserIcon }],
+      items: [
+        { name: 'My Profile', href: `${basePath}/profile`, icon: UserIcon },
+        ...(hasInvoices
+          ? [{ name: 'My Invoices', href: `${basePath}/invoices`, icon: InvoiceIcon }]
+          : []),
+      ],
     },
   ];
 

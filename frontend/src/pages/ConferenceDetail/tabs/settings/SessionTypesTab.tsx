@@ -9,16 +9,7 @@ import StatusBadge from '../../../../components/common/StatusBadge';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import ModalFooter from '../../../../components/common/ModalFooter';
 import CRUDSettingsTab, { type ColumnConfig } from './CRUDSettingsTab';
-
-// Helper function to generate slug from name
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-}
+import { slugifyHyphen } from '../../../../utils/validators';
 
 // --- Column definitions -----------------------------------------------------
 
@@ -148,7 +139,7 @@ function SessionTypeForm({
     setFormData((prev) => ({
       ...prev,
       name,
-      slug: autoSlug ? generateSlug(name) : prev.slug,
+      slug: autoSlug ? slugifyHyphen(name) : prev.slug,
     }));
   };
 

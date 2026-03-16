@@ -84,9 +84,13 @@ async def update_registration_questions_settings(
                 if len(options) < 2:
                     raise ValidationError(f"Radio/dropdown question '{q.get('text', '')}' must have at least 2 options")
 
-            # Sanitize help_text HTML
+            # Sanitize HTML in text, help_text, and options
+            if q.get("text"):
+                q["text"] = sanitize_html(q["text"])
             if q.get("help_text"):
                 q["help_text"] = sanitize_html(q["help_text"])
+            if q.get("options"):
+                q["options"] = [sanitize_html(opt) for opt in q["options"]]
 
     # Merge into existing settings
     settings = conference.settings or {}

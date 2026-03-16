@@ -411,6 +411,63 @@ async def submit_paper(
                 },
             )
 
+    # --- Validate character limits from form schema config ---
+    from app.api.v1.cfp._paper_helpers import strip_html_for_char_count
+    from app.models.form_schema import ConferencePaperFormSchema
+    from app.models.paper_form_variant import PaperFormVariant
+
+    builtin_cfg: dict = {}
+    if paper.form_variant_id:
+        fv_result = await db.execute(select(PaperFormVariant).where(PaperFormVariant.id == paper.form_variant_id))
+        variant = fv_result.scalar_one_or_none()
+        if variant and variant.builtin_fields_config:
+            builtin_cfg = variant.builtin_fields_config
+    if not builtin_cfg:
+        # Get conference_id via the CFP junction table (papers don't have conference_id directly)
+        conf_id_result = await db.execute(
+            select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == paper.cfp_id)
+        )
+        conf_id = conf_id_result.scalar_one_or_none()
+        schema_result = (
+            await db.execute(
+                select(ConferencePaperFormSchema).where(ConferencePaperFormSchema.conference_id == conf_id)
+            )
+            if conf_id
+            else None
+        )
+        schema = schema_result.scalar_one_or_none() if schema_result else None
+        if schema and schema.builtin_fields_config:
+            builtin_cfg = schema.builtin_fields_config
+
+    if builtin_cfg:
+        char_limit_fields = {
+            "title": ("Title", paper.title, False),
+            "abstract_short": ("Short Abstract", paper.abstract_short, True),
+            "abstract_long": ("Detailed Abstract", paper.abstract_long, True),
+            "learning_objectives": ("Learning Objectives", paper.learning_objectives, True),
+            "importance": ("Why is this important?", paper.importance, True),
+        }
+        char_errors: list[str] = []
+        for field_key, (label, value, is_html) in char_limit_fields.items():
+            cfg = builtin_cfg.get(field_key, {})
+            if not cfg.get("visible", True):
+                continue
+            plain = strip_html_for_char_count(value) if is_html else (value or "").strip()
+            min_c = cfg.get("min_chars")
+            max_c = cfg.get("max_chars")
+            if min_c is not None and len(plain) < min_c:
+                char_errors.append(f"{label} must be at least {min_c} characters (currently {len(plain)})")
+            if max_c is not None and len(plain) > max_c:
+                char_errors.append(f"{label} must be at most {max_c} characters (currently {len(plain)})")
+        if char_errors:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Character limit validation failed",
+                    "char_errors": char_errors,
+                },
+            )
+
     paper.status = PaperStatus.SUBMITTED.value
     paper.submitted_at = utcnow()
     await db.commit()

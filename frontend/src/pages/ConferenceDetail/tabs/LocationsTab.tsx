@@ -35,7 +35,7 @@ export default function ConferenceLocationsTab({
   const [createForm, setCreateForm] = useState({
     name: '',
     code: '',
-    location_type: 'room' as LocationCreate['location_type'],
+    location_type: '',
     description: '',
     capacity: '' as string | number,
     parent_id: '' as string,
@@ -141,7 +141,7 @@ export default function ConferenceLocationsTab({
       setCreateForm({
         name: '',
         code: '',
-        location_type: 'room',
+        location_type: '',
         description: '',
         capacity: '',
         parent_id: '',
@@ -343,6 +343,7 @@ export default function ConferenceLocationsTab({
                 }
                 className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               >
+                <option value="">Select type...</option>
                 {locationTypesData?.items
                   ?.filter((t) => t.is_active)
                   .map((t) => (

@@ -453,8 +453,11 @@ async def send_deadline_reminders(
                 for reminder_type, flag_attr in reminders_to_send:
                     try:
                         sent = await send_deadline_reminder(
+                            session,
                             to=to_email,
                             conference_name=conference.name or "Conference",
+                            conference_id=conference.id,
+                            tenant_id=conference.tenant_id,
                             deadline_title=deadline.title,
                             description=deadline.description,
                             due_date_formatted=due_formatted,

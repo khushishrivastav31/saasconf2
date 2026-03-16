@@ -19,6 +19,15 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import type { BuiltinFieldConfig } from '../../../../../types';
 
+// Fields that support min/max character limits (text / rich text fields)
+const CHAR_LIMIT_FIELDS = new Set([
+  'title',
+  'abstract_short',
+  'abstract_long',
+  'learning_objectives',
+  'importance',
+]);
+
 interface BuiltinFieldDef {
   key: string;
   label: string;
@@ -64,86 +73,126 @@ function SortableBuiltinField({
   };
 
   const isRequired = field.alwaysRequired || fieldConfig.required;
+  const supportsCharLimits = CHAR_LIMIT_FIELDS.has(field.key);
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center justify-between p-3 rounded-lg border ${
+      className={`p-3 rounded-lg border ${
         fieldConfig.visible
           ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
           : 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'
       } ${isDragging ? 'shadow-lg' : ''}`}
     >
-      <div className="flex items-center gap-3">
-        {/* Drag Handle */}
-        {isAdmin && (
-          <button
-            {...attributes}
-            {...listeners}
-            className="flex-shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none"
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {/* Drag Handle */}
+          {isAdmin && (
+            <button
+              {...attributes}
+              {...listeners}
+              className="flex-shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 8h16M4 16h16"
+                />
+              </svg>
+            </button>
+          )}
+          <span
+            className={`text-sm font-medium ${
+              fieldConfig.visible
+                ? 'text-gray-900 dark:text-gray-100'
+                : 'text-gray-400 dark:text-gray-500'
+            }`}
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 8h16M4 16h16"
-              />
-            </svg>
-          </button>
-        )}
-        <span
-          className={`text-sm font-medium ${
-            fieldConfig.visible
-              ? 'text-gray-900 dark:text-gray-100'
-              : 'text-gray-400 dark:text-gray-500'
-          }`}
-        >
-          {field.label}
-        </span>
-        {/* Built-in Badge */}
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700">
-          Built-in
-        </span>
-        {field.alwaysRequired && (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-            Always Required
+            {field.label}
           </span>
-        )}
+          {/* Built-in Badge */}
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700">
+            Built-in
+          </span>
+          {field.alwaysRequired && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+              Always Required
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={fieldConfig.visible}
+              onChange={(e) =>
+                onChange({
+                  ...fieldConfig,
+                  visible: e.target.checked,
+                })
+              }
+              disabled={!isAdmin || field.alwaysRequired}
+              className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+            />
+            <span className="text-xs text-gray-600 dark:text-gray-300">Visible</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isRequired}
+              onChange={(e) =>
+                onChange({
+                  ...fieldConfig,
+                  required: e.target.checked,
+                })
+              }
+              disabled={!isAdmin || field.alwaysRequired}
+              className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+            />
+            <span className="text-xs text-gray-600 dark:text-gray-300">Required</span>
+          </label>
+        </div>
       </div>
-      <div className="flex items-center gap-4">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={fieldConfig.visible}
-            onChange={(e) =>
-              onChange({
-                ...fieldConfig,
-                visible: e.target.checked,
-              })
-            }
-            disabled={!isAdmin || field.alwaysRequired}
-            className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
-          />
-          <span className="text-xs text-gray-600 dark:text-gray-300">Visible</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={isRequired}
-            onChange={(e) =>
-              onChange({
-                ...fieldConfig,
-                required: e.target.checked,
-              })
-            }
-            disabled={!isAdmin || field.alwaysRequired}
-            className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
-          />
-          <span className="text-xs text-gray-600 dark:text-gray-300">Required</span>
-        </label>
-      </div>
+      {/* Min/Max character inputs for text/richtext fields */}
+      {supportsCharLimits && fieldConfig.visible && isAdmin && (
+        <div className="flex items-center gap-4 mt-2 ml-8">
+          <label className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-500 dark:text-gray-400">Min chars</span>
+            <input
+              type="number"
+              min={0}
+              value={fieldConfig.min_chars ?? ''}
+              onChange={(e) =>
+                onChange({
+                  ...fieldConfig,
+                  min_chars: e.target.value ? parseInt(e.target.value, 10) : null,
+                })
+              }
+              placeholder="—"
+              className="w-20 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded focus:ring-primary-500 focus:border-primary-500"
+            />
+          </label>
+          <label className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-500 dark:text-gray-400">Max chars</span>
+            <input
+              type="number"
+              min={1}
+              value={fieldConfig.max_chars ?? ''}
+              onChange={(e) =>
+                onChange({
+                  ...fieldConfig,
+                  max_chars: e.target.value ? parseInt(e.target.value, 10) : null,
+                })
+              }
+              placeholder="—"
+              className="w-20 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded focus:ring-primary-500 focus:border-primary-500"
+            />
+          </label>
+        </div>
+      )}
     </div>
   );
 }

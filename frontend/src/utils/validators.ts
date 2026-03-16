@@ -92,3 +92,110 @@ export function normalizeUrl(value: string | null | undefined): string {
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
 }
+
+// Character replacements for German umlauts, ligatures, and common diacritics.
+// Applied before general transliteration so they produce the expected multi-char
+// expansions (e.g. ö → oe) rather than being stripped or reduced to "o".
+const CHAR_MAP: Record<string, string> = {
+  ä: 'ae',
+  ö: 'oe',
+  ü: 'ue',
+  ß: 'ss',
+  Ä: 'Ae',
+  Ö: 'Oe',
+  Ü: 'Ue',
+  à: 'a',
+  á: 'a',
+  â: 'a',
+  ã: 'a',
+  å: 'a',
+  è: 'e',
+  é: 'e',
+  ê: 'e',
+  ë: 'e',
+  ì: 'i',
+  í: 'i',
+  î: 'i',
+  ï: 'i',
+  ò: 'o',
+  ó: 'o',
+  ô: 'o',
+  õ: 'o',
+  ù: 'u',
+  ú: 'u',
+  û: 'u',
+  ñ: 'n',
+  ç: 'c',
+  ý: 'y',
+  ÿ: 'y',
+  ð: 'd',
+  þ: 'th',
+  ø: 'o',
+  æ: 'ae',
+  À: 'A',
+  Á: 'A',
+  Â: 'A',
+  Ã: 'A',
+  Å: 'A',
+  È: 'E',
+  É: 'E',
+  Ê: 'E',
+  Ë: 'E',
+  Ì: 'I',
+  Í: 'I',
+  Î: 'I',
+  Ï: 'I',
+  Ò: 'O',
+  Ó: 'O',
+  Ô: 'O',
+  Õ: 'O',
+  Ù: 'U',
+  Ú: 'U',
+  Û: 'U',
+  Ñ: 'N',
+  Ç: 'C',
+  Ý: 'Y',
+  Ð: 'D',
+  Þ: 'Th',
+  Ø: 'O',
+  Æ: 'Ae',
+};
+
+/**
+ * Replace known special characters (umlauts, diacritics) with ASCII equivalents.
+ */
+function transliterate(str: string): string {
+  return str.replace(/[^\x20-\x7E]/g, (ch) => CHAR_MAP[ch] ?? '');
+}
+
+/**
+ * Generate a hyphen-separated slug from a name.
+ * Handles German umlauts (ö→oe, ü→ue, ä→ae, ß→ss) and other diacritics.
+ *
+ * Example: "Große Halle" → "grosse-halle"
+ */
+export function slugifyHyphen(name: string): string {
+  return transliterate(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * Generate an underscore-separated slug from a name.
+ * Handles German umlauts (ö→oe, ü→ue, ä→ae, ß→ss) and other diacritics.
+ * Must start with a letter.
+ *
+ * Example: "Große Halle" → "grosse_halle"
+ */
+export function slugifyUnderscore(name: string): string {
+  return transliterate(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s_]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/^[^a-z]/, '')
+    .replace(/_+/g, '_')
+    .replace(/_$/, '');
+}
