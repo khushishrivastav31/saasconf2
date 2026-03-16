@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -38,19 +38,9 @@ import ConfirmDialog from '../../../../../components/ConfirmDialog';
 import FieldPalette from './FieldPalette';
 import FieldPropertyEditor from './FieldPropertyEditor';
 import UnifiedFieldCard, { type UnifiedField } from './UnifiedFieldCard';
-
-// --- Constants ---------------------------------------------------------------
-
-const BUILTIN_FIELDS_DEF = [
-  { key: 'title', label: 'Title', alwaysRequired: true },
-  { key: 'abstract_short', label: 'Short Abstract' },
-  { key: 'abstract_long', label: 'Long Abstract' },
-  { key: 'level', label: 'Level' },
-  { key: 'learning_objectives', label: 'Learning Objectives' },
-  { key: 'importance', label: 'Importance' },
-  { key: 'session_type', label: 'Session Type' },
-  { key: 'topics', label: 'Topics' },
-];
+import VariantManager from './VariantManager';
+import { BUILTIN_FIELDS_DEF } from './constants';
+import { BuiltinHelpTextPanel, FormPreview } from './shared';
 
 // --- Main Component ----------------------------------------------------------
 
@@ -70,6 +60,7 @@ function PaperFormBuilderTab({
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [deleteFieldTarget, setDeleteFieldTarget] = useState<UnifiedField | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
 
   // Drag & drop sensors with activation constraints for smoother dragging
   const sensors = useSensors(
@@ -456,132 +447,215 @@ function PaperFormBuilderTab({
 
   const activeField = activeId ? unifiedFields.find((f) => f.id === activeId) : null;
 
+  const visibleFieldCount = unifiedFields.filter((f) => f.is_visible).length;
+  const customFieldCount = unifiedFields.filter((f) => f.type === 'custom').length;
+
   return (
     <div className="h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            Paper Form Builder
-          </h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Design the paper submission form for this conference. Drag fields to reorder.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {hasSubmissions && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
-              {submissionsData?.submission_count} submissions exist
-            </span>
-          )}
-          <button
-            onClick={() => setShowPreview(!showPreview)}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            {showPreview ? 'Edit Mode' : 'Preview'}
-          </button>
-        </div>
-      </div>
+      <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+        Paper Form Builder
+      </h2>
 
-      <SuccessBanner message={successMessage} />
-      {error && <ErrorBanner message={error} />}
-
-      {showPreview ? (
-        <FormPreview unifiedFields={unifiedFields} />
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis]}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="grid grid-cols-12 gap-4" style={{ minHeight: '600px' }}>
-            {/* Left: Field Palette */}
-            <div className="col-span-3">
-              <FieldPalette onAddField={handleAddField} isAdmin={isAdmin} />
-            </div>
-
-            {/* Center: Unified Form Canvas */}
-            <div className="col-span-6">
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 h-full">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
-                  Form Fields
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                  All fields in submission order. Drag to reorder, toggle visibility and required.
+      {/* Standard Form — Collapsed Card */}
+      {!showBuilder ? (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Standard Form
+                  </h4>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                    Default
+                  </span>
+                  {hasSubmissions && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+                      {submissionsData?.submission_count} submissions
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Used by all submitters unless a role-based variant is assigned.
                 </p>
-
-                <SortableContext
-                  items={unifiedFields.map((f) => f.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-2">
-                    {unifiedFields.map((field) => (
-                      <UnifiedFieldCard
-                        key={field.id}
-                        field={field}
-                        isSelected={selectedFieldId === field.id}
-                        onSelect={() => setSelectedFieldId(field.id)}
-                        onDelete={
-                          field.type === 'custom' ? () => handleDeleteField(field) : undefined
-                        }
-                        onToggleVisible={
-                          field.type === 'builtin' && !field.alwaysRequired
-                            ? (v) => handleBuiltinFieldToggle(field.key, 'visible', v)
-                            : undefined
-                        }
-                        onToggleRequired={
-                          field.type === 'builtin' && !field.alwaysRequired
-                            ? (v) => handleBuiltinFieldToggle(field.key, 'required', v)
-                            : undefined
-                        }
-                        isAdmin={isAdmin}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-
-                {unifiedFields.length === 0 && (
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                    Click a field type from the palette to add custom fields
-                  </div>
-                )}
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  {visibleFieldCount} visible field{visibleFieldCount !== 1 ? 's' : ''}
+                  {customFieldCount > 0 && ` (${customFieldCount} custom)`}
+                </p>
               </div>
             </div>
-
-            {/* Right: Field Properties */}
-            <div className="col-span-3">
-              {selectedBuiltinKey ? (
-                <BuiltinHelpTextPanel
-                  fieldKey={selectedBuiltinKey}
-                  initialValue={schema?.builtin_fields_config[selectedBuiltinKey]?.help_text || ''}
-                  onSave={handleBuiltinFieldHelpText}
-                />
-              ) : (
-                <FieldPropertyEditor
-                  field={selectedCustomField}
-                  onUpdate={handleUpdateField}
-                  isAdmin={isAdmin}
-                />
-              )}
+            <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+              <button
+                type="button"
+                onClick={() => setShowBuilder(true)}
+                className="px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Edit
+              </button>
             </div>
           </div>
+        </div>
+      ) : (
+        /* Standard Form — Expanded Builder */
+        <div>
+          {/* Builder Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowBuilder(false);
+                  setShowPreview(false);
+                }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Back
+              </button>
+              <button
+                onClick={() => setShowPreview(!showPreview)}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                {showPreview ? 'Edit Mode' : 'Preview'}
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    Standard Form
+                  </h3>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                    Default
+                  </span>
+                </div>
+                <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                  Design the paper submission form. Drag fields to reorder.
+                </p>
+              </div>
+            </div>
+            {hasSubmissions && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+                {submissionsData?.submission_count} submissions exist
+              </span>
+            )}
+          </div>
 
-          {/* Drag Overlay */}
-          <DragOverlay>
-            {activeField ? (
-              <UnifiedFieldCard
-                field={activeField}
-                isSelected={false}
-                onSelect={() => {}}
-                isAdmin={isAdmin}
-                isDragging
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+          <SuccessBanner message={successMessage} />
+          {error && <ErrorBanner message={error} />}
+
+          {showPreview ? (
+            <FormPreview unifiedFields={unifiedFields} />
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="grid grid-cols-12 gap-4" style={{ minHeight: '600px' }}>
+                {/* Left: Field Palette */}
+                <div className="col-span-3">
+                  <FieldPalette onAddField={handleAddField} isAdmin={isAdmin} />
+                </div>
+
+                {/* Center: Unified Form Canvas */}
+                <div className="col-span-6">
+                  <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 h-full">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
+                      Form Fields
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                      All fields in submission order. Drag to reorder, toggle visibility and
+                      required.
+                    </p>
+
+                    <SortableContext
+                      items={unifiedFields.map((f) => f.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-2">
+                        {unifiedFields.map((field) => (
+                          <UnifiedFieldCard
+                            key={field.id}
+                            field={field}
+                            isSelected={selectedFieldId === field.id}
+                            onSelect={() => setSelectedFieldId(field.id)}
+                            onDelete={
+                              field.type === 'custom' ? () => handleDeleteField(field) : undefined
+                            }
+                            onToggleVisible={
+                              field.type === 'builtin' && !field.alwaysRequired
+                                ? (v) => handleBuiltinFieldToggle(field.key, 'visible', v)
+                                : undefined
+                            }
+                            onToggleRequired={
+                              field.type === 'builtin' && !field.alwaysRequired
+                                ? (v) => handleBuiltinFieldToggle(field.key, 'required', v)
+                                : undefined
+                            }
+                            isAdmin={isAdmin}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+
+                    {unifiedFields.length === 0 && (
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                        Click a field type from the palette to add custom fields
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right: Field Properties */}
+                <div className="col-span-3">
+                  {selectedBuiltinKey ? (
+                    <BuiltinHelpTextPanel
+                      fieldKey={selectedBuiltinKey}
+                      initialValue={
+                        schema?.builtin_fields_config[selectedBuiltinKey]?.help_text || ''
+                      }
+                      onSave={handleBuiltinFieldHelpText}
+                    />
+                  ) : (
+                    <FieldPropertyEditor
+                      field={selectedCustomField}
+                      onUpdate={handleUpdateField}
+                      isAdmin={isAdmin}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Drag Overlay */}
+              <DragOverlay>
+                {activeField ? (
+                  <UnifiedFieldCard
+                    field={activeField}
+                    isSelected={false}
+                    onSelect={() => {}}
+                    isAdmin={isAdmin}
+                    isDragging
+                  />
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </div>
       )}
+
+      {/* Role-Based Variants Manager */}
+      <VariantManager
+        conferenceId={conference.id}
+        variants={schema.variants ?? []}
+        isAdmin={isAdmin}
+      />
 
       {/* Versioning Warning Modal */}
       <ConfirmDialog
@@ -604,240 +678,6 @@ function PaperFormBuilderTab({
       />
     </div>
   );
-}
-
-// --- Built-in Field Help Text Panel ------------------------------------------
-
-function BuiltinHelpTextPanel({
-  fieldKey,
-  initialValue,
-  onSave,
-}: {
-  fieldKey: string;
-  initialValue: string;
-  onSave: (fieldKey: string, helpText: string) => void;
-}) {
-  const [value, setValue] = useState(initialValue);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Sync when switching fields
-  useEffect(() => {
-    setValue(initialValue);
-  }, [fieldKey, initialValue]);
-
-  const handleChange = useCallback(
-    (text: string) => {
-      setValue(text);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => onSave(fieldKey, text), 600);
-    },
-    [fieldKey, onSave]
-  );
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
-  return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-      <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-        Built-in Field Settings
-      </h3>
-      <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-          Help Text
-        </label>
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => handleChange(e.target.value)}
-          placeholder="Optional help text shown below the field..."
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-        />
-        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-          Displayed below the field on the submission form.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// --- Form Preview Component --------------------------------------------------
-
-function FormPreview({ unifiedFields }: { unifiedFields: UnifiedField[] }) {
-  return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 max-w-3xl mx-auto">
-      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">Form Preview</h3>
-
-      <div className="space-y-6">
-        {unifiedFields
-          .filter((f) => f.is_visible)
-          .map((field) => (
-            <div key={field.id}>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {field.label}
-                {field.is_required && <span className="text-red-500 ml-1">*</span>}
-              </label>
-              {field.type === 'builtin' ? (
-                <>
-                  {renderBuiltinPreviewField(field.key)}
-                  {field.builtinConfig?.help_text && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      {field.builtinConfig.help_text}
-                    </p>
-                  )}
-                </>
-              ) : field.customField ? (
-                <>
-                  {field.customField.description && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      {field.customField.description}
-                    </p>
-                  )}
-                  {renderCustomPreviewField(field.customField)}
-                  {field.customField.help_text && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      {field.customField.help_text}
-                    </p>
-                  )}
-                </>
-              ) : null}
-            </div>
-          ))}
-      </div>
-    </div>
-  );
-}
-
-function renderBuiltinPreviewField(key: string) {
-  switch (key) {
-    case 'abstract_long':
-    case 'learning_objectives':
-    case 'importance':
-      return (
-        <textarea
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
-          rows={4}
-          placeholder={`Enter ${key.replace('_', ' ')}...`}
-          disabled
-        />
-      );
-    case 'level':
-      return (
-        <select
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
-          disabled
-        >
-          <option>Select level...</option>
-          <option>Beginner</option>
-          <option>Intermediate</option>
-          <option>Advanced</option>
-          <option>All Levels</option>
-        </select>
-      );
-    case 'session_type':
-    case 'topics':
-      return (
-        <select
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
-          disabled
-        >
-          <option>Select {key.replace('_', ' ')}...</option>
-        </select>
-      );
-    default:
-      return (
-        <input
-          type="text"
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
-          placeholder={`Enter ${key.replace('_', ' ')}...`}
-          disabled
-        />
-      );
-  }
-}
-
-function renderCustomPreviewField(field: PaperFormField) {
-  switch (field.field_type) {
-    case 'text':
-      return (
-        <input
-          type="text"
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
-          placeholder={field.placeholder || ''}
-          disabled
-        />
-      );
-    case 'textarea':
-      return (
-        <textarea
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
-          rows={3}
-          placeholder={field.placeholder || ''}
-          disabled
-        />
-      );
-    case 'richtext':
-      return (
-        <div className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm bg-gray-50 dark:bg-gray-900 h-24">
-          <span className="text-gray-400 dark:text-gray-500">Rich text editor...</span>
-        </div>
-      );
-    case 'checkbox':
-      return (
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            className="rounded border-gray-300 dark:border-gray-600"
-            disabled
-          />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            {field.placeholder || 'Yes'}
-          </span>
-        </label>
-      );
-    case 'checkbox_group':
-      return (
-        <div className="space-y-2">
-          {(field.options || []).map((opt, idx) => (
-            <label key={idx} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="rounded border-gray-300 dark:border-gray-600"
-                disabled
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">{opt.label}</span>
-            </label>
-          ))}
-        </div>
-      );
-    case 'dropdown':
-      return (
-        <select
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"
-          disabled
-        >
-          <option>{field.placeholder || 'Select...'}</option>
-          {(field.options || []).map((opt, idx) => (
-            <option key={idx} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      );
-    case 'file_upload':
-      return (
-        <div className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900">
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            Drag and drop file here or click to browse
-          </span>
-        </div>
-      );
-    default:
-      return null;
-  }
 }
 
 export default PaperFormBuilderTab;

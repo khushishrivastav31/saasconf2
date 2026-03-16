@@ -28,7 +28,6 @@ from app.models.cfp import CallForPapers, CFPApplicant
 from app.models.conference import Conference
 from app.models.location import Location
 from app.models.tenant import Tenant
-from app.models.volunteer import Volunteer
 from app.schemas.conference import (
     ConferenceCreate,
     ConferenceListResponse,
@@ -557,15 +556,8 @@ async def delete_conference(
         deleted_attachments += len(result_att.fetchall())
 
     # --- Delete exclusive entities ---
-    deleted_volunteers = 0
     deleted_locations = 0
     deleted_cfps = 0
-
-    if dd.exclusive_vol_ids:
-        vols_result = await db.execute(select(Volunteer).where(Volunteer.id.in_(dd.exclusive_vol_ids)))
-        for vol in vols_result.scalars().all():
-            await db.delete(vol)
-            deleted_volunteers += 1
 
     if dd.exclusive_loc_ids:
         locs_result = await db.execute(select(Location).where(Location.id.in_(dd.exclusive_loc_ids)))
@@ -598,7 +590,6 @@ async def delete_conference(
         resource_id=conference.id,
         details={
             "name": conference_name,
-            "deleted_volunteers": deleted_volunteers,
             "deleted_locations": deleted_locations,
             "deleted_cfps": deleted_cfps,
             "deleted_applicants": deleted_applicants,
@@ -615,7 +606,6 @@ async def delete_conference(
 
     return {
         "message": f"Conference '{conference_name}' deleted successfully",
-        "deleted_volunteers": deleted_volunteers,
         "deleted_locations": deleted_locations,
         "deleted_cfps": deleted_cfps,
         "deleted_applicants": deleted_applicants,
@@ -662,11 +652,6 @@ async def delete_conference_preview(
         "is_active": conference.is_active,
         "can_delete": can_delete,
         "must_deactivate_first": conference.is_active,
-        "volunteers": {
-            "total_linked": dd.total_vols,
-            "will_delete": len(dd.exclusive_vol_ids),
-            "will_unlink": dd.total_vols - len(dd.exclusive_vol_ids),
-        },
         "locations": {
             "total_linked": dd.total_locs,
             "will_delete": len(dd.exclusive_loc_ids),

@@ -28,6 +28,7 @@ export const queryKeys = {
     list: (statusFilter?: string) => ['volunteers', statusFilter] as const,
     stats: ['volunteer-stats'] as const,
     byConference: (conferenceId: string) => ['conference-volunteers', conferenceId] as const,
+    profiles: (conferenceId: string) => ['volunteer-profiles', conferenceId] as const,
     roles: (conferenceId: string) => ['volunteer-roles', conferenceId] as const,
     sessionTasks: (conferenceId: string) => ['session-tasks', conferenceId] as const,
     assignments: (conferenceId: string) => ['volunteer-assignments', conferenceId] as const,
@@ -169,6 +170,7 @@ export const queryKeys = {
     platformCurrencies: ['platform-currencies'] as const,
     pronounOptions: (conferenceId: string) => ['pronoun-options', conferenceId] as const,
     paperFormSchema: (conferenceId: string) => ['paper-form-schema', conferenceId] as const,
+    paperFormVariants: (conferenceId: string) => ['paper-form-variants', conferenceId] as const,
     paperFormHasSubmissions: (conferenceId: string) =>
       ['paper-form-schema-has-submissions', conferenceId] as const,
     reviewCriteria: (conferenceId: string) => ['review-criteria', conferenceId] as const,

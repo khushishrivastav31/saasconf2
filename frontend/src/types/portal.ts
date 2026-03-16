@@ -35,6 +35,7 @@ export interface ApplicantProfile {
   needs_accessibility: boolean;
   accessibility_details: string | null;
   agrees_to_recording: boolean;
+  allow_out_of_timeframe: boolean;
   message_notifications_enabled: boolean;
   theme_preference: 'light' | 'dark' | null;
   picture_url: string | null;
@@ -147,6 +148,8 @@ export interface PortalPaper {
   conference_name: string | null;
   session_type_id: string | null;
   session_type_name: string | null;
+  form_variant_id: string | null;
+  form_variant_name: string | null;
   title: string;
   abstract_short: string | null;
   abstract_long: string | null;
@@ -173,6 +176,7 @@ export interface PortalPaperListResponse {
 export interface PortalPaperCreateRequest {
   cfp_id: string;
   session_type_id?: string;
+  form_variant_id?: string;
   title: string;
   abstract_short?: string;
   abstract_long?: string;
@@ -403,12 +407,25 @@ export interface PortalPaperFormField {
   options: PortalFieldOption[] | null;
 }
 
+export interface PortalPaperFormVariant {
+  id: string;
+  schema_id: string;
+  user_role_id: string;
+  role_name: string;
+  name: string;
+  description: string | null;
+  builtin_fields_config: Record<string, PortalBuiltinFieldConfig>;
+  is_active: boolean;
+  fields: PortalPaperFormField[];
+}
+
 export interface PortalPaperFormSchema {
   id: string;
   conference_id: string;
   version: number;
   builtin_fields_config: Record<string, PortalBuiltinFieldConfig>;
   fields: PortalPaperFormField[];
+  variants: PortalPaperFormVariant[];
 }
 
 // Portal messaging types

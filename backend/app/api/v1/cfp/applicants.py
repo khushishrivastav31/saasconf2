@@ -29,7 +29,7 @@ from app.schemas.cfp import (
     ApplicantResponse,
     ApplicantUpdate,
 )
-from app.schemas.settings import ApplicantRoleInfo
+from app.schemas.cfp_applicants import ApplicantRoleInfo
 
 from .shared import (
     MODULE_CODE,
@@ -100,10 +100,16 @@ async def _sync_role_assignments(
         if invalid:
             raise ValidationError(f"Invalid role IDs: {', '.join(str(i) for i in invalid)}")
 
-    # Delete existing assignments
-    existing = await db.execute(select(UserRoleAssignment).where(UserRoleAssignment.applicant_id == applicant_id))
+    # Delete existing assignments (scoped to tenant)
+    existing = await db.execute(
+        select(UserRoleAssignment).where(
+            UserRoleAssignment.applicant_id == applicant_id,
+            UserRoleAssignment.tenant_id == tenant_id,
+        )
+    )
     for assignment in existing.scalars().all():
         await db.delete(assignment)
+    await db.flush()  # Process DELETEs before INSERTs to avoid unique constraint violations
 
     # Create new assignments
     for role_id in role_ids:

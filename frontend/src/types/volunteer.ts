@@ -1,69 +1,38 @@
-// Volunteer types
-export type VolunteerStatus = 'pending' | 'approved' | 'rejected' | 'active' | 'inactive';
+// Volunteer profile types (applicant-based, role-driven)
 
-export interface Volunteer {
+export interface VolunteerProfile {
   id: string;
-  tenant_id: string;
-  email: string;
+  conference_id: string;
+  applicant_id: string;
   first_name: string;
   last_name: string;
-  full_name: string;
-  phone: string | null;
-  status: VolunteerStatus;
-  role: string | null;
+  email: string;
+  tshirt_size: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
   skills: string[];
   availability: Record<string, unknown>;
   notes: string | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
-  tshirt_size: string | null;
-  application_date: string;
-  approved_date: string | null;
+  color: string | null;
   total_hours: number;
-  created_at: string;
-  updated_at: string;
-  conference_ids: string[];
+  created_at: string | null;
+  updated_at: string | null;
 }
 
-export interface VolunteerCreate {
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone?: string;
-  role?: string;
+export interface VolunteerProfileUpdate {
+  tshirt_size?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
   skills?: string[];
   availability?: Record<string, unknown>;
-  notes?: string;
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  tshirt_size?: string;
-  conference_id: string;
-}
-
-export interface VolunteerUpdate {
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  status?: VolunteerStatus;
-  role?: string;
-  skills?: string[];
-  availability?: Record<string, unknown>;
-  notes?: string;
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  tshirt_size?: string;
+  notes?: string | null;
+  color?: string | null;
   total_hours?: number;
 }
 
-export interface VolunteerStats {
+export interface VolunteerProfileListResponse {
+  items: VolunteerProfile[];
   total: number;
-  pending: number;
-  approved: number;
-  active: number;
-  inactive: number;
-  rejected: number;
-  total_hours: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,7 +61,7 @@ export interface SessionTasksListResponse {
 
 export interface AssignedVolunteerBrief {
   assignment_id: string;
-  volunteer_id: string;
+  applicant_id: string;
   volunteer_name: string;
   volunteer_color: string | null;
 }
@@ -131,7 +100,7 @@ export interface VolunteerScheduleEntry {
 }
 
 export interface VolunteerScheduleResponse {
-  volunteer_id: string;
+  applicant_id: string;
   volunteer_name: string;
   volunteer_color: string | null;
   entries: VolunteerScheduleEntry[];

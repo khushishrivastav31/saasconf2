@@ -9,7 +9,6 @@ import { ErrorBanner } from '../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
 import type { CommitteeMember, CFPTopic, Applicant, CFPCommitteeRole } from '../../../types';
 import { parseApiError } from '../../../utils/apiError';
-import { validatePhone, validateEmail } from '../../../utils/validators';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 
 interface MemberListResponse {
@@ -23,25 +22,13 @@ interface ApplicantListResponse {
 }
 
 interface MemberFormData {
-  mode: 'link' | 'create';
   applicant_id: string | null;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  password: string;
   role: string;
   topic_ids: string[];
 }
 
 const emptyForm: MemberFormData = {
-  mode: 'link',
   applicant_id: null,
-  first_name: '',
-  last_name: '',
-  email: '',
-  phone: '',
-  password: '',
   role: '',
   topic_ids: [],
 };
@@ -200,20 +187,12 @@ function MemberForm({
   const [formData, setFormData] = useState<MemberFormData>(
     member
       ? {
-          mode: 'link',
           applicant_id: member.applicant_id,
-          first_name: member.first_name,
-          last_name: member.last_name,
-          email: member.email,
-          phone: '',
-          password: '',
           role: member.role,
           topic_ids: member.topics?.map((t) => t.id) || [],
         }
       : emptyForm
   );
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
   const [applicantSearch, setApplicantSearch] = useState('');
 
   // Fetch available committee roles from settings
@@ -264,19 +243,12 @@ function MemberForm({
     setFormData(
       member
         ? {
-            mode: 'link',
             applicant_id: member.applicant_id,
-            first_name: member.first_name,
-            last_name: member.last_name,
-            email: member.email,
-            phone: '',
-            password: '',
             role: member.role,
             topic_ids: member.topics?.map((t) => t.id) || [],
           }
         : emptyForm
     );
-    setPhoneError(null);
     setApplicantSearch('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [member?.id]);
@@ -301,19 +273,8 @@ function MemberForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (phoneError) return;
 
-    if (!isEditing) {
-      if (formData.mode === 'link' && !formData.applicant_id) return;
-      if (
-        formData.mode === 'create' &&
-        (!formData.first_name.trim() ||
-          !formData.last_name.trim() ||
-          !formData.email.trim() ||
-          !formData.password.trim())
-      )
-        return;
-    }
+    if (!isEditing && !formData.applicant_id) return;
 
     setSaving();
     onSave(formData);
@@ -323,38 +284,8 @@ function MemberForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       <ErrorBanner message={error} />
 
-      {/* Mode toggle — only when creating */}
+      {/* Select existing user */}
       {!isEditing && (
-        <div>
-          <div className="flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden w-fit">
-            <button
-              type="button"
-              onClick={() => setFormData((d) => ({ ...d, mode: 'link', applicant_id: null }))}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                formData.mode === 'link'
-                  ? 'bg-primary-50 text-primary-700 border-r border-primary-200'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-r border-gray-300 dark:border-gray-600'
-              }`}
-            >
-              Link Existing User
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormData((d) => ({ ...d, mode: 'create', applicant_id: null }))}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                formData.mode === 'create'
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              Create New User
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Link existing user mode */}
-      {!isEditing && formData.mode === 'link' && (
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Select User <span className="text-red-500">*</span>
@@ -417,84 +348,6 @@ function MemberForm({
                 {applicantSearch ? 'No users match your search.' : 'No users available.'}
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Create new user mode */}
-      {!isEditing && formData.mode === 'create' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              First Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.first_name}
-              onChange={(e) => setFormData((d) => ({ ...d, first_name: e.target.value }))}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Last Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.last_name}
-              onChange={(e) => setFormData((d) => ({ ...d, last_name: e.target.value }))}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData((d) => ({ ...d, email: e.target.value }))}
-              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
-              className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
-              required
-            />
-            {emailError && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Phone
-            </label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFormData((d) => ({ ...d, phone: value }));
-                setPhoneError(validatePhone(value));
-              }}
-              className={`w-full border rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
-                phoneError ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="+491234545 or 00491234566"
-            />
-            {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Password <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData((d) => ({ ...d, password: e.target.value }))}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-              required
-              minLength={6}
-            />
           </div>
         </div>
       )}
@@ -588,7 +441,7 @@ function MemberForm({
           </button>
           <button
             type="submit"
-            disabled={isSaving || !!phoneError}
+            disabled={isSaving}
             className={`px-4 py-2 text-sm font-medium text-white rounded-md disabled:opacity-50 transition-all duration-300 inline-flex items-center gap-2 ${
               saveStatus === 'saved'
                 ? 'bg-green-600 hover:bg-green-700'
@@ -687,18 +540,10 @@ export default function CFPProgramCommittee({
     mutationFn: async (data: MemberFormData) => {
       const payload: Record<string, unknown> = {
         conference_id: conferenceId,
+        applicant_id: data.applicant_id,
         role: data.role,
         topic_ids: data.topic_ids,
       };
-      if (data.mode === 'link' && data.applicant_id) {
-        payload.applicant_id = data.applicant_id;
-      } else {
-        payload.first_name = data.first_name;
-        payload.last_name = data.last_name;
-        payload.email = data.email;
-        payload.password = data.password;
-        if (data.phone.trim()) payload.phone = data.phone.trim();
-      }
       const response = await api.post<CommitteeMember>('/cfp/committee-members', payload);
       return response.data;
     },
@@ -767,26 +612,49 @@ export default function CFPProgramCommittee({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {isAdding
-              ? 'Add Committee Member'
-              : selectedMember
-                ? `${selectedMember.first_name} ${selectedMember.last_name}`
-                : 'Program Committee'}
-            {!isAdding && !selectedMember && memberCount > 0 && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                {memberCount}
-              </span>
-            )}
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {isAdding
-              ? 'Link an existing user or create a new one.'
-              : selectedMember
-                ? 'Edit committee role and topics.'
-                : 'Manage program committee members.'}
-          </p>
+        <div className="flex items-center gap-3">
+          {(isAdding || selectedMember) && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsAdding(false);
+                setSelectedMemberId(null);
+                setError(null);
+              }}
+              className="p-1.5 -ml-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Back to list"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+          )}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {isAdding
+                ? 'Add Committee Member'
+                : selectedMember
+                  ? `${selectedMember.first_name} ${selectedMember.last_name}`
+                  : 'Program Committee'}
+              {!isAdding && !selectedMember && memberCount > 0 && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                  {memberCount}
+                </span>
+              )}
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {isAdding
+                ? 'Select an existing user to add to the committee.'
+                : selectedMember
+                  ? 'Edit committee role and topics.'
+                  : 'Manage program committee members.'}
+            </p>
+          </div>
         </div>
         {isAdmin && !isAdding && !selectedMember && (
           <button

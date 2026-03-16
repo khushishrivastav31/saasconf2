@@ -359,14 +359,49 @@ class UserRoleListResponse(BaseModel):
     total: int
 
 
-# --- User Role Assignment Schemas (used on applicant endpoints) ---
+# --- Role Assignment Schemas (per-role member management) ---
 
 
-class ApplicantRoleInfo(BaseModel):
-    """Minimal role info included in applicant responses."""
+class RoleAssignmentCreate(BaseModel):
+    """Assign an applicant to a role."""
+
+    applicant_id: UUID
+
+
+class RoleAssignmentResponse(BaseModel):
+    """An applicant assigned to a role."""
 
     id: UUID
-    name: str
+    applicant_id: UUID
+    first_name: str
+    last_name: str
+    email: str
+    company: str | None = None
+    picture_url: str | None = None
+    created_at: datetime
+
+
+class RoleAssignmentListResponse(BaseModel):
+    """List of role assignments."""
+
+    items: list[RoleAssignmentResponse]
+    total: int
+
+
+class AssignableApplicantItem(BaseModel):
+    """An applicant available to be assigned to a role."""
+
+    id: UUID
+    first_name: str
+    last_name: str
+    email: str
+
+
+class AssignableApplicantListResponse(BaseModel):
+    """List of applicants available to assign."""
+
+    items: list[AssignableApplicantItem]
+    total: int
 
 
 # --- Invoice Settings Schemas ---

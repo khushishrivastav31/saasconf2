@@ -31,19 +31,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.applicant_security import create_applicant_access_token
 from app.core.security import hash_password
-from app.models.associations import ConferenceVolunteer
 from app.models.attachment import Attachment
 from app.models.cfp import CFPApplicant
 from app.models.conference import Conference
 from app.models.messaging import Message, MessageParticipant, MessageThread
 from app.models.module import Module, TenantModule
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
-from app.models.settings import SponsorPackage, VolunteerRole
+from app.models.settings import SponsorPackage, UserRole, UserRoleAssignment, VolunteerRole
 from app.models.sponsor import Sponsor
 from app.models.sponsor_contract import SponsorContract, SponsorContractVersion
 from app.models.tenant import Tenant
 from app.models.user import User
-from app.models.volunteer import Volunteer
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 from tests.conftest import _make_token, auth_headers
 
@@ -477,37 +475,67 @@ async def vol_role2(db_session: AsyncSession, tenant: Tenant, conference: Confer
 
 
 @pytest_asyncio.fixture()
-async def volunteer(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> Volunteer:
-    v = Volunteer(
+async def _volunteer_role(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> UserRole:
+    """Ensure a Volunteer UserRole exists for the conference."""
+    r = UserRole(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        name="Volunteer",
+        is_system=True,
+        is_active=True,
+    )
+    db_session.add(r)
+    await db_session.commit()
+    return r
+
+
+@pytest_asyncio.fixture()
+async def volunteer(
+    db_session: AsyncSession, tenant: Tenant, conference: Conference, _volunteer_role: UserRole
+) -> CFPApplicant:
+    a = CFPApplicant(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
         email=f"vol-{uuid.uuid4().hex[:6]}@test.com",
         first_name="Vera",
         last_name="Volunteer",
-        status="approved",
     )
-    db_session.add(v)
+    db_session.add(a)
     await db_session.flush()
-    db_session.add(ConferenceVolunteer(conference_id=conference.id, volunteer_id=v.id))
+    db_session.add(
+        UserRoleAssignment(
+            tenant_id=tenant.id,
+            user_role_id=_volunteer_role.id,
+            applicant_id=a.id,
+        )
+    )
     await db_session.commit()
-    return v
+    return a
 
 
 @pytest_asyncio.fixture()
-async def volunteer2(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> Volunteer:
-    v = Volunteer(
+async def volunteer2(
+    db_session: AsyncSession, tenant: Tenant, conference: Conference, _volunteer_role: UserRole
+) -> CFPApplicant:
+    a = CFPApplicant(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
         email=f"vol2-{uuid.uuid4().hex[:6]}@test.com",
         first_name="Victor",
         last_name="Volunteer",
-        status="approved",
     )
-    db_session.add(v)
+    db_session.add(a)
     await db_session.flush()
-    db_session.add(ConferenceVolunteer(conference_id=conference.id, volunteer_id=v.id))
+    db_session.add(
+        UserRoleAssignment(
+            tenant_id=tenant.id,
+            user_role_id=_volunteer_role.id,
+            applicant_id=a.id,
+        )
+    )
     await db_session.commit()
-    return v
+    return a
 
 
 @pytest_asyncio.fixture()
@@ -537,14 +565,14 @@ async def volunteer_assignment(
     tenant: Tenant,
     conference: Conference,
     session_task: SessionVolunteerTask,
-    volunteer: Volunteer,
+    volunteer: CFPApplicant,
 ) -> VolunteerAssignment:
     a = VolunteerAssignment(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
         conference_id=conference.id,
         session_volunteer_task_id=session_task.id,
-        volunteer_id=volunteer.id,
+        applicant_id=volunteer.id,
     )
     db_session.add(a)
     await db_session.commit()
@@ -1579,7 +1607,7 @@ class TestVolunteerAssignmentCRUD:
         client: AsyncClient,
         conference: Conference,
         session_task: SessionVolunteerTask,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         all_modules_tenant: Tenant,
         tenant_admin_user: User,
     ) -> None:
@@ -1589,14 +1617,14 @@ class TestVolunteerAssignmentCRUD:
             _vol_url(conference.id, "/volunteer-assignments"),
             json={
                 "session_volunteer_task_id": str(session_task.id),
-                "volunteer_id": str(volunteer.id),
+                "applicant_id": str(volunteer.id),
             },
             headers=headers,
         )
         assert resp.status_code == 200
         data = resp.json()
         assert data["volunteer_name"] == "Vera Volunteer"
-        assert data["volunteer_id"] == str(volunteer.id)
+        assert data["applicant_id"] == str(volunteer.id)
 
     @pytest.mark.asyncio
     async def test_list_assignments_overview(
@@ -1605,7 +1633,7 @@ class TestVolunteerAssignmentCRUD:
         conference: Conference,
         session_task: SessionVolunteerTask,
         volunteer_assignment: VolunteerAssignment,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         all_modules_tenant: Tenant,
         tenant_admin_user: User,
     ) -> None:
@@ -1652,7 +1680,7 @@ class TestVolunteerColor:
         self,
         client: AsyncClient,
         conference: Conference,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         all_modules_tenant: Tenant,
         tenant_admin_user: User,
     ) -> None:
@@ -1677,7 +1705,7 @@ class TestVolunteerSchedule:
         conference: Conference,
         session_task: SessionVolunteerTask,
         volunteer_assignment: VolunteerAssignment,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         all_modules_tenant: Tenant,
         tenant_admin_user: User,
     ) -> None:
@@ -1700,7 +1728,7 @@ class TestVolunteerSchedule:
         conference: Conference,
         session_task: SessionVolunteerTask,
         volunteer_assignment: VolunteerAssignment,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         all_modules_tenant: Tenant,
         tenant_admin_user: User,
     ) -> None:
@@ -1755,7 +1783,7 @@ class TestVolunteerSchedulePDF:
         conference: Conference,
         session_task: SessionVolunteerTask,
         volunteer_assignment: VolunteerAssignment,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         all_modules_tenant: Tenant,
         tenant_admin_user: User,
     ) -> None:
@@ -1776,7 +1804,7 @@ class TestVolunteerSchedulePDF:
         conference: Conference,
         session_task: SessionVolunteerTask,
         volunteer_assignment: VolunteerAssignment,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         all_modules_tenant: Tenant,
         tenant_admin_user: User,
     ) -> None:
@@ -1802,7 +1830,7 @@ class TestVolunteerSchedulePDF:
         conference: Conference,
         session_task: SessionVolunteerTask,
         volunteer_assignment: VolunteerAssignment,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         all_modules_tenant: Tenant,
         tenant_admin_user: User,
     ) -> None:
@@ -1826,7 +1854,7 @@ class TestVolunteerSchedulePDF:
         self,
         client: AsyncClient,
         conference: Conference,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         all_modules_tenant: Tenant,
         tenant_admin_user: User,
     ) -> None:

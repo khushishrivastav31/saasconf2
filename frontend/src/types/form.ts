@@ -74,6 +74,55 @@ export interface PaperFormFieldUpdate {
   options?: FieldOption[];
 }
 
+export interface PaperFormVariantField {
+  id: string;
+  tenant_id: string;
+  variant_id: string;
+  field_key: string;
+  field_type: PaperFormFieldType;
+  label: string;
+  description: string | null;
+  placeholder: string | null;
+  help_text: string | null;
+  display_order: number;
+  is_visible: boolean;
+  is_required: boolean;
+  validation_rules: ValidationRules | null;
+  options: FieldOption[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaperFormVariant {
+  id: string;
+  tenant_id: string;
+  schema_id: string;
+  user_role_id: string;
+  role_name: string;
+  name: string;
+  description: string | null;
+  builtin_fields_config: Record<string, BuiltinFieldConfig>;
+  is_active: boolean;
+  fields: PaperFormVariantField[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaperFormVariantCreate {
+  user_role_id: string;
+  name: string;
+  description?: string;
+  builtin_fields_config?: Record<string, BuiltinFieldConfig>;
+  is_active?: boolean;
+}
+
+export interface PaperFormVariantUpdate {
+  name?: string;
+  description?: string;
+  builtin_fields_config?: Record<string, BuiltinFieldConfig>;
+  is_active?: boolean;
+}
+
 export interface PaperFormSchema {
   id: string;
   tenant_id: string;
@@ -81,6 +130,7 @@ export interface PaperFormSchema {
   version: number;
   builtin_fields_config: Record<string, BuiltinFieldConfig>;
   fields: PaperFormField[];
+  variants: PaperFormVariant[];
   created_at: string;
   updated_at: string;
 }

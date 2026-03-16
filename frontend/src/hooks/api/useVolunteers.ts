@@ -1,48 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../config/api';
 import { queryKeys } from '../../config/queryKeys';
-import type {
-  Volunteer,
-  VolunteerCreate,
-  VolunteerUpdate,
-  VolunteerStats,
-  VolunteerRole,
-  PaginatedResponse,
-} from '../../types';
+import type { VolunteerProfile, VolunteerProfileUpdate, VolunteerRole } from '../../types';
 
 /**
- * Fetch a paginated, optionally filtered list of volunteers.
- */
-export function useVolunteerList(statusFilter?: string) {
-  return useQuery({
-    queryKey: queryKeys.volunteers.list(statusFilter),
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (statusFilter) params.set('status', statusFilter);
-      const response = await api.get<PaginatedResponse<Volunteer>>(`/volunteers?${params}`);
-      return response.data;
-    },
-  });
-}
-
-/**
- * Fetch aggregate volunteer statistics.
- */
-export function useVolunteerStats() {
-  return useQuery({
-    queryKey: queryKeys.volunteers.stats,
-    queryFn: async () => {
-      const response = await api.get<VolunteerStats>('/volunteers/stats');
-      return response.data;
-    },
-  });
-}
-
-/**
- * Fetch volunteer roles for a specific conference.
+ * Fetch volunteer roles (task types) for a specific conference.
  *
- * Used in volunteer create/edit forms to populate the role dropdown.
- * The query is disabled when `conferenceId` is falsy.
+ * Used in task assignment forms to populate the role dropdown.
  */
 export function useVolunteerRoles(conferenceId: string | undefined) {
   return useQuery({
@@ -58,63 +22,45 @@ export function useVolunteerRoles(conferenceId: string | undefined) {
 }
 
 /**
- * Mutation to create a new volunteer.
- *
- * Invalidates volunteer list and stats on success.
+ * Fetch volunteer profiles for a conference.
  */
-export function useCreateVolunteer() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: VolunteerCreate) => {
-      const response = await api.post<Volunteer>('/volunteers', data);
+export function useVolunteerProfiles(conferenceId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.volunteers.profiles(conferenceId ?? ''),
+    queryFn: async () => {
+      const response = await api.get<{ items: VolunteerProfile[]; total: number }>(
+        `/conferences/${conferenceId}/volunteer-profiles`
+      );
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.stats });
-      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.allList });
-    },
+    enabled: !!conferenceId,
   });
 }
 
 /**
- * Mutation to update an existing volunteer.
- *
- * Invalidates volunteer list and stats on success.
+ * Mutation to update a volunteer profile.
  */
-export function useUpdateVolunteer() {
+export function useUpdateVolunteerProfile(conferenceId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: VolunteerUpdate }) => {
-      const response = await api.put<Volunteer>(`/volunteers/${id}`, data);
+    mutationFn: async ({
+      applicantId,
+      data,
+    }: {
+      applicantId: string;
+      data: VolunteerProfileUpdate;
+    }) => {
+      const response = await api.put<VolunteerProfile>(
+        `/conferences/${conferenceId}/volunteer-profiles/${applicantId}`,
+        data
+      );
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.stats });
-      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.allList });
-    },
-  });
-}
-
-/**
- * Mutation to delete a volunteer.
- *
- * Invalidates volunteer list and stats on success.
- */
-export function useDeleteVolunteer() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/volunteers/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.stats });
-      queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.allList });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.volunteers.profiles(conferenceId ?? ''),
+      });
     },
   });
 }

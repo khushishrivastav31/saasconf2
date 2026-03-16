@@ -19,7 +19,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
+from app.models.associations import ConferenceCFP, ConferenceLocation
 from app.models.cfp import CallForPapers
 from app.models.conference import Conference
 from app.models.location import Location
@@ -27,7 +27,6 @@ from app.models.module import Module, TenantModule
 from app.models.screen_overlay import ScreenOverlay
 from app.models.tenant import Tenant
 from app.models.user import User
-from app.models.volunteer import Volunteer
 from tests.conftest import auth_headers
 
 # ── Helpers ────────────────────────────────────────────────────────────
@@ -106,22 +105,6 @@ async def tenant_with_all_modules(
 
 
 @pytest_asyncio.fixture()
-async def volunteer(db_session: AsyncSession, tenant: Tenant) -> Volunteer:
-    """Create a test volunteer."""
-    v = Volunteer(
-        id=uuid.uuid4(),
-        tenant_id=tenant.id,
-        email="volunteer@test.com",
-        first_name="Vol",
-        last_name="Unteer",
-        status="pending",
-    )
-    db_session.add(v)
-    await db_session.commit()
-    return v
-
-
-@pytest_asyncio.fixture()
 async def location(db_session: AsyncSession, tenant: Tenant) -> Location:
     """Create a test location."""
     loc = Location(
@@ -164,23 +147,6 @@ async def second_conference(db_session: AsyncSession, tenant: Tenant) -> Confere
     db_session.add(c)
     await db_session.commit()
     return c
-
-
-@pytest_asyncio.fixture()
-async def linked_volunteer(
-    db_session: AsyncSession,
-    conference: Conference,
-    volunteer: Volunteer,
-) -> Volunteer:
-    """Link a volunteer to the conference."""
-    db_session.add(
-        ConferenceVolunteer(
-            conference_id=conference.id,
-            volunteer_id=volunteer.id,
-        )
-    )
-    await db_session.commit()
-    return volunteer
 
 
 @pytest_asyncio.fixture()
@@ -539,164 +505,7 @@ class TestConferenceDeletePreview:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# 2. CONFERENCE ASSOCIATIONS - VOLUNTEERS
-# ═══════════════════════════════════════════════════════════════════════
-
-
-class TestVolunteerAssociations:
-    """Conference <-> Volunteer link/unlink."""
-
-    async def test_list_volunteers_empty(
-        self,
-        client: AsyncClient,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-    ) -> None:
-        """Listing volunteers for a conference with none linked returns empty."""
-        resp = await client.get(
-            f"{BASE_URL}/{conference.id}/volunteers",
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 200
-        assert resp.json()["total"] == 0
-
-    async def test_link_volunteer(
-        self,
-        client: AsyncClient,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-        volunteer: Volunteer,
-    ) -> None:
-        """Link a volunteer to a conference returns 201."""
-        resp = await client.post(
-            f"{BASE_URL}/{conference.id}/volunteers",
-            json={"id": str(volunteer.id)},
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 201
-        assert "linked" in resp.json()["message"].lower()
-
-    async def test_link_volunteer_duplicate(
-        self,
-        client: AsyncClient,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-        linked_volunteer: Volunteer,
-    ) -> None:
-        """Linking an already-linked volunteer returns 400."""
-        resp = await client.post(
-            f"{BASE_URL}/{conference.id}/volunteers",
-            json={"id": str(linked_volunteer.id)},
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 400
-
-    async def test_link_nonexistent_volunteer_404(
-        self,
-        client: AsyncClient,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-    ) -> None:
-        """Linking a nonexistent volunteer returns 404."""
-        fake_id = uuid.uuid4()
-        resp = await client.post(
-            f"{BASE_URL}/{conference.id}/volunteers",
-            json={"id": str(fake_id)},
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 404
-
-    async def test_list_linked_volunteers(
-        self,
-        client: AsyncClient,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-        linked_volunteer: Volunteer,
-    ) -> None:
-        """Listing volunteers shows the linked volunteer."""
-        resp = await client.get(
-            f"{BASE_URL}/{conference.id}/volunteers",
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["total"] == 1
-        assert data["items"][0]["first_name"] == "Vol"
-
-    async def test_unlink_volunteer_only_conference_blocked(
-        self,
-        client: AsyncClient,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-        linked_volunteer: Volunteer,
-    ) -> None:
-        """Cannot unlink a volunteer from their only conference."""
-        resp = await client.delete(
-            f"{BASE_URL}/{conference.id}/volunteers/{linked_volunteer.id}",
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 400
-        assert "only conference" in resp.json()["detail"].lower()
-
-    async def test_unlink_volunteer_with_multiple_conferences(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-        second_conference: Conference,
-        linked_volunteer: Volunteer,
-    ) -> None:
-        """Can unlink a volunteer when linked to multiple conferences."""
-        # Link to second conference too
-        db_session.add(
-            ConferenceVolunteer(
-                conference_id=second_conference.id,
-                volunteer_id=linked_volunteer.id,
-            )
-        )
-        await db_session.commit()
-
-        resp = await client.delete(
-            f"{BASE_URL}/{conference.id}/volunteers/{linked_volunteer.id}",
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 200
-        assert "unlinked" in resp.json()["message"].lower()
-
-    async def test_unlink_nonexistent_volunteer_404(
-        self,
-        client: AsyncClient,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-    ) -> None:
-        """Unlinking a volunteer not linked to the conference returns 404."""
-        fake_id = uuid.uuid4()
-        resp = await client.delete(
-            f"{BASE_URL}/{conference.id}/volunteers/{fake_id}",
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 404
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# 3. CONFERENCE ASSOCIATIONS - LOCATIONS
+# 2. CONFERENCE ASSOCIATIONS - LOCATIONS
 # ═══════════════════════════════════════════════════════════════════════
 
 

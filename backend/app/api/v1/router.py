@@ -42,8 +42,8 @@ from app.api.v1 import (
     user_conference_access,
     users,
     vat_rates,
+    volunteer_profiles,
     volunteer_tasks,
-    volunteers,
 )
 from app.api.v1.messaging.global_unread import router as global_unread_router
 
@@ -86,7 +86,6 @@ api_router.include_router(
 
 # Module-specific endpoints (requires module access)
 api_router.include_router(conferences.router, prefix="/conferences", tags=["Conferences"])
-api_router.include_router(volunteers.router, prefix="/volunteers", tags=["Volunteers"])
 api_router.include_router(locations.router, prefix="/locations", tags=["Locations"])
 api_router.include_router(cfp.router, prefix="/cfp", tags=["Call for Papers"])
 
@@ -169,6 +168,13 @@ api_router.include_router(
     volunteer_tasks.router,
     prefix="/conferences/{conference_id}/volunteer-tasks",
     tags=["Volunteer Tasks"],
+)
+
+# Volunteer profiles (conference-scoped)
+api_router.include_router(
+    volunteer_profiles.router,
+    prefix="/conferences/{conference_id}/volunteer-profiles",
+    tags=["Volunteer Profiles"],
 )
 
 # News (conference-scoped)

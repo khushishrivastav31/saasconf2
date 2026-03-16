@@ -11,11 +11,9 @@ from app.models.conference import Conference
 from app.models.location import Location
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
-from app.models.volunteer import Volunteer
 from app.schemas.cfp import CFPResponse
 from app.schemas.conference import ConferenceResponse, TeamMember
 from app.schemas.location import LocationResponse
-from app.schemas.volunteer import VolunteerResponse
 
 MODULE_CODE = "conferences"
 
@@ -126,33 +124,6 @@ def _build_conference_response(conf: Conference, tenant_slug: str | None = None)
         managers_count=managers_count,
         team_count=len(team_members),
         status=status,
-    )
-
-
-def _build_volunteer_response(v: Volunteer, conference_ids: list[UUID] | None = None) -> VolunteerResponse:
-    """Build a VolunteerResponse from a Volunteer model."""
-    return VolunteerResponse(
-        id=v.id,
-        tenant_id=v.tenant_id,
-        email=v.email,
-        first_name=v.first_name,
-        last_name=v.last_name,
-        full_name=v.full_name,
-        phone=v.phone,
-        status=v.status,
-        role=v.role,
-        skills=v.skills,
-        availability=v.availability,
-        notes=v.notes,
-        emergency_contact_name=v.emergency_contact_name,
-        emergency_contact_phone=v.emergency_contact_phone,
-        tshirt_size=v.tshirt_size,
-        application_date=v.application_date,
-        approved_date=v.approved_date,
-        total_hours=v.total_hours,
-        created_at=v.created_at,
-        updated_at=v.updated_at,
-        conference_ids=conference_ids or [],
     )
 
 

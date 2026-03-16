@@ -764,20 +764,21 @@ export const handbookCategories: HandbookCategory[] = [
           <div
             dangerouslySetInnerHTML={{
               __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Manage conference volunteers and their assignments. <strong>Requires: <code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">volunteers</code> module.</strong></p>
+<p class="text-gray-700 dark:text-gray-300 my-2">Volunteers are managed as a <strong>system role</strong>, just like Keynote, Tutorial, and other roles. Applicants are assigned the "Volunteer" role using the standard role member interface.</p>
 <strong>What you can do:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300">Add volunteers with name, email, contact info, and a per-conference color for visual identification</li>
-<li class="text-gray-700 dark:text-gray-300">Link existing portal users as volunteers</li>
-<li class="text-gray-700 dark:text-gray-300">Manage volunteer availability and preferences</li>
+<li class="text-gray-700 dark:text-gray-300">Assign the Volunteer role to applicants using the standard role member picker</li>
+<li class="text-gray-700 dark:text-gray-300">Manage volunteer-specific profile data (t-shirt size, emergency contact, skills, availability)</li>
+<li class="text-gray-700 dark:text-gray-300">Set a per-volunteer color for visual identification in assignment grids</li>
 </ul>
-<strong>Dependencies:</strong> Volunteer Tasks must be defined in Settings (1.4.1).
+<strong>Dependencies:</strong> Volunteer Tasks must be defined in Settings (1.4.1). Applicants must exist in the system.
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">3.5.1 Task Assignment</h4>
 <p class="text-gray-700 dark:text-gray-300 my-2">Assign volunteer tasks to specific sessions using a visual program grid. Drag and drop tasks onto sessions, set required volunteer count per task.</p>
 <strong>Dependencies:</strong> Sessions must be scheduled in Program Design (2.2.1). Volunteer Tasks must be defined in Settings.
 <strong>Consequences:</strong> Creates task requirements that need to be filled by volunteers in Volunteer Assignment.
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">3.5.2 Volunteer Assignment</h4>
 <p class="text-gray-700 dark:text-gray-300 my-2">Assign specific volunteers to session tasks. Visual program grid shows tasks and available volunteers. Drag and drop volunteers onto task slots.</p>
-<strong>Dependencies:</strong> Task Assignment (3.5.1) must have tasks assigned to sessions.
+<strong>Dependencies:</strong> Task Assignment (3.5.1) must have tasks assigned to sessions. Applicants must have the Volunteer role.
 <strong>Consequences:</strong> Volunteers see their assignments. Assignments appear in the Volunteer Schedule.
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">3.5.3 Volunteer Schedule</h4>
 <p class="text-gray-700 dark:text-gray-300 my-2">View the complete volunteer schedule in an expandable list format. Shows each volunteer's assignments across all days with times and locations. Supports PDF export for printing.</p>

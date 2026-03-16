@@ -14,14 +14,13 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.models.associations import ConferenceVolunteer
+from app.models.cfp_applicants import CFPApplicant
 from app.models.conference import Conference
 from app.models.module import Module, TenantModule
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
-from app.models.settings import VolunteerRole
+from app.models.settings import UserRole, UserRoleAssignment, VolunteerRole
 from app.models.tenant import Tenant
 from app.models.user import User
-from app.models.volunteer import Volunteer
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 from tests.conftest import auth_headers
 
@@ -314,54 +313,93 @@ async def vol_role_2(db_session: AsyncSession, tenant: Tenant, conference: Confe
 
 
 @pytest_asyncio.fixture()
-async def volunteer(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> Volunteer:
-    v = Volunteer(
+async def volunteer_user_role(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> UserRole:
+    role = UserRole(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        name="Volunteer",
+        is_system=True,
+        is_active=True,
+    )
+    db_session.add(role)
+    await db_session.commit()
+    return role
+
+
+@pytest_asyncio.fixture()
+async def volunteer(
+    db_session: AsyncSession, tenant: Tenant, conference: Conference, volunteer_user_role: UserRole
+) -> CFPApplicant:
+    a = CFPApplicant(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
         email="vol1@test.com",
         first_name="Alice",
         last_name="Smith",
-        status="approved",
     )
-    db_session.add(v)
+    db_session.add(a)
     await db_session.flush()
-    db_session.add(ConferenceVolunteer(conference_id=conference.id, volunteer_id=v.id))
+    db_session.add(
+        UserRoleAssignment(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            user_role_id=volunteer_user_role.id,
+            applicant_id=a.id,
+        )
+    )
     await db_session.commit()
-    return v
+    return a
 
 
 @pytest_asyncio.fixture()
-async def volunteer_2(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> Volunteer:
-    v = Volunteer(
+async def volunteer_2(
+    db_session: AsyncSession, tenant: Tenant, conference: Conference, volunteer_user_role: UserRole
+) -> CFPApplicant:
+    a = CFPApplicant(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
         email="vol2@test.com",
         first_name="Bob",
         last_name="Jones",
-        status="approved",
     )
-    db_session.add(v)
+    db_session.add(a)
     await db_session.flush()
-    db_session.add(ConferenceVolunteer(conference_id=conference.id, volunteer_id=v.id))
+    db_session.add(
+        UserRoleAssignment(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            user_role_id=volunteer_user_role.id,
+            applicant_id=a.id,
+        )
+    )
     await db_session.commit()
-    return v
+    return a
 
 
 @pytest_asyncio.fixture()
-async def volunteer_3(db_session: AsyncSession, tenant: Tenant, conference: Conference) -> Volunteer:
-    v = Volunteer(
+async def volunteer_3(
+    db_session: AsyncSession, tenant: Tenant, conference: Conference, volunteer_user_role: UserRole
+) -> CFPApplicant:
+    a = CFPApplicant(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
         email="vol3@test.com",
         first_name="Charlie",
         last_name="Brown",
-        status="approved",
     )
-    db_session.add(v)
+    db_session.add(a)
     await db_session.flush()
-    db_session.add(ConferenceVolunteer(conference_id=conference.id, volunteer_id=v.id))
+    db_session.add(
+        UserRoleAssignment(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            user_role_id=volunteer_user_role.id,
+            applicant_id=a.id,
+        )
+    )
     await db_session.commit()
-    return v
+    return a
 
 
 @pytest_asyncio.fixture()
@@ -391,14 +429,14 @@ async def assignment(
     tenant: Tenant,
     conference: Conference,
     session_task: SessionVolunteerTask,
-    volunteer: Volunteer,
+    volunteer: CFPApplicant,
 ) -> VolunteerAssignment:
     a = VolunteerAssignment(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
         conference_id=conference.id,
         session_volunteer_task_id=session_task.id,
-        volunteer_id=volunteer.id,
+        applicant_id=volunteer.id,
     )
     db_session.add(a)
     await db_session.commit()
@@ -468,14 +506,14 @@ class TestAuthEdgeCases:
         client: AsyncClient,
         conference: Conference,
         session_task: SessionVolunteerTask,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         user_token: str,
         tenant_with_vol_module: Tenant,
     ):
         """Regular users should be forbidden from creating volunteer assignments."""
         payload = {
             "session_volunteer_task_id": str(session_task.id),
-            "volunteer_id": str(volunteer.id),
+            "applicant_id": str(volunteer.id),
         }
         resp = await client.post(
             _url(conference.id, "/volunteer-assignments"), json=payload, headers=auth_headers(user_token)
@@ -503,7 +541,7 @@ class TestAuthEdgeCases:
         self,
         client: AsyncClient,
         conference: Conference,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         user_token: str,
         tenant_with_vol_module: Tenant,
     ):
@@ -701,7 +739,7 @@ class TestScheduleDetails:
         conference: Conference,
         session_task: SessionVolunteerTask,
         assignment: VolunteerAssignment,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):
@@ -729,7 +767,7 @@ class TestScheduleDetails:
         tenant: Tenant,
         multi_slot_session: ProgramSession,
         vol_role: VolunteerRole,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):
@@ -750,7 +788,7 @@ class TestScheduleDetails:
                 tenant_id=tenant.id,
                 conference_id=conference.id,
                 session_volunteer_task_id=svt.id,
-                volunteer_id=volunteer.id,
+                applicant_id=volunteer.id,
             )
         )
         await db_session.commit()
@@ -774,7 +812,7 @@ class TestScheduleDetails:
         session: ProgramSession,
         session_day2: ProgramSession,
         vol_role: VolunteerRole,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):
@@ -797,7 +835,7 @@ class TestScheduleDetails:
                     tenant_id=tenant.id,
                     conference_id=conference.id,
                     session_volunteer_task_id=svt.id,
-                    volunteer_id=volunteer.id,
+                    applicant_id=volunteer.id,
                 )
             )
         await db_session.commit()
@@ -866,8 +904,8 @@ class TestScheduleListAndUnassigned:
         tenant: Tenant,
         session: ProgramSession,
         vol_role: VolunteerRole,
-        volunteer: Volunteer,
-        volunteer_2: Volunteer,
+        volunteer: CFPApplicant,
+        volunteer_2: CFPApplicant,
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):
@@ -889,7 +927,7 @@ class TestScheduleListAndUnassigned:
                     tenant_id=tenant.id,
                     conference_id=conference.id,
                     session_volunteer_task_id=svt.id,
-                    volunteer_id=vol.id,
+                    applicant_id=vol.id,
                 )
             )
         await db_session.commit()
@@ -930,8 +968,8 @@ class TestScheduleListAndUnassigned:
         tenant: Tenant,
         session: ProgramSession,
         vol_role: VolunteerRole,
-        volunteer: Volunteer,
-        volunteer_2: Volunteer,
+        volunteer: CFPApplicant,
+        volunteer_2: CFPApplicant,
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):
@@ -953,7 +991,7 @@ class TestScheduleListAndUnassigned:
                     tenant_id=tenant.id,
                     conference_id=conference.id,
                     session_volunteer_task_id=svt.id,
-                    volunteer_id=vol.id,
+                    applicant_id=vol.id,
                 )
             )
         await db_session.commit()
@@ -1093,7 +1131,7 @@ class TestBoundaryAndValidation:
         self,
         client: AsyncClient,
         conference: Conference,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):
@@ -1110,7 +1148,7 @@ class TestBoundaryAndValidation:
         self,
         client: AsyncClient,
         conference: Conference,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):
@@ -1183,7 +1221,7 @@ class TestCrossConferenceIsolation:
         conference: Conference,
         session_task: SessionVolunteerTask,
         assignment: VolunteerAssignment,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):
@@ -1197,8 +1235,25 @@ class TestCrossConferenceIsolation:
         )
         db_session.add(conf_b)
         await db_session.flush()
-        # Link volunteer to conf_b as well
-        db_session.add(ConferenceVolunteer(conference_id=conf_b.id, volunteer_id=volunteer.id))
+        # Create a volunteer role for conf_b and assign the volunteer
+        role_b = UserRole(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            conference_id=conf_b.id,
+            name="Volunteer",
+            is_system=True,
+            is_active=True,
+        )
+        db_session.add(role_b)
+        await db_session.flush()
+        db_session.add(
+            UserRoleAssignment(
+                id=uuid.uuid4(),
+                tenant_id=tenant.id,
+                user_role_id=role_b.id,
+                applicant_id=volunteer.id,
+            )
+        )
         await db_session.commit()
 
         resp = await client.get(
@@ -1247,7 +1302,7 @@ class TestPdfExportEdgeCases:
         self,
         client: AsyncClient,
         conference: Conference,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):
@@ -1300,7 +1355,7 @@ class TestPdfExportEdgeCases:
         conference: Conference,
         session_task: SessionVolunteerTask,
         assignment: VolunteerAssignment,
-        volunteer: Volunteer,
+        volunteer: CFPApplicant,
         admin_token: str,
         tenant_with_vol_module: Tenant,
     ):

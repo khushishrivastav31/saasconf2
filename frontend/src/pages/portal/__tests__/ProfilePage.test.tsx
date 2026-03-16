@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import ProfilePage from '../ProfilePage';
 import { ApplicantAuthContext } from '../../../contexts/ApplicantAuthContext';
+import { ToastProvider } from '../../../components/Toast';
 import type { ApplicantProfile } from '../../../types/portal';
 import { createTestQueryClient } from '../../../test-utils';
 
@@ -80,6 +81,7 @@ const mockApplicant: ApplicantProfile = {
   needs_accessibility: false,
   accessibility_details: null,
   agrees_to_recording: false,
+  allow_out_of_timeframe: false,
   message_notifications_enabled: true,
   theme_preference: null,
   picture_url: null,
@@ -109,9 +111,11 @@ function renderWithProviders(
   return render(
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
-        <ApplicantAuthContext.Provider value={buildAuthContext(applicant)}>
-          {ui}
-        </ApplicantAuthContext.Provider>
+        <ToastProvider>
+          <ApplicantAuthContext.Provider value={buildAuthContext(applicant)}>
+            {ui}
+          </ApplicantAuthContext.Provider>
+        </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>
   );

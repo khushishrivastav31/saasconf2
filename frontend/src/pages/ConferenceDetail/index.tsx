@@ -12,8 +12,8 @@ import { SelectionProvider, useSelection } from './SelectionContext';
 const ConferenceDetailsTab = lazy(() => import('./tabs/DetailsTab'));
 const ConferenceTeamTab = lazy(() => import('./tabs/TeamTab'));
 const ConferenceSocialTab = lazy(() => import('./tabs/SocialTab'));
-const ConferenceVolunteersTab = lazy(() => import('./tabs/VolunteersTab'));
 const TaskAssignmentTab = lazy(() => import('./tabs/TaskAssignmentTab'));
+const VolunteersTab = lazy(() => import('./tabs/VolunteersTab'));
 const VolunteerAssignmentTab = lazy(() => import('./tabs/VolunteerAssignmentTab'));
 const VolunteerScheduleTab = lazy(() => import('./tabs/VolunteerScheduleTab'));
 const ConferenceLocationsTab = lazy(() => import('./tabs/LocationsTab'));
@@ -48,6 +48,7 @@ const CFPTopics = lazy(() => import('../modules/cfp').then((m) => ({ default: m.
 const CFPProgramCommittee = lazy(() =>
   import('../modules/cfp').then((m) => ({ default: m.CFPProgramCommittee }))
 );
+const RoleMembers = lazy(() => import('../modules/cfp').then((m) => ({ default: m.RoleMembers })));
 const CFPApplicants = lazy(() =>
   import('../modules/cfp').then((m) => ({ default: m.CFPApplicants }))
 );
@@ -393,7 +394,7 @@ function ConferenceDetailContent() {
                 />
               )}
               {activeSection === 'volunteers' && (
-                <ConferenceVolunteersTab conference={conference} isAdmin={isAdmin} />
+                <VolunteersTab conferenceId={conferenceId} isAdmin={isAdmin} />
               )}
               {activeSection === 'volunteer-task-assignment' && (
                 <TaskAssignmentTab conference={conference} isAdmin={isAdmin} />
@@ -413,6 +414,40 @@ function ConferenceDetailContent() {
               {activeSection === 'cfp-topics' && <CFPTopics isAdmin={isAdmin} />}
               {activeSection === 'cfp-program-committee' && (
                 <CFPProgramCommittee conferenceId={conferenceId} isAdmin={isAdmin} />
+              )}
+              {activeSection === 'role-keynote' && (
+                <RoleMembers conferenceId={conferenceId} isAdmin={isAdmin} roleName="Keynote" />
+              )}
+              {activeSection === 'role-tutorial' && (
+                <RoleMembers conferenceId={conferenceId} isAdmin={isAdmin} roleName="Tutorial" />
+              )}
+              {activeSection === 'role-social-event' && (
+                <RoleMembers
+                  conferenceId={conferenceId}
+                  isAdmin={isAdmin}
+                  roleName="Social Event"
+                />
+              )}
+              {activeSection === 'role-bonus-session' && (
+                <RoleMembers
+                  conferenceId={conferenceId}
+                  isAdmin={isAdmin}
+                  roleName="Bonus Session"
+                />
+              )}
+              {activeSection === 'role-active-session' && (
+                <RoleMembers
+                  conferenceId={conferenceId}
+                  isAdmin={isAdmin}
+                  roleName="Active Session"
+                />
+              )}
+              {activeSection === 'role-sponsor-talk' && (
+                <RoleMembers
+                  conferenceId={conferenceId}
+                  isAdmin={isAdmin}
+                  roleName="Sponsor Talk"
+                />
               )}
               {activeSection === 'cfp-applicants' && (
                 <CFPApplicants conferenceId={conferenceId} isAdmin={isAdmin} />

@@ -295,6 +295,7 @@ async def create_paper(
         cfp_id=data.cfp_id,
         main_speaker_id=current.applicant_id,
         session_type_id=data.session_type_id,
+        form_variant_id=data.form_variant_id,
         title=data.title,
         abstract_short=data.abstract_short,
         abstract_long=data.abstract_long,
@@ -898,6 +899,16 @@ async def _build_portal_paper_response(
         if st:
             session_type_name = st.name
 
+    # Form variant
+    form_variant_name = None
+    if paper.form_variant_id:
+        from app.models.paper_form_variant import PaperFormVariant
+
+        fv_result = await db.execute(select(PaperFormVariant).where(PaperFormVariant.id == paper.form_variant_id))
+        fv = fv_result.scalar_one_or_none()
+        if fv:
+            form_variant_name = fv.name
+
     # Main speaker info
     is_main_speaker = True
     main_speaker_first_name = None
@@ -956,6 +967,8 @@ async def _build_portal_paper_response(
         conference_name=conference_name,
         session_type_id=paper.session_type_id,
         session_type_name=session_type_name,
+        form_variant_id=paper.form_variant_id,
+        form_variant_name=form_variant_name,
         title=paper.title,
         abstract_short=paper.abstract_short,
         abstract_long=paper.abstract_long,

@@ -92,6 +92,12 @@ export type SectionId =
   | 'volunteer-task-assignment'
   | 'volunteer-assignment'
   | 'volunteer-schedule'
+  | 'role-keynote'
+  | 'role-tutorial'
+  | 'role-social-event'
+  | 'role-bonus-session'
+  | 'role-active-session'
+  | 'role-sponsor-talk'
   | 'settings';
 
 export interface SectionChild {
@@ -168,7 +174,20 @@ export const sectionGroups: SectionGroup[] = [
         icon: CfpUsersGroupIcon,
         moduleCode: 'cfp',
       },
-      { id: 'speakers', name: 'Speakers', icon: SpeakerIcon, moduleCode: 'speakers' },
+      {
+        id: 'speakers',
+        name: 'Speakers',
+        icon: SpeakerIcon,
+        moduleCode: 'speakers',
+        children: [
+          { id: 'role-keynote', name: 'Keynotes', icon: SpeakerIcon },
+          { id: 'role-tutorial', name: 'Tutorials', icon: SessionsIcon },
+          { id: 'role-social-event', name: 'Social Events', icon: PeopleIcon },
+          { id: 'role-bonus-session', name: 'Bonus Sessions', icon: SessionsIcon },
+          { id: 'role-active-session', name: 'Active Sessions', icon: SessionsIcon },
+          { id: 'role-sponsor-talk', name: 'Sponsor Talks', icon: SpeakerIcon },
+        ],
+      },
       { id: 'cfp-applicants', name: 'Users', icon: CfpInboxIcon, moduleCode: 'cfp' },
       { id: 'attendees', name: 'Attendees', icon: AttendeesIcon, moduleCode: 'attendees' },
       { id: 'badges', name: 'Badges', icon: BadgesIcon },

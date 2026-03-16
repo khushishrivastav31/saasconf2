@@ -137,7 +137,7 @@ export default function VolunteerScheduleTab({ conference }: Props) {
           {/* Volunteer list */}
           <div className="space-y-2 mb-6">
             {schedules.map((schedule) => {
-              const isExpanded = expandedVolunteers.has(schedule.volunteer_id);
+              const isExpanded = expandedVolunteers.has(schedule.applicant_id);
 
               // Group entries by day
               const dayGroups: Record<string, typeof schedule.entries> = {};
@@ -149,13 +149,13 @@ export default function VolunteerScheduleTab({ conference }: Props) {
 
               return (
                 <div
-                  key={schedule.volunteer_id}
+                  key={schedule.applicant_id}
                   className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
                 >
                   {/* Volunteer header */}
                   <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800">
                     <button
-                      onClick={() => toggleVolunteer(schedule.volunteer_id)}
+                      onClick={() => toggleVolunteer(schedule.applicant_id)}
                       className="flex items-center gap-3 flex-1"
                     >
                       <svg
@@ -184,8 +184,8 @@ export default function VolunteerScheduleTab({ conference }: Props) {
                       </span>
                     </button>
                     <button
-                      onClick={() => downloadPdf(schedule.volunteer_id)}
-                      disabled={downloadingId === schedule.volunteer_id}
+                      onClick={() => downloadPdf(schedule.applicant_id)}
+                      disabled={downloadingId === schedule.applicant_id}
                       className="flex items-center gap-1 px-3 py-1 text-xs text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-md transition-colors"
                     >
                       <svg
@@ -201,7 +201,7 @@ export default function VolunteerScheduleTab({ conference }: Props) {
                           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                         />
                       </svg>
-                      {downloadingId === schedule.volunteer_id ? 'Downloading...' : 'PDF'}
+                      {downloadingId === schedule.applicant_id ? 'Downloading...' : 'PDF'}
                     </button>
                   </div>
 

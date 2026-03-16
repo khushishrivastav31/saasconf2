@@ -81,6 +81,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: User Roles feature — conference-scoped role definitions (Settings > User Roles) + role assignment on CFP applicant profiles (toggle chips). Roles assigned via `user_role_assignments` table (applicant_id FK to cfp_applicants).
-- **Status**: All 2419 backend tests + 1552 frontend tests passing, mypy/ruff/tsc/eslint clean
+- **Last completed**: Volunteer system refactor — role-based approach using UserRoleAssignment + RoleMembers pattern. Migration 139 applied. Old Volunteer/ConferenceVolunteer models removed, replaced with VolunteerProfile + applicant-based system. Fixed env.py imports, migration column references, IntegrityError on duplicate assignments, toast feedback on role assign/remove, cross-tab query invalidation.
+- **Status**: Backend restarted, migration applied. Running checks (mypy/ruff/tsc/eslint). NOT YET COMMITTED.
 - **Note**: H2 (require current password for password change) deferred for later

@@ -337,6 +337,9 @@ class UserRole(Base):
         "Social Event",
         "Bonus Session",
         "Active Session",
+        "Program Committee",
+        "Sponsor Talk",
+        "Volunteer",
     ]
 
     __table_args__ = (

@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from app.models.location import Location
     from app.models.tenant import Tenant
     from app.models.user_conference_access import UserConferenceAccess
-    from app.models.volunteer import Volunteer
 
 
 class Conference(Base):
@@ -90,11 +89,6 @@ class Conference(Base):
 
     # Relationships
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="conferences")
-    volunteers: Mapped[list["Volunteer"]] = relationship(
-        "Volunteer",
-        secondary="conference_volunteers",
-        viewonly=True,
-    )
     locations: Mapped[list["Location"]] = relationship(
         "Location",
         secondary="conference_locations",

@@ -1,6 +1,10 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { PaperFormField, BuiltinFieldConfig } from '../../../../../types';
+import type {
+  PaperFormField,
+  PaperFormVariantField,
+  BuiltinFieldConfig,
+} from '../../../../../types';
 
 // Unified field that can be either built-in or custom
 export interface UnifiedField {
@@ -13,7 +17,7 @@ export interface UnifiedField {
   is_required: boolean;
   alwaysRequired?: boolean;
   // Only for custom fields
-  customField?: PaperFormField;
+  customField?: PaperFormField | PaperFormVariantField;
   // Only for builtin fields
   builtinConfig?: BuiltinFieldConfig;
 }

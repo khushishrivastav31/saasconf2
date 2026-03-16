@@ -15,6 +15,7 @@ from .registration_questions import router as registration_questions_router
 from .reviews import router as reviews_router
 from .screen_overlays import router as screen_overlays_router
 from .speaker_expenses import router as speaker_expenses_router
+from .volunteer_profile import router as volunteer_profile_router
 
 router = APIRouter()
 # papers, reviews, messaging, and form_schema must be included before auth because
@@ -31,5 +32,6 @@ router.include_router(currencies_router)
 router.include_router(my_registrations_router)
 router.include_router(registration_router)
 router.include_router(registration_questions_router)
+router.include_router(volunteer_profile_router)
 router.include_router(form_schema_router)
 router.include_router(auth_router)

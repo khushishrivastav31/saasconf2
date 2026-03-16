@@ -13,6 +13,7 @@ import type {
   PortalPaperCreateRequest,
   PortalPaperFormSchema,
   PortalPaperFormField,
+  PortalPaperFormVariant,
 } from '../../types/portal';
 import { parseApiError } from '../../utils/apiError';
 import { validateEmail } from '../../utils/validators';
@@ -159,6 +160,7 @@ function SubmitPaperPage() {
 
   const [selectedConferenceId, setSelectedConferenceId] = useState('');
   const [selectedCfpId, setSelectedCfpId] = useState('');
+  const [selectedVariantId, setSelectedVariantId] = useState('');
   const [sessionTypeId, setSessionTypeId] = useState('');
   const [title, setTitle] = useState('');
   const [abstractShort, setAbstractShort] = useState('');
@@ -209,7 +211,10 @@ function SubmitPaperPage() {
   });
 
   const selectedConference = conferences?.find((c) => c.id === selectedConferenceId);
-  const availableCfps = selectedConference?.cfps.filter((cfp) => cfp.status === 'open');
+  const allowOutOfTimeframe = applicant?.allow_out_of_timeframe ?? false;
+  const availableCfps = selectedConference?.cfps.filter(
+    (cfp) => cfp.status === 'open' || allowOutOfTimeframe
+  );
 
   // Auto-select the CFP when conference is selected (each conference has only one CFP)
   useEffect(() => {
@@ -220,6 +225,19 @@ function SubmitPaperPage() {
 
   const selectedCfp = availableCfps?.find((c) => c.id === selectedCfpId);
   const requiredSpeakerFields = selectedCfp?.required_speaker_fields || [];
+
+  // Resolve active variant (if any)
+  const activeVariant: PortalPaperFormVariant | null = useMemo(() => {
+    if (!formSchema || !selectedVariantId) return null;
+    return formSchema.variants?.find((v) => v.id === selectedVariantId) ?? null;
+  }, [formSchema, selectedVariantId]);
+
+  // Auto-select variant when there's exactly one
+  useEffect(() => {
+    if (formSchema?.variants?.length === 1 && !selectedVariantId) {
+      setSelectedVariantId(formSchema.variants[0].id);
+    }
+  }, [formSchema, selectedVariantId]);
 
   // Create unified sorted list of all fields (builtin + custom)
   type UnifiedFormField = {
@@ -236,7 +254,10 @@ function SubmitPaperPage() {
   const unifiedFormFields = useMemo((): UnifiedFormField[] => {
     if (!formSchema) return [];
 
-    const builtinConfig = formSchema.builtin_fields_config || {};
+    // Use variant config if selected, otherwise base schema
+    const builtinConfig =
+      activeVariant?.builtin_fields_config ?? formSchema.builtin_fields_config ?? {};
+    const customFieldsList = activeVariant?.fields ?? formSchema.fields;
     const requiredPaperFields = selectedCfp?.required_paper_fields || [];
     const builtinCount = BUILTIN_FIELD_DEFS.length;
 
@@ -255,7 +276,7 @@ function SubmitPaperPage() {
     });
 
     // Create unified custom fields
-    const customFields: UnifiedFormField[] = formSchema.fields
+    const customFields: UnifiedFormField[] = customFieldsList
       .filter((f) => f.is_visible)
       .map((f) => {
         // Check if unified ordering is in use
@@ -279,7 +300,7 @@ function SubmitPaperPage() {
     return [...builtinFields, ...customFields]
       .filter((f) => f.is_visible)
       .sort((a, b) => a.display_order - b.display_order);
-  }, [formSchema, selectedCfp]);
+  }, [formSchema, activeVariant, selectedCfp]);
 
   // Check missing speaker profile fields
   const missingSpeakerFields = requiredSpeakerFields.filter((field) => {
@@ -371,6 +392,7 @@ function SubmitPaperPage() {
     const payload: PortalPaperCreateRequest = {
       cfp_id: selectedCfpId,
       title: title.trim(),
+      ...(selectedVariantId ? { form_variant_id: selectedVariantId } : {}),
       ...(sessionTypeId ? { session_type_id: sessionTypeId } : {}),
       ...(abstractShort ? { abstract_short: abstractShort } : {}),
       ...(abstractLong ? { abstract_long: abstractLong } : {}),
@@ -428,6 +450,7 @@ function SubmitPaperPage() {
             onChange={(e) => {
               setSelectedConferenceId(e.target.value);
               setSelectedCfpId(''); // Will be auto-selected by useEffect
+              setSelectedVariantId('');
               setSessionTypeId('');
               setCustomFieldAnswers({});
             }}
@@ -466,6 +489,35 @@ function SubmitPaperPage() {
               </p>
             ) : (
               <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
+            )}
+          </div>
+        )}
+
+        {/* Form Variant Selection */}
+        {selectedCfpId && formSchema?.variants && formSchema.variants.length > 1 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Submission Type
+            </label>
+            <select
+              value={selectedVariantId}
+              onChange={(e) => {
+                setSelectedVariantId(e.target.value);
+                setCustomFieldAnswers({});
+              }}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="">Select submission type</option>
+              {formSchema.variants.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+            {activeVariant?.description && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {activeVariant.description}
+              </p>
             )}
           </div>
         )}

@@ -203,6 +203,8 @@ class PaperResponse(BaseModel):
     session_type_id: UUID | None
     session_type_name: str | None = None
     session_type_duration: int | None = None
+    form_variant_id: UUID | None = None
+    form_variant_name: str | None = None
     topics: list[TopicResponse] = Field(default_factory=list)
     title: str
     abstract_short: str | None

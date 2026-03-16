@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
 from app.models.alumni import Alumni, AlumniSource
-from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
+from app.models.associations import ConferenceCFP, ConferenceLocation
 from app.models.cfp import CallForPapers
 from app.models.conference import Conference
 from app.models.location import Location
@@ -25,7 +25,6 @@ from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.models.user_conference_access import UserConferenceAccess
-from app.models.volunteer import Volunteer
 from tests.conftest import _make_token, auth_headers
 
 # ── URL constants ────────────────────────────────────────────────────
@@ -116,21 +115,6 @@ async def second_conference(db_session: AsyncSession, tenant: Tenant) -> Confere
     db_session.add(c)
     await db_session.commit()
     return c
-
-
-@pytest_asyncio.fixture()
-async def volunteer(db_session: AsyncSession, tenant: Tenant) -> Volunteer:
-    v = Volunteer(
-        id=uuid.uuid4(),
-        tenant_id=tenant.id,
-        email="deepvol@test.com",
-        first_name="Deep",
-        last_name="Vol",
-        status="pending",
-    )
-    db_session.add(v)
-    await db_session.commit()
-    return v
 
 
 @pytest_asyncio.fixture()
@@ -654,7 +638,7 @@ class TestConferenceDelete:
         tenant_admin_user: User,
         admin_token: str,
     ) -> None:
-        """Delete a conference with linked volunteer, location, CFP."""
+        """Delete a conference with linked location and CFP."""
         tenant.super_user_id = tenant_admin_user.id
         await db_session.commit()
 
@@ -667,18 +651,6 @@ class TestConferenceDelete:
         )
         db_session.add(c)
         await db_session.flush()
-
-        vol = Volunteer(
-            id=uuid.uuid4(),
-            tenant_id=tenant.id,
-            email="delvol@test.com",
-            first_name="Del",
-            last_name="Vol",
-            status="pending",
-        )
-        db_session.add(vol)
-        await db_session.flush()
-        db_session.add(ConferenceVolunteer(conference_id=c.id, volunteer_id=vol.id))
 
         loc = Location(
             id=uuid.uuid4(),
@@ -708,7 +680,6 @@ class TestConferenceDelete:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["deleted_volunteers"] == 1
         assert data["deleted_locations"] == 1
         assert data["deleted_cfps"] == 1
 
@@ -825,95 +796,7 @@ class TestConferenceUpdateDeep:
 
 
 # =====================================================================
-# 7. CONFERENCE ASSOCIATIONS - VOLUNTEERS (deeper coverage)
-# =====================================================================
-
-
-class TestVolunteerAssociationsDeep:
-    """Deeper volunteer association tests with multiple items."""
-
-    @pytest.mark.asyncio
-    async def test_list_multiple_volunteers_with_conference_ids(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        tenant: Tenant,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-    ) -> None:
-        """List returns volunteers with their conference_ids populated."""
-        vols = []
-        for i in range(3):
-            v = Volunteer(
-                id=uuid.uuid4(),
-                tenant_id=tenant.id,
-                email=f"deepvol{i}@test.com",
-                first_name=f"Vol{i}",
-                last_name="Deep",
-                status="pending",
-            )
-            db_session.add(v)
-            vols.append(v)
-        await db_session.flush()
-
-        for v in vols:
-            db_session.add(ConferenceVolunteer(conference_id=conference.id, volunteer_id=v.id))
-        await db_session.commit()
-
-        resp = await client.get(
-            f"{CONF_URL}/{conference.id}/volunteers",
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["total"] == 3
-        assert len(data["items"]) == 3
-        # Each volunteer should have conference_ids populated
-        for item in data["items"]:
-            assert str(conference.id) in item["conference_ids"]
-
-    @pytest.mark.asyncio
-    async def test_list_volunteers_pagination(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        tenant: Tenant,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        conference: Conference,
-    ) -> None:
-        """Volunteer list respects page_size parameter."""
-        for i in range(3):
-            v = Volunteer(
-                id=uuid.uuid4(),
-                tenant_id=tenant.id,
-                email=f"pagvol{i}@test.com",
-                first_name=f"PagVol{i}",
-                last_name="Test",
-                status="pending",
-            )
-            db_session.add(v)
-            await db_session.flush()
-            db_session.add(ConferenceVolunteer(conference_id=conference.id, volunteer_id=v.id))
-        await db_session.commit()
-
-        resp = await client.get(
-            f"{CONF_URL}/{conference.id}/volunteers",
-            params={"page": 1, "page_size": 2},
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["total"] == 3
-        assert len(data["items"]) == 2
-        assert data["pages"] == 2
-
-
-# =====================================================================
-# 8. CONFERENCE ASSOCIATIONS - LOCATIONS (deeper coverage)
+# 7. CONFERENCE ASSOCIATIONS - LOCATIONS (deeper coverage)
 # =====================================================================
 
 

@@ -1,4 +1,4 @@
-"""Tests for volunteer CRUD endpoints."""
+"""Tests for volunteer profile endpoints (role-based volunteer system)."""
 
 import uuid
 
@@ -8,12 +8,13 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.models.associations import ConferenceVolunteer
+from app.models.cfp_applicants import CFPApplicant
 from app.models.conference import Conference
 from app.models.module import Module, TenantModule
+from app.models.settings import UserRole, UserRoleAssignment
 from app.models.tenant import Tenant
 from app.models.user import User
-from app.models.volunteer import Volunteer, VolunteerStatus
+from app.models.volunteer_profile import VolunteerProfile
 from tests.conftest import auth_headers
 
 # ── Helpers ────────────────────────────────────────────────────────────
@@ -27,24 +28,6 @@ def _make_token(user: User, modules: list[str] | None = None) -> str:
         role=user.role,
         modules=modules or [],
     )
-
-
-VOLUNTEERS_URL = "/api/v1/volunteers"
-
-
-VOLUNTEER_PAYLOAD = {
-    "email": "volunteer@example.com",
-    "first_name": "Jane",
-    "last_name": "Doe",
-    "phone": "+491701234567",
-    "role": "Registration Desk",
-    "skills": ["languages", "customer service"],
-    "availability": {"day1": True, "day2": True},
-    "notes": "Experienced volunteer",
-    "emergency_contact_name": "John Doe",
-    "emergency_contact_phone": "+491709876543",
-    "tshirt_size": "M",
-}
 
 
 # ── Fixtures ───────────────────────────────────────────────────────────
@@ -88,621 +71,241 @@ async def tenant_with_volunteers_module(
 
 @pytest.fixture()
 def admin_token_volunteers(tenant_admin_user: User) -> str:
-    """Return a valid access token for the tenant admin with volunteers module."""
     return _make_token(tenant_admin_user, modules=["volunteers"])
 
 
 @pytest.fixture()
 def user_token_volunteers(regular_user: User) -> str:
-    """Return a valid access token for a regular user with volunteers module."""
     return _make_token(regular_user, modules=["volunteers"])
 
 
 @pytest_asyncio.fixture()
-async def sample_volunteer(
+async def volunteer_role(
     db_session: AsyncSession,
     tenant: Tenant,
     conference: Conference,
-) -> Volunteer:
-    """Create a sample volunteer directly in the database with a conference association."""
-    volunteer = Volunteer(
+) -> UserRole:
+    """Create the Volunteer system role for the conference."""
+    role = UserRole(
         id=uuid.uuid4(),
         tenant_id=tenant.id,
-        email="seed-volunteer@example.com",
-        first_name="Seed",
-        last_name="Volunteer",
-        phone="+491701111111",
-        status=VolunteerStatus.PENDING.value,
-        role="Speaker Liaison",
-        skills=["coordination"],
-        availability={"day1": True},
-        notes="Seeded volunteer",
-        tshirt_size="L",
-        total_hours=0.0,
+        conference_id=conference.id,
+        name="Volunteer",
+        is_system=True,
+        is_active=True,
     )
-    db_session.add(volunteer)
+    db_session.add(role)
+    await db_session.commit()
+    return role
+
+
+@pytest_asyncio.fixture()
+async def volunteer_applicant(
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+    volunteer_role: UserRole,
+    tenant_admin_user: User,
+) -> CFPApplicant:
+    """Create an applicant with the Volunteer role assigned."""
+    applicant = CFPApplicant(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        email="volunteer@example.com",
+        first_name="Jane",
+        last_name="Doe",
+    )
+    db_session.add(applicant)
     await db_session.flush()
 
-    # Create conference association
-    db_session.add(
-        ConferenceVolunteer(
-            conference_id=conference.id,
-            volunteer_id=volunteer.id,
-        )
+    assignment = UserRoleAssignment(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        user_role_id=volunteer_role.id,
+        applicant_id=applicant.id,
+        assigned_by=tenant_admin_user.id,
     )
+    db_session.add(assignment)
     await db_session.commit()
-    await db_session.refresh(volunteer)
-    return volunteer
+    return applicant
+
+
+@pytest_asyncio.fixture()
+async def volunteer_profile(
+    db_session: AsyncSession,
+    tenant: Tenant,
+    conference: Conference,
+    volunteer_applicant: CFPApplicant,
+) -> VolunteerProfile:
+    """Create a volunteer profile for the applicant."""
+    profile = VolunteerProfile(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        conference_id=conference.id,
+        applicant_id=volunteer_applicant.id,
+        tshirt_size="M",
+        emergency_contact_name="John Doe",
+        emergency_contact_phone="+491709876543",
+        skills=["languages", "customer service"],
+        availability={"day1": True, "day2": True},
+        notes="Experienced volunteer",
+        color="#3B82F6",
+        total_hours=0.0,
+    )
+    db_session.add(profile)
+    await db_session.commit()
+    return profile
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# 1. LIST VOLUNTEERS
+# 1. LIST VOLUNTEER PROFILES
 # ═══════════════════════════════════════════════════════════════════════
 
 
-async def test_list_volunteers_empty(
+async def test_list_volunteer_profiles_empty(
     client: AsyncClient,
     tenant_with_volunteers_module: Tenant,
     tenant_admin_user: User,
     admin_token_volunteers: str,
+    conference: Conference,
+    volunteer_role: UserRole,
 ) -> None:
-    """Listing volunteers returns an empty list when none exist."""
+    """Listing profiles returns empty when no volunteers assigned."""
     response = await client.get(
-        VOLUNTEERS_URL,
+        f"/api/v1/conferences/{conference.id}/volunteer-profiles",
         headers=auth_headers(admin_token_volunteers),
     )
     assert response.status_code == 200
     data = response.json()
     assert data["items"] == []
     assert data["total"] == 0
-    assert data["page"] == 1
-    assert data["pages"] == 0
 
 
-async def test_list_volunteers_with_data(
+async def test_list_volunteer_profiles_with_data(
     client: AsyncClient,
     tenant_with_volunteers_module: Tenant,
     tenant_admin_user: User,
     admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
+    conference: Conference,
+    volunteer_applicant: CFPApplicant,
+    volunteer_profile: VolunteerProfile,
 ) -> None:
-    """Listing volunteers returns existing volunteers."""
+    """Listing profiles returns profiles for volunteers with the role."""
     response = await client.get(
-        VOLUNTEERS_URL,
+        f"/api/v1/conferences/{conference.id}/volunteer-profiles",
         headers=auth_headers(admin_token_volunteers),
     )
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
     assert len(data["items"]) == 1
-    assert data["items"][0]["email"] == "seed-volunteer@example.com"
-    assert data["items"][0]["first_name"] == "Seed"
-    assert data["items"][0]["last_name"] == "Volunteer"
-    assert data["items"][0]["id"] == str(sample_volunteer.id)
+    item = data["items"][0]
+    assert item["applicant_id"] == str(volunteer_applicant.id)
+    assert item["first_name"] == "Jane"
+    assert item["last_name"] == "Doe"
+    assert item["email"] == "volunteer@example.com"
+    assert item["tshirt_size"] == "M"
+    assert item["color"] == "#3B82F6"
 
 
-async def test_list_volunteers_filter_by_status(
+# ═══════════════════════════════════════════════════════════════════════
+# 2. UPDATE VOLUNTEER PROFILE
+# ═══════════════════════════════════════════════════════════════════════
+
+
+async def test_update_volunteer_profile(
     client: AsyncClient,
     tenant_with_volunteers_module: Tenant,
     tenant_admin_user: User,
     admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
-) -> None:
-    """Filtering volunteers by status returns only matching volunteers."""
-    # Sample volunteer is pending
-    response = await client.get(
-        VOLUNTEERS_URL,
-        params={"status": "pending"},
-        headers=auth_headers(admin_token_volunteers),
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["total"] == 1
-    assert data["items"][0]["status"] == "pending"
-
-    # No approved volunteers
-    response = await client.get(
-        VOLUNTEERS_URL,
-        params={"status": "approved"},
-        headers=auth_headers(admin_token_volunteers),
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["total"] == 0
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# 2. CREATE VOLUNTEER
-# ═══════════════════════════════════════════════════════════════════════
-
-
-async def test_create_volunteer_success(
-    client: AsyncClient,
     conference: Conference,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
+    volunteer_applicant: CFPApplicant,
+    volunteer_profile: VolunteerProfile,
 ) -> None:
-    """Tenant admin can create a volunteer and receives 201."""
-    payload = {
-        **VOLUNTEER_PAYLOAD,
-        "conference_id": str(conference.id),
-    }
-    response = await client.post(
-        VOLUNTEERS_URL,
-        json=payload,
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 201
-    data = response.json()
-    assert data["email"] == VOLUNTEER_PAYLOAD["email"]
-    assert data["first_name"] == VOLUNTEER_PAYLOAD["first_name"]
-    assert data["last_name"] == VOLUNTEER_PAYLOAD["last_name"]
-    assert data["full_name"] == "Jane Doe"
-    assert data["phone"] == VOLUNTEER_PAYLOAD["phone"]
-    assert data["role"] == VOLUNTEER_PAYLOAD["role"]
-    assert data["skills"] == VOLUNTEER_PAYLOAD["skills"]
-    assert data["availability"] == VOLUNTEER_PAYLOAD["availability"]
-    assert data["notes"] == VOLUNTEER_PAYLOAD["notes"]
-    assert data["emergency_contact_name"] == VOLUNTEER_PAYLOAD["emergency_contact_name"]
-    assert data["emergency_contact_phone"] == VOLUNTEER_PAYLOAD["emergency_contact_phone"]
-    assert data["tshirt_size"] == VOLUNTEER_PAYLOAD["tshirt_size"]
-    assert data["status"] == "pending"
-    assert data["total_hours"] == 0.0
-    assert data["approved_date"] is None
-    assert "id" in data
-    assert "tenant_id" in data
-    assert "created_at" in data
-    assert "updated_at" in data
-    # Conference association
-    assert str(conference.id) in data["conference_ids"]
-
-
-async def test_create_volunteer_forbidden_for_regular_user(
-    client: AsyncClient,
-    conference: Conference,
-    tenant_with_volunteers_module: Tenant,
-    regular_user: User,
-    user_token_volunteers: str,
-) -> None:
-    """Regular user (non-admin) cannot create a volunteer and gets 403."""
-    payload = {
-        **VOLUNTEER_PAYLOAD,
-        "conference_id": str(conference.id),
-    }
-    response = await client.post(
-        VOLUNTEERS_URL,
-        json=payload,
-        headers=auth_headers(user_token_volunteers),
-    )
-
-    assert response.status_code == 403
-
-
-async def test_create_volunteer_no_auth_401(
-    client: AsyncClient,
-    conference: Conference,
-    tenant_with_volunteers_module: Tenant,
-) -> None:
-    """Creating a volunteer without authentication returns 401."""
-    payload = {
-        **VOLUNTEER_PAYLOAD,
-        "conference_id": str(conference.id),
-    }
-    response = await client.post(VOLUNTEERS_URL, json=payload)
-
-    assert response.status_code == 401
-
-
-async def test_create_volunteer_duplicate_email(
-    client: AsyncClient,
-    conference: Conference,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
-) -> None:
-    """Creating a volunteer with a duplicate email returns 409 or 422."""
-    payload = {
-        "email": "seed-volunteer@example.com",  # Same as sample_volunteer
-        "first_name": "Duplicate",
-        "last_name": "Volunteer",
-        "conference_id": str(conference.id),
-    }
-    response = await client.post(
-        VOLUNTEERS_URL,
-        json=payload,
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    # Should fail with validation error (409 is the convention for duplicate)
-    assert response.status_code in (400, 409, 422)
-
-
-async def test_create_volunteer_conference_not_found(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-) -> None:
-    """Creating a volunteer with a non-existent conference_id returns 404."""
-    payload = {
-        **VOLUNTEER_PAYLOAD,
-        "conference_id": str(uuid.uuid4()),
-    }
-    response = await client.post(
-        VOLUNTEERS_URL,
-        json=payload,
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 404
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# 3. GET VOLUNTEER
-# ═══════════════════════════════════════════════════════════════════════
-
-
-async def test_get_volunteer_by_id(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
-    conference: Conference,
-) -> None:
-    """Get a volunteer by ID returns all expected fields."""
-    response = await client.get(
-        f"{VOLUNTEERS_URL}/{sample_volunteer.id}",
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["id"] == str(sample_volunteer.id)
-    assert data["email"] == "seed-volunteer@example.com"
-    assert data["first_name"] == "Seed"
-    assert data["last_name"] == "Volunteer"
-    assert data["full_name"] == "Seed Volunteer"
-    assert data["phone"] == "+491701111111"
-    assert data["status"] == "pending"
-    assert data["role"] == "Speaker Liaison"
-    assert data["skills"] == ["coordination"]
-    assert data["tshirt_size"] == "L"
-    assert "created_at" in data
-    assert "updated_at" in data
-    # Conference association
-    assert str(conference.id) in data["conference_ids"]
-
-
-async def test_get_volunteer_not_found(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-) -> None:
-    """Getting a non-existent volunteer returns 404."""
-    fake_id = uuid.uuid4()
-    response = await client.get(
-        f"{VOLUNTEERS_URL}/{fake_id}",
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 404
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# 4. UPDATE VOLUNTEER
-# ═══════════════════════════════════════════════════════════════════════
-
-
-async def test_update_volunteer(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
-) -> None:
-    """Tenant admin can update a volunteer."""
-    payload = {
-        "first_name": "Updated",
-        "last_name": "Name",
-        "role": "Stage Manager",
-        "notes": "Updated notes",
-    }
+    """Updating a volunteer profile changes the specified fields."""
     response = await client.put(
-        f"{VOLUNTEERS_URL}/{sample_volunteer.id}",
-        json=payload,
+        f"/api/v1/conferences/{conference.id}/volunteer-profiles/{volunteer_applicant.id}",
+        json={
+            "tshirt_size": "XL",
+            "notes": "Updated notes",
+            "color": "#EF4444",
+        },
         headers=auth_headers(admin_token_volunteers),
     )
-
     assert response.status_code == 200
     data = response.json()
-    assert data["first_name"] == "Updated"
-    assert data["last_name"] == "Name"
-    assert data["full_name"] == "Updated Name"
-    assert data["role"] == "Stage Manager"
+    assert data["tshirt_size"] == "XL"
     assert data["notes"] == "Updated notes"
-    # Unchanged fields
-    assert data["email"] == "seed-volunteer@example.com"
-    assert data["id"] == str(sample_volunteer.id)
+    assert data["color"] == "#EF4444"
+    # Unchanged fields preserved
+    assert data["emergency_contact_name"] == "John Doe"
+    assert data["skills"] == ["languages", "customer service"]
 
 
-async def test_update_volunteer_status(
+async def test_update_volunteer_profile_auto_create(
     client: AsyncClient,
     tenant_with_volunteers_module: Tenant,
     tenant_admin_user: User,
     admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
-) -> None:
-    """Updating volunteer status to 'approved' sets the approved_date."""
-    payload = {"status": "approved"}
-    response = await client.put(
-        f"{VOLUNTEERS_URL}/{sample_volunteer.id}",
-        json=payload,
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "approved"
-    assert data["approved_date"] is not None
-
-
-async def test_update_volunteer_not_found(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-) -> None:
-    """Updating a non-existent volunteer returns 404."""
-    fake_id = uuid.uuid4()
-    payload = {"first_name": "Ghost"}
-    response = await client.put(
-        f"{VOLUNTEERS_URL}/{fake_id}",
-        json=payload,
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 404
-
-
-async def test_update_volunteer_forbidden_for_regular_user(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    regular_user: User,
-    user_token_volunteers: str,
-    sample_volunteer: Volunteer,
-) -> None:
-    """Regular user cannot update a volunteer and gets 403."""
-    payload = {"first_name": "Forbidden"}
-    response = await client.put(
-        f"{VOLUNTEERS_URL}/{sample_volunteer.id}",
-        json=payload,
-        headers=auth_headers(user_token_volunteers),
-    )
-
-    assert response.status_code == 403
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# 5. DELETE VOLUNTEER
-# ═══════════════════════════════════════════════════════════════════════
-
-
-async def test_delete_volunteer(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
-) -> None:
-    """Tenant admin can delete a volunteer."""
-    response = await client.delete(
-        f"{VOLUNTEERS_URL}/{sample_volunteer.id}",
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert "message" in data
-    assert "deleted" in data["message"].lower()
-
-
-async def test_delete_volunteer_verify_gone(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
-) -> None:
-    """After deleting a volunteer, GET returns 404."""
-    url = f"{VOLUNTEERS_URL}/{sample_volunteer.id}"
-
-    # Delete
-    delete_response = await client.delete(
-        url,
-        headers=auth_headers(admin_token_volunteers),
-    )
-    assert delete_response.status_code == 200
-
-    # Verify GET returns 404
-    get_response = await client.get(
-        url,
-        headers=auth_headers(admin_token_volunteers),
-    )
-    assert get_response.status_code == 404
-
-
-async def test_delete_volunteer_not_found(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-) -> None:
-    """Deleting a non-existent volunteer returns 404."""
-    fake_id = uuid.uuid4()
-    response = await client.delete(
-        f"{VOLUNTEERS_URL}/{fake_id}",
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 404
-
-
-async def test_delete_volunteer_forbidden_for_regular_user(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    regular_user: User,
-    user_token_volunteers: str,
-    sample_volunteer: Volunteer,
-) -> None:
-    """Regular user cannot delete a volunteer and gets 403."""
-    response = await client.delete(
-        f"{VOLUNTEERS_URL}/{sample_volunteer.id}",
-        headers=auth_headers(user_token_volunteers),
-    )
-
-    assert response.status_code == 403
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# 6. APPROVE VOLUNTEER
-# ═══════════════════════════════════════════════════════════════════════
-
-
-async def test_approve_volunteer(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
     conference: Conference,
+    volunteer_applicant: CFPApplicant,
 ) -> None:
-    """Tenant admin can approve a volunteer via the dedicated endpoint."""
-    response = await client.post(
-        f"{VOLUNTEERS_URL}/{sample_volunteer.id}/approve",
+    """Updating a profile for applicant without one auto-creates it."""
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/volunteer-profiles/{volunteer_applicant.id}",
+        json={"tshirt_size": "S", "color": "#10B981"},
         headers=auth_headers(admin_token_volunteers),
     )
-
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "approved"
-    assert data["approved_date"] is not None
-    assert data["id"] == str(sample_volunteer.id)
-    assert data["email"] == "seed-volunteer@example.com"
-    # Conference association should be preserved
-    assert str(conference.id) in data["conference_ids"]
+    assert data["tshirt_size"] == "S"
+    assert data["color"] == "#10B981"
+    assert data["applicant_id"] == str(volunteer_applicant.id)
 
 
-async def test_approve_volunteer_not_found(
+async def test_update_profile_not_volunteer(
     client: AsyncClient,
+    db_session: AsyncSession,
     tenant_with_volunteers_module: Tenant,
+    tenant: Tenant,
     tenant_admin_user: User,
     admin_token_volunteers: str,
+    conference: Conference,
+    volunteer_role: UserRole,
 ) -> None:
-    """Approving a non-existent volunteer returns 404."""
-    fake_id = uuid.uuid4()
-    response = await client.post(
-        f"{VOLUNTEERS_URL}/{fake_id}/approve",
+    """Updating a profile for an applicant without Volunteer role fails."""
+    # Create applicant without the volunteer role
+    applicant = CFPApplicant(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        email="non-volunteer@example.com",
+        first_name="Not",
+        last_name="Volunteer",
+    )
+    db_session.add(applicant)
+    await db_session.commit()
+
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/volunteer-profiles/{applicant.id}",
+        json={"tshirt_size": "M"},
         headers=auth_headers(admin_token_volunteers),
     )
-
     assert response.status_code == 404
 
 
-async def test_approve_volunteer_forbidden_for_regular_user(
+async def test_update_profile_forbidden_for_regular_user(
     client: AsyncClient,
     tenant_with_volunteers_module: Tenant,
     regular_user: User,
     user_token_volunteers: str,
-    sample_volunteer: Volunteer,
+    conference: Conference,
+    volunteer_applicant: CFPApplicant,
+    volunteer_profile: VolunteerProfile,
 ) -> None:
-    """Regular user cannot approve a volunteer and gets 403."""
-    response = await client.post(
-        f"{VOLUNTEERS_URL}/{sample_volunteer.id}/approve",
+    """Regular user cannot update a volunteer profile."""
+    response = await client.put(
+        f"/api/v1/conferences/{conference.id}/volunteer-profiles/{volunteer_applicant.id}",
+        json={"tshirt_size": "XL"},
         headers=auth_headers(user_token_volunteers),
     )
-
     assert response.status_code == 403
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# 7. VOLUNTEER STATS
-# ═══════════════════════════════════════════════════════════════════════
-
-
-async def test_volunteer_stats_empty(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-) -> None:
-    """Volunteer stats returns zeroes when no volunteers exist."""
-    response = await client.get(
-        f"{VOLUNTEERS_URL}/stats",
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["total"] == 0
-    assert data["pending"] == 0
-    assert data["approved"] == 0
-    assert data["active"] == 0
-    assert data["inactive"] == 0
-    assert data["rejected"] == 0
-    assert data["total_hours"] == 0.0
-
-
-async def test_volunteer_stats_with_data(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
-) -> None:
-    """Volunteer stats counts existing volunteers correctly."""
-    response = await client.get(
-        f"{VOLUNTEERS_URL}/stats",
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["total"] == 1
-    assert data["pending"] == 1  # sample_volunteer is pending
-    assert data["approved"] == 0
-    assert data["active"] == 0
-    assert data["inactive"] == 0
-    assert data["rejected"] == 0
-
-
-async def test_volunteer_stats_after_approval(
-    client: AsyncClient,
-    tenant_with_volunteers_module: Tenant,
-    tenant_admin_user: User,
-    admin_token_volunteers: str,
-    sample_volunteer: Volunteer,
-) -> None:
-    """Volunteer stats reflect changes after approving a volunteer."""
-    # Approve the volunteer
-    approve_response = await client.post(
-        f"{VOLUNTEERS_URL}/{sample_volunteer.id}/approve",
-        headers=auth_headers(admin_token_volunteers),
-    )
-    assert approve_response.status_code == 200
-
-    # Check stats
-    response = await client.get(
-        f"{VOLUNTEERS_URL}/stats",
-        headers=auth_headers(admin_token_volunteers),
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["total"] == 1
-    assert data["pending"] == 0
-    assert data["approved"] == 1

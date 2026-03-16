@@ -26,6 +26,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.cfp import CallForPapers, CFPCommitteeMember, CFPTopic
     from app.models.cfp_applicants import CFPApplicant
+    from app.models.paper_form_variant import PaperFormVariant
     from app.models.tenant import Tenant
 
 
@@ -113,6 +114,9 @@ class CFPPaper(Base):
     session_type_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("session_types.id", ondelete="SET NULL"), nullable=True
     )
+    form_variant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("paper_form_variants.id", ondelete="SET NULL"), nullable=True
+    )
 
     # Content
     title: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -142,6 +146,7 @@ class CFPPaper(Base):
     tenant: Mapped["Tenant"] = relationship("Tenant")
     cfp: Mapped["CallForPapers"] = relationship("CallForPapers")
     main_speaker: Mapped["CFPApplicant"] = relationship("CFPApplicant", foreign_keys=[main_speaker_id])
+    form_variant: Mapped["PaperFormVariant | None"] = relationship("PaperFormVariant")
     cospeaker_associations: Mapped[list["CFPPaperCospeaker"]] = relationship(
         "CFPPaperCospeaker", back_populates="paper", cascade="all, delete-orphan", lazy="selectin"
     )
@@ -159,6 +164,7 @@ class CFPPaper(Base):
         Index("idx_cfp_papers_cfp", "cfp_id"),
         Index("idx_cfp_papers_main_speaker", "main_speaker_id"),
         Index("idx_cfp_papers_status", "tenant_id", "cfp_id", "status"),
+        Index("idx_cfp_papers_form_variant", "form_variant_id"),
     )
 
     def __repr__(self) -> str:

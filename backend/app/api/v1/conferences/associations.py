@@ -1,4 +1,4 @@
-"""Conference association endpoints (volunteer, location, CFP linking)."""
+"""Conference association endpoints (location, CFP linking)."""
 
 from uuid import UUID
 
@@ -15,183 +15,21 @@ from app.core.dependencies import (
 )
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.core.pagination import calculate_pages, paginate
-from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
+from app.models.associations import ConferenceCFP, ConferenceLocation
 from app.models.audit import AuditAction, AuditLog
 from app.models.cfp import CallForPapers, Submission
 from app.models.location import Location
-from app.models.volunteer import Volunteer
 from app.schemas.cfp import CFPListResponse
 from app.schemas.conference import ConferenceAssociationRequest
 from app.schemas.location import LocationListResponse
-from app.schemas.volunteer import VolunteerListResponse
 
 from ._shared import (
     MODULE_CODE,
     _build_cfp_response,
     _build_location_response_assoc,
-    _build_volunteer_response,
 )
 
 router = APIRouter()
-
-
-# ---------------------------------------------------------------------------
-# Conference <-> Volunteer association endpoints
-# ---------------------------------------------------------------------------
-
-
-@router.get(
-    "/{conference_id}/volunteers",
-    response_model=VolunteerListResponse,
-    dependencies=[Depends(require_module(MODULE_CODE))],
-)
-async def list_conference_volunteers(
-    conference_id: UUID,
-    current_user: CurrentUserDep,
-    db: DbSessionDep,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-) -> VolunteerListResponse:
-    """List volunteers linked to a conference."""
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-
-    query = (
-        select(Volunteer)
-        .join(ConferenceVolunteer, ConferenceVolunteer.volunteer_id == Volunteer.id)
-        .where(ConferenceVolunteer.conference_id == conference_id)
-        .where(Volunteer.tenant_id == current_user.tenant_id)
-    )
-
-    query = query.order_by(Volunteer.created_at.desc())
-    result = await paginate(db, query, page, page_size)
-    volunteers = result.items
-
-    # Batch-query conference_ids
-    vol_ids = [v.id for v in volunteers]
-    conf_ids_map: dict[UUID, list[UUID]] = {vid: [] for vid in vol_ids}
-    if vol_ids:
-        assoc_result = await db.execute(
-            select(ConferenceVolunteer.volunteer_id, ConferenceVolunteer.conference_id).where(
-                ConferenceVolunteer.volunteer_id.in_(vol_ids)
-            )
-        )
-        for row in assoc_result:
-            conf_ids_map[row.volunteer_id].append(row.conference_id)
-
-    items = [_build_volunteer_response(v, conf_ids_map.get(v.id, [])) for v in volunteers]
-    pages = calculate_pages(result.total, page_size)
-
-    return VolunteerListResponse(
-        items=items,
-        total=result.total,
-        page=page,
-        page_size=page_size,
-        pages=pages,
-    )
-
-
-@router.post("/{conference_id}/volunteers", status_code=201, dependencies=[Depends(require_module(MODULE_CODE))])
-async def link_volunteer_to_conference(
-    conference_id: UUID,
-    body: ConferenceAssociationRequest,
-    current_user: CurrentUserDep,
-    db: DbSessionDep,
-    request: Request,
-) -> dict:
-    """Link an existing volunteer to a conference."""
-    # Check admin access: tenant admin OR conference-specific admin
-    if not current_user.is_super_admin and not current_user.is_tenant_admin:
-        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-        if not has_access:
-            raise AuthorizationError("Admin access to this conference required")
-
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-
-    vol_result = await db.execute(
-        select(Volunteer).where(Volunteer.id == body.id).where(Volunteer.tenant_id == current_user.tenant_id)
-    )
-    if not vol_result.scalar_one_or_none():
-        raise NotFoundError("Volunteer not found")
-
-    existing = await db.execute(
-        select(ConferenceVolunteer)
-        .where(ConferenceVolunteer.conference_id == conference_id)
-        .where(ConferenceVolunteer.volunteer_id == body.id)
-    )
-    if existing.scalar_one_or_none():
-        raise ValidationError("Volunteer is already linked to this conference")
-
-    db.add(ConferenceVolunteer(conference_id=conference_id, volunteer_id=body.id))
-    db.add(
-        AuditLog(
-            tenant_id=current_user.tenant_id,
-            user_id=current_user.user_id,
-            action=AuditAction.CONFERENCE_LINK_VOLUNTEER,
-            resource_type="conference",
-            resource_id=conference_id,
-            details={"volunteer_id": str(body.id)},
-            ip_address=get_client_ip(request),
-            user_agent=request.headers.get("User-Agent"),
-        )
-    )
-
-    await db.commit()
-    return {"message": "Volunteer linked to conference"}
-
-
-@router.delete("/{conference_id}/volunteers/{volunteer_id}", dependencies=[Depends(require_module(MODULE_CODE))])
-async def unlink_volunteer_from_conference(
-    conference_id: UUID,
-    volunteer_id: UUID,
-    current_user: CurrentUserDep,
-    db: DbSessionDep,
-    request: Request,
-) -> dict:
-    """Unlink a volunteer from a conference. Blocked if it's the volunteer's only conference."""
-    # Check admin access: tenant admin OR conference-specific admin
-    if not current_user.is_super_admin and not current_user.is_tenant_admin:
-        has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-        if not has_access:
-            raise AuthorizationError("Admin access to this conference required")
-
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-
-    result = await db.execute(
-        select(ConferenceVolunteer)
-        .where(ConferenceVolunteer.conference_id == conference_id)
-        .where(ConferenceVolunteer.volunteer_id == volunteer_id)
-    )
-    assoc = result.scalar_one_or_none()
-    if not assoc:
-        raise NotFoundError("Volunteer is not linked to this conference")
-
-    count = (
-        await db.execute(
-            select(func.count())
-            .select_from(ConferenceVolunteer)
-            .where(ConferenceVolunteer.volunteer_id == volunteer_id)
-        )
-    ).scalar() or 0
-
-    if count <= 1:
-        raise ValidationError("Cannot unlink: this is the volunteer's only conference")
-
-    await db.delete(assoc)
-    db.add(
-        AuditLog(
-            tenant_id=current_user.tenant_id,
-            user_id=current_user.user_id,
-            action=AuditAction.CONFERENCE_UNLINK_VOLUNTEER,
-            resource_type="conference",
-            resource_id=conference_id,
-            details={"volunteer_id": str(volunteer_id)},
-            ip_address=get_client_ip(request),
-            user_agent=request.headers.get("User-Agent"),
-        )
-    )
-
-    await db.commit()
-    return {"message": "Volunteer unlinked from conference"}
 
 
 # ---------------------------------------------------------------------------

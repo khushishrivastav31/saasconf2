@@ -15,7 +15,6 @@ from app.models import (  # noqa
     Conference,
     ConferenceCFP,
     ConferenceLocation,
-    ConferenceVolunteer,
     Location,
     Module,
     PlatformCurrency,
@@ -24,7 +23,7 @@ from app.models import (  # noqa
     Tenant,
     TenantModule,
     User,
-    Volunteer,
+    VolunteerProfile,
 )
 
 settings = get_settings()

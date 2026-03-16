@@ -61,7 +61,7 @@ class VolunteerAssignmentCreate(BaseModel):
     """Assign a volunteer to a session-task."""
 
     session_volunteer_task_id: UUID
-    volunteer_id: UUID
+    applicant_id: UUID
 
 
 class VolunteerAssignmentResponse(BaseModel):
@@ -71,7 +71,7 @@ class VolunteerAssignmentResponse(BaseModel):
 
     id: UUID
     session_volunteer_task_id: UUID
-    volunteer_id: UUID
+    applicant_id: UUID
     volunteer_name: str
     volunteer_color: str | None
     created_at: datetime
@@ -86,7 +86,7 @@ class AssignedVolunteerBrief(BaseModel):
     """Brief volunteer info within a task-session context."""
 
     assignment_id: UUID
-    volunteer_id: UUID
+    applicant_id: UUID
     volunteer_name: str
     volunteer_color: str | None
 
@@ -140,7 +140,7 @@ class VolunteerScheduleEntry(BaseModel):
 class VolunteerScheduleResponse(BaseModel):
     """A volunteer's full schedule."""
 
-    volunteer_id: UUID
+    applicant_id: UUID
     volunteer_name: str
     volunteer_color: str | None
     entries: list[VolunteerScheduleEntry]

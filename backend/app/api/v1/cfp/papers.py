@@ -50,6 +50,7 @@ from .shared import (
     _build_paper_response,
     _paper_eager_options,
     _reload_paper,
+    _sync_speaker_role,
 )
 
 router = APIRouter()
@@ -350,6 +351,17 @@ async def update_paper(
                     CFPPaperAssignment.tenant_id == current_user.tenant_id,
                 )
             )
+
+    # Auto-assign/remove Speaker role on acceptance changes
+    if update_data.get("status"):
+        await _sync_speaker_role(
+            db,
+            paper,
+            current_user.tenant_id,
+            new_status=update_data["status"],
+            old_status=current_status,
+            assigned_by=current_user.user_id,
+        )
 
     # Update remaining fields
     for field, value in update_data.items():

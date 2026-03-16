@@ -52,6 +52,7 @@ export const mockApplicant: ApplicantProfile = {
   needs_accessibility: false,
   accessibility_details: null,
   agrees_to_recording: true,
+  allow_out_of_timeframe: false,
   message_notifications_enabled: true,
   theme_preference: null,
   picture_url: 'https://example.com/pic.jpg',

@@ -22,6 +22,7 @@ from app.models.cfp import (
     CFPTopic,
 )
 from app.models.conference import Conference
+from app.models.settings import UserRole, UserRoleAssignment
 from app.schemas.cfp import (
     CommitteeMemberCreate,
     CommitteeMemberListResponse,
@@ -31,6 +32,8 @@ from app.schemas.cfp import (
 )
 
 from .shared import MODULE_CODE, _batch_get_attachment_urls, _get_applicant_picture_url
+
+PROGRAM_COMMITTEE_ROLE = "Program Committee"
 
 router = APIRouter()
 
@@ -229,6 +232,33 @@ async def create_committee_member(
         )
         member.topics = list(topic_result.scalars().all())
 
+    # Auto-assign the "Program Committee" user role to this applicant
+    role_result = await db.execute(
+        select(UserRole).where(
+            UserRole.tenant_id == current_user.tenant_id,
+            UserRole.conference_id == member_data.conference_id,
+            UserRole.name == PROGRAM_COMMITTEE_ROLE,
+        )
+    )
+    pc_role = role_result.scalar_one_or_none()
+    if pc_role:
+        # Check if assignment already exists
+        existing_assignment = await db.execute(
+            select(UserRoleAssignment).where(
+                UserRoleAssignment.user_role_id == pc_role.id,
+                UserRoleAssignment.applicant_id == applicant.id,
+            )
+        )
+        if not existing_assignment.scalar_one_or_none():
+            db.add(
+                UserRoleAssignment(
+                    tenant_id=current_user.tenant_id,
+                    user_role_id=pc_role.id,
+                    applicant_id=applicant.id,
+                    assigned_by=current_user.user_id,
+                )
+            )
+
     await db.commit()
     await db.refresh(member)
     await db.refresh(applicant)
@@ -314,7 +344,38 @@ async def delete_committee_member(
         raise NotFoundError(f"Committee member with ID '{member_id}' not found")
 
     member_name = f"{member.applicant.first_name} {member.applicant.last_name}"
+    applicant_id = member.applicant_id
+    conference_id = member.conference_id
+
     await db.delete(member)
+
+    # Remove "Program Committee" role if the user has no other committee memberships
+    remaining = await db.execute(
+        select(func.count()).where(
+            CFPCommitteeMember.applicant_id == applicant_id,
+            CFPCommitteeMember.id != member_id,
+        )
+    )
+    if (remaining.scalar() or 0) == 0:
+        role_result = await db.execute(
+            select(UserRole).where(
+                UserRole.tenant_id == current_user.tenant_id,
+                UserRole.conference_id == conference_id,
+                UserRole.name == PROGRAM_COMMITTEE_ROLE,
+            )
+        )
+        pc_role = role_result.scalar_one_or_none()
+        if pc_role:
+            assignment_result = await db.execute(
+                select(UserRoleAssignment).where(
+                    UserRoleAssignment.user_role_id == pc_role.id,
+                    UserRoleAssignment.applicant_id == applicant_id,
+                )
+            )
+            assignment = assignment_result.scalar_one_or_none()
+            if assignment:
+                await db.delete(assignment)
+
     await db.commit()
 
     return {"message": f"Committee member '{member_name}' removed successfully"}

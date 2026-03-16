@@ -93,6 +93,7 @@ class ApplicantProfileResponse(BaseModel):
     needs_accessibility: bool = False
     accessibility_details: str | None = None
     agrees_to_recording: bool = False
+    allow_out_of_timeframe: bool = False
     message_notifications_enabled: bool = True
     theme_preference: str | None = None
     picture_url: str | None = None
@@ -230,6 +231,8 @@ class PortalPaperResponse(BaseModel):
     conference_name: str | None = None
     session_type_id: UUID | None = None
     session_type_name: str | None = None
+    form_variant_id: UUID | None = None
+    form_variant_name: str | None = None
     title: str
     abstract_short: str | None = None
     abstract_long: str | None = None
@@ -260,6 +263,7 @@ class PortalPaperCreateRequest(BaseModel):
 
     cfp_id: UUID
     session_type_id: UUID | None = None
+    form_variant_id: UUID | None = None
     title: str = Field(..., min_length=1, max_length=500)
     abstract_short: str | None = None
     abstract_long: str | None = None
@@ -274,6 +278,7 @@ class PortalPaperUpdateRequest(BaseModel):
     """Update an existing paper (draft only)."""
 
     session_type_id: UUID | None = None
+    form_variant_id: UUID | None = None
     title: str | None = Field(None, min_length=1, max_length=500)
     abstract_short: str | None = None
     abstract_long: str | None = None

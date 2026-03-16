@@ -25,11 +25,11 @@ from app.core.dependencies import (
     require_module,
 )
 from app.core.exceptions import NotFoundError, ValidationError
-from app.models.associations import ConferenceVolunteer
 from app.models.audit import AuditLog
+from app.models.cfp_applicants import CFPApplicant
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
-from app.models.settings import VolunteerRole
-from app.models.volunteer import Volunteer
+from app.models.settings import UserRole, UserRoleAssignment, VolunteerRole
+from app.models.volunteer_profile import VolunteerProfile
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 from app.schemas.volunteer_tasks import (
     AssignedVolunteerBrief,
@@ -106,12 +106,12 @@ async def _resolve_session_time(db: DbSessionDep, session: ProgramSession) -> tu
     return day_name, day_date, start_time, end_time, track_name
 
 
-async def _get_volunteer_color(db: DbSessionDep, volunteer_id: UUID, conference_id: UUID) -> str | None:
+async def _get_volunteer_color(db: DbSessionDep, applicant_id: UUID, conference_id: UUID) -> str | None:
     """Get a volunteer's color for a specific conference."""
     result = await db.execute(
-        select(ConferenceVolunteer.color).where(
-            ConferenceVolunteer.volunteer_id == volunteer_id,
-            ConferenceVolunteer.conference_id == conference_id,
+        select(VolunteerProfile.color).where(
+            VolunteerProfile.applicant_id == applicant_id,
+            VolunteerProfile.conference_id == conference_id,
         )
     )
     row = result.first()
@@ -390,7 +390,7 @@ async def list_volunteer_assignments(
         .options(
             selectinload(SessionVolunteerTask.volunteer_task),
             selectinload(SessionVolunteerTask.session),
-            selectinload(SessionVolunteerTask.assignments).selectinload(VolunteerAssignment.volunteer),
+            selectinload(SessionVolunteerTask.assignments).selectinload(VolunteerAssignment.applicant),
         )
     )
     svts = result.scalars().all()
@@ -410,13 +410,13 @@ async def list_volunteer_assignments(
 
             assigned_vols: list[AssignedVolunteerBrief] = []
             for assignment in svt.assignments:
-                vol = assignment.volunteer
-                color = await _get_volunteer_color(db, vol.id, conference_id)
+                applicant = assignment.applicant
+                color = await _get_volunteer_color(db, applicant.id, conference_id)
                 assigned_vols.append(
                     AssignedVolunteerBrief(
                         assignment_id=assignment.id,
-                        volunteer_id=vol.id,
-                        volunteer_name=vol.full_name,
+                        applicant_id=applicant.id,
+                        volunteer_name=f"{applicant.first_name} {applicant.last_name}",
                         volunteer_color=color,
                     )
                 )
@@ -476,31 +476,35 @@ async def create_volunteer_assignment(
     if not svt:
         raise NotFoundError("Session task assignment not found")
 
-    # Verify volunteer exists and is linked to conference
-    vol_result = await db.execute(
-        select(Volunteer).where(
-            Volunteer.id == data.volunteer_id,
-            Volunteer.tenant_id == current_user.tenant_id,
+    # Verify applicant exists
+    app_result = await db.execute(
+        select(CFPApplicant).where(
+            CFPApplicant.id == data.applicant_id,
+            CFPApplicant.tenant_id == current_user.tenant_id,
         )
     )
-    volunteer = vol_result.scalar_one_or_none()
-    if not volunteer:
-        raise NotFoundError("Volunteer not found")
+    applicant = app_result.scalar_one_or_none()
+    if not applicant:
+        raise NotFoundError("Applicant not found")
 
-    cv_result = await db.execute(
-        select(ConferenceVolunteer).where(
-            ConferenceVolunteer.volunteer_id == data.volunteer_id,
-            ConferenceVolunteer.conference_id == conference_id,
+    # Verify applicant has the Volunteer role for this conference
+    role_check = await db.execute(
+        select(UserRoleAssignment)
+        .join(UserRole, UserRoleAssignment.user_role_id == UserRole.id)
+        .where(
+            UserRoleAssignment.applicant_id == data.applicant_id,
+            UserRole.conference_id == conference_id,
+            UserRole.name == "Volunteer",
         )
     )
-    if not cv_result.scalar_one_or_none():
-        raise ValidationError("Volunteer is not linked to this conference")
+    if not role_check.scalar_one_or_none():
+        raise ValidationError("Applicant does not have the Volunteer role for this conference")
 
     # Check for duplicate
     existing = await db.execute(
         select(VolunteerAssignment).where(
             VolunteerAssignment.session_volunteer_task_id == data.session_volunteer_task_id,
-            VolunteerAssignment.volunteer_id == data.volunteer_id,
+            VolunteerAssignment.applicant_id == data.applicant_id,
         )
     )
     if existing.scalar_one_or_none():
@@ -510,11 +514,12 @@ async def create_volunteer_assignment(
         tenant_id=current_user.tenant_id,
         conference_id=conference_id,
         session_volunteer_task_id=data.session_volunteer_task_id,
-        volunteer_id=data.volunteer_id,
+        applicant_id=data.applicant_id,
     )
     db.add(assignment)
     await db.flush()  # Populate assignment.id before audit log
 
+    vol_name = f"{applicant.first_name} {applicant.last_name}"
     db.add(
         AuditLog(
             tenant_id=current_user.tenant_id,
@@ -524,7 +529,7 @@ async def create_volunteer_assignment(
             resource_id=str(assignment.id),
             details={
                 "conference_id": str(conference_id),
-                "volunteer_name": volunteer.full_name,
+                "volunteer_name": vol_name,
                 "task_name": svt.volunteer_task.name if svt.volunteer_task else "",
                 "session_title": svt.session.title if svt.session else "",
             },
@@ -536,13 +541,13 @@ async def create_volunteer_assignment(
     await db.commit()
     await db.refresh(assignment)
 
-    color = await _get_volunteer_color(db, volunteer.id, conference_id)
+    color = await _get_volunteer_color(db, applicant.id, conference_id)
 
     return VolunteerAssignmentResponse(
         id=assignment.id,
         session_volunteer_task_id=assignment.session_volunteer_task_id,
-        volunteer_id=assignment.volunteer_id,
-        volunteer_name=volunteer.full_name,
+        applicant_id=assignment.applicant_id,
+        volunteer_name=vol_name,
         volunteer_color=color,
         created_at=assignment.created_at,
     )
@@ -569,13 +574,14 @@ async def delete_volunteer_assignment(
             VolunteerAssignment.id == assignment_id,
             VolunteerAssignment.conference_id == conference_id,
         )
-        .options(selectinload(VolunteerAssignment.volunteer))
+        .options(selectinload(VolunteerAssignment.applicant))
     )
     assignment = result.scalar_one_or_none()
     if not assignment:
         raise NotFoundError("Volunteer assignment not found")
 
-    vol_name = assignment.volunteer.full_name if assignment.volunteer else "Unknown"
+    applicant = assignment.applicant
+    vol_name = f"{applicant.first_name} {applicant.last_name}" if applicant else "Unknown"
 
     db.add(
         AuditLog(
@@ -602,12 +608,12 @@ async def delete_volunteer_assignment(
 
 
 @router.patch(
-    "/volunteers/{volunteer_id}/color",
+    "/volunteers/{applicant_id}/color",
     dependencies=[Depends(require_module(MODULE_CODE))],
 )
 async def update_volunteer_color(
     conference_id: UUID,
-    volunteer_id: UUID,
+    applicant_id: UUID,
     data: VolunteerColorUpdate,
     current_user: TenantAdminDep,
     db: DbSessionDep,
@@ -616,16 +622,24 @@ async def update_volunteer_color(
     await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     result = await db.execute(
-        select(ConferenceVolunteer).where(
-            ConferenceVolunteer.conference_id == conference_id,
-            ConferenceVolunteer.volunteer_id == volunteer_id,
+        select(VolunteerProfile).where(
+            VolunteerProfile.conference_id == conference_id,
+            VolunteerProfile.applicant_id == applicant_id,
         )
     )
-    cv = result.scalar_one_or_none()
-    if not cv:
-        raise NotFoundError("Volunteer not linked to this conference")
+    profile = result.scalar_one_or_none()
+    if not profile:
+        # Auto-create profile if applicant has Volunteer role
+        profile = VolunteerProfile(
+            tenant_id=current_user.tenant_id,
+            conference_id=conference_id,
+            applicant_id=applicant_id,
+            color=data.color,
+        )
+        db.add(profile)
+    else:
+        profile.color = data.color
 
-    cv.color = data.color
     await db.commit()
 
     return {"message": "Volunteer color updated", "color": data.color}
@@ -637,33 +651,34 @@ async def update_volunteer_color(
 
 
 async def _build_schedule(
-    db: DbSessionDep, conference_id: UUID, volunteer_id: UUID | None = None
+    db: DbSessionDep, conference_id: UUID, applicant_id: UUID | None = None
 ) -> list[VolunteerScheduleResponse]:
     """Build schedule(s) for one or all volunteers in a conference."""
     query = (
         select(VolunteerAssignment)
         .where(VolunteerAssignment.conference_id == conference_id)
         .options(
-            selectinload(VolunteerAssignment.volunteer),
+            selectinload(VolunteerAssignment.applicant),
             selectinload(VolunteerAssignment.session_volunteer_task).selectinload(SessionVolunteerTask.session),
             selectinload(VolunteerAssignment.session_volunteer_task).selectinload(SessionVolunteerTask.volunteer_task),
         )
     )
-    if volunteer_id:
-        query = query.where(VolunteerAssignment.volunteer_id == volunteer_id)
+    if applicant_id:
+        query = query.where(VolunteerAssignment.applicant_id == applicant_id)
 
     result = await db.execute(query)
     assignments = result.scalars().all()
 
-    # Group by volunteer
+    # Group by applicant
     vol_map: dict[UUID, list[VolunteerAssignment]] = {}
     for a in assignments:
-        vol_map.setdefault(a.volunteer_id, []).append(a)
+        vol_map.setdefault(a.applicant_id, []).append(a)
 
     schedules: list[VolunteerScheduleResponse] = []
-    for vid, vol_assignments in vol_map.items():
-        vol = vol_assignments[0].volunteer
-        color = await _get_volunteer_color(db, vid, conference_id)
+    for aid, vol_assignments in vol_map.items():
+        applicant = vol_assignments[0].applicant
+        color = await _get_volunteer_color(db, aid, conference_id)
+        vol_name = f"{applicant.first_name} {applicant.last_name}"
 
         entries: list[VolunteerScheduleEntry] = []
         for a in vol_assignments:
@@ -693,8 +708,8 @@ async def _build_schedule(
 
         schedules.append(
             VolunteerScheduleResponse(
-                volunteer_id=vid,
-                volunteer_name=vol.full_name,
+                applicant_id=aid,
+                volunteer_name=vol_name,
                 volunteer_color=color,
                 entries=entries,
             )
@@ -784,36 +799,36 @@ async def list_unassigned_sessions(
 
 
 @router.get(
-    "/volunteer-schedule/{volunteer_id}",
+    "/volunteer-schedule/{applicant_id}",
     response_model=VolunteerScheduleResponse,
     dependencies=[Depends(require_module(MODULE_CODE))],
 )
 async def get_volunteer_schedule(
     conference_id: UUID,
-    volunteer_id: UUID,
+    applicant_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> VolunteerScheduleResponse:
     """Get a single volunteer's schedule."""
     await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
-    schedules = await _build_schedule(db, conference_id, volunteer_id)
+    schedules = await _build_schedule(db, conference_id, applicant_id)
     if not schedules:
         # Return empty schedule
-        vol_result = await db.execute(
-            select(Volunteer).where(
-                Volunteer.id == volunteer_id,
-                Volunteer.tenant_id == current_user.tenant_id,
+        app_result = await db.execute(
+            select(CFPApplicant).where(
+                CFPApplicant.id == applicant_id,
+                CFPApplicant.tenant_id == current_user.tenant_id,
             )
         )
-        vol = vol_result.scalar_one_or_none()
-        if not vol:
+        applicant = app_result.scalar_one_or_none()
+        if not applicant:
             raise NotFoundError("Volunteer not found")
 
-        color = await _get_volunteer_color(db, volunteer_id, conference_id)
+        color = await _get_volunteer_color(db, applicant_id, conference_id)
         return VolunteerScheduleResponse(
-            volunteer_id=volunteer_id,
-            volunteer_name=vol.full_name,
+            applicant_id=applicant_id,
+            volunteer_name=f"{applicant.first_name} {applicant.last_name}",
             volunteer_color=color,
             entries=[],
         )
@@ -927,29 +942,32 @@ def _generate_schedule_pdf(
 
 
 @router.get(
-    "/volunteer-schedule/{volunteer_id}/pdf",
+    "/volunteer-schedule/{applicant_id}/pdf",
     dependencies=[Depends(require_module(MODULE_CODE))],
 )
 async def download_volunteer_schedule_pdf(
     conference_id: UUID,
-    volunteer_id: UUID,
+    applicant_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> StreamingResponse:
     """Download a single volunteer's schedule as PDF."""
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
-    schedules = await _build_schedule(db, conference_id, volunteer_id)
+    schedules = await _build_schedule(db, conference_id, applicant_id)
     if not schedules:
-        vol_result = await db.execute(
-            select(Volunteer).where(Volunteer.id == volunteer_id, Volunteer.tenant_id == current_user.tenant_id)
+        app_result = await db.execute(
+            select(CFPApplicant).where(
+                CFPApplicant.id == applicant_id, CFPApplicant.tenant_id == current_user.tenant_id
+            )
         )
-        vol = vol_result.scalar_one_or_none()
-        if not vol:
+        applicant = app_result.scalar_one_or_none()
+        if not applicant:
             raise NotFoundError("Volunteer not found")
         # Generate empty schedule PDF
-        pdf_bytes = _generate_schedule_pdf(vol.full_name, None, [], conference.name)
-        filename = f"schedule_{vol.first_name}_{vol.last_name}.pdf"
+        vol_name = f"{applicant.first_name} {applicant.last_name}"
+        pdf_bytes = _generate_schedule_pdf(vol_name, None, [], conference.name)
+        filename = f"schedule_{applicant.first_name}_{applicant.last_name}.pdf"
     else:
         schedule = schedules[0]
         pdf_bytes = _generate_schedule_pdf(

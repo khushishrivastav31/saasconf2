@@ -9,12 +9,9 @@ export {
 
 // Volunteer hooks
 export {
-  useVolunteerList,
-  useVolunteerStats,
   useVolunteerRoles,
-  useCreateVolunteer,
-  useUpdateVolunteer,
-  useDeleteVolunteer,
+  useVolunteerProfiles,
+  useUpdateVolunteerProfile,
 } from './useVolunteers';
 
 // Settings hooks

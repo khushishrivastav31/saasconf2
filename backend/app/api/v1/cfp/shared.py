@@ -19,7 +19,7 @@ from app.models.cfp import (
 )
 from app.models.conference import Conference
 from app.models.review import PaperReview, ReviewQuestion, ReviewStatus
-from app.models.settings import SessionType
+from app.models.settings import SessionType, UserRole, UserRoleAssignment
 from app.schemas.cfp import (
     ApplicantResponse,
     CospeakerResponse,
@@ -125,6 +125,110 @@ async def _reload_paper(db, paper_id: UUID, tenant_id: UUID) -> CFPPaper:
         .where(CFPPaper.id == paper_id, CFPPaper.tenant_id == tenant_id)
     )
     return result.scalar_one()
+
+
+SPEAKER_ROLE = "Speaker"
+
+
+async def _sync_speaker_role(
+    db: DbSessionDep,
+    paper: CFPPaper,
+    tenant_id: UUID,
+    new_status: str,
+    old_status: str,
+    assigned_by: UUID | None = None,
+) -> None:
+    """Auto-assign or remove the 'Speaker' role when a paper changes status.
+
+    - Accepted → assign Speaker role to main speaker + co-speakers
+    - Away from accepted → remove Speaker role if user has no other accepted papers
+    """
+    was_accepted = old_status == PaperStatus.ACCEPTED.value
+    now_accepted = new_status == PaperStatus.ACCEPTED.value
+
+    if was_accepted == now_accepted:
+        return  # No change in acceptance
+
+    # Get the conference_id from the paper's CFP
+    cfp_result = await db.execute(select(ConferenceCFP.conference_id).where(ConferenceCFP.cfp_id == paper.cfp_id))
+    conference_id = cfp_result.scalar_one_or_none()
+    if not conference_id:
+        return
+
+    # Find the Speaker role for this conference
+    role_result = await db.execute(
+        select(UserRole).where(
+            UserRole.tenant_id == tenant_id,
+            UserRole.conference_id == conference_id,
+            UserRole.name == SPEAKER_ROLE,
+        )
+    )
+    speaker_role = role_result.scalar_one_or_none()
+    if not speaker_role:
+        return
+
+    # Collect all speaker applicant IDs (main + co-speakers)
+    speaker_ids = set()
+    if paper.main_speaker_id:
+        speaker_ids.add(paper.main_speaker_id)
+    cospeaker_result = await db.execute(
+        select(CFPPaperCospeaker.applicant_id).where(
+            CFPPaperCospeaker.paper_id == paper.id,
+        )
+    )
+    speaker_ids.update(cospeaker_result.scalars().all())
+
+    if not speaker_ids:
+        return
+
+    if now_accepted:
+        # Assign Speaker role to all speakers who don't already have it
+        existing_result = await db.execute(
+            select(UserRoleAssignment.applicant_id).where(
+                UserRoleAssignment.user_role_id == speaker_role.id,
+                UserRoleAssignment.applicant_id.in_(speaker_ids),
+            )
+        )
+        already_assigned = set(existing_result.scalars().all())
+        for applicant_id in speaker_ids - already_assigned:
+            db.add(
+                UserRoleAssignment(
+                    tenant_id=tenant_id,
+                    user_role_id=speaker_role.id,
+                    applicant_id=applicant_id,
+                    assigned_by=assigned_by,
+                )
+            )
+    else:
+        # Remove Speaker role — but only if user has no OTHER accepted papers
+        for applicant_id in speaker_ids:
+            other_accepted = await db.execute(
+                select(func.count())
+                .select_from(CFPPaper)
+                .where(
+                    CFPPaper.tenant_id == tenant_id,
+                    CFPPaper.status == PaperStatus.ACCEPTED.value,
+                    CFPPaper.id != paper.id,
+                    (
+                        (CFPPaper.main_speaker_id == applicant_id)
+                        | CFPPaper.id.in_(
+                            select(CFPPaperCospeaker.paper_id).where(
+                                CFPPaperCospeaker.applicant_id == applicant_id,
+                            )
+                        )
+                    ),
+                )
+            )
+            if (other_accepted.scalar() or 0) == 0:
+                assignment_result = await db.execute(
+                    select(UserRoleAssignment).where(
+                        UserRoleAssignment.user_role_id == speaker_role.id,
+                        UserRoleAssignment.applicant_id == applicant_id,
+                    )
+                )
+                assignment = assignment_result.scalar_one_or_none()
+                if assignment:
+                    await db.delete(assignment)
 
 
 async def _build_paper_response(
@@ -289,6 +393,7 @@ async def _build_paper_response(
         session_type_id=paper.session_type_id,
         session_type_name=session_type_name,
         session_type_duration=session_type_duration,
+        form_variant_id=paper.form_variant_id,
         topics=topics_responses,
         title=paper.title,
         abstract_short=paper.abstract_short,

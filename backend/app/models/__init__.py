@@ -3,7 +3,7 @@
 from app.models.alumni import Alumni, AlumniSource
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 from app.models.applicant_token import ApplicantEmailVerification, ApplicantRefreshToken
-from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
+from app.models.associations import ConferenceCFP, ConferenceLocation
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.models.booking import (
@@ -44,6 +44,7 @@ from app.models.messaging import (
 )
 from app.models.module import Module, TenantModule
 from app.models.news import NewsArticle
+from app.models.paper_form_variant import PaperFormVariant, PaperFormVariantField
 from app.models.payment_reminder import PaymentReminder
 from app.models.platform_currency import PlatformCurrency
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
@@ -92,7 +93,7 @@ from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
 from app.models.user_password_reset import UserPasswordReset
 from app.models.user_totp import UserTOTP
-from app.models.volunteer import Volunteer
+from app.models.volunteer_profile import VolunteerProfile
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 
 __all__ = [
@@ -126,7 +127,6 @@ __all__ = [
     "ConferenceCurrency",
     "ConferenceLocation",
     "ConferencePaperFormSchema",
-    "ConferenceVolunteer",
     "CospeakerInvitationStatus",
     "Deadline",
     "DiscountCode",
@@ -145,6 +145,8 @@ __all__ = [
     "Module",
     "NewsArticle",
     "PaperFormField",
+    "PaperFormVariant",
+    "PaperFormVariantField",
     "PaperLevel",
     "PaperReview",
     "PaperStatus",
@@ -190,7 +192,7 @@ __all__ = [
     "UserConferenceAccess",
     "UserPasswordReset",
     "UserTOTP",
-    "Volunteer",
     "VolunteerAssignment",
+    "VolunteerProfile",
     "VolunteerRole",
 ]

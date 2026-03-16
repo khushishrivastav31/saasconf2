@@ -20,8 +20,9 @@ import type {
   TaskAssignmentOverviewList,
   TaskSessionDetail,
   AssignedVolunteerBrief,
-  Volunteer,
+  VolunteerProfile,
 } from '../../../types/volunteer';
+import { useVolunteerProfiles } from '../../../hooks/api/useVolunteers';
 import type { SessionVisualSegment } from './ProgramDesignTab/hooks/useGridPositions';
 import { useProgramDays, useProgramGrid } from './ProgramDesignTab/hooks/useProgramGrid';
 import { useGridPositions } from './ProgramDesignTab/hooks/useGridPositions';
@@ -55,10 +56,10 @@ interface Props {
 // DraggableVolunteerItem — sidebar draggable volunteer card
 // ---------------------------------------------------------------------------
 interface DraggableVolunteerItemProps {
-  volunteer: Volunteer;
+  volunteer: VolunteerProfile;
   assignmentCount: number;
   isAdmin: boolean;
-  onColorCycle: (volunteerId: string, currentColor: string | null) => void;
+  onColorCycle: (applicantId: string, currentColor: string | null) => void;
 }
 
 function DraggableVolunteerItem({
@@ -68,12 +69,12 @@ function DraggableVolunteerItem({
   onColorCycle,
 }: DraggableVolunteerItemProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `vol-${volunteer.id}`,
+    id: `vol-${volunteer.applicant_id}`,
     data: { type: 'volunteer', volunteer },
   });
 
-  // Find the volunteer's color from conference_volunteers (passed as part of overview data)
-  const volColor = (volunteer as Volunteer & { color?: string | null }).color ?? null;
+  const volColor = volunteer.color ?? null;
+  const fullName = `${volunteer.first_name} ${volunteer.last_name}`;
 
   return (
     <div
@@ -94,20 +95,20 @@ function DraggableVolunteerItem({
         tabIndex={0}
         onClick={(e) => {
           e.stopPropagation();
-          if (isAdmin) onColorCycle(volunteer.id, volColor);
+          if (isAdmin) onColorCycle(volunteer.applicant_id, volColor);
         }}
         onKeyDown={(e) => {
           if (!isAdmin) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             e.stopPropagation();
-            onColorCycle(volunteer.id, volColor);
+            onColorCycle(volunteer.applicant_id, volColor);
           }
         }}
         onPointerDown={(e) => e.stopPropagation()}
       />
       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate flex-1">
-        {volunteer.full_name}
+        {fullName}
       </span>
       {assignmentCount > 0 && (
         <span className="ml-1 shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
@@ -239,13 +240,13 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDragData, setActiveDragData] = useState<{
     type: string;
-    volunteer: Volunteer;
+    volunteer: VolunteerProfile;
   } | null>(null);
 
   // Task picker modal state (for multi-task drops)
   const [pendingDrop, setPendingDrop] = useState<{
     sessionId: string;
-    volunteer: Volunteer;
+    volunteer: VolunteerProfile;
   } | null>(null);
   const [showTaskPicker, setShowTaskPicker] = useState(false);
 
@@ -294,16 +295,8 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
     },
   });
 
-  // Conference volunteers for sidebar
-  const { data: volunteersData } = useQuery({
-    queryKey: queryKeys.volunteers.conferenceList(conference.id),
-    queryFn: async () => {
-      const res = await api.get<{ items: Volunteer[]; total: number }>(
-        `/volunteers?conference_id=${conference.id}&page_size=100`
-      );
-      return res.data.items;
-    },
-  });
+  // Conference volunteers for sidebar (applicants with Volunteer role)
+  const { data: profilesData } = useVolunteerProfiles(conference.id);
 
   // ---------- Lookup maps ----------
 
@@ -329,13 +322,13 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
     return map;
   }, [overviewData]);
 
-  // volunteer_id -> number of assignments across all sessions
+  // applicant_id -> number of assignments across all sessions
   const volunteerAssignmentCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const taskOverview of overviewData?.items ?? []) {
       for (const detail of taskOverview.sessions) {
         for (const vol of detail.assigned_volunteers) {
-          counts.set(vol.volunteer_id, (counts.get(vol.volunteer_id) ?? 0) + 1);
+          counts.set(vol.applicant_id, (counts.get(vol.applicant_id) ?? 0) + 1);
         }
       }
     }
@@ -356,7 +349,7 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
   // ---------- Mutations ----------
 
   const assignMutation = useMutation({
-    mutationFn: async (data: { session_volunteer_task_id: string; volunteer_id: string }) => {
+    mutationFn: async (data: { session_volunteer_task_id: string; applicant_id: string }) => {
       await api.post(`/conferences/${conference.id}/volunteer-tasks/volunteer-assignments`, data);
     },
     onSuccess: () => {
@@ -386,30 +379,32 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
   });
 
   const colorMutation = useMutation({
-    mutationFn: async ({ volunteerId, color }: { volunteerId: string; color: string }) => {
+    mutationFn: async ({ applicantId, color }: { applicantId: string; color: string }) => {
       await api.patch(
-        `/conferences/${conference.id}/volunteer-tasks/volunteers/${volunteerId}/color`,
+        `/conferences/${conference.id}/volunteer-tasks/volunteers/${applicantId}/color`,
         { color }
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.volunteers.assignments(conference.id) });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.volunteers.conferenceList(conference.id),
+        queryKey: queryKeys.volunteers.profiles(conference.id),
       });
     },
   });
 
-  const handleColorCycle = (volunteerId: string, currentColor: string | null) => {
+  const handleColorCycle = (applicantId: string, currentColor: string | null) => {
     const currentIdx = PRESET_COLORS.indexOf(currentColor || '');
     const nextColor = PRESET_COLORS[(currentIdx + 1) % PRESET_COLORS.length];
-    colorMutation.mutate({ volunteerId, color: nextColor });
+    colorMutation.mutate({ applicantId, color: nextColor });
   };
 
   // ---------- Drag and Drop ----------
 
   const handleDragStart = (event: DragStartEvent) => {
-    const data = event.active.data.current as { type: string; volunteer: Volunteer } | undefined;
+    const data = event.active.data.current as
+      | { type: string; volunteer: VolunteerProfile }
+      | undefined;
     if (data?.type === 'volunteer') {
       setActiveDragData(data);
     }
@@ -419,7 +414,7 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
     setActiveDragData(null);
     const { active, over } = event;
     if (!over || !active.data.current) return;
-    const dragData = active.data.current as { type: string; volunteer: Volunteer };
+    const dragData = active.data.current as { type: string; volunteer: VolunteerProfile };
     const dropData = over.data.current as { sessionId: string } | undefined;
     if (!dropData?.sessionId || dragData.type !== 'volunteer') return;
 
@@ -434,12 +429,12 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
       const svtId = tasks[0].id;
       const assignments = sessionAssignmentMap.get(sessionId) ?? [];
       const detail = assignments.find((d) => d.session_volunteer_task_id === svtId);
-      if (detail?.assigned_volunteers.some((v) => v.volunteer_id === volunteer.id)) {
+      if (detail?.assigned_volunteers.some((v) => v.applicant_id === volunteer.applicant_id)) {
         return; // Already assigned
       }
       assignMutation.mutate({
         session_volunteer_task_id: svtId,
-        volunteer_id: volunteer.id,
+        applicant_id: volunteer.applicant_id,
       });
     } else {
       // Multiple tasks — open task picker modal
@@ -470,9 +465,11 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
   }
 
   // Filtered volunteers for sidebar
-  const allVolunteers = volunteersData ?? [];
+  const allVolunteers = profilesData?.items ?? [];
   const filteredVolunteers = searchQuery
-    ? allVolunteers.filter((v) => v.full_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? allVolunteers.filter((v) =>
+        `${v.first_name} ${v.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+      )
     : allVolunteers;
 
   // Data for task picker modal
@@ -521,9 +518,9 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
               <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
                 {filteredVolunteers.map((vol) => (
                   <DraggableVolunteerItem
-                    key={vol.id}
+                    key={vol.applicant_id}
                     volunteer={vol}
-                    assignmentCount={volunteerAssignmentCounts.get(vol.id) ?? 0}
+                    assignmentCount={volunteerAssignmentCounts.get(vol.applicant_id) ?? 0}
                     isAdmin={isAdmin}
                     onColorCycle={handleColorCycle}
                   />
@@ -693,7 +690,7 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
       <DragOverlay>
         {activeDragData ? (
           <div className="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium shadow-lg">
-            {activeDragData.volunteer.full_name}
+            {activeDragData.volunteer.first_name} {activeDragData.volunteer.last_name}
           </div>
         ) : null}
       </DragOverlay>
@@ -706,7 +703,7 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
             setShowTaskPicker(false);
             setPendingDrop(null);
           }}
-          title={`Assign ${pendingDrop.volunteer.full_name} to task`}
+          title={`Assign ${pendingDrop.volunteer.first_name} ${pendingDrop.volunteer.last_name} to task`}
         >
           <div className="px-6 py-4 space-y-2">
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
@@ -718,7 +715,7 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
                 (d) => d.session_volunteer_task_id === task.id
               );
               const alreadyAssigned = detail?.assigned_volunteers.some(
-                (v) => v.volunteer_id === pendingDrop.volunteer.id
+                (v) => v.applicant_id === pendingDrop.volunteer.applicant_id
               );
               const assigned = detail ? detail.assigned_volunteers.length : task.assigned_count;
 
@@ -730,7 +727,7 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
                     assignMutation.mutate(
                       {
                         session_volunteer_task_id: task.id,
-                        volunteer_id: pendingDrop.volunteer.id,
+                        applicant_id: pendingDrop.volunteer.applicant_id,
                       },
                       {
                         onSuccess: () => {
@@ -797,8 +794,8 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
                 const isFull = assigned >= task.required_count;
 
                 // Volunteers not yet assigned to this task
-                const assignedIds = new Set(assignedVols.map((v) => v.volunteer_id));
-                const availableVols = allVolunteers.filter((v) => !assignedIds.has(v.id));
+                const assignedIds = new Set(assignedVols.map((v) => v.applicant_id));
+                const availableVols = allVolunteers.filter((v) => !assignedIds.has(v.applicant_id));
 
                 return (
                   <div key={task.id}>
@@ -874,7 +871,7 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
                           if (e.target.value) {
                             assignMutation.mutate({
                               session_volunteer_task_id: task.id,
-                              volunteer_id: e.target.value,
+                              applicant_id: e.target.value,
                             });
                           }
                         }}
@@ -882,8 +879,8 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
                       >
                         <option value="">+ Add volunteer...</option>
                         {availableVols.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.full_name}
+                          <option key={v.applicant_id} value={v.applicant_id}>
+                            {v.first_name} {v.last_name}
                           </option>
                         ))}
                       </select>

@@ -20,10 +20,10 @@ from app.core.invoice_validation import validate_recipient_fields
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.core.vat_calculation import calculate_vat_for_invoice
-from app.models.associations import ConferenceVolunteer
+from app.models.cfp_applicants import CFPApplicant
 from app.models.invoice import Invoice
+from app.models.settings import UserRole, UserRoleAssignment
 from app.models.sponsor import Sponsor
-from app.models.volunteer import Volunteer
 from app.schemas.invoice import (
     InvoiceCreate,
     InvoiceListResponse,
@@ -259,17 +259,19 @@ async def search_recipients(
     )
     sponsors = list(sponsor_result.scalars().all())
 
-    # Search volunteers
+    # Search volunteers (applicants with Volunteer role)
     vol_result = await db.execute(
-        select(Volunteer)
-        .join(ConferenceVolunteer)
+        select(CFPApplicant)
+        .join(UserRoleAssignment, UserRoleAssignment.applicant_id == CFPApplicant.id)
+        .join(UserRole, UserRoleAssignment.user_role_id == UserRole.id)
         .where(
-            ConferenceVolunteer.conference_id == conference_id,
-            Volunteer.tenant_id == current_user.tenant_id,
+            UserRole.conference_id == conference_id,
+            UserRole.name == "Volunteer",
+            CFPApplicant.tenant_id == current_user.tenant_id,
             or_(
-                unaccent_ilike(Volunteer.first_name, f"%{q}%"),
-                unaccent_ilike(Volunteer.last_name, f"%{q}%"),
-                unaccent_ilike(Volunteer.email, f"%{q}%"),
+                unaccent_ilike(CFPApplicant.first_name, f"%{q}%"),
+                unaccent_ilike(CFPApplicant.last_name, f"%{q}%"),
+                unaccent_ilike(CFPApplicant.email, f"%{q}%"),
             ),
         )
         .limit(10)
@@ -316,14 +318,14 @@ async def search_recipients(
                 source_type="volunteer",
                 display_name=display_name,
                 email=volunteer.email,
-                company=None,
-                address_line1=volunteer.address_line1,
-                address_line2=volunteer.address_line2,
-                city=volunteer.city,
-                state=volunteer.state,
-                postal_code=volunteer.postal_code,
-                country=volunteer.country,
-                vat_number=volunteer.vat_number,
+                company=volunteer.company,
+                address_line1=None,
+                address_line2=None,
+                city=None,
+                state=None,
+                postal_code=None,
+                country=None,
+                vat_number=None,
                 phone=volunteer.phone,
                 contact_persons=[],
             )

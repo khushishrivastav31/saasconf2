@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 
 from app.core.dependencies import DbSessionDep
-from app.models.associations import ConferenceCFP, ConferenceLocation, ConferenceVolunteer
+from app.models.associations import ConferenceCFP, ConferenceLocation
 from app.models.cfp import CFPPaper
 from app.models.invoice import Invoice
 from app.models.sponsor import Sponsor
@@ -30,12 +30,10 @@ class ConferenceDeleteData:
     orphaned_applicant_ids: list[UUID] = field(default_factory=list)
 
     # IDs of entities exclusively linked to this conference (will be deleted)
-    exclusive_vol_ids: list[UUID] = field(default_factory=list)
     exclusive_loc_ids: list[UUID] = field(default_factory=list)
     exclusive_cfp_ids: list[UUID] = field(default_factory=list)
 
     # Total linked counts (includes shared entities that will only be unlinked)
-    total_vols: int = 0
     total_locs: int = 0
     total_cfps: int = 0
 
@@ -103,10 +101,6 @@ async def compute_conference_delete_data(
     data.orphaned_applicant_count = len(data.orphaned_applicant_ids)
 
     # --- Total linked counts ---
-    data.total_vols = (
-        await db.execute(select(func.count()).where(ConferenceVolunteer.conference_id == conference_id))
-    ).scalar() or 0
-
     data.total_locs = (
         await db.execute(select(func.count()).where(ConferenceLocation.conference_id == conference_id))
     ).scalar() or 0
@@ -116,18 +110,6 @@ async def compute_conference_delete_data(
     ).scalar() or 0
 
     # --- Exclusively-linked entities ---
-    # Volunteers only in this conference
-    exclusive_vol_ids_q = (
-        select(ConferenceVolunteer.volunteer_id)
-        .where(ConferenceVolunteer.conference_id == conference_id)
-        .where(
-            ~ConferenceVolunteer.volunteer_id.in_(
-                select(ConferenceVolunteer.volunteer_id).where(ConferenceVolunteer.conference_id != conference_id)
-            )
-        )
-    )
-    data.exclusive_vol_ids = list((await db.execute(exclusive_vol_ids_q)).scalars().all())
-
     # Locations only in this conference
     exclusive_loc_ids_q = (
         select(ConferenceLocation.location_id)

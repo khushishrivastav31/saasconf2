@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import type {
   PaperFormField,
+  PaperFormVariantField,
   PaperFormFieldUpdate,
   PaperFormFieldType,
   FieldOption,
   ValidationRules,
 } from '../../../../../types';
 
+export type EditableFormField = PaperFormField | PaperFormVariantField;
+
 interface FieldPropertyEditorProps {
-  field: PaperFormField | null;
+  field: EditableFormField | null;
   onUpdate: (id: string, data: PaperFormFieldUpdate) => void;
   isAdmin: boolean;
 }
@@ -50,7 +53,7 @@ export default function FieldPropertyEditor({
   onUpdate,
   isAdmin,
 }: FieldPropertyEditorProps) {
-  const [localField, setLocalField] = useState<PaperFormField | null>(null);
+  const [localField, setLocalField] = useState<EditableFormField | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
   // Sync local state when a different field is selected (intentionally keyed on

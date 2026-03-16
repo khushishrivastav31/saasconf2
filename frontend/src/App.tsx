@@ -13,7 +13,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Tenants = lazy(() => import('./pages/admin/Tenants'));
 const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
 const Settings = lazy(() => import('./pages/admin/Settings'));
-const Volunteers = lazy(() => import('./pages/modules/Volunteers'));
 const Locations = lazy(() => import('./pages/modules/Locations'));
 const CallForPapers = lazy(() => import('./pages/modules/CallForPapers'));
 const Conferences = lazy(() => import('./pages/Conferences'));
@@ -282,7 +281,7 @@ function App() {
             path="modules/volunteers"
             element={
               <ModuleRoute moduleCode="volunteers">
-                <Volunteers />
+                <Conferences />
               </ModuleRoute>
             }
           />
