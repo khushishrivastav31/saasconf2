@@ -59,6 +59,10 @@ vi.mock('../../../hooks/usePortalAuthMedia', () => ({
   usePortalAuthMedia: () => null,
 }));
 
+vi.mock('../../../components/portal/VolunteerProfileSection', () => ({
+  default: () => <div data-testid="volunteer-profile-section" />,
+}));
+
 vi.mock('../../../utils/mediaValidation', () => ({
   validateImage: vi.fn().mockResolvedValue(null),
   validateVideo: vi.fn().mockReturnValue(null),
