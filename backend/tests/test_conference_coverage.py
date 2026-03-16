@@ -482,7 +482,6 @@ class TestConferenceDeletePreview:
         assert data["conference_name"] == "TestConf 2026"
         assert data["is_active"] is True
         assert data["must_deactivate_first"] is True
-        assert "volunteers" in data
         assert "locations" in data
         assert "cfps" in data
         assert "papers" in data

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -82,6 +82,34 @@ class RecipientListMember(Base):
     __table_args__ = (
         UniqueConstraint("list_id", "applicant_id", name="uq_recipient_list_members_list_applicant"),
         Index("idx_recipient_list_members_list", "list_id"),
+    )
+
+
+class DynamicRecipientList(Base):
+    """A saved dynamic filter for recipient resolution, scoped to conference."""
+
+    __tablename__ = "dynamic_recipient_lists"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    conference_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conferences.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    target_type: Mapped[str] = mapped_column(String(20), nullable=False)  # "registration" | "sponsor"
+    filters: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "conference_id", "name", name="uq_dynamic_recipient_lists_name"),
+        Index("idx_dynamic_recipient_lists_tenant", "tenant_id"),
+        Index("idx_dynamic_recipient_lists_conference", "conference_id"),
     )
 
 

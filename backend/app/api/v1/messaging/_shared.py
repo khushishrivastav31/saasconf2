@@ -1,9 +1,11 @@
 """Shared helpers and constants for admin messaging endpoints."""
 
 import logging
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
     check_conference_admin_access,
@@ -13,9 +15,12 @@ from app.models.attachment import Attachment
 from app.models.cfp import CFPApplicant
 from app.models.conference import Conference
 from app.models.messaging import MessageParticipant
+from app.models.registration import BillingProfile, Registration, RegistrationItem
+from app.models.sponsor import Sponsor
 from app.models.user import User
 from app.schemas.messaging import (
     MessageAttachmentInfo,
+    RecipientPreviewItem,
     SenderInfo,
 )
 
@@ -233,12 +238,15 @@ def substitute_template_variables(
     conference_name: str = "",
     paper_title: str = "",
     paper_list: str = "",
+    company_name: str = "",
+    booking_option: str = "",
 ) -> str:
     """Replace template placeholder variables in text.
 
     Supported placeholders:
       [First Name], [Last Name], [Email],
-      [Conference Name], [Paper Title], [Paper List]
+      [Conference Name], [Paper Title], [Paper List],
+      [Company Name], [Booking Option]
 
     All values are HTML-escaped before substitution to prevent XSS,
     since this function runs after sanitize_html() has already cleaned
@@ -253,7 +261,139 @@ def substitute_template_variables(
         "[Conference Name]": html_escape(conference_name),
         "[Paper Title]": html_escape(paper_title),
         "[Paper List]": html_escape(paper_list),
+        "[Company Name]": html_escape(company_name),
+        "[Booking Option]": html_escape(booking_option),
     }
     for placeholder, value in replacements.items():
         text = text.replace(placeholder, value)
     return text
+
+
+# --- Recipient resolution helpers ---
+
+
+@dataclass
+class EmailRecipient:
+    """A resolved email-only recipient (not a CFP applicant)."""
+
+    email: str
+    first_name: str
+    last_name: str
+    source: str  # "registration" or "sponsor"
+    company_name: str = ""
+    booking_option_name: str = ""
+
+
+async def resolve_registrations(
+    db: AsyncSession,
+    tenant_id: UUID,
+    conference_id: UUID,
+    filters: dict | None = None,
+) -> list[EmailRecipient]:
+    """Query registrations matching filters, return email recipients."""
+    query = select(Registration).where(
+        Registration.tenant_id == tenant_id,
+        Registration.conference_id == conference_id,
+        Registration.status != "cancelled",
+    )
+
+    need_billing_join = False
+
+    if filters:
+        if filters.get("booking_option_ids"):
+            query = query.where(Registration.booking_option_id.in_(filters["booking_option_ids"]))
+
+        if filters.get("status"):
+            query = query.where(Registration.status == filters["status"])
+
+        if filters.get("registration_mode"):
+            query = query.where(Registration.registration_mode == filters["registration_mode"])
+
+        if filters.get("country") or filters.get("city") or filters.get("company"):
+            need_billing_join = True
+
+        if filters.get("session_ids"):
+            query = query.join(RegistrationItem, RegistrationItem.registration_id == Registration.id).where(
+                RegistrationItem.program_session_id.in_(filters["session_ids"])
+            )
+
+    if need_billing_join:
+        query = query.join(BillingProfile, BillingProfile.id == Registration.billing_profile_id)
+        if filters and filters.get("country"):
+            query = query.where(BillingProfile.country == filters["country"])
+        if filters and filters.get("city"):
+            query = query.where(BillingProfile.city.ilike(f"%{filters['city']}%"))
+        if filters and filters.get("company"):
+            query = query.where(BillingProfile.company_name.ilike(f"%{filters['company']}%"))
+
+    result = await db.execute(query.distinct())
+    recipients: list[EmailRecipient] = []
+    for reg in result.scalars().all():
+        recipients.append(
+            EmailRecipient(
+                email=reg.email,
+                first_name=reg.first_name,
+                last_name=reg.last_name,
+                source="registration",
+            )
+        )
+    return recipients
+
+
+async def resolve_sponsors(
+    db: AsyncSession,
+    tenant_id: UUID,
+    conference_id: UUID,
+    filters: dict | None = None,
+) -> list[EmailRecipient]:
+    """Query sponsors matching filters, extract contact person emails."""
+    query = select(Sponsor).where(
+        Sponsor.tenant_id == tenant_id,
+        Sponsor.conference_id == conference_id,
+        Sponsor.is_active.is_(True),
+    )
+
+    if filters:
+        if filters.get("sponsor_package_ids"):
+            query = query.where(Sponsor.sponsor_package_id.in_(filters["sponsor_package_ids"]))
+        if filters.get("country"):
+            query = query.where(Sponsor.country == filters["country"])
+        if filters.get("city"):
+            query = query.where(Sponsor.city.ilike(f"%{filters['city']}%"))
+
+    result = await db.execute(query)
+    recipients: list[EmailRecipient] = []
+    for sponsor in result.scalars().all():
+        if sponsor.contact_persons:
+            for cp in sponsor.contact_persons:
+                cp_email = cp.get("email") if isinstance(cp, dict) else None
+                if cp_email:
+                    cp_name = cp.get("name", "") if isinstance(cp, dict) else ""
+                    parts = cp_name.split(None, 1) if cp_name else ["", ""]
+                    recipients.append(
+                        EmailRecipient(
+                            email=cp_email,
+                            first_name=parts[0] if parts else "",
+                            last_name=parts[1] if len(parts) > 1 else "",
+                            source="sponsor",
+                            company_name=sponsor.company_name or "",
+                        )
+                    )
+    return recipients
+
+
+def recipients_to_preview(
+    recipients: list[EmailRecipient],
+    limit: int = 50,
+) -> list[RecipientPreviewItem]:
+    """Convert EmailRecipients to preview items."""
+    return [
+        RecipientPreviewItem(
+            email=r.email,
+            first_name=r.first_name,
+            last_name=r.last_name,
+            source=r.source,
+            detail=r.company_name or r.booking_option_name or None,
+        )
+        for r in recipients[:limit]
+    ]

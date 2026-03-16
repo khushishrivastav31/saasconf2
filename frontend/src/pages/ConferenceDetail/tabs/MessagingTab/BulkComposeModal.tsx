@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -8,6 +8,9 @@ import type { BulkRecipientFilter } from '../../../../types';
 import type {
   MessageTemplateListResponse,
   RecipientListListResponse,
+  SystemRecipientGroup,
+  DynamicRecipientListListResponse,
+  RecipientPreviewResponse,
 } from '../../../../types/messaging';
 
 const TEMPLATE_VARIABLES = [
@@ -16,6 +19,8 @@ const TEMPLATE_VARIABLES = [
   { label: 'Email', token: '[Email]' },
   { label: 'Conference', token: '[Conference Name]' },
   { label: 'Paper Title', token: '[Paper Title]' },
+  { label: 'Company Name', token: '[Company Name]' },
+  { label: 'Booking Option', token: '[Booking Option]' },
 ];
 
 interface BulkComposeModalProps {
@@ -31,7 +36,16 @@ interface BulkComposeModalProps {
   sending: boolean;
 }
 
-type RecipientCategory = 'all' | 'paper_status' | 'committee_role' | 'recipient_list';
+type RecipientCategory =
+  | 'all'
+  | 'paper_status'
+  | 'committee_role'
+  | 'recipient_list'
+  | 'user_role'
+  | 'all_registrations'
+  | 'all_sponsors'
+  | 'sponsor_package'
+  | 'dynamic_list';
 
 const PAPER_STATUSES = [
   { value: 'submitted', label: 'Submitted' },
@@ -60,6 +74,7 @@ export default function BulkComposeModal({
   const [paperStatus, setPaperStatus] = useState('');
   const [committeeRole, setCommitteeRole] = useState('');
   const [recipientListId, setRecipientListId] = useState('');
+  const [selectedGroupId, setSelectedGroupId] = useState(''); // user_role, sponsor_package, dynamic_list ID
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [screenOverlayId, setScreenOverlayId] = useState<string | null>(null);
 
@@ -87,8 +102,68 @@ export default function BulkComposeModal({
     enabled: open,
   });
 
+  // Fetch system lists (user roles, sponsors, registrations)
+  const { data: systemLists } = useQuery<SystemRecipientGroup[]>({
+    queryKey: queryKeys.messaging.systemLists(conferenceId),
+    queryFn: () =>
+      api.get(`/conferences/${conferenceId}/messaging/system-lists`).then((r) => r.data),
+    enabled: open,
+  });
+
+  // Fetch dynamic lists
+  const { data: dynamicListsData } = useQuery<DynamicRecipientListListResponse>({
+    queryKey: queryKeys.messaging.dynamicLists(conferenceId),
+    queryFn: () =>
+      api.get(`/conferences/${conferenceId}/messaging/dynamic-lists`).then((r) => r.data),
+    enabled: open,
+  });
+
   const templates = templatesData?.items ?? [];
   const recipientLists = recipientListsData?.items ?? [];
+  const dynamicLists = dynamicListsData?.items ?? [];
+
+  // Group system lists by category
+  const userRoleGroups = useMemo(
+    () => (systemLists ?? []).filter((g) => g.category === 'user_role'),
+    [systemLists]
+  );
+  const sponsorGroups = useMemo(
+    () => (systemLists ?? []).filter((g) => g.category === 'sponsor'),
+    [systemLists]
+  );
+  const registrationGroups = useMemo(
+    () => (systemLists ?? []).filter((g) => g.category === 'registration'),
+    [systemLists]
+  );
+
+  // Build the filter for recipient count preview
+  const currentFilter = useMemo((): BulkRecipientFilter | null => {
+    if (category === 'all') return { all_applicants: true };
+    if (category === 'paper_status' && paperStatus) return { paper_status: paperStatus };
+    if (category === 'committee_role' && committeeRole) return { committee_role: committeeRole };
+    if (category === 'recipient_list' && recipientListId)
+      return { recipient_list_id: recipientListId };
+    if (category === 'user_role' && selectedGroupId) return { user_role_id: selectedGroupId };
+    if (category === 'all_registrations') return { all_registrations: true };
+    if (category === 'all_sponsors') return { all_sponsors: true };
+    if (category === 'sponsor_package' && selectedGroupId)
+      return { sponsor_package_id: selectedGroupId };
+    if (category === 'dynamic_list' && selectedGroupId) return { dynamic_list_id: selectedGroupId };
+    return null;
+  }, [category, paperStatus, committeeRole, recipientListId, selectedGroupId]);
+
+  // Fetch recipient count preview
+  const { data: recipientPreview, isFetching: previewLoading } = useQuery<RecipientPreviewResponse>(
+    {
+      queryKey: [...queryKeys.messaging.recipientCount(conferenceId), currentFilter],
+      queryFn: () =>
+        api
+          .post(`/conferences/${conferenceId}/messaging/recipient-count`, currentFilter)
+          .then((r) => r.data),
+      enabled: open && currentFilter !== null,
+      staleTime: 30_000,
+    }
+  );
 
   useEffect(() => {
     if (!open) {
@@ -98,6 +173,7 @@ export default function BulkComposeModal({
       setPaperStatus('');
       setCommitteeRole('');
       setRecipientListId('');
+      setSelectedGroupId('');
       setSelectedTemplate('');
       setScreenOverlayId(null);
     }
@@ -105,20 +181,11 @@ export default function BulkComposeModal({
 
   if (!open) return null;
 
-  const hasFilter =
-    category === 'all' ||
-    (category === 'paper_status' && paperStatus) ||
-    (category === 'committee_role' && committeeRole) ||
-    (category === 'recipient_list' && recipientListId);
-
+  const hasFilter = currentFilter !== null;
   const canSend = hasFilter && subject.trim() && bodyHtml.trim();
 
   const buildRecipients = (): BulkRecipientFilter => {
-    if (category === 'all') return { all_applicants: true };
-    if (category === 'paper_status') return { paper_status: paperStatus };
-    if (category === 'committee_role') return { committee_role: committeeRole };
-    if (category === 'recipient_list') return { recipient_list_id: recipientListId };
-    return {};
+    return currentFilter ?? {};
   };
 
   const recipientLabel = () => {
@@ -133,6 +200,20 @@ export default function BulkComposeModal({
     if (category === 'recipient_list' && recipientListId) {
       const list = recipientLists.find((l) => l.id === recipientListId);
       return `List: ${list?.name ?? 'Unknown'} (${list?.member_count ?? 0} members)`;
+    }
+    if (category === 'user_role' && selectedGroupId) {
+      const group = userRoleGroups.find((g) => g.key === `user_role:${selectedGroupId}`);
+      return group?.label ?? 'User role members';
+    }
+    if (category === 'all_registrations') return 'All registrations (email only)';
+    if (category === 'all_sponsors') return 'All sponsors (email only)';
+    if (category === 'sponsor_package' && selectedGroupId) {
+      const group = sponsorGroups.find((g) => g.key === `sponsor_package:${selectedGroupId}`);
+      return group?.label ?? 'Sponsor package members';
+    }
+    if (category === 'dynamic_list' && selectedGroupId) {
+      const dl = dynamicLists.find((l) => l.id === selectedGroupId);
+      return `Dynamic: ${dl?.name ?? 'Unknown'} (${dl?.recipient_count ?? 0} recipients)`;
     }
     return '';
   };
@@ -193,36 +274,94 @@ export default function BulkComposeModal({
               Recipients
             </label>
             <select
-              value={
-                category === 'recipient_list' && recipientListId
-                  ? `list:${recipientListId}`
-                  : category
-              }
+              value={(() => {
+                if (category === 'recipient_list' && recipientListId)
+                  return `list:${recipientListId}`;
+                if (category === 'user_role' && selectedGroupId)
+                  return `user_role:${selectedGroupId}`;
+                if (category === 'sponsor_package' && selectedGroupId)
+                  return `sponsor_package:${selectedGroupId}`;
+                if (category === 'dynamic_list' && selectedGroupId)
+                  return `dynamic_list:${selectedGroupId}`;
+                return category;
+              })()}
               onChange={(e) => {
                 const val = e.target.value;
+                // Reset all sub-selectors
+                setPaperStatus('');
+                setCommitteeRole('');
+                setRecipientListId('');
+                setSelectedGroupId('');
+
                 if (val.startsWith('list:')) {
                   setCategory('recipient_list');
                   setRecipientListId(val.slice(5));
-                  setPaperStatus('');
-                  setCommitteeRole('');
+                } else if (val.startsWith('user_role:')) {
+                  setCategory('user_role');
+                  setSelectedGroupId(val.slice(10));
+                } else if (val.startsWith('sponsor_package:')) {
+                  setCategory('sponsor_package');
+                  setSelectedGroupId(val.slice(16));
+                } else if (val.startsWith('dynamic_list:')) {
+                  setCategory('dynamic_list');
+                  setSelectedGroupId(val.slice(13));
                 } else {
                   setCategory(val as RecipientCategory | '');
-                  setPaperStatus('');
-                  setCommitteeRole('');
-                  setRecipientListId('');
                 }
               }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
             >
               <option value="">Select recipient group...</option>
-              <option value="all">All applicants</option>
-              <option value="paper_status">By paper status</option>
-              <option value="committee_role">By committee role</option>
-              {recipientLists.length > 0 && (
-                <optgroup label="Recipient Lists">
+              <optgroup label="Applicants">
+                <option value="all">All applicants</option>
+                <option value="paper_status">By paper status</option>
+                <option value="committee_role">By committee role</option>
+              </optgroup>
+              {userRoleGroups.length > 0 && (
+                <optgroup label="By User Role">
+                  {userRoleGroups.map((g) => (
+                    <option key={g.key} value={`user_role:${g.key.split(':')[1]}`}>
+                      {g.label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {registrationGroups.length > 0 && (
+                <optgroup label="Registrations">
+                  {registrationGroups.map((g) => (
+                    <option key={g.key} value="all_registrations">
+                      {g.label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {sponsorGroups.length > 0 && (
+                <optgroup label="Sponsors">
+                  {sponsorGroups.map((g) => {
+                    if (g.key === 'all_sponsors')
+                      return (
+                        <option key={g.key} value="all_sponsors">
+                          {g.label}
+                        </option>
+                      );
+                    return (
+                      <option key={g.key} value={`sponsor_package:${g.key.split(':')[1]}`}>
+                        {g.label}
+                      </option>
+                    );
+                  })}
+                </optgroup>
+              )}
+              {(recipientLists.length > 0 || dynamicLists.length > 0) && (
+                <optgroup label="Saved Lists">
                   {recipientLists.map((l) => (
                     <option key={l.id} value={`list:${l.id}`}>
                       {l.name} ({l.member_count} members)
+                    </option>
+                  ))}
+                  {dynamicLists.map((dl) => (
+                    <option key={dl.id} value={`dynamic_list:${dl.id}`}>
+                      {dl.name} ({dl.recipient_count} recipients)
                     </option>
                   ))}
                 </optgroup>
@@ -272,10 +411,27 @@ export default function BulkComposeModal({
             </div>
           )}
 
-          {/* Selected summary */}
+          {/* Selected summary with recipient count */}
           {hasFilter && (
             <div className="text-sm text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-3 py-2 rounded-md">
               Sending to: <span className="font-medium">{recipientLabel()}</span>
+              {previewLoading && (
+                <span className="ml-2 text-blue-400 dark:text-blue-500">(counting...)</span>
+              )}
+              {!previewLoading && recipientPreview && (
+                <span className="ml-2 font-semibold">
+                  — {recipientPreview.total} recipient{recipientPreview.total !== 1 ? 's' : ''}
+                </span>
+              )}
+              {(category === 'all_registrations' ||
+                category === 'all_sponsors' ||
+                category === 'sponsor_package' ||
+                (category === 'dynamic_list' &&
+                  dynamicLists.find((dl) => dl.id === selectedGroupId)?.target_type)) && (
+                <span className="ml-1 text-xs text-amber-600 dark:text-amber-400">
+                  (email only — no in-app thread)
+                </span>
+              )}
             </div>
           )}
 

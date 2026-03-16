@@ -80,6 +80,11 @@ export interface BulkRecipientFilter {
   committee_role?: string;
   applicant_ids?: string[];
   recipient_list_id?: string;
+  user_role_id?: string;
+  all_registrations?: boolean;
+  all_sponsors?: boolean;
+  sponsor_package_id?: string;
+  dynamic_list_id?: string;
 }
 
 // Message Templates
@@ -126,6 +131,43 @@ export interface RecipientListDetailResponse {
 
 export interface RecipientListListResponse {
   items: RecipientListResponse[];
+  total: number;
+}
+
+// System & Dynamic Recipient Lists
+export interface SystemRecipientGroup {
+  key: string;
+  label: string;
+  category: 'user_role' | 'sponsor' | 'registration';
+  count: number;
+}
+
+export interface RecipientPreviewItem {
+  email: string;
+  first_name: string;
+  last_name: string;
+  source: string;
+  detail: string | null;
+}
+
+export interface RecipientPreviewResponse {
+  total: number;
+  items: RecipientPreviewItem[];
+}
+
+export interface DynamicRecipientList {
+  id: string;
+  name: string;
+  description: string | null;
+  target_type: 'registration' | 'sponsor';
+  filters: Record<string, unknown>;
+  recipient_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DynamicRecipientListListResponse {
+  items: DynamicRecipientList[];
   total: number;
 }
 

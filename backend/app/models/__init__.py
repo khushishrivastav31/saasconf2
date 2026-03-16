@@ -34,6 +34,7 @@ from app.models.invoice import Invoice
 from app.models.invoice_event import InvoiceEvent
 from app.models.location import Location
 from app.models.messaging import (
+    DynamicRecipientList,
     Message,
     MessageParticipant,
     MessageTemplate,
@@ -131,6 +132,7 @@ __all__ = [
     "Deadline",
     "DiscountCode",
     "DiscountCodeOption",
+    "DynamicRecipientList",
     "EmailTemplate",
     "ExpenseCategory",
     "ExpenseTier",

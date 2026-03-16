@@ -81,6 +81,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Volunteer system refactor — role-based approach using UserRoleAssignment + RoleMembers pattern. Migration 139 applied. Old Volunteer/ConferenceVolunteer models removed, replaced with VolunteerProfile + applicant-based system. Fixed env.py imports, migration column references, IntegrityError on duplicate assignments, toast feedback on role assign/remove, cross-tab query invalidation.
-- **Status**: Backend restarted, migration applied. Running checks (mypy/ruff/tsc/eslint). NOT YET COMMITTED.
+- **Last completed**: Paper form variants + volunteer role refactor + CFP role members (`b177bb5`). Variant form builder with drag-and-drop, collapsible standard form, preview mode. 12 new variant integration tests. Migrations 139-140.
+- **Status**: Clean — all checks passing, committed and pushed to main.
 - **Note**: H2 (require current password for password change) deferred for later

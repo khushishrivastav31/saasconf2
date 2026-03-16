@@ -137,11 +137,21 @@ class ReplyCreate(BaseModel):
 class BulkRecipientFilter(BaseModel):
     """Filter for selecting bulk recipients."""
 
+    # Existing applicant-based filters
     all_applicants: bool = False
     paper_status: str | None = None
     committee_role: str | None = None
     applicant_ids: list[UUID] | None = None
     recipient_list_id: UUID | None = None
+    # User role (applicant-based, creates threads)
+    user_role_id: UUID | None = None
+    # Registration-based (email-only delivery)
+    all_registrations: bool = False
+    # Sponsor-based (email-only delivery)
+    all_sponsors: bool = False
+    sponsor_package_id: UUID | None = None
+    # Dynamic list (email-only, resolved from saved filters)
+    dynamic_list_id: UUID | None = None
 
 
 class AdminBulkSend(BaseModel):
@@ -158,6 +168,7 @@ class BulkSendResponse(BaseModel):
 
     bulk_id: UUID
     threads_created: int
+    emails_sent: int = 0
 
 
 class BulkThreadSummary(BaseModel):
@@ -321,3 +332,91 @@ class InternalNoteCreate(BaseModel):
     """Create an internal note on a thread."""
 
     body_html: str = Field(..., min_length=1)
+
+
+# --- System & Dynamic Recipient Lists ---
+
+
+class SystemRecipientGroup(BaseModel):
+    """A computed system recipient group (not persisted)."""
+
+    key: str  # e.g. "user_role:{id}", "all_sponsors", "sponsor_package:{id}", "all_registrations"
+    label: str  # e.g. "Speakers (12)"
+    category: str  # "user_role", "sponsor", "registration"
+    count: int
+
+
+class RegistrationFilterSpec(BaseModel):
+    """Filter criteria for registration-based dynamic lists."""
+
+    booking_option_ids: list[UUID] | None = None
+    session_ids: list[UUID] | None = None
+    country: str | None = None
+    city: str | None = None
+    company: str | None = None
+    registration_mode: str | None = None
+    status: str | None = None
+
+
+class SponsorFilterSpec(BaseModel):
+    """Filter criteria for sponsor-based dynamic lists."""
+
+    sponsor_package_ids: list[UUID] | None = None
+    country: str | None = None
+    city: str | None = None
+
+
+class DynamicRecipientListCreate(BaseModel):
+    """Create a new dynamic recipient list."""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    description: str | None = None
+    target_type: str = Field(..., pattern=r"^(registration|sponsor)$")
+    filters: dict = Field(default_factory=dict)
+
+
+class DynamicRecipientListUpdate(BaseModel):
+    """Update a dynamic recipient list."""
+
+    name: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = None
+    filters: dict | None = None
+
+
+class DynamicRecipientListResponse(BaseModel):
+    """Dynamic recipient list response."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    description: str | None = None
+    target_type: str
+    filters: dict
+    recipient_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class DynamicRecipientListListResponse(BaseModel):
+    """List of dynamic recipient lists."""
+
+    items: list[DynamicRecipientListResponse]
+    total: int
+
+
+class RecipientPreviewItem(BaseModel):
+    """A resolved recipient for preview display."""
+
+    email: str
+    first_name: str
+    last_name: str
+    source: str  # "applicant", "registration", "sponsor"
+    detail: str | None = None  # e.g. booking option name, sponsor package
+
+
+class RecipientPreviewResponse(BaseModel):
+    """Preview of resolved recipients."""
+
+    total: int
+    items: list[RecipientPreviewItem]

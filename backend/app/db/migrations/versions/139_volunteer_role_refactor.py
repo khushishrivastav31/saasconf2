@@ -114,10 +114,13 @@ def upgrade() -> None:
         else:
             # Create new CFPApplicant
             applicant_id = uuid.uuid4()
+            # password_hash is NOT NULL; use an unusable placeholder so they
+            # must reset their password to log in.
+            placeholder_hash = "$2b$12$000000000000000000000000000000000000000000"
             conn.execute(
                 sa.text(
-                    "INSERT INTO cfp_applicants (id, tenant_id, email, first_name, last_name, phone, created_at) "
-                    "VALUES (:id, :tid, :email, :fn, :ln, :phone, now())"
+                    "INSERT INTO cfp_applicants (id, tenant_id, email, first_name, last_name, phone, password_hash, created_at) "
+                    "VALUES (:id, :tid, :email, :fn, :ln, :phone, :pw, now())"
                 ),
                 {
                     "id": applicant_id,
@@ -126,6 +129,7 @@ def upgrade() -> None:
                     "fn": vol.first_name,
                     "ln": vol.last_name,
                     "phone": vol.phone,
+                    "pw": placeholder_hash,
                 },
             )
 

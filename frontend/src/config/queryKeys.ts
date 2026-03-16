@@ -158,6 +158,11 @@ export const queryKeys = {
     recipientListDetail: (conferenceId: string, listId?: string | null) =>
       ['recipient-list-detail', conferenceId, listId] as const,
     committeeRoles: (conferenceId: string) => ['committee-roles', conferenceId] as const,
+    systemLists: (conferenceId: string) => ['messaging-system-lists', conferenceId] as const,
+    dynamicLists: (conferenceId: string) => ['messaging-dynamic-lists', conferenceId] as const,
+    dynamicListDetail: (conferenceId: string, listId: string) =>
+      ['messaging-dynamic-list-detail', conferenceId, listId] as const,
+    recipientCount: (conferenceId: string) => ['messaging-recipient-count', conferenceId] as const,
   },
 
   // ── Attachments ─────────────────────────────────────────────────
