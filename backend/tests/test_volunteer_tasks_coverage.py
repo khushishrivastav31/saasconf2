@@ -13,7 +13,7 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import create_access_token
+from app.core.security import create_access_token, hash_password
 from app.models.cfp_applicants import CFPApplicant
 from app.models.conference import Conference
 from app.models.module import Module, TenantModule
@@ -337,6 +337,7 @@ async def volunteer(
         email="vol1@test.com",
         first_name="Alice",
         last_name="Smith",
+        password_hash=hash_password("Password123!"),
     )
     db_session.add(a)
     await db_session.flush()
@@ -362,6 +363,7 @@ async def volunteer_2(
         email="vol2@test.com",
         first_name="Bob",
         last_name="Jones",
+        password_hash=hash_password("Password123!"),
     )
     db_session.add(a)
     await db_session.flush()
@@ -387,6 +389,7 @@ async def volunteer_3(
         email="vol3@test.com",
         first_name="Charlie",
         last_name="Brown",
+        password_hash=hash_password("Password123!"),
     )
     db_session.add(a)
     await db_session.flush()

@@ -81,6 +81,7 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Paper form variants + volunteer role refactor + CFP role members (`b177bb5`). Variant form builder with drag-and-drop, collapsible standard form, preview mode. 12 new variant integration tests. Migrations 139-140.
-- **Status**: Clean — all checks passing, committed and pushed to main.
+- **Last completed**: System & dynamic recipient lists for bulk messaging (`df46735`) — user role, registration, sponsor targeting; dynamic list builder; recipient count preview; migration 139 CI fix
+- **Status**: Clean — all checks passing, mypy/ruff/tsc/eslint clean
+- **Pending**: Handbook update for recipient lists feature
 - **Note**: H2 (require current password for password change) deferred for later
