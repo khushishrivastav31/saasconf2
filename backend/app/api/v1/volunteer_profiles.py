@@ -168,6 +168,19 @@ async def update_volunteer_profile(
     if not applicant:
         raise NotFoundError("Applicant not found")
 
+    # Verify applicant has the Volunteer role for this conference
+    role_check = await db.execute(
+        select(UserRoleAssignment.id)
+        .join(UserRole, UserRoleAssignment.user_role_id == UserRole.id)
+        .where(
+            UserRole.conference_id == conference_id,
+            UserRole.name == "Volunteer",
+            UserRoleAssignment.applicant_id == applicant_id,
+        )
+    )
+    if not role_check.scalar_one_or_none():
+        raise NotFoundError("Applicant does not have the Volunteer role")
+
     prof_result = await db.execute(
         select(VolunteerProfile).where(
             VolunteerProfile.conference_id == conference_id,

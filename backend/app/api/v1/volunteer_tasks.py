@@ -621,6 +621,19 @@ async def update_volunteer_color(
     """Set a volunteer's color for this conference."""
     await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
+    # Verify applicant exists and has the Volunteer role
+    role_check = await db.execute(
+        select(UserRoleAssignment.id)
+        .join(UserRole, UserRoleAssignment.user_role_id == UserRole.id)
+        .where(
+            UserRole.conference_id == conference_id,
+            UserRole.name == "Volunteer",
+            UserRoleAssignment.applicant_id == applicant_id,
+        )
+    )
+    if not role_check.scalar_one_or_none():
+        raise NotFoundError("Volunteer not found")
+
     result = await db.execute(
         select(VolunteerProfile).where(
             VolunteerProfile.conference_id == conference_id,
@@ -629,7 +642,6 @@ async def update_volunteer_color(
     )
     profile = result.scalar_one_or_none()
     if not profile:
-        # Auto-create profile if applicant has Volunteer role
         profile = VolunteerProfile(
             tenant_id=current_user.tenant_id,
             conference_id=conference_id,
