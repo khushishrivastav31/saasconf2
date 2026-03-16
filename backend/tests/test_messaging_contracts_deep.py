@@ -500,6 +500,7 @@ async def volunteer(
         email=f"vol-{uuid.uuid4().hex[:6]}@test.com",
         first_name="Vera",
         last_name="Volunteer",
+        password_hash=hash_password("Password123!"),
     )
     db_session.add(a)
     await db_session.flush()
@@ -524,6 +525,7 @@ async def volunteer2(
         email=f"vol2-{uuid.uuid4().hex[:6]}@test.com",
         first_name="Victor",
         last_name="Volunteer",
+        password_hash=hash_password("Password123!"),
     )
     db_session.add(a)
     await db_session.flush()

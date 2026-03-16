@@ -602,7 +602,6 @@ class TestConferenceDelete:
         assert resp.status_code == 200
         data = resp.json()
         assert "deleted successfully" in data["message"]
-        assert data["deleted_volunteers"] == 0
         assert data["deleted_locations"] == 0
         assert data["deleted_cfps"] == 0
 

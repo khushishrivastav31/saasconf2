@@ -188,7 +188,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
     queryKey: queryKeys.sponsors.packages(conference.id),
     queryFn: () =>
       api
-        .get(`/conferences/${conference.id}/sponsor-packages`)
+        .get(`/conferences/${conference.id}/settings/sponsor-packages`)
         .then((r) => r.data?.items ?? r.data),
     enabled: showDynamicModal && dlTargetType === 'sponsor',
   });
