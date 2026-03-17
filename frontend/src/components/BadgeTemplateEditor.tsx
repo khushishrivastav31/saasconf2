@@ -50,6 +50,7 @@ interface BadgeTemplateEditorProps {
   orientation?: string;
   onOrientationChange?: (orientation: string) => void;
   templateType?: string;
+  extraPlaceholders?: { category: string; items: { name: string; description: string }[] }[];
 }
 
 // A5 dimensions at 96 DPI
@@ -145,6 +146,7 @@ export default function BadgeTemplateEditor({
   orientation = 'landscape',
   onOrientationChange,
   templateType = 'attendee',
+  extraPlaceholders,
 }: BadgeTemplateEditorProps) {
   const { showToast } = useToast();
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
@@ -366,7 +368,7 @@ export default function BadgeTemplateEditor({
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Click to insert</p>
             </div>
             <div className="p-2 space-y-1">
-              {BADGE_PLACEHOLDERS.map((category) => {
+              {[...BADGE_PLACEHOLDERS, ...(extraPlaceholders ?? [])].map((category) => {
                 const isExpanded = expandedCategories.has(category.category);
                 return (
                   <div key={category.category}>

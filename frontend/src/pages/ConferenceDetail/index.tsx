@@ -4,9 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../../config/api';
 import { queryKeys } from '../../config/queryKeys';
 import { useToast } from '../../components/Toast';
+import UnsavedChangesDialog from '../../components/UnsavedChangesDialog';
 import { BackIcon } from './icons';
 import { useConferenceDetail } from './useConferenceDetail';
 import { SelectionProvider, useSelection } from './SelectionContext';
+import { DirtyContext } from './DirtyContext';
 
 // Lazy-loaded tab components
 const ConferenceDetailsTab = lazy(() => import('./tabs/DetailsTab'));
@@ -102,6 +104,12 @@ function ConferenceDetailContent() {
 
     // Router helpers
     navigate,
+
+    // Unsaved changes guard
+    setIsDirty,
+    showUnsavedDialog,
+    confirmLeaveTab,
+    cancelLeaveTab,
   } = useConferenceDetail(conferenceId);
 
   // Fetch deadlines for approaching-deadline toast warnings
@@ -365,189 +373,197 @@ function ConferenceDetailContent() {
         {/* Section content */}
         <div className="flex-1 min-w-0">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <Suspense
-              fallback={
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                </div>
-              }
-            >
-              {activeSection === 'details' && (
-                <ConferenceDetailsTab
-                  conference={conference}
-                  onUpdate={handleUpdate}
-                  isAdmin={isAdmin}
-                />
-              )}
-              {activeSection === 'team' && (
-                <ConferenceTeamTab
-                  conference={conference}
-                  onUpdate={handleUpdate}
-                  isAdmin={isAdmin}
-                />
-              )}
-              {activeSection === 'social' && (
-                <ConferenceSocialTab
-                  conference={conference}
-                  onUpdate={handleUpdate}
-                  isAdmin={isAdmin}
-                />
-              )}
-              {activeSection === 'volunteers' && (
-                <VolunteersTab conferenceId={conferenceId} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'volunteer-task-assignment' && (
-                <TaskAssignmentTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'volunteer-assignment' && (
-                <VolunteerAssignmentTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'volunteer-schedule' && (
-                <VolunteerScheduleTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'locations' && (
-                <ConferenceLocationsTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'cfp' && (
-                <ConferenceCFPsTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'cfp-topics' && <CFPTopics isAdmin={isAdmin} />}
-              {activeSection === 'cfp-program-committee' && (
-                <CFPProgramCommittee conferenceId={conferenceId} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'role-keynote' && (
-                <RoleMembers conferenceId={conferenceId} isAdmin={isAdmin} roleName="Keynote" />
-              )}
-              {activeSection === 'role-tutorial' && (
-                <RoleMembers conferenceId={conferenceId} isAdmin={isAdmin} roleName="Tutorial" />
-              )}
-              {activeSection === 'role-social-event' && (
-                <RoleMembers
-                  conferenceId={conferenceId}
-                  isAdmin={isAdmin}
-                  roleName="Social Event"
-                />
-              )}
-              {activeSection === 'role-bonus-session' && (
-                <RoleMembers
-                  conferenceId={conferenceId}
-                  isAdmin={isAdmin}
-                  roleName="Bonus Session"
-                />
-              )}
-              {activeSection === 'role-active-session' && (
-                <RoleMembers
-                  conferenceId={conferenceId}
-                  isAdmin={isAdmin}
-                  roleName="Active Session"
-                />
-              )}
-              {activeSection === 'role-sponsor-talk' && (
-                <RoleMembers
-                  conferenceId={conferenceId}
-                  isAdmin={isAdmin}
-                  roleName="Sponsor Talk"
-                />
-              )}
-              {activeSection === 'cfp-applicants' && (
-                <CFPApplicants conferenceId={conferenceId} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'cfp-papers' && <CFPPapers key={papersKey} isAdmin={isAdmin} />}
-              {activeSection === 'cfp-assignments' && (
-                <CFPAssignments conferenceId={conferenceId} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'cfp-evaluated-papers' && <CFPEvaluatedPapers />}
-              {activeSection === 'cfp-accepted-papers' && <CFPSelectedPapers filter="accepted" />}
-              {activeSection === 'cfp-rejected-papers' && <CFPSelectedPapers filter="rejected" />}
-              {activeSection === 'sessions' && (
-                <SessionsTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'speakers' && (
-                <SpeakersTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'attendees' && (
-                <AttendeesTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'badges' && conference && (
-                <BadgesTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'sponsors' && (
-                <ConferenceSponsorsTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'analytics' && (
-                <RegistrationQuestionsAnalyticsTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'analytics-questions' && (
-                <RegistrationQuestionsAnalyticsTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'analytics-statistics' && (
-                <ConferenceStatisticsTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'analytics-revenue' && (
-                <RevenueTrackingTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'analytics-financial' && (
-                <FinancialReportingTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'service_providers' && (
-                <ConferenceServiceProvidersTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'invoices' && (
-                <ConferenceInvoicesTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'payment-reminders' && (
-                <PaymentRemindersTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'cost-management' && (
-                <CostManagementTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'budget-planning' && (
-                <BudgetPlanningTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'speaker-expenses' && (
-                <SpeakerExpensesTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'program' && (
-                <ProgramDesignTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'program-design' && (
-                <ProgramDesignTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'program-build' && (
-                <ProgramBuildTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'booking' && conference && (
-                <ConferenceBookingTab
-                  conferenceId={conference.id}
-                  conferenceSlug={(conference.abbreviation || conference.name || '')
-                    .toUpperCase()
-                    .replace(/\s+/g, '')}
-                  isAdmin={isAdmin}
-                  conferenceCurrency={conference.currency}
-                />
-              )}
-              {activeSection === 'messaging' && conference && (
-                <MessagingTab conference={conference} />
-              )}
-              {activeSection === 'news' && conference && (
-                <NewsTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'registration' && conference && (
-                <RegistrationTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'alumni' && conference && (
-                <AlumniTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'deadlines' && conference && (
-                <DeadlinesTab conference={conference} isAdmin={isAdmin} />
-              )}
-              {activeSection === 'settings' && (
-                <ConferenceSettingsTab conference={conference} isAdmin={isAdmin} />
-              )}
-            </Suspense>
+            <DirtyContext.Provider value={setIsDirty}>
+              <Suspense
+                fallback={
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                  </div>
+                }
+              >
+                {activeSection === 'details' && (
+                  <ConferenceDetailsTab
+                    conference={conference}
+                    onUpdate={handleUpdate}
+                    isAdmin={isAdmin}
+                  />
+                )}
+                {activeSection === 'team' && (
+                  <ConferenceTeamTab
+                    conference={conference}
+                    onUpdate={handleUpdate}
+                    isAdmin={isAdmin}
+                  />
+                )}
+                {activeSection === 'social' && (
+                  <ConferenceSocialTab
+                    conference={conference}
+                    onUpdate={handleUpdate}
+                    isAdmin={isAdmin}
+                  />
+                )}
+                {activeSection === 'volunteers' && (
+                  <VolunteersTab conferenceId={conferenceId} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'volunteer-task-assignment' && (
+                  <TaskAssignmentTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'volunteer-assignment' && (
+                  <VolunteerAssignmentTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'volunteer-schedule' && (
+                  <VolunteerScheduleTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'locations' && (
+                  <ConferenceLocationsTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'cfp' && (
+                  <ConferenceCFPsTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'cfp-topics' && <CFPTopics isAdmin={isAdmin} />}
+                {activeSection === 'cfp-program-committee' && (
+                  <CFPProgramCommittee conferenceId={conferenceId} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'role-keynote' && (
+                  <RoleMembers conferenceId={conferenceId} isAdmin={isAdmin} roleName="Keynote" />
+                )}
+                {activeSection === 'role-tutorial' && (
+                  <RoleMembers conferenceId={conferenceId} isAdmin={isAdmin} roleName="Tutorial" />
+                )}
+                {activeSection === 'role-social-event' && (
+                  <RoleMembers
+                    conferenceId={conferenceId}
+                    isAdmin={isAdmin}
+                    roleName="Social Event"
+                  />
+                )}
+                {activeSection === 'role-bonus-session' && (
+                  <RoleMembers
+                    conferenceId={conferenceId}
+                    isAdmin={isAdmin}
+                    roleName="Bonus Session"
+                  />
+                )}
+                {activeSection === 'role-active-session' && (
+                  <RoleMembers
+                    conferenceId={conferenceId}
+                    isAdmin={isAdmin}
+                    roleName="Active Session"
+                  />
+                )}
+                {activeSection === 'role-sponsor-talk' && (
+                  <RoleMembers
+                    conferenceId={conferenceId}
+                    isAdmin={isAdmin}
+                    roleName="Sponsor Talk"
+                  />
+                )}
+                {activeSection === 'cfp-applicants' && (
+                  <CFPApplicants conferenceId={conferenceId} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'cfp-papers' && <CFPPapers key={papersKey} isAdmin={isAdmin} />}
+                {activeSection === 'cfp-assignments' && (
+                  <CFPAssignments conferenceId={conferenceId} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'cfp-evaluated-papers' && <CFPEvaluatedPapers />}
+                {activeSection === 'cfp-accepted-papers' && <CFPSelectedPapers filter="accepted" />}
+                {activeSection === 'cfp-rejected-papers' && <CFPSelectedPapers filter="rejected" />}
+                {activeSection === 'sessions' && (
+                  <SessionsTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'speakers' && (
+                  <SpeakersTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'attendees' && (
+                  <AttendeesTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'badges' && conference && (
+                  <BadgesTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'sponsors' && (
+                  <ConferenceSponsorsTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'analytics' && (
+                  <RegistrationQuestionsAnalyticsTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'analytics-questions' && (
+                  <RegistrationQuestionsAnalyticsTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'analytics-statistics' && (
+                  <ConferenceStatisticsTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'analytics-revenue' && (
+                  <RevenueTrackingTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'analytics-financial' && (
+                  <FinancialReportingTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'service_providers' && (
+                  <ConferenceServiceProvidersTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'invoices' && (
+                  <ConferenceInvoicesTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'payment-reminders' && (
+                  <PaymentRemindersTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'cost-management' && (
+                  <CostManagementTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'budget-planning' && (
+                  <BudgetPlanningTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'speaker-expenses' && (
+                  <SpeakerExpensesTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'program' && (
+                  <ProgramDesignTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'program-design' && (
+                  <ProgramDesignTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'program-build' && (
+                  <ProgramBuildTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'booking' && conference && (
+                  <ConferenceBookingTab
+                    conferenceId={conference.id}
+                    conferenceSlug={(conference.abbreviation || conference.name || '')
+                      .toUpperCase()
+                      .replace(/\s+/g, '')}
+                    isAdmin={isAdmin}
+                    conferenceCurrency={conference.currency}
+                  />
+                )}
+                {activeSection === 'messaging' && conference && (
+                  <MessagingTab conference={conference} />
+                )}
+                {activeSection === 'news' && conference && (
+                  <NewsTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'registration' && conference && (
+                  <RegistrationTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'alumni' && conference && (
+                  <AlumniTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'deadlines' && conference && (
+                  <DeadlinesTab conference={conference} isAdmin={isAdmin} />
+                )}
+                {activeSection === 'settings' && (
+                  <ConferenceSettingsTab conference={conference} isAdmin={isAdmin} />
+                )}
+              </Suspense>
+            </DirtyContext.Provider>
           </div>
         </div>
       </div>
+
+      <UnsavedChangesDialog
+        open={showUnsavedDialog}
+        onConfirm={confirmLeaveTab}
+        onCancel={cancelLeaveTab}
+      />
     </div>
   );
 }

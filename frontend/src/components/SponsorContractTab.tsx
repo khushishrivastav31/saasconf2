@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useContext } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 import type {
@@ -14,6 +14,7 @@ import RichTextEditor from './common/RichTextEditor';
 import AlertDialog from './AlertDialog';
 import Modal from './Modal';
 import ConfirmDialog from './ConfirmDialog';
+import { DirtyContext } from '../pages/ConferenceDetail/DirtyContext';
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -350,6 +351,9 @@ export default function SponsorContractTab({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
+  // Report dirty state to ConferenceDetail tab guard
+  const reportDirty = useContext(DirtyContext);
+
   const basePath = `/conferences/${conferenceId}/sponsors/${sponsor.id}/contract`;
 
   // Fetch contract
@@ -494,6 +498,14 @@ export default function SponsorContractTab({
       saveMutation.mutate(editedHtml);
     }
   };
+
+  // Track dirty state: contract exists and content has been edited
+  const contractDirty =
+    editedHtml !== null && contract != null && editedHtml !== contract.html_content;
+  useEffect(() => {
+    reportDirty(contractDirty);
+    return () => reportDirty(false);
+  }, [contractDirty, reportDirty]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;

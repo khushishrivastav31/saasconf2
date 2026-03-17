@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useConferenceAdmin } from '../../hooks/useConferenceAdmin';
@@ -66,6 +66,12 @@ export interface UseConferenceDetailReturn {
   // Router helpers
   navigate: ReturnType<typeof useNavigate>;
   conferenceId: string | undefined;
+
+  // Unsaved changes guard
+  setIsDirty: (dirty: boolean) => void;
+  showUnsavedDialog: boolean;
+  confirmLeaveTab: () => void;
+  cancelLeaveTab: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +128,44 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
       );
     }
   }, [activeSection, searchParams, setSearchParams]);
+
+  // -------------------------------------------------------------------------
+  // Unsaved changes guard for tab switching
+  // -------------------------------------------------------------------------
+
+  const isDirtyRef = useRef(false);
+  const [pendingSection, setPendingSection] = useState<SectionId | null>(null);
+
+  const setIsDirty = useCallback((dirty: boolean) => {
+    isDirtyRef.current = dirty;
+  }, []);
+
+  const guardedSetActiveSection = useCallback(
+    (section: SectionId | ((prev: SectionId) => SectionId)) => {
+      // Support both direct value and updater function
+      const nextSection = typeof section === 'function' ? section(activeSection) : section;
+      if (isDirtyRef.current) {
+        setPendingSection(nextSection);
+      } else {
+        setActiveSection(nextSection);
+      }
+    },
+    [activeSection]
+  );
+
+  const confirmLeaveTab = useCallback(() => {
+    if (pendingSection !== null) {
+      isDirtyRef.current = false;
+      setActiveSection(pendingSection);
+      setPendingSection(null);
+    }
+  }, [pendingSection]);
+
+  const cancelLeaveTab = useCallback(() => {
+    setPendingSection(null);
+  }, []);
+
+  const showUnsavedDialog = pendingSection !== null;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -181,7 +225,7 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
 
     // Sidebar navigation
     activeSection,
-    setActiveSection,
+    setActiveSection: guardedSetActiveSection,
     sidebarCollapsed,
     setSidebarCollapsed,
     expandedSections,
@@ -191,5 +235,11 @@ export function useConferenceDetail(conferenceId: string | undefined): UseConfer
     // Router helpers
     navigate,
     conferenceId,
+
+    // Unsaved changes guard
+    setIsDirty,
+    showUnsavedDialog,
+    confirmLeaveTab,
+    cancelLeaveTab,
   };
 }

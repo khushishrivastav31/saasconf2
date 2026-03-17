@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -9,6 +9,7 @@ import { parseApiError } from '../../../../utils/apiError';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import { COUNTRIES_BY_CONTINENT, BANK_TRANSFER_COUNTRY_CODES } from '../../../../config/countries';
 import type { Conference } from '../../../../types';
+import { DirtyContext } from '../../DirtyContext';
 
 interface StripeSettings {
   publishable_key: string | null;
@@ -61,6 +62,23 @@ export default function StripeSetupTab({
       setIsEnabled(settings.is_enabled);
     }
   }, [settings]);
+
+  // Track dirty state for unsaved changes guard
+  const isDirty = useMemo(() => {
+    if (!settings) return false;
+    return (
+      publishableKey !== (settings.publishable_key || '') ||
+      secretKey !== (settings.secret_key || '') ||
+      webhookSecret !== (settings.webhook_secret || '') ||
+      isEnabled !== settings.is_enabled
+    );
+  }, [settings, publishableKey, secretKey, webhookSecret, isEnabled]);
+
+  const reportDirty = useContext(DirtyContext);
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
 
   // Webhook URL for Stripe dashboard
   const webhookUrl = `${window.location.origin}/api/v1/stripe/webhook`;

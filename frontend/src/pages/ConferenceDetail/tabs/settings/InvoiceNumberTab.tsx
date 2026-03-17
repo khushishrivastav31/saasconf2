@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -6,6 +6,7 @@ import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import type { Conference } from '../../../../types';
+import { DirtyContext } from '../../DirtyContext';
 
 interface InvoiceSettings {
   invoice_number_template: string;
@@ -69,6 +70,33 @@ export default function InvoiceNumberTab({
       setCancCounterValue(settings.cancellation_counter_value);
     }
   }, [settings]);
+
+  // Track dirty state for unsaved changes guard
+  const isDirty = useMemo(() => {
+    if (!settings) return false;
+    return (
+      template !== settings.invoice_number_template ||
+      counterReset !== settings.invoice_counter_reset ||
+      counterValue !== settings.invoice_counter_value ||
+      cancTemplate !== settings.cancellation_number_template ||
+      cancCounterReset !== settings.cancellation_counter_reset ||
+      cancCounterValue !== settings.cancellation_counter_value
+    );
+  }, [
+    settings,
+    template,
+    counterReset,
+    counterValue,
+    cancTemplate,
+    cancCounterReset,
+    cancCounterValue,
+  ]);
+
+  const reportDirty = useContext(DirtyContext);
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
 
   // Update mutation
   const updateMutation = useMutation({

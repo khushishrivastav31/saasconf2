@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -6,6 +6,7 @@ import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import type { Conference } from '../../../../types';
+import { DirtyContext } from '../../DirtyContext';
 
 interface MyCompany {
   name: string;
@@ -74,6 +75,42 @@ export default function InvoiceCompanyDataTab({
       setExchangeRate(info.exchange_rate ? String(info.exchange_rate) : '');
     }
   }, [settings]);
+
+  // Track dirty state for unsaved changes guard
+  const isDirty = useMemo(() => {
+    if (!settings) return false;
+    const info = settings.invoice_company_info || {};
+    return (
+      companyName !== (info.name || '') ||
+      address !== (info.address || '') ||
+      city !== (info.city || '') ||
+      postalCode !== (info.postal_code || '') ||
+      country !== (info.country || '') ||
+      taxId !== (info.tax_id || '') ||
+      phone !== (info.phone || '') ||
+      footerText !== (info.footer_text || '') ||
+      secondCurrency !== (info.second_currency || '') ||
+      exchangeRate !== (info.exchange_rate ? String(info.exchange_rate) : '')
+    );
+  }, [
+    settings,
+    companyName,
+    address,
+    city,
+    postalCode,
+    country,
+    taxId,
+    phone,
+    footerText,
+    secondCurrency,
+    exchangeRate,
+  ]);
+
+  const reportDirty = useContext(DirtyContext);
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
 
   // Auto-populate from My Company (FIXED: single address field)
   const handleAutoPopulate = () => {

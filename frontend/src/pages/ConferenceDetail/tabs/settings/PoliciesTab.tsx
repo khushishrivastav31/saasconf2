@@ -5,7 +5,7 @@
  * - Privacy Policy, Cookies Policy, Imprint, Terms & Conditions, Code of Conduct
  * Each can be an external URL or inline rich text content.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -13,6 +13,7 @@ import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import type { Conference } from '../../../../types';
+import { DirtyContext } from '../../DirtyContext';
 
 interface PolicyEntry {
   type: 'url' | 'content' | null;
@@ -243,6 +244,12 @@ export default function PoliciesTab({ conference, isAdmin }: PoliciesTabProps) {
   // Local state for editing
   const [localPolicies, setLocalPolicies] = useState<Record<string, PolicyEntry>>({});
   const [isDirty, setIsDirty] = useState(false);
+
+  const reportDirty = useContext(DirtyContext);
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
 
   useEffect(() => {
     if (policies) {

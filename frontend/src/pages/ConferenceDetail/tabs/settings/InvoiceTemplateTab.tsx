@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -7,6 +7,7 @@ import { parseApiError } from '../../../../utils/apiError';
 import InvoiceTemplateEditor from '../../../../components/InvoiceTemplateEditor';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import type { Conference } from '../../../../types';
+import { DirtyContext } from '../../DirtyContext';
 
 interface FiscalRepresentative {
   id: string;
@@ -98,6 +99,39 @@ export default function InvoiceTemplateTab({
       setTemplates(loaded);
     }
   }, [settings]);
+
+  // Track dirty state for unsaved changes guard
+  const isDirty = useMemo(() => {
+    if (!settings) return false;
+    const info = settings.invoice_company_info || {};
+    const serverVatSource = info.vat_source || 'company';
+    const serverHeader = settings.invoice_header_html || '';
+    const serverFooter = settings.invoice_footer_html || '';
+    const serverFormat = settings.invoice_page_format || 'A4';
+    if (
+      vatSource !== serverVatSource ||
+      headerHtml !== serverHeader ||
+      footerHtml !== serverFooter ||
+      pageFormat !== serverFormat
+    )
+      return true;
+    const serverTemplates: Record<string, string> = { ...(settings.invoice_templates || {}) };
+    if (!serverTemplates.bank_transfer && settings.invoice_template_html) {
+      serverTemplates.bank_transfer = settings.invoice_template_html;
+    }
+    const base = serverTemplates.bank_transfer || '';
+    if (base) {
+      if (!serverTemplates.credit_card) serverTemplates.credit_card = base;
+      if (!serverTemplates.credit_note) serverTemplates.credit_note = base;
+    }
+    return JSON.stringify(templates) !== JSON.stringify(serverTemplates);
+  }, [settings, templates, vatSource, headerHtml, footerHtml, pageFormat]);
+
+  const reportDirty = useContext(DirtyContext);
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
 
   // Save mutation
   const saveMutation = useMutation({
