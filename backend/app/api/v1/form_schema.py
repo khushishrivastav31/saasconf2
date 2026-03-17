@@ -69,7 +69,6 @@ async def get_or_create_schema(db: DbSessionDep, conference_id: UUID, tenant_id:
             "abstract_long": {"visible": True, "required": False},
             "level": {"visible": True, "required": False},
             "learning_objectives": {"visible": True, "required": False},
-            "importance": {"visible": True, "required": False},
             "session_type": {"visible": True, "required": False},
             "topics": {"visible": True, "required": False},
         }

@@ -4,7 +4,6 @@ export const BUILTIN_FIELDS_DEF: { key: string; label: string; alwaysRequired?: 
   { key: 'abstract_long', label: 'Long Abstract' },
   { key: 'level', label: 'Level' },
   { key: 'learning_objectives', label: 'Learning Objectives' },
-  { key: 'importance', label: 'Importance' },
   { key: 'session_type', label: 'Session Type' },
   { key: 'topics', label: 'Topics' },
 ];

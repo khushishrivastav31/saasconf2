@@ -86,9 +86,8 @@ const mockFormSchema = {
     abstract_long: { visible: false, required: false, display_order: 2 },
     level: { visible: false, required: false, display_order: 3 },
     learning_objectives: { visible: false, required: false, display_order: 4 },
-    importance: { visible: false, required: false, display_order: 5 },
-    session_type: { visible: false, required: false, display_order: 6 },
-    topics: { visible: false, required: false, display_order: 7 },
+    session_type: { visible: false, required: false, display_order: 5 },
+    topics: { visible: false, required: false, display_order: 6 },
   },
 };
 
@@ -339,7 +338,6 @@ describe('SubmitPaperPage', () => {
           abstract_long: null,
           level: null,
           learning_objectives: null,
-          importance: null,
           video_url: null,
           main_speaker_first_name: null,
           main_speaker_last_name: null,

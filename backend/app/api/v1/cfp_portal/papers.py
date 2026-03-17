@@ -301,7 +301,6 @@ async def create_paper(
         abstract_long=data.abstract_long,
         level=data.level,
         learning_objectives=data.learning_objectives,
-        importance=data.importance,
         status=PaperStatus.DRAFT.value,
     )
     db.add(paper)
@@ -370,7 +369,6 @@ async def submit_paper(
             "abstract_long": paper.abstract_long,
             "level": paper.level,
             "learning_objectives": paper.learning_objectives,
-            "importance": paper.importance,
             "session_type": paper.session_type_id,
             "topics": paper.topics if paper.topics else None,
         }
@@ -445,7 +443,6 @@ async def submit_paper(
             "abstract_short": ("Short Abstract", paper.abstract_short, True),
             "abstract_long": ("Detailed Abstract", paper.abstract_long, True),
             "learning_objectives": ("Learning Objectives", paper.learning_objectives, True),
-            "importance": ("Why is this important?", paper.importance, True),
         }
         char_errors: list[str] = []
         for field_key, (label, value, is_html) in char_limit_fields.items():
@@ -1031,7 +1028,6 @@ async def _build_portal_paper_response(
         abstract_long=paper.abstract_long,
         level=paper.level,
         learning_objectives=paper.learning_objectives,
-        importance=paper.importance,
         status=portal_status,
         video_url=video_url,
         is_main_speaker=is_main_speaker,
@@ -1268,7 +1264,6 @@ async def _build_assigned_paper_response(
         abstract_long=paper.abstract_long,
         level=paper.level,
         learning_objectives=paper.learning_objectives,
-        importance=paper.importance,
         status=portal_status,
         session_type_name=session_type_name,
         topics=topics,

@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import UnsavedChangesDialog from '../../components/UnsavedChangesDialog';
 import { usePortalBasePath } from '../../hooks/usePortalBasePath';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import portalApi from '../../config/portalApi';
@@ -24,7 +26,6 @@ const BUILTIN_FIELD_DEFS: { key: string; label: string; alwaysRequired?: boolean
   { key: 'abstract_long', label: 'Detailed Abstract' },
   { key: 'level', label: 'Level' },
   { key: 'learning_objectives', label: 'Learning Objectives' },
-  { key: 'importance', label: 'Why is this important?' },
   { key: 'session_type', label: 'Session Type' },
   { key: 'topics', label: 'Topics' },
 ];
@@ -167,12 +168,25 @@ function SubmitPaperPage() {
   const [abstractLong, setAbstractLong] = useState('');
   const [level, setLevel] = useState('');
   const [learningObjectives, setLearningObjectives] = useState('');
-  const [importance, setImportance] = useState('');
   const [cospeakerEmails, setCospeakerEmails] = useState<string[]>([]);
   const [cospeakerInput, setCospeakerInput] = useState('');
   const [customFieldAnswers, setCustomFieldAnswers] = useState<Record<string, unknown>>({});
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
+
+  // Unsaved changes guard — dirty if user has entered any meaningful content
+  const isDirty = useMemo(
+    () =>
+      !!(
+        title.trim() ||
+        abstractShort.trim() ||
+        abstractLong.trim() ||
+        learningObjectives.trim() ||
+        cospeakerEmails.length > 0
+      ),
+    [title, abstractShort, abstractLong, learningObjectives, cospeakerEmails]
+  );
+  const { showDialog, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
   // Load conferences
   const { data: conferences } = useQuery({
@@ -404,7 +418,6 @@ function SubmitPaperPage() {
       ...(abstractLong ? { abstract_long: abstractLong } : {}),
       ...(level ? { level } : {}),
       ...(learningObjectives ? { learning_objectives: learningObjectives } : {}),
-      ...(importance ? { importance } : {}),
       ...(cospeakerEmails.length > 0 ? { cospeaker_emails: cospeakerEmails } : {}),
       ...(Object.keys(customFieldAnswers).length > 0
         ? { custom_field_answers: customFieldAnswers }
@@ -712,29 +725,6 @@ function SubmitPaperPage() {
                     </div>
                   );
 
-                case 'importance':
-                  return (
-                    <div key={field.key}>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {field.label}
-                        {field.is_required && <span className="text-red-500"> *</span>}
-                      </label>
-                      <RichTextEditor
-                        value={importance}
-                        onChange={(html) => setImportance(html)}
-                        placeholder="Why should this talk be selected?"
-                        rows={3}
-                        minLength={field.min_chars ?? undefined}
-                        maxLength={field.max_chars ?? undefined}
-                      />
-                      {field.help_text && (
-                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                          {field.help_text}
-                        </p>
-                      )}
-                    </div>
-                  );
-
                 case 'topics':
                   // Topics would need topic selection - skip for now if not implemented
                   return null;
@@ -852,6 +842,7 @@ function SubmitPaperPage() {
           </button>
         </div>
       </div>
+      <UnsavedChangesDialog open={showDialog} onConfirm={confirmLeave} onCancel={cancelLeave} />
     </div>
   );
 }

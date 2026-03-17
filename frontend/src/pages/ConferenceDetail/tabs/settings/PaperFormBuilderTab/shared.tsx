@@ -8,7 +8,6 @@ const CHAR_LIMIT_FIELDS = new Set([
   'abstract_short',
   'abstract_long',
   'learning_objectives',
-  'importance',
 ]);
 
 // Default level options (used when no custom options are configured)
@@ -325,7 +324,6 @@ function renderBuiltinPreviewField(key: string) {
   switch (key) {
     case 'abstract_long':
     case 'learning_objectives':
-    case 'importance':
       return (
         <textarea
           className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 text-sm dark:bg-gray-800 dark:text-gray-100"

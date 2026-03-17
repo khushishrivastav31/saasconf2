@@ -12,7 +12,7 @@ import type {
   CFPTopic,
   SessionType,
   PaperFormSchema,
-  BuiltinFieldConfig,
+  PaperFormField,
 } from '../../../../types';
 import type { PaperAssignmentListResponse } from '../../../../types/review';
 import { ACCEPTED_VIDEO_FORMATS, validateVideo } from '../../../../utils/mediaValidation';
@@ -54,7 +54,6 @@ export interface PaperFormData {
   abstract_long: string;
   level: PaperLevel | '';
   learning_objectives: string;
-  importance: string;
 }
 
 const emptyForm: PaperFormData = {
@@ -68,7 +67,6 @@ const emptyForm: PaperFormData = {
   abstract_long: '',
   level: '',
   learning_objectives: '',
-  importance: '',
 };
 
 const LEVEL_OPTIONS: { value: PaperLevel; label: string }[] = [
@@ -78,6 +76,30 @@ const LEVEL_OPTIONS: { value: PaperLevel; label: string }[] = [
   { value: 'all_levels', label: 'All Levels' },
 ];
 
+const BUILTIN_FIELD_DEFS: { key: string; label: string; alwaysRequired?: boolean }[] = [
+  { key: 'title', label: 'Title', alwaysRequired: true },
+  { key: 'abstract_short', label: 'Short Abstract' },
+  { key: 'abstract_long', label: 'Long Abstract' },
+  { key: 'level', label: 'Level' },
+  { key: 'learning_objectives', label: 'Learning Objectives' },
+  { key: 'session_type', label: 'Session Type' },
+  { key: 'topics', label: 'Topics' },
+];
+
+type UnifiedFormField = {
+  type: 'builtin' | 'custom';
+  key: string;
+  label: string;
+  display_order: number;
+  is_visible: boolean;
+  is_required: boolean;
+  help_text?: string | null;
+  min_chars?: number | null;
+  max_chars?: number | null;
+  options?: { value: string; label: string }[] | null;
+  customField?: PaperFormField;
+};
+
 // ---------------------------------------------------------------------------
 // Paper form component
 // ---------------------------------------------------------------------------
@@ -85,6 +107,7 @@ const LEVEL_OPTIONS: { value: PaperLevel; label: string }[] = [
 export function PaperForm({
   paper,
   conferenceId,
+  fallbackCfpId,
   onSave,
   onCancel,
   onDelete,
@@ -102,6 +125,7 @@ export function PaperForm({
 }: {
   paper: Paper | null; // null = creating
   conferenceId: string;
+  fallbackCfpId?: string;
   onSave: (data: PaperFormData, videoFile: File | null) => void;
   onCancel: () => void;
   onDelete?: () => void;
@@ -152,11 +176,12 @@ export function PaperForm({
           abstract_long: paper.abstract_long || '',
           level: paper.level || '',
           learning_objectives: paper.learning_objectives || '',
-          importance: paper.importance || '',
         }
       : emptyForm
   );
 
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [customFieldAnswers, setCustomFieldAnswers] = useState<Record<string, unknown>>({});
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
@@ -171,15 +196,28 @@ export function PaperForm({
   const videoPreviewSrc = videoPreview || existingVideoSrc;
 
   // Fetch the conference's CFP (one per conference) to auto-assign
-  const { data: cfpsData } = useQuery({
+  const { data: cfpsData, error: cfpQueryError } = useQuery({
     queryKey: ['cfp-list', conferenceId],
     queryFn: async () => {
       const response = await api.get<CFPListResponse>(`/conferences/${conferenceId}/cfps`);
       return response.data;
     },
+    enabled: !!conferenceId,
+    retry: 2,
   });
 
-  const conferenceCfpId = cfpsData?.items?.[0]?.id || '';
+  const conferenceCfpId = cfpsData?.items?.[0]?.id || fallbackCfpId || '';
+
+  // Log CFP query failures so they don't get silently swallowed
+  useEffect(() => {
+    if (cfpQueryError) {
+      console.error(
+        '[PaperForm] Failed to fetch CFPs for conference:',
+        conferenceId,
+        cfpQueryError
+      );
+    }
+  }, [cfpQueryError, conferenceId]);
 
   // Auto-assign CFP when data loads (for new papers)
   useEffect(() => {
@@ -240,9 +278,51 @@ export function PaperForm({
     staleTime: 60_000,
   });
 
-  const getFieldConfig = (fieldKey: string): BuiltinFieldConfig | undefined => {
-    return formSchemaData?.builtin_fields_config?.[fieldKey];
-  };
+  // Build unified sorted list of all fields (builtin + custom) based on form schema display_order
+  const unifiedFormFields = useMemo((): UnifiedFormField[] => {
+    const builtinConfig = formSchemaData?.builtin_fields_config ?? {};
+    const customFieldsList = formSchemaData?.fields ?? [];
+    const builtinCount = BUILTIN_FIELD_DEFS.length;
+
+    const builtinFields: UnifiedFormField[] = BUILTIN_FIELD_DEFS.map((bf, defaultIdx) => {
+      const config = builtinConfig[bf.key];
+      return {
+        type: 'builtin' as const,
+        key: bf.key,
+        label: bf.label,
+        display_order: config?.display_order ?? defaultIdx,
+        is_visible: config?.visible !== false,
+        is_required: bf.alwaysRequired || config?.required || false,
+        help_text: config?.help_text,
+        min_chars: config?.min_chars,
+        max_chars: config?.max_chars,
+        options: config?.options,
+      };
+    });
+
+    const customFields: UnifiedFormField[] = customFieldsList
+      .filter((f) => f.is_visible)
+      .map((f) => {
+        const unifiedOrderingInUse = Object.values(builtinConfig).some(
+          (c) => c.display_order !== undefined && c.display_order !== null
+        );
+        const order = unifiedOrderingInUse ? f.display_order : f.display_order + builtinCount;
+
+        return {
+          type: 'custom' as const,
+          key: f.field_key,
+          label: f.label,
+          display_order: order,
+          is_visible: f.is_visible,
+          is_required: f.is_required,
+          customField: f,
+        };
+      });
+
+    return [...builtinFields, ...customFields]
+      .filter((f) => f.is_visible)
+      .sort((a, b) => a.display_order - b.display_order);
+  }, [formSchemaData]);
 
   const applicants = useMemo(() => applicantsData?.items || [], [applicantsData?.items]);
   const topics = topicsData?.items || [];
@@ -257,7 +337,7 @@ export function PaperForm({
 
   // Reset form when the paper changes
   useEffect(() => {
-    setFormData(
+    setFormData((prev) =>
       paper
         ? {
             cfp_id: paper.cfp_id,
@@ -270,9 +350,8 @@ export function PaperForm({
             abstract_long: paper.abstract_long || '',
             level: paper.level || '',
             learning_objectives: paper.learning_objectives || '',
-            importance: paper.importance || '',
           }
-        : emptyForm
+        : { ...emptyForm, cfp_id: prev.cfp_id || conferenceCfpId }
     );
     setVideoFile(null);
     if (videoPreview) URL.revokeObjectURL(videoPreview);
@@ -337,19 +416,38 @@ export function PaperForm({
     });
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.cfp_id || !formData.main_speaker_id || !formData.title.trim()) return;
-    if (videoError) return;
-
-    onSave(formData, videoFile);
+  const handleFormSubmit = () => {
+    // Resolve cfp_id at submit time (useEffect race condition can leave it empty)
+    const resolvedCfpId = formData.cfp_id || conferenceCfpId;
+    const errors: string[] = [];
+    if (!resolvedCfpId)
+      errors.push('No CFP is linked to this conference. Please create or link a CFP first.');
+    if (!formData.main_speaker_id) errors.push('Please select a main speaker.');
+    if (!formData.title.trim()) errors.push('Please enter a title.');
+    if (videoError) errors.push(videoError);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors([]);
+    const submitData = { ...formData, cfp_id: resolvedCfpId };
+    onSave(submitData, videoFile);
   };
 
   const displayStatus = paper?.display_status || paper?.status;
 
   return (
-    <form onSubmit={handleFormSubmit} className="space-y-5">
+    <div className="space-y-5">
       <ErrorBanner message={error} />
+      {validationErrors.length > 0 && (
+        <div className="rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-3">
+          <ul className="list-disc list-inside text-sm text-amber-800 dark:text-amber-300 space-y-1">
+            {validationErrors.map((msg) => (
+              <li key={msg}>{msg}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Status lifeline for existing papers */}
       {paper && (
@@ -382,193 +480,361 @@ export function PaperForm({
         disabled={!canEdit}
       />
 
-      {/* Title */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Title <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={formData.title}
-          onChange={(e) => setFormData((d) => ({ ...d, title: e.target.value }))}
-          disabled={!canEdit}
-          maxLength={getFieldConfig('title')?.max_chars ?? undefined}
-          minLength={getFieldConfig('title')?.min_chars ?? undefined}
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
-          required
-        />
-        {(getFieldConfig('title')?.min_chars != null ||
-          getFieldConfig('title')?.max_chars != null) && (
-          <div className="flex justify-end mt-1">
-            <span
-              className={`text-xs ${
-                getFieldConfig('title')?.max_chars != null &&
-                formData.title.length > getFieldConfig('title')!.max_chars!
-                  ? 'text-red-600 font-medium'
-                  : getFieldConfig('title')?.min_chars != null &&
-                      formData.title.length > 0 &&
-                      formData.title.length < getFieldConfig('title')!.min_chars!
-                    ? 'text-red-600 font-medium'
-                    : 'text-gray-400 dark:text-gray-500'
-              }`}
-            >
-              {formData.title.length}
-              {getFieldConfig('title')?.min_chars != null && (
-                <span> (min {getFieldConfig('title')!.min_chars})</span>
-              )}
-              {getFieldConfig('title')?.max_chars != null && (
-                <span> / {getFieldConfig('title')!.max_chars}</span>
-              )}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Session Type */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Session Type
-        </label>
-        <select
-          value={formData.session_type_id}
-          onChange={(e) => setFormData((d) => ({ ...d, session_type_id: e.target.value }))}
-          disabled={!canEdit}
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
-        >
-          <option value="">Select session type...</option>
-          {sessionTypes.map((st) => (
-            <option key={st.id} value={st.id}>
-              {st.name} ({st.duration_minutes} min)
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Topics */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Topics
-        </label>
-        {topics.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {topics.map((topic) => {
-              const isSelected = formData.topic_ids.includes(topic.id);
+      {/* Dynamic Form Fields - rendered in form schema display_order */}
+      {unifiedFormFields.map((field) => {
+        if (field.type === 'builtin') {
+          switch (field.key) {
+            case 'title':
               return (
-                <button
-                  key={topic.id}
-                  type="button"
-                  onClick={() => handleTopicToggle(topic.id)}
-                  disabled={!canEdit}
-                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    isSelected
-                      ? 'bg-primary-100 text-primary-700 border-2 border-primary-500'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-transparent hover:bg-gray-200 dark:hover:bg-gray-700'
-                  } ${!canEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                >
-                  {topic.name}
-                  {isSelected && (
-                    <svg className="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData((d) => ({ ...d, title: e.target.value }))}
+                    disabled={!canEdit}
+                    maxLength={field.max_chars ?? undefined}
+                    minLength={field.min_chars ?? undefined}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+                    required
+                  />
+                  {(field.min_chars != null || field.max_chars != null) && (
+                    <div className="flex justify-end mt-1">
+                      <span
+                        className={`text-xs ${
+                          field.max_chars != null && formData.title.length > field.max_chars
+                            ? 'text-red-600 font-medium'
+                            : field.min_chars != null &&
+                                formData.title.length > 0 &&
+                                formData.title.length < field.min_chars
+                              ? 'text-red-600 font-medium'
+                              : 'text-gray-400 dark:text-gray-500'
+                        }`}
+                      >
+                        {formData.title.length}
+                        {field.min_chars != null && <span> (min {field.min_chars})</span>}
+                        {field.max_chars != null && <span> / {field.max_chars}</span>}
+                      </span>
+                    </div>
                   )}
-                </button>
+                  {field.help_text && (
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      {field.help_text}
+                    </p>
+                  )}
+                </div>
               );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No topics available.</p>
-        )}
-      </div>
 
-      {/* Level */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Level
-        </label>
-        <select
-          value={formData.level}
-          onChange={(e) => setFormData((d) => ({ ...d, level: e.target.value as PaperLevel | '' }))}
-          disabled={!canEdit}
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
-        >
-          <option value="">Select level...</option>
-          {LEVEL_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+            case 'session_type':
+              return (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Session Type
+                    {field.is_required && <span className="text-red-500"> *</span>}
+                  </label>
+                  <select
+                    value={formData.session_type_id}
+                    onChange={(e) =>
+                      setFormData((d) => ({ ...d, session_type_id: e.target.value }))
+                    }
+                    disabled={!canEdit}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select session type...</option>
+                    {sessionTypes.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.name} ({st.duration_minutes} min)
+                      </option>
+                    ))}
+                  </select>
+                  {field.help_text && (
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      {field.help_text}
+                    </p>
+                  )}
+                </div>
+              );
 
-      {/* Short Abstract */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Short Abstract
-        </label>
-        <RichTextEditor
-          value={formData.abstract_short}
-          onChange={(html) => setFormData((d) => ({ ...d, abstract_short: html }))}
-          placeholder="Brief summary of your talk..."
-          rows={3}
-          disabled={!canEdit}
-          minLength={getFieldConfig('abstract_short')?.min_chars ?? undefined}
-          maxLength={getFieldConfig('abstract_short')?.max_chars ?? undefined}
-        />
-      </div>
+            case 'topics':
+              return (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Topics
+                    {field.is_required && <span className="text-red-500"> *</span>}
+                  </label>
+                  {topics.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {topics.map((topic) => {
+                        const isSelected = formData.topic_ids.includes(topic.id);
+                        return (
+                          <button
+                            key={topic.id}
+                            type="button"
+                            onClick={() => handleTopicToggle(topic.id)}
+                            disabled={!canEdit}
+                            className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                              isSelected
+                                ? 'bg-primary-100 text-primary-700 border-2 border-primary-500'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-transparent hover:bg-gray-200 dark:hover:bg-gray-700'
+                            } ${!canEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          >
+                            {topic.name}
+                            {isSelected && (
+                              <svg className="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                      No topics available.
+                    </p>
+                  )}
+                  {field.help_text && (
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      {field.help_text}
+                    </p>
+                  )}
+                </div>
+              );
 
-      {/* Long Abstract */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Long Abstract
-        </label>
-        <RichTextEditor
-          value={formData.abstract_long}
-          onChange={(html) => setFormData((d) => ({ ...d, abstract_long: html }))}
-          placeholder="Detailed description of your talk..."
-          rows={6}
-          disabled={!canEdit}
-          minLength={getFieldConfig('abstract_long')?.min_chars ?? undefined}
-          maxLength={getFieldConfig('abstract_long')?.max_chars ?? undefined}
-        />
-      </div>
+            case 'level':
+              return (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Level
+                    {field.is_required && <span className="text-red-500"> *</span>}
+                  </label>
+                  <select
+                    value={formData.level}
+                    onChange={(e) =>
+                      setFormData((d) => ({ ...d, level: e.target.value as PaperLevel | '' }))
+                    }
+                    disabled={!canEdit}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select level...</option>
+                    {(field.options && field.options.length > 0
+                      ? field.options
+                      : LEVEL_OPTIONS
+                    ).map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  {field.help_text && (
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      {field.help_text}
+                    </p>
+                  )}
+                </div>
+              );
 
-      {/* Learning Objectives */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Learning Objectives
-        </label>
-        <RichTextEditor
-          value={formData.learning_objectives}
-          onChange={(html) => setFormData((d) => ({ ...d, learning_objectives: html }))}
-          placeholder="What will attendees learn from this talk?"
-          rows={4}
-          disabled={!canEdit}
-          minLength={getFieldConfig('learning_objectives')?.min_chars ?? undefined}
-          maxLength={getFieldConfig('learning_objectives')?.max_chars ?? undefined}
-        />
-      </div>
+            case 'abstract_short':
+              return (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Short Abstract
+                    {field.is_required && <span className="text-red-500"> *</span>}
+                  </label>
+                  <RichTextEditor
+                    value={formData.abstract_short}
+                    onChange={(html) => setFormData((d) => ({ ...d, abstract_short: html }))}
+                    placeholder="Brief summary of your talk..."
+                    rows={3}
+                    disabled={!canEdit}
+                    minLength={field.min_chars ?? undefined}
+                    maxLength={field.max_chars ?? undefined}
+                  />
+                  {field.help_text && (
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      {field.help_text}
+                    </p>
+                  )}
+                </div>
+              );
 
-      {/* Why Important */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Why is this talk important?
-        </label>
-        <RichTextEditor
-          value={formData.importance}
-          onChange={(html) => setFormData((d) => ({ ...d, importance: html }))}
-          placeholder="Explain why this topic matters..."
-          rows={4}
-          disabled={!canEdit}
-          minLength={getFieldConfig('importance')?.min_chars ?? undefined}
-          maxLength={getFieldConfig('importance')?.max_chars ?? undefined}
-        />
-      </div>
+            case 'abstract_long':
+              return (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Long Abstract
+                    {field.is_required && <span className="text-red-500"> *</span>}
+                  </label>
+                  <RichTextEditor
+                    value={formData.abstract_long}
+                    onChange={(html) => setFormData((d) => ({ ...d, abstract_long: html }))}
+                    placeholder="Detailed description of your talk..."
+                    rows={6}
+                    disabled={!canEdit}
+                    minLength={field.min_chars ?? undefined}
+                    maxLength={field.max_chars ?? undefined}
+                  />
+                  {field.help_text && (
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      {field.help_text}
+                    </p>
+                  )}
+                </div>
+              );
 
-      {/* Video */}
+            case 'learning_objectives':
+              return (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Learning Objectives
+                    {field.is_required && <span className="text-red-500"> *</span>}
+                  </label>
+                  <RichTextEditor
+                    value={formData.learning_objectives}
+                    onChange={(html) => setFormData((d) => ({ ...d, learning_objectives: html }))}
+                    placeholder="What will attendees learn from this talk?"
+                    rows={4}
+                    disabled={!canEdit}
+                    minLength={field.min_chars ?? undefined}
+                    maxLength={field.max_chars ?? undefined}
+                  />
+                  {field.help_text && (
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      {field.help_text}
+                    </p>
+                  )}
+                </div>
+              );
+
+            default:
+              return null;
+          }
+        }
+
+        // Render custom fields
+        if (field.type === 'custom' && field.customField) {
+          const cf = field.customField;
+          const cfValue = customFieldAnswers[field.key];
+          return (
+            <div key={cf.id}>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {field.label}
+                {field.is_required && <span className="text-red-500"> *</span>}
+              </label>
+              {cf.description && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{cf.description}</p>
+              )}
+              {cf.field_type === 'text' && (
+                <input
+                  type="text"
+                  value={String(cfValue ?? '')}
+                  onChange={(e) =>
+                    setCustomFieldAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                  }
+                  placeholder={cf.placeholder || ''}
+                  disabled={!canEdit}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+                />
+              )}
+              {cf.field_type === 'textarea' && (
+                <textarea
+                  value={String(cfValue ?? '')}
+                  onChange={(e) =>
+                    setCustomFieldAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                  }
+                  placeholder={cf.placeholder || ''}
+                  disabled={!canEdit}
+                  rows={3}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+                />
+              )}
+              {cf.field_type === 'richtext' && (
+                <RichTextEditor
+                  value={String(cfValue ?? '')}
+                  onChange={(html) =>
+                    setCustomFieldAnswers((prev) => ({ ...prev, [field.key]: html }))
+                  }
+                  placeholder={cf.placeholder || ''}
+                  rows={4}
+                  disabled={!canEdit}
+                />
+              )}
+              {cf.field_type === 'dropdown' && (
+                <select
+                  value={String(cfValue ?? '')}
+                  onChange={(e) =>
+                    setCustomFieldAnswers((prev) => ({ ...prev, [field.key]: e.target.value }))
+                  }
+                  disabled={!canEdit}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+                >
+                  <option value="">{cf.placeholder || 'Select...'}</option>
+                  {(cf.options || []).map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {cf.field_type === 'checkbox' && (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(cfValue)}
+                    onChange={(e) =>
+                      setCustomFieldAnswers((prev) => ({ ...prev, [field.key]: e.target.checked }))
+                    }
+                    disabled={!canEdit}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {cf.placeholder || 'Yes'}
+                  </span>
+                </label>
+              )}
+              {cf.field_type === 'checkbox_group' && (
+                <div className="space-y-2">
+                  {(cf.options || []).map((opt) => {
+                    const selectedValues = Array.isArray(cfValue) ? cfValue : [];
+                    return (
+                      <label key={opt.value} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedValues.includes(opt.value)}
+                          onChange={(e) => {
+                            const newValues = e.target.checked
+                              ? [...selectedValues, opt.value]
+                              : selectedValues.filter((v: string) => v !== opt.value);
+                            setCustomFieldAnswers((prev) => ({ ...prev, [field.key]: newValues }));
+                          }}
+                          disabled={!canEdit}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {opt.label}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+              {cf.help_text && (
+                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{cf.help_text}</p>
+              )}
+            </div>
+          );
+        }
+
+        return null;
+      })}
+
+      {/* Video (always rendered after dynamic fields) */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Video
@@ -582,7 +848,7 @@ export function PaperForm({
               }
             }}
             disabled={!videoPreviewSrc}
-            className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-900 relative ${
+            className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden shrink-0 bg-gray-50 dark:bg-gray-900 relative ${
               videoPreviewSrc
                 ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
                 : ''
@@ -776,7 +1042,8 @@ export function PaperForm({
           )}
           {canEdit && (
             <button
-              type="submit"
+              type="button"
+              onClick={handleFormSubmit}
               disabled={isSaving || !!videoError}
               className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-md disabled:opacity-50 transition-all duration-300 ${
                 saveStatus === 'saved'
@@ -850,6 +1117,6 @@ export function PaperForm({
         type="video"
         alt="Paper video"
       />
-    </form>
+    </div>
   );
 }

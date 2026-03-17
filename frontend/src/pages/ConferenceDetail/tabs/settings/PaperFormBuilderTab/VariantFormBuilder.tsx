@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, useContext } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -32,6 +32,7 @@ import type {
 import { parseApiError } from '../../../../../utils/apiError';
 import { SuccessBanner, ErrorBanner } from '../../../../../components/common/ErrorBanner';
 import ConfirmDialog from '../../../../../components/ConfirmDialog';
+import { DirtyContext } from '../../../DirtyContext';
 import FieldPalette from './FieldPalette';
 import FieldPropertyEditor from './FieldPropertyEditor';
 import UnifiedFieldCard, { type UnifiedField } from './UnifiedFieldCard';
@@ -58,6 +59,13 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const pendingActionRef = useRef<(() => void) | null>(null);
+
+  // Report to parent ConferenceDetail tab guard
+  const reportDirty = useContext(DirtyContext);
+  useEffect(() => {
+    reportDirty(hasUnsavedChanges);
+    return () => reportDirty(false);
+  }, [hasUnsavedChanges, reportDirty]);
 
   // Warn on browser close/reload with unsaved changes
   useEffect(() => {

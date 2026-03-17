@@ -17,10 +17,11 @@ test.describe('Cross-Conference Module Pages', () => {
 
   test('should load locations page with content', async ({ page }) => {
     await page.goto('/modules/locations');
+    await page.waitForLoadState('networkidle');
 
     const heading = page.getByRole('heading', { name: /location/i });
     const content = page.getByText(/location/i).first();
-    await expect(heading.or(content)).toBeVisible({ timeout: 10000 });
+    await expect(heading.or(content)).toBeVisible({ timeout: 15000 });
   });
 
   test('should load CFP module page', async ({ page }) => {

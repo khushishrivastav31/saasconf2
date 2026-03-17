@@ -133,7 +133,6 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
       if (data.abstract_long.trim()) payload.abstract_long = data.abstract_long;
       if (data.level) payload.level = data.level as PaperLevel;
       if (data.learning_objectives.trim()) payload.learning_objectives = data.learning_objectives;
-      if (data.importance.trim()) payload.importance = data.importance;
 
       const response = await api.post<Paper>('/cfp/papers', payload);
       return response.data;
@@ -155,7 +154,6 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
         abstract_long: data.abstract_long,
         level: data.level ? (data.level as PaperLevel) : undefined,
         learning_objectives: data.learning_objectives,
-        importance: data.importance,
       };
 
       const response = await api.put<Paper>(`/cfp/papers/${id}`, payload);
@@ -293,6 +291,9 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
   const selectedPaper = papers.find((p) => p.id === selectedPaperId);
   const paperCount = papers.length;
 
+  // Fallback: extract cfp_id from existing papers (in case the CFP list query fails)
+  const fallbackCfpId = useMemo(() => papers[0]?.cfp_id || '', [papers]);
+
   // Filter papers by search query
   const filteredPapers = useMemo(() => {
     if (!searchQuery.trim()) return papers;
@@ -353,6 +354,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
         <PaperForm
           paper={null}
           conferenceId={conferenceId || ''}
+          fallbackCfpId={fallbackCfpId}
           onSave={handleCreate}
           onCancel={() => {
             setIsAdding(false);

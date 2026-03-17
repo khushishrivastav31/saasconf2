@@ -4,16 +4,25 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class BadgeConditionalImage(BaseModel):
-    """A conditional image that appears on a badge when a condition is met."""
+    """A conditional image that appears on a badge when a condition is met.
+
+    Condition types:
+      - "booking_option" / "registration_item": condition_value = booking option UUID
+      - "conference_day": condition_value = program day UUID
+      - "field": generic field check — uses condition_field + condition_operator + condition_value
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     name: str
     placeholder: str  # e.g. "IMG_DAY1" (without brackets)
-    condition_type: str  # "booking_option" | "conference_day" | "registration_item"
-    condition_value: str  # UUID as string
+    condition_type: str  # "booking_option" | "conference_day" | "field"
+    condition_value: str  # UUID or comparison value
     attachment_id: str | None = None
+    # For field-based conditions:
+    condition_field: str | None = None  # e.g. "country", "pronouns", "company_name"
+    condition_operator: str | None = None  # "eq", "neq", "contains", "not_empty", "empty"
 
 
 class BadgeSettingsResponse(BaseModel):

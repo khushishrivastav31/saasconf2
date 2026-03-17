@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sanitizeHtml } from '../../utils/richText';
@@ -13,7 +13,7 @@ import type {
   PortalConferenceDetail,
   PortalSpeakerFeedbackListResponse,
   PortalPaperFormSchema,
-  PortalBuiltinFieldConfig,
+  PortalPaperFormField,
 } from '../../types/portal';
 import RichTextEditor from '../../components/common/RichTextEditor';
 import RichTextDisplay from '../../components/common/RichTextDisplay';
@@ -26,6 +26,37 @@ import { INVITATION_STATUS_COLORS } from '../../config/statusColors';
 import { ACCEPTED_VIDEO_FORMATS, validateVideo } from '../../utils/mediaValidation';
 import { usePortalAuthMedia } from '../../hooks/usePortalAuthMedia';
 import { useSaveStatus } from '../../hooks/useSaveStatus';
+
+const BUILTIN_FIELD_DEFS: { key: string; label: string; alwaysRequired?: boolean }[] = [
+  { key: 'title', label: 'Title', alwaysRequired: true },
+  { key: 'abstract_short', label: 'Short Abstract' },
+  { key: 'abstract_long', label: 'Detailed Abstract' },
+  { key: 'level', label: 'Level' },
+  { key: 'learning_objectives', label: 'Learning Objectives' },
+  { key: 'session_type', label: 'Session Type' },
+  { key: 'topics', label: 'Topics' },
+];
+
+const LEVEL_OPTIONS = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+  { value: 'all_levels', label: 'All Levels' },
+];
+
+type UnifiedFormField = {
+  type: 'builtin' | 'custom';
+  key: string;
+  label: string;
+  display_order: number;
+  is_visible: boolean;
+  is_required: boolean;
+  help_text?: string | null;
+  min_chars?: number | null;
+  max_chars?: number | null;
+  options?: { value: string; label: string }[] | null;
+  customField?: PortalPaperFormField;
+};
 
 function PaperDetailPage() {
   const { paperId } = useParams<{
@@ -43,7 +74,7 @@ function PaperDetailPage() {
   const [editLevel, setEditLevel] = useState('');
   const [editSessionTypeId, setEditSessionTypeId] = useState('');
   const [editLearningObjectives, setEditLearningObjectives] = useState('');
-  const [editImportance, setEditImportance] = useState('');
+  const [editCustomFieldAnswers, setEditCustomFieldAnswers] = useState<Record<string, unknown>>({});
   const [cospeakerEmails, setCospeakerEmails] = useState<string[]>([]);
   const [cospeakerInput, setCospeakerInput] = useState('');
   const [error, setError] = useState('');
@@ -113,17 +144,60 @@ function PaperDetailPage() {
     staleTime: 60_000,
   });
 
-  // Get effective builtin config (variant or base schema)
-  const getFieldConfig = (fieldKey: string): PortalBuiltinFieldConfig | undefined => {
-    if (!formSchema) return undefined;
-    if (paper?.form_variant_id) {
-      const variant = formSchema.variants?.find((v) => v.id === paper.form_variant_id);
-      if (variant?.builtin_fields_config?.[fieldKey]) {
-        return variant.builtin_fields_config[fieldKey];
-      }
-    }
-    return formSchema.builtin_fields_config?.[fieldKey];
-  };
+  // Build unified sorted list of all fields (builtin + custom) based on form schema display_order
+  const unifiedFormFields = useMemo((): UnifiedFormField[] => {
+    if (!formSchema) return [];
+
+    const builtinConfig = paper?.form_variant_id
+      ? (formSchema.variants?.find((v) => v.id === paper.form_variant_id)?.builtin_fields_config ??
+        formSchema.builtin_fields_config ??
+        {})
+      : (formSchema.builtin_fields_config ?? {});
+    const customFieldsList = paper?.form_variant_id
+      ? (formSchema.variants?.find((v) => v.id === paper.form_variant_id)?.fields ??
+        formSchema.fields)
+      : formSchema.fields;
+    const builtinCount = BUILTIN_FIELD_DEFS.length;
+
+    const builtinFields: UnifiedFormField[] = BUILTIN_FIELD_DEFS.map((bf, defaultIdx) => {
+      const config = builtinConfig[bf.key];
+      return {
+        type: 'builtin' as const,
+        key: bf.key,
+        label: bf.label,
+        display_order: config?.display_order ?? defaultIdx,
+        is_visible: config?.visible !== false,
+        is_required: bf.alwaysRequired || config?.required || false,
+        help_text: config?.help_text,
+        min_chars: config?.min_chars,
+        max_chars: config?.max_chars,
+        options: config?.options,
+      };
+    });
+
+    const customFields: UnifiedFormField[] = (customFieldsList ?? [])
+      .filter((f) => f.is_visible)
+      .map((f) => {
+        const unifiedOrderingInUse = Object.values(builtinConfig).some(
+          (c) => c.display_order !== undefined && c.display_order !== null
+        );
+        const order = unifiedOrderingInUse ? f.display_order : f.display_order + builtinCount;
+
+        return {
+          type: 'custom' as const,
+          key: f.field_key,
+          label: f.label,
+          display_order: order,
+          is_visible: f.is_visible,
+          is_required: f.is_required,
+          customField: f,
+        };
+      });
+
+    return [...builtinFields, ...customFields]
+      .filter((f) => f.is_visible)
+      .sort((a, b) => a.display_order - b.display_order);
+  }, [formSchema, paper?.form_variant_id]);
 
   useEffect(() => {
     return () => {
@@ -202,7 +276,6 @@ function PaperDetailPage() {
           'paper:abstract_long': 'Detailed Abstract',
           'paper:level': 'Level',
           'paper:learning_objectives': 'Learning Objectives',
-          'paper:importance': 'Why is this important?',
           'paper:session_type': 'Session Type',
           'paper:topics': 'Topics',
           'speaker:bio': 'Speaker Bio',
@@ -263,8 +336,8 @@ function PaperDetailPage() {
     setEditLevel(paper.level || '');
     setEditSessionTypeId(paper.session_type_id || '');
     setEditLearningObjectives(paper.learning_objectives || '');
-    setEditImportance(paper.importance || '');
     setCospeakerEmails(paper.cospeakers.map((cs) => cs.email));
+    setEditCustomFieldAnswers(paper.custom_field_answers || {});
     setVideoFile(null);
     if (videoPreview) URL.revokeObjectURL(videoPreview);
     setVideoPreview(null);
@@ -295,8 +368,10 @@ function PaperDetailPage() {
       level: editLevel || undefined,
       session_type_id: editSessionTypeId || undefined,
       learning_objectives: editLearningObjectives || undefined,
-      importance: editImportance || undefined,
       ...(paper?.is_main_speaker ? { cospeaker_emails: cospeakerEmails } : {}),
+      ...(Object.keys(editCustomFieldAnswers).length > 0
+        ? { custom_field_answers: editCustomFieldAnswers }
+        : {}),
     };
 
     try {
@@ -440,155 +515,319 @@ function PaperDetailPage() {
 
         {isEditing ? (
           <div className="space-y-5">
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                maxLength={getFieldConfig('title')?.max_chars ?? undefined}
-                minLength={getFieldConfig('title')?.min_chars ?? undefined}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-              />
-              {(getFieldConfig('title')?.min_chars != null ||
-                getFieldConfig('title')?.max_chars != null) && (
-                <div className="flex justify-end mt-1">
-                  <span
-                    className={`text-xs ${
-                      getFieldConfig('title')?.max_chars != null &&
-                      editTitle.length > getFieldConfig('title')!.max_chars!
-                        ? 'text-red-600 font-medium'
-                        : getFieldConfig('title')?.min_chars != null &&
-                            editTitle.length > 0 &&
-                            editTitle.length < getFieldConfig('title')!.min_chars!
-                          ? 'text-red-600 font-medium'
-                          : 'text-gray-400 dark:text-gray-500'
-                    }`}
-                  >
-                    {editTitle.length}
-                    {getFieldConfig('title')?.min_chars != null && (
-                      <span> (min {getFieldConfig('title')!.min_chars})</span>
+            {/* Dynamic Form Fields - rendered in form schema display_order */}
+            {unifiedFormFields.map((field) => {
+              if (field.type === 'builtin') {
+                switch (field.key) {
+                  case 'title':
+                    return (
+                      <div key={field.key}>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          {field.label} <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          maxLength={field.max_chars ?? undefined}
+                          minLength={field.min_chars ?? undefined}
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                        />
+                        {(field.min_chars != null || field.max_chars != null) && (
+                          <div className="flex justify-end mt-1">
+                            <span
+                              className={`text-xs ${
+                                field.max_chars != null && editTitle.length > field.max_chars
+                                  ? 'text-red-600 font-medium'
+                                  : field.min_chars != null &&
+                                      editTitle.length > 0 &&
+                                      editTitle.length < field.min_chars
+                                    ? 'text-red-600 font-medium'
+                                    : 'text-gray-400 dark:text-gray-500'
+                              }`}
+                            >
+                              {editTitle.length}
+                              {field.min_chars != null && <span> (min {field.min_chars})</span>}
+                              {field.max_chars != null && <span> / {field.max_chars}</span>}
+                            </span>
+                          </div>
+                        )}
+                        {field.help_text && (
+                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                            {field.help_text}
+                          </p>
+                        )}
+                      </div>
+                    );
+
+                  case 'session_type':
+                    if (!conferenceDetail || conferenceDetail.session_types.length === 0)
+                      return null;
+                    return (
+                      <div key={field.key}>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          {field.label}
+                          {field.is_required && <span className="text-red-500"> *</span>}
+                        </label>
+                        <select
+                          value={editSessionTypeId}
+                          onChange={(e) => setEditSessionTypeId(e.target.value)}
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                        >
+                          <option value="">Select session type</option>
+                          {conferenceDetail.session_types.map((st) => (
+                            <option key={st.id} value={st.id}>
+                              {st.name} ({st.duration_minutes} min)
+                            </option>
+                          ))}
+                        </select>
+                        {field.help_text && (
+                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                            {field.help_text}
+                          </p>
+                        )}
+                      </div>
+                    );
+
+                  case 'topics':
+                    // Topics not editable in portal detail page (no topic selection data available)
+                    return null;
+
+                  case 'level':
+                    return (
+                      <div key={field.key}>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          {field.label}
+                          {field.is_required && <span className="text-red-500"> *</span>}
+                        </label>
+                        <select
+                          value={editLevel}
+                          onChange={(e) => setEditLevel(e.target.value)}
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                        >
+                          <option value="">Select level...</option>
+                          {(field.options && field.options.length > 0
+                            ? field.options
+                            : LEVEL_OPTIONS
+                          ).map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        {field.help_text && (
+                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                            {field.help_text}
+                          </p>
+                        )}
+                      </div>
+                    );
+
+                  case 'abstract_short':
+                    return (
+                      <div key={field.key}>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {field.label}
+                          {field.is_required && <span className="text-red-500"> *</span>}
+                        </label>
+                        <RichTextEditor
+                          value={editAbstractShort}
+                          onChange={(html) => setEditAbstractShort(html)}
+                          placeholder="Brief summary of your talk..."
+                          rows={3}
+                          minLength={field.min_chars ?? undefined}
+                          maxLength={field.max_chars ?? undefined}
+                        />
+                        {field.help_text && (
+                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                            {field.help_text}
+                          </p>
+                        )}
+                      </div>
+                    );
+
+                  case 'abstract_long':
+                    return (
+                      <div key={field.key}>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {field.label}
+                          {field.is_required && <span className="text-red-500"> *</span>}
+                        </label>
+                        <RichTextEditor
+                          value={editAbstractLong}
+                          onChange={(html) => setEditAbstractLong(html)}
+                          placeholder="Detailed description of your talk..."
+                          rows={6}
+                          minLength={field.min_chars ?? undefined}
+                          maxLength={field.max_chars ?? undefined}
+                        />
+                        {field.help_text && (
+                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                            {field.help_text}
+                          </p>
+                        )}
+                      </div>
+                    );
+
+                  case 'learning_objectives':
+                    return (
+                      <div key={field.key}>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {field.label}
+                          {field.is_required && <span className="text-red-500"> *</span>}
+                        </label>
+                        <RichTextEditor
+                          value={editLearningObjectives}
+                          onChange={(html) => setEditLearningObjectives(html)}
+                          placeholder="What will attendees learn from this talk?"
+                          rows={4}
+                          minLength={field.min_chars ?? undefined}
+                          maxLength={field.max_chars ?? undefined}
+                        />
+                        {field.help_text && (
+                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                            {field.help_text}
+                          </p>
+                        )}
+                      </div>
+                    );
+
+                  default:
+                    return null;
+                }
+              }
+
+              // Render custom fields
+              if (field.type === 'custom' && field.customField) {
+                const cf = field.customField;
+                const cfValue = editCustomFieldAnswers[field.key];
+                return (
+                  <div key={cf.id}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {field.label}
+                      {field.is_required && <span className="text-red-500"> *</span>}
+                    </label>
+                    {cf.description && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        {cf.description}
+                      </p>
                     )}
-                    {getFieldConfig('title')?.max_chars != null && (
-                      <span> / {getFieldConfig('title')!.max_chars}</span>
+                    {cf.field_type === 'text' && (
+                      <input
+                        type="text"
+                        value={String(cfValue ?? '')}
+                        onChange={(e) =>
+                          setEditCustomFieldAnswers((prev) => ({
+                            ...prev,
+                            [field.key]: e.target.value,
+                          }))
+                        }
+                        placeholder={cf.placeholder || ''}
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                      />
                     )}
-                  </span>
-                </div>
-              )}
-            </div>
+                    {cf.field_type === 'textarea' && (
+                      <textarea
+                        value={String(cfValue ?? '')}
+                        onChange={(e) =>
+                          setEditCustomFieldAnswers((prev) => ({
+                            ...prev,
+                            [field.key]: e.target.value,
+                          }))
+                        }
+                        placeholder={cf.placeholder || ''}
+                        rows={3}
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                      />
+                    )}
+                    {cf.field_type === 'richtext' && (
+                      <RichTextEditor
+                        value={String(cfValue ?? '')}
+                        onChange={(html) =>
+                          setEditCustomFieldAnswers((prev) => ({ ...prev, [field.key]: html }))
+                        }
+                        placeholder={cf.placeholder || ''}
+                        rows={4}
+                      />
+                    )}
+                    {cf.field_type === 'dropdown' && (
+                      <select
+                        value={String(cfValue ?? '')}
+                        onChange={(e) =>
+                          setEditCustomFieldAnswers((prev) => ({
+                            ...prev,
+                            [field.key]: e.target.value,
+                          }))
+                        }
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                      >
+                        <option value="">{cf.placeholder || 'Select...'}</option>
+                        {(cf.options || []).map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {cf.field_type === 'checkbox' && (
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(cfValue)}
+                          onChange={(e) =>
+                            setEditCustomFieldAnswers((prev) => ({
+                              ...prev,
+                              [field.key]: e.target.checked,
+                            }))
+                          }
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {cf.placeholder || 'Yes'}
+                        </span>
+                      </label>
+                    )}
+                    {cf.field_type === 'checkbox_group' && (
+                      <div className="space-y-2">
+                        {(cf.options || []).map((opt) => {
+                          const selectedValues = Array.isArray(cfValue) ? cfValue : [];
+                          return (
+                            <label key={opt.value} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedValues.includes(opt.value)}
+                                onChange={(e) => {
+                                  const newValues = e.target.checked
+                                    ? [...selectedValues, opt.value]
+                                    : selectedValues.filter((v: string) => v !== opt.value);
+                                  setEditCustomFieldAnswers((prev) => ({
+                                    ...prev,
+                                    [field.key]: newValues,
+                                  }));
+                                }}
+                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                {opt.label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {cf.help_text && (
+                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                        {cf.help_text}
+                      </p>
+                    )}
+                  </div>
+                );
+              }
 
-            {/* Session Type */}
-            {conferenceDetail && conferenceDetail.session_types.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Session Type
-                </label>
-                <select
-                  value={editSessionTypeId}
-                  onChange={(e) => setEditSessionTypeId(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                >
-                  <option value="">Select session type</option>
-                  {conferenceDetail.session_types.map((st) => (
-                    <option key={st.id} value={st.id}>
-                      {st.name} ({st.duration_minutes} min)
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+              return null;
+            })}
 
-            {/* Level */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Level
-              </label>
-              <select
-                value={editLevel}
-                onChange={(e) => setEditLevel(e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-              >
-                <option value="">Select level...</option>
-                {(getFieldConfig('level')?.options && getFieldConfig('level')!.options!.length > 0
-                  ? getFieldConfig('level')!.options!
-                  : [
-                      { value: 'beginner', label: 'Beginner' },
-                      { value: 'intermediate', label: 'Intermediate' },
-                      { value: 'advanced', label: 'Advanced' },
-                      { value: 'all_levels', label: 'All Levels' },
-                    ]
-                ).map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Short Abstract */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Short Abstract
-              </label>
-              <RichTextEditor
-                value={editAbstractShort}
-                onChange={(html) => setEditAbstractShort(html)}
-                placeholder="Brief summary of your talk..."
-                rows={3}
-                minLength={getFieldConfig('abstract_short')?.min_chars ?? undefined}
-                maxLength={getFieldConfig('abstract_short')?.max_chars ?? undefined}
-              />
-            </div>
-
-            {/* Long Abstract */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Detailed Abstract
-              </label>
-              <RichTextEditor
-                value={editAbstractLong}
-                onChange={(html) => setEditAbstractLong(html)}
-                placeholder="Detailed description of your talk..."
-                rows={6}
-                minLength={getFieldConfig('abstract_long')?.min_chars ?? undefined}
-                maxLength={getFieldConfig('abstract_long')?.max_chars ?? undefined}
-              />
-            </div>
-
-            {/* Learning Objectives */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Learning Objectives
-              </label>
-              <RichTextEditor
-                value={editLearningObjectives}
-                onChange={(html) => setEditLearningObjectives(html)}
-                placeholder="What will attendees learn from this talk?"
-                rows={4}
-                minLength={getFieldConfig('learning_objectives')?.min_chars ?? undefined}
-                maxLength={getFieldConfig('learning_objectives')?.max_chars ?? undefined}
-              />
-            </div>
-
-            {/* Why Important */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Why is this talk important?
-              </label>
-              <RichTextEditor
-                value={editImportance}
-                onChange={(html) => setEditImportance(html)}
-                placeholder="Explain why this topic matters..."
-                rows={4}
-                minLength={getFieldConfig('importance')?.min_chars ?? undefined}
-                maxLength={getFieldConfig('importance')?.max_chars ?? undefined}
-              />
-            </div>
-
-            {/* Video */}
+            {/* Video (always rendered after dynamic fields) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Video
@@ -605,7 +844,7 @@ function PaperDetailPage() {
                     }
                   }}
                   disabled={!videoPreviewSrc}
-                  className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-900 relative ${
+                  className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden shrink-0 bg-gray-50 dark:bg-gray-900 relative ${
                     videoPreviewSrc
                       ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
                       : ''
@@ -914,20 +1153,6 @@ function PaperDetailPage() {
                   className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: sanitizeHtml(paper.learning_objectives),
-                  }}
-                />
-              </div>
-            )}
-
-            {paper.importance && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Importance
-                </dt>
-                <dd
-                  className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeHtml(paper.importance),
                   }}
                 />
               </div>

@@ -317,14 +317,21 @@ async def upload_conditional_image(
     name: str = Form(...),
     placeholder: str = Form(...),
     condition_type: str = Form(...),
-    condition_value: str = Form(...),
+    condition_value: str = Form(""),
+    condition_field: str | None = Form(None),
+    condition_operator: str | None = Form(None),
 ) -> BadgeSettingsResponse:
     """Upload a conditional image for badge templates."""
     await check_conference_admin(conference_id, current_user, db)
 
     # Validate condition_type
-    if condition_type not in ("booking_option", "conference_day", "registration_item"):
-        raise ValidationError("condition_type must be one of: booking_option, conference_day, registration_item")
+    valid_types = ("booking_option", "conference_day", "registration_item", "field")
+    if condition_type not in valid_types:
+        raise ValidationError(f"condition_type must be one of: {', '.join(valid_types)}")
+    if condition_type == "field" and not condition_field:
+        raise ValidationError("condition_field is required when condition_type is 'field'")
+    if condition_type == "field" and condition_operator not in ("eq", "neq", "contains", "not_empty", "empty"):
+        raise ValidationError("condition_operator must be one of: eq, neq, contains, not_empty, empty")
 
     # Read and validate file
     file_data = await file.read()
@@ -369,16 +376,18 @@ async def upload_conditional_image(
     settings = conference.settings or {}
 
     images: list[dict] = list(settings.get("badge_conditional_images", []))
-    images.append(
-        {
-            "id": str(uuid_mod.uuid4()),
-            "name": name,
-            "placeholder": placeholder.upper().replace(" ", "_"),
-            "condition_type": condition_type,
-            "condition_value": condition_value,
-            "attachment_id": str(attachment.id),
-        }
-    )
+    img_entry: dict[str, str | None] = {
+        "id": str(uuid_mod.uuid4()),
+        "name": name,
+        "placeholder": placeholder.upper().replace(" ", "_"),
+        "condition_type": condition_type,
+        "condition_value": condition_value,
+        "attachment_id": str(attachment.id),
+    }
+    if condition_type == "field":
+        img_entry["condition_field"] = condition_field
+        img_entry["condition_operator"] = condition_operator
+    images.append(img_entry)
     settings["badge_conditional_images"] = images
     conference.settings = settings
     flag_modified(conference, "settings")

@@ -25,7 +25,6 @@ const CHAR_LIMIT_FIELDS = new Set([
   'abstract_short',
   'abstract_long',
   'learning_objectives',
-  'importance',
 ]);
 
 interface BuiltinFieldDef {

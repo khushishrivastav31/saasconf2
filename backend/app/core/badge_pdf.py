@@ -8,6 +8,7 @@ portrait or landscape orientation.
 import asyncio
 import base64
 import io
+import logging
 import re
 from typing import Any
 from uuid import UUID
@@ -19,6 +20,8 @@ from sqlalchemy.orm import joinedload, selectinload
 from app.models.attachment import Attachment
 from app.models.conference import Conference
 from app.models.registration import Registration
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -339,45 +342,66 @@ async def generate_qr_preview(qr_fields: list[str], logo_data: bytes | None = No
 
 
 def _evaluate_condition(
-    condition_type: str,
-    condition_value: str,
+    img_cfg: dict,
     registration: Registration,
+    data: dict[str, Any],
     booking_options_by_id: dict[str, Any] | None = None,
 ) -> bool:
     """Check if a conditional image's condition is met for a registration.
 
-    ``booking_options_by_id`` is a pre-loaded map of str(id) → BookingOption
-    used for conference_day condition checks.
+    ``data`` is the badge data dict (first_name, country, pronouns, etc.).
+    ``booking_options_by_id`` is a pre-loaded map of str(id) → BookingOption.
     """
-    if condition_type == "booking_option":
-        # Direct booking option match
-        if str(registration.booking_option_id) == condition_value:
+    condition_type = img_cfg.get("condition_type", "")
+    condition_value = img_cfg.get("condition_value", "")
+
+    reg_bo_id = str(registration.booking_option_id)
+    item_bo_ids = [str(getattr(item, "booking_option_id", None)) for item in getattr(registration, "items", [])]
+
+    if condition_type in ("booking_option", "registration_item"):
+        # Check main booking option + all add-on items
+        if reg_bo_id == condition_value:
             return True
-        # Also check registration items
-        for item in getattr(registration, "items", []):
-            if str(getattr(item, "booking_option_id", None)) == condition_value:
+        for item_bo_id in item_bo_ids:
+            if item_bo_id == condition_value:
                 return True
+        logger.info(
+            "Conditional image condition NOT met: type=%s value=%s reg_booking=%s items=%s reg=%s",
+            condition_type,
+            condition_value,
+            reg_bo_id,
+            item_bo_ids,
+            registration.id,
+        )
         return False
 
     if condition_type == "conference_day":
         options_map = booking_options_by_id or {}
-        # Check main booking option's conference_day_id
-        main_opt = options_map.get(str(registration.booking_option_id))
+        main_opt = options_map.get(reg_bo_id)
         if main_opt and str(getattr(main_opt, "conference_day_id", None)) == condition_value:
             return True
-        # Also check items' booking options
-        for item in getattr(registration, "items", []):
-            item_opt = options_map.get(str(getattr(item, "booking_option_id", None)))
+        for item_bo_id in item_bo_ids:
+            item_opt = options_map.get(item_bo_id)
             if item_opt and str(getattr(item_opt, "conference_day_id", None)) == condition_value:
                 return True
         return False
 
-    if condition_type == "registration_item":
-        # Check if registration has any item matching the value
-        for item in getattr(registration, "items", []):
-            if str(getattr(item, "booking_option_id", None)) == condition_value:
-                return True
-        return False
+    if condition_type == "field":
+        field_name = img_cfg.get("condition_field", "")
+        operator = img_cfg.get("condition_operator", "eq")
+        field_val = str(data.get(field_name, "") or "")
+        compare_val = condition_value
+
+        if operator == "eq":
+            return field_val.lower() == compare_val.lower()
+        if operator == "neq":
+            return field_val.lower() != compare_val.lower()
+        if operator == "contains":
+            return compare_val.lower() in field_val.lower()
+        if operator == "not_empty":
+            return bool(field_val.strip())
+        if operator == "empty":
+            return not field_val.strip()
 
     return False
 
@@ -386,11 +410,18 @@ async def _resolve_conditional_images(
     settings: dict,
     registration: Registration | None,
     db: AsyncSession,
+    data: dict[str, Any] | None = None,
     booking_options_by_id: dict[str, Any] | None = None,
 ) -> dict[str, str]:
     """Resolve conditional images: return placeholder → <img> or empty string."""
     images_config: list[dict] = settings.get("badge_conditional_images", [])
     result: dict[str, str] = {}
+
+    logger.info(
+        "Resolving %d conditional images for registration=%s",
+        len(images_config),
+        registration.id if registration else "preview",
+    )
 
     for img_cfg in images_config:
         placeholder = img_cfg.get("placeholder", "")
@@ -401,9 +432,9 @@ async def _resolve_conditional_images(
         condition_met = True  # Default to True for preview (no registration)
         if registration is not None:
             condition_met = _evaluate_condition(
-                img_cfg.get("condition_type", ""),
-                img_cfg.get("condition_value", ""),
+                img_cfg,
                 registration,
+                data or {},
                 booking_options_by_id,
             )
 
@@ -414,12 +445,14 @@ async def _resolve_conditional_images(
         # Load attachment image
         attachment_id = img_cfg.get("attachment_id")
         if not attachment_id:
+            logger.warning("Conditional image [%s] has no attachment_id", placeholder)
             result[placeholder] = ""
             continue
 
         att_result = await db.execute(select(Attachment).where(Attachment.id == UUID(attachment_id)))
         attachment = att_result.scalar_one_or_none()
         if not attachment:
+            logger.warning("Conditional image [%s] attachment %s not found in DB", placeholder, attachment_id)
             result[placeholder] = ""
             continue
 
@@ -427,6 +460,12 @@ async def _resolve_conditional_images(
         result[placeholder] = (
             f'<img src="data:{attachment.content_type};base64,{b64}" '
             f'alt="{img_cfg.get("name", "")}" style="max-height: 40px;">'
+        )
+        logger.info(
+            "Conditional image [%s] resolved: condition_met=%s, img_size=%d bytes",
+            placeholder,
+            condition_met,
+            len(attachment.file_data),
         )
 
     return result
@@ -548,7 +587,17 @@ async def generate_badge_pdf(
     qr_html = _generate_qr_vcard(data, qr_fields, logo_data=qr_logo_data) if qr_fields else ""
 
     # Conditional images
-    conditional_images = await _resolve_conditional_images(settings, registration, db, booking_options_by_id)
+    conditional_images = await _resolve_conditional_images(settings, registration, db, data, booking_options_by_id)
+
+    # Log which conditional image placeholders are in the template
+    for ph in conditional_images:
+        found = f"[{ph}]" in template_html
+        logger.info(
+            "Badge template placeholder [%s]: in_template=%s, has_content=%s",
+            ph,
+            found,
+            bool(conditional_images[ph]),
+        )
 
     # Build replacements and apply
     replacements = _build_replacements(data, conference, badge_type, qr_html, conditional_images)
@@ -681,7 +730,7 @@ async def generate_badges_bulk(
             qr_html = _generate_qr_vcard(data, qr_fields, logo_data=qr_logo_data)
 
         # Conditional images per registration
-        cond_imgs = await _resolve_conditional_images(settings, reg, db, booking_options_by_id)
+        cond_imgs = await _resolve_conditional_images(settings, reg, db, data, booking_options_by_id)
 
         replacements = _build_replacements(data, conference, badge_type, qr_html, cond_imgs)
         body = _apply_placeholders(template_html, replacements)
