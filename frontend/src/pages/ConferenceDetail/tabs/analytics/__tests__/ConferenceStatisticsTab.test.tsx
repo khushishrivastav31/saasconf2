@@ -47,6 +47,9 @@ vi.mock('react-simple-maps', () => ({
   Marker: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="map-marker">{children}</div>
   ),
+  ZoomableGroup: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="zoomable-group">{children}</div>
+  ),
 }));
 
 const MOCK_CONFERENCE: Conference = {
