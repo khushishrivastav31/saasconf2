@@ -35,6 +35,7 @@ jobs:
               - 'backend/**'
             frontend:
               - 'frontend/src/**'
+              - 'frontend/e2e/**'
               - 'frontend/package*.json'
               - 'frontend/tsconfig*.json'
               - 'frontend/vite.config.*'
@@ -450,7 +451,10 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: [deploy-staging]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: |
+      always() &&
+      needs.deploy-staging.result == 'success' &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
