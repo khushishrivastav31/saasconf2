@@ -973,69 +973,91 @@ async def get_attendees_per_day(
     db: DbSessionDep,
     current_user: CurrentUserDep,
 ) -> AttendeesPerDayResponse:
-    """Number of distinct registered attendees per conference day (via RegistrationItem→BookingOption→ProgramDay)."""
+    """Number of attendees per conference day, sourced from invoice line items."""
     await check_conference_admin(conference_id, current_user, db)
+
+    tenant_id = current_user.tenant_id
 
     # Check if any program days exist for this conference
     days_check_stmt = select(ProgramDay.id).where(
         ProgramDay.conference_id == conference_id,
-        ProgramDay.tenant_id == current_user.tenant_id,
+        ProgramDay.tenant_id == tenant_id,
     )
     days_check_result = await db.execute(days_check_stmt)
     if not days_check_result.first():
         return AttendeesPerDayResponse(days=[], has_program_days=False)
 
-    stmt = (
-        select(
-            ProgramDay.id.label("day_id"),
-            ProgramDay.date.label("day_date"),
-            ProgramDay.name.label("day_name"),
-            func.count(func.distinct(RegistrationItem.registration_id)).label("cnt"),
-        )
-        .join(BookingOption, BookingOption.conference_day_id == ProgramDay.id)
-        .join(RegistrationItem, RegistrationItem.booking_option_id == BookingOption.id)
-        .join(Registration, Registration.id == RegistrationItem.registration_id)
+    # Get all program days
+    all_days_stmt = (
+        select(ProgramDay.id, ProgramDay.date, ProgramDay.name, ProgramDay.sort_order)
         .where(
             ProgramDay.conference_id == conference_id,
-            ProgramDay.tenant_id == current_user.tenant_id,
-            Registration.status != RegistrationStatus.CANCELLED,
+            ProgramDay.tenant_id == tenant_id,
         )
-        .group_by(ProgramDay.id, ProgramDay.date, ProgramDay.name, ProgramDay.sort_order)
         .order_by(ProgramDay.sort_order, ProgramDay.date)
     )
-    result = await db.execute(stmt)
-    rows = result.all()
+    all_days_result = await db.execute(all_days_stmt)
+    all_days = all_days_result.all()
 
-    # Include days with 0 if they exist but no registrations — use full day list
-    if not rows:
-        # Return days with 0 count
-        all_days_stmt = (
-            select(ProgramDay.id, ProgramDay.date, ProgramDay.name, ProgramDay.sort_order)
-            .where(
-                ProgramDay.conference_id == conference_id,
-                ProgramDay.tenant_id == current_user.tenant_id,
-            )
-            .order_by(ProgramDay.sort_order, ProgramDay.date)
+    # Count attendees per booking option from invoice line items.
+    # Each line item = 1 attendee for that booking option.
+    # Matches line item description to booking option name (same pattern as revenue tracking).
+    count_stmt = text("""
+        SELECT bo.id AS booking_option_id,
+               bo.conference_day_id,
+               bo.name AS option_name,
+               COUNT(*) AS cnt
+        FROM invoices i
+        CROSS JOIN jsonb_array_elements(
+            CASE WHEN jsonb_typeof(i.line_items) = 'array' THEN i.line_items ELSE jsonb_build_array() END
+        ) AS li
+        JOIN booking_options bo ON (
+            li->>'description' = bo.name
+            OR li->>'description' LIKE bo.name || ' - %'
         )
-        all_days_result = await db.execute(all_days_stmt)
-        all_rows = all_days_result.all()
-        days = [
-            DayAttendance(
-                day_label=f"{row.name or f'Day {i + 1}'} – {row.date}",
-                date=str(row.date),
-                count=0,
-            )
-            for i, row in enumerate(all_rows)
-        ]
-        return AttendeesPerDayResponse(days=days, has_program_days=True)
+        WHERE i.conference_id = :conference_id
+          AND i.tenant_id = :tenant_id
+          AND i.is_active = true
+          AND i.status IN ('paid', 'overdue', 'sent')
+          AND i.recipient_source_type IN ('registration', 'billing_profile')
+          AND i.template_type != 'credit_note'
+          AND bo.conference_id = :conference_id
+          AND bo.tenant_id = :tenant_id
+        GROUP BY bo.id, bo.conference_day_id, bo.name
+    """)
+    count_result = await db.execute(
+        count_stmt,
+        {"conference_id": str(conference_id), "tenant_id": str(tenant_id)},
+    )
+
+    # Build lookup: program_day_id -> count (via conference_day_id FK or name match)
+    day_counts: dict[str, int] = {}
+    # Also build name-based lookup for fallback
+    day_name_to_id: dict[str, str] = {}
+    for day in all_days:
+        day_counts[str(day.id)] = 0
+        if day.name:
+            day_name_to_id[day.name.lower()] = str(day.id)
+
+    for row in count_result.mappings().all():
+        day_id_str = str(row["conference_day_id"]) if row["conference_day_id"] else None
+        cnt = int(row["cnt"])
+
+        if day_id_str and day_id_str in day_counts:
+            day_counts[day_id_str] += cnt
+        elif row["option_name"]:
+            # Fallback: match booking option name to program day name
+            matched_day_id = day_name_to_id.get(row["option_name"].lower())
+            if matched_day_id:
+                day_counts[matched_day_id] += cnt
 
     days = [
         DayAttendance(
-            day_label=f"{row.day_name or f'Day {i + 1}'} – {row.day_date}",
-            date=str(row.day_date),
-            count=int(row.cnt),
+            day_label=f"{day.name or f'Day {i + 1}'} – {day.date}",
+            date=str(day.date),
+            count=day_counts.get(str(day.id), 0),
         )
-        for i, row in enumerate(rows)
+        for i, day in enumerate(all_days)
     ]
     return AttendeesPerDayResponse(days=days, has_program_days=True)
 
@@ -1055,69 +1077,122 @@ async def get_tutorials_stats(
     db: DbSessionDep,
     current_user: CurrentUserDep,
 ) -> TutorialsResponse:
-    """Attendee count and revenue per tutorial booking option."""
+    """Attendee count and revenue per tutorial session.
+
+    Tutorials are identified from registration data (not heuristics):
+      1. Registration.main_session_id — main booking option is a tutorial
+      2. RegistrationItem.item_type = 'tutorial' — add-on tutorial item
+    Revenue comes from matching invoice line items by description.
+    """
     await check_conference_admin(conference_id, current_user, db)
 
-    # Tutorials = booking options linked to a ProgramSession (session-linked options)
-    # In the data model, tutorial options are booking options where a RegistrationItem
-    # carries a program_session_id. We group by booking_option + session.
     from app.models.program import ProgramSession
 
-    stmt = (
+    tenant_id = current_user.tenant_id
+
+    # Source 1: Main booking option tutorials (Registration.main_session_id)
+    main_stmt = (
         select(
-            BookingOption.id.label("option_id"),
             BookingOption.name.label("option_name"),
             ProgramSession.title.label("session_title"),
-            func.count(func.distinct(RegistrationItem.registration_id)).label("attendee_count"),
+            func.count(Registration.id).label("cnt"),
         )
-        .join(RegistrationItem, RegistrationItem.booking_option_id == BookingOption.id)
-        .join(Registration, Registration.id == RegistrationItem.registration_id)
-        .outerjoin(ProgramSession, ProgramSession.id == RegistrationItem.program_session_id)
+        .join(BookingOption, BookingOption.id == Registration.booking_option_id)
+        .join(ProgramSession, ProgramSession.id == Registration.main_session_id)
         .where(
-            BookingOption.conference_id == conference_id,
-            BookingOption.tenant_id == current_user.tenant_id,
-            RegistrationItem.program_session_id.is_not(None),
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == tenant_id,
+            Registration.main_session_id.is_not(None),
             Registration.status != RegistrationStatus.CANCELLED,
         )
-        .group_by(BookingOption.id, BookingOption.name, ProgramSession.title)
-        .order_by(func.count(func.distinct(RegistrationItem.registration_id)).desc())
+        .group_by(BookingOption.name, ProgramSession.title)
     )
-    result = await db.execute(stmt)
-    rows = result.all()
 
-    if not rows:
+    # Source 2: Add-on tutorial items (RegistrationItem.item_type = 'tutorial')
+    addon_stmt = (
+        select(
+            RegistrationItem.item_name.label("session_title"),
+            func.count(RegistrationItem.id).label("cnt"),
+        )
+        .join(Registration, Registration.id == RegistrationItem.registration_id)
+        .where(
+            RegistrationItem.item_type == "tutorial",
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == tenant_id,
+            Registration.status != RegistrationStatus.CANCELLED,
+        )
+        .group_by(RegistrationItem.item_name)
+    )
+
+    main_result = await db.execute(main_stmt)
+    addon_result = await db.execute(addon_stmt)
+
+    # Merge: key by session_title, sum attendee counts
+    tut_counts: dict[str, int] = {}
+    tut_option: dict[str, str | None] = {}
+    for row in main_result.all():
+        key = row.session_title or "Unknown"
+        tut_counts[key] = tut_counts.get(key, 0) + int(row.cnt)
+        if key not in tut_option:
+            tut_option[key] = row.option_name
+
+    for row in addon_result.all():
+        key = row.session_title or "Unknown"
+        tut_counts[key] = tut_counts.get(key, 0) + int(row.cnt)
+        if key not in tut_option:
+            tut_option[key] = None
+
+    if not tut_counts:
         return TutorialsResponse(tutorials=[], has_tutorials=False, total_revenue=0.0)
 
-    # Get active booking period for pricing
-    period_stmt = (
-        select(BookingPeriod)
-        .where(
-            BookingPeriod.conference_id == conference_id,
-            BookingPeriod.tenant_id == current_user.tenant_id,
-        )
-        .order_by(BookingPeriod.end_date.desc())
-        .limit(1)
+    # Get revenue from invoice line items grouped by description
+    revenue_stmt = text("""
+        SELECT
+            li->>'description' AS description,
+            COALESCE(SUM((li->>'total')::numeric), 0) AS revenue
+        FROM invoices i
+        CROSS JOIN jsonb_array_elements(
+            CASE WHEN jsonb_typeof(i.line_items) = 'array' THEN i.line_items ELSE jsonb_build_array() END
+        ) AS li
+        WHERE i.conference_id = :conference_id
+          AND i.tenant_id = :tenant_id
+          AND i.is_active = true
+          AND i.status IN ('paid', 'overdue', 'sent')
+          AND i.recipient_source_type IN ('registration', 'billing_profile')
+          AND i.template_type != 'credit_note'
+        GROUP BY li->>'description'
+    """)
+    revenue_result = await db.execute(
+        revenue_stmt,
+        {"conference_id": str(conference_id), "tenant_id": str(tenant_id)},
     )
-    period_result = await db.execute(period_stmt)
-    booking_period = period_result.scalar_one_or_none()
+    # Build lookup: description -> revenue
+    desc_revenue: dict[str, float] = {}
+    for rev_row in revenue_result.mappings().all():
+        desc_revenue[rev_row["description"]] = float(rev_row["revenue"])
 
+    # Match tutorials to invoice revenue by description
+    # Invoice descriptions are: "OptionName - SessionTitle" (main) or "SessionTitle" (add-on)
     tutorials: list[TutorialStats] = []
     total_revenue = 0.0
 
-    for row in rows:
-        # Get price from booking period
-        unit_price = 0.0
-        if booking_period and booking_period.prices:
-            price_val = booking_period.prices.get(str(row.option_id))
-            if price_val is not None:
-                unit_price = float(price_val)
-        revenue = unit_price * int(row.attendee_count)
+    for session_title, count in sorted(tut_counts.items(), key=lambda x: -x[1]):
+        option_name = tut_option.get(session_title)
+
+        # Try matching: "OptionName - SessionTitle" first, then just "SessionTitle"
+        revenue = 0.0
+        if option_name:
+            full_desc = f"{option_name} - {session_title}"
+            revenue = desc_revenue.get(full_desc, 0.0)
+        if revenue == 0.0:
+            revenue = desc_revenue.get(session_title, 0.0)
+
         total_revenue += revenue
         tutorials.append(
             TutorialStats(
-                tutorial_name=row.option_name,
-                session_title=row.session_title,
-                attendee_count=int(row.attendee_count),
+                tutorial_name=session_title,
+                session_title=option_name,
+                attendee_count=count,
                 revenue=revenue,
             )
         )
