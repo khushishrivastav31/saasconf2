@@ -24,6 +24,7 @@ class BadgeSettingsResponse(BaseModel):
     badge_templates: dict[str, str] = {}
     badge_orientation: str = "landscape"
     badge_qr_fields: list[str] = []
+    badge_qr_logo_attachment_id: str | None = None
     badge_conditional_images: list[BadgeConditionalImage] = []
 
 
@@ -33,6 +34,7 @@ class BadgeSettingsUpdate(BaseModel):
     badge_templates: dict[str, str] | None = None
     badge_orientation: str | None = None
     badge_qr_fields: list[str] | None = None
+    badge_qr_logo_attachment_id: str | None = None
     badge_conditional_images: list[BadgeConditionalImage] | None = None
 
     @field_validator("badge_orientation")

@@ -69,13 +69,10 @@ const BADGE_PLACEHOLDERS = [
       { name: '[EMAIL]', description: 'Email address' },
       { name: '[PHONE]', description: 'Phone number' },
       { name: '[JOB_TITLE]', description: 'Job title' },
+      { name: '[COMPANY_NAME]', description: 'Company name' },
       { name: '[DEPARTMENT]', description: 'Department' },
       { name: '[PRONOUNS]', description: 'Pronouns' },
     ],
-  },
-  {
-    category: 'Company',
-    items: [{ name: '[COMPANY_NAME]', description: 'Company name' }],
   },
   {
     category: 'Conference',

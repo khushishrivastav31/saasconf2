@@ -27,6 +27,7 @@ export interface BuiltinFieldConfig {
   help_text?: string | null;
   min_chars?: number | null;
   max_chars?: number | null;
+  options?: { value: string; label: string }[] | null;
 }
 
 export interface PaperFormField {

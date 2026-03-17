@@ -250,6 +250,7 @@ function SubmitPaperPage() {
     help_text?: string | null;
     min_chars?: number | null;
     max_chars?: number | null;
+    options?: { value: string; label: string }[] | null;
     customField?: PortalPaperFormField;
   };
 
@@ -276,6 +277,7 @@ function SubmitPaperPage() {
         help_text: config?.help_text,
         min_chars: config?.min_chars,
         max_chars: config?.max_chars,
+        options: config?.options,
       };
     });
 
@@ -665,10 +667,19 @@ function SubmitPaperPage() {
                         className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
                       >
                         <option value="">Select level</option>
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                        <option value="all_levels">All Levels</option>
+                        {(field.options && field.options.length > 0
+                          ? field.options
+                          : [
+                              { value: 'beginner', label: 'Beginner' },
+                              { value: 'intermediate', label: 'Intermediate' },
+                              { value: 'advanced', label: 'Advanced' },
+                              { value: 'all_levels', label: 'All Levels' },
+                            ]
+                        ).map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
                       </select>
                       {field.help_text && (
                         <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">

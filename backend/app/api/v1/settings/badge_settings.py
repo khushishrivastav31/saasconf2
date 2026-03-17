@@ -39,6 +39,7 @@ def _read_badge_settings(settings: dict) -> BadgeSettingsResponse:
         badge_templates=settings.get("badge_templates", {}),
         badge_orientation=settings.get("badge_orientation", "landscape"),
         badge_qr_fields=settings.get("badge_qr_fields", []),
+        badge_qr_logo_attachment_id=settings.get("badge_qr_logo_attachment_id"),
         badge_conditional_images=[BadgeConditionalImage(**img) for img in settings.get("badge_conditional_images", [])],
     )
 
@@ -157,6 +158,152 @@ async def preview_badge_pdf(
 
 
 # ---------------------------------------------------------------------------
+# QR Code logo upload / delete / preview
+# ---------------------------------------------------------------------------
+
+
+@router.post("/badge-settings/qr-logo")
+async def upload_qr_logo(
+    conference_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    file: UploadFile = File(...),
+) -> BadgeSettingsResponse:
+    """Upload a logo image to overlay on badge QR codes."""
+    await check_conference_admin(conference_id, current_user, db)
+
+    file_data = await file.read()
+    if not file_data:
+        raise ValidationError("Empty file")
+
+    app_settings = get_settings()
+    file_size = len(file_data)
+    if file_size > app_settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+        raise ValidationError(
+            f"File size ({file_size // (1024 * 1024)}MB) exceeds maximum ({app_settings.MAX_UPLOAD_SIZE_MB}MB)"
+        )
+
+    content_type = file.content_type or "application/octet-stream"
+    verified_type = validate_upload(file_data, content_type, "badge_qr_logo")
+    file_data = strip_image_metadata(file_data, verified_type)
+    file_size = len(file_data)
+    safe_name = sanitize_filename(file.filename or "qr-logo")
+
+    # Create attachment
+    attachment = Attachment(
+        tenant_id=current_user.tenant_id,
+        entity_type="badge_qr_logo",
+        entity_id=conference_id,
+        filename=safe_name,
+        content_type=verified_type,
+        file_size=file_size,
+        file_data=file_data,
+        uploaded_by=current_user.user_id,
+    )
+    db.add(attachment)
+    await db.flush()
+
+    # Delete old logo attachment if present
+    result = await db.execute(
+        select(Conference).where(
+            Conference.id == conference_id,
+            Conference.tenant_id == current_user.tenant_id,
+        )
+    )
+    conference = result.scalar_one()
+    settings = conference.settings or {}
+    old_id = settings.get("badge_qr_logo_attachment_id")
+    if old_id:
+        old_att = await db.execute(select(Attachment).where(Attachment.id == UUID(old_id)))
+        old_attachment = old_att.scalar_one_or_none()
+        if old_attachment:
+            await db.delete(old_attachment)
+
+    settings["badge_qr_logo_attachment_id"] = str(attachment.id)
+    conference.settings = settings
+    flag_modified(conference, "settings")
+
+    await db.commit()
+    await db.refresh(conference)
+
+    return _read_badge_settings(conference.settings or {})
+
+
+@router.delete("/badge-settings/qr-logo")
+async def delete_qr_logo(
+    conference_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> BadgeSettingsResponse:
+    """Remove the QR code logo overlay."""
+    await check_conference_admin(conference_id, current_user, db)
+
+    result = await db.execute(
+        select(Conference).where(
+            Conference.id == conference_id,
+            Conference.tenant_id == current_user.tenant_id,
+        )
+    )
+    conference = result.scalar_one()
+    settings = conference.settings or {}
+
+    old_id = settings.get("badge_qr_logo_attachment_id")
+    if old_id:
+        att_result = await db.execute(select(Attachment).where(Attachment.id == UUID(old_id)))
+        attachment = att_result.scalar_one_or_none()
+        if attachment:
+            await db.delete(attachment)
+
+    settings.pop("badge_qr_logo_attachment_id", None)
+    conference.settings = settings
+    flag_modified(conference, "settings")
+
+    await db.commit()
+    await db.refresh(conference)
+
+    return _read_badge_settings(conference.settings or {})
+
+
+@router.get("/badge-settings/qr-preview")
+async def preview_qr_code(
+    conference_id: UUID,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> StreamingResponse:
+    """Generate a preview QR code PNG with the uploaded logo overlay."""
+    conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
+    settings = conference.settings or {}
+
+    qr_fields = settings.get("badge_qr_fields", ["first_name", "last_name", "email"])
+    if not qr_fields:
+        qr_fields = ["first_name", "last_name", "email"]
+
+    # Load logo data if configured
+    logo_data: bytes | None = None
+    logo_att_id = settings.get("badge_qr_logo_attachment_id")
+    if logo_att_id:
+        att_result = await db.execute(
+            select(Attachment).where(
+                Attachment.id == UUID(logo_att_id),
+                Attachment.tenant_id == current_user.tenant_id,
+            )
+        )
+        att = att_result.scalar_one_or_none()
+        if att:
+            logo_data = att.file_data
+
+    from app.core.badge_pdf import generate_qr_preview
+
+    png_bytes = await generate_qr_preview(qr_fields, logo_data)
+
+    return StreamingResponse(
+        BytesIO(png_bytes),
+        media_type="image/png",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+# ---------------------------------------------------------------------------
 # Conditional image upload / delete / serve
 # ---------------------------------------------------------------------------
 
@@ -206,7 +353,7 @@ async def upload_conditional_image(
         content_type=verified_type,
         file_size=file_size,
         file_data=file_data,
-        uploaded_by=current_user.id,
+        uploaded_by=current_user.user_id,
     )
     db.add(attachment)
     await db.flush()

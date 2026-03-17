@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -53,6 +53,21 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
   const [activeId, setActiveId] = useState<string | null>(null);
   const [deleteFieldTarget, setDeleteFieldTarget] = useState<UnifiedField | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Track unsaved changes across panels
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const pendingActionRef = useRef<(() => void) | null>(null);
+
+  // Warn on browser close/reload with unsaved changes
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasUnsavedChanges]);
 
   // Editable variant metadata
   const [editingName, setEditingName] = useState(false);
@@ -199,11 +214,20 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
     updateVariantMutation.mutate({ builtin_fields_config: newConfig });
   };
 
-  const handleBuiltinFieldHelpText = (fieldKey: string, helpText: string) => {
+  const handleBuiltinFieldHelpText = (
+    fieldKey: string,
+    helpText: string,
+    options?: { value: string; label: string }[] | null
+  ) => {
     const existing = variant.builtin_fields_config[fieldKey] || { visible: true, required: false };
+    const updated = {
+      ...existing,
+      help_text: helpText || null,
+      ...(options !== undefined ? { options: options && options.length > 0 ? options : null } : {}),
+    };
     const newConfig = {
       ...variant.builtin_fields_config,
-      [fieldKey]: { ...existing, help_text: helpText || null },
+      [fieldKey]: updated,
     };
     updateVariantMutation.mutate({ builtin_fields_config: newConfig });
   };
@@ -298,6 +322,30 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
     doReorder();
   };
 
+  const guardUnsaved = useCallback(
+    (action: () => void) => {
+      if (hasUnsavedChanges) {
+        pendingActionRef.current = action;
+        setShowUnsavedDialog(true);
+      } else {
+        action();
+      }
+    },
+    [hasUnsavedChanges]
+  );
+
+  const confirmDiscard = () => {
+    setHasUnsavedChanges(false);
+    setShowUnsavedDialog(false);
+    pendingActionRef.current?.();
+    pendingActionRef.current = null;
+  };
+
+  const cancelDiscard = () => {
+    setShowUnsavedDialog(false);
+    pendingActionRef.current = null;
+  };
+
   const handleSaveName = () => {
     const trimmed = nameValue.trim();
     if (!trimmed) return;
@@ -318,7 +366,7 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={onBack}
+            onClick={() => guardUnsaved(onBack)}
             className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -456,7 +504,7 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
                         key={field.id}
                         field={field}
                         isSelected={selectedFieldId === field.id}
-                        onSelect={() => setSelectedFieldId(field.id)}
+                        onSelect={() => guardUnsaved(() => setSelectedFieldId(field.id))}
                         onDelete={
                           field.type === 'custom' ? () => handleDeleteField(field) : undefined
                         }
@@ -490,7 +538,11 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
                 <BuiltinHelpTextPanel
                   fieldKey={selectedBuiltinKey}
                   initialValue={variant.builtin_fields_config[selectedBuiltinKey]?.help_text || ''}
+                  initialMinChars={variant.builtin_fields_config[selectedBuiltinKey]?.min_chars}
+                  initialMaxChars={variant.builtin_fields_config[selectedBuiltinKey]?.max_chars}
+                  initialOptions={variant.builtin_fields_config[selectedBuiltinKey]?.options}
                   onSave={handleBuiltinFieldHelpText}
+                  onDirtyChange={setHasUnsavedChanges}
                 />
               ) : (
                 <FieldPropertyEditor
@@ -525,6 +577,16 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
         confirmLabel="Delete"
         onConfirm={confirmDeleteField}
         onCancel={() => setDeleteFieldTarget(null)}
+      />
+
+      {/* Unsaved Changes Confirm */}
+      <ConfirmDialog
+        open={showUnsavedDialog}
+        title="Unsaved Changes"
+        message="You have unsaved changes. Do you want to discard them?"
+        confirmLabel="Discard"
+        onConfirm={confirmDiscard}
+        onCancel={cancelDiscard}
       />
     </div>
   );

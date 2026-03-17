@@ -168,6 +168,7 @@ class AttendeesPerDayResponse(BaseModel):
 class TutorialStats(BaseModel):
     tutorial_name: str
     session_title: str | None
+    speaker_name: str | None = None
     attendee_count: int
     revenue: float
 

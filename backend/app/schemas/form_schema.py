@@ -52,6 +52,10 @@ class BuiltinFieldConfig(BaseModel):
     help_text: str | None = None
     min_chars: int | None = Field(None, ge=0, description="Minimum character count for text/richtext fields")
     max_chars: int | None = Field(None, ge=1, description="Maximum character count for text/richtext fields")
+    options: list[dict[str, str]] | None = Field(
+        None,
+        description="Custom dropdown options for built-in fields like 'level'. Each: {value, label}",
+    )
 
 
 # --- Paper Form Field Schemas ---

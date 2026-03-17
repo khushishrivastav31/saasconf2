@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { PaperFormField, PaperFormVariantField } from '../../../../../types';
 import type { UnifiedField } from './UnifiedFieldCard';
 
@@ -11,20 +11,46 @@ const CHAR_LIMIT_FIELDS = new Set([
   'importance',
 ]);
 
+// Default level options (used when no custom options are configured)
+const DEFAULT_LEVEL_OPTIONS = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+  { value: 'all_levels', label: 'All Levels' },
+];
+
+// Built-in fields that have dropdown/select options
+const DROPDOWN_FIELDS: Record<string, { editable: boolean; hint?: string }> = {
+  level: { editable: true },
+  session_type: {
+    editable: false,
+    hint: 'Session types are managed in Settings \u2192 Session Types.',
+  },
+  topics: { editable: false, hint: 'Topics are managed in the CFP \u2192 Topics section.' },
+};
+
 export function BuiltinHelpTextPanel({
   fieldKey,
   initialValue,
   initialMinChars,
   initialMaxChars,
+  initialOptions,
   onSave,
   onSaveCharLimits,
+  onDirtyChange,
 }: {
   fieldKey: string;
   initialValue: string;
   initialMinChars?: number | null;
   initialMaxChars?: number | null;
-  onSave: (fieldKey: string, helpText: string) => void;
+  initialOptions?: { value: string; label: string }[] | null;
+  onSave: (
+    fieldKey: string,
+    helpText: string,
+    options?: { value: string; label: string }[] | null
+  ) => void;
   onSaveCharLimits?: (fieldKey: string, minChars: number | null, maxChars: number | null) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [value, setValue] = useState(initialValue);
   const [minChars, setMinChars] = useState<string>(
@@ -33,52 +59,59 @@ export function BuiltinHelpTextPanel({
   const [maxChars, setMaxChars] = useState<string>(
     initialMaxChars != null ? String(initialMaxChars) : ''
   );
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const charDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [options, setOptions] = useState<{ value: string; label: string }[]>(
+    initialOptions ?? (fieldKey === 'level' ? DEFAULT_LEVEL_OPTIONS : [])
+  );
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     setValue(initialValue);
     setMinChars(initialMinChars != null ? String(initialMinChars) : '');
     setMaxChars(initialMaxChars != null ? String(initialMaxChars) : '');
-  }, [fieldKey, initialValue, initialMinChars, initialMaxChars]);
+    setOptions(initialOptions ?? (fieldKey === 'level' ? DEFAULT_LEVEL_OPTIONS : []));
+    setIsDirty(false);
+    onDirtyChange?.(false);
+  }, [fieldKey, initialValue, initialMinChars, initialMaxChars, initialOptions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleChange = useCallback(
-    (text: string) => {
-      setValue(text);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => onSave(fieldKey, text), 600);
-    },
-    [fieldKey, onSave]
-  );
+  const markDirty = useCallback(() => {
+    if (!isDirty) {
+      setIsDirty(true);
+      onDirtyChange?.(true);
+    }
+  }, [isDirty, onDirtyChange]);
 
-  const handleCharLimitChange = useCallback(
-    (newMin: string, newMax: string) => {
-      if (charDebounceRef.current) clearTimeout(charDebounceRef.current);
-      charDebounceRef.current = setTimeout(() => {
-        onSaveCharLimits?.(
-          fieldKey,
-          newMin ? parseInt(newMin, 10) : null,
-          newMax ? parseInt(newMax, 10) : null
-        );
-      }, 600);
-    },
-    [fieldKey, onSaveCharLimits]
-  );
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (charDebounceRef.current) clearTimeout(charDebounceRef.current);
-    };
-  }, []);
+  const handleSave = () => {
+    const dropdownConfig = DROPDOWN_FIELDS[fieldKey];
+    onSave(fieldKey, value, dropdownConfig?.editable ? options : undefined);
+    if (onSaveCharLimits) {
+      onSaveCharLimits(
+        fieldKey,
+        minChars ? parseInt(minChars, 10) : null,
+        maxChars ? parseInt(maxChars, 10) : null
+      );
+    }
+    setIsDirty(false);
+    onDirtyChange?.(false);
+  };
 
   const supportsCharLimits = CHAR_LIMIT_FIELDS.has(fieldKey);
+  const dropdownConfig = DROPDOWN_FIELDS[fieldKey];
 
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-      <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-        Built-in Field Settings
-      </h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          Built-in Field Settings
+        </h3>
+        {isDirty && (
+          <button
+            onClick={handleSave}
+            className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+          >
+            Save Changes
+          </button>
+        )}
+      </div>
       <div className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -87,7 +120,10 @@ export function BuiltinHelpTextPanel({
           <input
             type="text"
             value={value}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={(e) => {
+              setValue(e.target.value);
+              markDirty();
+            }}
             placeholder="Optional help text shown below the field..."
             className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           />
@@ -110,7 +146,7 @@ export function BuiltinHelpTextPanel({
                   value={minChars}
                   onChange={(e) => {
                     setMinChars(e.target.value);
-                    handleCharLimitChange(e.target.value, maxChars);
+                    markDirty();
                   }}
                   placeholder="—"
                   className="w-20 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded focus:ring-primary-500 focus:border-primary-500"
@@ -124,7 +160,7 @@ export function BuiltinHelpTextPanel({
                   value={maxChars}
                   onChange={(e) => {
                     setMaxChars(e.target.value);
-                    handleCharLimitChange(minChars, e.target.value);
+                    markDirty();
                   }}
                   placeholder="—"
                   className="w-20 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded focus:ring-primary-500 focus:border-primary-500"
@@ -134,6 +170,103 @@ export function BuiltinHelpTextPanel({
             <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
               Enforced on submission. Leave empty for no limit.
             </p>
+          </div>
+        )}
+
+        {/* Dropdown options for editable built-in fields (e.g. Level) */}
+        {dropdownConfig?.editable && (
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+              Dropdown Options
+            </label>
+            <div className="space-y-3">
+              {options.map((opt, idx) => (
+                <div
+                  key={idx}
+                  className="relative rounded-md border border-gray-200 dark:border-gray-700 p-2.5"
+                >
+                  <button
+                    onClick={() => {
+                      setOptions(options.filter((_, i) => i !== idx));
+                      markDirty();
+                    }}
+                    className="absolute top-1.5 right-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500"
+                    title="Remove option"
+                  >
+                    <svg
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                  <div className="space-y-1.5 pr-5">
+                    <input
+                      type="text"
+                      value={opt.label}
+                      onChange={(e) => {
+                        const updated = [...options];
+                        updated[idx] = { ...updated[idx], label: e.target.value };
+                        setOptions(updated);
+                        markDirty();
+                      }}
+                      placeholder="Label (shown to user)"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm dark:bg-gray-800 dark:text-gray-100"
+                    />
+                    <input
+                      type="text"
+                      value={opt.value}
+                      onChange={(e) => {
+                        const updated = [...options];
+                        updated[idx] = { ...updated[idx], value: e.target.value };
+                        setOptions(updated);
+                        markDirty();
+                      }}
+                      placeholder="Value (stored internally)"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs text-gray-500 dark:text-gray-400 dark:bg-gray-800"
+                    />
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  setOptions([...options, { value: '', label: '' }]);
+                  markDirty();
+                }}
+                className="text-sm text-primary-600 hover:text-primary-700"
+              >
+                + Add Option
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Info note for non-editable dropdown fields (Session Type, Topics) */}
+        {dropdownConfig && !dropdownConfig.editable && dropdownConfig.hint && (
+          <div className="rounded-md bg-blue-50 dark:bg-blue-900/20 p-3">
+            <div className="flex">
+              <svg
+                className="h-4 w-4 text-blue-400 mt-0.5 mr-2 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="text-xs text-blue-700 dark:text-blue-300">{dropdownConfig.hint}</p>
+            </div>
           </div>
         )}
       </div>

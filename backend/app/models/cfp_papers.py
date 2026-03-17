@@ -122,7 +122,7 @@ class CFPPaper(Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     abstract_short: Mapped[str | None] = mapped_column(Text, nullable=True)
     abstract_long: Mapped[str | None] = mapped_column(Text, nullable=True)
-    level: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     learning_objectives: Mapped[str | None] = mapped_column(Text, nullable=True)
     importance: Mapped[str | None] = mapped_column(Text, nullable=True)
 

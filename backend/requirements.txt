@@ -97,6 +97,7 @@ urllib3==2.6.3
 uvicorn==0.41.0
 uvloop==0.22.1
 watchfiles==1.1.1
+cairosvg==2.9.0
 weasyprint==68.1
 webencodings==0.5.1
 websockets==16.0

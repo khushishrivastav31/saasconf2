@@ -512,10 +512,19 @@ function PaperDetailPage() {
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="">Select level...</option>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-                <option value="all_levels">All Levels</option>
+                {(getFieldConfig('level')?.options && getFieldConfig('level')!.options!.length > 0
+                  ? getFieldConfig('level')!.options!
+                  : [
+                      { value: 'beginner', label: 'Beginner' },
+                      { value: 'intermediate', label: 'Intermediate' },
+                      { value: 'advanced', label: 'Advanced' },
+                      { value: 'all_levels', label: 'All Levels' },
+                    ]
+                ).map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
 

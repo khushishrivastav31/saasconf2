@@ -1086,6 +1086,8 @@ async def get_tutorials_stats(
     """
     await check_conference_admin(conference_id, current_user, db)
 
+    from app.models.cfp_applicants import CFPApplicant
+    from app.models.cfp_papers import CFPPaper
     from app.models.program import ProgramSession
 
     tenant_id = current_user.tenant_id
@@ -1171,6 +1173,26 @@ async def get_tutorials_stats(
     for rev_row in revenue_result.mappings().all():
         desc_revenue[rev_row["description"]] = float(rev_row["revenue"])
 
+    # Get speaker names: ProgramSession.title -> main speaker name
+    speaker_stmt = (
+        select(
+            ProgramSession.title.label("session_title"),
+            (CFPApplicant.first_name + " " + CFPApplicant.last_name).label("speaker_name"),
+        )
+        .join(CFPPaper, CFPPaper.id == ProgramSession.paper_id)
+        .join(CFPApplicant, CFPApplicant.id == CFPPaper.main_speaker_id)
+        .where(
+            ProgramSession.conference_id == conference_id,
+            ProgramSession.tenant_id == tenant_id,
+            ProgramSession.title.in_(list(tut_counts.keys())),
+        )
+    )
+    speaker_result = await db.execute(speaker_stmt)
+    speaker_map: dict[str, str] = {}
+    for sp_row in speaker_result.all():
+        if sp_row.session_title:
+            speaker_map[sp_row.session_title] = sp_row.speaker_name
+
     # Match tutorials to invoice revenue by description
     # Invoice descriptions are: "OptionName - SessionTitle" (main) or "SessionTitle" (add-on)
     tutorials: list[TutorialStats] = []
@@ -1192,6 +1214,7 @@ async def get_tutorials_stats(
             TutorialStats(
                 tutorial_name=session_title,
                 session_title=option_name,
+                speaker_name=speaker_map.get(session_title),
                 attendee_count=count,
                 revenue=revenue,
             )

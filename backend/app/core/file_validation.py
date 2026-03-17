@@ -16,6 +16,8 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "tenant_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "sponsor_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "screen_overlay_image": {"image/jpeg", "image/png", "image/webp", "image/gif"},
+    "badge_qr_logo": {"image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"},
+    "badge_conditional_image": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "sponsor_package_contract": {
         "application/pdf",
         "application/msword",
@@ -49,6 +51,7 @@ DEFAULT_ALLOWED_MIME_TYPES = {
 _FALLBACK_MIME_TYPES = {
     "text/plain",
     "text/csv",
+    "image/svg+xml",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 }

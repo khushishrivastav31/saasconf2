@@ -45,6 +45,18 @@ function toLocalDatetime(isoStr: string | null): string {
   }
 }
 
+/** Convert a datetime-local value (local time) back to a UTC ISO string for the backend. */
+function localDatetimeToISO(localStr: string | null): string | null {
+  if (!localStr) return null;
+  try {
+    // datetime-local gives "YYYY-MM-DDTHH:mm" in local time
+    // new Date() parses this as local time, .toISOString() converts to UTC
+    return new Date(localStr).toISOString();
+  } catch {
+    return null;
+  }
+}
+
 interface CFPFormState {
   title: string;
   description: string;
@@ -212,10 +224,10 @@ export default function ConferenceCFPsTab({
       title: form.title,
       description: form.description || null,
       status: form.status,
-      open_date: form.open_date || null,
-      close_date: form.close_date || null,
-      notification_date: form.notification_date || null,
-      program_announcement_date: form.program_announcement_date || null,
+      open_date: localDatetimeToISO(form.open_date),
+      close_date: localDatetimeToISO(form.close_date),
+      notification_date: localDatetimeToISO(form.notification_date),
+      program_announcement_date: localDatetimeToISO(form.program_announcement_date),
       max_submissions_per_speaker: form.max_submissions_per_speaker
         ? Number(form.max_submissions_per_speaker)
         : null,

@@ -139,7 +139,7 @@ class PaperCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     abstract_short: str | None = None
     abstract_long: str | None = None
-    level: PaperLevel | None = None
+    level: str | None = None
     learning_objectives: str | None = None
     importance: str | None = None
     custom_field_answers: dict | None = None
@@ -162,7 +162,7 @@ class PaperUpdate(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=500)
     abstract_short: str | None = None
     abstract_long: str | None = None
-    level: PaperLevel | None = None
+    level: str | None = None
     learning_objectives: str | None = None
     importance: str | None = None
     custom_field_answers: dict | None = None
