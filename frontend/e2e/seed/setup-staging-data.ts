@@ -100,7 +100,7 @@ async function main() {
     "GET",
     `/conferences?search=${CONFERENCE_ABBREV}`,
   );
-  let conf = conferences.items.find((c) => c.abbreviation === CONFERENCE_ABBREV);
+  const conf = conferences.items.find((c) => c.abbreviation === CONFERENCE_ABBREV);
   let conferenceId: string;
 
   if (conf) {
@@ -417,22 +417,39 @@ async function main() {
     log(`Booking periods already exist (${periodsResp.total}).`);
   }
 
-  // 15. Create volunteers
+  // 15. Create volunteers (applicants with Volunteer role)
   log("Checking volunteers...");
-  const volunteersResp = await api<{ items: Array<{ id: string; email: string }>; total: number }>(
+  const volunteersResp = await api<{ items: Array<{ id: string }>; total: number }>(
     "GET",
-    `/conferences/${conferenceId}/volunteers`,
+    `/conferences/${conferenceId}/volunteer-profiles`,
   );
   if (volunteersResp.total === 0) {
-    const volunteersDef = [
-      { conference_id: conferenceId, email: "volunteer1@test-e2e.example.com", first_name: "Alice", last_name: "Volunteer", role: "Registration Desk" },
-      { conference_id: conferenceId, email: "volunteer2@test-e2e.example.com", first_name: "Bob", last_name: "Helper", role: "Speaker Liaison" },
-    ];
-    for (const v of volunteersDef) {
-      log(`Creating volunteer "${v.first_name} ${v.last_name}"...`);
-      await apiSafe("POST", "/volunteers", v);
+    // Get the Volunteer role ID (system roles are auto-created on first access)
+    const rolesResp = await api<{ items: Array<{ id: string; name: string }> }>(
+      "GET",
+      `/conferences/${conferenceId}/settings/user-roles`,
+    );
+    const volunteerRole = rolesResp.items.find((r) => r.name === "Volunteer");
+    if (!volunteerRole) {
+      log("WARNING: Volunteer role not found, skipping volunteer creation.");
+    } else {
+      const volunteersDef = [
+        { email: "volunteer1@test-e2e.example.com", first_name: "Alice", last_name: "Volunteer", password: "Test1234" },
+        { email: "volunteer2@test-e2e.example.com", first_name: "Bob", last_name: "Helper", password: "Test1234" },
+      ];
+      for (const v of volunteersDef) {
+        log(`Creating volunteer "${v.first_name} ${v.last_name}"...`);
+        const applicant = await apiSafe<{ id: string }>(
+          "POST",
+          "/cfp/applicants",
+          { ...v, role_ids: [volunteerRole.id] },
+        );
+        if (applicant) {
+          log(`  Assigned Volunteer role to ${v.email}`);
+        }
+      }
+      log("Volunteers created.");
     }
-    log("Volunteers created.");
   } else {
     log(`Volunteers already exist (${volunteersResp.total}).`);
   }
