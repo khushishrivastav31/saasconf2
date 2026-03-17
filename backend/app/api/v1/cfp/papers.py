@@ -217,7 +217,7 @@ async def create_paper(
         title=paper_data.title,
         abstract_short=paper_data.abstract_short,
         abstract_long=paper_data.abstract_long,
-        level=paper_data.level.value if paper_data.level else None,
+        level=paper_data.level,
         learning_objectives=paper_data.learning_objectives,
         importance=paper_data.importance,
         status=PaperStatus.DRAFT.value,
@@ -320,9 +320,7 @@ async def update_paper(
             await validate_topics(db, topic_ids, current_user.tenant_id)
         await sync_paper_topics(db, paper_id, topic_ids or [])
 
-    # Handle level enum
-    if update_data.get("level"):
-        update_data["level"] = update_data["level"].value
+    # level is now a plain string, no enum conversion needed
 
     # Validate and handle status transitions
     if update_data.get("status"):
