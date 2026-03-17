@@ -144,18 +144,6 @@ function EvaluatedPaperCard({ paper }: { paper: PortalAssignedPaper }) {
               </div>
             )}
 
-            {paper.importance && (
-              <div>
-                <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
-                  Importance
-                </h4>
-                <RichTextDisplay
-                  content={paper.importance}
-                  className="text-sm text-gray-700 dark:text-gray-300"
-                />
-              </div>
-            )}
-
             {paper.video_url && (
               <div>
                 <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">

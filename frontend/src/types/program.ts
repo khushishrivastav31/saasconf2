@@ -181,7 +181,6 @@ export interface EnrichedSession {
   paper_abstract_short: string | null;
   paper_level: string | null;
   paper_learning_objectives: string | null;
-  paper_importance: string | null;
   paper_status: string | null;
   paper_custom_field_answers: Record<string, unknown> | null;
   speaker_name: string | null;

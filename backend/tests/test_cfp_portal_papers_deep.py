@@ -247,7 +247,6 @@ class TestPaperResponseFields:
             "abstract_long": "A much longer abstract with detail",
             "level": "advanced",
             "learning_objectives": "Learn distributed systems",
-            "importance": "Critical for the community",
         }
         resp = await client.post(
             f"{PORTAL_BASE}/papers",
@@ -261,7 +260,6 @@ class TestPaperResponseFields:
         assert data["abstract_long"] == "A much longer abstract with detail"
         assert data["level"] == "advanced"
         assert data["learning_objectives"] == "Learn distributed systems"
-        assert data["importance"] == "Critical for the community"
         assert data["session_type_id"] == str(session_type.id)
         assert data["session_type_name"] == "Workshop"
         assert data["cfp_id"] == str(cfp.id)
@@ -460,7 +458,7 @@ class TestSubmitValidation:
         tenant: Tenant,
     ) -> None:
         """Submit fails with 422 when CFP requires fields that the paper is missing."""
-        cfp.required_paper_fields = ["abstract_short", "abstract_long", "level", "importance"]
+        cfp.required_paper_fields = ["abstract_short", "abstract_long", "level", "learning_objectives"]
         await db_session.commit()
 
         # Create paper without any of the required fields
@@ -486,7 +484,7 @@ class TestSubmitValidation:
         assert "paper:abstract_short" in missing
         assert "paper:abstract_long" in missing
         assert "paper:level" in missing
-        assert "paper:importance" in missing
+        assert "paper:learning_objectives" in missing
 
     @pytest.mark.asyncio
     async def test_submit_fails_with_missing_required_speaker_fields(

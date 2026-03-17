@@ -400,7 +400,6 @@ async def _build_paper_response(
         abstract_long=paper.abstract_long,
         level=paper.level,
         learning_objectives=paper.learning_objectives,
-        importance=paper.importance,
         status=paper.status,
         display_status=_compute_display_status(paper.status, paper.cfp.status),
         video_url=video_url,

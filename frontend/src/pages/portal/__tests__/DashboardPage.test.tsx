@@ -46,7 +46,6 @@ function createPaper(
     abstract_long: null,
     level: null,
     learning_objectives: null,
-    importance: null,
     status,
     video_url: null,
     is_main_speaker: true,

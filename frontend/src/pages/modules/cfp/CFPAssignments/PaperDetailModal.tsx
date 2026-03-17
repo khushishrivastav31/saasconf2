@@ -172,19 +172,6 @@ export function PaperDetailModal({
             </div>
           )}
 
-          {/* Importance */}
-          {paper.importance && (
-            <div>
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                Why is this talk important?
-              </h4>
-              <RichTextDisplay
-                content={paper.importance}
-                className="text-sm text-gray-700 dark:text-gray-300"
-              />
-            </div>
-          )}
-
           {/* Video */}
           {paper.video_url && (
             <div>

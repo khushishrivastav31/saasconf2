@@ -292,7 +292,6 @@ function renderCell(key: string, session: EnrichedSession, value: string) {
   if (
     key === 'abstract' ||
     key === 'learning_objectives' ||
-    key === 'importance' ||
     key === 'description' ||
     key === 'notes'
   ) {

@@ -322,7 +322,6 @@ async def papers_with_cospeaker(
         abstract_short="AI abstract",
         level="intermediate",
         learning_objectives="Learn AI",
-        importance="Very important",
         status=PaperStatus.SUBMITTED.value,
         submitted_at=datetime.now(UTC),
         custom_field_answers={"experience": "5 years", "tags": ["ai", "ml"]},

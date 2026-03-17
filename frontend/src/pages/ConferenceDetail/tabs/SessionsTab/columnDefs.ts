@@ -1,7 +1,7 @@
-import { formatDate } from "../../../../utils/formatDate";
-import type { EnrichedSession, CustomFieldMeta } from "../../../../types";
+import { formatDate } from '../../../../utils/formatDate';
+import type { EnrichedSession, CustomFieldMeta } from '../../../../types';
 
-export type ColumnGroup = "session" | "paper" | "speaker" | "custom";
+export type ColumnGroup = 'session' | 'paper' | 'speaker' | 'custom';
 
 export interface ColumnDef {
   key: string;
@@ -12,22 +12,22 @@ export interface ColumnDef {
 }
 
 function formatSlotTime(t: string | null): string {
-  if (!t) return "";
+  if (!t) return '';
   return t.slice(0, 5); // HH:MM
 }
 
 export const BUILTIN_COLUMNS: ColumnDef[] = [
   {
-    key: "day",
-    label: "Day",
-    group: "session",
+    key: 'day',
+    label: 'Day',
+    group: 'session',
     defaultVisible: true,
-    getValue: (s) => s.day_name || formatDate(s.day_date) || "",
+    getValue: (s) => s.day_name || formatDate(s.day_date) || '',
   },
   {
-    key: "time",
-    label: "Time",
-    group: "session",
+    key: 'time',
+    label: 'Time',
+    group: 'session',
     defaultVisible: true,
     getValue: (s) => {
       const start = formatSlotTime(s.start_time);
@@ -36,102 +36,95 @@ export const BUILTIN_COLUMNS: ColumnDef[] = [
     },
   },
   {
-    key: "track",
-    label: "Track",
-    group: "session",
+    key: 'track',
+    label: 'Track',
+    group: 'session',
     defaultVisible: true,
-    getValue: (s) => (s.is_general_event ? "All Tracks" : s.track_name || "-"),
+    getValue: (s) => (s.is_general_event ? 'All Tracks' : s.track_name || '-'),
   },
   {
-    key: "title",
-    label: "Session",
-    group: "session",
+    key: 'title',
+    label: 'Session',
+    group: 'session',
     defaultVisible: true,
     getValue: (s) => s.title,
   },
   {
-    key: "type",
-    label: "Type",
-    group: "session",
+    key: 'type',
+    label: 'Type',
+    group: 'session',
     defaultVisible: true,
-    getValue: (s) => s.session_type_name || "-",
+    getValue: (s) => s.session_type_name || '-',
   },
   {
-    key: "speaker",
-    label: "Speaker",
-    group: "speaker",
+    key: 'speaker',
+    label: 'Speaker',
+    group: 'speaker',
     defaultVisible: true,
-    getValue: (s) => s.speaker_name || "-",
+    getValue: (s) => s.speaker_name || '-',
   },
   {
-    key: "speaker_email",
-    label: "Speaker Email",
-    group: "speaker",
+    key: 'speaker_email',
+    label: 'Speaker Email',
+    group: 'speaker',
     defaultVisible: false,
-    getValue: (s) => s.speaker_email || "-",
+    getValue: (s) => s.speaker_email || '-',
   },
   {
-    key: "speaker_company",
-    label: "Speaker Company",
-    group: "speaker",
+    key: 'speaker_company',
+    label: 'Speaker Company',
+    group: 'speaker',
     defaultVisible: false,
-    getValue: (s) => s.speaker_company || "-",
+    getValue: (s) => s.speaker_company || '-',
   },
   {
-    key: "cospeakers",
-    label: "Co-Speakers",
-    group: "speaker",
+    key: 'cospeakers',
+    label: 'Co-Speakers',
+    group: 'speaker',
     defaultVisible: false,
-    getValue: (s) => s.cospeakers || "-",
+    getValue: (s) => s.cospeakers || '-',
   },
   {
-    key: "abstract",
-    label: "Abstract",
-    group: "paper",
+    key: 'abstract',
+    label: 'Abstract',
+    group: 'paper',
     defaultVisible: false,
-    getValue: (s) => s.paper_abstract_short || "-",
+    getValue: (s) => s.paper_abstract_short || '-',
   },
   {
-    key: "level",
-    label: "Level",
-    group: "paper",
+    key: 'level',
+    label: 'Level',
+    group: 'paper',
     defaultVisible: false,
-    getValue: (s) => s.paper_level || "-",
+    getValue: (s) => s.paper_level || '-',
   },
   {
-    key: "learning_objectives",
-    label: "Learning Objectives",
-    group: "paper",
+    key: 'learning_objectives',
+    label: 'Learning Objectives',
+    group: 'paper',
     defaultVisible: false,
-    getValue: (s) => s.paper_learning_objectives || "-",
+    getValue: (s) => s.paper_learning_objectives || '-',
   },
   {
-    key: "importance",
-    label: "Importance",
-    group: "paper",
+    key: 'paper_status',
+    label: 'Paper Status',
+    group: 'paper',
     defaultVisible: false,
-    getValue: (s) => s.paper_importance || "-",
+    getValue: (s) => s.paper_status || '-',
   },
   {
-    key: "paper_status",
-    label: "Paper Status",
-    group: "paper",
+    key: 'description',
+    label: 'Description',
+    group: 'session',
     defaultVisible: false,
-    getValue: (s) => s.paper_status || "-",
+    getValue: (s) => s.description || '-',
   },
   {
-    key: "description",
-    label: "Description",
-    group: "session",
+    key: 'notes',
+    label: 'Notes',
+    group: 'session',
     defaultVisible: false,
-    getValue: (s) => s.description || "-",
-  },
-  {
-    key: "notes",
-    label: "Notes",
-    group: "session",
-    defaultVisible: false,
-    getValue: (s) => s.notes || "-",
+    getValue: (s) => s.notes || '-',
   },
 ];
 
@@ -145,15 +138,15 @@ export function buildColumns(customFields: CustomFieldMeta[]): ColumnDef[] {
     columns.push({
       key: `custom_${cf.field_key}`,
       label: cf.label,
-      group: "custom",
+      group: 'custom',
       defaultVisible: false,
       getValue: (s) => {
         const answers = s.paper_custom_field_answers;
-        if (!answers) return "-";
+        if (!answers) return '-';
         const val = answers[cf.field_key];
-        if (val == null) return "-";
-        if (Array.isArray(val)) return val.join(", ");
-        if (typeof val === "boolean") return val ? "Yes" : "No";
+        if (val == null) return '-';
+        if (Array.isArray(val)) return val.join(', ');
+        if (typeof val === 'boolean') return val ? 'Yes' : 'No';
         return String(val);
       },
     });

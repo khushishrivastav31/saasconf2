@@ -17,7 +17,6 @@ VALID_PAPER_FIELDS = {
     "abstract_long",
     "level",
     "learning_objectives",
-    "importance",
     "session_type",
     "topics",
     "video",

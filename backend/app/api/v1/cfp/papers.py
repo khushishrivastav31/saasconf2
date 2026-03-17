@@ -219,7 +219,6 @@ async def create_paper(
         abstract_long=paper_data.abstract_long,
         level=paper_data.level,
         learning_objectives=paper_data.learning_objectives,
-        importance=paper_data.importance,
         status=PaperStatus.DRAFT.value,
     )
     db.add(paper)

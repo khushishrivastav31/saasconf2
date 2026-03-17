@@ -235,6 +235,11 @@ export interface Applicant {
   phone: string | null;
   title: string | null;
   company: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
   bio: string | null;
   allow_out_of_timeframe: boolean;
   social_links: ApplicantSocialLinks;
@@ -256,6 +261,11 @@ export interface ApplicantCreate {
   phone?: string;
   title?: string;
   company?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
   bio?: string;
   allow_out_of_timeframe?: boolean;
   social_links?: ApplicantSocialLinks;
@@ -324,7 +334,6 @@ export interface Paper {
   abstract_long: string | null;
   level: PaperLevel | null;
   learning_objectives: string | null;
-  importance: string | null;
   status: PaperStatus;
   display_status: PaperStatus | null;
   video_url: string | null;
@@ -348,7 +357,6 @@ export interface PaperCreate {
   abstract_long?: string;
   level?: PaperLevel;
   learning_objectives?: string;
-  importance?: string;
 }
 
 export interface PaperUpdate {
@@ -361,7 +369,6 @@ export interface PaperUpdate {
   abstract_long?: string;
   level?: PaperLevel;
   learning_objectives?: string;
-  importance?: string;
   status?: PaperStatus;
 }
 

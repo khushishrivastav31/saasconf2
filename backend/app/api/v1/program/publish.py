@@ -706,7 +706,6 @@ async def export_sessions(
         "Paper Abstract",
         "Level",
         "Learning Objectives",
-        "Importance",
         "Paper Status",
     ]
     for cf in custom_fields:
@@ -741,7 +740,6 @@ async def export_sessions(
             paper.abstract_short or "" if paper else "",
             paper.level or "" if paper else "",
             paper.learning_objectives or "" if paper else "",
-            paper.importance or "" if paper else "",
             paper.status or "" if paper else "",
         ]
         # Add custom field values

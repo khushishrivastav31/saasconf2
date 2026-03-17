@@ -141,7 +141,6 @@ class PaperCreate(BaseModel):
     abstract_long: str | None = None
     level: str | None = None
     learning_objectives: str | None = None
-    importance: str | None = None
     custom_field_answers: dict | None = None
 
     @field_validator("co_speaker_ids")
@@ -164,7 +163,6 @@ class PaperUpdate(BaseModel):
     abstract_long: str | None = None
     level: str | None = None
     learning_objectives: str | None = None
-    importance: str | None = None
     custom_field_answers: dict | None = None
     status: PaperStatus | None = None
 
@@ -211,7 +209,6 @@ class PaperResponse(BaseModel):
     abstract_long: str | None
     level: str | None
     learning_objectives: str | None
-    importance: str | None
     custom_field_answers: dict | None = None
     status: str
     display_status: str | None = None

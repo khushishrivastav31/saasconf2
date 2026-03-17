@@ -124,7 +124,6 @@ class CFPPaper(Base):
     abstract_long: Mapped[str | None] = mapped_column(Text, nullable=True)
     level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     learning_objectives: Mapped[str | None] = mapped_column(Text, nullable=True)
-    importance: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Custom field answers (from form builder)
     custom_field_answers: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

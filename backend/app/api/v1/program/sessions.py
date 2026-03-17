@@ -283,7 +283,6 @@ async def list_sessions_enriched(
                 paper_abstract_short=paper.abstract_short if paper else None,
                 paper_level=paper.level if paper else None,
                 paper_learning_objectives=paper.learning_objectives if paper else None,
-                paper_importance=paper.importance if paper else None,
                 paper_status=paper.status if paper else None,
                 paper_custom_field_answers=paper.custom_field_answers if paper else None,
                 speaker_name=f"{speaker.first_name} {speaker.last_name}".strip() if speaker else None,

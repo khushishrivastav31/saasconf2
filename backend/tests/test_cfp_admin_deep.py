@@ -474,7 +474,6 @@ class TestPaperCreateWithFullData:
                 "abstract_long": "Long text",
                 "level": "advanced",
                 "learning_objectives": "Learn ML",
-                "importance": "Critical",
             },
             headers=headers,
         )

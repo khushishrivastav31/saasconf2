@@ -351,7 +351,6 @@ class EnrichedSessionResponse(BaseModel):
     paper_abstract_short: str | None = None
     paper_level: str | None = None
     paper_learning_objectives: str | None = None
-    paper_importance: str | None = None
     paper_status: str | None = None
     paper_custom_field_answers: dict[str, Any] | None = None
     # Speaker data
