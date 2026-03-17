@@ -1,18 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { DashboardPage } from './pages/dashboard.page';
 
 test.describe('Dashboard', () => {
   test('should render dashboard with welcome greeting', async ({ page }) => {
-    const dashboard = new DashboardPage(page);
-    await dashboard.goto();
-    await dashboard.expectVisible();
-    await expect(dashboard.welcomeText).toBeVisible();
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL(/dashboard/, { timeout: 10000 });
+    await expect(page.getByText(/welcome/i)).toBeVisible({ timeout: 10000 });
   });
 
   test('should show dashboard navigation cards', async ({ page }) => {
-    const dashboard = new DashboardPage(page);
-    await dashboard.goto();
-    await dashboard.expectVisible();
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL(/dashboard/, { timeout: 10000 });
 
     // Dashboard should have clickable cards/links
     const links = page.getByRole('link');

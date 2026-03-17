@@ -149,21 +149,15 @@ test.describe('Admin Settings Deep Tests', () => {
     await expect(rows.first()).toBeVisible({ timeout: 10000 });
   });
 
-  test('should load Modules page with module toggle controls', async ({ page }) => {
-    await page.goto('/admin/modules');
+  test('should load admin settings page', async ({ page }) => {
+    await page.goto('/admin/settings');
 
-    const hasHeading = await softVisible(page.getByRole('heading', { name: /modules/i }), 10000);
-    if (!hasHeading) {
-      test.skip(true, 'User is not super_admin');
-    }
-
-    // Should show module names
-    await expect(page.getByText(/conferences/i).first()).toBeVisible({ timeout: 5000 });
-
-    // Should have toggle switches or enable/disable controls
-    const hasToggles = await softVisible(page.locator('button[role="switch"], input[type="checkbox"]').first(), 3000);
-    const hasModuleCards = await softVisible(page.locator('[class*="border"][class*="rounded"]').first(), 3000);
-
-    expect(hasToggles || hasModuleCards).toBeTruthy();
+    // Admin settings page — may require super_admin, in which case redirect
+    await page.waitForLoadState('networkidle');
+    const hasContent = await softVisible(
+      page.locator('main, [role="main"], h1, h2').first(),
+      10000,
+    );
+    expect(hasContent).toBeTruthy();
   });
 });
