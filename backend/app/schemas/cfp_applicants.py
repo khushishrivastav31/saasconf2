@@ -33,6 +33,11 @@ class ApplicantCreate(BaseModel):
     phone: str | None = Field(None, max_length=50)
     title: str | None = Field(None, max_length=255)
     company: str | None = Field(None, max_length=255)
+    address_line_1: str | None = Field(None, max_length=500)
+    address_line_2: str | None = Field(None, max_length=500)
+    city: str | None = Field(None, max_length=255)
+    postal_code: str | None = Field(None, max_length=20)
+    country: str | None = Field(None, max_length=100)
     bio: str | None = None
     password: str = Field(..., min_length=6)
     allow_out_of_timeframe: bool = False
@@ -58,6 +63,11 @@ class ApplicantUpdate(BaseModel):
     phone: str | None = Field(None, max_length=50)
     title: str | None = Field(None, max_length=255)
     company: str | None = Field(None, max_length=255)
+    address_line_1: str | None = Field(None, max_length=500)
+    address_line_2: str | None = Field(None, max_length=500)
+    city: str | None = Field(None, max_length=255)
+    postal_code: str | None = Field(None, max_length=20)
+    country: str | None = Field(None, max_length=100)
     bio: str | None = None
     password: str | None = Field(None, min_length=6)
     allow_out_of_timeframe: bool | None = None
@@ -94,6 +104,11 @@ class ApplicantResponse(BaseModel):
     phone: str | None
     title: str | None
     company: str | None
+    address_line_1: str | None = None
+    address_line_2: str | None = None
+    city: str | None = None
+    postal_code: str | None = None
+    country: str | None = None
     bio: str | None
     allow_out_of_timeframe: bool
     social_links: dict = {}

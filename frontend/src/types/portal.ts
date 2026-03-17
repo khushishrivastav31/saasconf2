@@ -30,6 +30,11 @@ export interface ApplicantProfile {
   phone: string | null;
   title: string | null;
   company: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
   bio: string | null;
   social_links: Record<string, string>;
   needs_accessibility: boolean;
@@ -50,6 +55,11 @@ export interface ApplicantProfileUpdate {
   phone?: string;
   title?: string;
   company?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
   bio?: string;
   social_links?: Record<string, string>;
   needs_accessibility?: boolean;
@@ -155,7 +165,6 @@ export interface PortalPaper {
   abstract_long: string | null;
   level: string | null;
   learning_objectives: string | null;
-  importance: string | null;
   status: string;
   video_url: string | null;
   is_main_speaker: boolean;
@@ -182,7 +191,6 @@ export interface PortalPaperCreateRequest {
   abstract_long?: string;
   level?: string;
   learning_objectives?: string;
-  importance?: string;
   cospeaker_emails?: string[];
   custom_field_answers?: Record<string, unknown>;
 }
@@ -194,7 +202,6 @@ export interface PortalPaperUpdateRequest {
   abstract_long?: string;
   level?: string;
   learning_objectives?: string;
-  importance?: string;
   cospeaker_emails?: string[];
   custom_field_answers?: Record<string, unknown>;
 }
@@ -256,7 +263,6 @@ export interface PortalAssignedPaper {
   abstract_long: string | null;
   level: string | null;
   learning_objectives: string | null;
-  importance: string | null;
   status: string;
   session_type_name: string | null;
   topics: PortalTopic[];

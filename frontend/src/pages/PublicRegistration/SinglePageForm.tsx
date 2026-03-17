@@ -7,6 +7,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import UnsavedChangesDialog from '../../components/UnsavedChangesDialog';
 import { loadStripe } from '@stripe/stripe-js';
 import type { Stripe } from '@stripe/stripe-js';
 import { useMutation } from '@tanstack/react-query';
@@ -147,6 +149,12 @@ export default function SinglePageForm({
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+
+  // Unsaved changes guard — dirty if any attendee has meaningful data
+  const isDirty = useMemo(() => {
+    return attendees.some((a) => !!(a.first_name.trim() || a.last_name.trim() || a.email.trim()));
+  }, [attendees]);
+  const { showDialog, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
   // PaymentIntent state for payment-first flow
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
@@ -1533,6 +1541,7 @@ export default function SinglePageForm({
           onClose={() => setPrivacyModalOpen(false)}
         />
       )}
+      <UnsavedChangesDialog open={showDialog} onConfirm={confirmLeave} onCancel={cancelLeave} />
     </form>
   );
 }

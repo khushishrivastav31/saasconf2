@@ -16,6 +16,7 @@ import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import { DeleteIcon } from '../../../ConferenceDetail/icons';
 import type { Applicant, PronounOption, UserRole } from '../../../../types';
 import { SPEAKER_SOCIAL_PLATFORMS } from '../../../../config/socialPlatforms';
+import { COUNTRY_OPTIONS } from '../../../../config/countries';
 
 export interface ApplicantFormData {
   first_name: string;
@@ -25,6 +26,11 @@ export interface ApplicantFormData {
   phone: string;
   title: string;
   company: string;
+  address_line_1: string;
+  address_line_2: string;
+  city: string;
+  postal_code: string;
+  country: string;
   bio: string;
   password: string;
   allow_out_of_timeframe: boolean;
@@ -43,6 +49,11 @@ const emptyForm: ApplicantFormData = {
   phone: '',
   title: '',
   company: '',
+  address_line_1: '',
+  address_line_2: '',
+  city: '',
+  postal_code: '',
+  country: '',
   bio: '',
   password: '',
   allow_out_of_timeframe: false,
@@ -123,6 +134,11 @@ export function ApplicantForm({
           phone: applicant.phone || '',
           title: applicant.title || '',
           company: applicant.company || '',
+          address_line_1: applicant.address_line_1 || '',
+          address_line_2: applicant.address_line_2 || '',
+          city: applicant.city || '',
+          postal_code: applicant.postal_code || '',
+          country: applicant.country || '',
           bio: applicant.bio || '',
           password: '',
           allow_out_of_timeframe: applicant.allow_out_of_timeframe,
@@ -180,6 +196,11 @@ export function ApplicantForm({
             phone: applicant.phone || '',
             title: applicant.title || '',
             company: applicant.company || '',
+            address_line_1: applicant.address_line_1 || '',
+            address_line_2: applicant.address_line_2 || '',
+            city: applicant.city || '',
+            postal_code: applicant.postal_code || '',
+            country: applicant.country || '',
             bio: applicant.bio || '',
             password: '',
             allow_out_of_timeframe: applicant.allow_out_of_timeframe,
@@ -518,7 +539,82 @@ export function ApplicantForm({
             className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
           />
         </div>
+      </div>
 
+      {/* Address */}
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Address</h3>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Address Line 1
+              </label>
+              <input
+                type="text"
+                value={formData.address_line_1}
+                onChange={(e) => setFormData((d) => ({ ...d, address_line_1: e.target.value }))}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Address Line 2
+              </label>
+              <input
+                type="text"
+                value={formData.address_line_2}
+                onChange={(e) => setFormData((d) => ({ ...d, address_line_2: e.target.value }))}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                placeholder="Apartment, suite, etc. (optional)"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                City
+              </label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData((d) => ({ ...d, city: e.target.value }))}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Postal Code
+              </label>
+              <input
+                type="text"
+                value={formData.postal_code}
+                onChange={(e) => setFormData((d) => ({ ...d, postal_code: e.target.value }))}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Country
+              </label>
+              <select
+                value={formData.country}
+                onChange={(e) => setFormData((d) => ({ ...d, country: e.target.value }))}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+              >
+                <option value="">Select country...</option>
+                {COUNTRY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Password{' '}

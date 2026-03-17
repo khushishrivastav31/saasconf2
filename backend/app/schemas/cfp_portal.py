@@ -88,6 +88,11 @@ class ApplicantProfileResponse(BaseModel):
     phone: str | None = None
     title: str | None = None
     company: str | None = None
+    address_line_1: str | None = None
+    address_line_2: str | None = None
+    city: str | None = None
+    postal_code: str | None = None
+    country: str | None = None
     bio: str | None = None
     social_links: dict = {}
     needs_accessibility: bool = False
@@ -110,6 +115,11 @@ class ApplicantProfileUpdate(BaseModel):
     phone: str | None = Field(None, max_length=50)
     title: str | None = Field(None, max_length=255)
     company: str | None = Field(None, max_length=255)
+    address_line_1: str | None = Field(None, max_length=500)
+    address_line_2: str | None = Field(None, max_length=500)
+    city: str | None = Field(None, max_length=255)
+    postal_code: str | None = Field(None, max_length=20)
+    country: str | None = Field(None, max_length=100)
     bio: str | None = None
     social_links: dict | None = None
     needs_accessibility: bool | None = None
@@ -238,7 +248,6 @@ class PortalPaperResponse(BaseModel):
     abstract_long: str | None = None
     level: str | None = None
     learning_objectives: str | None = None
-    importance: str | None = None
     custom_field_answers: dict | None = None
     status: str
     video_url: str | None = None
@@ -269,7 +278,6 @@ class PortalPaperCreateRequest(BaseModel):
     abstract_long: str | None = None
     level: str | None = None
     learning_objectives: str | None = None
-    importance: str | None = None
     custom_field_answers: dict | None = None
     cospeaker_emails: list[EmailStr] = Field(default_factory=list, max_length=3)
 
@@ -284,7 +292,6 @@ class PortalPaperUpdateRequest(BaseModel):
     abstract_long: str | None = None
     level: str | None = None
     learning_objectives: str | None = None
-    importance: str | None = None
     custom_field_answers: dict | None = None
     cospeaker_emails: list[EmailStr] | None = Field(None, max_length=3)
 
@@ -367,7 +374,6 @@ class PortalAssignedPaperResponse(BaseModel):
     abstract_long: str | None = None
     level: str | None = None
     learning_objectives: str | None = None
-    importance: str | None = None
     status: str
     session_type_name: str | None = None
     topics: list[PortalTopicResponse] = []

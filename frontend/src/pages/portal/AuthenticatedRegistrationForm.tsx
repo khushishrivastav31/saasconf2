@@ -92,10 +92,10 @@ export default function AuthenticatedRegistrationForm({
   // Billing state - pre-filled from user profile
   const [billing, setBilling] = useState<BillingProfileCreate>({
     company_name: applicant?.company || null,
-    street: '',
-    postal_code: '',
-    city: '',
-    country: '',
+    street: applicant?.address_line_1 || '',
+    postal_code: applicant?.postal_code || '',
+    city: applicant?.city || '',
+    country: applicant?.country || '',
     contact_first_name: applicant?.first_name || '',
     contact_last_name: applicant?.last_name || '',
     contact_email: applicant?.email || '',

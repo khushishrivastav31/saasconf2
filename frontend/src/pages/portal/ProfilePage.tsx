@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
 import { useSaveStatus } from '../../hooks/useSaveStatus';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import UnsavedChangesDialog from '../../components/UnsavedChangesDialog';
 import portalApi from '../../config/portalApi';
 import type { ApplicantProfile, ApplicantProfileUpdate } from '../../types/portal';
 import RichTextEditor from '../../components/common/RichTextEditor';
@@ -16,6 +18,7 @@ import {
   validateVideo,
 } from '../../utils/mediaValidation';
 import { usePortalAuthMedia } from '../../hooks/usePortalAuthMedia';
+import { COUNTRY_OPTIONS } from '../../config/countries';
 
 function convertSocialLinks(
   links: Record<string, string> | null | undefined
@@ -42,6 +45,11 @@ function ProfilePage() {
   const [phone, setPhone] = useState('');
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [profileCity, setProfileCity] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [profileCountry, setProfileCountry] = useState('');
   const [bio, setBio] = useState('');
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
   const [addPlatform, setAddPlatform] = useState('');
@@ -84,6 +92,11 @@ function ProfilePage() {
       setPhone(applicant.phone || '');
       setTitle(applicant.title || '');
       setCompany(applicant.company || '');
+      setAddressLine1(applicant.address_line_1 || '');
+      setAddressLine2(applicant.address_line_2 || '');
+      setProfileCity(applicant.city || '');
+      setPostalCode(applicant.postal_code || '');
+      setProfileCountry(applicant.country || '');
       setBio(applicant.bio || '');
       setSocialLinks(convertSocialLinks(applicant.social_links));
       setNeedsAccessibility(applicant.needs_accessibility);
@@ -92,6 +105,53 @@ function ProfilePage() {
       setMessageNotifications(applicant.message_notifications_enabled ?? true);
     }
   }, [applicant]);
+
+  // Unsaved changes guard
+  const isDirty = useMemo(() => {
+    if (!applicant) return false;
+    return (
+      firstName !== applicant.first_name ||
+      lastName !== applicant.last_name ||
+      pronouns !== (applicant.pronouns || '') ||
+      phone !== (applicant.phone || '') ||
+      title !== (applicant.title || '') ||
+      company !== (applicant.company || '') ||
+      addressLine1 !== (applicant.address_line_1 || '') ||
+      addressLine2 !== (applicant.address_line_2 || '') ||
+      profileCity !== (applicant.city || '') ||
+      postalCode !== (applicant.postal_code || '') ||
+      profileCountry !== (applicant.country || '') ||
+      bio !== (applicant.bio || '') ||
+      needsAccessibility !== applicant.needs_accessibility ||
+      accessibilityDetails !== (applicant.accessibility_details || '') ||
+      agreesToRecording !== applicant.agrees_to_recording ||
+      messageNotifications !== (applicant.message_notifications_enabled ?? true) ||
+      !!pictureFile ||
+      !!videoFile
+    );
+  }, [
+    applicant,
+    firstName,
+    lastName,
+    pronouns,
+    phone,
+    title,
+    company,
+    addressLine1,
+    addressLine2,
+    profileCity,
+    postalCode,
+    profileCountry,
+    bio,
+    needsAccessibility,
+    accessibilityDetails,
+    agreesToRecording,
+    messageNotifications,
+    pictureFile,
+    videoFile,
+  ]);
+
+  const { showDialog, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
   useEffect(() => {
     portalApi
@@ -196,6 +256,11 @@ function ProfilePage() {
       phone: phone || undefined,
       title: title || undefined,
       company: company || undefined,
+      address_line_1: addressLine1 || undefined,
+      address_line_2: addressLine2 || undefined,
+      city: profileCity || undefined,
+      postal_code: postalCode || undefined,
+      country: profileCountry || undefined,
       bio: bio || undefined,
       social_links: filteredLinks,
       needs_accessibility: needsAccessibility,
@@ -548,6 +613,77 @@ function ProfilePage() {
               </div>
             </div>
 
+            {/* Address */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Address</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Address Line 1
+                  </label>
+                  <input
+                    type="text"
+                    value={addressLine1}
+                    onChange={(e) => setAddressLine1(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Address Line 2
+                  </label>
+                  <input
+                    type="text"
+                    value={addressLine2}
+                    onChange={(e) => setAddressLine2(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    placeholder="Apartment, suite, etc. (optional)"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      value={profileCity}
+                      onChange={(e) => setProfileCity(e.target.value)}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      value={postalCode}
+                      onChange={(e) => setPostalCode(e.target.value)}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Country
+                    </label>
+                    <select
+                      value={profileCountry}
+                      onChange={(e) => setProfileCountry(e.target.value)}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                    >
+                      <option value="">Select country...</option>
+                      {COUNTRY_OPTIONS.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Bio */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -808,6 +944,7 @@ function ProfilePage() {
         type={mediaPreview.type}
         alt="Profile media"
       />
+      <UnsavedChangesDialog open={showDialog} onConfirm={confirmLeave} onCancel={cancelLeave} />
     </div>
   );
 }
