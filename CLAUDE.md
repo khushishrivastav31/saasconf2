@@ -81,7 +81,7 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: System & dynamic recipient lists for bulk messaging (`df46735`) — user role, registration, sponsor targeting; dynamic list builder; recipient count preview; migration 139 CI fix
-- **Status**: Clean — all checks passing, mypy/ruff/tsc/eslint clean
-- **Pending**: Handbook update for recipient lists feature
+- **Last completed**: Remove importance field from paper forms + unsaved changes warnings + address fields on profiles + E2E fixes + handbook updates
+- **Status**: Clean — all static checks passing (mypy/ruff/tsc/eslint), frontend tests pass. Not yet committed.
+- **Pending**: User approval to commit all outstanding changes
 - **Note**: H2 (require current password for password change) deferred for later

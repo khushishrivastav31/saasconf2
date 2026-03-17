@@ -756,9 +756,12 @@ export const handbookCategories: HandbookCategory[] = [
 <strong>What you can do:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300">View applicant profiles and submission history</li>
+<li class="text-gray-700 dark:text-gray-300">Edit user profiles including personal info, bio, social links, and <strong>address</strong> (address line 1, address line 2, city, postal code, country)</li>
 <li class="text-gray-700 dark:text-gray-300">Check registration status across conferences</li>
 <li class="text-gray-700 dark:text-gray-300">Manage portal access permissions</li>
 </ul>
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">User Address</h4>
+<p class="text-gray-700 dark:text-gray-300 my-2">Each portal user can have an address stored on their profile. The address is editable by both the admin (in the user form) and the user themselves (in the portal profile page). When a user registers for a conference via the authenticated registration form, their profile address is used to pre-fill the billing address fields. <strong>Note:</strong> Invoice addresses are frozen at creation time and are never affected by later profile changes.</p>
 <strong>Dependencies:</strong> CFP must be configured and open for submissions.
 <strong>Consequences:</strong> User accounts persist across conferences within the tenant. Portal users can submit papers, register for events, and view their history.`,
             }}
@@ -1387,7 +1390,9 @@ export const handbookCategories: HandbookCategory[] = [
 <li class="text-gray-700 dark:text-gray-300"><strong>Technical Support</strong>: support@saasconf.com</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>VAT Questions</strong>: Consult your tax advisor — SaaSConf provides calculation tools but not tax advice</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Feature Requests</strong>: Submit via platform feedback form</li>
-</ul>`,
+</ul>
+<h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">Unsaved Changes</h4>
+<p class="text-gray-700 dark:text-gray-300 my-2">When you have unsaved changes on a settings tab or portal form, the system will warn you before navigating away. A confirmation dialog asks whether to stay or leave. If you close the browser tab with unsaved changes, the browser will also show a native warning. Settings tabs that auto-save (e.g., Financial Settings, Email Settings) do not show this warning since changes are saved automatically.</p>`,
             }}
           />
         ),
