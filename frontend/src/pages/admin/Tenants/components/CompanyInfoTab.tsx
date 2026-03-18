@@ -1,12 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
+import UnsavedChangesDialog from '../../../../components/UnsavedChangesDialog';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import { validatePhone, validateEmail } from '../../../../utils/validators';
 import { COUNTRIES_BY_CONTINENT } from '../../../../config/countries';
 import { parseApiError } from '../../../../utils/apiError';
-import { useSaveStatus } from '../../../../hooks/useSaveStatus';
+import { useUnsavedChanges } from '../../../../hooks/useUnsavedChanges';
+import { useToast } from '../../../../components/Toast';
 import type { Tenant, TenantUpdate, ContactPerson } from '../../../../types';
 
 export default function CompanyInfoTab({
@@ -19,6 +21,7 @@ export default function CompanyInfoTab({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -103,18 +106,24 @@ export default function CompanyInfoTab({
     }
   };
 
-  const [formData, setFormData] = useState<TenantUpdate>({
-    name: tenant.name,
-    address: tenant.address || '',
-    postal_code: tenant.postal_code || '',
-    city: tenant.city || '',
-    country: tenant.country || '',
-    vat_number: tenant.vat_number || '',
-    website: tenant.website || '',
-    email_domain: tenant.email_domain || '',
-    contact_persons: tenant.contact_persons || [],
-    comments: tenant.comments || '',
-  });
+  const buildInitialFormData = useCallback(
+    (): TenantUpdate => ({
+      name: tenant.name,
+      address: tenant.address || '',
+      postal_code: tenant.postal_code || '',
+      city: tenant.city || '',
+      country: tenant.country || '',
+      vat_number: tenant.vat_number || '',
+      website: tenant.website || '',
+      email_domain: tenant.email_domain || '',
+      contact_persons: tenant.contact_persons || [],
+      comments: tenant.comments || '',
+    }),
+    [tenant]
+  );
+
+  const [formData, setFormData] = useState<TenantUpdate>(buildInitialFormData);
+  const [isDirty, setIsDirty] = useState(false);
 
   const [newContact, setNewContact] = useState<ContactPerson>({
     first_name: '',
@@ -124,44 +133,37 @@ export default function CompanyInfoTab({
     role: '',
   });
 
-  const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
+  const { showDialog, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
   const updateMutation = useMutation({
     mutationFn: async (data: TenantUpdate) => {
       await api.put(`/admin/tenants/${tenant.id}`, data);
     },
-    onMutate: () => {
-      setSaving();
-    },
     onSuccess: () => {
-      setSaved();
+      setIsDirty(false);
       onUpdate();
+      showToast('Company details saved', 'success');
     },
-    onError: () => {
-      setError();
+    onError: (err) => {
+      showToast(parseApiError(err), 'error');
     },
   });
 
-  // Auto-save when form data changes (with debounce)
-  const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
-    null
-  );
-
   const handleFieldChange = (field: keyof TenantUpdate, value: string | undefined) => {
-    const newFormData = { ...formData, [field]: value };
-    setFormData(newFormData);
-
-    // Clear existing timeout
-    if (debounceTimeout) {
-      clearTimeout(debounceTimeout);
-    }
-
-    // Set new timeout for auto-save (500ms debounce)
-    const timeout = setTimeout(() => {
-      updateMutation.mutate(newFormData);
-    }, 500);
-    setDebounceTimeout(timeout);
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setIsDirty(true);
   };
+
+  const handleSave = useCallback(() => {
+    // Exclude contact_persons — they're saved explicitly via add/remove/update
+    const { contact_persons: _, ...payload } = formData;
+    updateMutation.mutate(payload as TenantUpdate);
+  }, [formData, updateMutation]);
+
+  const handleDiscard = useCallback(() => {
+    setFormData(buildInitialFormData());
+    setIsDirty(false);
+  }, [buildInitialFormData]);
 
   const addContact = () => {
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
@@ -220,52 +222,21 @@ export default function CompanyInfoTab({
       <div className="flex justify-between items-center mb-4">
         <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Company Details</h4>
         <div className="flex items-center gap-2">
-          {saveStatus === 'saving' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md">
-              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Saving...
-            </span>
+          {isDirty && (
+            <button
+              onClick={handleDiscard}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Discard
+            </button>
           )}
-          {saveStatus === 'saved' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-md">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Saved
-            </span>
-          )}
-          {saveStatus === 'error' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-md">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-              Save failed
-            </span>
-          )}
+          <button
+            onClick={handleSave}
+            disabled={!isDirty || updateMutation.isPending}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
       </div>
 
@@ -1045,8 +1016,8 @@ export default function CompanyInfoTab({
                     <div className="mt-2">
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         This action <strong>cannot be undone</strong>. This will permanently delete
-                        the company <strong>"{tenant.name}"</strong> and all associated data
-                        including:
+                        the company <strong>&quot;{tenant.name}&quot;</strong> and all associated
+                        data including:
                       </p>
                       <ul className="mt-2 text-sm text-gray-500 dark:text-gray-400 list-disc list-inside space-y-1">
                         <li>All users and their accounts</li>
@@ -1100,6 +1071,8 @@ export default function CompanyInfoTab({
           </div>
         </div>
       )}
+
+      <UnsavedChangesDialog open={showDialog} onConfirm={confirmLeave} onCancel={cancelLeave} />
     </div>
   );
 }

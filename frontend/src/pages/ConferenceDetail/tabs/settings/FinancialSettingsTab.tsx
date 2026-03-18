@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useContext } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -13,6 +13,7 @@ import type {
   PaginatedResponse,
 } from '../../../../types';
 import FiscalRepSection from '../FiscalRepSection';
+import { DirtyContext } from '../../DirtyContext';
 
 interface VatRule {
   attendance_type: string;
@@ -89,6 +90,10 @@ function FinancialSettingsTab({
   conference: Conference;
   isAdmin: boolean;
 }) {
+  const reportDirty = useContext(DirtyContext);
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
   const [formData, setFormData] = useState({
     currency: conference.currency || '',
     invoice_currency: conference.invoice_currency || '',
@@ -96,41 +101,35 @@ function FinancialSettingsTab({
       ? String(conference.settings.invoice_exchange_rate)
       : '',
   });
+  const [isDirty, setIsDirty] = useState(false);
 
-  // Track previous conference values to sync formData when server data changes
-  const prevConferenceRef = useRef({
-    currency: conference.currency,
-    invoice_currency: conference.invoice_currency,
-    exchange_rate: conference.settings?.invoice_exchange_rate,
-  });
-
-  // Sync formData with conference prop when conference data changes from server
+  // Sync from server when not dirty
   useEffect(() => {
-    const prev = prevConferenceRef.current;
-    const curr = {
-      currency: conference.currency,
-      invoice_currency: conference.invoice_currency,
-      exchange_rate: conference.settings?.invoice_exchange_rate,
-    };
-
-    // Only update if conference values actually changed
-    if (
-      prev.currency !== curr.currency ||
-      prev.invoice_currency !== curr.invoice_currency ||
-      prev.exchange_rate !== curr.exchange_rate
-    ) {
+    if (!isDirty) {
       setFormData({
-        currency: curr.currency || '',
-        invoice_currency: curr.invoice_currency || '',
-        exchange_rate: curr.exchange_rate ? String(curr.exchange_rate) : '',
+        currency: conference.currency || '',
+        invoice_currency: conference.invoice_currency || '',
+        exchange_rate: conference.settings?.invoice_exchange_rate
+          ? String(conference.settings.invoice_exchange_rate)
+          : '',
       });
-      prevConferenceRef.current = curr;
     }
   }, [
     conference.currency,
     conference.invoice_currency,
     conference.settings?.invoice_exchange_rate,
+    isDirty,
   ]);
+
+  // Track VAT dirty state from sub-component
+  const [vatDirty, setVatDirty] = useState(false);
+  const combinedDirty = isDirty || vatDirty;
+
+  // Report dirty state to parent
+  useEffect(() => {
+    reportDirty(combinedDirty);
+    return () => reportDirty(false);
+  }, [combinedDirty, reportDirty]);
 
   const { data: currencyOptions } = useQuery({
     queryKey: queryKeys.settings.platformCurrencies,
@@ -143,19 +142,12 @@ function FinancialSettingsTab({
     },
   });
 
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
-  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
-  const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
-    null
-  );
-
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const exchangeVal = data.exchange_rate ? parseFloat(data.exchange_rate) : null;
       const payload: ConferenceUpdate = {
         currency: data.currency || undefined,
-        invoice_currency: data.invoice_currency || null, // Send null to clear field
+        invoice_currency: data.invoice_currency || null,
         settings: {
           ...(conference.settings || {}),
           invoice_exchange_rate: exchangeVal,
@@ -164,35 +156,44 @@ function FinancialSettingsTab({
       const response = await api.put(`/conferences/${conference.id}`, payload);
       return response.data;
     },
-    onMutate: () => setSaving(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.conferences.detail(conference.id) });
-      setSaved();
+      setIsDirty(false);
     },
     onError: (err) => {
-      setSaveError();
       showToast(parseApiError(err), 'error');
     },
   });
 
-  const handleFieldChange = (
-    field: 'currency' | 'invoice_currency' | 'exchange_rate',
-    value: string
-  ) => {
-    let newFormData = { ...formData, [field]: value };
-    // Clear exchange rate when second currency is removed
-    if (field === 'invoice_currency' && !value) {
-      newFormData = { ...newFormData, exchange_rate: '' };
-    }
-    setFormData(newFormData);
+  const handleFieldChange = useCallback(
+    (field: 'currency' | 'invoice_currency' | 'exchange_rate', value: string) => {
+      setFormData((prev) => {
+        let newData = { ...prev, [field]: value };
+        // Clear exchange rate when second currency is removed
+        if (field === 'invoice_currency' && !value) {
+          newData = { ...newData, exchange_rate: '' };
+        }
+        return newData;
+      });
+      setIsDirty(true);
+    },
+    []
+  );
 
-    if (debounceTimeout) clearTimeout(debounceTimeout);
+  const handleSave = useCallback(() => {
+    updateMutation.mutate(formData);
+  }, [formData, updateMutation]);
 
-    const timeout = setTimeout(() => {
-      updateMutation.mutate(newFormData);
-    }, 500);
-    setDebounceTimeout(timeout);
-  };
+  const handleDiscard = useCallback(() => {
+    setFormData({
+      currency: conference.currency || '',
+      invoice_currency: conference.invoice_currency || '',
+      exchange_rate: conference.settings?.invoice_exchange_rate
+        ? String(conference.settings.invoice_exchange_rate)
+        : '',
+    });
+    setIsDirty(false);
+  }, [conference]);
 
   return (
     <div>
@@ -205,52 +206,21 @@ function FinancialSettingsTab({
         </div>
         {isAdmin && (
           <div className="flex items-center gap-2">
-            {saveStatus === 'saving' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md">
-                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Saving...
-              </span>
+            {isDirty && (
+              <button
+                onClick={handleDiscard}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Discard
+              </button>
             )}
-            {saveStatus === 'saved' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-md">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                Saved
-              </span>
-            )}
-            {saveStatus === 'error' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-md">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                Save failed
-              </span>
-            )}
+            <button
+              onClick={handleSave}
+              disabled={!isDirty || updateMutation.isPending}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
         )}
       </div>
@@ -342,7 +312,7 @@ function FinancialSettingsTab({
         </div>
 
         {/* VAT Decision Rules */}
-        <VatRulesTable conferenceId={conference.id} isAdmin={isAdmin} />
+        <VatRulesTable conferenceId={conference.id} isAdmin={isAdmin} onDirtyChange={setVatDirty} />
 
         {/* EU Member States */}
         <EuCountriesSection conferenceId={conference.id} isAdmin={isAdmin} />
@@ -356,17 +326,19 @@ function FinancialSettingsTab({
 
 // ─── VAT Rules Table ─────────────────────────────────────────────────
 
-function VatRulesTable({ conferenceId, isAdmin }: { conferenceId: string; isAdmin: boolean }) {
+function VatRulesTable({
+  conferenceId,
+  isAdmin,
+  onDirtyChange,
+}: {
+  conferenceId: string;
+  isAdmin: boolean;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [rules, setRules] = useState<VatRule[]>([]);
-  const [vatSaveTimeout, setVatSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const {
-    saveStatus: vatSaveStatus,
-    setSaving: setVatSaving,
-    setSaved: setVatSaved,
-    setError: setVatSaveError,
-  } = useSaveStatus();
+  const [isDirty, setIsDirty] = useState(false);
 
   const { data: invoiceSettings, isLoading } = useQuery({
     queryKey: queryKeys.invoiceSettings(conferenceId),
@@ -376,11 +348,18 @@ function VatRulesTable({ conferenceId, isAdmin }: { conferenceId: string; isAdmi
     },
   });
 
+  // Sync from server when not dirty
   useEffect(() => {
-    if (invoiceSettings?.vat_rules) {
+    if (invoiceSettings?.vat_rules && !isDirty) {
       setRules(invoiceSettings.vat_rules);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoiceSettings]);
+
+  // Report dirty to parent
+  useEffect(() => {
+    onDirtyChange(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const saveMutation = useMutation({
     mutationFn: async (updatedRules: VatRule[]) => {
@@ -388,28 +367,30 @@ function VatRulesTable({ conferenceId, isAdmin }: { conferenceId: string; isAdmi
         vat_rules: updatedRules,
       });
     },
-    onMutate: () => setVatSaving(),
     onSuccess: () => {
-      setVatSaved();
+      setIsDirty(false);
       queryClient.invalidateQueries({ queryKey: queryKeys.invoiceSettings(conferenceId) });
     },
     onError: (err) => {
-      setVatSaveError();
       showToast(parseApiError(err), 'error');
     },
   });
 
-  const updateRule = useCallback(
-    (index: number, field: keyof VatRule, value: string | boolean) => {
-      const updated = rules.map((r, i) => (i === index ? { ...r, [field]: value } : r));
-      setRules(updated);
+  const updateRule = useCallback((index: number, field: keyof VatRule, value: string | boolean) => {
+    setRules((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+    setIsDirty(true);
+  }, []);
 
-      if (vatSaveTimeout) clearTimeout(vatSaveTimeout);
-      const timeout = setTimeout(() => saveMutation.mutate(updated), 800);
-      setVatSaveTimeout(timeout);
-    },
-    [rules, vatSaveTimeout, saveMutation]
-  );
+  const handleSaveVat = useCallback(() => {
+    saveMutation.mutate(rules);
+  }, [rules, saveMutation]);
+
+  const handleDiscardVat = useCallback(() => {
+    if (invoiceSettings?.vat_rules) {
+      setRules(invoiceSettings.vat_rules);
+      setIsDirty(false);
+    }
+  }, [invoiceSettings]);
 
   if (isLoading) {
     return <div className="text-gray-500 dark:text-gray-400 text-sm">Loading VAT rules...</div>;
@@ -430,12 +411,23 @@ function VatRulesTable({ conferenceId, isAdmin }: { conferenceId: string; isAdmi
             location.
           </p>
         </div>
-        {vatSaveStatus === 'saving' && (
-          <span className="text-xs text-gray-500 dark:text-gray-400">Saving...</span>
-        )}
-        {vatSaveStatus === 'saved' && (
-          <span className="text-xs text-green-600 dark:text-green-400">Saved</span>
-        )}
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <button
+              onClick={handleDiscardVat}
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Discard
+            </button>
+          )}
+          <button
+            onClick={handleSaveVat}
+            disabled={!isDirty || saveMutation.isPending || !isAdmin}
+            className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {saveMutation.isPending ? 'Saving...' : 'Save VAT Rules'}
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">

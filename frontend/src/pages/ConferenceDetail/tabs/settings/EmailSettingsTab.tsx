@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useContext } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -6,10 +6,12 @@ import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
 import type { Conference } from '../../../../types';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
+import { DirtyContext } from '../../DirtyContext';
 
 function EmailSettingsTab({ conference, isAdmin }: { conference: Conference; isAdmin: boolean }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const reportDirty = useContext(DirtyContext);
 
   const emailSendingEnabled = (conference.settings?.email_sending_enabled as boolean) ?? true;
   const savedHeader = (conference.settings?.email_header_html as string) || '';
@@ -17,14 +19,23 @@ function EmailSettingsTab({ conference, isAdmin }: { conference: Conference; isA
 
   const [headerHtml, setHeaderHtml] = useState(savedHeader);
   const [footerHtml, setFooterHtml] = useState(savedFooter);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
-  // Sync from server when conference data changes
+  // Sync from server when conference data changes (only when not dirty)
   useEffect(() => {
-    setHeaderHtml(savedHeader);
-    setFooterHtml(savedFooter);
-  }, [savedHeader, savedFooter]);
+    if (!isDirty) {
+      setHeaderHtml(savedHeader);
+      setFooterHtml(savedFooter);
+    }
+  }, [savedHeader, savedFooter, isDirty]);
 
+  // Report dirty state to parent for tab-switch guarding
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
+
+  // Toggle stays as immediate action (it's a switch, not a form field)
   const toggleEmailSending = useMutation({
     mutationFn: async () => {
       const newSettings = {
@@ -56,6 +67,7 @@ function EmailSettingsTab({ conference, isAdmin }: { conference: Conference; isA
       await api.put(`/conferences/${conference.id}`, { settings: newSettings });
     },
     onSuccess: () => {
+      setIsDirty(false);
       queryClient.invalidateQueries({
         queryKey: queryKeys.conferences.detail(conference.id),
       });
@@ -66,44 +78,61 @@ function EmailSettingsTab({ conference, isAdmin }: { conference: Conference; isA
     },
   });
 
-  const debouncedSave = useCallback(
-    (header: string, footer: string) => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        saveHeaderFooter.mutate({
-          email_header_html: header,
-          email_footer_html: footer,
-        });
-      }, 1000);
-    },
-    [saveHeaderFooter]
-  );
+  const handleHeaderChange = useCallback((html: string) => {
+    setHeaderHtml(html);
+    setIsDirty(true);
+  }, []);
 
-  const handleHeaderChange = useCallback(
-    (html: string) => {
-      setHeaderHtml(html);
-      debouncedSave(html, footerHtml);
-    },
-    [debouncedSave, footerHtml]
-  );
+  const handleFooterChange = useCallback((html: string) => {
+    setFooterHtml(html);
+    setIsDirty(true);
+  }, []);
 
-  const handleFooterChange = useCallback(
-    (html: string) => {
-      setFooterHtml(html);
-      debouncedSave(headerHtml, html);
-    },
-    [debouncedSave, headerHtml]
-  );
+  const handleSave = useCallback(() => {
+    saveHeaderFooter.mutate({
+      email_header_html: headerHtml,
+      email_footer_html: footerHtml,
+    });
+  }, [headerHtml, footerHtml, saveHeaderFooter]);
+
+  const handleDiscard = useCallback(() => {
+    setHeaderHtml(savedHeader);
+    setFooterHtml(savedFooter);
+    setIsDirty(false);
+  }, [savedHeader, savedFooter]);
 
   return (
     <div className="space-y-6">
       {/* Email Sending Toggle */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Email Settings</h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Control outgoing email notifications for this conference.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Email Settings
+              </h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Control outgoing email notifications and customize header/footer.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isDirty && (
+                <button
+                  onClick={handleDiscard}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Discard
+                </button>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={!isDirty || saveHeaderFooter.isPending || !isAdmin}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {saveHeaderFooter.isPending ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="p-6">

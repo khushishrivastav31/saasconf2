@@ -77,7 +77,7 @@ export const handbookCategories: HandbookCategory[] = [
 <li class="text-gray-700 dark:text-gray-300">Upload/replace/delete conference logo (JPEG, PNG, WebP, GIF; max 10 MB)</li>
 <li class="text-gray-700 dark:text-gray-300">View and copy auto-generated portal URLs</li>
 </ul>
-<p class="text-gray-700 dark:text-gray-300 my-2">All fields auto-save when you stop typing. A save indicator shows "Saving..." / "Saved" / "Save failed".</p>
+<p class="text-gray-700 dark:text-gray-300 my-2">Edit any field, then click <strong>Save Changes</strong> to persist. A <strong>Discard</strong> button appears when you have unsaved changes. Logo uploads/deletions save immediately. If you try to switch tabs with unsaved changes, a confirmation dialog will ask whether to stay or leave.</p>
 <strong>Dependencies:</strong> None — this is the starting point for any conference.
 <strong>Consequences:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
@@ -149,7 +149,7 @@ export const handbookCategories: HandbookCategory[] = [
         content: () => (
           <div
             dangerouslySetInnerHTML={{
-              __html: `<p class="text-gray-700 dark:text-gray-300 my-2">The Settings tab contains 5 groups of configuration sub-tabs. All settings auto-save.</p>
+              __html: `<p class="text-gray-700 dark:text-gray-300 my-2">The Settings tab contains 5 groups of configuration sub-tabs. All settings require an explicit <strong>Save Changes</strong> click. A <strong>Discard</strong> button appears when you have unsaved changes. Switching tabs with unsaved changes triggers a confirmation dialog. Some action-like controls (toggles, single selects) save immediately.</p>
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">1.4.1 People & Roles</h4>
 <h5 class="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-2 text-sm">User Roles</h5>
 <p class="text-gray-700 dark:text-gray-300 my-2">Define custom roles for categorizing conference participants (e.g., "Keynote", "Tutorial", "Social Event"). Each role can have members (CFP applicants) assigned to it.</p>
@@ -1392,7 +1392,7 @@ export const handbookCategories: HandbookCategory[] = [
 <li class="text-gray-700 dark:text-gray-300"><strong>Feature Requests</strong>: Submit via platform feedback form</li>
 </ul>
 <h4 class="font-medium text-gray-900 dark:text-gray-100 mt-5 mb-2">Unsaved Changes</h4>
-<p class="text-gray-700 dark:text-gray-300 my-2">When you have unsaved changes on a settings tab or portal form, the system will warn you before navigating away. A confirmation dialog asks whether to stay or leave. If you close the browser tab with unsaved changes, the browser will also show a native warning. Settings tabs that auto-save (e.g., Financial Settings, Email Settings) do not show this warning since changes are saved automatically.</p>`,
+<p class="text-gray-700 dark:text-gray-300 my-2">All forms across the platform use explicit save — changes are only persisted when you click <strong>Save Changes</strong>. When you have unsaved changes, a <strong>Discard</strong> button appears to revert to the last saved state. If you try to navigate away (switch tabs, close the panel, or leave the page) with unsaved changes, a confirmation dialog asks whether to stay or leave. On standalone pages like My Company, closing the browser tab with unsaved changes also triggers a native browser warning.</p>`,
             }}
           />
         ),

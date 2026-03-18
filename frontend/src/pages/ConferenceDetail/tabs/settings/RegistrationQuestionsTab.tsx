@@ -3,19 +3,19 @@
  *
  * Manages questions shown to portal users after their first login post-registration.
  * Question types: checkbox, text field, radio buttons, dropdown.
- * Auto-saves changes with debounce. Includes live preview of portal view.
+ * Explicit save with unsaved-changes guard. Includes live preview of portal view.
  */
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
-import { useSaveStatus } from '../../../../hooks/useSaveStatus';
 import type { Conference } from '../../../../types';
 import MiniRichTextEditor from '../../../../components/common/MiniRichTextEditor';
 import RichTextDisplay from '../../../../components/common/RichTextDisplay';
 import { stripHtml } from '../../../../utils/richText';
+import { DirtyContext } from '../../DirtyContext';
 
 interface RegistrationQuestion {
   id: string;
@@ -499,25 +499,6 @@ function QuestionCard({
   );
 }
 
-// --- Save Status Indicator ---
-
-function SaveStatusIndicator({ status }: { status: 'idle' | 'saving' | 'saved' | 'error' }) {
-  if (status === 'idle') return null;
-  return (
-    <span
-      className={`text-xs font-medium ${
-        status === 'saving'
-          ? 'text-gray-400 dark:text-gray-500'
-          : status === 'saved'
-            ? 'text-green-600 dark:text-green-400'
-            : 'text-red-600 dark:text-red-400'
-      }`}
-    >
-      {status === 'saving' ? 'Saving...' : status === 'saved' ? 'Saved' : 'Save failed'}
-    </span>
-  );
-}
-
 // --- Main Tab Component ---
 
 export default function RegistrationQuestionsTab({
@@ -526,7 +507,7 @@ export default function RegistrationQuestionsTab({
 }: RegistrationQuestionsTabProps) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
+  const reportDirty = useContext(DirtyContext);
   const [showPreview, setShowPreview] = useState(false);
 
   const settingsKey = [...queryKeys.conferences.detail(conference.id), 'registration-questions'];
@@ -557,16 +538,20 @@ export default function RegistrationQuestionsTab({
     questions: [],
   });
   const [isDirty, setIsDirty] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const localSettingsRef = useRef(localSettings);
-  localSettingsRef.current = localSettings;
 
+  // Sync server data to local state (only when not dirty)
   useEffect(() => {
-    if (settings) {
+    if (settings && !isDirty) {
       setLocalSettings(settings);
-      setIsDirty(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
+
+  // Report dirty state to parent for tab-switch guarding
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: RegistrationQuestionsSettings) => {
@@ -579,84 +564,63 @@ export default function RegistrationQuestionsTab({
     onSuccess: (data) => {
       queryClient.setQueryData(settingsKey, data);
       setIsDirty(false);
-      setSaved();
     },
     onError: (err) => {
-      setError();
       showToast(parseApiError(err, 'Failed to save'), 'error');
     },
   });
 
-  // Debounced auto-save
-  const triggerAutoSave = useCallback(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const current = localSettingsRef.current;
-      const validationError = validateSettings(current);
-      if (validationError) return; // Don't save invalid state
-      setSaving();
-      saveMutation.mutate(current);
-    }, 800);
-  }, [saveMutation, setSaving]);
+  const handleSave = useCallback(() => {
+    const validationError = validateSettings(localSettings);
+    if (validationError) {
+      showToast(validationError, 'error');
+      return;
+    }
+    saveMutation.mutate(localSettings);
+  }, [localSettings, saveMutation, showToast]);
 
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+  const handleDiscard = useCallback(() => {
+    if (settings) {
+      setLocalSettings(settings);
+      setIsDirty(false);
+    }
+  }, [settings]);
+
+  const updateSettings = useCallback((updates: Partial<RegistrationQuestionsSettings>) => {
+    setLocalSettings((prev) => ({ ...prev, ...updates }));
+    setIsDirty(true);
   }, []);
 
-  const updateSettings = useCallback(
-    (updates: Partial<RegistrationQuestionsSettings>) => {
-      setLocalSettings((prev) => ({ ...prev, ...updates }));
-      setIsDirty(true);
-      triggerAutoSave();
-    },
-    [triggerAutoSave]
-  );
+  const updateQuestion = useCallback((index: number, updated: RegistrationQuestion) => {
+    setLocalSettings((prev) => {
+      const questions = [...prev.questions];
+      questions[index] = updated;
+      return { ...prev, questions };
+    });
+    setIsDirty(true);
+  }, []);
 
-  const updateQuestion = useCallback(
-    (index: number, updated: RegistrationQuestion) => {
-      setLocalSettings((prev) => {
-        const questions = [...prev.questions];
-        questions[index] = updated;
-        return { ...prev, questions };
-      });
-      setIsDirty(true);
-      triggerAutoSave();
-    },
-    [triggerAutoSave]
-  );
+  const removeQuestion = useCallback((index: number) => {
+    setLocalSettings((prev) => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== index),
+    }));
+    setIsDirty(true);
+  }, []);
 
-  const removeQuestion = useCallback(
-    (index: number) => {
-      setLocalSettings((prev) => ({
+  const moveQuestion = useCallback((index: number, direction: -1 | 1) => {
+    setLocalSettings((prev) => {
+      const questions = [...prev.questions];
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= questions.length) return prev;
+      [questions[index], questions[newIndex]] = [questions[newIndex], questions[index]];
+      return {
         ...prev,
-        questions: prev.questions.filter((_, i) => i !== index),
-      }));
-      setIsDirty(true);
-      triggerAutoSave();
-    },
-    [triggerAutoSave]
-  );
-
-  const moveQuestion = useCallback(
-    (index: number, direction: -1 | 1) => {
-      setLocalSettings((prev) => {
-        const questions = [...prev.questions];
-        const newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= questions.length) return prev;
-        [questions[index], questions[newIndex]] = [questions[newIndex], questions[index]];
-        return {
-          ...prev,
-          questions: questions.map((q, i) => ({ ...q, sort_order: i })),
-        };
-      });
-      setIsDirty(true);
-      triggerAutoSave();
-    },
-    [triggerAutoSave]
-  );
+        questions: questions.map((q, i) => ({ ...q, sort_order: i })),
+      };
+    });
+    setIsDirty(true);
+  }, []);
 
   const addQuestion = useCallback(() => {
     setLocalSettings((prev) => ({
@@ -664,7 +628,6 @@ export default function RegistrationQuestionsTab({
       questions: [...prev.questions, createEmptyQuestion(prev.questions.length)],
     }));
     setIsDirty(true);
-    // Don't auto-save new empty question — it would fail validation
   }, []);
 
   if (isLoading) {
@@ -679,28 +642,41 @@ export default function RegistrationQuestionsTab({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Registration Questions
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Define questions shown to portal users after their first login. Changes are saved
-              automatically.
-            </p>
-          </div>
-          {(isDirty || saveStatus !== 'idle') && <SaveStatusIndicator status={saveStatus} />}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Registration Questions
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Define questions shown to portal users after their first login.
+          </p>
         </div>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={localSettings.enabled}
-            onChange={(e) => updateSettings({ enabled: e.target.checked })}
-            disabled={!isAdmin}
-            className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-          />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Enabled</span>
-        </label>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={localSettings.enabled}
+              onChange={(e) => updateSettings({ enabled: e.target.checked })}
+              disabled={!isAdmin}
+              className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Enabled</span>
+          </label>
+          {isDirty && (
+            <button
+              onClick={handleDiscard}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Discard
+            </button>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={!isDirty || saveMutation.isPending || !isAdmin}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </div>
 
       {localSettings.enabled && (

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback, useContext } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { COUNTRIES_BY_CONTINENT } from '../../../config/countries';
@@ -7,13 +7,37 @@ import {
   resolveTimezoneValue,
   COUNTRY_DEFAULT_TIMEZONE,
 } from '../../../config/timezones';
-import { useSaveStatus } from '../../../hooks/useSaveStatus';
 import type { Conference, ConferenceUpdate } from '../../../types';
 import RichTextEditor from '../../../components/common/RichTextEditor';
 import ConferenceLogo from '../../../components/ConferenceLogo';
 import { parseApiError } from '../../../utils/apiError';
 import { validateEmail, validatePhone, normalizeUrl } from '../../../utils/validators';
 import { useToast } from '../../../components/Toast';
+import { DirtyContext } from '../DirtyContext';
+
+function buildFormData(conference: Conference): ConferenceUpdate {
+  return {
+    name: conference.name,
+    abbreviation: conference.abbreviation || '',
+    description: conference.description || '',
+    website: conference.website || '',
+    support_email: conference.support_email || '',
+    contact_email: conference.contact_email || '',
+    phone: conference.phone || '',
+    start_date: conference.start_date || '',
+    end_date: conference.end_date || '',
+    venue_name: conference.venue_name || '',
+    venue_address: conference.venue_address || '',
+    city: conference.city || '',
+    state: conference.state || '',
+    postal_code: conference.postal_code || '',
+    country: conference.country || '',
+    timezone: resolveTimezoneValue(conference.timezone || ''),
+    venue_type: conference.venue_type,
+    venue_url: conference.venue_url || '',
+    virtual_platform_url: conference.virtual_platform_url || '',
+  };
+}
 
 function PortalUrlField({ tenantSlug, path }: { tenantSlug: string; path: string }) {
   const [copied, setCopied] = useState(false);
@@ -113,34 +137,25 @@ function ConferenceDetailsTab({
   onUpdate: () => void;
   isAdmin: boolean;
 }) {
-  const [formData, setFormData] = useState<ConferenceUpdate>({
-    name: conference.name,
-    abbreviation: conference.abbreviation || '',
-    description: conference.description || '',
-    website: conference.website || '',
-    support_email: conference.support_email || '',
-    contact_email: conference.contact_email || '',
-    phone: conference.phone || '',
-    start_date: conference.start_date || '',
-    end_date: conference.end_date || '',
-    venue_name: conference.venue_name || '',
-    venue_address: conference.venue_address || '',
-    city: conference.city || '',
-    state: conference.state || '',
-    postal_code: conference.postal_code || '',
-    country: conference.country || '',
-    timezone: resolveTimezoneValue(conference.timezone || ''),
-    venue_type: conference.venue_type,
-    venue_url: conference.venue_url || '',
-    virtual_platform_url: conference.virtual_platform_url || '',
-  });
+  const reportDirty = useContext(DirtyContext);
+  const [formData, setFormData] = useState<ConferenceUpdate>(buildFormData(conference));
+  const [isDirty, setIsDirty] = useState(false);
 
   const { showToast } = useToast();
-  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
   const [emailErrors, setEmailErrors] = useState<Record<string, string | null>>({});
-  const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
-    null
-  );
+
+  // Sync from server when conference changes (only when not dirty)
+  useEffect(() => {
+    if (!isDirty) {
+      setFormData(buildFormData(conference));
+    }
+  }, [conference, isDirty]);
+
+  // Report dirty state to parent for tab-switch guarding
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: ConferenceUpdate) => {
@@ -150,13 +165,11 @@ function ConferenceDetailsTab({
       };
       await api.put(`/conferences/${conference.id}`, payload);
     },
-    onMutate: () => setSaving(),
     onSuccess: () => {
-      setSaved();
+      setIsDirty(false);
       onUpdate();
     },
     onError: (err) => {
-      setSaveError();
       showToast(parseApiError(err), 'error');
     },
   });
@@ -168,9 +181,9 @@ function ConferenceDetailsTab({
 
   const uploadLogoMutation = useMutation({
     mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await api.post(`/conferences/${conference.id}/logo`, formData, {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api.post(`/conferences/${conference.id}/logo`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       return res.data;
@@ -214,102 +227,114 @@ function ConferenceDetailsTab({
     if (file) {
       uploadLogoMutation.mutate(file);
     }
-    // Reset input so the same file can be selected again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const handleFieldChange = (
-    field: keyof ConferenceUpdate,
-    value: string | boolean | number | undefined
-  ) => {
-    const newFormData = { ...formData, [field]: value };
-    setFormData(newFormData);
+  const handleFieldChange = useCallback(
+    (field: keyof ConferenceUpdate, value: string | boolean | number | undefined) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+      setIsDirty(true);
 
-    // Clear validation error on change if the user is fixing it
-    if ((field === 'support_email' || field === 'contact_email') && emailErrors[field]) {
-      const error = validateEmail(value as string);
-      setEmailErrors((prev) => ({ ...prev, [field]: error }));
-      if (error) return; // Don't auto-save while email is still invalid
-    }
-    if (field === 'phone') {
-      if (emailErrors.phone) {
+      // Clear validation error on change if the user is fixing it
+      if ((field === 'support_email' || field === 'contact_email') && emailErrors[field]) {
+        setEmailErrors((prev) => ({ ...prev, [field]: validateEmail(value as string) }));
+      }
+      if (field === 'phone' && emailErrors.phone) {
         setEmailErrors((prev) => ({ ...prev, phone: null }));
       }
-      // Don't auto-save while typing a phone number — wait for blur
-      if (value && validatePhone(value as string)) return;
+    },
+    [emailErrors]
+  );
+
+  const handleCountryChange = useCallback((country: string) => {
+    setFormData((prev) => {
+      const updated = { ...prev, country };
+      // Auto-suggest timezone when country changes and timezone is empty
+      if (country && !prev.timezone) {
+        const defaultTz = COUNTRY_DEFAULT_TIMEZONE[country];
+        if (defaultTz) {
+          updated.timezone = defaultTz;
+        }
+      }
+      return updated;
+    });
+    setIsDirty(true);
+  }, []);
+
+  const handleStartDateChange = useCallback((newStart: string) => {
+    setFormData((prev) => {
+      const adjustEnd = prev.end_date && newStart && prev.end_date < newStart;
+      return {
+        ...prev,
+        start_date: newStart,
+        ...(adjustEnd ? { end_date: newStart } : {}),
+      };
+    });
+    setIsDirty(true);
+  }, []);
+
+  const handleSave = useCallback(() => {
+    // Validate emails before saving
+    const supportError = formData.support_email
+      ? validateEmail(formData.support_email as string)
+      : null;
+    const contactError = formData.contact_email
+      ? validateEmail(formData.contact_email as string)
+      : null;
+    const phoneError = formData.phone ? validatePhone(formData.phone as string) : null;
+
+    if (supportError || contactError || phoneError) {
+      setEmailErrors({
+        support_email: supportError,
+        contact_email: contactError,
+        phone: phoneError,
+      });
+      showToast('Please fix validation errors before saving', 'error');
+      return;
     }
 
-    // Don't auto-save if any email field has a validation error
-    const hasEmailError = emailErrors.support_email || emailErrors.contact_email;
-    if (hasEmailError) return;
+    // Normalize URLs before saving
+    const normalized = {
+      ...formData,
+      venue_url: formData.venue_url ? normalizeUrl(formData.venue_url as string) : '',
+      virtual_platform_url: formData.virtual_platform_url
+        ? normalizeUrl(formData.virtual_platform_url as string)
+        : '',
+    };
+    setFormData(normalized);
+    updateMutation.mutate(normalized);
+  }, [formData, updateMutation, showToast]);
 
-    if (debounceTimeout) clearTimeout(debounceTimeout);
-
-    const timeout = setTimeout(() => {
-      updateMutation.mutate(newFormData);
-    }, 500);
-    setDebounceTimeout(timeout);
-  };
+  const handleDiscard = useCallback(() => {
+    setFormData(buildFormData(conference));
+    setIsDirty(false);
+    setEmailErrors({});
+  }, [conference]);
 
   return (
     <div>
-      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
-        Conference Details
-      </h4>
-
-      {/* Floating save status indicator */}
-      {saveStatus !== 'idle' && (
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 animate-fade-in">
-          {saveStatus === 'saving' && (
-            <span className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-lg">
-              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Saving...
-            </span>
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Conference Details</h4>
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <button
+              onClick={handleDiscard}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Discard
+            </button>
           )}
-          {saveStatus === 'saved' && (
-            <span className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-800 rounded-full shadow-lg">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Saved
-            </span>
-          )}
-          {saveStatus === 'error' && (
-            <span className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-full shadow-lg">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-              Save failed
-            </span>
-          )}
+          <button
+            onClick={handleSave}
+            disabled={!isDirty || updateMutation.isPending || !isAdmin}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
-      )}
+      </div>
 
       <div className="space-y-4">
         {/* Logo */}
@@ -485,21 +510,7 @@ function ConferenceDetailsTab({
               type="date"
               className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={formData.start_date}
-              onChange={(e) => {
-                const newStart = e.target.value;
-                const adjustEnd = formData.end_date && newStart && formData.end_date < newStart;
-                const newFormData = {
-                  ...formData,
-                  start_date: newStart,
-                  ...(adjustEnd ? { end_date: newStart } : {}),
-                };
-                setFormData(newFormData);
-                if (debounceTimeout) clearTimeout(debounceTimeout);
-                const timeout = setTimeout(() => {
-                  updateMutation.mutate(newFormData);
-                }, 500);
-                setDebounceTimeout(timeout);
-              }}
+              onChange={(e) => handleStartDateChange(e.target.value)}
               disabled={!isAdmin}
             />
           </div>
@@ -651,10 +662,6 @@ function ConferenceDetailsTab({
                 onBlur={(e) => {
                   const phoneError = validatePhone(e.target.value);
                   setEmailErrors((prev) => ({ ...prev, phone: phoneError }));
-                  // Save on blur if phone is valid (auto-save was skipped during typing)
-                  if (!phoneError) {
-                    updateMutation.mutate({ ...formData, phone: e.target.value });
-                  }
                 }}
                 disabled={!isAdmin}
               />
@@ -739,23 +746,7 @@ function ConferenceDetailsTab({
                 <select
                   className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={formData.country}
-                  onChange={(e) => {
-                    const country = e.target.value;
-                    const newFormData = { ...formData, country };
-                    // Auto-suggest timezone when country changes and timezone is empty
-                    if (country && !formData.timezone) {
-                      const defaultTz = COUNTRY_DEFAULT_TIMEZONE[country];
-                      if (defaultTz) {
-                        newFormData.timezone = defaultTz;
-                      }
-                    }
-                    setFormData(newFormData);
-                    if (debounceTimeout) clearTimeout(debounceTimeout);
-                    const timeout = setTimeout(() => {
-                      updateMutation.mutate(newFormData);
-                    }, 500);
-                    setDebounceTimeout(timeout);
-                  }}
+                  onChange={(e) => handleCountryChange(e.target.value)}
                   disabled={!isAdmin}
                 >
                   <option value="">Select a country...</option>

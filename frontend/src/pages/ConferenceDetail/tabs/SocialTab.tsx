@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import api from '../../../config/api';
 import type { Conference, SocialLinks } from '../../../types';
 import { CONFERENCE_SOCIAL_PLATFORMS } from '../../../config/socialPlatforms';
-import { useSaveStatus } from '../../../hooks/useSaveStatus';
+import { DirtyContext } from '../DirtyContext';
 
 function ConferenceSocialTab({
   conference,
@@ -14,59 +14,69 @@ function ConferenceSocialTab({
   onUpdate: () => void;
   isAdmin: boolean;
 }) {
+  const reportDirty = useContext(DirtyContext);
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(conference.social_links || {});
-  const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
-  const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
-    null
-  );
+  const [isDirty, setIsDirty] = useState(false);
   const [addPlatform, setAddPlatform] = useState('');
   const [customPlatformName, setCustomPlatformName] = useState('');
+
+  // Sync server data when not dirty
+  useEffect(() => {
+    if (!isDirty) {
+      setSocialLinks(conference.social_links || {});
+    }
+  }, [conference.social_links, isDirty]);
+
+  // Report dirty state to parent for tab-switch guarding
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
 
   const updateMutation = useMutation({
     mutationFn: async (links: SocialLinks) => {
       await api.put(`/conferences/${conference.id}`, { social_links: links });
     },
-    onMutate: () => setSaving(),
     onSuccess: () => {
-      setSaved();
+      setIsDirty(false);
       onUpdate();
-    },
-    onError: () => {
-      setError();
     },
   });
 
-  const saveLinks = (newLinks: SocialLinks) => {
-    setSocialLinks(newLinks);
-    if (debounceTimeout) clearTimeout(debounceTimeout);
-    const timeout = setTimeout(() => {
-      updateMutation.mutate(newLinks);
-    }, 500);
-    setDebounceTimeout(timeout);
-  };
+  const handleLinkChange = useCallback((platform: string, value: string) => {
+    setSocialLinks((prev) => ({ ...prev, [platform]: value || undefined }));
+    setIsDirty(true);
+  }, []);
 
-  const handleLinkChange = (platform: string, value: string) => {
-    saveLinks({ ...socialLinks, [platform]: value || undefined });
-  };
+  const handleDelete = useCallback((platform: string) => {
+    setSocialLinks((prev) => {
+      const newLinks = { ...prev };
+      delete newLinks[platform];
+      return newLinks;
+    });
+    setIsDirty(true);
+  }, []);
 
-  const handleDelete = (platform: string) => {
-    const newLinks = { ...socialLinks };
-    delete newLinks[platform];
-    setSocialLinks(newLinks);
-    updateMutation.mutate(newLinks);
-  };
-
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     const key =
       addPlatform === '__custom__'
         ? customPlatformName.trim().toLowerCase().replace(/\s+/g, '_')
         : addPlatform;
     if (!key || socialLinks[key] !== undefined) return;
-    const newLinks = { ...socialLinks, [key]: '' };
-    setSocialLinks(newLinks);
+    setSocialLinks((prev) => ({ ...prev, [key]: '' }));
     setAddPlatform('');
     setCustomPlatformName('');
-  };
+    setIsDirty(true);
+  }, [addPlatform, customPlatformName, socialLinks]);
+
+  const handleSave = useCallback(() => {
+    updateMutation.mutate(socialLinks);
+  }, [socialLinks, updateMutation]);
+
+  const handleDiscard = useCallback(() => {
+    setSocialLinks(conference.social_links || {});
+    setIsDirty(false);
+  }, [conference.social_links]);
 
   // Build the list of active entries: known platforms + any custom keys
   const knownKeys = new Set(CONFERENCE_SOCIAL_PLATFORMS.map((p) => p.key as string));
@@ -100,52 +110,21 @@ function ConferenceSocialTab({
         <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Social Media Links</h4>
         {isAdmin && (
           <div className="flex items-center gap-2">
-            {saveStatus === 'saving' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md">
-                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Saving...
-              </span>
+            {isDirty && (
+              <button
+                onClick={handleDiscard}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Discard
+              </button>
             )}
-            {saveStatus === 'saved' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-md">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                Saved
-              </span>
-            )}
-            {saveStatus === 'error' && (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-md">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                Save failed
-              </span>
-            )}
+            <button
+              onClick={handleSave}
+              disabled={!isDirty || updateMutation.isPending}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
         )}
       </div>

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import type { Conference, PaymentReminderSettings } from '../../../../types/conference';
-import { useSaveStatus } from '../../../../hooks/useSaveStatus';
+import { DirtyContext } from '../../DirtyContext';
 
 interface Props {
   conference: Conference;
@@ -19,8 +19,7 @@ const DEFAULTS: PaymentReminderSettings = {
 
 export default function PaymentReminderSettingsTab({ conference, isAdmin }: Props) {
   const queryClient = useQueryClient();
-  const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
-  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const reportDirty = useContext(DirtyContext);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: queryKeys.paymentReminders.settings(conference.id),
@@ -34,49 +33,52 @@ export default function PaymentReminderSettingsTab({ conference, isAdmin }: Prop
   });
 
   const [form, setForm] = useState<PaymentReminderSettings>(DEFAULTS);
+  const [isDirty, setIsDirty] = useState(false);
 
+  // Sync server data when not dirty
   useEffect(() => {
-    if (settings) {
+    if (settings && !isDirty) {
       setForm(settings);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
+
+  // Report dirty state to parent for tab-switch guarding
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
 
   const mutation = useMutation({
     mutationFn: async (data: PaymentReminderSettings) => {
       await api.put(`/conferences/${conference.id}/settings/payment-reminder-settings`, data);
     },
     onSuccess: () => {
-      setSaved();
+      setIsDirty(false);
       queryClient.invalidateQueries({
         queryKey: queryKeys.paymentReminders.settings(conference.id),
       });
     },
-    onError: () => {
-      setError();
-    },
   });
-
-  const debouncedSave = useCallback(
-    (data: PaymentReminderSettings) => {
-      setSaving();
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        mutation.mutate(data);
-      }, 800);
-    },
-    [mutation, setSaving]
-  );
 
   const updateField = useCallback(
     <K extends keyof PaymentReminderSettings>(key: K, value: PaymentReminderSettings[K]) => {
-      setForm((prev) => {
-        const next = { ...prev, [key]: value };
-        debouncedSave(next);
-        return next;
-      });
+      setForm((prev) => ({ ...prev, [key]: value }));
+      setIsDirty(true);
     },
-    [debouncedSave]
+    []
   );
+
+  const handleSave = useCallback(() => {
+    mutation.mutate(form);
+  }, [form, mutation]);
+
+  const handleDiscard = useCallback(() => {
+    if (settings) {
+      setForm(settings);
+      setIsDirty(false);
+    }
+  }, [settings]);
 
   if (isLoading) {
     return (
@@ -97,15 +99,23 @@ export default function PaymentReminderSettingsTab({ conference, isAdmin }: Prop
             Configure automatic payment reminders for overdue invoices.
           </p>
         </div>
-        {saveStatus === 'saving' && (
-          <span className="text-xs text-gray-500 dark:text-gray-400">Saving...</span>
-        )}
-        {saveStatus === 'saved' && (
-          <span className="text-xs text-green-600 dark:text-green-400">Saved</span>
-        )}
-        {saveStatus === 'error' && (
-          <span className="text-xs text-red-600 dark:text-red-400">Save failed</span>
-        )}
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <button
+              onClick={handleDiscard}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Discard
+            </button>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={!isDirty || mutation.isPending || !isAdmin}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {mutation.isPending ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 space-y-6">

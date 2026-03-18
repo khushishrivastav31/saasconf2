@@ -8,7 +8,7 @@
  * - Color theme customization
  * - Portal URL display
  */
-import { useState, useRef } from 'react';
+import { useState, useRef, useContext, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -16,6 +16,7 @@ import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
 import ConferenceLogo from '../../../../components/ConferenceLogo';
 import type { Conference } from '../../../../types';
+import { DirtyContext } from '../../DirtyContext';
 
 interface PortalCustomizationTabProps {
   conference: Conference;
@@ -256,6 +257,19 @@ You'll be able to view your registration details, download your ticket, and acce
   };
 
   const hasThemeChanges = JSON.stringify(theme) !== JSON.stringify(currentTheme);
+  const hasSuccessMessageChanges =
+    successMessage !== (portalSettings.success_message || defaultSuccessMessage);
+  const hasDateChanges =
+    registrationStartDate !== (portalSettings.registration_start_date || '') ||
+    registrationEndDate !== (portalSettings.registration_end_date || '');
+
+  const isDirty = hasThemeChanges || hasSuccessMessageChanges || hasDateChanges;
+
+  const reportDirty = useContext(DirtyContext);
+  useEffect(() => {
+    reportDirty(isDirty);
+    return () => reportDirty(false);
+  }, [isDirty, reportDirty]);
 
   return (
     <div className="space-y-6">

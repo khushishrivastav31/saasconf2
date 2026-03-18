@@ -1,13 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 import ConfirmDialog from '../components/ConfirmDialog';
+import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import RichTextEditor from '../components/common/RichTextEditor';
 import { validatePhone, validateEmail } from '../utils/validators';
 import { COUNTRIES_BY_CONTINENT } from '../config/countries';
 import VatNumberInput from '../components/common/VatNumberInput';
 import { parseApiError } from '../utils/apiError';
-import { useSaveStatus } from '../hooks/useSaveStatus';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 import { useToast } from '../components/Toast';
 import type { Tenant, TenantUpdate, ContactPerson } from '../types';
 
@@ -123,18 +124,24 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
     }
   };
 
-  const [formData, setFormData] = useState<TenantUpdate>({
-    name: tenant.name,
-    address: tenant.address || '',
-    postal_code: tenant.postal_code || '',
-    city: tenant.city || '',
-    country: tenant.country || '',
-    phone: tenant.phone || '',
-    vat_number: tenant.vat_number || '',
-    website: tenant.website || '',
-    contact_persons: tenant.contact_persons || [],
-    comments: tenant.comments || '',
-  });
+  const buildInitialFormData = useCallback(
+    (): TenantUpdate => ({
+      name: tenant.name,
+      address: tenant.address || '',
+      postal_code: tenant.postal_code || '',
+      city: tenant.city || '',
+      country: tenant.country || '',
+      phone: tenant.phone || '',
+      vat_number: tenant.vat_number || '',
+      website: tenant.website || '',
+      contact_persons: tenant.contact_persons || [],
+      comments: tenant.comments || '',
+    }),
+    [tenant]
+  );
+
+  const [formData, setFormData] = useState<TenantUpdate>(buildInitialFormData);
+  const [isDirty, setIsDirty] = useState(false);
 
   const [newContact, setNewContact] = useState<ContactPerson>({
     first_name: '',
@@ -145,48 +152,46 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
   });
 
   const { showToast } = useToast();
-  const { saveStatus, setSaving, setSaved, setError } = useSaveStatus();
+  const { showDialog, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
   const updateMutation = useMutation({
     mutationFn: async (data: TenantUpdate) => {
       await api.put('/my-company', data);
     },
-    onMutate: () => {
-      setSaving();
-    },
     onSuccess: () => {
-      setSaved();
+      setIsDirty(false);
       onUpdate();
+      showToast('Company details saved', 'success');
     },
     onError: (err) => {
-      setError();
       showToast(parseApiError(err), 'error');
     },
   });
 
-  // Auto-save when form data changes (with debounce)
-  const [debounceTimeout, setDebounceTimeout] = useState<ReturnType<typeof setTimeout> | null>(
-    null
-  );
-
   const handleFieldChange = (field: keyof TenantUpdate, value: string | undefined) => {
-    const newFormData = { ...formData, [field]: value };
-    setFormData(newFormData);
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+  };
 
-    // Don't auto-save while typing a phone number — wait for blur
-    if (field === 'phone' && value && validatePhone(value)) return;
-
-    if (debounceTimeout) {
-      clearTimeout(debounceTimeout);
+  const handleSave = useCallback(() => {
+    // Validate phone before saving
+    if (formData.phone) {
+      const phoneError = validatePhone(formData.phone);
+      if (phoneError) {
+        showToast(phoneError, 'error');
+        return;
+      }
     }
 
-    // Exclude contact_persons from auto-save — they're saved explicitly via add/remove/update
-    const { contact_persons: _, ...payload } = newFormData;
-    const timeout = setTimeout(() => {
-      updateMutation.mutate(payload as TenantUpdate);
-    }, 500);
-    setDebounceTimeout(timeout);
-  };
+    // Exclude contact_persons from this save — they're saved explicitly via add/remove/update
+    const { contact_persons: _, ...payload } = formData;
+    updateMutation.mutate(payload as TenantUpdate);
+  }, [formData, updateMutation, showToast]);
+
+  const handleDiscard = useCallback(() => {
+    setFormData(buildInitialFormData());
+    setIsDirty(false);
+  }, [buildInitialFormData]);
 
   const addContact = () => {
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
@@ -228,52 +233,21 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
       <div className="flex justify-between items-center mb-4">
         <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Company Details</h4>
         <div className="flex items-center gap-2">
-          {saveStatus === 'saving' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md">
-              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Saving...
-            </span>
+          {isDirty && (
+            <button
+              onClick={handleDiscard}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Discard
+            </button>
           )}
-          {saveStatus === 'saved' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-md">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Saved
-            </span>
-          )}
-          {saveStatus === 'error' && (
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-md">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-              Save failed
-            </span>
-          )}
+          <button
+            onClick={handleSave}
+            disabled={!isDirty || updateMutation.isPending}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
       </div>
 
@@ -461,13 +435,6 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
               className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
               value={formData.phone || ''}
               onChange={(e) => handleFieldChange('phone', e.target.value)}
-              onBlur={(e) => {
-                const phoneError = validatePhone(e.target.value);
-                if (!phoneError) {
-                  const { contact_persons: _, ...payload } = { ...formData, phone: e.target.value };
-                  updateMutation.mutate(payload as TenantUpdate);
-                }
-              }}
             />
           </div>
           <VatNumberInput
@@ -850,6 +817,8 @@ function CompanyForm({ tenant, onUpdate }: { tenant: Tenant; onUpdate: () => voi
         }}
         onCancel={() => setDeleteContactIndex(null)}
       />
+
+      <UnsavedChangesDialog open={showDialog} onConfirm={confirmLeave} onCancel={cancelLeave} />
     </div>
   );
 }

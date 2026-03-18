@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import FinancialSettingsTab from '../FinancialSettingsTab';
 import type { Conference } from '../../../../../types';
@@ -167,7 +167,7 @@ describe('FinancialSettingsTab', () => {
     expect(screen.queryByText('Save failed')).not.toBeInTheDocument();
   });
 
-  it('triggers auto-save on currency change after debounce', async () => {
+  it('saves currency on explicit Save Changes click', async () => {
     mockedApi.put.mockResolvedValue({ data: {} });
 
     render(<FinancialSettingsTab conference={mockConference} isAdmin={true} />, {
@@ -179,18 +179,15 @@ describe('FinancialSettingsTab', () => {
       expect(screen.getAllByText('GBP — British Pound')).toHaveLength(2);
     });
 
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-
     const selects = screen.getAllByRole('combobox');
     fireEvent.change(selects[0], { target: { value: 'GBP' } });
 
-    // Should not have called API yet (debounce)
+    // Should not have called API yet (no autosave)
     expect(mockedApi.put).not.toHaveBeenCalled();
 
-    // Advance past debounce (500ms)
-    await act(async () => {
-      vi.advanceTimersByTime(500);
-    });
+    // Click Save Changes button
+    const saveButton = screen.getByRole('button', { name: /save changes/i });
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(mockedApi.put).toHaveBeenCalledWith(
@@ -198,12 +195,9 @@ describe('FinancialSettingsTab', () => {
         expect.objectContaining({ currency: 'GBP' })
       );
     });
-
-    vi.useRealTimers();
   });
 
   it('shows error toast on save failure', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     mockedApi.put.mockRejectedValue({
       response: { data: { detail: 'Invalid currency code' } },
     });
@@ -212,18 +206,21 @@ describe('FinancialSettingsTab', () => {
       wrapper: createWrapper(),
     });
 
+    // Wait for currency options to load
+    await waitFor(() => {
+      expect(screen.getAllByText('GBP — British Pound')).toHaveLength(2);
+    });
+
     const selects = screen.getAllByRole('combobox');
     fireEvent.change(selects[0], { target: { value: 'XXX' } });
 
-    await act(async () => {
-      vi.advanceTimersByTime(500);
-    });
+    // Click Save Changes button
+    const saveButton = screen.getByRole('button', { name: /save changes/i });
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith('Invalid currency code', 'error');
     });
-
-    vi.useRealTimers();
   });
 
   it('shows placeholder options for empty currency', () => {
