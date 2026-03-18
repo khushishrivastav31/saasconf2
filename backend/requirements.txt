@@ -51,7 +51,7 @@ pluggy==1.6.0
 prometheus-fastapi-instrumentator==7.1.0
 prometheus_client==0.24.1
 psycopg2-binary==2.9.11
-pyasn1==0.6.2
+pyasn1==0.6.3
 pycountry==26.2.16
 pycparser==3.0
 pydantic==2.12.5
