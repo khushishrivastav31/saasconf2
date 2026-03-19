@@ -165,23 +165,53 @@ export default function RichTextEditor({
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
     }
+    try {
+      const parsed = new URL(url);
+      if (!['https:', 'http:', 'mailto:'].includes(parsed.protocol)) {
+        alert('Only https, http, and mailto links are allowed.');
+        return;
+      }
+    } catch {
+      alert('Please enter a valid URL (e.g. https://example.com).');
+      return;
+    }
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   }, [editor]);
 
   const addImage = useCallback(() => {
     if (!editor) return;
     const url = window.prompt('Image URL', 'https://');
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
+    if (!url) return;
+    try {
+      const parsed = new URL(url);
+      if (!['https:', 'http:'].includes(parsed.protocol)) {
+        alert('Only https and http image URLs are allowed.');
+        return;
+      }
+    } catch {
+      alert('Please enter a valid image URL (e.g. https://example.com/image.jpg).');
+      return;
     }
+    editor.chain().focus().setImage({ src: url }).run();
   }, [editor]);
 
   const addYoutubeVideo = useCallback(() => {
     if (!editor) return;
     const url = window.prompt('YouTube URL', 'https://www.youtube.com/watch?v=');
-    if (url) {
-      editor.commands.setYoutubeVideo({ src: url });
+    if (!url) return;
+    try {
+      const parsed = new URL(url);
+      if (
+        !['www.youtube.com', 'youtube.com', 'youtu.be', 'm.youtube.com'].includes(parsed.hostname)
+      ) {
+        alert('Please enter a valid YouTube URL.');
+        return;
+      }
+    } catch {
+      alert('Please enter a valid YouTube URL.');
+      return;
     }
+    editor.commands.setYoutubeVideo({ src: url });
   }, [editor]);
 
   const insertTable = useCallback(() => {

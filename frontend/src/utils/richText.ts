@@ -20,7 +20,12 @@ export function stripHtml(html: string): string {
 /**
  * Sanitizes HTML for safe rendering via dangerouslySetInnerHTML.
  * Preserves inline styles (needed for rich text color/highlight from tiptap).
+ * Blocks dangerous URI schemes (javascript:, vbscript:, data: except images).
  */
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, { ADD_ATTR: ['style'] });
+  return DOMPurify.sanitize(html, {
+    ADD_ATTR: ['style'],
+    ALLOWED_URI_REGEXP:
+      /^(?:(?:https?|mailto):|data:image\/(?:png|jpeg|jpg|gif|webp|bmp);base64,)/i,
+  });
 }
