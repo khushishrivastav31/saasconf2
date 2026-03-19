@@ -2,6 +2,7 @@
 
 from uuid import UUID
 
+from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep
 from app.core.exceptions import AuthorizationError
 from app.models.invoice import Invoice
@@ -13,8 +14,14 @@ async def require_invoice_admin(
     current_user: CurrentUserDep,
     conference_id: UUID,
 ) -> None:
-    """Check admin access: super admin, tenant admin, OR conference-specific admin."""
+    """Check admin access: super admin, tenant admin, OR conference-specific admin.
+
+    Validates conference exists and belongs to the user's tenant (raises 404 if not).
+    """
     from app.core.dependencies import check_conference_admin_access
+
+    # Validate conference exists and belongs to tenant (raises 404 if not found)
+    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
 
     # Super admins and tenant admins have automatic access
     if current_user.is_super_admin or current_user.is_tenant_admin:

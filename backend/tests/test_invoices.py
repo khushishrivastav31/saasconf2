@@ -1800,8 +1800,8 @@ async def test_pdf_download_requires_authorization(
     url = _invoices_url(conference.id, f"{sample_invoice.id}/pdf")
     response = await client.get(url, headers=auth_headers(non_admin_token))
 
-    # Should be forbidden (403) - user is not admin for this conference's tenant
-    assert response.status_code == 403
+    # Cross-tenant access returns 404 (don't leak conference existence)
+    assert response.status_code == 404
 
 
 async def test_pdf_preview_requires_authorization(
@@ -1840,7 +1840,8 @@ async def test_pdf_preview_requires_authorization(
     url = _invoices_url(conference.id, f"{sample_invoice.id}/preview-pdf")
     response = await client.post(url, headers=auth_headers(non_admin_token))
 
-    assert response.status_code == 403
+    # Cross-tenant access returns 404 (don't leak conference existence)
+    assert response.status_code == 404
 
 
 async def test_zugferd_validation_requires_authorization(
@@ -1879,7 +1880,8 @@ async def test_zugferd_validation_requires_authorization(
     url = _invoices_url(conference.id, f"{sample_invoice.id}/validate-zugferd")
     response = await client.post(url, headers=auth_headers(non_admin_token))
 
-    assert response.status_code == 403
+    # Cross-tenant access returns 404 (don't leak conference existence)
+    assert response.status_code == 404
 
 
 async def test_debug_stripe_search_requires_authorization(
@@ -1918,4 +1920,5 @@ async def test_debug_stripe_search_requires_authorization(
     url = _invoices_url(conference.id, f"{sample_invoice.id}/debug-stripe-search")
     response = await client.get(url, headers=auth_headers(non_admin_token))
 
-    assert response.status_code == 403
+    # Cross-tenant access returns 404 (don't leak conference existence)
+    assert response.status_code == 404
