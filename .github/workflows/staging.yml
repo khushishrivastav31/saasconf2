@@ -479,6 +479,35 @@ jobs:
         working-directory: frontend
         run: mkdir -p playwright/.auth
 
+      - name: Wait for staging to be ready
+        run: |
+          echo "Waiting for staging API to become ready..."
+          for i in $(seq 1 30); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' https://api.staging.sonrisa.ventures/health/ready || true)
+            if [ "$status" = "200" ]; then
+              echo "Staging API is ready (attempt $i)"
+              break
+            fi
+            echo "Attempt $i/30: API returned $status, waiting 10s..."
+            sleep 10
+          done
+          # Final check
+          curl -sf https://api.staging.sonrisa.ventures/health/ready || (echo "API not ready after 5 minutes" && exit 1)
+
+      - name: Wait for staging frontend
+        run: |
+          echo "Waiting for staging frontend..."
+          for i in $(seq 1 30); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' https://staging.sonrisa.ventures || true)
+            if [ "$status" = "200" ]; then
+              echo "Frontend is ready (attempt $i)"
+              break
+            fi
+            echo "Attempt $i/30: frontend returned $status, waiting 10s..."
+            sleep 10
+          done
+          curl -sf https://staging.sonrisa.ventures || (echo "Frontend not ready after 5 minutes" && exit 1)
+
       - name: Seed E2E test data
         working-directory: frontend
         env:
