@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, get_client_ip, require_module
-from app.core.exceptions import AuthorizationError
 from app.core.invoice_audit import create_invoice_audit_log
 from app.core.invoice_email import (
     send_invoice_email,
@@ -35,25 +34,12 @@ from app.schemas.invoice import (
 from app.services.invoice_service import prepare_invoice_for_sending
 
 from ._helpers import build_invoice_response
+from ._helpers import require_invoice_admin as _require_invoice_admin
 
 MODULE_CODE = "invoices"
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-async def _require_invoice_admin(db: DbSessionDep, current_user: CurrentUserDep, conference_id: UUID) -> None:
-    """Check admin access: super admin, tenant admin, OR conference-specific admin."""
-    # Super admins and tenant admins have automatic access
-    if current_user.is_super_admin or current_user.is_tenant_admin:
-        return
-
-    # For regular users, check conference-specific admin access
-    from app.core.dependencies import check_conference_admin_access
-
-    has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-    if not has_access:
-        raise AuthorizationError("Admin access to this conference required")
 
 
 @router.post("/{invoice_id}/send", response_model=InvoiceResponse, dependencies=[Depends(require_module(MODULE_CODE))])

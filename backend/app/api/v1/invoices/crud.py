@@ -35,41 +35,12 @@ from app.schemas.vat_rate import VatPreviewRequest, VatPreviewResponse
 from app.services.invoice_service import auto_populate_attendance_type_from_registration
 
 from ._helpers import build_invoice_response
+from ._helpers import require_invoice_admin as _require_invoice_admin
 
 MODULE_CODE = "invoices"
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# Helper Functions
-# ═══════════════════════════════════════════════════════════════════════
-
-
-async def _require_invoice_admin(
-    db: DbSessionDep,
-    current_user: CurrentUserDep,
-    conference_id: UUID,
-) -> None:
-    """Check admin access: super admin, tenant admin, OR conference-specific admin.
-
-    Validates conference exists and user has admin access.
-    """
-    from app.core.dependencies import check_conference_admin_access
-    from app.core.exceptions import AuthorizationError
-
-    # Validate conference exists (raises 404 if not found)
-    await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
-
-    # Super admins and tenant admins have automatic access
-    if current_user.is_super_admin or current_user.is_tenant_admin:
-        return
-
-    # For regular users, check conference-specific admin access
-    has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-    if not has_access:
-        raise AuthorizationError("Admin access to this conference required")
 
 
 # ═══════════════════════════════════════════════════════════════════════

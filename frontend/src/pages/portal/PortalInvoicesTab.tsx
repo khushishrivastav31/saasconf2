@@ -17,11 +17,7 @@ interface PortalInvoice {
   currency: string | null;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  sent: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-  paid: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-  overdue: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-};
+import { INVOICE_STATUS_COLORS as STATUS_COLORS } from '../../config/statusColors';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 

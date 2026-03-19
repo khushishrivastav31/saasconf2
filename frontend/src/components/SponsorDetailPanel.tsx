@@ -8,6 +8,7 @@ import { queryKeys } from '../config/queryKeys';
 import AttachmentList from './AttachmentList';
 import ContactPersonList from './ContactPersonList';
 import DetailPanelWrapper from './DetailPanelWrapper';
+import { INVOICE_STATUS_COLORS } from '../config/statusColors';
 import SponsorContractTab from './SponsorContractTab';
 import RichTextEditor from './common/RichTextEditor';
 import SponsorLogoUpload from './SponsorLogoUpload';
@@ -484,13 +485,7 @@ export default function SponsorDetailPanel({
 // Sponsor Invoices sub-component
 // ---------------------------------------------------------------------------
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
-  sent: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-  paid: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-  overdue: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-  cancelled: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
-};
+const STATUS_COLORS = INVOICE_STATUS_COLORS;
 
 function SponsorInvoicesContent({
   conferenceId,

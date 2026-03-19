@@ -284,7 +284,7 @@ describe('InvoiceDetailPanel', () => {
       const header = screen.getByText('INV-2024-001').closest('div')?.parentElement;
       const badge = within(header!).getByText('Draft');
       expect(badge.className).toContain('bg-gray-100');
-      expect(badge.className).toContain('text-gray-800');
+      expect(badge.className).toContain('text-gray-700');
     });
 
     it('renders sent status with blue color', () => {
@@ -293,7 +293,7 @@ describe('InvoiceDetailPanel', () => {
       const header = screen.getByText('INV-2024-001').closest('div')?.parentElement;
       const badge = within(header!).getByText('Sent');
       expect(badge.className).toContain('bg-blue-100');
-      expect(badge.className).toContain('text-blue-800');
+      expect(badge.className).toContain('text-blue-700');
     });
 
     it('renders paid status with green color', () => {
@@ -302,7 +302,7 @@ describe('InvoiceDetailPanel', () => {
       const header = screen.getByText('INV-2024-001').closest('div')?.parentElement;
       const badge = within(header!).getByText('Paid');
       expect(badge.className).toContain('bg-green-100');
-      expect(badge.className).toContain('text-green-800');
+      expect(badge.className).toContain('text-green-700');
     });
 
     it('renders overdue status with red color', () => {
@@ -311,7 +311,7 @@ describe('InvoiceDetailPanel', () => {
       const header = screen.getByText('INV-2024-001').closest('div')?.parentElement;
       const badge = within(header!).getByText('Overdue');
       expect(badge.className).toContain('bg-red-100');
-      expect(badge.className).toContain('text-red-800');
+      expect(badge.className).toContain('text-red-700');
     });
 
     it('renders cancelled status with yellow color', () => {
@@ -320,7 +320,7 @@ describe('InvoiceDetailPanel', () => {
       const header = screen.getByText('INV-2024-001').closest('div')?.parentElement;
       const badge = within(header!).getByText('Cancelled');
       expect(badge.className).toContain('bg-yellow-100');
-      expect(badge.className).toContain('text-yellow-800');
+      expect(badge.className).toContain('text-yellow-700');
     });
   });
 

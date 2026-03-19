@@ -1,7 +1,29 @@
 """Shared helpers for invoice API endpoints."""
 
+from uuid import UUID
+
+from app.core.dependencies import CurrentUserDep, DbSessionDep
+from app.core.exceptions import AuthorizationError
 from app.models.invoice import Invoice
 from app.schemas.invoice import InvoiceResponse
+
+
+async def require_invoice_admin(
+    db: DbSessionDep,
+    current_user: CurrentUserDep,
+    conference_id: UUID,
+) -> None:
+    """Check admin access: super admin, tenant admin, OR conference-specific admin."""
+    from app.core.dependencies import check_conference_admin_access
+
+    # Super admins and tenant admins have automatic access
+    if current_user.is_super_admin or current_user.is_tenant_admin:
+        return
+
+    # For regular users, check conference-specific admin access
+    has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
+    if not has_access:
+        raise AuthorizationError("Admin access to this conference required")
 
 
 def build_invoice_response(

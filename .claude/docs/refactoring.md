@@ -15,10 +15,17 @@ When modifying existing files, apply the "boy scout rule" — improve patterns i
 - **CFP** — Split into `cfp/cfp_crud.py`, `paper_assignments.py`, `paper_cospeakers.py`, `paper_reviews.py`, `submissions.py`, `__init__.py` (literal paths before catch-all)
 
 **Remaining Large Files** (refactor only when modifying):
-- `cfp_portal/papers.py` (1,142 lines)
-- `volunteer_tasks.py` (1,004 lines)
+- `core/invoice_pdf.py` (1,403 lines) → split into `_styles.py`, `_utils.py`
+- `cfp_portal/papers.py` (1,275 lines)
+- `analytics.py` (1,223 lines) → group by domain (financial, attendance, cfp)
+- `portal/registration.py` (1,160 lines)
+- `registrations/core.py` (1,087 lines)
+- `volunteer_tasks.py` (1,034 lines)
 - `messaging/threads.py` (962 lines)
 - `cfp_portal/messaging.py` (838 lines)
+
+**Completed DRY improvements** (March 2026):
+- `_require_invoice_admin()` consolidated into `invoices/_helpers.py` (was duplicated in 4 files)
 
 ## Frontend: Hook Extraction
 
@@ -30,9 +37,20 @@ When modifying existing files, apply the "boy scout rule" — improve patterns i
 3. **Inline mutations** → `hooks/api/use*Mutations.ts`
 
 **Largest components to split when modifying** (not proactively):
-- RegistrationTab (1,351 lines) → BookingOptionSelect, AttendeeFields, SessionSelector
+- InvoicesTab (1,743 lines) → InvoiceFilters, InvoiceTable, useInvoiceMutations
+- SinglePageForm (1,547 lines) → AttendeeSection, BillingSection, PricingCalculator
+- PaperDetailPage (1,316 lines) → PaperEditor, FeedbackSection, CoSpeakerManager
+- RegistrationTab (1,222 lines) → BookingOptionSelect, AttendeeFields, SessionSelector
 - ScreenOverlaysTab (1,204 lines) → OverlayEditor, OverlayPreview, OverlayList
+- SpeakerExpensesTab (1,173 lines) → ExpenseList, AllowanceManager, ApprovalWorkflow
 - ProgramGrid (1,144 lines) → GridCell, GridHeader, GridControls
+- BadgeDesignerTab (1,139 lines) → Badge canvas, field editor, preview
+- InvoiceDetailPanel (1,133 lines) → Extract tab contents to sub-components
+- EditorToolbar (1,030 lines) → Split toolbar sections
+
+**Completed DRY improvements** (March 2026):
+- `STATUS_COLORS` consolidated into `config/statusColors.ts` (was duplicated in 7 files)
+- Autosave → explicit save + unsaved changes warnings across all 9 form pages
 
 ## What NOT to Refactor
 - Don't refactor files you're not already modifying

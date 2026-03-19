@@ -11,28 +11,16 @@ from sqlalchemy.orm import selectinload
 
 from app.core.conference_helpers import get_conference_for_tenant
 from app.core.dependencies import CurrentUserDep, DbSessionDep, require_module
-from app.core.exceptions import AuthorizationError, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.core.invoice_pdf import generate_invoice_pdf
 from app.models.invoice import Invoice
+
+from ._helpers import require_invoice_admin as _require_invoice_admin
 
 MODULE_CODE = "invoices"
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-async def _require_invoice_admin(db: DbSessionDep, current_user: CurrentUserDep, conference_id: UUID) -> None:
-    """Check admin access: super admin, tenant admin, OR conference-specific admin."""
-    from app.core.dependencies import check_conference_admin_access
-
-    # Super admins and tenant admins have automatic access
-    if current_user.is_super_admin or current_user.is_tenant_admin:
-        return
-
-    # For regular users, check conference-specific admin access
-    has_access = await check_conference_admin_access(db, current_user.user_id, conference_id)
-    if not has_access:
-        raise AuthorizationError("Admin access to this conference required")
 
 
 @router.get("/{invoice_id}/pdf", dependencies=[Depends(require_module(MODULE_CODE))])
