@@ -149,6 +149,7 @@ export default function AttachmentList({
                   onClick={() => handleDownload(attachment)}
                   className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
                   title="Download"
+                  aria-label="Download attachment"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -164,6 +165,7 @@ export default function AttachmentList({
                   onClick={() => setDeleteTarget(attachment)}
                   className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                   title="Delete"
+                  aria-label="Delete attachment"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path

@@ -66,7 +66,7 @@ export default function ForgotPassword() {
               </div>
             )}
 
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               Enter your email address and we'll send you a link to reset your password.
             </p>
 

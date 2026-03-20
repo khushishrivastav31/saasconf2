@@ -280,27 +280,25 @@ describe('RichTextEditor', () => {
     expect(italicButton.className).toContain('bg-primary-100');
   });
 
-  it('prompts for URL when link button is clicked', async () => {
+  it('opens prompt dialog when link button is clicked', async () => {
     const user = userEvent.setup();
-    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('https://example.com');
 
     render(<RichTextEditor {...defaultProps} />);
 
     await user.click(screen.getByTitle('Link'));
-    expect(promptSpy).toHaveBeenCalledWith('URL', 'https://');
-
-    promptSpy.mockRestore();
+    // The prompt dialog should appear with the URL input
+    expect(screen.getByText('Enter URL')).toBeInTheDocument();
   });
 
-  it('does not set link when prompt is cancelled', async () => {
+  it('closes prompt dialog when cancel is clicked', async () => {
     const user = userEvent.setup();
-    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue(null);
 
     render(<RichTextEditor {...defaultProps} />);
 
     await user.click(screen.getByTitle('Link'));
-    // Chain should not be called for link setting when cancelled
+    expect(screen.getByText('Enter URL')).toBeInTheDocument();
 
-    promptSpy.mockRestore();
+    await user.click(screen.getByText('Cancel'));
+    expect(screen.queryByText('Enter URL')).not.toBeInTheDocument();
   });
 });

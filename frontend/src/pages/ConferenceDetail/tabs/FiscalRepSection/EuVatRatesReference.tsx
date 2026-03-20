@@ -135,7 +135,7 @@ function EuVatRatesReference() {
             </button>
           )}
         </div>
-        <div className="text-xs text-gray-600 dark:text-gray-400">
+        <div className="text-xs text-gray-600 dark:text-gray-300">
           <p>
             Manage VAT/GST/Sales Tax rates for all countries. These rates are used for automatic
             invoice calculation and as suggestions when setting up conference tax rates.
@@ -159,7 +159,7 @@ function EuVatRatesReference() {
           </h6>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs text-gray-600 dark:text-gray-400">
+              <label className="block text-xs text-gray-600 dark:text-gray-300">
                 Country Code (ISO)
               </label>
               <input
@@ -175,7 +175,7 @@ function EuVatRatesReference() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 dark:text-gray-400">Country Name</label>
+              <label className="block text-xs text-gray-600 dark:text-gray-300">Country Name</label>
               <input
                 type="text"
                 placeholder="e.g. Germany"
@@ -185,7 +185,7 @@ function EuVatRatesReference() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 dark:text-gray-400">Rate (%)</label>
+              <label className="block text-xs text-gray-600 dark:text-gray-300">Rate (%)</label>
               <input
                 type="number"
                 min="0"
@@ -240,7 +240,7 @@ function EuVatRatesReference() {
                   <td className="py-1.5 pr-3 text-gray-700 dark:text-gray-300">
                     {rate.country_name}
                   </td>
-                  <td className="py-1.5 pr-3 text-gray-600 dark:text-gray-400 font-mono">
+                  <td className="py-1.5 pr-3 text-gray-600 dark:text-gray-300 font-mono">
                     {rate.country_code}
                   </td>
                   <td className="py-1.5 pr-3 font-medium text-gray-900 dark:text-gray-100">

@@ -215,22 +215,22 @@ function FiscalRepForm({
         <div className="text-sm space-y-1">
           <p className="font-medium text-gray-900 dark:text-gray-100">{fiscalRep.company_name}</p>
           {fiscalRep.address_line1 && (
-            <p className="text-gray-600 dark:text-gray-400">{fiscalRep.address_line1}</p>
+            <p className="text-gray-600 dark:text-gray-300">{fiscalRep.address_line1}</p>
           )}
           {fiscalRep.city && (
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600 dark:text-gray-300">
               {[fiscalRep.postal_code, fiscalRep.city, fiscalRep.country]
                 .filter(Boolean)
                 .join(', ')}
             </p>
           )}
           {fiscalRep.vat_number && (
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600 dark:text-gray-300">
               VAT: <span className="font-mono">{fiscalRep.vat_number}</span>
             </p>
           )}
           {fiscalRep.conference_vat_number && (
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600 dark:text-gray-300">
               Conference VAT:{' '}
               <span className="font-mono font-medium">{fiscalRep.conference_vat_number}</span>
             </p>
@@ -241,7 +241,7 @@ function FiscalRepForm({
                 Contact Persons:
               </p>
               {fiscalRep.contact_persons.map((cp, i) => (
-                <p key={i} className="text-gray-600 dark:text-gray-400">
+                <p key={i} className="text-gray-600 dark:text-gray-300">
                   {cp.first_name} {cp.last_name}
                   {cp.email && <span className="ml-2 text-gray-500">({cp.email})</span>}
                 </p>
@@ -249,7 +249,7 @@ function FiscalRepForm({
             </div>
           )}
           {!fiscalRep.is_active && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 mt-1">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 mt-1">
               Inactive
             </span>
           )}

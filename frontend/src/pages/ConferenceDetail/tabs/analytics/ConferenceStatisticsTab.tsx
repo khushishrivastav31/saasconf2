@@ -389,10 +389,10 @@ function AttendeesLocationView({ conferenceId }: { conferenceId: string }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-400 font-medium">
+                  <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-300 font-medium">
                     Country
                   </th>
-                  <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-400 font-medium">
+                  <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-300 font-medium">
                     Attendees
                   </th>
                 </tr>
@@ -421,13 +421,13 @@ function AttendeesLocationView({ conferenceId }: { conferenceId: string }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-400 font-medium">
+                  <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-300 font-medium">
                     City
                   </th>
-                  <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-400 font-medium">
+                  <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-300 font-medium">
                     Country
                   </th>
-                  <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-400 font-medium">
+                  <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-300 font-medium">
                     Attendees
                   </th>
                 </tr>
@@ -712,16 +712,16 @@ function TutorialsView({ conferenceId }: { conferenceId: string }) {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-400 font-medium">
+              <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-300 font-medium">
                 Tutorial
               </th>
-              <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-400 font-medium">
+              <th className="px-4 py-2 text-left text-gray-600 dark:text-gray-300 font-medium">
                 Booking Option
               </th>
-              <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-400 font-medium">
+              <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-300 font-medium">
                 Attendees
               </th>
-              <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-400 font-medium">
+              <th className="px-4 py-2 text-right text-gray-600 dark:text-gray-300 font-medium">
                 Revenue
               </th>
             </tr>
@@ -779,7 +779,7 @@ export default function ConferenceStatisticsTab({ conference }: ConferenceStatis
             className={`whitespace-nowrap px-4 py-2 text-sm font-medium rounded-t transition-colors ${
               activeSubTab === tab.id
                 ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200'
             }`}
           >
             {tab.label}

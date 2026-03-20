@@ -432,7 +432,7 @@ function VariantFormBuilder({ conferenceId, variant, isAdmin, onBack }: VariantF
                     setNameValue(variant.name);
                     setDescValue(variant.description || '');
                   }}
-                  className="px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400"
+                  className="px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-300"
                 >
                   Cancel
                 </button>

@@ -328,7 +328,7 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
               className={`text-sm px-3 py-1.5 rounded-md capitalize ${
                 activeView === view
                   ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >
               {view === 'defaults' ? 'Allowance Defaults' : view}
@@ -744,7 +744,7 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
                             </button>
                             <button
                               onClick={() => setAddExpenseFor(null)}
-                              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-300"
                             >
                               Cancel
                             </button>
@@ -1135,7 +1135,7 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
                   setRejectId(null);
                   setRejectReason('');
                 }}
-                className="text-sm px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                className="text-sm px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200"
               >
                 Cancel
               </button>

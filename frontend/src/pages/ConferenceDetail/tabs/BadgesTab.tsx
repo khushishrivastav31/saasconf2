@@ -200,7 +200,7 @@ export default function BadgesTab({
       <div className="flex flex-wrap items-center gap-3">
         {/* Badge Type Selector */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
             Badge Type:
           </label>
           <select
@@ -412,7 +412,7 @@ export default function BadgesTab({
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Showing {skip + 1}\u2013{Math.min(skip + limit, total)} of {total}
           </p>
           <div className="flex gap-1">
@@ -423,7 +423,7 @@ export default function BadgesTab({
             >
               Previous
             </button>
-            <span className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400">
+            <span className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300">
               Page {currentPage} of {totalPages}
             </span>
             <button
@@ -447,7 +447,7 @@ export default function BadgesTab({
               </h2>
               <button
                 onClick={() => setPreviewBlobUrl(null)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -466,7 +466,7 @@ export default function BadgesTab({
                 className="w-full h-full rounded"
                 aria-label="Badge PDF Preview"
               >
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-gray-600 dark:text-gray-300">
                   Your browser doesn&apos;t support inline PDF viewing.{' '}
                   <a
                     href={previewBlobUrl}

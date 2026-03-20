@@ -482,7 +482,7 @@ export default function BadgeDesignerTab({
           {/* Duplicate from dropdown */}
           {isAdmin && (
             <div className="relative ml-auto group">
-              <button className="px-3 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+              <button className="px-3 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
                 Copy from...
               </button>
               <div className="absolute right-0 mt-1 w-52 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
@@ -924,7 +924,7 @@ export default function BadgeDesignerTab({
                             </button>
                             <button
                               onClick={() => setEditingCondImageId(null)}
-                              className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                              className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200"
                             >
                               Cancel
                             </button>
@@ -1120,7 +1120,7 @@ export default function BadgeDesignerTab({
                       setCondFile(null);
                       if (condFileRef.current) condFileRef.current.value = '';
                     }}
-                    className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                    className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200"
                   >
                     Cancel
                   </button>

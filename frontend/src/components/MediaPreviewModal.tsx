@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from 'react';
 
 interface MediaPreviewModalProps {
   open: boolean;
   onClose: () => void;
   src: string | null;
-  type: "image" | "video";
+  type: 'image' | 'video';
   alt?: string;
 }
 
@@ -13,27 +13,27 @@ export default function MediaPreviewModal({
   onClose,
   src,
   type,
-  alt = "Preview",
+  alt = 'Preview',
 }: MediaPreviewModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Handle escape key to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         onClose();
       }
     };
 
     if (open) {
-      document.addEventListener("keydown", handleKeyDown);
+      document.addEventListener('keydown', handleKeyDown);
       // Prevent body scroll when modal is open
-      document.body.style.overflow = "hidden";
+      document.body.style.overflow = 'hidden';
     }
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
     };
   }, [open, onClose]);
 
@@ -57,13 +57,9 @@ export default function MediaPreviewModal({
         onClick={onClose}
         className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
         title="Close (Esc)"
+        aria-label="Close preview"
       >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -78,7 +74,7 @@ export default function MediaPreviewModal({
         className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
-        {type === "image" ? (
+        {type === 'image' ? (
           <img
             src={src}
             alt={alt}

@@ -684,6 +684,7 @@ function ToolbarButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
+      aria-label={title}
       className={`p-1.5 rounded text-sm leading-none transition-colors ${
         active
           ? 'bg-primary-100 text-primary-700'

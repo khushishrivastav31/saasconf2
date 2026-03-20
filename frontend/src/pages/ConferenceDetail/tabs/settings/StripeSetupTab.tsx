@@ -130,7 +130,7 @@ export default function StripeSetupTab({
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
           Stripe Setup
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
           Configure Stripe API keys for payment processing. Only tenant super users can edit these
           settings.
         </p>
@@ -201,7 +201,7 @@ export default function StripeSetupTab({
                 <button
                   type="button"
                   onClick={() => setShowSecretKey(!showSecretKey)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200"
                 >
                   {showSecretKey ? 'Hide' : 'Show'}
                 </button>
@@ -257,7 +257,7 @@ export default function StripeSetupTab({
                 <button
                   type="button"
                   onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200"
                 >
                   {showWebhookSecret ? 'Hide' : 'Show'}
                 </button>
@@ -289,7 +289,7 @@ export default function StripeSetupTab({
           <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
             How to set up Stripe
           </h3>
-          <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300 mb-4">
             <li>Log in to your Stripe Dashboard</li>
             <li>Navigate to Developers &rarr; API keys</li>
             <li>Copy your Publishable key and Secret key and paste them above</li>

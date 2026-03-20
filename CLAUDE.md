@@ -81,6 +81,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Phases 3+4 — OPS_API_KEY for ops endpoints, log field masking, React.memo on list components, staleTime optimization for conferences/currencies
-- **Status**: Clean — mypy/ruff/tsc/eslint pass, all tests pass. Not yet committed.
-- **Pending**: User approval to commit. Phases 5-6 of plan remain (accessibility, UX polish)
+- **Last completed**: All 6 phases of performance/reliability plan complete
+- **Status**: Clean — mypy/ruff/tsc/eslint pass, all 1541 frontend + backend tests pass. Not yet committed.
+- **Pending**: User approval to commit phases 5-6

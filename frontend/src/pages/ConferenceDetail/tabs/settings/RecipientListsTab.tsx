@@ -417,7 +417,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
                             </button>
                             <button
                               onClick={() => setDeleteConfirm(null)}
-                              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-300"
                             >
                               Cancel
                             </button>
@@ -524,7 +524,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
                               </button>
                               <button
                                 onClick={() => setDeleteDynamicConfirm(null)}
-                                className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-300"
                               >
                                 Cancel
                               </button>
@@ -743,7 +743,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
                     {/* Booking Options */}
                     {Array.isArray(bookingOptions) && bookingOptions.length > 0 && (
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                           Booking Options
                         </label>
                         <select
@@ -773,7 +773,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
                     {/* Bookable Sessions */}
                     {Array.isArray(bookableSessions) && bookableSessions.length > 0 && (
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                           Bookable Sessions
                         </label>
                         <select
@@ -802,7 +802,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
 
                     {/* Country */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                         Country
                       </label>
                       <select
@@ -821,7 +821,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
 
                     {/* City */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                         City
                       </label>
                       <input
@@ -835,7 +835,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
 
                     {/* Company */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                         Company
                       </label>
                       <input
@@ -849,7 +849,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
 
                     {/* Registration Mode */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                         Registration Mode
                       </label>
                       <select
@@ -865,7 +865,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
 
                     {/* Status */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                         Status
                       </label>
                       <select
@@ -887,7 +887,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
                     {/* Sponsor Packages */}
                     {Array.isArray(sponsorPackages) && sponsorPackages.length > 0 && (
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                           Sponsor Packages
                         </label>
                         <select
@@ -916,7 +916,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
 
                     {/* Country */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                         Country
                       </label>
                       <select
@@ -935,7 +935,7 @@ export default function RecipientListsTab({ conference, isAdmin }: Props) {
 
                     {/* City */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                         City
                       </label>
                       <input

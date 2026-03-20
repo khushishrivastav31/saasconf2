@@ -855,7 +855,7 @@ export default function InvoiceDetailPanel({
                     </label>
                     {cancelRegistrations && (
                       <label className="block mt-3">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">
                           Cancellation message to attendees (optional)
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-1">

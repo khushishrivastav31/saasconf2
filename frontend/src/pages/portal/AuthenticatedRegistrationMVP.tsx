@@ -76,7 +76,7 @@ export default function AuthenticatedRegistrationMVP() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading registration...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading registration...</p>
         </div>
       </div>
     );
@@ -94,7 +94,7 @@ export default function AuthenticatedRegistrationMVP() {
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Conference Not Found
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
             The requested conference could not be found or you don't have access to it.
           </p>
           <button
@@ -119,7 +119,7 @@ export default function AuthenticatedRegistrationMVP() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               {conference.name}
             </h1>
-            <h2 className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+            <h2 className="text-lg text-gray-600 dark:text-gray-300 mb-6">
               Conference Registration
             </h2>
 

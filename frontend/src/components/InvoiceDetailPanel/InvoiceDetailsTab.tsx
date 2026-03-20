@@ -56,7 +56,7 @@ export default function InvoiceDetailsTab({
 
   return (
     <div className="px-6 py-5 space-y-4">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Invoice Number
@@ -64,7 +64,7 @@ export default function InvoiceDetailsTab({
           <input
             type="text"
             disabled
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300"
             value={hasNumber ? (formData.invoice_number ?? '') : 'Not yet assigned'}
           />
           {!hasNumber && (
@@ -123,7 +123,7 @@ export default function InvoiceDetailsTab({
             <input
               type="text"
               disabled
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400"
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300"
               value={
                 (formData.status || invoice.status).charAt(0).toUpperCase() +
                 (formData.status || invoice.status).slice(1)
@@ -146,7 +146,7 @@ export default function InvoiceDetailsTab({
           <input
             type="text"
             disabled
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300"
             value={invoice.related_invoice_number}
           />
         </div>
@@ -161,7 +161,7 @@ export default function InvoiceDetailsTab({
             <input
               type="text"
               disabled
-              className="flex-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-mono text-xs"
+              className="flex-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 sm:text-sm bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300 font-mono text-xs"
               value={invoice.stripe_payment_link_url}
             />
             <a
@@ -648,7 +648,7 @@ function ZugferdValidationStatus({
             </div>
 
             {validation.valid && (
-              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
                 This invoice meets all ZUGFeRD requirements and will include embedded XML when
                 downloaded.
               </p>
@@ -661,12 +661,12 @@ function ZugferdValidationStatus({
                 </p>
                 <ul className="space-y-0.5">
                   {validation.errors.map((error, i) => (
-                    <li key={i} className="text-xs text-gray-600 dark:text-gray-400">
+                    <li key={i} className="text-xs text-gray-600 dark:text-gray-300">
                       • {error}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
                   Invoice will be generated as standard PDF without ZUGFeRD XML until these issues
                   are resolved.
                 </p>
@@ -680,7 +680,7 @@ function ZugferdValidationStatus({
                 </p>
                 <ul className="space-y-0.5">
                   {validation.warnings.map((warning, i) => (
-                    <li key={i} className="text-xs text-gray-600 dark:text-gray-400">
+                    <li key={i} className="text-xs text-gray-600 dark:text-gray-300">
                       • {warning}
                     </li>
                   ))}

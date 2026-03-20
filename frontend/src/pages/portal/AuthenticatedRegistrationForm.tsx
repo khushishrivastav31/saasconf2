@@ -580,7 +580,7 @@ export default function AuthenticatedRegistrationForm({
   if (!conference) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600 dark:text-gray-400">Conference not found</p>
+        <p className="text-gray-600 dark:text-gray-300">Conference not found</p>
       </div>
     );
   }

@@ -343,7 +343,7 @@ export default function DeadlinesTab({ conference, isAdmin }: DeadlinesTabProps)
                     {statusBadge(status)}
                   </div>
                   {deadline.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">
                       {deadline.description}
                     </p>
                   )}

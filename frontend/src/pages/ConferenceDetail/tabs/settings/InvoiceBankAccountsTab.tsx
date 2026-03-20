@@ -417,11 +417,11 @@ export default function InvoiceBankAccountsTab({
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                         IBAN: {account.iban}
                       </p>
                       {account.bic && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
                           BIC: {account.bic}
                         </p>
                       )}

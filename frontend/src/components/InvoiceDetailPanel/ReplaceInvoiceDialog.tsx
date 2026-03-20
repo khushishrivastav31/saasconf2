@@ -175,7 +175,7 @@ export default function ReplaceInvoiceDialog({
 
               {/* Company/Recipient Name */}
               <label className="block mb-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-gray-600 dark:text-gray-300">
                   Company / Recipient Name
                 </span>
                 <input
@@ -188,7 +188,7 @@ export default function ReplaceInvoiceDialog({
 
               {/* Email */}
               <label className="block mb-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Email</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">Email</span>
                 <input
                   type="email"
                   value={recipientEmail}
@@ -203,7 +203,7 @@ export default function ReplaceInvoiceDialog({
 
               {/* Address */}
               <label className="block mb-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Street Address</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">Street Address</span>
                 <input
                   type="text"
                   value={recipientAddress}
@@ -215,7 +215,7 @@ export default function ReplaceInvoiceDialog({
               {/* City & Postal Code */}
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <label className="block">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">City</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">City</span>
                   <input
                     type="text"
                     value={recipientCity}
@@ -224,7 +224,7 @@ export default function ReplaceInvoiceDialog({
                   />
                 </label>
                 <label className="block">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Postal Code</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Postal Code</span>
                   <input
                     type="text"
                     value={recipientPostalCode}
@@ -236,7 +236,7 @@ export default function ReplaceInvoiceDialog({
 
               {/* Country */}
               <label className="block mb-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Country</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">Country</span>
                 <select
                   value={recipientCountry}
                   onChange={(e) => setRecipientCountry(e.target.value)}
@@ -269,7 +269,7 @@ export default function ReplaceInvoiceDialog({
 
               {/* Procurement Code / PO Number */}
               <label className="block mb-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-gray-600 dark:text-gray-300">
                   PO Number / Procurement Code
                 </span>
                 <input

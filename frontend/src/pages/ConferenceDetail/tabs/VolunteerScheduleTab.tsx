@@ -234,13 +234,13 @@ export default function VolunteerScheduleTab({ conference }: Props) {
                                       key={idx}
                                       className="border-b border-gray-100 dark:border-gray-700 last:border-0"
                                     >
-                                      <td className="py-1.5 pr-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                      <td className="py-1.5 pr-4 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                                         {entry.start_time}&ndash;{entry.end_time}
                                       </td>
                                       <td className="py-1.5 pr-4 text-gray-900 dark:text-gray-100">
                                         {entry.session_title}
                                       </td>
-                                      <td className="py-1.5 pr-4 text-gray-600 dark:text-gray-400">
+                                      <td className="py-1.5 pr-4 text-gray-600 dark:text-gray-300">
                                         {entry.track_name || '\u2013'}
                                       </td>
                                       <td className="py-1.5">
@@ -280,7 +280,7 @@ export default function VolunteerScheduleTab({ conference }: Props) {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                   <thead>
-                    <tr className="bg-amber-50 dark:bg-amber-900/10 text-left text-xs text-gray-600 dark:text-gray-400">
+                    <tr className="bg-amber-50 dark:bg-amber-900/10 text-left text-xs text-gray-600 dark:text-gray-300">
                       <th className="px-3 py-2 font-medium">Session</th>
                       <th className="px-3 py-2 font-medium">Day</th>
                       <th className="px-3 py-2 font-medium">Time</th>
@@ -298,13 +298,13 @@ export default function VolunteerScheduleTab({ conference }: Props) {
                         <td className="px-3 py-2 text-gray-900 dark:text-gray-100">
                           {item.session_title}
                         </td>
-                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
+                        <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
                           {item.day_name}
                         </td>
-                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                        <td className="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                           {item.start_time}&ndash;{item.end_time}
                         </td>
-                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
+                        <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
                           {item.track_name || '\u2013'}
                         </td>
                         <td className="px-3 py-2">

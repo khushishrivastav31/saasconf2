@@ -14,7 +14,7 @@ function VatRatesSection({ conferenceCountry, taxInfo }: VatRatesSectionProps) {
           <h6 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Conference Tax/VAT Rate
           </h6>
-          <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+          <div className="text-xs text-gray-600 dark:text-gray-300 space-y-1">
             <p>
               The tax rate is automatically determined from the conference country and your Country
               VAT/Tax Rates list below.

@@ -231,7 +231,7 @@ export default function PaymentModal({
                 {vatAmount && vatRate ? (
                   <>
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2" />
-                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
                       <span>VAT ({vatRate}%)</span>
                       <span>{formatPrice(vatAmount, currency)}</span>
                     </div>

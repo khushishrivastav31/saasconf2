@@ -202,7 +202,7 @@ describe('SponsorLogoUpload', () => {
   });
 
   describe('delete interaction', () => {
-    it('calls delete API when Delete Logo is clicked', async () => {
+    it('calls delete API when Delete Logo is confirmed', async () => {
       const user = userEvent.setup();
       const mockLogo = {
         id: 'att-1',
@@ -241,7 +241,16 @@ describe('SponsorLogoUpload', () => {
         expect(screen.getByText('Delete Logo')).toBeInTheDocument();
       });
 
+      // Click Delete Logo — opens confirmation dialog
       await user.click(screen.getByText('Delete Logo'));
+      expect(
+        screen.getByText(
+          'Are you sure you want to delete this sponsor logo? This action cannot be undone.'
+        )
+      ).toBeInTheDocument();
+
+      // Confirm deletion
+      await user.click(screen.getByRole('button', { name: 'Delete' }));
 
       await waitFor(() => {
         expect(api.delete).toHaveBeenCalledWith('/attachments/att-1');

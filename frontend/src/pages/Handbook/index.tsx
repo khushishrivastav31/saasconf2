@@ -227,7 +227,7 @@ export default function Handbook() {
                                 className={`block w-full text-left px-3 py-1.5 text-sm rounded-md ${
                                   activeSection === section.id
                                     ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium'
-                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                                 }`}
                               >
                                 {section.title}
@@ -296,7 +296,7 @@ export default function Handbook() {
                               className={`block w-full text-left px-2 py-1.5 text-sm rounded-md ${
                                 activeSection === section.id
                                   ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium'
-                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                               }`}
                             >
                               {section.title}

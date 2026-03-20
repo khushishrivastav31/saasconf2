@@ -294,7 +294,7 @@ export default function InvoiceCompanyDataTab({
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Optional: Dual Currency Display
           </h3>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-xs text-gray-600 dark:text-gray-300 mb-4">
             Display invoice totals in a second currency alongside the primary currency.
           </p>
 

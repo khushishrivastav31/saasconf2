@@ -195,7 +195,7 @@ export default function MessageTemplatesTab({ conference, isAdmin }: Props) {
                             </button>
                             <button
                               onClick={() => setDeleteConfirm(null)}
-                              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-300"
                             >
                               Cancel
                             </button>

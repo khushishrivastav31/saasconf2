@@ -162,7 +162,7 @@ export default function InvoiceLineItemsTab({
 
         {/* Discount Code Display */}
         {formData.discount_code && (
-          <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded-md">
+          <div className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded-md">
             <span className="font-medium">Discount Code Applied:</span>{' '}
             <span className="text-gray-900 dark:text-gray-100">{formData.discount_code}</span>
             {formData.discount_amount && formData.discount_amount > 0 && (

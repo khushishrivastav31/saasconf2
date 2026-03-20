@@ -578,7 +578,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Showing {(page - 1) * PAGE_SIZE + 1}&ndash;
             {Math.min(page * PAGE_SIZE, total)} of {total} alumni
           </p>
@@ -591,7 +591,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
             >
               Previous
             </button>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="text-sm text-gray-600 dark:text-gray-300">
               Page {page} of {totalPages}
             </span>
             <button

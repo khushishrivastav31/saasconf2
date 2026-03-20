@@ -193,7 +193,7 @@ export default function VatNumberInput({
 
       {/* Requirement explanation */}
       {requirementReason && (
-        <div className="mt-1 mb-2 text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+        <div className="mt-1 mb-2 text-xs text-gray-600 dark:text-gray-300 flex items-start gap-1">
           <svg
             className="w-4 h-4 shrink-0 mt-0.5"
             fill="currentColor"

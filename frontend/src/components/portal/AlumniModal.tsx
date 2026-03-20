@@ -56,7 +56,7 @@ export default function AlumniModal({
           </h3>
 
           {/* Message */}
-          <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
+          <p className="text-sm text-gray-600 dark:text-gray-300 text-center mb-4">
             {warningMessage}
           </p>
 
@@ -68,7 +68,7 @@ export default function AlumniModal({
               </p>
               <ul className="space-y-1">
                 {alumniConferences.slice(0, 5).map((conf) => (
-                  <li key={conf.conference_id} className="text-sm text-gray-600 dark:text-gray-400">
+                  <li key={conf.conference_id} className="text-sm text-gray-600 dark:text-gray-300">
                     • {conf.conference_name}
                   </li>
                 ))}

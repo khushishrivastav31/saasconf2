@@ -743,7 +743,7 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
                                 />
                               )}
                               {!isAdmin && selectedReg.main_session_name && (
-                                <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                                <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">
                                   Selected: {selectedReg.main_session_name}
                                 </div>
                               )}

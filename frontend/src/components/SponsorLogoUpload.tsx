@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/api';
 import { queryKeys } from '../config/queryKeys';
+import ConfirmDialog from './ConfirmDialog';
 import type { Attachment } from '../types';
 
 interface SponsorLogoUploadProps {
@@ -14,6 +15,7 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
   const [status, setStatus] = useState<'idle' | 'uploading' | 'deleting' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [logoBlobUrl, setLogoBlobUrl] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: logoData, isLoading } = useQuery({
     queryKey: queryKeys.attachments.list('sponsor_logo', sponsorId),
@@ -228,7 +230,7 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
           {logo && (
             <button
               type="button"
-              onClick={() => deleteMutation.mutate()}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={status === 'deleting'}
               className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
                 status === 'deleting'
@@ -283,6 +285,19 @@ export default function SponsorLogoUpload({ sponsorId }: SponsorLogoUploadProps)
           </p>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Delete Logo"
+        message="Are you sure you want to delete this sponsor logo? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => {
+          setShowDeleteConfirm(false);
+          deleteMutation.mutate();
+        }}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }

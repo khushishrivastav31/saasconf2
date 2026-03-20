@@ -153,19 +153,19 @@ export default function OrderSummary({
                     <div className="font-medium text-gray-900 dark:text-gray-100 flex-1">
                       {item.description}
                     </div>
-                    <div className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="ml-2 text-sm text-gray-600 dark:text-gray-300">
                       × {item.quantity}
                     </div>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Unit price:</span>
+                    <span className="text-gray-600 dark:text-gray-300">Unit price:</span>
                     <span className="text-gray-900 dark:text-gray-100">
                       {formatPrice(item.unitPrice, currency)}
                     </span>
                   </div>
                   {item.discountPerUnit > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Discount:</span>
+                      <span className="text-gray-600 dark:text-gray-300">Discount:</span>
                       <span className="text-green-600 dark:text-green-400">
                         -{formatPrice(item.lineDiscount, currency)}
                       </span>
@@ -186,14 +186,14 @@ export default function OrderSummary({
           <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3 space-y-2">
             {/* Subtotal (before VAT) */}
             <div className="flex justify-between items-center text-sm">
-              <div className="text-gray-600 dark:text-gray-400">Subtotal</div>
+              <div className="text-gray-600 dark:text-gray-300">Subtotal</div>
               <div className="text-gray-900 dark:text-gray-100">{formatPrice(total, currency)}</div>
             </div>
 
             {/* VAT */}
             {vatCalculation && vatCalculation.vat_rate > 0 && (
               <div className="flex justify-between items-center text-sm">
-                <div className="text-gray-600 dark:text-gray-400">
+                <div className="text-gray-600 dark:text-gray-300">
                   VAT ({vatCalculation.vat_rate}%)
                 </div>
                 <div className="text-gray-900 dark:text-gray-100">

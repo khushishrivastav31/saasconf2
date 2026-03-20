@@ -87,12 +87,12 @@ export default function ZugferdSettingsTab({ conference, isAdmin }: ZugferdSetti
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             ZUGFeRD/Factur-X E-Invoicing
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             Configure hybrid e-invoicing with embedded XML for EU compliance (mandatory in Germany
             2025-2028)
           </p>
         </div>
-        {saveStatus && <div className="text-sm text-gray-600 dark:text-gray-400">{saveStatus}</div>}
+        {saveStatus && <div className="text-sm text-gray-600 dark:text-gray-300">{saveStatus}</div>}
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-6">
@@ -115,7 +115,7 @@ export default function ZugferdSettingsTab({ conference, isAdmin }: ZugferdSetti
             >
               Enable ZUGFeRD/Factur-X
             </label>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
               When enabled, invoices will include embedded XML data for automated processing by
               customer accounting systems (DATEV, Lexware, sevDesk, etc.). All settings are
               automatically determined from your invoice and conference data.

@@ -434,28 +434,28 @@ function VatRulesTable({
         <table className="min-w-full text-xs">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-300">
                 Attendance
               </th>
-              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-300">
                 Customer
               </th>
-              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-300">
                 Location
               </th>
-              <th className="text-center py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+              <th className="text-center py-2 px-2 font-medium text-gray-600 dark:text-gray-300">
                 Charge VAT
               </th>
-              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-300">
                 VAT Rate From
               </th>
-              <th className="text-center py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+              <th className="text-center py-2 px-2 font-medium text-gray-600 dark:text-gray-300">
                 Reverse Charge
               </th>
-              <th className="text-center py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+              <th className="text-center py-2 px-2 font-medium text-gray-600 dark:text-gray-300">
                 OSS
               </th>
-              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-400">
+              <th className="text-left py-2 px-2 font-medium text-gray-600 dark:text-gray-300">
                 Note
               </th>
             </tr>

@@ -12,7 +12,7 @@ function TaxInfoSection({ taxInfo, conferenceCountry, hasFiscalRep }: TaxInfoSec
   return (
     <div className="mb-4">
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-sm text-gray-600 dark:text-gray-400">Tax Representation:</span>
+        <span className="text-sm text-gray-600 dark:text-gray-300">Tax Representation:</span>
         {isSelfRepresented ? (
           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
             Self-represented

@@ -3,6 +3,73 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getEditorExtensions } from './richtext/extensions';
 import EditorToolbar from './richtext/EditorToolbar';
 
+interface PromptDialogState {
+  open: boolean;
+  title: string;
+  defaultValue: string;
+  onSubmit: (value: string) => void;
+}
+
+function PromptDialog({ state, onClose }: { state: PromptDialogState; onClose: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState(state.defaultValue);
+
+  useEffect(() => {
+    if (state.open) {
+      setValue(state.defaultValue);
+      setTimeout(() => inputRef.current?.select(), 0);
+    }
+  }, [state.open, state.defaultValue]);
+
+  if (!state.open) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    state.onSubmit(value);
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-full max-w-sm mx-4"
+      >
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+          {state.title}
+        </h3>
+        <input
+          ref={inputRef}
+          type="url"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          placeholder="https://"
+        />
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-3 py-1.5 text-sm text-white bg-primary-600 rounded-md hover:bg-primary-700"
+          >
+            OK
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 interface RichTextEditorProps {
   value: string | undefined;
   onChange: (html: string) => void;
@@ -31,6 +98,14 @@ export default function RichTextEditor({
 }: RichTextEditorProps) {
   const [charCount, setCharCount] = useState(0);
   const [, setSelectionUpdate] = useState(0); // Force re-render on selection change
+  const defaultPromptState: PromptDialogState = {
+    open: false,
+    title: '',
+    defaultValue: '',
+    onSubmit: () => {},
+  };
+  const [promptState, setPromptState] = useState<PromptDialogState>(defaultPromptState);
+  const closePrompt = useCallback(() => setPromptState((s) => ({ ...s, open: false })), []);
 
   const editorRef = useRef<Editor | null>(null);
 
@@ -159,59 +234,67 @@ export default function RichTextEditor({
   const setLink = useCallback(() => {
     if (!editor) return;
     const previousUrl = editor.getAttributes('link').href;
-    const url = window.prompt('URL', previousUrl || 'https://');
-    if (url === null) return;
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-    try {
-      const parsed = new URL(url);
-      if (!['https:', 'http:', 'mailto:'].includes(parsed.protocol)) {
-        alert('Only https, http, and mailto links are allowed.');
-        return;
-      }
-    } catch {
-      alert('Please enter a valid URL (e.g. https://example.com).');
-      return;
-    }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    setPromptState({
+      open: true,
+      title: 'Enter URL',
+      defaultValue: previousUrl || 'https://',
+      onSubmit: (url: string) => {
+        if (url === '') {
+          editor.chain().focus().extendMarkRange('link').unsetLink().run();
+          return;
+        }
+        try {
+          const parsed = new URL(url);
+          if (!['https:', 'http:', 'mailto:'].includes(parsed.protocol)) return;
+        } catch {
+          return;
+        }
+        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+      },
+    });
   }, [editor]);
 
   const addImage = useCallback(() => {
     if (!editor) return;
-    const url = window.prompt('Image URL', 'https://');
-    if (!url) return;
-    try {
-      const parsed = new URL(url);
-      if (!['https:', 'http:'].includes(parsed.protocol)) {
-        alert('Only https and http image URLs are allowed.');
-        return;
-      }
-    } catch {
-      alert('Please enter a valid image URL (e.g. https://example.com/image.jpg).');
-      return;
-    }
-    editor.chain().focus().setImage({ src: url }).run();
+    setPromptState({
+      open: true,
+      title: 'Image URL',
+      defaultValue: 'https://',
+      onSubmit: (url: string) => {
+        if (!url) return;
+        try {
+          const parsed = new URL(url);
+          if (!['https:', 'http:'].includes(parsed.protocol)) return;
+        } catch {
+          return;
+        }
+        editor.chain().focus().setImage({ src: url }).run();
+      },
+    });
   }, [editor]);
 
   const addYoutubeVideo = useCallback(() => {
     if (!editor) return;
-    const url = window.prompt('YouTube URL', 'https://www.youtube.com/watch?v=');
-    if (!url) return;
-    try {
-      const parsed = new URL(url);
-      if (
-        !['www.youtube.com', 'youtube.com', 'youtu.be', 'm.youtube.com'].includes(parsed.hostname)
-      ) {
-        alert('Please enter a valid YouTube URL.');
-        return;
-      }
-    } catch {
-      alert('Please enter a valid YouTube URL.');
-      return;
-    }
-    editor.commands.setYoutubeVideo({ src: url });
+    setPromptState({
+      open: true,
+      title: 'YouTube URL',
+      defaultValue: 'https://www.youtube.com/watch?v=',
+      onSubmit: (url: string) => {
+        if (!url) return;
+        try {
+          const parsed = new URL(url);
+          if (
+            !['www.youtube.com', 'youtube.com', 'youtu.be', 'm.youtube.com'].includes(
+              parsed.hostname
+            )
+          )
+            return;
+        } catch {
+          return;
+        }
+        editor.commands.setYoutubeVideo({ src: url });
+      },
+    });
   }, [editor]);
 
   const insertTable = useCallback(() => {
@@ -292,6 +375,8 @@ export default function RichTextEditor({
           </span>
         </div>
       )}
+
+      <PromptDialog state={promptState} onClose={closePrompt} />
     </div>
   );
 }

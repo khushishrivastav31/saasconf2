@@ -367,14 +367,14 @@ export default function ReplaceAttendeeModal({
                 <span className="font-medium text-gray-700 dark:text-gray-300">
                   Booking Option:
                 </span>{' '}
-                <span className="text-gray-600 dark:text-gray-400">
+                <span className="text-gray-600 dark:text-gray-300">
                   {registration.booking_option_name || 'N/A'}
                 </span>
               </div>
               {registration.items.length > 0 && (
                 <div>
                   <span className="font-medium text-gray-700 dark:text-gray-300">Add-ons:</span>
-                  <ul className="list-disc list-inside ml-2 text-gray-600 dark:text-gray-400">
+                  <ul className="list-disc list-inside ml-2 text-gray-600 dark:text-gray-300">
                     {registration.items.map((item) => (
                       <li key={item.id}>{item.item_name}</li>
                     ))}
@@ -537,7 +537,7 @@ export default function ReplaceAttendeeModal({
           {/* Summary */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Summary</h4>
-            <ul className="text-sm space-y-1 text-gray-600 dark:text-gray-400">
+            <ul className="text-sm space-y-1 text-gray-600 dark:text-gray-300">
               <li>✓ Old attendee: Registration will be cancelled, access removed</li>
               <li>✓ New attendee: Will receive welcome email with portal access</li>
               <li>

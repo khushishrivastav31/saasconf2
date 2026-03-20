@@ -230,7 +230,7 @@ const VariantCard = memo(function VariantCard({
                 {variant.role_name}
               </span>
               {!variant.is_active && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                   Inactive
                 </span>
               )}
@@ -252,7 +252,7 @@ const VariantCard = memo(function VariantCard({
             className={`px-2.5 py-1 text-xs font-medium rounded-md border transition-colors ${
               variant.is_active
                 ? 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/50'
-                : 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
+                : 'text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
             }`}
           >
             {variant.is_active ? 'Active' : 'Inactive'}
