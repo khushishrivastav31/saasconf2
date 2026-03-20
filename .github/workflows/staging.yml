@@ -15,6 +15,10 @@ env:
   STAGING_USER: deploy
   STAGING_PATH: /opt/saasconf/app
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   # ─────────────────────────────────────────────────────────────
   # Detect which areas changed
