@@ -5,6 +5,7 @@ import { queryKeys } from '../../../config/queryKeys';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import type { Conference } from '../../../types';
 import type { Budget, BudgetCategory, BudgetLineItem } from '../../../types/conference';
+import { EmptyState } from '../../../components/common/EmptyState';
 
 interface BudgetPlanningTabProps {
   conference: Conference;
@@ -278,18 +279,31 @@ export default function BudgetPlanningTab({ conference, isAdmin }: BudgetPlannin
       )}
 
       {!activeBudget && !showNewForm && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
-            No budgets yet. Create one to start planning.
-          </p>
-          {isAdmin && (
-            <button
-              onClick={() => setShowNewForm(true)}
-              className="text-sm px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-            >
-              Create Budget
-            </button>
-          )}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <EmptyState
+            icon={
+              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                />
+              </svg>
+            }
+            title="No budgets yet"
+            description="Create one to start planning your conference budget."
+            action={
+              isAdmin ? (
+                <button
+                  onClick={() => setShowNewForm(true)}
+                  className="text-sm px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  Create Budget
+                </button>
+              ) : undefined
+            }
+          />
         </div>
       )}
 

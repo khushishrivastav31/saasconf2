@@ -18,6 +18,8 @@ import ConfirmDialog from '../../../components/ConfirmDialog';
 import ContactPersonList from '../../../components/ContactPersonList';
 import RichTextEditor from '../../../components/common/RichTextEditor';
 import { ErrorBanner } from '../../../components/common/ErrorBanner';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { EmptyState } from '../../../components/common/EmptyState';
 import { useSelection } from '../SelectionContext';
 
 export default function ConferenceLocationsTab({
@@ -513,9 +515,7 @@ export default function ConferenceLocationsTab({
       )}
 
       {isLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
-        </div>
+        <LoadingSpinner />
       ) : data?.items && data.items.length > 0 ? (
         <div className="flex gap-6">
           {/* Location List */}
@@ -637,8 +637,27 @@ export default function ConferenceLocationsTab({
           </div>
         </div>
       ) : (
-        <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-          No locations linked to this conference yet.
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+          <EmptyState
+            icon={
+              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            }
+            title="No locations linked yet"
+            description="Add locations to this conference to manage venues and rooms."
+          />
         </div>
       )}
 

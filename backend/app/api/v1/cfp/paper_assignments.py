@@ -1,5 +1,6 @@
 """Paper assignment endpoints (list, create, auto-assign, delete)."""
 
+from collections import Counter
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -238,6 +239,9 @@ async def auto_assign_papers(
     )
     existing_pairs = {(row[0], row[1]) for row in existing_pairs_result}
 
+    # Pre-compute assignment counts per paper for O(1) lookup
+    paper_assignment_counts: Counter[UUID] = Counter(p for p, _m in existing_pairs)
+
     assignments_created = 0
     papers_processed = 0
     papers_skipped = 0
@@ -267,8 +271,8 @@ async def auto_assign_papers(
         # Sort by current load (asc) for balanced distribution
         eligible.sort(key=lambda m: member_load.get(m.id, 0))
 
-        # Count existing assignments for this paper
-        existing_count = sum(1 for p, m in existing_pairs if p == paper.id)
+        # Count existing assignments for this paper (O(1) lookup)
+        existing_count = paper_assignment_counts.get(paper.id, 0)
         needed = data.reviewers_per_paper - existing_count
 
         if needed <= 0:
@@ -285,6 +289,7 @@ async def auto_assign_papers(
             )
             db.add(assignment)
             existing_pairs.add((paper.id, member.id))
+            paper_assignment_counts[paper.id] += 1
             member_load[member.id] = member_load.get(member.id, 0) + 1
             assigned_count += 1
             assignments_created += 1

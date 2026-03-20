@@ -9,6 +9,8 @@ import type {
   PaymentReminderSettings,
   PaymentReminderStats,
 } from '../../../types/conference';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { EmptyState } from '../../../components/common/EmptyState';
 
 interface Props {
   conference: Conference;
@@ -181,36 +183,22 @@ function PaymentRemindersTab({ conference, isAdmin }: Props) {
 
       {/* Table */}
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
-        </div>
+        <LoadingSpinner />
       ) : reminders.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          <svg
-            className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"
-            />
-          </svg>
-          <p className="text-lg font-medium">No payment reminders yet</p>
-          <p className="text-sm mt-1">
-            Reminders are automatically sent for overdue invoices based on your{' '}
-            <span className="font-medium">Settings &gt; Payment Reminders</span> configuration.
-          </p>
-          {settings && (
-            <p className="text-xs mt-2 text-gray-400 dark:text-gray-500">
-              1st reminder: {settings.first_reminder_days} days after due date | 2nd reminder:{' '}
-              {settings.second_reminder_days} days after due date
-            </p>
-          )}
-        </div>
+        <EmptyState
+          icon={
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"
+              />
+            </svg>
+          }
+          title="No payment reminders yet"
+          description={`Reminders are automatically sent for overdue invoices based on your Settings > Payment Reminders configuration.${settings ? ` 1st: ${settings.first_reminder_days} days, 2nd: ${settings.second_reminder_days} days after due date.` : ''}`}
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

@@ -13,6 +13,7 @@ import type {
   AllowanceDefault,
 } from '../../../types/conference';
 import { EXPENSE_STATUS_COLORS as STATUS_COLORS } from '../../../config/statusColors';
+import { EmptyState } from '../../../components/common/EmptyState';
 
 interface SpeakerExpensesTabProps {
   conference: Conference;
@@ -783,8 +784,26 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
             ))}
 
             {speakerGroups.length === 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                No expenses found. Speakers submit expenses through the portal.
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <EmptyState
+                  icon={
+                    <svg
+                      className="w-12 h-12"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"
+                      />
+                    </svg>
+                  }
+                  title="No expenses found"
+                  description="Speakers submit expenses through the portal."
+                />
               </div>
             )}
           </div>

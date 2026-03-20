@@ -5,6 +5,8 @@ import { queryKeys } from '../../../config/queryKeys';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import type { Conference } from '../../../types';
 import type { Budget, ExpenseStats } from '../../../types/conference';
+import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
+import { EmptyState } from '../../../components/common/EmptyState';
 
 interface CostManagementTabProps {
   conference: Conference;
@@ -63,25 +65,18 @@ export default function CostManagementTab({ conference }: CostManagementTabProps
       <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Cost Management</h2>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-        </div>
+        <LoadingSpinner />
       ) : !hasBudgets && !hasExpenses ? (
-        <div className="text-center py-12">
-          <svg
-            className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <line x1="12" y1="1" x2="12" y2="23" />
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-          </svg>
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">No Cost Data Yet</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            Create a budget in Budget Planning or add speaker expenses to see a summary here.
-          </p>
-        </div>
+        <EmptyState
+          icon={
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <line x1="12" y1="1" x2="12" y2="23" />
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          }
+          title="No cost data yet"
+          description="Create a budget in Budget Planning or add speaker expenses to see a summary here."
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* ── Budget Planning Summary ── */}
