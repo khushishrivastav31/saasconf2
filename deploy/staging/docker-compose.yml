@@ -65,7 +65,8 @@ services:
       DEBUG: "false"
       CORS_ORIGINS: '["https://${DOMAIN}", "https://www.${DOMAIN}"]'
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
-      SUPER_ADMIN_PASSWORD: "Test1234"
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
+      OPS_API_KEY: ${OPS_API_KEY}
       SENTRY_DSN: ${SENTRY_DSN_BACKEND:-}
       SENTRY_ENVIRONMENT: staging
       APP_VERSION: ${APP_VERSION:-0.1.0}
@@ -142,8 +143,8 @@ services:
     depends_on:
       - backend
     environment:
-      SUPER_ADMIN_PASSWORD: "Test1234"
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 86400; echo \"Running data retention cleanup...\"; curl -sf -X POST -H \"Authorization: Bearer $${SUPER_ADMIN_PASSWORD}\" http://backend:8000/ops/data-retention-cleanup || echo \"Cleanup failed\"; done;'"
+      OPS_API_KEY: ${OPS_API_KEY}
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 86400; echo \"Running data retention cleanup...\"; curl -sf -X POST -H \"Authorization: Bearer $${OPS_API_KEY}\" http://backend:8000/ops/data-retention-cleanup || echo \"Cleanup failed\"; done;'"
     deploy:
       resources:
         limits:
@@ -160,8 +161,8 @@ services:
     depends_on:
       - backend
     environment:
-      SUPER_ADMIN_PASSWORD: "Test1234"
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 3600; echo \"Sending deadline reminders...\"; curl -sf -X POST -H \"Authorization: Bearer $${SUPER_ADMIN_PASSWORD}\" http://backend:8000/ops/send-deadline-reminders || echo \"Deadline reminders failed\"; done;'"
+      OPS_API_KEY: ${OPS_API_KEY}
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 3600; echo \"Sending deadline reminders...\"; curl -sf -X POST -H \"Authorization: Bearer $${OPS_API_KEY}\" http://backend:8000/ops/send-deadline-reminders || echo \"Deadline reminders failed\"; done;'"
     deploy:
       resources:
         limits:
@@ -178,8 +179,8 @@ services:
     depends_on:
       - backend
     environment:
-      SUPER_ADMIN_PASSWORD: "Test1234"
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 86400; echo \"Sending payment reminders...\"; curl -sf -X POST -H \"Authorization: Bearer $${SUPER_ADMIN_PASSWORD}\" http://backend:8000/ops/send-payment-reminders || echo \"Payment reminders failed\"; done;'"
+      OPS_API_KEY: ${OPS_API_KEY}
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 86400; echo \"Sending payment reminders...\"; curl -sf -X POST -H \"Authorization: Bearer $${OPS_API_KEY}\" http://backend:8000/ops/send-payment-reminders || echo \"Payment reminders failed\"; done;'"
     deploy:
       resources:
         limits:

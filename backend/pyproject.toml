@@ -8,32 +8,57 @@ packages = [{include = "app"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-fastapi = "0.129.0"
-uvicorn = {version = "0.34.2", extras = ["standard"]}
+# Web framework
+fastapi = "0.135.1"
+uvicorn = {version = "0.41.0", extras = ["standard"]}
 starlette = "0.52.1"
 python-multipart = "0.0.22"
-sqlalchemy = "2.0.41"
+# Database
+sqlalchemy = "2.0.48"
 asyncpg = "0.31.0"
-psycopg2-binary = "2.9.10"
-alembic = "1.15.2"
-redis = "5.2.1"
-PyJWT = {version = "2.10.1", extras = ["crypto"]}
-argon2-cffi = "23.1.0"
-pydantic = "2.11.1"
-pydantic-settings = "2.9.1"
-email-validator = "2.2.0"
-phonenumbers = "9.0.2"
+psycopg2-binary = "2.9.11"
+alembic = "1.18.4"
+redis = "7.3.0"
+# Auth & security
+PyJWT = {version = "2.12.0", extras = ["crypto"]}
+argon2-cffi = "25.1.0"
+pyotp = "2.9.0"
+qrcode = "8.0"
+cairosvg = "2.9.0"
+# Validation
+pydantic = "2.12.5"
+pydantic-settings = "2.13.1"
+email-validator = "2.3.0"
+phonenumbers = "9.0.25"
 python-stdnum = "2.2"
+schwifty = "2026.3.0"
+pycountry = "26.2.16"
+# PDF & document generation
+weasyprint = "68.1"
+fpdf2 = "2.8.3"
+factur-x = "3.15"
+pypdf = "6.9.1"
+openpyxl = "3.1.5"
+mammoth = "1.11.0"
+striprtf = "0.0.29"
+python-docx = "1.2.0"
+html2docx = "1.6.0"
+lxml = "6.0.2"
+# Payments
+stripe = "14.4.1"
+# Infrastructure
 slowapi = "0.1.9"
-sentry-sdk = {version = "2.22.0", extras = ["fastapi"]}
-python-json-logger = "3.3.0"
-python-dotenv = "1.1.0"
+sentry-sdk = {version = "2.54.0", extras = ["fastapi"]}
+python-json-logger = "4.0.0"
+python-dotenv = "1.2.2"
 httpx = "0.28.1"
+prometheus-fastapi-instrumentator = "7.1.0"
+geonamescache = "3.0.0"
+# Media & files
 filetype = "1.2.0"
 Pillow = "12.1.1"
-nh3 = "0.2.21"
-resend = "2.7.0"
-prometheus-fastapi-instrumentator = "7.0.2"
+nh3 = "0.3.3"
+resend = "2.23.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
@@ -113,6 +138,22 @@ module = [
     "facturx.*",
     "lxml",
     "lxml.*",
+    "cairosvg",
+    "qrcode",
+    "qrcode.*",
+    "pyotp",
+    "schwifty",
+    "schwifty.*",
+    "pycountry",
+    "pycountry.*",
+    "geonamescache",
+    "geonamescache.*",
+    "stripe",
+    "stripe.*",
+    "pypdf",
+    "pypdf.*",
+    "openpyxl",
+    "openpyxl.*",
 ]
 ignore_missing_imports = true
 
