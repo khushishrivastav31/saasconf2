@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
@@ -502,6 +503,14 @@ export default function RegistrationTab({
   }
 
   const isCreating = createMutation.isPending;
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: data?.items?.length ?? 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 48,
+    overscan: 10,
+  });
 
   // ---- Detail view ----
   if (selectedId && selectedReg) {
@@ -1089,9 +1098,12 @@ export default function RegistrationTab({
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div
+            ref={scrollContainerRef}
+            className="overflow-auto max-h-[600px] border border-gray-200 dark:border-gray-700 rounded-lg"
+          >
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900">
+              <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     Name
@@ -1120,49 +1132,68 @@ export default function RegistrationTab({
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {data.items.map((reg) => (
+                {rowVirtualizer.getVirtualItems().length > 0 && (
+                  <tr style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }}>
+                    <td colSpan={8} />
+                  </tr>
+                )}
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const reg = data.items[virtualRow.index];
+                  return (
+                    <tr
+                      key={reg.id}
+                      data-index={virtualRow.index}
+                      ref={rowVirtualizer.measureElement}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => {
+                        setSelectedId(reg.id);
+                        setError(null);
+                        setSuccess(null);
+                      }}
+                    >
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {reg.first_name} {reg.last_name}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {reg.email}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {reg.booking_option_name || '\u2014'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {reg.billing_company_name || '\u2014'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {invoiceMap[reg.billing_profile_id]?.number || '\u2014'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            STATUS_COLORS[reg.status] ||
+                            'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+                          }`}
+                        >
+                          {STATUS_LABELS[reg.status] || reg.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500">
+                        {MODE_LABELS[reg.registration_mode] || reg.registration_mode}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {reg.items.length > 0 ? reg.items.length : '\u2014'}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {rowVirtualizer.getVirtualItems().length > 0 && (
                   <tr
-                    key={reg.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                    onClick={() => {
-                      setSelectedId(reg.id);
-                      setError(null);
-                      setSuccess(null);
+                    style={{
+                      height: `${rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1]?.end ?? 0)}px`,
                     }}
                   >
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {reg.first_name} {reg.last_name}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                      {reg.email}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                      {reg.booking_option_name || '\u2014'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                      {reg.billing_company_name || '\u2014'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                      {invoiceMap[reg.billing_profile_id]?.number || '\u2014'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          STATUS_COLORS[reg.status] ||
-                          'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-                        }`}
-                      >
-                        {STATUS_LABELS[reg.status] || reg.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500">
-                      {MODE_LABELS[reg.registration_mode] || reg.registration_mode}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                      {reg.items.length > 0 ? reg.items.length : '\u2014'}
-                    </td>
+                    <td colSpan={8} />
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
