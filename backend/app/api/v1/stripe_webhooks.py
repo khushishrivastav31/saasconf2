@@ -119,9 +119,22 @@ async def stripe_webhook(
 
         logger.info(f"Processing Stripe webhook: {event_type} for invoice {invoice_id}")
 
+        # Idempotency: check if this event was already processed
+        already_processed = any(
+            e.metadata and e.metadata.get("webhook_event_id") == event.id for e in (invoice.events or [])
+        )
+        if already_processed:
+            logger.info(f"Webhook event {event.id} already processed for invoice {invoice_id}, skipping")
+            return {"status": "duplicate", "event_type": event_type}
+
         # Handle payment_intent.succeeded
         if event_type == "payment_intent.succeeded":
             payment_intent = event_obj
+
+            # State guard: only transition non-paid invoices
+            if invoice.status == "paid":
+                logger.info(f"Invoice {invoice_id} already paid, skipping duplicate payment event")
+                return {"status": "already_paid", "event_type": event_type}
 
             # Update invoice status
             invoice.status = "paid"
@@ -163,6 +176,11 @@ async def stripe_webhook(
         # Handle payment_intent.payment_failed
         elif event_type == "payment_intent.payment_failed":
             payment_intent = event_obj
+
+            # State guard: don't log failure for already-paid invoices
+            if invoice.status == "paid":
+                logger.info(f"Invoice {invoice_id} already paid, ignoring failure event")
+                return {"status": "already_paid", "event_type": event_type}
 
             # Log failure
             await log_invoice_event(

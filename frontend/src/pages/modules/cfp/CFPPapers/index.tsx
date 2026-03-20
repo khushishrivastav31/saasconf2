@@ -1,6 +1,6 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams } from 'react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { useIsAdmin } from '../../../../hooks/useIsAdmin';
 import type { Paper, PaperCreate, PaperUpdate, PaperLevel, PaperStatus } from '../../../../types';
@@ -15,7 +15,11 @@ import type { PaperFormData } from './PaperForm';
 interface PaperListResponse {
   items: Paper[];
   total: number;
+  skip: number;
+  limit: number;
 }
+
+const PAGE_SIZE = 50;
 
 // ---------------------------------------------------------------------------
 // Row in the papers list view
@@ -87,19 +91,44 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Paper | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [page, setPage] = useState(0);
   const [confirmAction, setConfirmAction] = useState<{
     paper: Paper;
     action: 'accepted' | 'rejected' | 'draft';
   } | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['cfp-papers', conferenceId],
+  // Debounce search input (300ms)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(0); // Reset to first page on new search
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchQuery]);
+
+  // Reset page when status filter changes
+  useEffect(() => {
+    setPage(0);
+  }, [statusFilter]);
+
+  const skip = page * PAGE_SIZE;
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['cfp-papers', conferenceId, skip, PAGE_SIZE, debouncedSearch, statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (conferenceId) params.append('conference_id', conferenceId);
+      params.append('skip', String(skip));
+      params.append('limit', String(PAGE_SIZE));
+      if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim());
+      if (statusFilter) params.append('status', statusFilter);
       const response = await api.get<PaperListResponse>(`/cfp/papers?${params.toString()}`);
       return response.data;
     },
+    placeholderData: keepPreviousData,
     refetchInterval: 15000,
   });
 
@@ -288,29 +317,12 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
   };
 
   const papers = useMemo(() => data?.items || [], [data?.items]);
+  const totalPapers = data?.total ?? 0;
+  const totalPages = Math.ceil(totalPapers / PAGE_SIZE);
   const selectedPaper = papers.find((p) => p.id === selectedPaperId);
-  const paperCount = papers.length;
 
   // Fallback: extract cfp_id from existing papers (in case the CFP list query fails)
   const fallbackCfpId = useMemo(() => papers[0]?.cfp_id || '', [papers]);
-
-  // Filter papers by search query
-  const filteredPapers = useMemo(() => {
-    if (!searchQuery.trim()) return papers;
-    const q = searchQuery.toLowerCase();
-    return papers.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.main_speaker?.first_name.toLowerCase().includes(q) ||
-        p.main_speaker?.last_name.toLowerCase().includes(q) ||
-        p.cospeakers.some(
-          (c) =>
-            c.applicant.first_name.toLowerCase().includes(q) ||
-            c.applicant.last_name.toLowerCase().includes(q)
-        ) ||
-        (p.session_type_name && p.session_type_name.toLowerCase().includes(q))
-    );
-  }, [papers, searchQuery]);
 
   return (
     <div>
@@ -318,9 +330,9 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {isAdding ? 'New Paper' : selectedPaper ? selectedPaper.title : 'Papers'}
-            {!isAdding && !selectedPaper && paperCount > 0 && (
+            {!isAdding && !selectedPaper && totalPapers > 0 && (
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                {paperCount}
+                {totalPapers}
               </span>
             )}
           </h2>
@@ -399,53 +411,100 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
         />
       ) : (
         <div className="space-y-3">
-          {/* Search */}
-          <div className="relative">
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by title, speaker, or session type..."
-              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+          {/* Search + Status Filter */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <CloseIcon />
-              </button>
-            )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by title or speaker name..."
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+                >
+                  <CloseIcon />
+                </button>
+              )}
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
+              <option value="in_evaluation">In Evaluation</option>
+              <option value="evaluated">Evaluated</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+            </select>
           </div>
 
+          {/* Loading indicator for background refetch */}
+          {isFetching && !isLoading && (
+            <div className="text-xs text-gray-400 dark:text-gray-500 text-right">Loading...</div>
+          )}
+
           {/* List */}
-          {filteredPapers.length > 0 ? (
+          {papers.length > 0 ? (
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-              {filteredPapers.map((p) => (
+              {papers.map((p) => (
                 <PaperListRow key={p.id} paper={p} onClick={() => setSelectedPaperId(p.id)} />
               ))}
             </div>
-          ) : papers.length > 0 ? (
+          ) : debouncedSearch || statusFilter ? (
             <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-              No papers match "{searchQuery}"
+              No papers match your filters
             </div>
           ) : (
             <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
               No papers yet. Click "+ Add Paper" to get started.
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                Showing {skip + 1}–{Math.min(skip + PAGE_SIZE, totalPapers)} of {totalPapers}
+              </span>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>

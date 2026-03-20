@@ -6,7 +6,7 @@ from collections import OrderedDict
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
@@ -52,6 +52,7 @@ from ._helpers import (
     _get_option_name_map,
     _send_registration_emails,
     _validate_booking_option,
+    _validate_session_capacity,
     limiter,
 )
 
@@ -371,6 +372,7 @@ async def create_registration(
     data: UnifiedRegistrationCreate,
     current_user: CurrentUserDep,
     db: DbSessionDep,
+    background_tasks: BackgroundTasks,
 ) -> UnifiedRegistrationResponse:
     """Register one or more attendees with shared billing."""
     tenant_id = current_user.tenant_id
@@ -386,6 +388,14 @@ async def create_registration(
     opt_map: dict[UUID, BookingOption] = {}
     for oid in option_ids:
         opt_map[oid] = await _validate_booking_option(db, oid, conference_id, tenant_id)
+
+    # Validate session capacity (with row-level locking to prevent overselling)
+    for att in data.attendees:
+        if att.main_session_id:
+            await _validate_session_capacity(db, att.main_session_id, conference_id, tenant_id)
+        for item in att.items:
+            if item.program_session_id:
+                await _validate_session_capacity(db, item.program_session_id, conference_id, tenant_id)
 
     # Create shared billing profile
     billing = BillingProfile(
@@ -455,9 +465,10 @@ async def create_registration(
 
     await db.commit()
 
-    # Send emails AFTER commit (non-blocking - failures logged but don't rollback)
+    # Send emails in background (post-response) for faster registration flow
     password_setup_tokens = {reg.id: token for reg, token in user_tokens}
-    await _send_registration_emails(
+    background_tasks.add_task(
+        _send_registration_emails,
         db=db,
         registrations=registrations,
         conference=conference,
@@ -554,6 +565,11 @@ async def create_individual_registration(
     await _check_email_unique(db, conference_id, data.attendee.email)
     opt = await _validate_booking_option(db, data.booking_option_id, conference_id, tenant_id)
 
+    # Validate session capacity for items
+    for item in data.items:
+        if item.program_session_id:
+            await _validate_session_capacity(db, item.program_session_id, conference_id, tenant_id)
+
     # Create billing profile
     billing = BillingProfile(
         tenant_id=tenant_id,
@@ -618,6 +634,11 @@ async def create_company_registration(
 
     await _check_email_unique(db, conference_id, data.attendee.email)
     opt = await _validate_booking_option(db, data.booking_option_id, conference_id, tenant_id)
+
+    # Validate session capacity for items
+    for item in data.items:
+        if item.program_session_id:
+            await _validate_session_capacity(db, item.program_session_id, conference_id, tenant_id)
 
     billing = BillingProfile(
         tenant_id=tenant_id,
@@ -687,6 +708,12 @@ async def create_bulk_registration(
     opt_map: dict[UUID, BookingOption] = {}
     for oid in option_ids:
         opt_map[oid] = await _validate_booking_option(db, oid, conference_id, tenant_id)
+
+    # Validate session capacity for items (with row-level locking to prevent overselling)
+    for att in data.attendees:
+        for item in att.items:
+            if item.program_session_id:
+                await _validate_session_capacity(db, item.program_session_id, conference_id, tenant_id)
 
     # Create shared billing profile
     billing = BillingProfile(

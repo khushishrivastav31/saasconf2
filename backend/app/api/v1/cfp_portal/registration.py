@@ -4,7 +4,7 @@ import logging
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -694,6 +694,7 @@ async def create_authenticated_registration(
     data: PortalRegistrationRequest,
     current_applicant: CurrentApplicantDep,
     db: DbSessionDep,
+    background_tasks: BackgroundTasks,
 ) -> PortalRegistrationResponse:
     """Create registration for authenticated user with discount code support.
 
@@ -948,9 +949,10 @@ async def create_authenticated_registration(
         except Exception as e:
             logger.error(f"Failed to create user for registration {reg.id}: {e}")
 
-    # Build password_setup_tokens dict and send emails
+    # Send emails in background (post-response) for faster registration flow
     password_setup_tokens = {reg.id: token for reg, token in user_tokens}
-    await _send_registration_emails(
+    background_tasks.add_task(
+        _send_registration_emails,
         db=db,
         registrations=registrations,
         conference=conference,

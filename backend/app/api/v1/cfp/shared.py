@@ -231,6 +231,266 @@ async def _sync_speaker_role(
                     await db.delete(assignment)
 
 
+async def _build_paper_responses_batch(
+    db: DbSessionDep,
+    papers: list[CFPPaper],
+    tenant_id: UUID,
+) -> list[PaperResponse]:
+    """Build PaperResponse objects for a batch of papers in ~10 queries instead of 10*N.
+
+    Uses batch queries for attachment URLs, session types, conference names,
+    reviews, committee members, and review questions.
+    """
+    if not papers:
+        return []
+
+    paper_ids = [p.id for p in papers]
+    cfp_ids = list({p.cfp_id for p in papers})
+
+    # 1. Batch-fetch paper video URLs
+    paper_video_urls = await _batch_get_attachment_urls(db, paper_ids, "paper_video", tenant_id)
+
+    # 2. Batch-fetch all speaker picture + video URLs
+    all_speaker_ids: set[UUID] = set()
+    for p in papers:
+        if p.main_speaker_id:
+            all_speaker_ids.add(p.main_speaker_id)
+        for assoc in p.cospeaker_associations:
+            all_speaker_ids.add(assoc.applicant_id)
+    speaker_id_list = list(all_speaker_ids)
+
+    speaker_picture_urls: dict[UUID, str] = {}
+    speaker_video_urls: dict[UUID, str] = {}
+    if speaker_id_list:
+        speaker_picture_urls = await _batch_get_attachment_urls(db, speaker_id_list, "applicant_picture", tenant_id)
+        speaker_video_urls = await _batch_get_attachment_urls(db, speaker_id_list, "applicant_video", tenant_id)
+
+    # 3. Batch-fetch session types
+    session_type_ids = list({p.session_type_id for p in papers if p.session_type_id})
+    session_type_map: dict[UUID, tuple[str, int | None]] = {}
+    if session_type_ids:
+        st_result = await db.execute(select(SessionType).where(SessionType.id.in_(session_type_ids)))
+        for st in st_result.scalars().all():
+            session_type_map[st.id] = (st.name, st.duration_minutes)
+
+    # 4. Batch-fetch conference names via ConferenceCFP
+    cfp_conference_map: dict[UUID, tuple[UUID, str]] = {}
+    if cfp_ids:
+        conf_result = await db.execute(
+            select(ConferenceCFP.cfp_id, Conference.id, Conference.name)
+            .join(Conference, Conference.id == ConferenceCFP.conference_id)
+            .where(ConferenceCFP.cfp_id.in_(cfp_ids))
+        )
+        for row in conf_result.all():
+            cfp_conference_map[row[0]] = (row[1], row[2])
+
+    # 5. Batch-fetch all submitted reviews for these papers
+    reviews_result = await db.execute(
+        select(PaperReview)
+        .where(
+            PaperReview.paper_id.in_(paper_ids),
+            PaperReview.tenant_id == tenant_id,
+            PaperReview.status == ReviewStatus.SUBMITTED.value,
+        )
+        .order_by(PaperReview.submitted_at)
+    )
+    all_reviews = list(reviews_result.scalars().all())
+
+    # Group reviews by paper_id
+    reviews_by_paper: dict[UUID, list[PaperReview]] = {}
+    all_member_ids: set[UUID] = set()
+    for rev in all_reviews:
+        reviews_by_paper.setdefault(rev.paper_id, []).append(rev)
+        all_member_ids.add(rev.committee_member_id)
+
+    # 6. Batch-fetch committee members for reviews
+    members_map: dict[UUID, CFPCommitteeMember] = {}
+    if all_member_ids:
+        members_result = await db.execute(
+            select(CFPCommitteeMember)
+            .options(selectinload(CFPCommitteeMember.applicant))
+            .where(CFPCommitteeMember.id.in_(list(all_member_ids)))
+        )
+        members_map = {m.id: m for m in members_result.scalars().all()}
+
+    # 7. Batch-fetch review questions per conference (for max_review_score)
+    conference_ids = list({cid for cid, _ in cfp_conference_map.values()})
+    max_score_by_conference: dict[UUID, float | None] = {}
+    if conference_ids:
+        questions_result = await db.execute(
+            select(ReviewQuestion).where(
+                ReviewQuestion.conference_id.in_(conference_ids),
+                ReviewQuestion.tenant_id == tenant_id,
+                ReviewQuestion.is_active.is_(True),
+                ReviewQuestion.count_in_score.is_(True),
+            )
+        )
+        questions_by_conf: dict[UUID, list[ReviewQuestion]] = {}
+        for q in questions_result.scalars().all():
+            questions_by_conf.setdefault(q.conference_id, []).append(q)
+
+        for conf_id, questions in questions_by_conf.items():
+            total_max_weighted = 0.0
+            total_weight = 0.0
+            for q in questions:
+                if not q.score_scale or not q.score_scale.options:
+                    continue
+                max_val = max(
+                    (o.numeric_value for o in q.score_scale.options if o.numeric_value is not None and not o.is_unsure),
+                    default=None,
+                )
+                if max_val is not None:
+                    total_max_weighted += max_val * q.weight
+                    total_weight += q.weight
+            max_score_by_conference[conf_id] = total_max_weighted / total_weight if total_weight > 0 else None
+
+    # 8. Batch-count must_have per paper
+    must_have_result = await db.execute(
+        select(PaperReview.paper_id, func.count(PaperReview.id))
+        .where(
+            PaperReview.paper_id.in_(paper_ids),
+            PaperReview.tenant_id == tenant_id,
+            PaperReview.must_have.is_(True),
+            PaperReview.status == ReviewStatus.SUBMITTED.value,
+        )
+        .group_by(PaperReview.paper_id)
+    )
+    must_have_counts = dict(must_have_result.all())
+
+    # --- Build responses ---
+    def _build_applicant(applicant: CFPApplicant) -> ApplicantResponse:
+        return ApplicantResponse(
+            id=applicant.id,
+            tenant_id=applicant.tenant_id,
+            first_name=applicant.first_name,
+            last_name=applicant.last_name,
+            email=applicant.email,
+            phone=applicant.phone,
+            title=applicant.title,
+            company=applicant.company,
+            bio=applicant.bio,
+            allow_out_of_timeframe=applicant.allow_out_of_timeframe,
+            social_links=applicant.social_links or {},
+            needs_accessibility=applicant.needs_accessibility,
+            accessibility_details=applicant.accessibility_details,
+            agrees_to_recording=applicant.agrees_to_recording,
+            picture_url=speaker_picture_urls.get(applicant.id),
+            video_url=speaker_video_urls.get(applicant.id),
+            created_at=applicant.created_at,
+            updated_at=applicant.updated_at,
+        )
+
+    items: list[PaperResponse] = []
+    for paper in papers:
+        main_speaker_response = _build_applicant(paper.main_speaker)
+
+        cospeakers_responses = [
+            CospeakerResponse(
+                applicant=_build_applicant(assoc.applicant),
+                invitation_status=assoc.invitation_status,
+                invited_at=assoc.invited_at,
+                responded_at=assoc.responded_at,
+            )
+            for assoc in paper.cospeaker_associations
+        ]
+
+        topics_responses = [
+            TopicResponse(
+                id=t.id,
+                tenant_id=t.tenant_id,
+                name=t.name,
+                description=t.description,
+                created_at=t.created_at,
+                updated_at=t.updated_at,
+            )
+            for t in paper.topics
+        ]
+
+        comments_responses = [
+            PaperCommentResponse(
+                id=c.id,
+                committee_member_id=c.committee_member_id,
+                committee_member_first_name=c.committee_member.applicant.first_name if c.committee_member else None,
+                committee_member_last_name=c.committee_member.applicant.last_name if c.committee_member else None,
+                committee_member_role=c.committee_member.role if c.committee_member else None,
+                content=c.content,
+                created_at=c.created_at,
+            )
+            for c in paper.comments
+        ]
+
+        # Session type
+        session_type_name = None
+        session_type_duration = None
+        if paper.session_type_id and paper.session_type_id in session_type_map:
+            session_type_name, session_type_duration = session_type_map[paper.session_type_id]
+
+        # Conference name and max review score
+        conference_name = None
+        max_review_score: float | None = None
+        conf_info = cfp_conference_map.get(paper.cfp_id)
+        if conf_info:
+            conference_id, conference_name = conf_info
+            max_review_score = max_score_by_conference.get(conference_id)
+
+        # Reviews
+        paper_reviews = reviews_by_paper.get(paper.id, [])
+        review_summaries = [
+            PaperReviewSummary(
+                reviewer_first_name=(
+                    members_map[rev.committee_member_id].applicant.first_name
+                    if rev.committee_member_id in members_map and members_map[rev.committee_member_id].applicant
+                    else None
+                ),
+                reviewer_last_name=(
+                    members_map[rev.committee_member_id].applicant.last_name
+                    if rev.committee_member_id in members_map and members_map[rev.committee_member_id].applicant
+                    else None
+                ),
+                total_score=rev.total_score,
+                internal_comment=rev.internal_comment,
+                must_have=rev.must_have,
+            )
+            for rev in paper_reviews
+        ]
+
+        items.append(
+            PaperResponse(
+                id=paper.id,
+                tenant_id=paper.tenant_id,
+                cfp_id=paper.cfp_id,
+                cfp_title=paper.cfp.title,
+                cfp_status=paper.cfp.status,
+                conference_name=conference_name,
+                main_speaker_id=paper.main_speaker_id,
+                main_speaker=main_speaker_response,
+                cospeakers=cospeakers_responses,
+                session_type_id=paper.session_type_id,
+                session_type_name=session_type_name,
+                session_type_duration=session_type_duration,
+                form_variant_id=paper.form_variant_id,
+                topics=topics_responses,
+                title=paper.title,
+                abstract_short=paper.abstract_short,
+                abstract_long=paper.abstract_long,
+                level=paper.level,
+                learning_objectives=paper.learning_objectives,
+                status=paper.status,
+                display_status=_compute_display_status(paper.status, paper.cfp.status),
+                video_url=paper_video_urls.get(paper.id),
+                comments=comments_responses,
+                must_have_count=must_have_counts.get(paper.id, 0),
+                max_review_score=max_review_score,
+                review_summaries=review_summaries,
+                submitted_at=paper.submitted_at,
+                created_at=paper.created_at,
+                updated_at=paper.updated_at,
+            )
+        )
+
+    return items
+
+
 async def _build_paper_response(
     db: DbSessionDep,
     paper: CFPPaper,

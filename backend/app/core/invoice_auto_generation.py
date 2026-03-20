@@ -43,74 +43,84 @@ async def _build_attendee_notes(db: AsyncSession, registrations: list[Registrati
 
     Format (one line per attendee):
     Attendees:
-    Name, Package: Session, Add-on 1, Add-on 2, Add-on 3
+    - Name
+      Package: Session
+      Add-on 1
+      Add-on 2
 
-    Example:
-    Hans Müller, Tutorial Day: Back to Testing Basics, Conference Day 1, Conference Day 2
-
-    Args:
-        db: Database session
-        registrations: List of Registration instances
-
-    Returns:
-        Formatted notes string
+    Uses batch queries to avoid N+1 (one query per booking option, session, and items).
     """
     if not registrations:
         return ""
 
+    reg_ids = [reg.id for reg in registrations]
+
+    # Batch-fetch all booking options referenced by registrations
+    booking_option_ids = list({reg.booking_option_id for reg in registrations if reg.booking_option_id})
+    option_map: dict[UUID, str] = {}
+    if booking_option_ids:
+        opt_result = await db.execute(
+            select(BookingOption.id, BookingOption.name).where(BookingOption.id.in_(booking_option_ids))
+        )
+        option_map = {row[0]: row[1] for row in opt_result.all()}
+
+    # Batch-fetch all registration items with their booking option names
+    items_result = await db.execute(
+        select(RegistrationItem, BookingOption.sort_order)
+        .join(BookingOption, RegistrationItem.booking_option_id == BookingOption.id)
+        .where(RegistrationItem.registration_id.in_(reg_ids))
+        .order_by(BookingOption.sort_order)
+    )
+    items_by_reg: dict[UUID, list[RegistrationItem]] = {}
+    for item, _sort_order in items_result.all():
+        items_by_reg.setdefault(item.registration_id, []).append(item)
+
+    # Batch-fetch all program sessions (main sessions + item sessions)
+    all_session_ids: set[UUID] = set()
+    for reg in registrations:
+        if reg.main_session_id:
+            all_session_ids.add(
+                UUID(reg.main_session_id) if isinstance(reg.main_session_id, str) else reg.main_session_id
+            )
+    for items in items_by_reg.values():
+        for item in items:
+            if item.program_session_id:
+                all_session_ids.add(item.program_session_id)
+
+    session_map: dict[UUID, str] = {}
+    if all_session_ids:
+        session_result = await db.execute(
+            select(ProgramSession.id, ProgramSession.title).where(ProgramSession.id.in_(list(all_session_ids)))
+        )
+        session_map = {row[0]: row[1] for row in session_result.all()}
+
+    # Build notes
     notes_lines = ["Attendees:"]
 
     for reg in registrations:
-        # 1. Name - starts on new line with bullet point
-        attendee_name = f"- {reg.first_name} {reg.last_name}"
-        notes_lines.append(attendee_name)
+        notes_lines.append(f"- {reg.first_name} {reg.last_name}")
 
-        # 2. Main package (with session if applicable)
-        booking_option_stmt = select(BookingOption).where(BookingOption.id == reg.booking_option_id)
-        booking_option_result = await db.execute(booking_option_stmt)
-        booking_option = booking_option_result.scalar_one_or_none()
-        package_name = booking_option.name if booking_option else "Unknown"
+        package_name = option_map.get(reg.booking_option_id, "Unknown") if reg.booking_option_id else "Unknown"
 
-        # Get main session if present
         session_name = None
         if reg.main_session_id:
-            session_stmt = select(ProgramSession).where(ProgramSession.id == reg.main_session_id)
-            session_result = await db.execute(session_stmt)
-            session = session_result.scalar_one_or_none()
-            if session:
-                session_name = session.title
+            sid = UUID(reg.main_session_id) if isinstance(reg.main_session_id, str) else reg.main_session_id
+            session_name = session_map.get(sid)
 
-        # Format: "  Package: Session" or "  Package" (indented)
         if session_name:
             notes_lines.append(f"  {package_name}: {session_name}")
         else:
             notes_lines.append(f"  {package_name}")
 
-        # 3. Get and sort add-on items by booking option sort_order
-        items_stmt = (
-            select(RegistrationItem, BookingOption)
-            .join(BookingOption, RegistrationItem.booking_option_id == BookingOption.id)
-            .where(RegistrationItem.registration_id == reg.id)
-            .order_by(BookingOption.sort_order)
-        )
-        items_result = await db.execute(items_stmt)
-        items_with_options = items_result.all()
-
-        for item, _option in items_with_options:
-            # Skip duplicate items (backward compatibility)
+        for item in items_by_reg.get(reg.id, []):
             if item.booking_option_id == reg.booking_option_id:
                 continue
             if item.item_name:
-                # Check if this item has a session selection
                 item_text = item.item_name
                 if item.program_session_id:
-                    session_stmt = select(ProgramSession).where(ProgramSession.id == item.program_session_id)
-                    session_result = await db.execute(session_stmt)
-                    session = session_result.scalar_one_or_none()
-                    if session and session.title:
-                        item_text = f"{item.item_name}: {session.title}"
-
-                # Add each item on its own line, indented
+                    title = session_map.get(item.program_session_id)
+                    if title:
+                        item_text = f"{item.item_name}: {title}"
                 notes_lines.append(f"  {item_text}")
 
     return "\n".join(notes_lines)

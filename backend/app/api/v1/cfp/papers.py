@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import (
@@ -48,6 +48,7 @@ from ._paper_helpers import (
 from .shared import (
     MODULE_CODE,
     _build_paper_response,
+    _build_paper_responses_batch,
     _paper_eager_options,
     _reload_paper,
     _sync_speaker_role,
@@ -107,43 +108,61 @@ async def list_papers(
     status: str | None = None,
     main_speaker_id: UUID | None = None,
     applicant_id: UUID | None = Query(None, description="Filter papers where applicant is main speaker or co-speaker"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    search: str | None = Query(None, description="Search papers by title or speaker name"),
 ) -> PaperListResponse:
-    """List all papers for the current tenant."""
-    query = (
-        select(CFPPaper)
-        .options(*_paper_eager_options())
-        .where(CFPPaper.tenant_id == current_user.tenant_id)
-        .order_by(CFPPaper.created_at.desc())
-    )
+    """List papers for the current tenant with server-side pagination."""
+    # Build base filter (shared between count and data queries)
+    base_filter = select(CFPPaper).where(CFPPaper.tenant_id == current_user.tenant_id)
 
     if conference_id:
-        query = query.join(ConferenceCFP, CFPPaper.cfp_id == ConferenceCFP.cfp_id).where(
+        base_filter = base_filter.join(ConferenceCFP, CFPPaper.cfp_id == ConferenceCFP.cfp_id).where(
             ConferenceCFP.conference_id == conference_id
         )
 
     if cfp_id:
-        query = query.where(CFPPaper.cfp_id == cfp_id)
+        base_filter = base_filter.where(CFPPaper.cfp_id == cfp_id)
 
     if status:
-        query = query.where(CFPPaper.status == status)
+        base_filter = base_filter.where(CFPPaper.status == status)
 
     if main_speaker_id:
-        query = query.where(CFPPaper.main_speaker_id == main_speaker_id)
+        base_filter = base_filter.where(CFPPaper.main_speaker_id == main_speaker_id)
 
     if applicant_id:
         cospeaker_paper_ids = (
             select(CFPPaperCospeaker.paper_id).where(CFPPaperCospeaker.applicant_id == applicant_id).scalar_subquery()
         )
-        query = query.where((CFPPaper.main_speaker_id == applicant_id) | CFPPaper.id.in_(cospeaker_paper_ids))
+        base_filter = base_filter.where(
+            (CFPPaper.main_speaker_id == applicant_id) | CFPPaper.id.in_(cospeaker_paper_ids)
+        )
 
-    result = await db.execute(query)
+    if search:
+        from app.models.cfp import CFPApplicant
+
+        search_term = f"%{search}%"
+        base_filter = base_filter.outerjoin(CFPApplicant, CFPPaper.main_speaker_id == CFPApplicant.id).where(
+            CFPPaper.title.ilike(search_term)
+            | CFPApplicant.first_name.ilike(search_term)
+            | CFPApplicant.last_name.ilike(search_term)
+        )
+
+    # Count total matching rows
+    count_query = select(func.count()).select_from(base_filter.subquery())
+    total = (await db.execute(count_query)).scalar() or 0
+
+    # Fetch paginated data with eager loads
+    data_query = (
+        base_filter.options(*_paper_eager_options()).order_by(CFPPaper.created_at.desc()).offset(skip).limit(limit)
+    )
+
+    result = await db.execute(data_query)
     papers = list(result.scalars().all())
 
-    items = []
-    for paper in papers:
-        items.append(await _build_paper_response(db, paper, current_user.tenant_id))
+    items = await _build_paper_responses_batch(db, papers, current_user.tenant_id)
 
-    return PaperListResponse(items=items, total=len(items))
+    return PaperListResponse(items=items, total=total, skip=skip, limit=limit)
 
 
 @router.get("/papers/stats", response_model=PaperStats, dependencies=[Depends(require_module(MODULE_CODE))])
@@ -152,30 +171,25 @@ async def get_paper_stats(
     db: DbSessionDep,
     cfp_id: UUID | None = None,
 ) -> PaperStats:
-    """Get paper statistics."""
-    base_query = select(CFPPaper).where(CFPPaper.tenant_id == current_user.tenant_id)
+    """Get paper statistics using SQL aggregation."""
+    base = select(CFPPaper.status, func.count(CFPPaper.id)).where(CFPPaper.tenant_id == current_user.tenant_id)
 
     if cfp_id:
-        base_query = base_query.where(CFPPaper.cfp_id == cfp_id)
+        base = base.where(CFPPaper.cfp_id == cfp_id)
 
-    result = await db.execute(base_query)
-    papers = list(result.scalars().all())
+    result = await db.execute(base.group_by(CFPPaper.status))
+    counts = dict(result.all())
 
-    stats = {
-        "total": len(papers),
-        "draft": 0,
-        "submitted": 0,
-        "in_evaluation": 0,
-        "evaluated": 0,
-        "rejected": 0,
-        "accepted": 0,
-    }
-
-    for paper in papers:
-        if paper.status in stats:
-            stats[paper.status] += 1
-
-    return PaperStats(**stats)
+    total = sum(counts.values())
+    return PaperStats(
+        total=total,
+        draft=counts.get("draft", 0),
+        submitted=counts.get("submitted", 0),
+        in_evaluation=counts.get("in_evaluation", 0),
+        evaluated=counts.get("evaluated", 0),
+        rejected=counts.get("rejected", 0),
+        accepted=counts.get("accepted", 0),
+    )
 
 
 @router.post(

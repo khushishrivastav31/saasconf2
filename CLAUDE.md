@@ -81,7 +81,7 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Remove importance field from paper forms + unsaved changes warnings + address fields on profiles + E2E fixes + handbook updates
-- **Status**: Clean — all static checks passing (mypy/ruff/tsc/eslint), frontend tests pass. Not yet committed.
-- **Pending**: User approval to commit all outstanding changes
+- **Last completed**: Phase 1+2 of performance/reliability plan — CFP paper pagination + batch loading + SQL stats, frontend server-side pagination, session booking race condition fix (SELECT FOR UPDATE), Stripe webhook idempotency, background email sending, invoice attendee notes batch fix
+- **Status**: Clean — all static checks passing (mypy/ruff/tsc/eslint), all tests pass. Not yet committed.
+- **Pending**: User approval to commit. Phases 3-6 of plan remain (backend perf, frontend perf, accessibility, UX polish)
 - **Note**: H2 (require current password for password change) deferred for later

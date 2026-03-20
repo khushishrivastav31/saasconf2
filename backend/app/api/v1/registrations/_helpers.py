@@ -17,6 +17,7 @@ from app.models.registration import (
     RegistrationItemType,
     RegistrationStatus,
 )
+from app.models.settings import SessionType
 from app.schemas.registration import (
     RegistrationItemCreate,
     RegistrationItemResponse,
@@ -42,6 +43,66 @@ async def _validate_booking_option(db, option_id: UUID, conference_id: UUID, ten
     if not opt:
         raise ValidationError(f"Booking option '{option_id}' not found or inactive for this conference")
     return opt
+
+
+async def _validate_session_capacity(
+    db,
+    session_id: UUID,
+    conference_id: UUID,
+    tenant_id: UUID,
+) -> None:
+    """Check that a session has capacity, using SELECT FOR UPDATE to prevent races.
+
+    Locks the session's SessionType row (which holds max_attendees) for the
+    duration of the transaction, then counts current bookings across both
+    Registration.main_session_id and RegistrationItem.program_session_id.
+    Raises ValidationError if the session is full.
+    """
+    # Get the session and its session_type_id
+    session_result = await db.execute(
+        select(ProgramSession.session_type_id, ProgramSession.title).where(
+            ProgramSession.id == session_id,
+            ProgramSession.conference_id == conference_id,
+            ProgramSession.tenant_id == tenant_id,
+        )
+    )
+    session_row = session_result.one_or_none()
+    if not session_row or not session_row.session_type_id:
+        return  # No session type = no capacity limit
+
+    # Lock the session type row to serialize concurrent capacity checks
+    st_result = await db.execute(
+        select(SessionType).where(SessionType.id == session_row.session_type_id).with_for_update()
+    )
+    session_type = st_result.scalar_one_or_none()
+    if not session_type or session_type.max_attendees is None:
+        return  # No capacity limit configured
+
+    # Count current bookings for this session (main + items)
+    sid_str = str(session_id)
+    main_count_result = await db.execute(
+        select(func.count()).where(
+            Registration.main_session_id == sid_str,
+            Registration.conference_id == conference_id,
+            Registration.tenant_id == tenant_id,
+            Registration.status != RegistrationStatus.CANCELLED.value,
+        )
+    )
+    main_count = main_count_result.scalar() or 0
+
+    item_count_result = await db.execute(
+        select(func.count()).where(
+            RegistrationItem.program_session_id == session_id,
+            RegistrationItem.tenant_id == tenant_id,
+        )
+    )
+    item_count = item_count_result.scalar() or 0
+
+    total_booked = main_count + item_count
+    if total_booked >= session_type.max_attendees:
+        raise ValidationError(
+            f"Session '{session_row.title}' is full ({total_booked}/{session_type.max_attendees} spots taken)"
+        )
 
 
 async def _resolve_item(

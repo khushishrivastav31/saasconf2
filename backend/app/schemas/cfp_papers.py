@@ -227,6 +227,8 @@ class PaperListResponse(BaseModel):
 
     items: list[PaperResponse]
     total: int
+    skip: int
+    limit: int
 
 
 class PaperStats(BaseModel):

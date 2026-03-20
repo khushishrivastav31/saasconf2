@@ -11,7 +11,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,6 +57,7 @@ from ..registrations._helpers import (
     _create_items,
     _send_registration_emails,
     _validate_booking_option,
+    _validate_session_capacity,
 )
 
 logger = logging.getLogger(__name__)
@@ -856,6 +857,7 @@ async def create_public_registration(
     conference_slug: str,
     data: PortalRegistrationRequest,
     db: DbSessionDep,
+    background_tasks: BackgroundTasks,
 ) -> PortalRegistrationResponse:
     """
     Create public conference registration (no authentication required).
@@ -951,6 +953,14 @@ async def create_public_registration(
     opt_map: dict[UUID, BookingOption] = {}
     for oid in option_ids:
         opt_map[oid] = await _validate_booking_option(db, oid, conference_id, tenant_id)
+
+    # Validate session capacity (with row-level locking to prevent overselling)
+    for att in data.attendees:
+        if att.main_session_id:
+            await _validate_session_capacity(db, att.main_session_id, conference_id, tenant_id)
+        for item in att.items or []:
+            if item.program_session_id:
+                await _validate_session_capacity(db, item.program_session_id, conference_id, tenant_id)
 
     # Enforce: bank transfer only for countries enabled in conference settings
     from app.core.default_settings import BANK_TRANSFER_COUNTRIES
@@ -1116,9 +1126,10 @@ async def create_public_registration(
         except Exception as e:
             logger.error(f"Failed to create user for registration {reg.id}: {e}")
 
-    # Build password_setup_tokens dict and send emails
+    # Send emails in background (post-response) for faster registration flow
     password_setup_tokens = {reg.id: token for reg, token in user_tokens}
-    await _send_registration_emails(
+    background_tasks.add_task(
+        _send_registration_emails,
         db=db,
         registrations=registrations,
         conference=conference,
