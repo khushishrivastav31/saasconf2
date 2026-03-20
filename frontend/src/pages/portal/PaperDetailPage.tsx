@@ -1,12 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { sanitizeHtml } from '../../utils/richText';
-import { validateEmail } from '../../utils/validators';
 import portalApi from '../../config/portalApi';
 import { useApplicantAuth } from '../../hooks/useApplicantAuth';
 import { usePortalBasePath } from '../../hooks/usePortalBasePath';
-import { formatDate } from '../../utils/formatDate';
 import type {
   PortalPaper,
   PortalPaperUpdateRequest,
@@ -15,17 +12,17 @@ import type {
   PortalPaperFormSchema,
   PortalPaperFormField,
 } from '../../types/portal';
-import RichTextEditor from '../../components/common/RichTextEditor';
 import RichTextDisplay from '../../components/common/RichTextDisplay';
 import { isAxiosError } from 'axios';
 import { parseApiError } from '../../utils/apiError';
 import MediaPreviewModal from '../../components/MediaPreviewModal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import PaperStatusLifeline from '../../components/PaperStatusLifeline';
-import { INVITATION_STATUS_COLORS } from '../../config/statusColors';
-import { ACCEPTED_VIDEO_FORMATS, validateVideo } from '../../utils/mediaValidation';
+import { validateVideo } from '../../utils/mediaValidation';
 import { usePortalAuthMedia } from '../../hooks/usePortalAuthMedia';
 import { useSaveStatus } from '../../hooks/useSaveStatus';
+import PaperEditForm from './PaperEditForm';
+import PaperViewDisplay from './PaperViewDisplay';
 
 const BUILTIN_FIELD_DEFS: { key: string; label: string; alwaysRequired?: boolean }[] = [
   { key: 'title', label: 'Title', alwaysRequired: true },
@@ -35,13 +32,6 @@ const BUILTIN_FIELD_DEFS: { key: string; label: string; alwaysRequired?: boolean
   { key: 'learning_objectives', label: 'Learning Objectives' },
   { key: 'session_type', label: 'Session Type' },
   { key: 'topics', label: 'Topics' },
-];
-
-const LEVEL_OPTIONS = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' },
-  { value: 'all_levels', label: 'All Levels' },
 ];
 
 type UnifiedFormField = {
@@ -514,719 +504,50 @@ function PaperDetailPage() {
         </div>
 
         {isEditing ? (
-          <div className="space-y-5">
-            {/* Dynamic Form Fields - rendered in form schema display_order */}
-            {unifiedFormFields.map((field) => {
-              if (field.type === 'builtin') {
-                switch (field.key) {
-                  case 'title':
-                    return (
-                      <div key={field.key}>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          {field.label} <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          maxLength={field.max_chars ?? undefined}
-                          minLength={field.min_chars ?? undefined}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                        />
-                        {(field.min_chars != null || field.max_chars != null) && (
-                          <div className="flex justify-end mt-1">
-                            <span
-                              className={`text-xs ${
-                                field.max_chars != null && editTitle.length > field.max_chars
-                                  ? 'text-red-600 font-medium'
-                                  : field.min_chars != null &&
-                                      editTitle.length > 0 &&
-                                      editTitle.length < field.min_chars
-                                    ? 'text-red-600 font-medium'
-                                    : 'text-gray-400 dark:text-gray-500'
-                              }`}
-                            >
-                              {editTitle.length}
-                              {field.min_chars != null && <span> (min {field.min_chars})</span>}
-                              {field.max_chars != null && <span> / {field.max_chars}</span>}
-                            </span>
-                          </div>
-                        )}
-                        {field.help_text && (
-                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                            {field.help_text}
-                          </p>
-                        )}
-                      </div>
-                    );
-
-                  case 'session_type':
-                    if (!conferenceDetail || conferenceDetail.session_types.length === 0)
-                      return null;
-                    return (
-                      <div key={field.key}>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          {field.label}
-                          {field.is_required && <span className="text-red-500"> *</span>}
-                        </label>
-                        <select
-                          value={editSessionTypeId}
-                          onChange={(e) => setEditSessionTypeId(e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                        >
-                          <option value="">Select session type</option>
-                          {conferenceDetail.session_types.map((st) => (
-                            <option key={st.id} value={st.id}>
-                              {st.name} ({st.duration_minutes} min)
-                            </option>
-                          ))}
-                        </select>
-                        {field.help_text && (
-                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                            {field.help_text}
-                          </p>
-                        )}
-                      </div>
-                    );
-
-                  case 'topics':
-                    // Topics not editable in portal detail page (no topic selection data available)
-                    return null;
-
-                  case 'level':
-                    return (
-                      <div key={field.key}>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          {field.label}
-                          {field.is_required && <span className="text-red-500"> *</span>}
-                        </label>
-                        <select
-                          value={editLevel}
-                          onChange={(e) => setEditLevel(e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                        >
-                          <option value="">Select level...</option>
-                          {(field.options && field.options.length > 0
-                            ? field.options
-                            : LEVEL_OPTIONS
-                          ).map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                        {field.help_text && (
-                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                            {field.help_text}
-                          </p>
-                        )}
-                      </div>
-                    );
-
-                  case 'abstract_short':
-                    return (
-                      <div key={field.key}>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          {field.label}
-                          {field.is_required && <span className="text-red-500"> *</span>}
-                        </label>
-                        <RichTextEditor
-                          value={editAbstractShort}
-                          onChange={(html) => setEditAbstractShort(html)}
-                          placeholder="Brief summary of your talk..."
-                          rows={3}
-                          minLength={field.min_chars ?? undefined}
-                          maxLength={field.max_chars ?? undefined}
-                        />
-                        {field.help_text && (
-                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                            {field.help_text}
-                          </p>
-                        )}
-                      </div>
-                    );
-
-                  case 'abstract_long':
-                    return (
-                      <div key={field.key}>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          {field.label}
-                          {field.is_required && <span className="text-red-500"> *</span>}
-                        </label>
-                        <RichTextEditor
-                          value={editAbstractLong}
-                          onChange={(html) => setEditAbstractLong(html)}
-                          placeholder="Detailed description of your talk..."
-                          rows={6}
-                          minLength={field.min_chars ?? undefined}
-                          maxLength={field.max_chars ?? undefined}
-                        />
-                        {field.help_text && (
-                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                            {field.help_text}
-                          </p>
-                        )}
-                      </div>
-                    );
-
-                  case 'learning_objectives':
-                    return (
-                      <div key={field.key}>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          {field.label}
-                          {field.is_required && <span className="text-red-500"> *</span>}
-                        </label>
-                        <RichTextEditor
-                          value={editLearningObjectives}
-                          onChange={(html) => setEditLearningObjectives(html)}
-                          placeholder="What will attendees learn from this talk?"
-                          rows={4}
-                          minLength={field.min_chars ?? undefined}
-                          maxLength={field.max_chars ?? undefined}
-                        />
-                        {field.help_text && (
-                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                            {field.help_text}
-                          </p>
-                        )}
-                      </div>
-                    );
-
-                  default:
-                    return null;
-                }
-              }
-
-              // Render custom fields
-              if (field.type === 'custom' && field.customField) {
-                const cf = field.customField;
-                const cfValue = editCustomFieldAnswers[field.key];
-                return (
-                  <div key={cf.id}>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {field.label}
-                      {field.is_required && <span className="text-red-500"> *</span>}
-                    </label>
-                    {cf.description && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        {cf.description}
-                      </p>
-                    )}
-                    {cf.field_type === 'text' && (
-                      <input
-                        type="text"
-                        value={String(cfValue ?? '')}
-                        onChange={(e) =>
-                          setEditCustomFieldAnswers((prev) => ({
-                            ...prev,
-                            [field.key]: e.target.value,
-                          }))
-                        }
-                        placeholder={cf.placeholder || ''}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                      />
-                    )}
-                    {cf.field_type === 'textarea' && (
-                      <textarea
-                        value={String(cfValue ?? '')}
-                        onChange={(e) =>
-                          setEditCustomFieldAnswers((prev) => ({
-                            ...prev,
-                            [field.key]: e.target.value,
-                          }))
-                        }
-                        placeholder={cf.placeholder || ''}
-                        rows={3}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                      />
-                    )}
-                    {cf.field_type === 'richtext' && (
-                      <RichTextEditor
-                        value={String(cfValue ?? '')}
-                        onChange={(html) =>
-                          setEditCustomFieldAnswers((prev) => ({ ...prev, [field.key]: html }))
-                        }
-                        placeholder={cf.placeholder || ''}
-                        rows={4}
-                      />
-                    )}
-                    {cf.field_type === 'dropdown' && (
-                      <select
-                        value={String(cfValue ?? '')}
-                        onChange={(e) =>
-                          setEditCustomFieldAnswers((prev) => ({
-                            ...prev,
-                            [field.key]: e.target.value,
-                          }))
-                        }
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                      >
-                        <option value="">{cf.placeholder || 'Select...'}</option>
-                        {(cf.options || []).map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    {cf.field_type === 'checkbox' && (
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(cfValue)}
-                          onChange={(e) =>
-                            setEditCustomFieldAnswers((prev) => ({
-                              ...prev,
-                              [field.key]: e.target.checked,
-                            }))
-                          }
-                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          {cf.placeholder || 'Yes'}
-                        </span>
-                      </label>
-                    )}
-                    {cf.field_type === 'checkbox_group' && (
-                      <div className="space-y-2">
-                        {(cf.options || []).map((opt) => {
-                          const selectedValues = Array.isArray(cfValue) ? cfValue : [];
-                          return (
-                            <label key={opt.value} className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={selectedValues.includes(opt.value)}
-                                onChange={(e) => {
-                                  const newValues = e.target.checked
-                                    ? [...selectedValues, opt.value]
-                                    : selectedValues.filter((v: string) => v !== opt.value);
-                                  setEditCustomFieldAnswers((prev) => ({
-                                    ...prev,
-                                    [field.key]: newValues,
-                                  }));
-                                }}
-                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                              />
-                              <span className="text-sm text-gray-700 dark:text-gray-300">
-                                {opt.label}
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {cf.help_text && (
-                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                        {cf.help_text}
-                      </p>
-                    )}
-                  </div>
-                );
-              }
-
-              return null;
-            })}
-
-            {/* Video (always rendered after dynamic fields) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Video
-              </label>
-              <div className="flex items-start gap-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (videoPreviewSrc) {
-                      setMediaPreview({
-                        open: true,
-                        src: videoPreviewSrc,
-                      });
-                    }
-                  }}
-                  disabled={!videoPreviewSrc}
-                  className={`w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden shrink-0 bg-gray-50 dark:bg-gray-900 relative ${
-                    videoPreviewSrc
-                      ? 'cursor-pointer hover:border-primary-400 hover:shadow-md transition-all'
-                      : ''
-                  }`}
-                  title={videoPreviewSrc ? 'Click to play video' : undefined}
-                >
-                  {videoPreviewSrc ? (
-                    <>
-                      <video
-                        src={videoPreviewSrc}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                        <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                          <svg
-                            className="w-4 h-4 text-gray-700 ml-0.5"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                      <svg
-                        className="w-8 h-8"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                </button>
-                <div className="flex-1">
-                  <input
-                    type="file"
-                    accept={ACCEPTED_VIDEO_FORMATS}
-                    onChange={handleVideoChange}
-                    className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-                  />
-                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                    MP4, MOV, WebM, AVI, or MKV. Max 50MB.
-                  </p>
-                  {videoError && <p className="mt-1 text-xs text-red-600">{videoError}</p>}
-                </div>
-              </div>
-            </div>
-
-            {/* Co-speakers (only main speaker can manage) */}
-            {paper.is_main_speaker && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Co-speakers{' '}
-                  <span className="text-gray-400 dark:text-gray-500 font-normal">(max 3)</span>
-                </label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="flex-1">
-                    <input
-                      type="email"
-                      value={cospeakerInput}
-                      onChange={(e) => setCospeakerInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddCospeaker();
-                        }
-                      }}
-                      onBlur={(e) => setEmailError(validateEmail(e.target.value))}
-                      className={`w-full border ${emailError ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100`}
-                      placeholder="Co-speaker email"
-                      disabled={cospeakerEmails.length >= 3}
-                    />
-                    {emailError && (
-                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddCospeaker}
-                    disabled={cospeakerEmails.length >= 3 || !!emailError}
-                    className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-sm disabled:opacity-50"
-                  >
-                    Add
-                  </button>
-                </div>
-                {cospeakerEmails.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {cospeakerEmails.map((email) => {
-                      const existing = paper.cospeakers.find((cs) => cs.email === email);
-                      return (
-                        <span
-                          key={email}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary-50 text-primary-700 border border-primary-200"
-                        >
-                          {existing
-                            ? `${existing.first_name || ''} ${existing.last_name || ''}`.trim() ||
-                              email
-                            : email}
-                          {existing && (
-                            <span
-                              className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${INVITATION_STATUS_COLORS[existing.invitation_status] || 'bg-gray-100 text-gray-600'}`}
-                            >
-                              {existing.invitation_status}
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCospeakerEmails(cospeakerEmails.filter((e) => e !== email))
-                            }
-                            className="ml-0.5 text-primary-400 hover:text-primary-700"
-                          >
-                            <svg
-                              className="w-3.5 h-3.5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-                {cospeakerEmails.length > 0 && (
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    {cospeakerEmails.length}/3 co-speakers selected
-                  </p>
-                )}
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  Co-speakers must be registered on this platform. They will receive an invitation.
-                </p>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div>
-                {paper.is_main_speaker && (
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    disabled={deleteMutation.isPending}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                    {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => submitMutation.mutate()}
-                  disabled={submitMutation.isPending || updateMutation.isPending}
-                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 transition-colors"
-                >
-                  {submitMutation.isPending ? 'Submitting...' : 'Submit Paper'}
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={updateMutation.isPending || !!videoError}
-                  className={`px-4 py-2 text-sm font-medium text-white rounded-md disabled:opacity-50 transition-all duration-300 inline-flex items-center gap-2 ${
-                    saveStatus === 'saved'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : saveStatus === 'error'
-                        ? 'bg-red-600 hover:bg-red-700'
-                        : 'bg-primary-600 hover:bg-primary-700'
-                  }`}
-                >
-                  {saveStatus === 'saving' && (
-                    <svg
-                      className="animate-spin h-4 w-4 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  )}
-                  {saveStatus === 'saved' && (
-                    <svg
-                      className="h-4 w-4 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  )}
-                  {saveStatus === 'saving'
-                    ? 'Saving...'
-                    : saveStatus === 'saved'
-                      ? 'Saved!'
-                      : 'Save Changes'}
-                </button>
-              </div>
-            </div>
-          </div>
+          <PaperEditForm
+            paper={paper}
+            unifiedFormFields={unifiedFormFields}
+            conferenceDetail={conferenceDetail}
+            editTitle={editTitle}
+            setEditTitle={setEditTitle}
+            editAbstractShort={editAbstractShort}
+            setEditAbstractShort={setEditAbstractShort}
+            editAbstractLong={editAbstractLong}
+            setEditAbstractLong={setEditAbstractLong}
+            editLevel={editLevel}
+            setEditLevel={setEditLevel}
+            editSessionTypeId={editSessionTypeId}
+            setEditSessionTypeId={setEditSessionTypeId}
+            editLearningObjectives={editLearningObjectives}
+            setEditLearningObjectives={setEditLearningObjectives}
+            editCustomFieldAnswers={editCustomFieldAnswers}
+            setEditCustomFieldAnswers={setEditCustomFieldAnswers}
+            cospeakerEmails={cospeakerEmails}
+            setCospeakerEmails={setCospeakerEmails}
+            cospeakerInput={cospeakerInput}
+            setCospeakerInput={setCospeakerInput}
+            emailError={emailError}
+            setEmailError={setEmailError}
+            videoPreviewSrc={videoPreviewSrc}
+            videoError={videoError}
+            saveStatus={saveStatus}
+            isUpdatePending={updateMutation.isPending}
+            isSubmitPending={submitMutation.isPending}
+            isDeletePending={deleteMutation.isPending}
+            onSave={handleSave}
+            onSubmit={() => submitMutation.mutate()}
+            onCancel={() => setIsEditing(false)}
+            onDelete={() => setShowDeleteConfirm(true)}
+            onAddCospeaker={handleAddCospeaker}
+            onVideoChange={handleVideoChange}
+            onMediaPreview={(src) => setMediaPreview({ open: true, src })}
+          />
         ) : (
-          <div className="space-y-5">
-            {/* Read-only fields */}
-            {paper.session_type_name && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Session Type
-                </dt>
-                <dd className="text-sm text-gray-900 dark:text-gray-100 mt-0.5">
-                  {paper.session_type_name}
-                </dd>
-              </div>
-            )}
-
-            {paper.level && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Level
-                </dt>
-                <dd className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 capitalize">
-                  {paper.level.replace('_', ' ')}
-                </dd>
-              </div>
-            )}
-
-            {paper.abstract_short && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Short Abstract
-                </dt>
-                <dd
-                  className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeHtml(paper.abstract_short),
-                  }}
-                />
-              </div>
-            )}
-
-            {paper.abstract_long && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Detailed Abstract
-                </dt>
-                <dd
-                  className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeHtml(paper.abstract_long),
-                  }}
-                />
-              </div>
-            )}
-
-            {paper.learning_objectives && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Learning Objectives
-                </dt>
-                <dd
-                  className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeHtml(paper.learning_objectives),
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Video (read-only display) */}
-            {videoPreviewSrc && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">
-                  Video
-                </dt>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setMediaPreview({
-                      open: true,
-                      src: videoPreviewSrc,
-                    })
-                  }
-                  className="w-24 h-24 rounded-lg border-2 border-gray-300 dark:border-gray-600 overflow-hidden bg-gray-50 dark:bg-gray-900 relative cursor-pointer hover:border-primary-400 hover:shadow-md transition-all"
-                  title="Click to play video"
-                >
-                  <video
-                    src={videoPreviewSrc}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                      <svg
-                        className="w-4 h-4 text-gray-700 ml-0.5"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            )}
-
-            {/* Co-speakers */}
-            {paper.cospeakers.length > 0 && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">
-                  Co-speakers
-                </dt>
-                <div className="flex flex-wrap gap-2">
-                  {paper.cospeakers.map((cs) => (
-                    <span
-                      key={cs.applicant_id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary-50 text-primary-700 border border-primary-200"
-                    >
-                      <span>{`${cs.first_name || ''} ${cs.last_name || ''}`.trim()}</span>
-                      <span className="text-primary-400 text-xs">({cs.email})</span>
-                      <span
-                        className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${INVITATION_STATUS_COLORS[cs.invitation_status] || 'bg-gray-100 text-gray-600'}`}
-                      >
-                        {cs.invitation_status}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {paper.submitted_at && (
-              <div className="pt-4 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500">
-                Submitted on {formatDate(paper.submitted_at)}
-              </div>
-            )}
-          </div>
+          <PaperViewDisplay
+            paper={paper}
+            videoPreviewSrc={videoPreviewSrc}
+            onMediaPreview={(src) => setMediaPreview({ open: true, src })}
+          />
         )}
       </div>
 
