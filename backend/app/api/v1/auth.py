@@ -38,6 +38,7 @@ from app.models.user import User
 from app.models.user_password_reset import UserPasswordReset
 from app.models.user_totp import UserTOTP
 from app.schemas.auth import (
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
     MFALoginResponse,
@@ -478,6 +479,61 @@ async def update_user_preferences(
     await db.refresh(user)
 
     return await get_current_user_info(current_user, db)
+
+
+@router.patch("/me/password")
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+    request: Request,
+) -> dict:
+    """Change password for the currently authenticated user.
+
+    Requires the current password for verification.
+    Revokes all refresh tokens on success (force re-login on other devices).
+    """
+    result = await db.execute(select(User).where(User.id == current_user.user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise AuthenticationError("User not found")
+
+    # Verify current password
+    if not verify_password(data.current_password, user.password_hash):
+        raise AuthenticationError("Current password is incorrect")
+
+    # Prevent setting the same password
+    if verify_password(data.new_password, user.password_hash):
+        raise AuthenticationError("New password must be different from current password")
+
+    # Update password
+    user.password_hash = hash_password(data.new_password)
+
+    # Revoke all refresh tokens (force re-login on other devices)
+    active_tokens_result = await db.execute(
+        select(RefreshToken).where(
+            RefreshToken.user_id == user.id,
+            RefreshToken.revoked_at.is_(None),
+        )
+    )
+    for rt in active_tokens_result.scalars().all():
+        rt.revoked_at = utcnow()
+
+    # Audit log
+    db.add(
+        AuditLog(
+            tenant_id=user.tenant_id,
+            user_id=user.id,
+            action=AuditAction.USER_PASSWORD_CHANGED,
+            resource_type="user",
+            resource_id=user.id,
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
+
+    await db.commit()
+    return {"message": "Password changed successfully"}
 
 
 @router.post("/forgot-password")

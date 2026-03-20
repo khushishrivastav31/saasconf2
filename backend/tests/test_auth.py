@@ -7,7 +7,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.applicant_security import generate_email_verification_token
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 from app.core.utils import utcnow
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
@@ -296,3 +296,68 @@ async def test_reset_password_short_password(
         json={"token": raw_token, "new_password": "short"},
     )
     assert response.status_code == 422
+
+
+# ── Change password tests ────────────────────────────────────────────────
+
+
+async def test_change_password_success(
+    client: AsyncClient, tenant_admin_user: User, tenant_admin_token: str, db_session: AsyncSession
+) -> None:
+    """Successfully change password with correct current password."""
+    response = await client.patch(
+        "/api/v1/auth/me/password",
+        json={"current_password": "Password123!", "new_password": "NewPassword456!"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 200
+    assert response.json()["message"] == "Password changed successfully"
+
+    # Verify the password was actually changed
+    await db_session.refresh(tenant_admin_user)
+    assert verify_password("NewPassword456!", tenant_admin_user.password_hash)
+
+
+async def test_change_password_wrong_current(
+    client: AsyncClient, tenant_admin_token: str
+) -> None:
+    """Reject change when current password is wrong."""
+    response = await client.patch(
+        "/api/v1/auth/me/password",
+        json={"current_password": "WrongPassword!", "new_password": "NewPassword456!"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 401
+
+
+async def test_change_password_same_as_current(
+    client: AsyncClient, tenant_admin_token: str
+) -> None:
+    """Reject change when new password is the same as current."""
+    response = await client.patch(
+        "/api/v1/auth/me/password",
+        json={"current_password": "Password123!", "new_password": "Password123!"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 401
+
+
+async def test_change_password_weak_new_password(
+    client: AsyncClient, tenant_admin_token: str
+) -> None:
+    """Reject change when new password is too weak (no uppercase)."""
+    response = await client.patch(
+        "/api/v1/auth/me/password",
+        json={"current_password": "Password123!", "new_password": "weakpassword1"},
+        headers=auth_headers(tenant_admin_token),
+    )
+    assert response.status_code == 422
+
+
+async def test_change_password_unauthenticated(client: AsyncClient) -> None:
+    """Reject change when not authenticated."""
+    response = await client.patch(
+        "/api/v1/auth/me/password",
+        json={"current_password": "Password123!", "new_password": "NewPassword456!"},
+    )
+    assert response.status_code == 401

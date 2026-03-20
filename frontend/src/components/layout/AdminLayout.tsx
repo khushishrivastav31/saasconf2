@@ -6,6 +6,7 @@ import { useScrollRestoration } from '../../hooks/useScrollRestoration';
 import api from '../../config/api';
 import { queryKeys } from '../../config/queryKeys';
 import ThemeToggle from '../ThemeToggle';
+import ChangePasswordModal from '../ChangePasswordModal';
 import type { GlobalUnreadCountResponse } from '../../types/messaging';
 
 const navigation = [
@@ -197,6 +198,7 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const lastRefreshRef = useRef(0);
 
@@ -545,6 +547,15 @@ export default function AdminLayout() {
                   <button
                     onClick={() => {
                       setUserMenuOpen(false);
+                      setChangePasswordOpen(true);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    Change Password
+                  </button>
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
                       handleLogout();
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -556,6 +567,10 @@ export default function AdminLayout() {
             </div>
           </div>
         </header>
+        <ChangePasswordModal
+          open={changePasswordOpen}
+          onClose={() => setChangePasswordOpen(false)}
+        />
 
         {/* Page content */}
         <main className="py-6 px-4 sm:px-6 lg:px-8">

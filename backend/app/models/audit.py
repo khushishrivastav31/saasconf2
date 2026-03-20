@@ -80,6 +80,7 @@ class AuditAction:
     USER_INVITE_SENT = "user.invite_sent"
     USER_PASSWORD_RESET_REQUESTED = "user.password_reset_requested"
     USER_PASSWORD_RESET_COMPLETED = "user.password_reset_completed"
+    USER_PASSWORD_CHANGED = "user.password_changed"
 
     # MFA
     MFA_ENABLED = "user.mfa_enabled"

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AdminLayout from '../AdminLayout';
+import { ToastProvider } from '../../Toast';
 import type { User } from '../../../types';
 
 // Mock ThemeToggle (AdminLayout renders it, but these tests don't test theme)
@@ -44,7 +45,9 @@ function renderWithProviders() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <AdminLayout />
+      <ToastProvider>
+        <AdminLayout />
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
