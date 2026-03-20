@@ -73,7 +73,12 @@ function getRingColor(stageKey: string): string {
   }
 }
 
-export default function PaperStatusLifeline({ status, compact = false }: PaperStatusLifelineProps) {
+import React from 'react';
+
+export default React.memo(function PaperStatusLifeline({
+  status,
+  compact = false,
+}: PaperStatusLifelineProps) {
   const currentIndex = STATUS_INDEX[status] ?? -1;
   const isAccepted = status === 'accepted';
   const isRejected = status === 'rejected';
@@ -210,4 +215,4 @@ export default function PaperStatusLifeline({ status, compact = false }: PaperSt
       </div>
     </div>
   );
-}
+});

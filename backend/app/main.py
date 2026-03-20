@@ -337,7 +337,17 @@ async def readiness_check() -> JSONResponse:
     )
 
 
-# ─── Ops endpoints (super-admin only) ─────────────────────
+# ─── Ops endpoints (cron / ops API key) ──────────────────
+
+
+def _verify_ops_auth(request: Request) -> bool:
+    """Verify ops endpoint authorization using OPS_API_KEY (preferred) or SUPER_ADMIN_PASSWORD fallback."""
+    auth_header = request.headers.get("Authorization", "")
+    ops_key = settings.OPS_API_KEY or settings.SUPER_ADMIN_PASSWORD
+    expected = f"Bearer {ops_key}"
+    return secrets.compare_digest(auth_header, expected)
+
+
 @app.post("/ops/data-retention-cleanup")
 @limiter.limit("5/hour")
 async def data_retention_cleanup(
@@ -357,10 +367,7 @@ async def data_retention_cleanup(
 
     logger = logging.getLogger("saasconf.ops")
 
-    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD (timing-safe)
-    auth_header = request.headers.get("Authorization", "")
-    expected = f"Bearer {settings.SUPER_ADMIN_PASSWORD}"
-    if not secrets.compare_digest(auth_header, expected):
+    if not _verify_ops_auth(request):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     try:
@@ -398,10 +405,7 @@ async def send_deadline_reminders(
 
     logger = logging.getLogger("saasconf.ops")
 
-    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD (timing-safe)
-    auth_header = request.headers.get("Authorization", "")
-    expected = f"Bearer {settings.SUPER_ADMIN_PASSWORD}"
-    if not secrets.compare_digest(auth_header, expected):
+    if not _verify_ops_auth(request):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     now = datetime.now(UTC)
@@ -498,10 +502,7 @@ async def send_payment_reminders(
 
     logger = logging.getLogger("saasconf.ops")
 
-    # Authenticate via bearer token matching SUPER_ADMIN_PASSWORD (timing-safe)
-    auth_header = request.headers.get("Authorization", "")
-    expected = f"Bearer {settings.SUPER_ADMIN_PASSWORD}"
-    if not secrets.compare_digest(auth_header, expected):
+    if not _verify_ops_auth(request):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     total_sent = 0

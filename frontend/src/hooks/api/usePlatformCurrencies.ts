@@ -21,5 +21,6 @@ export function usePlatformCurrencies() {
       );
       return response.data.items;
     },
+    staleTime: 60 * 60 * 1000,
   });
 }

@@ -18,6 +18,7 @@ export function useConferenceList(statusFilter?: string) {
       const response = await api.get<PaginatedResponse<Conference>>(`/conferences?${params}`);
       return response.data;
     },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -35,6 +36,7 @@ export function useConferenceDetail(conferenceId: string | undefined) {
       return response.data;
     },
     enabled: !!conferenceId,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -48,6 +50,7 @@ export function useConferenceStats() {
       const response = await api.get<ConferenceStats>('/conferences/stats');
       return response.data;
     },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -64,6 +67,7 @@ export function useConferencesForSelect() {
       const response = await api.get<PaginatedResponse<Conference>>('/conferences?page_size=100');
       return response.data;
     },
+    staleTime: 30 * 60 * 1000,
   });
 }
 

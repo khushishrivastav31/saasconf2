@@ -81,7 +81,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Phase 1+2 of performance/reliability plan — CFP paper pagination + batch loading + SQL stats, frontend server-side pagination, session booking race condition fix (SELECT FOR UPDATE), Stripe webhook idempotency, background email sending, invoice attendee notes batch fix
-- **Status**: Clean — all static checks passing (mypy/ruff/tsc/eslint), all tests pass. Not yet committed.
-- **Pending**: User approval to commit. Phases 3-6 of plan remain (backend perf, frontend perf, accessibility, UX polish)
-- **Note**: H2 (require current password for password change) deferred for later
+- **Last completed**: Phases 3+4 — OPS_API_KEY for ops endpoints, log field masking, React.memo on list components, staleTime optimization for conferences/currencies
+- **Status**: Clean — mypy/ruff/tsc/eslint pass, all tests pass. Not yet committed.
+- **Pending**: User approval to commit. Phases 5-6 of plan remain (accessibility, UX polish)

@@ -1,4 +1,10 @@
-export function ErrorBanner({ message }: { message: string | null }) {
+import React from 'react';
+
+export const ErrorBanner = React.memo(function ErrorBanner({
+  message,
+}: {
+  message: string | null;
+}) {
   if (!message) return null;
   return (
     <div
@@ -9,9 +15,13 @@ export function ErrorBanner({ message }: { message: string | null }) {
       {message}
     </div>
   );
-}
+});
 
-export function SuccessBanner({ message }: { message: string | null }) {
+export const SuccessBanner = React.memo(function SuccessBanner({
+  message,
+}: {
+  message: string | null;
+}) {
   if (!message) return null;
   return (
     <div
@@ -22,4 +32,4 @@ export function SuccessBanner({ message }: { message: string | null }) {
       {message}
     </div>
   );
-}
+});

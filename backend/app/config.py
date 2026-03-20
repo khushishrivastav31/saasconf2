@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     SUPER_ADMIN_EMAIL: str = "admin@saasconf.com"
     SUPER_ADMIN_PASSWORD: str  # No default — MUST be set via environment variable
 
+    # Ops API key — used by cron jobs / ops endpoints instead of SUPER_ADMIN_PASSWORD.
+    # Falls back to SUPER_ADMIN_PASSWORD if not set.
+    OPS_API_KEY: str = ""
+
     # Monitoring
     SENTRY_DSN: str = ""  # Leave empty to disable Sentry
     SENTRY_ENVIRONMENT: str = "development"

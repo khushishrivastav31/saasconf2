@@ -5,9 +5,39 @@ Outputs human-readable colored logs in development.
 """
 
 import logging
+import re
 import sys
 
 from pythonjsonlogger.json import JsonFormatter
+
+# Patterns that indicate sensitive data in log messages
+_SENSITIVE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r'("?password"?\s*[:=]\s*)"[^"]*"', re.IGNORECASE), r"\1" + '"***"'),
+    (re.compile(r'("?secret"?\s*[:=]\s*)"[^"]*"', re.IGNORECASE), r"\1" + '"***"'),
+    (re.compile(r'("?token"?\s*[:=]\s*)"[^"]*"', re.IGNORECASE), r"\1" + '"***"'),
+    (re.compile(r'("?api_key"?\s*[:=]\s*)"[^"]*"', re.IGNORECASE), r"\1" + '"***"'),
+    (re.compile(r'("?authorization"?\s*[:=]\s*)"[^"]*"', re.IGNORECASE), r"\1" + '"***"'),
+    (re.compile(r"(Bearer\s+)\S+", re.IGNORECASE), r"\1***"),
+    (re.compile(r"(eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+"), r"\1.***"),
+]
+
+
+class SensitiveFieldFilter(logging.Filter):
+    """Redact sensitive fields (passwords, tokens, secrets) from log messages."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.msg, str):
+            for pattern, replacement in _SENSITIVE_PATTERNS:
+                record.msg = pattern.sub(replacement, record.msg)
+        if record.args and isinstance(record.args, tuple):
+            redacted = []
+            for arg in record.args:
+                if isinstance(arg, str):
+                    for pattern, replacement in _SENSITIVE_PATTERNS:
+                        arg = pattern.sub(replacement, arg)
+                redacted.append(arg)
+            record.args = tuple(redacted)
+        return True
 
 
 def setup_logging(*, debug: bool = False, level: str = "INFO") -> None:
@@ -41,6 +71,7 @@ def setup_logging(*, debug: bool = False, level: str = "INFO") -> None:
         )
 
     handler.setFormatter(formatter)
+    handler.addFilter(SensitiveFieldFilter())
     root.addHandler(handler)
 
     # Quiet noisy loggers

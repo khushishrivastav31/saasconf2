@@ -1,4 +1,6 @@
-export default function StatusBadge({
+import React from 'react';
+
+export default React.memo(function StatusBadge({
   isActive,
   onClick,
 }: {
@@ -34,4 +36,4 @@ export default function StatusBadge({
       {label}
     </span>
   );
-}
+});
