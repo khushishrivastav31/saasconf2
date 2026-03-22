@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { memo, useCallback, useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Modal from '../../../../components/Modal';
 import api from '../../../../config/api';
@@ -53,6 +53,36 @@ const TEMPLATE_VARS = [
 function resolveTemplate(template: string, vars: Record<string, string>): string {
   return template.replace(/\[(\w+)\]/g, (match, key) => vars[key] ?? match);
 }
+
+const PersonCheckboxItem = memo(function PersonCheckboxItem({
+  person,
+  checked,
+  onToggle,
+}: {
+  person: PersonEntry;
+  checked: boolean;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 px-2 py-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-white dark:hover:bg-gray-800 rounded">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={() => onToggle(person.id)}
+        className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+      />
+      <span className="font-medium">
+        {person.first_name} {person.last_name}
+      </span>
+      {person.company_name && (
+        <span className="text-gray-400 dark:text-gray-500">— {person.company_name}</span>
+      )}
+      {person.email && (
+        <span className="text-gray-400 dark:text-gray-500 text-xs ml-auto">{person.email}</span>
+      )}
+    </label>
+  );
+});
 
 export default function BulkDiscountModal({
   open,
@@ -214,14 +244,14 @@ export default function BulkDiscountModal({
     setSelectedListId('');
   }, [source]);
 
-  const togglePerson = (id: string) => {
+  const togglePerson = useCallback((id: string) => {
     setSelectedPeople((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
 
   const toggleAll = () => {
     if (selectedPeople.size === people.length) {
@@ -385,28 +415,12 @@ export default function BulkDiscountModal({
               </div>
               <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-gray-50 dark:bg-gray-900 max-h-48 overflow-y-auto space-y-1">
                 {people.map((p) => (
-                  <label
+                  <PersonCheckboxItem
                     key={p.id}
-                    className="flex items-center gap-2 px-2 py-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-white dark:hover:bg-gray-800 rounded"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedPeople.has(p.id)}
-                      onChange={() => togglePerson(p.id)}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="font-medium">
-                      {p.first_name} {p.last_name}
-                    </span>
-                    {p.company_name && (
-                      <span className="text-gray-400 dark:text-gray-500">— {p.company_name}</span>
-                    )}
-                    {p.email && (
-                      <span className="text-gray-400 dark:text-gray-500 text-xs ml-auto">
-                        {p.email}
-                      </span>
-                    )}
-                  </label>
+                    person={p}
+                    checked={selectedPeople.has(p.id)}
+                    onToggle={togglePerson}
+                  />
                 ))}
               </div>
             </div>
@@ -636,7 +650,7 @@ export default function BulkDiscountModal({
                   type="checkbox"
                   checked={isCombinable}
                   onChange={(e) => setIsCombinable(e.target.checked)}
-                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                 />
                 Combinable
               </label>
@@ -645,7 +659,7 @@ export default function BulkDiscountModal({
                   type="checkbox"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
-                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                 />
                 Active
               </label>
@@ -672,7 +686,7 @@ export default function BulkDiscountModal({
                               : [...prev, opt.id]
                           )
                         }
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                       />
                       {opt.name}
                     </label>
@@ -702,7 +716,7 @@ export default function BulkDiscountModal({
                               : [...prev, per.id]
                           )
                         }
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                       />
                       {per.name}
                     </label>

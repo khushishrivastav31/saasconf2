@@ -1348,7 +1348,7 @@ class TestExpenseListAndDetail:
 
         resp = await client.get(
             _url(conference.id),
-            params={"skip": 0, "limit": 2},
+            params={"page": 1, "page_size": 2},
             headers=auth_headers(tenant_admin_token),
         )
         data = resp.json()

@@ -144,7 +144,7 @@ export default function PackageModal({
                       type="checkbox"
                       checked={selectedOptionIds.includes(option.id)}
                       onChange={() => handleToggleOption(option.id)}
-                      className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">{option.name}</span>
                   </label>
@@ -163,7 +163,7 @@ export default function PackageModal({
                 type="checkbox"
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
-                className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                className="h-4 w-4 text-primary-600 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
               />
               <label
                 htmlFor={`${idPrefix}-active`}

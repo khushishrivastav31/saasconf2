@@ -1,10 +1,8 @@
-"""CFP Applicant Portal - Paper management and browsing endpoints."""
+"""CFP Applicant Portal - Paper CRUD, submission, and assigned-paper endpoints."""
 
-from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi import APIRouter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,11 +10,9 @@ from sqlalchemy.orm import selectinload
 from app.config import get_settings
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
 from app.core.email import send_cospeaker_invitation_email
-from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
-from app.core.file_validation import safe_content_disposition, sanitize_filename, strip_image_metadata, validate_upload
+from app.core.exceptions import AuthorizationError, NotFoundError, SubmissionValidationError, ValidationError
 from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
-from app.models.attachment import Attachment
 from app.models.cfp import (
     CallForPapers,
     CFPApplicant,
@@ -25,7 +21,6 @@ from app.models.cfp import (
     CFPPaperAssignment,
     CFPPaperCospeaker,
     CFPStatus,
-    CFPTopic,
     CospeakerInvitationStatus,
     PaperStatus,
 )
@@ -38,17 +33,11 @@ from app.models.tenant import Tenant
 from app.schemas.cfp_portal import (
     PortalAssignedPaperListResponse,
     PortalAssignedPaperResponse,
-    PortalCFPResponse,
-    PortalConferenceDetailResponse,
-    PortalConferenceSummary,
     PortalCospeakerResponse,
-    PortalInvitationListResponse,
-    PortalInvitationResponse,
     PortalPaperCreateRequest,
     PortalPaperListResponse,
     PortalPaperResponse,
     PortalPaperUpdateRequest,
-    PortalSessionTypeResponse,
     PortalTopicResponse,
 )
 
@@ -59,161 +48,6 @@ from .shared import (
 )
 
 router = APIRouter()
-
-
-# --- Topics and Conferences browsing ---
-
-
-@router.get("/portal/topics", response_model=list[PortalTopicResponse])
-async def list_portal_topics(
-    current: CurrentApplicantDep,
-    db: DbSessionDep,
-) -> list[PortalTopicResponse]:
-    """List all topics available for the current tenant."""
-    result = await db.execute(select(CFPTopic).where(CFPTopic.tenant_id == current.tenant_id).order_by(CFPTopic.name))
-    topics = list(result.scalars().all())
-    return [PortalTopicResponse(id=t.id, name=t.name, description=t.description) for t in topics]
-
-
-@router.get("/portal/conferences", response_model=list[PortalConferenceSummary])
-async def list_conferences(
-    current: CurrentApplicantDep,
-    db: DbSessionDep,
-) -> list[PortalConferenceSummary]:
-    """List conferences with open CFPs for the tenant."""
-    result = await db.execute(
-        select(Conference)
-        .where(Conference.tenant_id == current.tenant_id)
-        .where(Conference.is_active == True)
-        .order_by(Conference.start_date.desc().nulls_last())
-    )
-    conferences = result.scalars().all()
-
-    # Batch-load all CFPs for all conferences (single query instead of N+1)
-    conf_ids = [conf.id for conf in conferences]
-    cfps_by_conf: dict = {cid: [] for cid in conf_ids}
-    if conf_ids:
-        cfp_result = await db.execute(
-            select(ConferenceCFP.conference_id, CallForPapers)
-            .join(CallForPapers, CallForPapers.id == ConferenceCFP.cfp_id)
-            .where(ConferenceCFP.conference_id.in_(conf_ids))
-        )
-        for conference_id, cfp in cfp_result.all():
-            cfps_by_conf[conference_id].append(cfp)
-
-    # Check registration status per conference (matched by email)
-    from app.models.registration import Registration, RegistrationStatus
-
-    user_email = current.applicant.email.lower()
-    registered_conf_ids: set = set()
-    if conf_ids:
-        reg_result = await db.execute(
-            select(Registration.conference_id)
-            .where(
-                Registration.tenant_id == current.tenant_id,
-                Registration.email == user_email,
-                Registration.conference_id.in_(conf_ids),
-                Registration.status != RegistrationStatus.CANCELLED.value,
-            )
-            .distinct()
-        )
-        registered_conf_ids = set(reg_result.scalars().all())
-
-    # Check speaker status per conference (has accepted/confirmed papers)
-    speaker_conf_ids: set = set()
-    if conf_ids:
-        from app.models.cfp_papers import CFPPaper
-
-        speaker_result = await db.execute(
-            select(ConferenceCFP.conference_id)
-            .join(CFPPaper, CFPPaper.cfp_id == ConferenceCFP.cfp_id)
-            .where(
-                CFPPaper.main_speaker_id == current.applicant_id,
-                ConferenceCFP.conference_id.in_(conf_ids),
-                CFPPaper.status == "accepted",
-            )
-            .distinct()
-        )
-        speaker_conf_ids = set(speaker_result.scalars().all())
-
-    today = date.today()
-    items = []
-    for conf in conferences:
-        # Determine if public registration is currently open
-        portal_settings = (conf.settings or {}).get("public_registration_portal", {})
-        reg_open = False
-        if portal_settings.get("enabled"):
-            reg_start = portal_settings.get("registration_start_date")
-            reg_end = portal_settings.get("registration_end_date")
-            start_ok = reg_start is None or date.fromisoformat(reg_start) <= today
-            end_ok = reg_end is None or today <= date.fromisoformat(reg_end)
-            reg_open = start_ok and end_ok
-
-        items.append(
-            PortalConferenceSummary(
-                id=conf.id,
-                name=conf.name,
-                abbreviation=conf.abbreviation,
-                description=conf.description,
-                start_date=conf.start_date,
-                end_date=conf.end_date,
-                city=conf.city,
-                country=conf.country,
-                venue_type=conf.venue_type,
-                logo_url=conf.logo_url,
-                cfps=[PortalCFPResponse.model_validate(cfp) for cfp in cfps_by_conf.get(conf.id, [])],
-                registration_open=reg_open,
-                is_registered=conf.id in registered_conf_ids,
-                is_speaker=conf.id in speaker_conf_ids,
-                expenses_enabled=(conf.settings or {}).get("speaker_expenses", {}).get("expenses_enabled", False),
-            )
-        )
-
-    return items
-
-
-@router.get("/portal/conferences/{conference_id}", response_model=PortalConferenceDetailResponse)
-async def get_conference_detail(
-    conference_id: str,
-    current: CurrentApplicantDep,
-    db: DbSessionDep,
-) -> PortalConferenceDetailResponse:
-    """Get conference details with session types for paper submission."""
-    result = await db.execute(
-        select(Conference).where(
-            Conference.id == conference_id,
-            Conference.tenant_id == current.tenant_id,
-        )
-    )
-    conference = result.scalar_one_or_none()
-    if not conference:
-        raise NotFoundError("Conference not found")
-
-    # Load CFPs
-    cfp_result = await db.execute(
-        select(CallForPapers)
-        .join(ConferenceCFP, ConferenceCFP.cfp_id == CallForPapers.id)
-        .where(ConferenceCFP.conference_id == conference.id)
-    )
-    cfps = cfp_result.scalars().all()
-
-    # Load session types
-    st_result = await db.execute(
-        select(SessionType).where(
-            SessionType.conference_id == conference.id,
-            SessionType.is_active == True,
-            SessionType.cfp_eligible == True,
-        )
-    )
-    session_types = st_result.scalars().all()
-
-    return PortalConferenceDetailResponse(
-        id=conference.id,
-        name=conference.name,
-        abbreviation=conference.abbreviation,
-        cfps=[PortalCFPResponse.model_validate(cfp) for cfp in cfps],
-        session_types=[PortalSessionTypeResponse.model_validate(st) for st in session_types],
-    )
 
 
 # --- Papers ---
@@ -401,12 +235,9 @@ async def submit_paper(
                         missing.append("speaker:video")
 
         if missing:
-            raise HTTPException(
-                status_code=422,
-                detail={
-                    "message": "Missing required fields",
-                    "missing_fields": missing,
-                },
+            raise SubmissionValidationError(
+                "Missing required fields",
+                missing_fields=missing,
             )
 
     # --- Validate character limits from form schema config ---
@@ -457,12 +288,9 @@ async def submit_paper(
             if max_c is not None and len(plain) > max_c:
                 char_errors.append(f"{label} must be at most {max_c} characters (currently {len(plain)})")
         if char_errors:
-            raise HTTPException(
-                status_code=422,
-                detail={
-                    "message": "Character limit validation failed",
-                    "char_errors": char_errors,
-                },
+            raise SubmissionValidationError(
+                "Character limit validation failed",
+                char_errors=char_errors,
             )
 
     paper.status = PaperStatus.SUBMITTED.value
@@ -506,250 +334,6 @@ async def delete_paper(
     await db.delete(paper)
     await db.commit()
     return {"message": "Paper deleted"}
-
-
-# --- Invitations ---
-
-
-@router.get("/portal/invitations", response_model=PortalInvitationListResponse)
-async def list_invitations(
-    current: CurrentApplicantDep,
-    db: DbSessionDep,
-) -> PortalInvitationListResponse:
-    """List co-speaker invitations for the current applicant."""
-    result = await db.execute(
-        select(CFPPaperCospeaker)
-        .where(CFPPaperCospeaker.applicant_id == current.applicant_id)
-        .order_by(CFPPaperCospeaker.invited_at.desc())
-    )
-    cospeaker_rows = result.scalars().all()
-
-    # Batch-load all related data to avoid N+1 queries
-    paper_ids = list({row.paper_id for row in cospeaker_rows})
-    papers_map: dict = {}
-    speakers_map: dict = {}
-    cfps_map: dict = {}
-    conf_names_map: dict = {}
-
-    if paper_ids:
-        # Batch-load papers
-        papers_result = await db.execute(select(CFPPaper).where(CFPPaper.id.in_(paper_ids)))
-        papers_map = {p.id: p for p in papers_result.scalars().all()}
-
-        # Batch-load main speakers
-        speaker_ids = list({p.main_speaker_id for p in papers_map.values() if p.main_speaker_id})
-        if speaker_ids:
-            speakers_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id.in_(speaker_ids)))
-            speakers_map = {s.id: s for s in speakers_result.scalars().all()}
-
-        # Batch-load CFPs
-        cfp_ids = list({p.cfp_id for p in papers_map.values() if p.cfp_id})
-        if cfp_ids:
-            cfps_result = await db.execute(select(CallForPapers).where(CallForPapers.id.in_(cfp_ids)))
-            cfps_map = {c.id: c for c in cfps_result.scalars().all()}
-
-            # Batch-load conference names via conference_cfps
-            conf_result = await db.execute(
-                select(ConferenceCFP.cfp_id, Conference.name)
-                .join(Conference, Conference.id == ConferenceCFP.conference_id)
-                .where(ConferenceCFP.cfp_id.in_(cfp_ids))
-            )
-            for cfp_id, conf_name in conf_result.all():
-                conf_names_map.setdefault(cfp_id, conf_name)
-
-    items = []
-    for row in cospeaker_rows:
-        paper = papers_map.get(row.paper_id)
-        if not paper:
-            continue
-
-        main_speaker = speakers_map.get(paper.main_speaker_id)
-        cfp = cfps_map.get(paper.cfp_id)
-        conference_name = conf_names_map.get(paper.cfp_id)
-
-        items.append(
-            PortalInvitationResponse(
-                paper_id=paper.id,
-                paper_title=paper.title,
-                cfp_title=cfp.title if cfp else None,
-                conference_name=conference_name,
-                main_speaker_first_name=main_speaker.first_name if main_speaker else "Unknown",
-                main_speaker_last_name=main_speaker.last_name if main_speaker else "",
-                main_speaker_email=main_speaker.email if main_speaker else "",
-                invitation_status=row.invitation_status,
-                invited_at=row.invited_at,
-            )
-        )
-
-    return PortalInvitationListResponse(items=items, total=len(items))
-
-
-@router.post("/portal/invitations/{paper_id}/accept")
-async def accept_invitation(
-    paper_id: str,
-    current: CurrentApplicantDep,
-    db: DbSessionDep,
-) -> dict:
-    """Accept a co-speaker invitation."""
-    result = await db.execute(
-        select(CFPPaperCospeaker).where(
-            CFPPaperCospeaker.paper_id == paper_id,
-            CFPPaperCospeaker.applicant_id == current.applicant_id,
-        )
-    )
-    row = result.scalar_one_or_none()
-    if not row:
-        raise NotFoundError("Invitation not found")
-
-    if row.invitation_status != CospeakerInvitationStatus.PENDING.value:
-        raise ValidationError("Invitation has already been responded to")
-
-    row.invitation_status = CospeakerInvitationStatus.ACCEPTED.value
-    row.responded_at = utcnow()
-    await db.commit()
-
-    return {"message": "Invitation accepted"}
-
-
-@router.post("/portal/invitations/{paper_id}/decline")
-async def decline_invitation(
-    paper_id: str,
-    current: CurrentApplicantDep,
-    db: DbSessionDep,
-) -> dict:
-    """Decline a co-speaker invitation."""
-    result = await db.execute(
-        select(CFPPaperCospeaker).where(
-            CFPPaperCospeaker.paper_id == paper_id,
-            CFPPaperCospeaker.applicant_id == current.applicant_id,
-        )
-    )
-    row = result.scalar_one_or_none()
-    if not row:
-        raise NotFoundError("Invitation not found")
-
-    if row.invitation_status != CospeakerInvitationStatus.PENDING.value:
-        raise ValidationError("Invitation has already been responded to")
-
-    row.invitation_status = CospeakerInvitationStatus.DECLINED.value
-    row.responded_at = utcnow()
-    await db.commit()
-
-    return {"message": "Invitation declined"}
-
-
-# --- Attachments ---
-
-PORTAL_ALLOWED_ENTITY_TYPES = {"applicant_picture", "applicant_video", "paper_video", "speaker_expense"}
-
-
-@router.post("/portal/attachments")
-async def upload_portal_attachment(
-    current: CurrentApplicantDep,
-    db: DbSessionDep,
-    file: UploadFile = File(...),
-    entity_type: str = Form(...),
-    entity_id: str = Form(...),
-    description: str | None = Form(None),
-) -> dict:
-    """Upload an attachment (picture/video) for the current applicant or their paper."""
-    if entity_type not in PORTAL_ALLOWED_ENTITY_TYPES:
-        raise ValidationError(f"Invalid entity_type: {entity_type}")
-
-    # Validate ownership
-    if entity_type in ("applicant_picture", "applicant_video"):
-        if str(current.applicant_id) != entity_id:
-            raise AuthorizationError("You can only upload media for your own profile")
-    elif entity_type == "paper_video":
-        paper = await _get_applicant_or_cospeaker_paper(db, entity_id, current.applicant_id, current.tenant_id)
-        if paper.status != PaperStatus.DRAFT.value:
-            raise ValidationError("Can only upload video for draft papers")
-    elif entity_type == "speaker_expense":
-        from app.models.speaker_expense import SpeakerExpense
-
-        exp_result = await db.execute(
-            select(SpeakerExpense).where(
-                SpeakerExpense.id == entity_id,
-                SpeakerExpense.cfp_applicant_id == current.applicant_id,
-                SpeakerExpense.tenant_id == current.tenant_id,
-            )
-        )
-        if not exp_result.scalar_one_or_none():
-            raise AuthorizationError("Expense not found or not yours")
-
-    file_data = await file.read()
-    file_size = len(file_data)
-
-    from app.config import get_settings
-
-    settings = get_settings()
-    max_size = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
-    if file_size > max_size:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File size ({file_size // (1024 * 1024)}MB) exceeds maximum allowed ({settings.MAX_UPLOAD_SIZE_MB}MB)",
-        )
-
-    verified_type = validate_upload(file_data, file.content_type or "application/octet-stream", entity_type)
-    if entity_type == "applicant_picture":
-        file_data = strip_image_metadata(file_data, verified_type)
-        file_size = len(file_data)
-    safe_filename = sanitize_filename(file.filename or "upload")
-
-    # Delete existing attachment of same type for this entity (only keep latest)
-    # Exception: speaker_expense allows multiple receipts
-    if entity_type != "speaker_expense":
-        existing_result = await db.execute(
-            select(Attachment).where(
-                Attachment.tenant_id == current.tenant_id,
-                Attachment.entity_type == entity_type,
-                Attachment.entity_id == entity_id,
-            )
-        )
-        for old in existing_result.scalars().all():
-            await db.delete(old)
-
-    attachment = Attachment(
-        tenant_id=current.tenant_id,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        filename=safe_filename,
-        content_type=verified_type,
-        file_size=file_size,
-        file_data=file_data,
-        description=description,
-    )
-    db.add(attachment)
-    await db.commit()
-
-    return {"id": str(attachment.id), "filename": attachment.filename, "file_size": file_size}
-
-
-@router.get("/portal/attachments/{attachment_id}/download")
-async def download_portal_attachment(
-    attachment_id: str,
-    current: CurrentApplicantDep,
-    db: DbSessionDep,
-) -> Response:
-    """Download an attachment."""
-    result = await db.execute(
-        select(Attachment).where(
-            Attachment.id == attachment_id,
-            Attachment.tenant_id == current.tenant_id,
-        )
-    )
-    attachment = result.scalar_one_or_none()
-    if not attachment:
-        raise NotFoundError("Attachment not found")
-
-    return Response(
-        content=attachment.file_data,
-        media_type=attachment.content_type,
-        headers={
-            "Content-Disposition": safe_content_disposition(attachment.filename, "inline"),
-            "Content-Length": str(attachment.file_size),
-        },
-    )
 
 
 # --- Assigned Papers (committee member view) ---

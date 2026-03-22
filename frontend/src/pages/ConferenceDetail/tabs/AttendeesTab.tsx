@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
+import { useDebouncedValue } from '../../../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
@@ -43,7 +44,7 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
 
   // State
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterBookingOption, setFilterBookingOption] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -58,14 +59,6 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
   const [showAddItem, setShowAddItem] = useState(false);
   const [addItemType, setAddItemType] = useState<'booking_option' | 'tutorial'>('booking_option');
   const [addItemOptionId, setAddItemOptionId] = useState('');
-
-  // Debounced search (300ms)
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => setDebouncedSearch(value), 300);
-  }, []);
 
   // Fetch registrations
   const {
@@ -377,7 +370,6 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
   const hasActiveFilters = search || filterStatus || filterBookingOption;
   const clearFilters = () => {
     setSearch('');
-    setDebouncedSearch('');
     setFilterStatus('');
     setFilterBookingOption('');
   };
@@ -490,14 +482,13 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
             type="text"
             placeholder="Search by name or email..."
             value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
           />
           {search && (
             <button
               onClick={() => {
                 setSearch('');
-                setDebouncedSearch('');
               }}
               className="absolute right-2 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >

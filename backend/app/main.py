@@ -237,16 +237,12 @@ async def conflict_error_handler(request: Request, exc: ConflictError) -> JSONRe
 @app.exception_handler(SubmissionValidationError)
 async def submission_validation_error_handler(request: Request, exc: SubmissionValidationError) -> JSONResponse:
     """Handle paper submission validation errors with structured details."""
-    return _cors_response(
-        request,
-        422,
-        {
-            "detail": {
-                "message": exc.message,
-                "missing_fields": exc.missing_fields,
-            },
-        },
-    )
+    detail: dict = {"message": exc.message}
+    if exc.missing_fields:
+        detail["missing_fields"] = exc.missing_fields
+    if exc.char_errors:
+        detail["char_errors"] = exc.char_errors
+    return _cors_response(request, 422, {"detail": detail})
 
 
 @app.exception_handler(SaaSConfException)

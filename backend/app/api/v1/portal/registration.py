@@ -8,11 +8,9 @@ Implements comprehensive security measures for public-facing forms.
 import logging
 from collections import OrderedDict
 from datetime import date
-from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,13 +21,7 @@ from app.core.recaptcha import validate_recaptcha
 from app.core.registration_security import validate_registration_security
 from app.core.stripe_helper import create_payment_intent
 from app.core.user_auto_creation import create_user_for_registration
-from app.core.vat_calculation import (
-    classify_customer_location,
-    classify_customer_type,
-)
-from app.core.vat_rules import get_vat_rule
-from app.core.vat_validation import validate_vat_number
-from app.models.booking import BookingOption, DiscountCode, DiscountCodeOption, DiscountCodePeriod
+from app.models.booking import BookingOption
 from app.models.cfp import CFPApplicant, CFPPaper
 from app.models.conference import Conference
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot
@@ -42,7 +34,6 @@ from app.models.registration import (
 )
 from app.models.settings import SessionType
 from app.models.tenant import Tenant
-from app.models.vat_rate_by_country import VatRateByCountry
 from app.schemas.portal_registration import (
     PortalRegistrationRequest,
     PortalRegistrationResponse,
@@ -401,7 +392,7 @@ async def get_public_bookable_sessions(
                 "slot_id": slot_key,
                 "start_time": start,
                 "end_time": end,
-                "label": f"{start} – {end}",
+                "label": f"{start} \u2013 {end}",
                 "sessions": [],
             }
         else:
@@ -410,7 +401,7 @@ async def get_public_bookable_sessions(
             new_end = end_slot.end_time.strftime("%H:%M")
             if new_end > existing_end:
                 slots[slot_key]["end_time"] = new_end
-                slots[slot_key]["label"] = f"{slots[slot_key]['start_time']} – {new_end}"
+                slots[slot_key]["label"] = f"{slots[slot_key]['start_time']} \u2013 {new_end}"
 
         speaker_name = f"{speaker_first} {speaker_last}".strip() if speaker_first else None
         current_count = session_capacity.get(str(session.id), 0)
@@ -450,406 +441,6 @@ async def get_public_bookable_sessions(
     return {"day_name": day_name, "groups": groups}
 
 
-@router.get("/{tenant_slug}/conferences/{conference_slug}/validate-discount/{code}")
-async def validate_discount_code(
-    tenant_slug: str,
-    conference_slug: str,
-    code: str,
-    db: DbSessionDep,
-) -> dict:
-    """
-    Validate a discount code for the public registration portal.
-
-    No authentication required - publicly accessible endpoint.
-    Returns discount details if valid, or error details if invalid.
-    """
-    from app.models.booking import BookingPeriod
-
-    # Resolve tenant and conference
-    _tenant, conference = await resolve_tenant_and_conference(db, tenant_slug, conference_slug)
-
-    # Look up the discount code
-    result = await db.execute(
-        select(DiscountCode).where(
-            DiscountCode.conference_id == conference.id,
-            DiscountCode.code == code.upper(),  # Case-insensitive lookup
-            DiscountCode.is_active == True,
-        )
-    )
-    discount = result.scalar_one_or_none()
-
-    if not discount:
-        return {
-            "valid": False,
-            "message": "Invalid discount code",
-        }
-
-    # Check date range
-    today = date.today()
-    if discount.start_date and today < discount.start_date:
-        return {
-            "valid": False,
-            "message": f"This discount code is not valid until {discount.start_date.strftime('%Y-%m-%d')}",
-        }
-
-    if discount.end_date and today > discount.end_date:
-        return {
-            "valid": False,
-            "message": f"This discount code expired on {discount.end_date.strftime('%Y-%m-%d')}",
-        }
-
-    # Check usage limit
-    if discount.max_uses > 0 and discount.usage_count >= discount.max_uses:
-        return {
-            "valid": False,
-            "message": "This discount code has reached its maximum usage limit",
-        }
-
-    # Get applicable booking options (if restricted)
-    option_result = await db.execute(
-        select(DiscountCodeOption.booking_option_id).where(DiscountCodeOption.discount_code_id == discount.id)
-    )
-    applicable_option_ids = [str(row[0]) for row in option_result.all()]
-
-    # Get applicable periods (if restricted)
-    period_result = await db.execute(
-        select(DiscountCodePeriod.booking_period_id).where(DiscountCodePeriod.discount_code_id == discount.id)
-    )
-    applicable_period_ids = [str(row[0]) for row in period_result.all()]
-
-    # If no period restrictions, find current active period
-    if not applicable_period_ids:
-        all_periods_result = await db.execute(
-            select(BookingPeriod).where(
-                BookingPeriod.conference_id == conference.id,
-                BookingPeriod.is_active == True,
-            )
-        )
-        all_periods = all_periods_result.scalars().all()
-        for period in all_periods:
-            if period.start_date <= today <= period.end_date:
-                applicable_period_ids = [str(period.id)]
-                break
-
-    return {
-        "valid": True,
-        "discount_type": discount.discount_type,  # "fixed" or "percentage"
-        "discount_value": float(discount.discount_value),
-        "currency": discount.currency or conference.currency,
-        "description": discount.description,
-        "applicable_option_ids": applicable_option_ids or None,  # None = applies to all
-        "applicable_period_ids": applicable_period_ids or None,  # None = applies to all periods
-        "is_combinable": discount.is_combinable,
-    }
-
-
-class VatCalculationRequest(BaseModel):
-    """Request for VAT calculation preview."""
-
-    country: str
-    vat_number: str | None = None
-    subtotal: float
-
-
-@router.post("/{tenant_slug}/conferences/{conference_slug}/calculate-vat")
-async def calculate_vat_preview(
-    tenant_slug: str,
-    conference_slug: str,
-    data: VatCalculationRequest,
-    db: DbSessionDep,
-) -> dict:
-    """
-    Calculate VAT for public registration portal (preview before submission).
-
-    No authentication required - publicly accessible endpoint.
-    Calculates VAT based on VAT decision table rules.
-    """
-    from app.core.address import _resolve_country_code
-    from app.core.default_settings import DEFAULT_EU_COUNTRIES, DEFAULT_VAT_RULES
-
-    # Resolve tenant and conference
-    _tenant, conference = await resolve_tenant_and_conference(db, tenant_slug, conference_slug)
-
-    # Step 1: Classify customer type (B2B vs B2C)
-    customer_type = classify_customer_type(data.vat_number)
-
-    # Step 2: Classify customer location (domestic/EU/non-EU)
-    eu_countries = (conference.settings or {}).get("eu_countries", DEFAULT_EU_COUNTRIES)
-    customer_location = classify_customer_location(
-        data.country,
-        conference.country or "",
-        eu_countries,
-    )
-
-    # Step 3: Determine attendance type (default to conference venue type)
-    venue_type = conference.venue_type
-    if venue_type == "virtual":
-        attendance_type = "virtual"
-    elif venue_type == "in_person":
-        attendance_type = "in_person"
-    elif venue_type == "hybrid":
-        # For hybrid, we need to infer from booking options
-        # For preview purposes, default to in_person (safest assumption for VAT calculation)
-        attendance_type = "in_person"
-    else:
-        attendance_type = "in_person"
-
-    # Step 4: Lookup VAT rule from decision table
-    vat_rules = (conference.settings or {}).get("vat_rules", DEFAULT_VAT_RULES)
-    rule = get_vat_rule(vat_rules, attendance_type, customer_type, customer_location)
-
-    if not rule:
-        return {
-            "vat_rate": 0.0,
-            "vat_amount": 0.0,
-            "total": data.subtotal,
-            "notes": None,
-        }
-
-    # Step 5: Determine tax rate based on rule
-    rate = Decimal("0.00")
-
-    if not rule.get("charge_vat"):
-        rate = Decimal("0.00")
-    elif rule.get("vat_rate_source") == "conference":
-        # Use conference country VAT rate
-        conference_country_iso = _resolve_country_code(conference.country)
-        if conference_country_iso:
-            # Try tenant-specific rate first
-            stmt = select(VatRateByCountry.standard_rate).where(
-                VatRateByCountry.tenant_id == conference.tenant_id,
-                VatRateByCountry.country_code == conference_country_iso,
-            )
-            result = await db.execute(stmt)
-            fetched_rate = result.scalar_one_or_none()
-
-            # Fall back to global rate
-            if fetched_rate is None:
-                stmt = select(VatRateByCountry.standard_rate).where(
-                    VatRateByCountry.tenant_id.is_(None),
-                    VatRateByCountry.country_code == conference_country_iso,
-                )
-                result = await db.execute(stmt)
-                fetched_rate = result.scalar_one_or_none()
-
-            if fetched_rate is not None:
-                rate = fetched_rate
-    elif rule.get("vat_rate_source") == "customer":
-        # Use customer country VAT rate
-        customer_country_iso = _resolve_country_code(data.country)
-        if customer_country_iso:
-            # Try tenant-specific rate first
-            stmt = select(VatRateByCountry.standard_rate).where(
-                VatRateByCountry.tenant_id == conference.tenant_id,
-                VatRateByCountry.country_code == customer_country_iso,
-            )
-            result = await db.execute(stmt)
-            fetched_rate = result.scalar_one_or_none()
-
-            # Fall back to global rate
-            if fetched_rate is None:
-                stmt = select(VatRateByCountry.standard_rate).where(
-                    VatRateByCountry.tenant_id.is_(None),
-                    VatRateByCountry.country_code == customer_country_iso,
-                )
-                result = await db.execute(stmt)
-                fetched_rate = result.scalar_one_or_none()
-
-            if fetched_rate is not None:
-                rate = fetched_rate
-
-    # Step 6: Calculate tax amount
-    subtotal = Decimal(str(data.subtotal))
-    vat_amount = (subtotal * rate / Decimal("100")).quantize(Decimal("0.01"))
-    total = subtotal + vat_amount
-
-    # Step 7: Generate notes text
-    notes = None
-    if rule.get("reverse_charge"):
-        notes = (
-            "VAT Reverse Charge: In accordance with Article 196 of the VAT Directive 2006/112/EC, "
-            "the customer is liable for VAT in their country of establishment."
-        )
-    elif rule.get("oss_applicable"):
-        notes = f"VAT charged under the EU One-Stop Shop (OSS) scheme at the rate applicable in your country ({rate}%)."
-
-    return {
-        "vat_rate": float(rate),
-        "vat_amount": float(vat_amount),
-        "total": float(total),
-        "notes": notes,
-    }
-
-
-class CreatePaymentIntentRequest(BaseModel):
-    """Request to create PaymentIntent before registration."""
-
-    total: float
-
-
-class CreatePaymentIntentResponse(BaseModel):
-    """Response with PaymentIntent details."""
-
-    payment_intent_id: str
-    client_secret: str
-    publishable_key: str
-
-
-@router.post("/{tenant_slug}/conferences/{conference_slug}/create-payment-intent")
-async def create_payment_intent_preview(
-    tenant_slug: str,
-    conference_slug: str,
-    data: CreatePaymentIntentRequest,
-    db: DbSessionDep,
-) -> CreatePaymentIntentResponse:
-    """
-    Create Stripe PaymentIntent immediately (before registration submission).
-
-    Used for payment-first flow: user selects credit card → Stripe form appears immediately.
-    This creates the PaymentIntent with the current order total, which can be updated
-    if the user changes their order.
-
-    No authentication required - publicly accessible endpoint.
-
-    Args:
-        tenant_slug: Tenant URL slug
-        conference_slug: Conference abbreviation
-        data: Payment intent request with total amount
-        db: Database session
-
-    Returns:
-        CreatePaymentIntentResponse with client_secret for Stripe Elements
-
-    Raises:
-        HTTPException: If Stripe not configured or validation fails
-    """
-    # Resolve tenant and conference
-    _tenant, conference = await resolve_tenant_and_conference(db, tenant_slug, conference_slug)
-
-    # Validate Stripe is enabled
-    stripe_settings = conference.settings.get("stripe", {})
-    if not stripe_settings.get("is_enabled"):
-        raise HTTPException(status_code=400, detail="Stripe is not enabled for this conference")
-
-    publishable_key = stripe_settings.get("publishable_key")
-    secret_key = stripe_settings.get("secret_key")
-
-    if not secret_key or not publishable_key:
-        raise HTTPException(status_code=400, detail="Stripe keys not configured")
-
-    # Validate amount
-    if data.total <= 0:
-        raise HTTPException(status_code=400, detail="Total must be greater than 0")
-
-    # Create PaymentIntent
-    try:
-        import stripe
-
-        stripe.api_key = secret_key
-
-        payment_intent = stripe.PaymentIntent.create(
-            amount=int(data.total * 100),  # Convert to cents
-            currency=(conference.currency or "EUR").lower(),
-            metadata={
-                "system": "saasconf",
-                "tenant_id": str(conference.tenant_id),
-                "conference_id": str(conference.id),
-                "preview": "true",  # Mark as preview (not linked to invoice yet)
-            },
-        )
-
-        if not payment_intent.client_secret:
-            raise HTTPException(status_code=500, detail="Failed to create payment intent")
-
-        logger.info(f"Created preview PaymentIntent {payment_intent.id} for {data.total} {conference.currency}")
-
-        return CreatePaymentIntentResponse(
-            payment_intent_id=payment_intent.id,
-            client_secret=payment_intent.client_secret,
-            publishable_key=publishable_key,
-        )
-
-    except stripe.error.StripeError as e:
-        logger.error(f"Stripe PaymentIntent creation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Stripe error: {e!s}") from e
-
-
-class UpdatePaymentIntentRequest(BaseModel):
-    """Request to update PaymentIntent amount."""
-
-    total: float
-
-
-@router.put("/{tenant_slug}/conferences/{conference_slug}/update-payment-intent/{payment_intent_id}")
-async def update_payment_intent_amount(
-    tenant_slug: str,
-    conference_slug: str,
-    payment_intent_id: str,
-    data: UpdatePaymentIntentRequest,
-    db: DbSessionDep,
-) -> dict:
-    """
-    Update PaymentIntent amount when order total changes.
-
-    Used when user modifies their order (adds/removes attendees) after PaymentIntent
-    was created. Stripe allows updating the amount as long as payment hasn't been confirmed.
-
-    No authentication required - publicly accessible endpoint.
-
-    Args:
-        tenant_slug: Tenant URL slug
-        conference_slug: Conference abbreviation
-        payment_intent_id: Stripe PaymentIntent ID
-        data: Update request with new total
-        db: Database session
-
-    Returns:
-        Success confirmation
-
-    Raises:
-        HTTPException: If Stripe not configured or update fails
-    """
-    # Resolve tenant and conference
-    _tenant, conference = await resolve_tenant_and_conference(db, tenant_slug, conference_slug)
-
-    # Validate Stripe is enabled
-    stripe_settings = conference.settings.get("stripe", {})
-    if not stripe_settings.get("is_enabled"):
-        raise HTTPException(status_code=400, detail="Stripe is not enabled for this conference")
-
-    secret_key = stripe_settings.get("secret_key")
-    if not secret_key:
-        raise HTTPException(status_code=400, detail="Stripe secret key not configured")
-
-    # Validate amount
-    if data.total <= 0:
-        raise HTTPException(status_code=400, detail="Total must be greater than 0")
-
-    # Update PaymentIntent
-    try:
-        import stripe
-
-        stripe.api_key = secret_key
-
-        payment_intent = stripe.PaymentIntent.modify(
-            payment_intent_id,
-            amount=int(data.total * 100),  # Convert to cents
-        )
-
-        logger.info(f"Updated PaymentIntent {payment_intent_id} to {data.total} {conference.currency}")
-
-        return {
-            "success": True,
-            "payment_intent_id": payment_intent.id,
-            "amount": data.total,
-            "currency": conference.currency,
-        }
-
-    except stripe.error.StripeError as e:
-        logger.error(f"Stripe PaymentIntent update failed for {payment_intent_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Stripe error: {e!s}") from e
-
-
 @router.post("/{tenant_slug}/conferences/{conference_slug}/register")
 async def create_public_registration(
     request: Request,
@@ -863,7 +454,7 @@ async def create_public_registration(
     Create public conference registration (no authentication required).
 
     Security measures:
-    - reCAPTCHA v3 validation (score ≥ 0.5)
+    - reCAPTCHA v3 validation (score >= 0.5)
     - Honeypot field check
     - Form timestamp validation
     - Disposable email blocking
@@ -897,6 +488,7 @@ async def create_public_registration(
 
     # Check if registration is currently open based on portal settings
     portal_settings = conference.settings.get("public_registration_portal", {}) if conference.settings else {}
+
     if not portal_settings.get("enabled", False):
         raise HTTPException(status_code=403, detail="Registration portal is not enabled for this conference")
 
@@ -1148,24 +740,3 @@ async def create_public_registration(
         stripe_publishable_key=stripe_publishable_key,
         success_url=success_url,
     )
-
-
-@router.post("/{tenant_slug}/conferences/{conference_slug}/validate-vat")
-async def validate_vat_public(
-    tenant_slug: str,
-    conference_slug: str,
-    db: DbSessionDep,
-    vat_number: str = Query(..., min_length=2),
-    country: str = Query(..., min_length=2, max_length=2),
-) -> dict:  # type: ignore[type-arg]
-    """
-    Public VAT validation endpoint (no authentication required).
-
-    Used by public registration form to validate VAT numbers in real-time.
-    Performs 3-stage validation: stdnum → regex → VIES.
-    """
-    # Verify tenant and conference exist (basic validation)
-    _tenant, _conference = await resolve_tenant_and_conference(db, tenant_slug, conference_slug)
-
-    # Validate VAT number
-    return await validate_vat_number(vat_number, country)

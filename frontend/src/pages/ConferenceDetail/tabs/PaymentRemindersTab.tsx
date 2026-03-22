@@ -1,8 +1,9 @@
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { queryKeys } from '../../../config/queryKeys';
 import { useToast } from '../../../components/Toast';
+import { useDebouncedValue } from '../../../hooks/useDebounce';
 import type {
   Conference,
   PaymentReminder,
@@ -23,22 +24,7 @@ function PaymentRemindersTab({ conference, isAdmin }: Props) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [reminderFilter, setReminderFilter] = useState('');
-  const debouncedSearch = useRef('');
-  const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      setSearch(value);
-      if (searchTimer.current) clearTimeout(searchTimer.current);
-      searchTimer.current = setTimeout(() => {
-        debouncedSearch.current = value;
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.paymentReminders.byConference(conference.id),
-        });
-      }, 300);
-    },
-    [conference.id, queryClient]
-  );
+  const debouncedSearch = useDebouncedValue(search);
 
   // Fetch reminders
   const { data, isLoading } = useQuery({
@@ -46,14 +32,14 @@ function PaymentRemindersTab({ conference, isAdmin }: Props) {
       ...queryKeys.paymentReminders.byConference(conference.id),
       statusFilter,
       reminderFilter,
-      debouncedSearch.current,
+      debouncedSearch,
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (statusFilter) params.set('status', statusFilter);
       if (reminderFilter) params.set('reminder_number', reminderFilter);
-      if (debouncedSearch.current) params.set('search', debouncedSearch.current);
-      params.set('limit', '200');
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      params.set('page_size', '200');
       const res = await api.get<{ items: PaymentReminder[]; total: number }>(
         `/conferences/${conference.id}/payment-reminders?${params}`
       );
@@ -157,7 +143,7 @@ function PaymentRemindersTab({ conference, isAdmin }: Props) {
           type="text"
           placeholder="Search invoice # or recipient..."
           value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-gray-100 w-64"
         />
         <select

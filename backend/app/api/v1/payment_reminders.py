@@ -67,8 +67,8 @@ async def list_payment_reminders(
     status: str | None = Query(None, description="Filter by status: pending, sent, failed"),
     search: str | None = Query(None, description="Search by invoice number or recipient"),
     reminder_number: int | None = Query(None, description="Filter by reminder number: 1 or 2"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
 ) -> PaymentReminderListResponse:
     """List payment reminders for a conference with optional filters."""
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
@@ -110,7 +110,7 @@ async def list_payment_reminders(
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 
-    query = query.order_by(PaymentReminder.created_at.desc()).offset(skip).limit(limit)
+    query = query.order_by(PaymentReminder.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     items = [PaymentReminderResponse.model_validate(r) for r in result.scalars().all()]
 

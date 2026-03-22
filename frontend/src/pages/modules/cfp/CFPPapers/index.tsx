@@ -15,8 +15,8 @@ import type { PaperFormData } from './PaperForm';
 interface PaperListResponse {
   items: Paper[];
   total: number;
-  skip: number;
-  limit: number;
+  page: number;
+  page_size: number;
 }
 
 const PAGE_SIZE = 50;
@@ -93,7 +93,7 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(1);
   const [confirmAction, setConfirmAction] = useState<{
     paper: Paper;
     action: 'accepted' | 'rejected' | 'draft';
@@ -104,25 +104,23 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
   useEffect(() => {
     debounceRef.current = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setPage(0); // Reset to first page on new search
+      setPage(1); // Reset to first page on new search
     }, 300);
     return () => clearTimeout(debounceRef.current);
   }, [searchQuery]);
 
   // Reset page when status filter changes
   useEffect(() => {
-    setPage(0);
+    setPage(1);
   }, [statusFilter]);
 
-  const skip = page * PAGE_SIZE;
-
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['cfp-papers', conferenceId, skip, PAGE_SIZE, debouncedSearch, statusFilter],
+    queryKey: ['cfp-papers', conferenceId, page, PAGE_SIZE, debouncedSearch, statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (conferenceId) params.append('conference_id', conferenceId);
-      params.append('skip', String(skip));
-      params.append('limit', String(PAGE_SIZE));
+      params.append('page', String(page));
+      params.append('page_size', String(PAGE_SIZE));
       if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim());
       if (statusFilter) params.append('status', statusFilter);
       const response = await api.get<PaperListResponse>(`/cfp/papers?${params.toString()}`);
@@ -485,20 +483,21 @@ export default function CFPPapers({ isAdmin: isAdminProp }: CFPPapersProps = {})
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-2">
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                Showing {skip + 1}–{Math.min(skip + PAGE_SIZE, totalPapers)} of {totalPapers}
+                Showing {(page - 1) * PAGE_SIZE + 1}&ndash;{Math.min(page * PAGE_SIZE, totalPapers)}{' '}
+                of {totalPapers}
               </span>
               <div className="flex gap-1">
                 <button
                   type="button"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                   className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
                 >
                   Previous
                 </button>
                 <button
                   type="button"
-                  disabled={page >= totalPages - 1}
+                  disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
                   className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
                 >

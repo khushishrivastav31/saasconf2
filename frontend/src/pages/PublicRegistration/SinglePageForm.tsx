@@ -4,13 +4,11 @@
  * Complete registration form on a single scrollable page.
  * Integrates attendees, billing, and booking options with real-time pricing.
  */
-import { useState, useEffect, useCallback, useMemo, useRef, FormEvent } from 'react';
+import { useState, useMemo, FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import UnsavedChangesDialog from '../../components/UnsavedChangesDialog';
-import { loadStripe } from '@stripe/stripe-js';
-import type { Stripe } from '@stripe/stripe-js';
 import { useMutation } from '@tanstack/react-query';
 import publicApi from '../../config/publicApi';
 import type {
@@ -18,65 +16,26 @@ import type {
   PortalAttendee,
   PortalBilling,
   PortalRegistrationResponse,
-  DiscountCodeValidation,
-  VatCalculation,
 } from '../../types/publicRegistration';
 import ConferenceHeader from './components/ConferenceHeader';
 import AttendeeSection from './components/AttendeeSection';
 import OrderSummary from './components/OrderSummary';
-import InlineStripePayment from './components/InlineStripePayment';
+import BillingFormSection from './components/BillingFormSection';
 import { useToast } from '../../components/Toast';
 import { parseApiError } from '../../utils/apiError';
-import VatNumberInput from '../../components/common/VatNumberInput';
-import {
-  COUNTRIES_BY_CONTINENT,
-  EU_COUNTRY_CODES,
-  isBankTransferCountry,
-} from '../../config/countries';
 import { validateEmail, validatePhone } from '../../utils/validators';
-import { applyDiscount } from './helpers';
+import { transformAttendees } from './helpers';
+import { useDiscountCode } from './hooks/useDiscountCode';
+import { useVatCalculation } from './hooks/useVatCalculation';
+import { useStripePayment } from './hooks/useStripePayment';
 import PolicyLinks from './components/PolicyLinks';
 import PolicyModal from './components/PolicyModal';
+import TermsConsentSection from './components/TermsConsentSection';
 
 interface SinglePageFormProps {
   conference: PublicConference;
   tenantSlug: string;
   conferenceSlug: string;
-}
-
-// Helper to determine VAT requirement client-side
-function determineVatRequirement(
-  country: string,
-  conferenceCountry: string,
-  conferenceVenue: string,
-  hasCompanyName: boolean
-): { level: 'required' | 'recommended' | 'optional'; reason?: string } {
-  if (!country || !conferenceCountry) {
-    return { level: 'optional' };
-  }
-
-  const isEU = EU_COUNTRY_CODES.has(country.toUpperCase());
-  const isDomestic = country.toUpperCase() === conferenceCountry.toUpperCase();
-  const isVirtual = conferenceVenue === 'virtual' || conferenceVenue === 'hybrid';
-
-  // REQUIRED: Virtual/hybrid + EU (non-domestic) + has company name (B2B indicator)
-  if (isVirtual && isEU && !isDomestic && hasCompanyName) {
-    return {
-      level: 'required',
-      reason:
-        'VAT number is required for reverse charge on virtual services to EU businesses (Article 196, VAT Directive).',
-    };
-  }
-
-  // RECOMMENDED: B2B (has company name) in domestic or EU
-  if (hasCompanyName && (isDomestic || isEU)) {
-    return {
-      level: 'recommended',
-      reason: 'VAT number is recommended for B2B transactions to enable VAT reclaim.',
-    };
-  }
-
-  return { level: 'optional' };
 }
 
 export default function SinglePageForm({
@@ -127,20 +86,29 @@ export default function SinglePageForm({
     payment_method: conference.stripe_enabled ? 'credit_card' : 'bank_transfer',
   });
 
-  // Validation errors
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [emailValidated, setEmailValidated] = useState<boolean | null>(null);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [phoneValidated, setPhoneValidated] = useState<boolean | null>(null);
+  // VAT validation state (shared with BillingFormSection and handleSubmit)
   const [vatValidated, setVatValidated] = useState<boolean | null>(null);
 
-  // Discount code state
-  const [discountValidation, setDiscountValidation] = useState<DiscountCodeValidation | null>(null);
-  const [discountLoading, setDiscountLoading] = useState(false);
-  const [discountMessage, setDiscountMessage] = useState<string | null>(null);
+  // Discount code
+  const {
+    discountValidation,
+    discountLoading,
+    discountMessage,
+    setDiscountMessage,
+    validateDiscountCode,
+  } = useDiscountCode(tenantSlug, conferenceSlug);
 
-  // VAT calculation state
-  const [vatCalculation, setVatCalculation] = useState<VatCalculation | null>(null);
+  // VAT calculation
+  const { vatCalculation, vatRequirement, paymentAmount } = useVatCalculation({
+    tenantSlug,
+    conferenceSlug,
+    billing,
+    attendees,
+    discountValidation,
+    bookingPeriods: conference.booking_periods,
+    conferenceCountry: conference.country || '',
+    conferenceVenueType: conference.venue_type || 'in_person',
+  });
 
   // Terms & Conditions consent (show when T&C or Privacy Policy is enabled)
   const hasTerms = !!(
@@ -156,283 +124,25 @@ export default function SinglePageForm({
   }, [attendees]);
   const { showDialog, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
-  // PaymentIntent state for payment-first flow
-  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [publishableKey, setPublishableKey] = useState<string | null>(null);
-  const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
-  const [attemptingPayment, setAttemptingPayment] = useState(false); // For credit card payment confirmation
-
-  // Eagerly load Stripe when page mounts (not when user selects credit card)
-  // This eliminates the race condition between Stripe initialization and PaymentIntent creation
-  const stripePromiseRef = useRef<Promise<Stripe | null> | null>(null);
-  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
-  const stripeEnabled = conference.stripe_enabled ?? false;
-
-  useEffect(() => {
-    if (stripeEnabled && conference.stripe_publishable_key && !stripePromiseRef.current) {
-      const promise = loadStripe(conference.stripe_publishable_key, { locale: 'en' });
-      stripePromiseRef.current = promise;
-      setStripePromise(promise);
-    }
-  }, [stripeEnabled, conference.stripe_publishable_key]);
-
-  // Determine VAT requirement level
-  const vatRequirement = useMemo(() => {
-    return determineVatRequirement(
-      billing.country,
-      conference.country || '',
-      conference.venue_type || 'in_person',
-      !!billing.company_name?.trim()
-    );
-  }, [billing.country, billing.company_name, conference.country, conference.venue_type]);
-
-  // Validate discount code
-  const validateDiscountCode = async (code: string) => {
-    if (!code || code.trim() === '') {
-      setDiscountValidation(null);
-      setDiscountMessage(null);
-      return;
-    }
-
-    setDiscountLoading(true);
-    setDiscountMessage(null);
-
-    try {
-      const response = await publicApi.get<DiscountCodeValidation>(
-        `/portal/${tenantSlug}/conferences/${conferenceSlug}/validate-discount/${encodeURIComponent(code.trim())}`
-      );
-
-      setDiscountValidation(response.data);
-
-      if (response.data.valid) {
-        setDiscountMessage(`✓ Discount applied: ${response.data.description || 'Valid code'}`);
-      } else {
-        setDiscountMessage(`✗ ${response.data.message || 'Invalid code'}`);
-      }
-    } catch {
-      setDiscountValidation(null);
-      setDiscountMessage('✗ Error validating discount code');
-    } finally {
-      setDiscountLoading(false);
-    }
-  };
-
-  // Calculate VAT based on country and VAT number
-  const calculateVat = useCallback(
-    async (subtotal: number, country: string, vatNumber: string | null) => {
-      if (!country || subtotal <= 0) {
-        setVatCalculation(null);
-        return;
-      }
-
-      try {
-        const response = await publicApi.post<VatCalculation>(
-          `/portal/${tenantSlug}/conferences/${conferenceSlug}/calculate-vat`,
-          {
-            country,
-            vat_number: vatNumber,
-            subtotal,
-          }
-        );
-
-        setVatCalculation(response.data);
-      } catch (err) {
-        console.error('Error calculating VAT:', err);
-        setVatCalculation(null);
-      }
-    },
-    [tenantSlug, conferenceSlug]
-  );
-
-  // Recalculate VAT whenever billing country, VAT number, or subtotal changes
-  useEffect(() => {
-    // Calculate subtotal from attendees using SAME logic as OrderSummary
-    const today = new Date().toISOString().slice(0, 10);
-    const activePeriod = conference.booking_periods.find(
-      (p) => p.start_date <= today && p.end_date >= today
-    );
-
-    let subtotal = 0;
-    attendees.forEach((attendee) => {
-      const bookingIds = attendee.booking_option_ids || [];
-      bookingIds.forEach((optionId) => {
-        const priceInfo = conference.booking_periods.find((p) => {
-          return p.start_date <= today && p.end_date >= today && p.prices[optionId];
-        });
-        const price = priceInfo?.prices[optionId] || 0;
-
-        // Apply discount using helper that checks option/period restrictions
-        const { discountedPrice } = applyDiscount(
-          price,
-          discountValidation || null,
-          optionId,
-          activePeriod?.id
-        );
-        subtotal += discountedPrice;
-      });
-    });
-
-    // Calculate VAT
-    calculateVat(subtotal, billing.country, billing.vat_number || null);
-  }, [
-    billing.country,
-    billing.vat_number,
-    attendees,
-    discountValidation,
-    conference.booking_periods,
-    calculateVat,
-  ]);
-
-  // Calculate subtotal for PaymentIntent (same logic as VAT calculation effect)
-  const currentSubtotal = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const activePeriod = conference.booking_periods.find(
-      (p) => p.start_date <= today && p.end_date >= today
-    );
-
-    let total = 0;
-    attendees.forEach((attendee) => {
-      const bookingIds = attendee.booking_option_ids || [];
-      bookingIds.forEach((optionId) => {
-        const priceInfo = conference.booking_periods.find((p) => {
-          return p.start_date <= today && p.end_date >= today && p.prices[optionId];
-        });
-        const price = priceInfo?.prices[optionId] || 0;
-        const { discountedPrice } = applyDiscount(
-          price,
-          discountValidation || null,
-          optionId,
-          activePeriod?.id
-        );
-        total += discountedPrice;
-      });
-    });
-    return total;
-  }, [attendees, conference.booking_periods, discountValidation]);
-
-  // Determine the amount for PaymentIntent: use VAT total if available, otherwise subtotal
-  const paymentAmount = vatCalculation ? vatCalculation.total : currentSubtotal;
-
-  // Create PaymentIntent when credit card is selected and there's a positive amount
-  useEffect(() => {
-    const shouldCreatePaymentIntent =
-      billing.payment_method === 'credit_card' &&
-      paymentAmount > 0 &&
-      !paymentIntentId &&
-      !creatingPaymentIntent;
-
-    if (!shouldCreatePaymentIntent) {
-      return;
-    }
-
-    const createPaymentIntent = async () => {
-      setCreatingPaymentIntent(true);
-      try {
-        const response = await publicApi.post<{
-          payment_intent_id: string;
-          client_secret: string;
-          publishable_key: string;
-        }>(`/portal/${tenantSlug}/conferences/${conferenceSlug}/create-payment-intent`, {
-          total: paymentAmount,
-        });
-
-        setPaymentIntentId(response.data.payment_intent_id);
-        setClientSecret(response.data.client_secret);
-        setPublishableKey(response.data.publishable_key);
-      } catch (err) {
-        console.error('Error creating PaymentIntent:', err);
-        showToast('Failed to initialize payment. Please try again.', 'error');
-      } finally {
-        setCreatingPaymentIntent(false);
-      }
-    };
-
-    createPaymentIntent();
-  }, [
-    billing.payment_method,
-    paymentAmount,
+  // Stripe payment
+  const {
     paymentIntentId,
-    creatingPaymentIntent,
+    clientSecret,
+    publishableKey,
+    stripePromise,
+    attemptingPayment,
+    setAttemptingPayment,
+    bankTransferAvailable,
+    creditCardAvailable,
+  } = useStripePayment({
     tenantSlug,
     conferenceSlug,
+    conference,
+    billing,
+    setBilling,
+    paymentAmount,
     showToast,
-  ]);
-
-  // Update PaymentIntent when total changes
-  useEffect(() => {
-    const shouldUpdatePaymentIntent =
-      billing.payment_method === 'credit_card' && paymentIntentId && paymentAmount > 0;
-
-    if (!shouldUpdatePaymentIntent) {
-      return;
-    }
-
-    const updatePaymentIntent = async () => {
-      try {
-        await publicApi.put(
-          `/portal/${tenantSlug}/conferences/${conferenceSlug}/update-payment-intent/${paymentIntentId}`,
-          {
-            total: paymentAmount,
-          }
-        );
-      } catch (err) {
-        console.error('Error updating PaymentIntent:', err);
-        // Don't show error toast - this is a background update
-      }
-    };
-
-    updatePaymentIntent();
-  }, [billing.payment_method, paymentIntentId, paymentAmount, tenantSlug, conferenceSlug]);
-
-  // Clear PaymentIntent when switching away from credit card
-  useEffect(() => {
-    if (billing.payment_method !== 'credit_card' && paymentIntentId) {
-      setPaymentIntentId(null);
-      setClientSecret(null);
-      setPublishableKey(null);
-    }
-  }, [billing.payment_method, paymentIntentId]);
-
-  // Payment method availability based on Stripe status and country
-  const bankTransferAvailable =
-    !stripeEnabled ||
-    !billing.country ||
-    isBankTransferCountry(billing.country, conference.bank_transfer_countries);
-  const creditCardAvailable = stripeEnabled;
-
-  // Auto-switch payment method when availability changes
-  useEffect(() => {
-    if (!stripeEnabled && billing.payment_method === 'credit_card') {
-      setBilling((prev) => ({ ...prev, payment_method: 'bank_transfer' }));
-    } else if (
-      stripeEnabled &&
-      billing.country &&
-      !isBankTransferCountry(billing.country, conference.bank_transfer_countries) &&
-      billing.payment_method === 'bank_transfer'
-    ) {
-      setBilling((prev) => ({ ...prev, payment_method: 'credit_card' }));
-    }
-  }, [billing.country, stripeEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Copy first attendee data to billing
-  const copyAttendeeDataToBilling = () => {
-    if (attendees.length > 0) {
-      const firstAttendee = attendees[0];
-      setBilling({
-        ...billing,
-        contact_first_name: firstAttendee.first_name,
-        contact_last_name: firstAttendee.last_name,
-        contact_email: firstAttendee.email,
-        contact_phone: firstAttendee.phone || '',
-      });
-      // Clear any validation errors
-      setEmailError(null);
-      setPhoneError(null);
-      // Show success message
-      showToast('Contact information copied from attendee', 'success');
-    }
-  };
+  });
 
   // Handle payment completion (after Stripe Elements confirms)
   const handlePaymentComplete = async () => {
@@ -446,66 +156,7 @@ export default function SinglePageForm({
     }
 
     // Prepare registration data
-    const transformedAttendees = attendees.map((att, attendeeIndex) => {
-      const bookingIds = att.booking_option_ids || [];
-      const [primaryId, ...additionalIds] = bookingIds;
-
-      // Collect all session selections for this attendee
-      const attendeeSessions = sessionSelections[attendeeIndex] || {};
-
-      // Find session for primary booking option (goes to main_session_id)
-      let mainSessionId: string | null = null;
-      if (primaryId && attendeeSessions[primaryId]) {
-        const primarySlots = attendeeSessions[primaryId];
-        // Get first selected session for primary option
-        const sessionId = Object.values(primarySlots).find((id) => id);
-        if (sessionId) {
-          mainSessionId = sessionId;
-        }
-      }
-
-      // Build items array for additional options and their sessions
-      const items: Array<{
-        item_type: 'booking_option';
-        booking_option_id: string;
-        program_session_id?: string;
-      }> = [];
-
-      // Add additional booking options (without sessions for now)
-      additionalIds.forEach((id) => {
-        const hasSession = attendeeSessions[id];
-        if (!hasSession) {
-          // No session for this option - add as simple item
-          items.push({
-            item_type: 'booking_option' as const,
-            booking_option_id: id,
-          });
-        }
-      });
-
-      // Add sessions for additional options
-      Object.entries(attendeeSessions).forEach(([optionId, slotSelections]) => {
-        // Skip primary option (already handled as main_session_id)
-        if (optionId === primaryId) return;
-
-        Object.entries(slotSelections).forEach(([, sessionId]) => {
-          if (sessionId) {
-            items.push({
-              item_type: 'booking_option' as const,
-              booking_option_id: optionId,
-              program_session_id: sessionId,
-            });
-          }
-        });
-      });
-
-      return {
-        ...att,
-        booking_option_id: primaryId,
-        main_session_id: mainSessionId,
-        items,
-      };
-    });
+    const transformedAttendees = transformAttendees(attendees, sessionSelections);
 
     try {
       // Get reCAPTCHA token (optional - backend validates only if configured)
@@ -719,21 +370,18 @@ export default function SinglePageForm({
     // Validate billing contact info
     const contactEmailError = validateEmail(billing.contact_email);
     if (contactEmailError) {
-      setEmailError(contactEmailError);
       showToast('Please provide a valid email address', 'error');
       return;
     }
 
     // Phone is required
     if (!billing.contact_phone || billing.contact_phone.trim() === '') {
-      setPhoneError('Phone number is required');
       showToast('Please provide a contact phone number', 'error');
       return;
     }
 
     const contactPhoneError = validatePhone(billing.contact_phone);
     if (contactPhoneError) {
-      setPhoneError(contactPhoneError);
       showToast(
         'Please provide a valid phone number in international format (e.g. +49123456789)',
         'error'
@@ -785,67 +433,7 @@ export default function SinglePageForm({
       setAttemptingPayment(true);
     } else {
       // Bank transfer: Create registration immediately (existing behavior)
-      // Transform attendees for backend (first booking option is primary, rest are items)
-      const transformedAttendees = attendees.map((att, attendeeIndex) => {
-        const bookingIds = att.booking_option_ids || [];
-        const [primaryId, ...additionalIds] = bookingIds;
-
-        // Collect all session selections for this attendee
-        const attendeeSessions = sessionSelections[attendeeIndex] || {};
-
-        // Find session for primary booking option (goes to main_session_id)
-        let mainSessionId: string | null = null;
-        if (primaryId && attendeeSessions[primaryId]) {
-          const primarySlots = attendeeSessions[primaryId];
-          // Get first selected session for primary option
-          const sessionId = Object.values(primarySlots).find((id) => id);
-          if (sessionId) {
-            mainSessionId = sessionId;
-          }
-        }
-
-        // Build items array for additional options and their sessions
-        const items: Array<{
-          item_type: 'booking_option';
-          booking_option_id: string;
-          program_session_id?: string;
-        }> = [];
-
-        // Add additional booking options (without sessions for now)
-        additionalIds.forEach((id) => {
-          const hasSession = attendeeSessions[id];
-          if (!hasSession) {
-            // No session for this option - add as simple item
-            items.push({
-              item_type: 'booking_option' as const,
-              booking_option_id: id,
-            });
-          }
-        });
-
-        // Add sessions for additional options
-        Object.entries(attendeeSessions).forEach(([optionId, slotSelections]) => {
-          // Skip primary option (already handled as main_session_id)
-          if (optionId === primaryId) return;
-
-          Object.entries(slotSelections).forEach(([, sessionId]) => {
-            if (sessionId) {
-              items.push({
-                item_type: 'booking_option' as const,
-                booking_option_id: optionId,
-                program_session_id: sessionId,
-              });
-            }
-          });
-        });
-
-        return {
-          ...att,
-          booking_option_id: primaryId,
-          main_session_id: mainSessionId,
-          items,
-        };
-      });
+      const transformedAttendees = transformAttendees(attendees, sessionSelections);
 
       // Submit
       submitMutation.mutate({
@@ -923,559 +511,39 @@ export default function SinglePageForm({
         />
 
         {/* Billing Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Billing Information
-            </h2>
-            {attendees.length > 0 && attendees[0].first_name && (
-              <button
-                type="button"
-                onClick={copyAttendeeDataToBilling}
-                className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center gap-1"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
-                  />
-                </svg>
-                Copy from {attendees[0].first_name} {attendees[0].last_name}
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {/* Company Name */}
-            <div>
-              <label
-                htmlFor="company_name"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Company Name
-              </label>
-              <input
-                id="company_name"
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
-                value={billing.company_name}
-                onChange={(e) => setBilling({ ...billing, company_name: e.target.value })}
-              />
-            </div>
-
-            {/* Address */}
-            <div>
-              <label
-                htmlFor="street"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Street *
-              </label>
-              <input
-                id="street"
-                type="text"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
-                value={billing.street}
-                onChange={(e) => setBilling({ ...billing, street: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="postal_code"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Postal Code *
-                </label>
-                <input
-                  id="postal_code"
-                  type="text"
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
-                  value={billing.postal_code}
-                  onChange={(e) => setBilling({ ...billing, postal_code: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="city"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  City *
-                </label>
-                <input
-                  id="city"
-                  type="text"
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
-                  value={billing.city}
-                  onChange={(e) => setBilling({ ...billing, city: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Country */}
-            <div>
-              <label
-                htmlFor="country"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Country *
-              </label>
-              <select
-                id="country"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
-                value={billing.country}
-                onChange={(e) => {
-                  setBilling({ ...billing, country: e.target.value });
-                  setVatValidated(null);
-                }}
-              >
-                <option value="">Select country...</option>
-                {COUNTRIES_BY_CONTINENT.map((group) => (
-                  <optgroup key={group.continent} label={group.continent}>
-                    {group.countries.map((country) => (
-                      <option key={country.code} value={country.code}>
-                        {country.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-
-            {/* VAT Number */}
-            <div>
-              <VatNumberInput
-                value={billing.vat_number || ''}
-                onChange={(value) => {
-                  setBilling({ ...billing, vat_number: value });
-                  setVatValidated(null);
-                }}
-                onValidationResult={(valid) => setVatValidated(valid)}
-                country={billing.country}
-                required={vatRequirement.level === 'required'}
-                level={vatRequirement.level}
-                requirementReason={vatRequirement.reason}
-                apiClient={publicApi}
-                endpoint={`/portal/${tenantSlug}/conferences/${conferenceSlug}/validate-vat`}
-              />
-            </div>
-
-            {/* Contact Person */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="contact_first_name"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Contact First Name *
-                </label>
-                <input
-                  id="contact_first_name"
-                  type="text"
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
-                  value={billing.contact_first_name}
-                  onChange={(e) => setBilling({ ...billing, contact_first_name: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="contact_last_name"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Contact Last Name *
-                </label>
-                <input
-                  id="contact_last_name"
-                  type="text"
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
-                  value={billing.contact_last_name}
-                  onChange={(e) => setBilling({ ...billing, contact_last_name: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="contact_email"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Contact Email *
-                </label>
-                <div className="relative">
-                  <input
-                    id="contact_email"
-                    type="email"
-                    required
-                    className={`mt-1 block w-full rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100 ${
-                      emailValidated === true
-                        ? 'border-green-500 dark:border-green-600 focus:border-green-500 focus:ring-green-500'
-                        : emailError
-                          ? 'border-red-300 dark:border-red-600'
-                          : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                    value={billing.contact_email}
-                    onChange={(e) => {
-                      setBilling({ ...billing, contact_email: e.target.value });
-                      setEmailError(null);
-                      setEmailValidated(null);
-                    }}
-                    onBlur={(e) => {
-                      const error = validateEmail(e.target.value);
-                      if (error) {
-                        setEmailError(error);
-                        setEmailValidated(false);
-                      } else {
-                        setEmailError(null);
-                        setEmailValidated(true);
-                      }
-                    }}
-                  />
-                  {/* Validation icon */}
-                  {emailValidated === true && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <svg
-                        className="h-5 w-5 text-green-500"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                  {emailValidated === false && emailError && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                {emailError && (
-                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">{emailError}</p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="contact_phone"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Contact Phone *
-                </label>
-                <div className="relative">
-                  <input
-                    id="contact_phone"
-                    type="tel"
-                    required
-                    placeholder="+49123456789"
-                    className={`mt-1 block w-full rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100 ${
-                      phoneValidated === true
-                        ? 'border-green-500 dark:border-green-600 focus:border-green-500 focus:ring-green-500'
-                        : phoneError
-                          ? 'border-red-300 dark:border-red-600'
-                          : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                    value={billing.contact_phone}
-                    onChange={(e) => {
-                      setBilling({ ...billing, contact_phone: e.target.value });
-                      setPhoneError(null);
-                      setPhoneValidated(null);
-                    }}
-                    onBlur={(e) => {
-                      const value = e.target.value.trim();
-                      if (!value) {
-                        setPhoneError('Phone number is required');
-                        setPhoneValidated(false);
-                      } else {
-                        const error = validatePhone(value);
-                        if (error) {
-                          setPhoneError(error);
-                          setPhoneValidated(false);
-                        } else {
-                          setPhoneError(null);
-                          setPhoneValidated(true);
-                        }
-                      }
-                    }}
-                  />
-                  {/* Validation icon */}
-                  {phoneValidated === true && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <svg
-                        className="h-5 w-5 text-green-500"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                  {phoneValidated === false && phoneError && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                {phoneError && (
-                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">{phoneError}</p>
-                )}
-                {!phoneError && (
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Use international format with country code (e.g. +49123456789)
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Procurement Code */}
-            <div>
-              <label
-                htmlFor="procurement_code"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Procurement / PO Code
-              </label>
-              <input
-                id="procurement_code"
-                type="text"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100"
-                value={billing.procurement_code || ''}
-                onChange={(e) => setBilling({ ...billing, procurement_code: e.target.value })}
-              />
-            </div>
-
-            {/* Discount Code */}
-            <div>
-              <label
-                htmlFor="discount_code"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Discount Code
-              </label>
-              <div className="relative">
-                <input
-                  id="discount_code"
-                  type="text"
-                  placeholder="Enter code if applicable"
-                  className={`mt-1 block w-full rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-900 dark:text-gray-100 ${
-                    discountValidation?.valid
-                      ? 'border-green-300 dark:border-green-600'
-                      : discountMessage && !discountValidation?.valid
-                        ? 'border-red-300 dark:border-red-600'
-                        : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                  value={billing.discount_code || ''}
-                  onChange={(e) => {
-                    setBilling({ ...billing, discount_code: e.target.value });
-                    setDiscountMessage(null);
-                  }}
-                  onBlur={(e) => validateDiscountCode(e.target.value)}
-                  disabled={discountLoading}
-                />
-                {discountLoading && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5">
-                    <svg
-                      className="animate-spin h-4 w-4 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </div>
-              {discountMessage && (
-                <p
-                  className={`mt-1 text-xs ${
-                    discountValidation?.valid
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-red-400'
-                  }`}
-                >
-                  {discountMessage}
-                </p>
-              )}
-            </div>
-
-            {/* Payment Method */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Payment Method *
-              </label>
-              {!creditCardAvailable ? (
-                <div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Bank Transfer</p>
-                </div>
-              ) : bankTransferAvailable ? (
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="payment_method"
-                      value="bank_transfer"
-                      checked={billing.payment_method === 'bank_transfer'}
-                      onChange={(e) =>
-                        setBilling({
-                          ...billing,
-                          payment_method: e.target.value as 'credit_card' | 'bank_transfer',
-                        })
-                      }
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
-                    />
-                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                      Bank Transfer
-                    </span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="payment_method"
-                      value="credit_card"
-                      checked={billing.payment_method === 'credit_card'}
-                      onChange={(e) =>
-                        setBilling({
-                          ...billing,
-                          payment_method: e.target.value as 'credit_card' | 'bank_transfer',
-                        })
-                      }
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
-                    />
-                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                      Credit Card
-                    </span>
-                  </label>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Credit Card</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Bank transfer is not available for your billing country.
-                  </p>
-                </div>
-              )}
-
-              {/* Inline Stripe Payment - shows when credit card is selected */}
-              {billing.payment_method === 'credit_card' && (
-                <InlineStripePayment
-                  clientSecret={clientSecret}
-                  publishableKey={publishableKey}
-                  stripePromise={stripePromise}
-                  billingName={`${billing.contact_first_name} ${billing.contact_last_name}`.trim()}
-                  onSuccess={handlePaymentComplete}
-                  onError={(msg) => {
-                    setAttemptingPayment(false); // Reset payment attempt state
-                    showToast(msg, 'error');
-                  }}
-                  isSubmitting={attemptingPayment}
-                />
-              )}
-            </div>
-          </div>
-        </div>
+        <BillingFormSection
+          billing={billing}
+          setBilling={setBilling}
+          attendees={attendees}
+          tenantSlug={tenantSlug}
+          conferenceSlug={conferenceSlug}
+          discountValidation={discountValidation}
+          discountLoading={discountLoading}
+          discountMessage={discountMessage}
+          setDiscountMessage={setDiscountMessage}
+          validateDiscountCode={validateDiscountCode}
+          vatRequirement={vatRequirement}
+          setVatValidated={setVatValidated}
+          clientSecret={clientSecret}
+          publishableKey={publishableKey}
+          stripePromise={stripePromise}
+          attemptingPayment={attemptingPayment}
+          setAttemptingPayment={setAttemptingPayment}
+          bankTransferAvailable={bankTransferAvailable}
+          creditCardAvailable={creditCardAvailable}
+          handlePaymentComplete={handlePaymentComplete}
+          showToast={showToast}
+        />
 
         {/* Terms & Conditions / Privacy Policy Consent */}
         {hasTerms && (
-          <div className="flex items-start gap-3 bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <input
-              type="checkbox"
-              id="terms-consent"
-              checked={termsAccepted}
-              onChange={(e) => setTermsAccepted(e.target.checked)}
-              className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
-            />
-            <label htmlFor="terms-consent" className="text-sm text-gray-700 dark:text-gray-300">
-              I hereby acknowledge that I have read and understood the{' '}
-              {conference.policies?.terms_and_conditions?.type === 'url' &&
-              conference.policies.terms_and_conditions.url ? (
-                <a
-                  href={conference.policies.terms_and_conditions.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-600 hover:text-primary-700 underline"
-                >
-                  Terms and Conditions
-                </a>
-              ) : conference.policies?.terms_and_conditions?.type === 'content' &&
-                conference.policies.terms_and_conditions.content ? (
-                <button
-                  type="button"
-                  onClick={() => setTermsModalOpen(true)}
-                  className="text-primary-600 hover:text-primary-700 underline font-medium"
-                >
-                  Terms and Conditions
-                </button>
-              ) : (
-                <span className="text-primary-600 font-medium">Terms and Conditions</span>
-              )}{' '}
-              and{' '}
-              {conference.policies?.privacy_policy?.type === 'url' &&
-              conference.policies.privacy_policy.url ? (
-                <a
-                  href={conference.policies.privacy_policy.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-600 hover:text-primary-700 underline"
-                >
-                  Privacy Policy
-                </a>
-              ) : conference.policies?.privacy_policy?.type === 'content' &&
-                conference.policies.privacy_policy.content ? (
-                <button
-                  type="button"
-                  onClick={() => setPrivacyModalOpen(true)}
-                  className="text-primary-600 hover:text-primary-700 underline font-medium"
-                >
-                  Privacy Policy
-                </button>
-              ) : (
-                <span className="text-primary-600 font-medium">Privacy Policy</span>
-              )}{' '}
-              and I agree to all of the terms.
-              <span className="text-red-500 ml-0.5">*</span>
-            </label>
-          </div>
+          <TermsConsentSection
+            policies={conference.policies}
+            termsAccepted={termsAccepted}
+            setTermsAccepted={setTermsAccepted}
+            setTermsModalOpen={setTermsModalOpen}
+            setPrivacyModalOpen={setPrivacyModalOpen}
+          />
         )}
 
         {/* Submit Button */}

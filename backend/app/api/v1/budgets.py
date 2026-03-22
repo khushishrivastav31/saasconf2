@@ -196,8 +196,8 @@ async def list_budgets(
     current_user: CurrentUserDep,
     db: DbSessionDep,
     status: str | None = Query(None),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
 ) -> BudgetListResponse:
     """List budgets for a conference."""
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
@@ -213,7 +213,11 @@ async def list_budgets(
     total = count_result.scalar() or 0
 
     result = await db.execute(
-        select(Budget).where(*base_filter).order_by(Budget.created_at.desc()).offset(skip).limit(limit)
+        select(Budget)
+        .where(*base_filter)
+        .order_by(Budget.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
     budgets = result.scalars().all()
 

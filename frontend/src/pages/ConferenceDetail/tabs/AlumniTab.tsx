@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { queryKeys } from '../../../config/queryKeys';
 import { parseApiError } from '../../../utils/apiError';
+import { useDebouncedValue } from '../../../hooks/useDebounce';
 import type { Conference } from '../../../types';
 import Modal from '../../../components/Modal';
 import ConfirmDialog from '../../../components/ConfirmDialog';
@@ -89,8 +90,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
   // State
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedSearch = useDebouncedValue(search);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Alumni | null>(null);
@@ -105,16 +105,6 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
   const [editEmailError, setEditEmailError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Debounced search handler
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      setDebouncedSearch(value);
-      setPage(1);
-    }, 300);
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Queries & Mutations
@@ -317,7 +307,10 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
           <input
             type="text"
             value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             placeholder="Search by name, email, or company..."
             className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-primary-500 focus:border-primary-500"
           />

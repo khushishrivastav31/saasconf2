@@ -156,3 +156,15 @@ export interface VatCalculation {
   total: number;
   notes?: string | null;
 }
+
+export interface TransformedAttendeeItem {
+  item_type: 'booking_option';
+  booking_option_id: string;
+  program_session_id?: string;
+}
+
+export interface TransformedAttendee extends PortalAttendee {
+  booking_option_id: string;
+  main_session_id: string | null;
+  items: TransformedAttendeeItem[];
+}

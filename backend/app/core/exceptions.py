@@ -69,6 +69,18 @@ class ConflictError(SaaSConfException):
 class SubmissionValidationError(SaaSConfException):
     """Raised when paper submission validation fails with structured details."""
 
-    def __init__(self, message: str, missing_fields: list[str] | None = None):
+    def __init__(
+        self,
+        message: str,
+        missing_fields: list[str] | None = None,
+        char_errors: list[str] | None = None,
+    ):
         self.missing_fields = missing_fields or []
-        super().__init__(message, details={"missing_fields": self.missing_fields})
+        self.char_errors = char_errors or []
+        super().__init__(
+            message,
+            details={
+                "missing_fields": self.missing_fields,
+                "char_errors": self.char_errors,
+            },
+        )

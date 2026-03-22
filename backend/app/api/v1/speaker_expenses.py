@@ -703,8 +703,8 @@ async def list_speaker_expenses(
     category_id: UUID | None = Query(None),
     speaker_name: str | None = Query(None),
     search: str | None = Query(None),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
 ) -> SpeakerExpenseListResponse:
     """List all speaker expenses for a conference with filters."""
     conference = await get_conference_for_tenant(db, conference_id, current_user.tenant_id)
@@ -734,8 +734,8 @@ async def list_speaker_expenses(
         )
         .where(*base_filter)
         .order_by(SpeakerExpense.speaker_name, SpeakerExpense.created_at.desc())
-        .offset(skip)
-        .limit(limit)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
     expenses = result.scalars().all()
 

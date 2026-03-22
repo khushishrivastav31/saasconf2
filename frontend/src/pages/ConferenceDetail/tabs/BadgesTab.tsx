@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
 import { parseApiError } from '../../../utils/apiError';
+import { useDebouncedValue } from '../../../hooks/useDebounce';
 import type { Conference } from '../../../types';
 
 const BADGE_TYPES = [
@@ -34,30 +35,20 @@ export default function BadgesTab({
   const { showToast } = useToast();
   const [badgeType, setBadgeType] = useState('attendee');
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [skip, setSkip] = useState(0);
+  const debouncedSearch = useDebouncedValue(search);
+  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [bulkGenerating, setBulkGenerating] = useState(false);
-  const limit = 50;
-
-  // Debounce search
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value);
-    const timer = setTimeout(() => {
-      setDebouncedSearch(value);
-      setSkip(0);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, []);
+  const pageSize = 50;
 
   // Fetch registrations
   const { data, isLoading } = useQuery({
-    queryKey: ['badge-registrations', conference.id, skip, limit, debouncedSearch],
+    queryKey: ['badge-registrations', conference.id, page, pageSize, debouncedSearch],
     queryFn: async () => {
       const res = await api.get(`/conferences/${conference.id}/badges`, {
-        params: { skip, limit, search: debouncedSearch },
+        params: { page, page_size: pageSize, search: debouncedSearch },
       });
       return res.data as { items: BadgeRegistration[]; total: number };
     },
@@ -65,8 +56,7 @@ export default function BadgesTab({
 
   const registrations = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / limit);
-  const currentPage = Math.floor(skip / limit) + 1;
+  const totalPages = Math.ceil(total / pageSize);
 
   // Toggle selection
   const toggleSelect = useCallback((id: string) => {
@@ -235,7 +225,10 @@ export default function BadgesTab({
             type="text"
             placeholder="Search by name or email..."
             value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="w-full pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
@@ -413,22 +406,22 @@ export default function BadgesTab({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Showing {skip + 1}\u2013{Math.min(skip + limit, total)} of {total}
+            Showing {(page - 1) * pageSize + 1}&ndash;{Math.min(page * pageSize, total)} of {total}
           </p>
           <div className="flex gap-1">
             <button
-              onClick={() => setSkip(Math.max(0, skip - limit))}
-              disabled={skip === 0}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
               className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
               Previous
             </button>
             <span className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300">
-              Page {currentPage} of {totalPages}
+              Page {page} of {totalPages}
             </span>
             <button
-              onClick={() => setSkip(skip + limit)}
-              disabled={skip + limit >= total}
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages}
               className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
               Next

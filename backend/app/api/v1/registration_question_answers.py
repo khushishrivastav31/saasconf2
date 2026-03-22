@@ -32,8 +32,8 @@ async def list_registration_question_answers(
     conference_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
     search: str | None = None,
 ) -> AnswersListResponse:
     """List all registration question answers for a conference, grouped by applicant.
@@ -79,8 +79,8 @@ async def list_registration_question_answers(
         )
         .group_by(RegistrationQuestionAnswer.applicant_id)
         .order_by(func.max(RegistrationQuestionAnswer.answered_at).desc())
-        .offset(skip)
-        .limit(limit)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
 
     if applicant_filter is not None:

@@ -7,7 +7,7 @@ registrations.
 from io import BytesIO
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
@@ -27,8 +27,8 @@ async def list_badge_registrations(
     conference_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
-    skip: int = 0,
-    limit: int = 50,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
     search: str = "",
 ) -> dict:
     """List registrations for badge generation with search and pagination."""
@@ -58,8 +58,8 @@ async def list_badge_registrations(
             joinedload(Registration.billing_profile),
         )
         .order_by(Registration.last_name, Registration.first_name)
-        .offset(skip)
-        .limit(min(limit, 100))
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
     result = await db.execute(items_query)
     registrations = result.unique().scalars().all()

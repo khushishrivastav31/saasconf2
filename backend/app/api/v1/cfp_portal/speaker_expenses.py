@@ -126,8 +126,8 @@ async def list_my_expenses(
     db: DbSessionDep,
     conference_id: UUID | None = Query(None),
     status: str | None = Query(None),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
 ) -> dict:
     """List the current speaker's expenses."""
     applicant_id = current_applicant.applicant_id
@@ -154,8 +154,8 @@ async def list_my_expenses(
         )
         .where(*base_filter)
         .order_by(SpeakerExpense.created_at.desc())
-        .offset(skip)
-        .limit(limit)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
     expenses = result.scalars().all()
 

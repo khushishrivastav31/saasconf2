@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { memo, useCallback, useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -62,7 +62,7 @@ interface DraggableVolunteerItemProps {
   onColorCycle: (applicantId: string, currentColor: string | null) => void;
 }
 
-function DraggableVolunteerItem({
+const DraggableVolunteerItem = memo(function DraggableVolunteerItem({
   volunteer,
   assignmentCount,
   isAdmin,
@@ -117,7 +117,7 @@ function DraggableVolunteerItem({
       )}
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // DroppableVolunteerSessionCell — grid session cell showing task fill badges
@@ -129,7 +129,7 @@ interface DroppableVolunteerSessionCellProps {
   onClick: () => void;
 }
 
-function DroppableVolunteerSessionCell({
+const DroppableVolunteerSessionCell = memo(function DroppableVolunteerSessionCell({
   segment,
   sessionTasks,
   sessionAssignments,
@@ -221,7 +221,7 @@ function DroppableVolunteerSessionCell({
       </div>
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // formatTime helper
@@ -393,11 +393,14 @@ export default function VolunteerAssignmentTab({ conference, isAdmin }: Props) {
     },
   });
 
-  const handleColorCycle = (applicantId: string, currentColor: string | null) => {
-    const currentIdx = PRESET_COLORS.indexOf(currentColor || '');
-    const nextColor = PRESET_COLORS[(currentIdx + 1) % PRESET_COLORS.length];
-    colorMutation.mutate({ applicantId, color: nextColor });
-  };
+  const handleColorCycle = useCallback(
+    (applicantId: string, currentColor: string | null) => {
+      const currentIdx = PRESET_COLORS.indexOf(currentColor || '');
+      const nextColor = PRESET_COLORS[(currentIdx + 1) % PRESET_COLORS.length];
+      colorMutation.mutate({ applicantId, color: nextColor });
+    },
+    [colorMutation]
+  );
 
   // ---------- Drag and Drop ----------
 

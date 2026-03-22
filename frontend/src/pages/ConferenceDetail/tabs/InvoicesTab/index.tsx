@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useInvoiceFilters } from './useInvoiceFilters';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -61,21 +62,21 @@ export default function ConferenceInvoicesTab({
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
 
   // Search & filter state
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterType, setFilterType] = useState('');
-  const [filterDateFrom, setFilterDateFrom] = useState('');
-  const [filterDateTo, setFilterDateTo] = useState('');
-
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      setDebouncedSearch(value);
-    }, 300);
-  }, []);
+  const {
+    search,
+    setSearch,
+    debouncedSearch,
+    filterStatus,
+    setFilterStatus,
+    filterType,
+    setFilterType,
+    filterDateFrom,
+    setFilterDateFrom,
+    filterDateTo,
+    setFilterDateTo,
+    hasActiveFilters,
+    clearAllFilters,
+  } = useInvoiceFilters();
 
   // Read invoice ID from URL parameter and select it
   useEffect(() => {
@@ -704,13 +705,6 @@ export default function ConferenceInvoicesTab({
   };
 
   const invoiceCount = data?.total || 0;
-  const hasActiveFilters = !!(
-    debouncedSearch ||
-    filterStatus ||
-    filterType ||
-    filterDateFrom ||
-    filterDateTo
-  );
 
   // Pre-compute flattened row list for virtual scrolling (parent invoices + credit note sub-rows)
   const flattenedRows = useMemo(() => {
@@ -930,11 +924,9 @@ export default function ConferenceInvoicesTab({
           {!isAdding && (
             <InvoiceSearchFilters
               search={search}
-              onSearchChange={handleSearchChange}
+              onSearchChange={setSearch}
               onClearSearch={() => {
                 setSearch('');
-                setDebouncedSearch('');
-                if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
               }}
               filterStatus={filterStatus}
               setFilterStatus={setFilterStatus}
@@ -945,15 +937,7 @@ export default function ConferenceInvoicesTab({
               filterDateTo={filterDateTo}
               setFilterDateTo={setFilterDateTo}
               hasActiveFilters={hasActiveFilters}
-              onClearAllFilters={() => {
-                setSearch('');
-                setDebouncedSearch('');
-                setFilterStatus('');
-                setFilterType('');
-                setFilterDateFrom('');
-                setFilterDateTo('');
-                if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-              }}
+              onClearAllFilters={clearAllFilters}
             />
           )}
 

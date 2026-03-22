@@ -342,7 +342,7 @@ export default function DiscountModal({
                   type="checkbox"
                   checked={isCombinable}
                   onChange={(e) => setIsCombinable(e.target.checked)}
-                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                 />
                 Combinable
               </label>
@@ -354,7 +354,7 @@ export default function DiscountModal({
                     type="checkbox"
                     checked={isActive}
                     onChange={(e) => setIsActive(e.target.checked)}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                   />
                   Active
                 </label>
@@ -378,7 +378,7 @@ export default function DiscountModal({
                         type="checkbox"
                         checked={applicableOptions.includes(opt.id)}
                         onChange={() => toggleOption(opt.id)}
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                       />
                       {opt.name}
                     </label>
@@ -405,7 +405,7 @@ export default function DiscountModal({
                         type="checkbox"
                         checked={applicablePeriods.includes(period.id)}
                         onChange={() => togglePeriod(period.id)}
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
                       />
                       {period.name}
                     </label>

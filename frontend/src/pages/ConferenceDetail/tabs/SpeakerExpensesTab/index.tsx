@@ -1,19 +1,21 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../../../config/api';
-import { queryKeys } from '../../../config/queryKeys';
-import { formatCurrency } from '../../../utils/formatCurrency';
-import { useToast } from '../../../components/Toast';
-import ComposeModal from './MessagingTab/ComposeModal';
-import type { Conference } from '../../../types';
+import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
+import { formatCurrency } from '../../../../utils/formatCurrency';
+import { useToast } from '../../../../components/Toast';
+import ComposeModal from '../MessagingTab/ComposeModal';
+import type { Conference } from '../../../../types';
 import type {
   SpeakerExpense,
   ExpenseStats,
   SpeakerAllowance,
   AllowanceDefault,
-} from '../../../types/conference';
-import { EXPENSE_STATUS_COLORS as STATUS_COLORS } from '../../../config/statusColors';
-import { EmptyState } from '../../../components/common/EmptyState';
+} from '../../../../types/conference';
+import { EXPENSE_STATUS_COLORS as STATUS_COLORS } from '../../../../config/statusColors';
+import { EmptyState } from '../../../../components/common/EmptyState';
+import DefaultsView from './DefaultsView';
+import AllowancesView from './AllowancesView';
 
 interface SpeakerExpensesTabProps {
   conference: Conference;
@@ -811,132 +813,17 @@ export default function SpeakerExpensesTab({ conference, isAdmin }: SpeakerExpen
       )}
 
       {activeView === 'allowances' && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Speaker
-                </th>
-                <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Tier
-                </th>
-                <th className="text-right px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Allowance
-                </th>
-                <th className="text-right px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Claimed
-                </th>
-                <th className="text-right px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Approved
-                </th>
-                <th className="text-right px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Remaining
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {allowances?.map((a) => (
-                <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
-                    {a.speaker_name || '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {isAdmin && tiers.length > 0 ? (
-                      <select
-                        value={a.expense_tier_id || ''}
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            assignTier.mutate({
-                              cfpApplicantId: a.cfp_applicant_id,
-                              tierId: e.target.value,
-                              allowanceId: a.id,
-                            });
-                          }
-                        }}
-                        className="text-sm rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 px-2 py-1"
-                      >
-                        <option value="">— Select tier —</option>
-                        {tiers.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name} ({formatCurrency(t.max_amount, t.currency)})
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {a.expense_tier_name || '—'}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100">
-                    {formatCurrency(a.max_amount, a.currency)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100">
-                    {formatCurrency(a.total_claimed, a.currency)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100">
-                    {formatCurrency(a.total_approved, a.currency)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 text-right ${a.remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}
-                  >
-                    {formatCurrency(a.remaining, a.currency)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {(!allowances || allowances.length === 0) && (
-            <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-              No speaker allowances configured. Set up allowance defaults by session type first.
-            </div>
-          )}
-        </div>
+        <AllowancesView
+          isAdmin={isAdmin}
+          allowances={allowances}
+          tiers={tiers}
+          assignTier={assignTier}
+          formatCurrency={formatCurrency}
+        />
       )}
 
       {activeView === 'defaults' && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Set maximum expense allowances per session type. When a speaker is assigned to a
-              session, their allowance is automatically set from the session type default.
-            </p>
-          </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Session Type
-                </th>
-                <th className="text-right px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Max Amount
-                </th>
-                <th className="text-left px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Currency
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {allowanceDefaults?.map((d) => (
-                <tr key={d.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
-                    {d.session_type_name || '—'}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100">
-                    {formatCurrency(d.max_amount, d.currency)}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{d.currency}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {(!allowanceDefaults || allowanceDefaults.length === 0) && (
-            <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-              No allowance defaults configured. Use the API to set defaults per session type.
-            </div>
-          )}
-        </div>
+        <DefaultsView allowanceDefaults={allowanceDefaults} formatCurrency={formatCurrency} />
       )}
 
       {/* Expense detail slide-over panel */}

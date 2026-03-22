@@ -104,8 +104,8 @@ async def list_committee_members(
     current_user: CurrentUserDep,
     db: DbSessionDep,
     conference_id: UUID | None = Query(None, description="Filter by conference"),
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=500, description="Max records to return"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(100, ge=1, le=500, description="Max records to return"),
 ) -> CommitteeMemberListResponse:
     """List committee members for the current tenant, optionally filtered by conference."""
     base_filter = CFPCommitteeMember.tenant_id == current_user.tenant_id
@@ -123,8 +123,8 @@ async def list_committee_members(
         .options(selectinload(CFPCommitteeMember.applicant))
         .where(*filters)
         .order_by(CFPCommitteeMember.created_at.desc())
-        .offset(skip)
-        .limit(limit)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
     result = await db.execute(query)
     members = list(result.scalars().all())

@@ -53,8 +53,8 @@ async def list_invoices(
     conference_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
     status: str | None = None,
     recipient_source_type: str | None = None,
     recipient_source_id: UUID | None = None,
@@ -79,10 +79,6 @@ async def list_invoices(
         query = query.where(Invoice.recipient_source_type == recipient_source_type)
     if recipient_source_id:
         query = query.where(Invoice.recipient_source_id == recipient_source_id)
-
-    # Convert skip/limit to page/page_size for paginate function
-    page = (skip // limit) + 1 if limit > 0 else 1
-    page_size = limit
 
     # Use paginate helper (it handles count + pagination)
     result = await paginate(db, query, page=page, page_size=page_size)

@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../config/api';
 import { queryKeys } from '../config/queryKeys';
+import { useDebouncedValue } from '../hooks/useDebounce';
 import type { RecipientSearchResult } from '../types';
 
 const SOURCE_BADGES: Record<string, { label: string; className: string }> = {
@@ -41,10 +42,10 @@ export default function RecipientPicker({
   disabled,
 }: RecipientPickerProps) {
   const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debouncedRaw = useDebouncedValue(query);
+  const debouncedQuery = debouncedRaw.trim().length >= 2 ? debouncedRaw.trim() : '';
   const [showDropdown, setShowDropdown] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Click-outside detection
   useEffect(() => {
@@ -57,27 +58,10 @@ export default function RecipientPicker({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced search
-  const handleSearchChange = useCallback((value: string) => {
-    setQuery(value);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (value.trim().length >= 2) {
-      timerRef.current = setTimeout(() => {
-        setDebouncedQuery(value.trim());
-        setShowDropdown(true);
-      }, 300);
-    } else {
-      setDebouncedQuery('');
-      setShowDropdown(false);
-    }
-  }, []);
-
-  // Cleanup timer on unmount
+  // Show/hide dropdown based on debounced query
   useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
+    setShowDropdown(debouncedQuery.length > 0);
+  }, [debouncedQuery]);
 
   const { data, isFetching } = useQuery({
     queryKey: queryKeys.invoices.recipientSearch(conferenceId, debouncedQuery),
@@ -115,7 +99,7 @@ export default function RecipientPicker({
         <input
           type="text"
           value={query}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(e) => setQuery(e.target.value)}
           onFocus={() => {
             if (debouncedQuery.length >= 2) setShowDropdown(true);
           }}
@@ -127,7 +111,6 @@ export default function RecipientPicker({
           type="button"
           onClick={() => {
             setQuery('');
-            setDebouncedQuery('');
             setShowDropdown(false);
             onManualEntry();
           }}
@@ -164,7 +147,6 @@ export default function RecipientPicker({
                   onClick={() => {
                     onSelect(result);
                     setQuery('');
-                    setDebouncedQuery('');
                     setShowDropdown(false);
                   }}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0"

@@ -250,7 +250,7 @@ function PronounOptionModal({
             <input
               id="pronoun-active"
               type="checkbox"
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
               checked={formData.is_active ?? true}
               onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
             />

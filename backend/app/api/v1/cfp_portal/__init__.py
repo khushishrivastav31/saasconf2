@@ -2,9 +2,12 @@
 
 from fastapi import APIRouter
 
+from .attachments import router as attachments_router
 from .auth import router as auth_router
+from .browsing import router as browsing_router
 from .currencies import router as currencies_router
 from .form_schema import router as form_schema_router
+from .invitations import router as invitations_router
 from .invoices import router as invoices_router
 from .messaging import router as messaging_router
 from .my_registrations import router as my_registrations_router
@@ -18,10 +21,14 @@ from .speaker_expenses import router as speaker_expenses_router
 from .volunteer_profile import router as volunteer_profile_router
 
 router = APIRouter()
-# papers, reviews, messaging, and form_schema must be included before auth because
-# auth contains the catch-all landing page route /portal/{tenant_slug}/{abbreviation}
-# which would otherwise match paths like /portal/papers/{id} or /portal/messages/{id}.
+# papers, browsing, invitations, attachments, reviews, messaging, and form_schema must
+# be included before auth because auth contains the catch-all landing page route
+# /portal/{tenant_slug}/{abbreviation} which would otherwise match paths like
+# /portal/papers/{id} or /portal/messages/{id}.
+router.include_router(browsing_router)
 router.include_router(papers_router)
+router.include_router(invitations_router)
+router.include_router(attachments_router)
 router.include_router(reviews_router)
 router.include_router(messaging_router)
 router.include_router(news_router)

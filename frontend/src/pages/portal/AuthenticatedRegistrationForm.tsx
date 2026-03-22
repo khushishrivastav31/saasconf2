@@ -27,6 +27,7 @@ import type {
   DiscountCodeValidation,
   VatCalculation,
   PortalRegistrationResponse,
+  TransformedAttendee,
 } from '../../types/publicRegistration';
 import type { BillingProfileCreate } from '../../types';
 import { isBankTransferCountry } from '../../config/countries';
@@ -317,7 +318,7 @@ export default function AuthenticatedRegistrationForm({
     Error,
     {
       billing: BillingProfileCreate;
-      attendees: PortalAttendee[];
+      attendees: TransformedAttendee[];
       payment_intent_id?: string;
     }
   >({
@@ -492,8 +493,7 @@ export default function AuthenticatedRegistrationForm({
       // For bank transfer, submit directly
       registrationMutation.mutate({
         billing,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        attendees: transformedAttendees as any,
+        attendees: transformedAttendees,
       });
     }
   };
@@ -557,8 +557,7 @@ export default function AuthenticatedRegistrationForm({
     // Payment confirmed, now submit registration
     registrationMutation.mutate({
       billing,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      attendees: transformedAttendees as any,
+      attendees: transformedAttendees,
       payment_intent_id: paymentIntentId || undefined,
     });
   };

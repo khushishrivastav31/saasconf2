@@ -108,8 +108,8 @@ async def list_papers(
     status: str | None = None,
     main_speaker_id: UUID | None = None,
     applicant_id: UUID | None = Query(None, description="Filter papers where applicant is main speaker or co-speaker"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
     search: str | None = Query(None, description="Search papers by title or speaker name"),
 ) -> PaperListResponse:
     """List papers for the current tenant with server-side pagination."""
@@ -154,7 +154,10 @@ async def list_papers(
 
     # Fetch paginated data with eager loads
     data_query = (
-        base_filter.options(*_paper_eager_options()).order_by(CFPPaper.created_at.desc()).offset(skip).limit(limit)
+        base_filter.options(*_paper_eager_options())
+        .order_by(CFPPaper.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
 
     result = await db.execute(data_query)
@@ -162,7 +165,7 @@ async def list_papers(
 
     items = await _build_paper_responses_batch(db, papers, current_user.tenant_id)
 
-    return PaperListResponse(items=items, total=total, skip=skip, limit=limit)
+    return PaperListResponse(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.get("/papers/stats", response_model=PaperStats, dependencies=[Depends(require_module(MODULE_CODE))])

@@ -399,8 +399,8 @@ async def list_role_assignments(
     current_user: CurrentUserDep,
     db: DbSessionDep,
     search: str | None = Query(None, description="Search by name or email"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
 ) -> RoleAssignmentListResponse:
     """List users assigned to a specific role."""
     conference = await _resolve_conference(conference_id, current_user, db)
@@ -435,7 +435,7 @@ async def list_role_assignments(
         )
     total = (await db.execute(count_query)).scalar() or 0
 
-    result = await db.execute(query.offset(skip).limit(limit))
+    result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
     rows = result.all()
 
     # Batch-fetch picture URLs
@@ -593,7 +593,8 @@ async def list_assignable_applicants(
     current_user: CurrentUserDep,
     db: DbSessionDep,
     search: str | None = Query(None, description="Search by name or email"),
-    limit: int = Query(50, ge=1, le=200),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
 ) -> AssignableApplicantListResponse:
     """List applicants NOT already assigned to this role (for the picker)."""
     conference = await _resolve_conference(conference_id, current_user, db)
@@ -611,7 +612,8 @@ async def list_assignable_applicants(
             CFPApplicant.id.notin_(assigned_sq),
         )
         .order_by(CFPApplicant.last_name, CFPApplicant.first_name)
-        .limit(limit)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
 
     if search:

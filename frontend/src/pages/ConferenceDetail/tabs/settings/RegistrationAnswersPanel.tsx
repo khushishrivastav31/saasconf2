@@ -37,8 +37,8 @@ interface RegistrationAnswersPanelProps {
 
 export default function RegistrationAnswersPanel({ conference }: RegistrationAnswersPanelProps) {
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
-  const limit = 20;
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -48,7 +48,7 @@ export default function RegistrationAnswersPanel({ conference }: RegistrationAns
       page,
     ],
     queryFn: async () => {
-      const params: Record<string, string | number> = { skip: page * limit, limit };
+      const params: Record<string, string | number> = { page, page_size: pageSize };
       if (search) params.search = search;
       const res = await api.get<AnswersListResponse>(
         `/conferences/${conference.id}/registration-question-answers`,
@@ -58,7 +58,7 @@ export default function RegistrationAnswersPanel({ conference }: RegistrationAns
     },
   });
 
-  const totalPages = useMemo(() => Math.ceil((data?.total ?? 0) / limit), [data?.total]);
+  const totalPages = useMemo(() => Math.ceil((data?.total ?? 0) / pageSize), [data?.total]);
 
   const formatDate = (dateStr: string) => {
     try {
@@ -98,7 +98,7 @@ export default function RegistrationAnswersPanel({ conference }: RegistrationAns
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
-            setPage(0);
+            setPage(1);
           }}
           placeholder="Search by name or email..."
           className="w-full max-w-sm border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100"
@@ -156,18 +156,18 @@ export default function RegistrationAnswersPanel({ conference }: RegistrationAns
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
           <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
             className="text-sm text-primary-600 hover:text-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Previous
           </button>
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            Page {page + 1} of {totalPages}
+            Page {page} of {totalPages}
           </span>
           <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
             className="text-sm text-primary-600 hover:text-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next

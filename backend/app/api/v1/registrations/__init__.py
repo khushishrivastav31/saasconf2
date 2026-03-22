@@ -15,6 +15,11 @@ from .core import (  # noqa: F401
     update_registration,
     validate_vat,
 )
+from .deprecated import (  # noqa: F401
+    create_bulk_registration,
+    create_company_registration,
+    create_individual_registration,
+)
 from .items import add_registration_item, remove_registration_item  # noqa: F401
 
 MODULE_CODE = "registration"
@@ -22,8 +27,9 @@ MODULE_CODE = "registration"
 router = APIRouter(dependencies=[Depends(require_module(MODULE_CODE))])
 
 # Import route functions and register them on the main router
-from . import billing, core, items  # noqa: E402
+from . import billing, core, deprecated, items  # noqa: E402
 
 router.routes.extend(billing.router.routes)
 router.routes.extend(items.router.routes)
 router.routes.extend(core.router.routes)
+router.routes.extend(deprecated.router.routes)

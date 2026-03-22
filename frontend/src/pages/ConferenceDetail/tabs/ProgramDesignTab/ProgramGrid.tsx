@@ -185,7 +185,7 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
                 type="checkbox"
                 checked={isSessionFree}
                 onChange={(e) => setIsSessionFree(e.target.checked)}
-                className="rounded border-gray-300 text-amber-600 focus:ring-amber-500 w-3 h-3"
+                className="rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500 w-3 h-3"
               />
               <span>Break/Lunch</span>
             </label>
