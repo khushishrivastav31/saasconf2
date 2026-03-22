@@ -12,7 +12,7 @@
 - Migrations excluded; API route modules have relaxed error codes due to SQLAlchemy
 
 ## Docker
-- Base images pinned to specific SHAs in all Dockerfiles
+- Base images pinned to specific SHA256 digests in all Dockerfiles and docker-compose
 - CI uses concurrency controls to cancel redundant runs
 
 ## Dev Files
@@ -33,7 +33,7 @@
 - `POST /ops/data-retention-cleanup` — cron cleanup (nightly)
 - `POST /ops/send-deadline-reminders` — cron reminders (hourly)
 - `POST /ops/send-payment-reminders` — cron payment reminders (daily)
-- All ops endpoints auth via `Authorization: Bearer <SUPER_ADMIN_PASSWORD>`
+- All ops endpoints auth via `Authorization: Bearer <OPS_API_KEY>` (no fallback — OPS_API_KEY must be set)
 
 ## Backup & Restore
 
@@ -96,6 +96,23 @@ Restore stops app containers, drops/recreates the DB, streams the dump in, then 
 - On failure: sets `::error::` annotation; check the workflow run for logs
 - Artifact: `backup-report-<run_id>` uploaded with **30-day** retention
 
+## Required GitHub Secrets
+
+The staging CI/CD workflow requires these repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Description |
+|---|---|
+| `STAGING_HOST` | Staging server IP or hostname |
+| `STAGING_USER` | SSH user for deployment (e.g., `deploy`) |
+| `STAGING_PATH` | Deployment path on server (e.g., `/opt/saasconf/app`) |
+| `STAGING_SSH_KEY` | Private SSH key for deployment user |
+| `E2E_ADMIN_EMAIL` | Admin email for E2E tests |
+| `E2E_ADMIN_PASSWORD` | Admin password for E2E tests |
+| `E2E_PORTAL_EMAIL` | Portal user email for E2E tests |
+| `E2E_PORTAL_PASSWORD` | Portal user password for E2E tests |
+| `E2E_TENANT_SLUG` | Tenant slug for E2E tests |
+| `E2E_CONFERENCE_ID` | Conference ID for E2E tests |
+
 ## Deployment
 - CI tags images as `:previous` before rebuilding for rollback
 - Migrations run without `|| true` — deploy fails properly on errors
@@ -139,4 +156,33 @@ Restore stops app containers, drops/recreates the DB, streams the dump in, then 
 - RLS bypass: `set_config('app.is_super_admin', 'true', true)`
 - Redis explicitly initialized/closed in `client` fixture
 - Rate limiting disabled globally via `RATELIMIT_ENABLED=false`
-- 930+ backend tests, all passing
+- 2480+ backend tests, all passing
+
+## Secret Rotation
+
+| Secret | Rotation Impact | Procedure |
+|--------|----------------|-----------|
+| `JWT_SECRET_KEY` | Invalidates ALL active sessions | 1. Set new key in `.env` 2. `docker compose restart backend` 3. All users must re-login |
+| `OPS_API_KEY` | Cron jobs fail until updated | 1. Generate new key: `openssl rand -hex 32` 2. Update `.env` AND cron service env vars 3. `docker compose restart backend cleanup-cron deadline-cron payment-reminder-cron` |
+| `DB_PASSWORD` | App cannot connect until restarted | 1. `ALTER USER saasconf PASSWORD 'new_pass';` in psql 2. Update `.env` 3. `docker compose restart backend` |
+| `SUPER_ADMIN_PASSWORD` | Super admin cannot login until updated | 1. Update `.env` 2. `docker compose restart backend` (password re-hashed on startup) |
+| `STAGING_SSH_KEY` | CI/CD deploys fail | 1. Generate new key pair on server 2. Update GitHub Secret `STAGING_SSH_KEY` 3. Add public key to `~deploy/.ssh/authorized_keys` |
+
+**Schedule**: Rotate JWT_SECRET_KEY and OPS_API_KEY quarterly. Rotate DB_PASSWORD and SSH keys annually or after any team member departure.
+
+## Rollback Procedure
+
+If a deployment causes issues:
+
+1. **Identify the problem**: Check `docker compose logs backend -f` and health endpoints
+2. **Quick rollback** (previous image):
+   ```bash
+   cd /opt/saasconf/app/deploy/staging
+   docker compose stop backend frontend
+   docker tag saasconf_backend:previous saasconf_backend:latest
+   docker tag saasconf_frontend:previous saasconf_frontend:latest
+   docker compose up -d backend frontend
+   ```
+3. **Verify health**: `curl -f https://api.staging.domain/health/ready`
+4. **If migration caused the issue**: Rollback requires `alembic downgrade -1` — test in a copy first
+5. **Notify team**: Document what went wrong in a post-mortem

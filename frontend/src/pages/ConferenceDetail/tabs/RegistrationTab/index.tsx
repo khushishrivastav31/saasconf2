@@ -85,11 +85,6 @@ export default function RegistrationTab({
   // Replace attendee state
   const [replaceTarget, setReplaceTarget] = useState<Registration | null>(null);
 
-  // Debug logging for replaceTarget state changes
-  useEffect(() => {
-    console.log('replaceTarget state changed:', replaceTarget);
-  }, [replaceTarget]);
-
   // Add item state
   const [showAddItem, setShowAddItem] = useState(false);
   const [addItemType, setAddItemType] = useState<'booking_option' | 'tutorial'>('booking_option');
@@ -627,7 +622,6 @@ export default function RegistrationTab({
                 {(selectedReg.status === 'invoiced' || selectedReg.status === 'paid') && (
                   <button
                     onClick={() => {
-                      console.log('Replace Attendee clicked', selectedReg);
                       setReplaceTarget(selectedReg);
                     }}
                     className="px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
@@ -828,11 +822,6 @@ export default function RegistrationTab({
 
         {replaceTarget && (
           <>
-            {console.log('About to render ReplaceAttendeeModal (detail view)', {
-              replaceTarget,
-              isOpen: !!replaceTarget,
-              conferenceId: conference.id,
-            })}
             <ReplaceAttendeeModal
               isOpen={!!replaceTarget}
               onClose={() => setReplaceTarget(null)}
@@ -982,7 +971,6 @@ export default function RegistrationTab({
                   type="button"
                   onClick={() => {
                     const attendee = attendees[0];
-                    console.log('Copying attendee info:', attendee);
                     const updatedBilling = {
                       ...billing,
                       contact_first_name: attendee.first_name,
@@ -990,7 +978,6 @@ export default function RegistrationTab({
                       contact_email: attendee.email,
                       contact_phone: attendee.phone || '',
                     };
-                    console.log('Updated billing:', updatedBilling);
                     setBilling(updatedBilling);
                   }}
                   className="text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
@@ -1235,11 +1222,6 @@ export default function RegistrationTab({
 
       {replaceTarget && (
         <>
-          {console.log('About to render ReplaceAttendeeModal', {
-            replaceTarget,
-            isOpen: !!replaceTarget,
-            conferenceId: conference.id,
-          })}
           <ReplaceAttendeeModal
             isOpen={!!replaceTarget}
             onClose={() => setReplaceTarget(null)}

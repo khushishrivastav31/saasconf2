@@ -1,7 +1,8 @@
 services:
   # PostgreSQL Database
   db:
-    image: postgres:16.8-alpine
+    # postgres:16.8-alpine
+    image: postgres:16.8-alpine@sha256:b0193ab17e40d8292932955de12d15f065ac9520ac382f6e661a52068e4c27b1
     container_name: saasconf_db_staging
     restart: unless-stopped
     environment:
@@ -28,10 +29,11 @@ services:
 
   # Redis for token blacklist and caching
   redis:
-    image: redis:7.4-alpine
+    # redis:7.4-alpine
+    image: redis:7.4-alpine@sha256:4bfd9eca23339865dc14fe75f6d9ae643f714924623978dd2798f1a673b08f43
     container_name: saasconf_redis_staging
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --appendfsync everysec
     volumes:
       - redis_data:/data
     healthcheck:
@@ -72,6 +74,8 @@ services:
       APP_VERSION: ${APP_VERSION:-0.1.0}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@sonrisa.ventures}
+      FRONTEND_BASE_URL: https://${DOMAIN}
+      PORTAL_BASE_URL: https://${DOMAIN}
     depends_on:
       db:
         condition: service_healthy
@@ -115,7 +119,8 @@ services:
 
   # Nginx Reverse Proxy with SSL
   nginx:
-    image: nginx:1.27-alpine
+    # nginx:1.27-alpine
+    image: nginx:1.27-alpine@sha256:62223d644fa234c3a1cc785ee14242ec47a77364226f1c811d2f669f96dc2ac8
     container_name: saasconf_nginx_staging
     restart: unless-stopped
     ports:

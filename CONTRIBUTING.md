@@ -89,14 +89,17 @@ You do not need to manually run formatters -- the pre-commit hooks handle this f
 
 ## Pull Request Process
 
-1. **CI must pass.** Pull requests require passing checks for:
-   - Backend tests
-   - Frontend tests
-   - TypeScript type checking
-   - Production build
-2. **Keep PRs focused.** Each pull request should address one feature or fix. Avoid combining unrelated changes.
-3. **Include a clear description.** Explain what the PR does, why the change is needed, and any relevant context for reviewers.
-4. **Link related issues** if applicable (e.g., "Closes #42").
+1. **CI must pass.** Branch protection requires these status checks to pass before merge:
+   - `backend-tests` -- Python test suite (pytest + mypy + ruff)
+   - `frontend-tests` -- TypeScript checks + Vitest + production build
+   - `security-audit` -- Trivy vulnerability scanning
+2. **One approving review required.** At least one maintainer must approve the PR. Stale approvals are dismissed when new commits are pushed.
+3. **Branch must be up-to-date** with `main` before merging (strict mode).
+4. **Keep PRs focused.** Each pull request should address one feature or fix. Avoid combining unrelated changes.
+5. **Include a clear description.** Explain what the PR does, why the change is needed, and any relevant context for reviewers.
+6. **Link related issues** if applicable (e.g., "Closes #42").
+
+> **Note:** Force pushes and branch deletion are disabled on `main`.
 
 ## Questions
 

@@ -538,9 +538,6 @@ export default function SinglePageForm({
         form_start_timestamp: formStartTime,
       };
 
-      // Log the exact payload being sent for debugging
-      console.log('[Registration Payload]', JSON.stringify(requestPayload, null, 2));
-
       // Create registration (payment already confirmed)
       const response = await publicApi.post<PortalRegistrationResponse>(
         `/portal/${tenantSlug}/conferences/${conferenceSlug}/register`,
@@ -678,7 +675,6 @@ export default function SinglePageForm({
       return res.data;
     },
     onSuccess: (response) => {
-      console.log('Registration response:', response);
       // Bank transfer flow: Navigate to confirmation immediately
       navigate('confirmation', { state: { registrationResponse: response } });
     },

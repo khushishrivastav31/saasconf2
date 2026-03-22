@@ -117,8 +117,6 @@ export default function InvoiceBankAccountsTab({
         },
       };
 
-      console.log('[BANK ACCOUNTS] Adding and saving:', JSON.stringify(payload, null, 2));
-
       const res = await api.put(`/conferences/${conference.id}/settings/invoice-settings`, payload);
       return res.data;
     },

@@ -137,51 +137,59 @@ describe('ProfilePage', () => {
   });
 
   describe('personal info tab (default)', () => {
-    it('renders the My Profile heading', () => {
+    it('renders the My Profile heading', async () => {
       renderWithProviders(<ProfilePage />);
       expect(screen.getByText('My Profile')).toBeInTheDocument();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
-    it('renders the email field pre-filled and disabled', () => {
+    it('renders the email field pre-filled and disabled', async () => {
       renderWithProviders(<ProfilePage />);
       const emailInput = screen.getByDisplayValue('jane.doe@example.com');
       expect(emailInput).toBeDisabled();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
-    it('renders first name and last name inputs with applicant data', () => {
+    it('renders first name and last name inputs with applicant data', async () => {
       renderWithProviders(<ProfilePage />);
       expect(screen.getByDisplayValue('Jane')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Doe')).toBeInTheDocument();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
-    it('renders the pronouns select field', () => {
+    it('renders the pronouns select field', async () => {
       renderWithProviders(<ProfilePage />);
       // The page has a "Select pronouns..." placeholder option; confirm the select renders
       expect(screen.getByRole('option', { name: /select pronouns/i })).toBeInTheDocument();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
-    it('renders the bio rich text editor', () => {
+    it('renders the bio rich text editor', async () => {
       renderWithProviders(<ProfilePage />);
       expect(screen.getByTestId('rich-text-editor')).toBeInTheDocument();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
-    it('renders the Save Profile button', () => {
+    it('renders the Save Profile button', async () => {
       renderWithProviders(<ProfilePage />);
       expect(screen.getByRole('button', { name: /save profile/i })).toBeInTheDocument();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
-    it('renders the tab navigation', () => {
+    it('renders the tab navigation', async () => {
       renderWithProviders(<ProfilePage />);
       expect(screen.getByRole('button', { name: /personal info/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /program committee/i })).toBeInTheDocument();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
-    it('renders the accessibility checkbox unchecked by default', () => {
+    it('renders the accessibility checkbox unchecked by default', async () => {
       renderWithProviders(<ProfilePage />);
       const checkbox = screen.getByRole('checkbox', {
         name: /i need accessibility accommodations/i,
       });
       expect(checkbox).not.toBeChecked();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
     it('reveals the accessibility details textarea when checkbox is checked', async () => {
@@ -196,21 +204,23 @@ describe('ProfilePage', () => {
       expect(screen.getByPlaceholderText(/wheelchair access/i)).toBeInTheDocument();
     });
 
-    it('renders the recording consent checkbox', () => {
+    it('renders the recording consent checkbox', async () => {
       renderWithProviders(<ProfilePage />);
       const checkbox = screen.getByRole('checkbox', {
         name: /i agree to being recorded/i,
       });
       expect(checkbox).toBeInTheDocument();
       expect(checkbox).not.toBeChecked();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
-    it('renders the message notifications checkbox checked by default', () => {
+    it('renders the message notifications checkbox checked by default', async () => {
       renderWithProviders(<ProfilePage />);
       const checkbox = screen.getByRole('checkbox', {
         name: /email notifications for new messages/i,
       });
       expect(checkbox).toBeChecked();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
   });
 
@@ -309,15 +319,17 @@ describe('ProfilePage', () => {
   });
 
   describe('social links', () => {
-    it('shows empty state message when no social links are present', () => {
+    it('shows empty state message when no social links are present', async () => {
       renderWithProviders(<ProfilePage />);
       expect(screen.getByText(/no social media links added yet/i)).toBeInTheDocument();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
-    it('renders the platform selector for adding links', () => {
+    it('renders the platform selector for adding links', async () => {
       renderWithProviders(<ProfilePage />);
       // The "add platform" select has a "Select platform..." default option
       expect(screen.getByRole('option', { name: /select platform/i })).toBeInTheDocument();
+      await waitFor(() => expect(mockPortalApi.get).toHaveBeenCalled());
     });
 
     it('adds a social link row when a platform is selected and Add is clicked', async () => {

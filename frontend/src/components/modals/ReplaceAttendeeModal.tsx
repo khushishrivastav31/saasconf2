@@ -29,8 +29,6 @@ export default function ReplaceAttendeeModal({
   registration,
   conferenceId,
 }: ReplaceAttendeeModalProps) {
-  console.log('ReplaceAttendeeModal RENDER - isOpen:', isOpen, 'registration:', registration);
-
   const queryClient = useQueryClient();
 
   const [firstName, setFirstName] = useState('');

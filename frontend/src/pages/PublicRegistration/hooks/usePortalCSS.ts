@@ -54,8 +54,6 @@ export function usePortalCSS(tenantSlug: string, conferenceSlug: string): void {
         styleElement.textContent = css;
         // Always append last so it has highest source-order priority
         document.head.appendChild(styleElement);
-
-        console.log('[Portal CSS] Loaded custom styles');
       })
       .catch((error) => {
         console.error('[Portal CSS] Failed to load:', error);
@@ -70,7 +68,6 @@ export function usePortalCSS(tenantSlug: string, conferenceSlug: string): void {
       for (const varName of appliedVars) {
         document.documentElement.style.removeProperty(varName);
       }
-      console.log('[Portal CSS] Cleaned up custom styles');
     };
   }, [tenantSlug, conferenceSlug]);
 }

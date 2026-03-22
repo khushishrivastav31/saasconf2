@@ -341,10 +341,11 @@ async def readiness_check() -> JSONResponse:
 
 
 def _verify_ops_auth(request: Request) -> bool:
-    """Verify ops endpoint authorization using OPS_API_KEY (preferred) or SUPER_ADMIN_PASSWORD fallback."""
+    """Verify ops endpoint authorization using OPS_API_KEY."""
+    if not settings.OPS_API_KEY:
+        return False
     auth_header = request.headers.get("Authorization", "")
-    ops_key = settings.OPS_API_KEY or settings.SUPER_ADMIN_PASSWORD
-    expected = f"Bearer {ops_key}"
+    expected = f"Bearer {settings.OPS_API_KEY}"
     return secrets.compare_digest(auth_header, expected)
 
 

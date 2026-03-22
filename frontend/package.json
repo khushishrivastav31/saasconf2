@@ -101,6 +101,7 @@
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
   },
+  "//overrides": "d3-color >=3.1.0 required to fix CVE in older versions (transitive dep from recharts)",
   "overrides": {
     "d3-color": "^3.1.0"
   }

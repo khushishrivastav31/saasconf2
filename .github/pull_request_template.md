@@ -27,9 +27,13 @@
 - [ ] No console.log or debug statements
 - [ ] No hardcoded secrets or credentials
 - [ ] Database migrations included (if needed)
+- [ ] In-app Handbook updated (if UI/behavior change)
+
+## Deployment Notes
+<!-- Any migration steps, environment variable changes, or deployment considerations -->
 
 ## Screenshots (if applicable)
 <!-- Add screenshots for UI changes -->
 
 ## Related Issues
-<!-- Link related issues: Closes #123 -->
+<!-- Closes #123 -->

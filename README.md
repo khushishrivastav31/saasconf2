@@ -31,9 +31,9 @@ SaaSConf is a full-stack, multi-tenant platform that streamlines the entire conf
 
 | Layer | Technology |
 |------------|-----------|
-| Backend | FastAPI 0.109, SQLAlchemy 2.0 (async), PostgreSQL 15, Redis 7, Alembic |
-| Frontend | React 18, TypeScript 5, Vite 5, Tailwind CSS 3, React Query 5 |
-| Auth | JWT (python-jose), Argon2id password hashing |
+| Backend | FastAPI 0.135, SQLAlchemy 2.0 (async), PostgreSQL 16.8, Redis 7.4, Alembic |
+| Frontend | React 19, TypeScript 5.7, Vite 7, Tailwind CSS 4, TanStack Query 5 |
+| Auth | JWT (PyJWT), Argon2id password hashing |
 | Email | Resend |
 | Monitoring | Sentry (backend + frontend) |
 | Testing | pytest + pytest-asyncio, Vitest, Playwright |

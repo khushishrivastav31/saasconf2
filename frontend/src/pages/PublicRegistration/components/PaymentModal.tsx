@@ -120,19 +120,14 @@ export default function PaymentModal({
 
   // Initialize Stripe with English locale
   useEffect(() => {
-    console.log('PaymentModal mounted:', { isOpen, clientSecret, publishableKey, total });
     if (publishableKey) {
-      console.log('Loading Stripe with key:', publishableKey);
       setStripePromise(loadStripe(publishableKey, { locale: 'en' }));
     }
   }, [publishableKey, isOpen, clientSecret, total]);
 
   if (!isOpen) {
-    console.log('PaymentModal not showing (isOpen = false)');
     return null;
   }
-
-  console.log('PaymentModal rendering...');
 
   const options: StripeElementsOptions = {
     clientSecret,

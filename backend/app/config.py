@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://localhost:5432/saasconf"  # No credentials in default
     DATABASE_SSL_REQUIRED: bool = False  # Set to True in production
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
@@ -68,8 +70,7 @@ class Settings(BaseSettings):
     SUPER_ADMIN_EMAIL: str = "admin@saasconf.com"
     SUPER_ADMIN_PASSWORD: str  # No default — MUST be set via environment variable
 
-    # Ops API key — used by cron jobs / ops endpoints instead of SUPER_ADMIN_PASSWORD.
-    # Falls back to SUPER_ADMIN_PASSWORD if not set.
+    # Ops API key — used by cron jobs / ops endpoints. REQUIRED in staging/production.
     OPS_API_KEY: str = ""
 
     # Monitoring

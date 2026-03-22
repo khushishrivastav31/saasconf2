@@ -5,15 +5,16 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  STAGING_HOST: 46.225.88.254
-  STAGING_USER: deploy
-  STAGING_PATH: /opt/saasconf/app
+  STAGING_HOST: ${{ secrets.STAGING_HOST }}
+  STAGING_USER: ${{ secrets.STAGING_USER }}
+  STAGING_PATH: ${{ secrets.STAGING_PATH }}
 
 permissions:
   contents: read
@@ -51,6 +52,7 @@ jobs:
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: changes
     if: needs.changes.outputs.backend == 'true'
 
@@ -149,6 +151,7 @@ jobs:
   frontend-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
 
@@ -192,6 +195,19 @@ jobs:
         env:
           VITE_API_URL: https://api.staging.sonrisa.ventures
         run: npm run build
+
+      - name: Check bundle size
+        working-directory: frontend
+        run: |
+          echo "=== Bundle Size Report ==="
+          du -sh dist/
+          du -sh dist/assets/*.js | sort -rh | head -10
+          TOTAL_JS=$(find dist/assets -name '*.js' -exec cat {} + | wc -c)
+          echo "Total JS: $(( TOTAL_JS / 1024 )) KB"
+          if [ "$TOTAL_JS" -gt 2097152 ]; then
+            echo "::error::Total JS bundle exceeds 2MB ($TOTAL_JS bytes)"
+            exit 1
+          fi
 
   # ─────────────────────────────────────────────────────────────
   # Dependency Security Audit (always runs — fast)
@@ -259,6 +275,8 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 30
     needs: [changes, backend-tests, frontend-tests, security-audit, secrets-scan]
     if: |
       always() &&
@@ -454,6 +472,7 @@ jobs:
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [deploy-staging]
     if: |
       always() &&

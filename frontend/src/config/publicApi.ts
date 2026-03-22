@@ -17,7 +17,6 @@ const publicApi = axios.create({
 if (import.meta.env.DEV) {
   publicApi.interceptors.request.use(
     (config) => {
-      console.log('[Public API Request]', config.method?.toUpperCase(), config.url);
       return config;
     },
     (error) => {
