@@ -89,7 +89,7 @@ striprtf==0.0.29
 tinycss2==1.5.1
 tinyhtml5==2.0.0
 types-openpyxl==3.1.5.20250919
-types-passlib==1.7.7.20250602
+types-passlib==1.7.7.20260211
 types-pyasn1==0.6.0.20250914
 typing-inspection==0.4.2
 typing_extensions==4.15.0
