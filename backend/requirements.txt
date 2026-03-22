@@ -90,7 +90,7 @@ tinycss2==1.5.1
 tinyhtml5==2.0.0
 types-openpyxl==3.1.5.20250919
 types-passlib==1.7.7.20260211
-types-pyasn1==0.6.0.20250914
+types-pyasn1==0.6.0.20260319
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.6.3
