@@ -5,6 +5,7 @@ import { softVisible } from './helpers/navigation';
 /** Navigate to dashboard, re-authenticating if the saved session expired. */
 async function gotoDashboard(page: import('@playwright/test').Page) {
   await page.goto('/dashboard');
+  await page.waitForLoadState('networkidle');
 
   // If redirected to login, the stored auth state has expired — re-authenticate
   if (page.url().includes('/login')) {
@@ -15,6 +16,7 @@ async function gotoDashboard(page: import('@playwright/test').Page) {
     await page.getByPlaceholder(/password/i).fill(password);
     await page.getByRole('button', { name: /sign in/i }).click();
     await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 15000 });
+    await page.waitForLoadState('networkidle');
   }
 
   await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible({ timeout: 15000 });
