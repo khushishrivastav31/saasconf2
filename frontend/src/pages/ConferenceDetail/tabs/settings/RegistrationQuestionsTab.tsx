@@ -344,6 +344,7 @@ function QuestionCard({
             disabled={isFirst}
             className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
             title="Move up"
+            aria-label="Move up"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -360,6 +361,7 @@ function QuestionCard({
             disabled={isLast}
             className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
             title="Move down"
+            aria-label="Move down"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -375,6 +377,7 @@ function QuestionCard({
             onClick={onRemove}
             className="p-1.5 text-red-400 hover:text-red-600 dark:hover:text-red-300"
             title="Remove question"
+            aria-label="Remove question"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path

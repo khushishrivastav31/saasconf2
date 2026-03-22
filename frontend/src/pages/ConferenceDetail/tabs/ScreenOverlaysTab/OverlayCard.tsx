@@ -72,6 +72,7 @@ export function OverlayCard({
           className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
             overlay.is_active ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
           } ${isAdmin ? 'cursor-pointer' : 'cursor-default'}`}
+          aria-label={overlay.is_active ? 'Deactivate overlay' : 'Activate overlay'}
         >
           <span
             className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white dark:bg-gray-800 transition-transform ${
@@ -87,6 +88,7 @@ export function OverlayCard({
               onClick={() => onPreview(overlay)}
               className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 rounded"
               title="Preview"
+              aria-label="Preview"
             >
               <EyeIcon />
             </button>
@@ -94,6 +96,7 @@ export function OverlayCard({
               onClick={() => onEdit(overlay)}
               className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-primary-600 rounded"
               title="Edit"
+              aria-label="Edit"
             >
               <EditIcon />
             </button>
@@ -101,6 +104,7 @@ export function OverlayCard({
               onClick={() => onDelete(overlay)}
               className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 rounded"
               title="Delete"
+              aria-label="Delete"
             >
               <DeleteIcon />
             </button>

@@ -106,6 +106,7 @@ const AssignmentRow = memo(function AssignmentRow({
           onClick={onRemove}
           className="p-1 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors flex-shrink-0"
           title="Remove from role"
+          aria-label="Remove from role"
         >
           <DeleteIcon />
         </button>

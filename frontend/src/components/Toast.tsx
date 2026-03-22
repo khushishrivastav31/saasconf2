@@ -126,7 +126,11 @@ function ToastMessage({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: 
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
 
       {/* Dismiss */}
-      <button onClick={handleDismiss} className={`flex-shrink-0 ${s.icon} hover:opacity-70`}>
+      <button
+        onClick={handleDismiss}
+        className={`flex-shrink-0 ${s.icon} hover:opacity-70`}
+        aria-label="Dismiss"
+      >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"

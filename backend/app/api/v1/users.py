@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from app.config import get_settings
 from app.core.applicant_security import generate_email_verification_token
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
-from app.core.email import _get_tenant_from_email, send_tenant_user_welcome_email
+from app.core.email import _get_tenant_from_email, send_email_background, send_tenant_user_welcome_email
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
@@ -236,7 +236,8 @@ async def create_tenant_user(
                     break
         from_email = await _get_tenant_from_email(db, target_tenant_id)
         user_type = "Administrator" if user.role == UserRole.TENANT_ADMIN.value else "Team Member"
-        await send_tenant_user_welcome_email(
+        send_email_background(
+            send_tenant_user_welcome_email,
             db,
             email=user.email,
             token=raw_token,

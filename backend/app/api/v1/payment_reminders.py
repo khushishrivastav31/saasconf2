@@ -1,6 +1,7 @@
 """Payment Reminder API endpoints (conference-scoped)."""
 
 from datetime import date, datetime
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Query
@@ -64,8 +65,10 @@ async def list_payment_reminders(
     conference_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
-    status: str | None = Query(None, description="Filter by status: pending, sent, failed"),
-    search: str | None = Query(None, description="Search by invoice number or recipient"),
+    status: Literal["pending", "sent", "failed"] | None = Query(
+        None, description="Filter by status: pending, sent, failed"
+    ),
+    search: str | None = Query(None, max_length=200, description="Search by invoice number or recipient"),
     reminder_number: int | None = Query(None, description="Filter by reminder number: 1 or 2"),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),

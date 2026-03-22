@@ -133,6 +133,7 @@ export default function PronounOptionsTab({
                         onClick={() => handleEdit(pronoun)}
                         className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors mr-2"
                         title="Edit"
+                        aria-label="Edit"
                       >
                         <EditIcon />
                       </button>
@@ -140,6 +141,7 @@ export default function PronounOptionsTab({
                         onClick={() => handleDelete(pronoun)}
                         className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                         title="Delete"
+                        aria-label="Delete"
                       >
                         <DeleteIcon />
                       </button>

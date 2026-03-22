@@ -1148,6 +1148,7 @@ export default function ConferenceInvoicesTab({
                                     disabled={deleteMutation.isPending}
                                     className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors disabled:opacity-50"
                                     title="Delete"
+                                    aria-label="Delete"
                                   >
                                     <DeleteIcon />
                                   </button>

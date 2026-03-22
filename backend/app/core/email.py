@@ -6,6 +6,9 @@ otherwise falls back to console logging for development.
 
 import asyncio
 import logging
+import os
+from collections.abc import Awaitable, Callable
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -30,6 +33,56 @@ logger = logging.getLogger(__name__)
 
 # Lazy initialization of Resend client
 _resend_client = None
+
+# Store references to background email tasks so they aren't garbage-collected.
+_background_tasks: set[asyncio.Task[None]] = set()
+
+
+async def _send_with_retry(
+    send_fn: Callable[..., Awaitable[bool]],
+    *args: Any,
+    max_retries: int = 3,
+    **kwargs: Any,
+) -> None:
+    """Retry an async email send with exponential backoff.
+
+    Logs warnings on transient failures and an error after all retries are exhausted.
+    Never raises — designed for fire-and-forget usage.
+    """
+    for attempt in range(max_retries):
+        try:
+            await send_fn(*args, **kwargs)
+            return
+        except Exception as e:
+            if attempt < max_retries - 1:
+                delay = 2**attempt  # 1s, 2s, 4s
+                logger.warning(f"Email send attempt {attempt + 1}/{max_retries} failed, retrying in {delay}s: {e}")
+                await asyncio.sleep(delay)
+            else:
+                logger.error(f"Email send failed after {max_retries} attempts: {e}", exc_info=True)
+
+
+def send_email_background(
+    send_fn: Callable[..., Awaitable[bool]],
+    *args: Any,
+    max_retries: int = 3,
+    **kwargs: Any,
+) -> None:
+    """Fire-and-forget email with retry. Schedules the send as a background task.
+
+    Use this instead of ``await send_fn(...)`` for non-critical emails where
+    the caller does not need to know whether the email succeeded (e.g.
+    notifications, confirmations).  Password-reset and verification emails
+    should still be awaited directly so the user gets immediate feedback.
+    """
+    if os.environ.get("TESTING") == "true":
+        return
+    task = asyncio.create_task(
+        _send_with_retry(send_fn, *args, max_retries=max_retries, **kwargs),
+        name=f"email-retry-{send_fn.__name__}",
+    )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
 
 def _get_resend():

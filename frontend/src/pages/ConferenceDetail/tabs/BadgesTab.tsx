@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
 import { parseApiError } from '../../../utils/apiError';
-import { useDebouncedValue } from '../../../hooks/useDebounce';
+import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import type { Conference } from '../../../types';
 
 const BADGE_TYPES = [
@@ -34,9 +34,10 @@ export default function BadgesTab({
 }) {
   const { showToast } = useToast();
   const [badgeType, setBadgeType] = useState('attendee');
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search);
-  const [page, setPage] = useState(1);
+  const { search, setSearch, debouncedSearch, page, setPage } = useUrlFilters({
+    search: '',
+    page: 1,
+  });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
@@ -225,10 +226,7 @@ export default function BadgesTab({
             type="text"
             placeholder="Search by name or email..."
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
@@ -410,7 +408,7 @@ export default function BadgesTab({
           </p>
           <div className="flex gap-1">
             <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page <= 1}
               className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
@@ -420,7 +418,7 @@ export default function BadgesTab({
               Page {page} of {totalPages}
             </span>
             <button
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => setPage(page + 1)}
               disabled={page >= totalPages}
               className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >

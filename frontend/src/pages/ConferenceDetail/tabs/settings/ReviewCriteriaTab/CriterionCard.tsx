@@ -62,6 +62,7 @@ export default function CriterionCard({
               onClick={onEdit}
               className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
               title="Edit Criterion"
+              aria-label="Edit Criterion"
             >
               <EditIcon />
             </button>
@@ -69,6 +70,7 @@ export default function CriterionCard({
               onClick={onDelete}
               className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
               title="Delete Criterion"
+              aria-label="Delete Criterion"
             >
               <DeleteIcon />
             </button>
@@ -175,6 +177,7 @@ export default function CriterionCard({
                             onClick={() => onEditQuestion(question)}
                             className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors mr-1"
                             title="Edit Question"
+                            aria-label="Edit Question"
                           >
                             <EditIcon />
                           </button>
@@ -182,6 +185,7 @@ export default function CriterionCard({
                             onClick={() => onDeleteQuestion(question)}
                             className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                             title="Delete Question"
+                            aria-label="Delete Question"
                           >
                             <DeleteIcon />
                           </button>

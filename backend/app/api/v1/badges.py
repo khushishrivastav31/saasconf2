@@ -29,7 +29,7 @@ async def list_badge_registrations(
     db: DbSessionDep,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
-    search: str = "",
+    search: str = Query("", max_length=200),
 ) -> dict:
     """List registrations for badge generation with search and pagination."""
     await check_conference_admin(conference_id, current_user, db)

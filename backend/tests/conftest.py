@@ -26,6 +26,7 @@ os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 os.environ["RATELIMIT_ENABLED"] = "false"  # Disable rate limiting in tests
+os.environ["TESTING"] = "true"  # Disable background email tasks in tests
 
 from app.core.security import create_access_token, hash_password
 from app.db.base import Base

@@ -151,6 +151,7 @@ function ConferenceSocialTab({
                   onClick={() => handleDelete(platform.key)}
                   className="flex-shrink-0 p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                   title={`Remove ${platform.label}`}
+                  aria-label={`Remove ${platform.label}`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path

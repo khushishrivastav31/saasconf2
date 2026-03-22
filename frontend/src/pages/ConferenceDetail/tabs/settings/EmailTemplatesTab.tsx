@@ -178,6 +178,7 @@ function EmailTemplatesTab({ conference, isAdmin }: { conference: Conference; is
                         onClick={() => handleEdit(template)}
                         className="text-primary-600 hover:text-primary-900"
                         title="Edit template"
+                        aria-label="Edit template"
                       >
                         <EditIcon />
                       </button>

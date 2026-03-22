@@ -430,36 +430,27 @@ async def _send_registration_emails(
         invoice: Invoice model (or None if not created yet)
         password_setup_tokens: Optional dict mapping registration_id to password setup token
     """
+    from app.core.email import send_email_background
     from app.core.registration_emails import send_attendee_welcome_email, send_registration_invoice_email
 
-    # Send invoice email to billing contact (if invoice exists)
+    # Send invoice email to billing contact (fire-and-forget with retry)
     if invoice:
-        try:
-            await send_registration_invoice_email(
-                db=db,
-                invoice=invoice,
-                conference=conference,
-            )
-        except Exception as e:
-            # Log but don't fail the registration
-            import logging
+        send_email_background(
+            send_registration_invoice_email,
+            db=db,
+            invoice=invoice,
+            conference=conference,
+        )
 
-            logging.getLogger(__name__).warning(f"Failed to send invoice email: {e}")
-
-    # Send welcome email to each attendee
+    # Send welcome email to each attendee (fire-and-forget with retry)
     for reg in registrations:
-        try:
-            # Get password setup token for this registration
-            token = password_setup_tokens.get(reg.id, "") if password_setup_tokens else ""
+        # Get password setup token for this registration
+        token = password_setup_tokens.get(reg.id, "") if password_setup_tokens else ""
 
-            await send_attendee_welcome_email(
-                db=db,
-                registration=reg,
-                conference=conference,
-                password_setup_token=token,
-            )
-        except Exception as e:
-            # Log but don't fail the registration
-            import logging
-
-            logging.getLogger(__name__).warning(f"Failed to send welcome email to {reg.email}: {e}")
+        send_email_background(
+            send_attendee_welcome_email,
+            db=db,
+            registration=reg,
+            conference=conference,
+            password_setup_token=token,
+        )

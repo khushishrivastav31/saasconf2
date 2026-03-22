@@ -74,6 +74,7 @@ export function MainSpeakerSearch({
                 setQuery('');
               }}
               className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 flex-shrink-0"
+              aria-label="Clear selection"
             >
               <CloseIcon />
             </button>

@@ -172,259 +172,271 @@ function TenantOnlyRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <Suspense fallback={<LazyFallback />}>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/setup-password" element={<SetupPassword />} />
+    <ErrorBoundary>
+      <Suspense fallback={<LazyFallback />}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/setup-password" element={<SetupPassword />} />
 
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                <AdminLayout />
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-
-          {/* Admin routes */}
           <Route
-            path="admin/tenants"
+            path="/"
             element={
-              <AdminRoute>
-                <Tenants />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="admin/audit-logs"
-            element={
-              <AdminRoute>
-                <AuditLogs />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="admin/settings"
-            element={
-              <AdminRoute>
-                <Settings />
-              </AdminRoute>
-            }
-          />
-
-          {/* My Company (tenant admin only) */}
-          <Route
-            path="my-company"
-            element={
-              <TenantOnlyRoute>
-                <MyCompany />
-              </TenantOnlyRoute>
-            }
-          />
-
-          {/* Team management (tenant admin) */}
-          <Route
-            path="team"
-            element={
-              <TenantAdminRoute>
-                <Team />
-              </TenantAdminRoute>
-            }
-          />
-
-          {/* Applicant Activity Log (tenant admin only) */}
-          <Route
-            path="applicant-activity"
-            element={
-              <TenantOnlyRoute>
-                <ApplicantActivityLog />
-              </TenantOnlyRoute>
-            }
-          />
-
-          {/* System Email Templates (tenant admin only) */}
-          <Route
-            path="email-templates"
-            element={
-              <TenantOnlyRoute>
-                <SystemEmailTemplates />
-              </TenantOnlyRoute>
-            }
-          />
-
-          {/* Handbook (all authenticated users) */}
-          <Route path="handbook" element={<Handbook />} />
-
-          {/* Module routes */}
-          <Route
-            path="modules/conferences"
-            element={
-              <ModuleRoute moduleCode="conferences">
-                <Conferences />
-              </ModuleRoute>
-            }
-          />
-          <Route
-            path="modules/conferences/:conferenceId"
-            element={
-              <ModuleRoute moduleCode="conferences">
-                <ConferenceDetail />
-              </ModuleRoute>
-            }
-          />
-          <Route
-            path="modules/volunteers"
-            element={
-              <ModuleRoute moduleCode="volunteers">
-                <Conferences />
-              </ModuleRoute>
-            }
-          />
-          <Route
-            path="modules/locations"
-            element={
-              <ModuleRoute moduleCode="locations">
-                <Locations />
-              </ModuleRoute>
-            }
-          />
-          <Route
-            path="modules/cfp"
-            element={
-              <ModuleRoute moduleCode="cfp">
-                <CFPLayout />
-              </ModuleRoute>
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <AdminLayout />
+                </ErrorBoundary>
+              </ProtectedRoute>
             }
           >
-            <Route index element={<CallForPapers />} />
-            <Route path="topics" element={<CFPTopics />} />
-            <Route path="program-committee" element={<CFPProgramCommittee />} />
-            <Route path="applicants" element={<CFPApplicants />} />
-            <Route path="papers" element={<CFPPapers />} />
-            <Route path="evaluated-papers" element={<CFPEvaluatedPapers />} />
-            <Route path="accepted-papers" element={<CFPSelectedPapers filter="accepted" />} />
-            <Route path="rejected-papers" element={<CFPSelectedPapers filter="rejected" />} />
-            <Route path="assignments" element={<CFPAssignments />} />
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+
+            {/* Admin routes */}
+            <Route
+              path="admin/tenants"
+              element={
+                <AdminRoute>
+                  <Tenants />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="admin/audit-logs"
+              element={
+                <AdminRoute>
+                  <AuditLogs />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="admin/settings"
+              element={
+                <AdminRoute>
+                  <Settings />
+                </AdminRoute>
+              }
+            />
+
+            {/* My Company (tenant admin only) */}
+            <Route
+              path="my-company"
+              element={
+                <TenantOnlyRoute>
+                  <MyCompany />
+                </TenantOnlyRoute>
+              }
+            />
+
+            {/* Team management (tenant admin) */}
+            <Route
+              path="team"
+              element={
+                <TenantAdminRoute>
+                  <Team />
+                </TenantAdminRoute>
+              }
+            />
+
+            {/* Applicant Activity Log (tenant admin only) */}
+            <Route
+              path="applicant-activity"
+              element={
+                <TenantOnlyRoute>
+                  <ApplicantActivityLog />
+                </TenantOnlyRoute>
+              }
+            />
+
+            {/* System Email Templates (tenant admin only) */}
+            <Route
+              path="email-templates"
+              element={
+                <TenantOnlyRoute>
+                  <SystemEmailTemplates />
+                </TenantOnlyRoute>
+              }
+            />
+
+            {/* Handbook (all authenticated users) */}
+            <Route path="handbook" element={<Handbook />} />
+
+            {/* Module routes */}
+            <Route
+              path="modules/conferences"
+              element={
+                <ModuleRoute moduleCode="conferences">
+                  <Conferences />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="modules/conferences/:conferenceId"
+              element={
+                <ModuleRoute moduleCode="conferences">
+                  <ConferenceDetail />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="modules/volunteers"
+              element={
+                <ModuleRoute moduleCode="volunteers">
+                  <Conferences />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="modules/locations"
+              element={
+                <ModuleRoute moduleCode="locations">
+                  <Locations />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="modules/cfp"
+              element={
+                <ModuleRoute moduleCode="cfp">
+                  <CFPLayout />
+                </ModuleRoute>
+              }
+            >
+              <Route index element={<CallForPapers />} />
+              <Route path="topics" element={<CFPTopics />} />
+              <Route path="program-committee" element={<CFPProgramCommittee />} />
+              <Route path="applicants" element={<CFPApplicants />} />
+              <Route path="papers" element={<CFPPapers />} />
+              <Route path="evaluated-papers" element={<CFPEvaluatedPapers />} />
+              <Route path="accepted-papers" element={<CFPSelectedPapers filter="accepted" />} />
+              <Route path="rejected-papers" element={<CFPSelectedPapers filter="rejected" />} />
+              <Route path="assignments" element={<CFPAssignments />} />
+            </Route>
+            <Route
+              path="modules/sessions"
+              element={
+                <ModuleRoute moduleCode="sessions">
+                  <ComingSoon moduleName="Session Management" />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="modules/speakers"
+              element={
+                <ModuleRoute moduleCode="speakers">
+                  <ComingSoon moduleName="Speaker Management" />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="modules/attendees"
+              element={
+                <ModuleRoute moduleCode="attendees">
+                  <ComingSoon moduleName="Attendee Management" />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="modules/sponsors"
+              element={
+                <ModuleRoute moduleCode="sponsors">
+                  <ComingSoon moduleName="Sponsor Management" />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="modules/analytics"
+              element={
+                <ModuleRoute moduleCode="analytics">
+                  <ComingSoon moduleName="Analytics & Reports" />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="modules/service-providers"
+              element={
+                <ModuleRoute moduleCode="service_providers">
+                  <ComingSoon moduleName="Service Provider Management" />
+                </ModuleRoute>
+              }
+            />
           </Route>
-          <Route
-            path="modules/sessions"
-            element={
-              <ModuleRoute moduleCode="sessions">
-                <ComingSoon moduleName="Session Management" />
-              </ModuleRoute>
-            }
-          />
-          <Route
-            path="modules/speakers"
-            element={
-              <ModuleRoute moduleCode="speakers">
-                <ComingSoon moduleName="Speaker Management" />
-              </ModuleRoute>
-            }
-          />
-          <Route
-            path="modules/attendees"
-            element={
-              <ModuleRoute moduleCode="attendees">
-                <ComingSoon moduleName="Attendee Management" />
-              </ModuleRoute>
-            }
-          />
-          <Route
-            path="modules/sponsors"
-            element={
-              <ModuleRoute moduleCode="sponsors">
-                <ComingSoon moduleName="Sponsor Management" />
-              </ModuleRoute>
-            }
-          />
-          <Route
-            path="modules/analytics"
-            element={
-              <ModuleRoute moduleCode="analytics">
-                <ComingSoon moduleName="Analytics & Reports" />
-              </ModuleRoute>
-            }
-          />
-          <Route
-            path="modules/service-providers"
-            element={
-              <ModuleRoute moduleCode="service_providers">
-                <ComingSoon moduleName="Service Provider Management" />
-              </ModuleRoute>
-            }
-          />
-        </Route>
 
-        {/* CFP Applicant Portal — public routes */}
-        <Route
-          path=":companySlug/portal/user/login"
-          element={
-            <ApplicantAuthProvider>
-              <LoginPage />
-            </ApplicantAuthProvider>
-          }
-        />
-        <Route
-          path=":companySlug/portal/user/register"
-          element={
-            <ApplicantAuthProvider>
-              <RegisterPage />
-            </ApplicantAuthProvider>
-          }
-        />
-        <Route path=":companySlug/portal/user/verify-email" element={<VerifyEmailPage />} />
+          {/* CFP Applicant Portal — public routes */}
+          <Route
+            path=":companySlug/portal/user/login"
+            element={
+              <ApplicantAuthProvider>
+                <LoginPage />
+              </ApplicantAuthProvider>
+            }
+          />
+          <Route
+            path=":companySlug/portal/user/register"
+            element={
+              <ApplicantAuthProvider>
+                <RegisterPage />
+              </ApplicantAuthProvider>
+            }
+          />
+          <Route path=":companySlug/portal/user/verify-email" element={<VerifyEmailPage />} />
 
-        {/* CFP Landing Page — public route */}
-        <Route path=":tenantSlug/portal/:abbreviation" element={<LandingPage />} />
+          {/* CFP Landing Page — public route */}
+          <Route path=":tenantSlug/portal/:abbreviation" element={<LandingPage />} />
 
-        {/* Public Registration Portal — public route */}
-        <Route path=":tenantSlug/register/:conferenceSlug/*" element={<PublicRegistrationPage />} />
-
-        {/* CFP Applicant Portal — authenticated routes */}
-        <Route
-          path=":companySlug/portal"
-          element={
-            <ApplicantAuthProvider>
+          {/* Public Registration Portal — public route */}
+          <Route
+            path=":tenantSlug/register/:conferenceSlug/*"
+            element={
               <ErrorBoundary>
-                <PortalLayout />
+                <PublicRegistrationPage />
               </ErrorBoundary>
-            </ApplicantAuthProvider>
-          }
-        >
-          <Route index element={<Navigate to="news" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="papers/new" element={<SubmitPaperPage />} />
-          <Route path="papers/:paperId" element={<PaperDetailPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="invitations" element={<InvitationsPage />} />
-          <Route path="assigned-papers" element={<AssignedPapersTab />} />
-          <Route path="evaluated-papers" element={<EvaluatedPapersTab />} />
-          <Route path="messages" element={<MessagesPage />} />
-          <Route path="news" element={<NewsPage />} />
-          <Route path="info/:conferenceId" element={<InfoPage />} />
-          <Route path="register/:conferenceId" element={<AuthenticatedRegistrationPage />} />
-          <Route path="my-registrations" element={<MyRegistrationsPage />} />
-          <Route path="my-expenses/:conferenceId" element={<MyExpensesPage />} />
-          <Route path="invoices" element={<PortalInvoicesPage />} />
-        </Route>
+            }
+          />
 
-        {/* Legacy redirects for old URLs / emailed links */}
-        <Route path="cfp/:tenantSlug/:abbreviation/login" element={<LegacyLoginRedirect />} />
-        <Route path="cfp/:tenantSlug/:abbreviation/register" element={<LegacyRegisterRedirect />} />
-        <Route path="cfp/:tenantSlug/verify-email" element={<LegacyVerifyEmailRedirect />} />
-        <Route path="cfp/:tenantSlug/portal/*" element={<LegacyCFPPortalRedirect />} />
-        <Route path="cfp/:tenantSlug/:abbreviation" element={<LegacyLoginRedirect />} />
+          {/* CFP Applicant Portal — authenticated routes */}
+          <Route
+            path=":companySlug/portal"
+            element={
+              <ApplicantAuthProvider>
+                <ErrorBoundary>
+                  <PortalLayout />
+                </ErrorBoundary>
+              </ApplicantAuthProvider>
+            }
+          >
+            <Route index element={<Navigate to="news" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="papers/new" element={<SubmitPaperPage />} />
+            <Route path="papers/:paperId" element={<PaperDetailPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="invitations" element={<InvitationsPage />} />
+            <Route path="assigned-papers" element={<AssignedPapersTab />} />
+            <Route path="evaluated-papers" element={<EvaluatedPapersTab />} />
+            <Route path="messages" element={<MessagesPage />} />
+            <Route path="news" element={<NewsPage />} />
+            <Route path="info/:conferenceId" element={<InfoPage />} />
+            <Route path="register/:conferenceId" element={<AuthenticatedRegistrationPage />} />
+            <Route path="my-registrations" element={<MyRegistrationsPage />} />
+            <Route path="my-expenses/:conferenceId" element={<MyExpensesPage />} />
+            <Route path="invoices" element={<PortalInvoicesPage />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+          {/* Legacy redirects for old URLs / emailed links */}
+          <Route path="cfp/:tenantSlug/:abbreviation/login" element={<LegacyLoginRedirect />} />
+          <Route
+            path="cfp/:tenantSlug/:abbreviation/register"
+            element={<LegacyRegisterRedirect />}
+          />
+          <Route path="cfp/:tenantSlug/verify-email" element={<LegacyVerifyEmailRedirect />} />
+          <Route path="cfp/:tenantSlug/portal/*" element={<LegacyCFPPortalRedirect />} />
+          <Route path="cfp/:tenantSlug/:abbreviation" element={<LegacyLoginRedirect />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 

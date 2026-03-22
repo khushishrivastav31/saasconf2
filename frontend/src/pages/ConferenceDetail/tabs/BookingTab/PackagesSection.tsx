@@ -166,6 +166,7 @@ export default function PackagesSection({
                           onClick={() => onEditPackage(pkg)}
                           className="text-gray-400 hover:text-primary-600 transition-colors"
                           title="Edit package"
+                          aria-label="Edit package"
                         >
                           <EditIcon />
                         </button>
@@ -175,6 +176,7 @@ export default function PackagesSection({
                           }
                           className="text-gray-300 hover:text-red-500 transition-colors"
                           title="Delete package"
+                          aria-label="Delete package"
                         >
                           <DeleteIcon />
                         </button>

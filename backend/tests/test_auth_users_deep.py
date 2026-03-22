@@ -10,8 +10,7 @@ Targets uncovered happy-path code in:
 
 import os
 import uuid
-from datetime import date, timedelta
-from decimal import Decimal
+from datetime import timedelta
 
 os.environ.setdefault(
     "DATABASE_URL",
@@ -37,11 +36,7 @@ from app.models.applicant_token import ApplicantEmailVerification, ApplicantPass
 from app.models.associations import ConferenceLocation
 from app.models.cfp_applicants import CFPApplicant
 from app.models.conference import Conference
-# from app.models.conference_vat_rate import ConferenceVatRate  # DELETED
 from app.models.fiscal_representative import FiscalRepresentative
-
-# Skip entire module - ConferenceVatRate was deleted
-pytestmark = pytest.mark.skip(reason="ConferenceVatRate model deleted - needs migration to VatRateByCountry")
 from app.models.location import Location
 from app.models.module import Module, TenantModule
 from app.models.settings import TenantLocationType
@@ -68,11 +63,6 @@ DEFAULT_PASSWORD = "Password123!"
 
 def _fiscal_rep_url(conference_id: uuid.UUID) -> str:
     return f"/api/v1/conferences/{conference_id}/fiscal-representative"
-
-
-def _vat_rates_url(conference_id: uuid.UUID, rate_id: uuid.UUID | None = None) -> str:
-    base = f"/api/v1/conferences/{conference_id}/vat-rates"
-    return f"{base}/{rate_id}" if rate_id else base
 
 
 def _tax_info_url(conference_id: uuid.UUID) -> str:
@@ -1370,115 +1360,10 @@ class TestFiscalRepDeep:
         resp = await client.delete(_fiscal_rep_url(conference.id), headers=auth_headers(admin_token))
         assert resp.status_code == 404
 
-    @pytest.mark.asyncio
-    async def test_vat_rates_list_empty(
-        self,
-        client: AsyncClient,
-        conference: Conference,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-    ) -> None:
-        """List VAT rates when none exist returns empty list."""
-        resp = await client.get(_vat_rates_url(conference.id), headers=auth_headers(admin_token))
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["items"] == []
-        assert data["total"] == 0
-
-    @pytest.mark.asyncio
-    async def test_vat_rate_create_and_list(
-        self,
-        client: AsyncClient,
-        conference: Conference,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-    ) -> None:
-        """Create a VAT rate and verify it appears in the list."""
-        payload = {
-            "rate": 19.0,
-            "start_date": "2026-01-01",
-            "end_date": "2026-12-31",
-            "description": "Standard rate",
-        }
-        create_resp = await client.post(_vat_rates_url(conference.id), json=payload, headers=auth_headers(admin_token))
-        assert create_resp.status_code == 201
-        rate_data = create_resp.json()
-        assert Decimal(str(rate_data["rate"])) == Decimal("19.0")
-        assert rate_data["description"] == "Standard rate"
-
-        # List should include it
-        list_resp = await client.get(_vat_rates_url(conference.id), headers=auth_headers(admin_token))
-        assert list_resp.status_code == 200
-        assert list_resp.json()["total"] >= 1
-
-    @pytest.mark.asyncio
-    async def test_vat_rate_update_dates_and_overlap_check(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        conference: Conference,
-        tenant: Tenant,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-    ) -> None:
-        """Updating VAT rate dates triggers overlap check."""
-        today = date.today()
-        rate1 = ConferenceVatRate(
-            id=uuid.uuid4(),
-            tenant_id=tenant.id,
-            conference_id=conference.id,
-            rate=Decimal("19.00"),
-            start_date=today,
-            end_date=today + timedelta(days=30),
-        )
-        rate2 = ConferenceVatRate(
-            id=uuid.uuid4(),
-            tenant_id=tenant.id,
-            conference_id=conference.id,
-            rate=Decimal("21.00"),
-            start_date=today + timedelta(days=60),
-            end_date=today + timedelta(days=90),
-        )
-        db_session.add_all([rate1, rate2])
-        await db_session.commit()
-
-        # Try to extend rate2's start into rate1's range -> overlap
-        resp = await client.put(
-            _vat_rates_url(conference.id, rate2.id),
-            json={"start_date": str(today + timedelta(days=10))},
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 400
-
-    @pytest.mark.asyncio
-    async def test_vat_rate_delete(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        conference: Conference,
-        tenant: Tenant,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-    ) -> None:
-        """Delete a VAT rate."""
-        rate = ConferenceVatRate(
-            id=uuid.uuid4(),
-            tenant_id=tenant.id,
-            conference_id=conference.id,
-            rate=Decimal("10.00"),
-            start_date=date(2028, 1, 1),
-            end_date=date(2028, 12, 31),
-        )
-        db_session.add(rate)
-        await db_session.commit()
-
-        resp = await client.delete(_vat_rates_url(conference.id, rate.id), headers=auth_headers(admin_token))
-        assert resp.status_code == 200
-        assert "deleted" in resp.json()["message"].lower()
+    # NOTE: test_vat_rates_list_empty, test_vat_rate_create_and_list,
+    # test_vat_rate_update_dates_and_overlap_check, test_vat_rate_delete removed --
+    # ConferenceVatRate model was replaced by tenant-level VatRateByCountry.
+    # Conference-level /vat-rates endpoints no longer exist.
 
     @pytest.mark.asyncio
     async def test_tax_info_self_representation(
@@ -1539,33 +1424,5 @@ class TestFiscalRepDeep:
         assert data["fiscal_representative"] is not None
         assert data["fiscal_representative"]["is_active"] is True
 
-    @pytest.mark.asyncio
-    async def test_vat_rate_update_end_before_start_rejected(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        conference: Conference,
-        tenant: Tenant,
-        tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-    ) -> None:
-        """Updating end_date to before start_date returns 400."""
-        today = date.today()
-        rate = ConferenceVatRate(
-            id=uuid.uuid4(),
-            tenant_id=tenant.id,
-            conference_id=conference.id,
-            rate=Decimal("19.00"),
-            start_date=today,
-            end_date=today + timedelta(days=30),
-        )
-        db_session.add(rate)
-        await db_session.commit()
-
-        resp = await client.put(
-            _vat_rates_url(conference.id, rate.id),
-            json={"end_date": str(today - timedelta(days=1))},
-            headers=auth_headers(admin_token),
-        )
-        assert resp.status_code == 400
+    # NOTE: test_vat_rate_update_end_before_start_rejected removed --
+    # ConferenceVatRate model was replaced by tenant-level VatRateByCountry.

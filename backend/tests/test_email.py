@@ -19,7 +19,9 @@ from app.core import email as email_module
 from app.core.email import (
     _get_resend,
     _log_email,
+    _send_with_retry,
     send_email,
+    send_email_background,
 )
 from app.core.email_templates import (
     RenderedEmail,
@@ -718,3 +720,124 @@ class TestSendNewMessageNotification:
         assert context["Conference Name"] == "TestConf"
         assert context["Message Subject"] == "Review Update"
         assert context["Messages Link"] == "https://example.com/msg"
+
+
+# ---------------------------------------------------------------------------
+# _send_with_retry tests
+# ---------------------------------------------------------------------------
+
+
+class TestSendWithRetry:
+    """Tests for the _send_with_retry helper."""
+
+    @pytest.mark.asyncio
+    async def test_succeeds_on_first_attempt(self):
+        """Calls the function once when it succeeds immediately."""
+        mock_fn = AsyncMock(return_value=True)
+        await _send_with_retry(mock_fn, "arg1", kw="val")
+        mock_fn.assert_awaited_once_with("arg1", kw="val")
+
+    @pytest.mark.asyncio
+    async def test_retries_on_failure_then_succeeds(self):
+        """Retries after a failure and succeeds on the second attempt."""
+        mock_fn = AsyncMock(side_effect=[Exception("transient"), True])
+        with patch("app.core.email.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            await _send_with_retry(mock_fn, max_retries=3)
+        assert mock_fn.await_count == 2
+        mock_sleep.assert_awaited_once_with(1)  # 2^0 = 1
+
+    @pytest.mark.asyncio
+    async def test_exponential_backoff_delays(self):
+        """Uses exponential backoff: 1s, 2s, 4s."""
+        mock_fn = AsyncMock(side_effect=[Exception("e1"), Exception("e2"), Exception("e3")])
+        with patch("app.core.email.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            await _send_with_retry(mock_fn, max_retries=3)
+        assert mock_fn.await_count == 3
+        # Should have slept twice (not after the last attempt)
+        assert mock_sleep.await_count == 2
+        mock_sleep.assert_any_await(1)  # 2^0
+        mock_sleep.assert_any_await(2)  # 2^1
+
+    @pytest.mark.asyncio
+    async def test_logs_error_after_all_retries_exhausted(self, caplog):
+        """Logs an error when all retry attempts fail."""
+        import logging
+
+        mock_fn = AsyncMock(side_effect=Exception("persistent failure"))
+        mock_fn.__name__ = "mock_send"
+        with (
+            caplog.at_level(logging.ERROR),
+            patch("app.core.email.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            await _send_with_retry(mock_fn, max_retries=2)
+        assert "Email send failed after 2 attempts" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_never_raises(self):
+        """Never propagates exceptions to the caller."""
+        mock_fn = AsyncMock(side_effect=Exception("boom"))
+        with patch("app.core.email.asyncio.sleep", new_callable=AsyncMock):
+            # Should not raise
+            await _send_with_retry(mock_fn, max_retries=1)
+
+
+# ---------------------------------------------------------------------------
+# send_email_background tests
+# ---------------------------------------------------------------------------
+
+
+class TestSendEmailBackground:
+    """Tests for the send_email_background wrapper."""
+
+    @pytest.fixture(autouse=True)
+    def _enable_background_emails(self, monkeypatch):
+        """Allow real background email tasks for these tests."""
+        monkeypatch.delenv("TESTING", raising=False)
+
+    @pytest.mark.asyncio
+    async def test_creates_background_task(self):
+        """Creates an asyncio task that eventually calls the send function."""
+        import asyncio
+
+        mock_fn = AsyncMock(return_value=True)
+        mock_fn.__name__ = "mock_send"
+
+        send_email_background(mock_fn, "to@example.com", subject="Test")
+
+        # Let the event loop run the background task
+        await asyncio.sleep(0.05)
+
+        mock_fn.assert_awaited_once_with("to@example.com", subject="Test")
+
+    @pytest.mark.asyncio
+    async def test_task_stored_in_background_set(self):
+        """Task reference is stored to prevent garbage collection."""
+        import asyncio
+
+        mock_fn = AsyncMock(return_value=True)
+        mock_fn.__name__ = "mock_send"
+
+        initial_count = len(email_module._background_tasks)
+        send_email_background(mock_fn, "to@example.com")
+
+        # Task should be in the set immediately
+        assert len(email_module._background_tasks) >= initial_count + 1
+
+        # After completion, task is cleaned up
+        await asyncio.sleep(0.05)
+        assert len(email_module._background_tasks) == initial_count
+
+    @pytest.mark.asyncio
+    async def test_does_not_block_caller(self):
+        """The call returns immediately without waiting for the email."""
+        import asyncio
+
+        mock_fn = AsyncMock(side_effect=Exception("slow failure"))
+        mock_fn.__name__ = "mock_send"
+
+        with patch("app.core.email.asyncio.sleep", new_callable=AsyncMock):
+            # This should return immediately, not block
+            send_email_background(mock_fn, "to@example.com", max_retries=1)
+
+        # Give the task time to complete
+        await asyncio.sleep(0.05)

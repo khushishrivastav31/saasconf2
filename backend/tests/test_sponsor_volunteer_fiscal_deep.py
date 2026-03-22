@@ -27,14 +27,9 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.models.associations import ConferenceVolunteer
 from app.models.attachment import Attachment
 from app.models.conference import Conference
-# from app.models.conference_vat_rate import ConferenceVatRate  # DELETED
 from app.models.fiscal_representative import FiscalRepresentative
-
-# Skip entire module - ConferenceVatRate was deleted
-pytestmark = pytest.mark.skip(reason="ConferenceVatRate model deleted - needs migration to VatRateByCountry")
 from app.models.module import Module, TenantModule
 from app.models.program import ProgramDay, ProgramSession, ProgramTimeSlot, ProgramTrack
 from app.models.settings import SponsorPackage, VolunteerRole
@@ -42,9 +37,13 @@ from app.models.sponsor import Sponsor
 from app.models.sponsor_contract import SponsorContract, SponsorContractVersion
 from app.models.tenant import Tenant
 from app.models.user import User
-from app.models.volunteer import Volunteer
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
 from tests.conftest import auth_headers
+
+# Placeholders for deleted models used in type annotations of skipped test classes
+ConferenceVatRate = type("ConferenceVatRate", (), {})
+ConferenceVolunteer = type("ConferenceVolunteer", (), {})
+Volunteer = type("Volunteer", (), {})
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -893,6 +892,7 @@ class TestContractDeleteThenResources:
 # ═══════════════════════════════════════════════════════════════════════════
 
 
+@pytest.mark.skip(reason="Volunteer model restructured from Volunteer to VolunteerProfile; tests need full rewrite")
 class TestVolunteerTaskCreationErrors:
     """Edge cases for POST /session-tasks."""
 
@@ -991,6 +991,7 @@ class TestVolunteerTaskCreationErrors:
         assert resp.status_code == 404
 
 
+@pytest.mark.skip(reason="Volunteer model restructured from Volunteer to VolunteerProfile; tests need full rewrite")
 class TestVolunteerAssignmentCreationErrors:
     """Edge cases for POST /volunteer-assignments."""
 
@@ -1076,6 +1077,7 @@ class TestVolunteerAssignmentCreationErrors:
         assert resp.status_code == 400
 
 
+@pytest.mark.skip(reason="Volunteer model restructured from Volunteer to VolunteerProfile; tests need full rewrite")
 class TestVolunteerAssignmentDelete:
     """DELETE /volunteer-assignments/{id} edge cases."""
 
@@ -1112,6 +1114,7 @@ class TestVolunteerAssignmentDelete:
         assert resp.status_code == 404
 
 
+@pytest.mark.skip(reason="Volunteer model restructured from Volunteer to VolunteerProfile; tests need full rewrite")
 class TestVolunteerColorAndSchedulePdf:
     """Color update success and PDF export with actual data."""
 
@@ -1217,6 +1220,7 @@ class TestVolunteerColorAndSchedulePdf:
         assert data["volunteer_name"] == "Alice Alpha"
 
 
+@pytest.mark.skip(reason="Volunteer model restructured from Volunteer to VolunteerProfile; tests need full rewrite")
 class TestVolunteerAssignmentOverviewWithVolunteers:
     """Test the overview endpoint when volunteers are actually assigned."""
 
@@ -1378,6 +1382,9 @@ class TestFiscalRepContactPersonsUpdate:
         assert data["id"] == str(rep.id)
 
 
+@pytest.mark.skip(
+    reason="ConferenceVatRate model replaced by tenant-level VatRateByCountry; conference-level /vat-rates API removed"
+)
 class TestVatRateUpdateRateOnly:
     """Test PUT on a VAT rate that only changes the rate (no date change)."""
 
@@ -1414,6 +1421,9 @@ class TestVatRateUpdateRateOnly:
         assert resp.json()["end_date"] == str(rate.end_date)
 
 
+@pytest.mark.skip(
+    reason="ConferenceVatRate model replaced by tenant-level VatRateByCountry; conference-level /vat-rates API removed"
+)
 class TestVatRateEdgeCases:
     """Additional VAT rate edge cases."""
 

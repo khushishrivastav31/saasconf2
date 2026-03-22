@@ -1,8 +1,8 @@
-"""Tests for fiscal representative and conference VAT rate endpoints.
+"""Tests for fiscal representative endpoints.
 
-NOTE: ConferenceVatRate tests are temporarily skipped as the model was replaced
-with VatRateByCountry (tenant-level, not conference-level).
-TODO: Update these tests to use the new VatRateByCountry system.
+NOTE: ConferenceVatRate test classes (sections 4-8) are skipped because the model was
+replaced with tenant-level VatRateByCountry. The conference-level /vat-rates endpoints
+no longer exist. Fiscal representative CRUD tests (sections 1-3) remain active.
 """
 
 import os
@@ -25,14 +25,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
 from app.models.conference import Conference
-# from app.models.conference_vat_rate import ConferenceVatRate  # DELETED - replaced with VatRateByCountry
 from app.models.fiscal_representative import FiscalRepresentative
-
-# Skip entire module - ConferenceVatRate was deleted
-pytestmark = pytest.mark.skip(reason="ConferenceVatRate model deleted - needs migration to VatRateByCountry")
 from app.models.tenant import Tenant
 from app.models.user import User
 from tests.conftest import auth_headers
+
+# Placeholder for deleted model used in type annotations of skipped test classes
+ConferenceVatRate = type("ConferenceVatRate", (), {})
 
 # -- Helpers ----------------------------------------------------------------
 
@@ -556,6 +555,9 @@ class TestDeleteFiscalRepresentative:
 # ===========================================================================
 
 
+@pytest.mark.skip(
+    reason="ConferenceVatRate model replaced by tenant-level VatRateByCountry; conference-level /vat-rates API removed"
+)
 class TestListVatRates:
     """GET /conferences/{conference_id}/vat-rates"""
 
@@ -641,6 +643,9 @@ class TestListVatRates:
 # ===========================================================================
 
 
+@pytest.mark.skip(
+    reason="ConferenceVatRate model replaced by tenant-level VatRateByCountry; conference-level /vat-rates API removed"
+)
 class TestCreateVatRate:
     """POST /conferences/{conference_id}/vat-rates"""
 
@@ -827,6 +832,9 @@ class TestCreateVatRate:
 # ===========================================================================
 
 
+@pytest.mark.skip(
+    reason="ConferenceVatRate model replaced by tenant-level VatRateByCountry; conference-level /vat-rates API removed"
+)
 class TestUpdateVatRate:
     """PUT /conferences/{conference_id}/vat-rates/{rate_id}"""
 
@@ -997,6 +1005,9 @@ class TestUpdateVatRate:
 # ===========================================================================
 
 
+@pytest.mark.skip(
+    reason="ConferenceVatRate model replaced by tenant-level VatRateByCountry; conference-level /vat-rates API removed"
+)
 class TestDeleteVatRate:
     """DELETE /conferences/{conference_id}/vat-rates/{rate_id}"""
 
@@ -1108,60 +1119,6 @@ class TestTaxInfo:
         assert data["effective_vat_number"] is None
         assert data["fiscal_representative"] is None
 
-    async def test_current_vat_rate(
-        self,
-        client: AsyncClient,
-        conference_with_country: Conference,
-        tenant_with_modules: Tenant,
-        tenant_with_country: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-        sample_vat_rate: ConferenceVatRate,
-    ) -> None:
-        """Returns the current VAT rate for today's date."""
-        url = _tax_info_url(conference_with_country.id)
-        response = await client.get(url, headers=auth_headers(admin_token))
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["current_vat_rate"] is not None
-        assert Decimal(str(data["current_vat_rate"])) == Decimal("21.00")
-        # The rate should appear in the vat_rates list too
-        assert len(data["vat_rates"]) == 1
-        assert Decimal(str(data["vat_rates"][0]["rate"])) == Decimal("21.00")
-
-    async def test_no_current_rate(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        conference_with_country: Conference,
-        tenant: Tenant,
-        tenant_with_modules: Tenant,
-        tenant_with_country: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
-    ) -> None:
-        """Returns null when no VAT rate covers today."""
-        today = date.today()
-        # Create a rate that does NOT cover today
-        future_rate = ConferenceVatRate(
-            id=uuid.uuid4(),
-            tenant_id=tenant.id,
-            conference_id=conference_with_country.id,
-            rate=Decimal("25.00"),
-            start_date=today + timedelta(days=60),
-            end_date=today + timedelta(days=120),
-            description="Future rate only",
-        )
-        db_session.add(future_rate)
-        await db_session.commit()
-
-        url = _tax_info_url(conference_with_country.id)
-        response = await client.get(url, headers=auth_headers(admin_token))
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["current_vat_rate"] is None
-        # The rate still appears in the full list
-        assert len(data["vat_rates"]) == 1
-        assert data["vat_rates"][0]["description"] == "Future rate only"
+    # NOTE: test_current_vat_rate and test_no_current_rate removed --
+    # they used the deleted ConferenceVatRate model and the old vat_rates response field.
+    # Tax-info now uses tenant-level VatRateByCountry and returns current_vat_rate only.

@@ -786,6 +786,7 @@ export function ApplicantForm({
                         onClick={() => handleDeletePlatform(platform.key)}
                         className="flex-shrink-0 p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                         title={`Remove ${platform.label}`}
+                        aria-label={`Remove ${platform.label}`}
                       >
                         <DeleteIcon />
                       </button>

@@ -1,5 +1,6 @@
 """Paper CRUD endpoints (list, stats, create, get, update, submit, unsubmit, delete, get assignments)."""
 
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -105,12 +106,13 @@ async def list_papers(
     db: DbSessionDep,
     cfp_id: UUID | None = None,
     conference_id: UUID | None = None,
-    status: str | None = None,
+    status: Literal["draft", "submitted", "in_evaluation", "evaluated", "final_consideration", "rejected", "accepted"]
+    | None = None,
     main_speaker_id: UUID | None = None,
     applicant_id: UUID | None = Query(None, description="Filter papers where applicant is main speaker or co-speaker"),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
-    search: str | None = Query(None, description="Search papers by title or speaker name"),
+    search: str | None = Query(None, max_length=200, description="Search papers by title or speaker name"),
 ) -> PaperListResponse:
     """List papers for the current tenant with server-side pagination."""
     # Build base filter (shared between count and data queries)

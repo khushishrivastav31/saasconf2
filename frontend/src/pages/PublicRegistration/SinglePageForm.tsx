@@ -16,6 +16,7 @@ import type {
   PortalAttendee,
   PortalBilling,
   PortalRegistrationResponse,
+  TransformedAttendee,
 } from '../../types/publicRegistration';
 import ConferenceHeader from './components/ConferenceHeader';
 import AttendeeSection from './components/AttendeeSection';
@@ -182,8 +183,7 @@ export default function SinglePageForm({
           payment_intent_id: paymentIntentId,
           vat_validated: vatValidated,
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        attendees: transformedAttendees as any,
+        attendees: transformedAttendees,
         recaptcha_token: recaptchaToken,
         honeypot_field: honeypot,
         form_start_timestamp: formStartTime,
@@ -314,7 +314,7 @@ export default function SinglePageForm({
   const submitMutation = useMutation({
     mutationFn: async (data: {
       billing: PortalBilling;
-      attendees: PortalAttendee[];
+      attendees: TransformedAttendee[];
       recaptcha_token: string;
       honeypot_field: string;
       form_start_timestamp: number;
@@ -438,8 +438,7 @@ export default function SinglePageForm({
       // Submit
       submitMutation.mutate({
         billing,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        attendees: transformedAttendees as any, // Transform PortalAttendee[] to BulkAttendeeData[]
+        attendees: transformedAttendees,
         recaptcha_token: recaptchaToken,
         honeypot_field: honeypot,
         form_start_timestamp: formStartTime,

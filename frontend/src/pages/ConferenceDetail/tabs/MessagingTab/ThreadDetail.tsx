@@ -160,6 +160,7 @@ export default function ThreadDetail({
           onClick={onBack}
           className={`text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 ${isPopup ? '' : 'lg:hidden'}`}
           title={isPopup ? 'Close' : 'Back'}
+          aria-label={isPopup ? 'Close' : 'Back'}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {isPopup ? (
@@ -195,6 +196,7 @@ export default function ThreadDetail({
               onClick={onFlag}
               className="p-1.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 transition-colors"
               title="Toggle flag"
+              aria-label="Toggle flag"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path

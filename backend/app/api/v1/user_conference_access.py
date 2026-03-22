@@ -14,7 +14,7 @@ from app.core.dependencies import (
     TenantAdminDep,
     get_client_ip,
 )
-from app.core.email import send_conference_team_invitation_email
+from app.core.email import send_conference_team_invitation_email, send_email_background
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
 from app.models.conference import Conference
@@ -147,27 +147,25 @@ async def grant_conference_access(
     await db.commit()
     await db.refresh(access)
 
-    # Send conference team invitation email (best-effort, don't fail the grant)
-    try:
-        settings = get_settings()
-        tenant_result = await db.execute(select(Tenant.name).where(Tenant.id == current_user.tenant_id))
-        tenant_name = tenant_result.scalar_one_or_none() or ""
-        access_label = "Admin" if access_data.access_level == "admin" else "Read Only"
-        await send_conference_team_invitation_email(
-            db,
-            email=user.email,
-            first_name=user.first_name or "",
-            last_name=user.last_name or "",
-            conference_name=conference.name,
-            company_name=tenant_name,
-            access_level=access_label,
-            conference_id=conference.id,
-            tenant_id=current_user.tenant_id,
-            support_email=conference.support_email or conference.contact_email or "",
-            base_url=settings.FRONTEND_BASE_URL,
-        )
-    except Exception:
-        logger.exception("Failed to send conference team invitation email")
+    # Send conference team invitation email (fire-and-forget with retry)
+    settings = get_settings()
+    tenant_result = await db.execute(select(Tenant.name).where(Tenant.id == current_user.tenant_id))
+    tenant_name = tenant_result.scalar_one_or_none() or ""
+    access_label = "Admin" if access_data.access_level == "admin" else "Read Only"
+    send_email_background(
+        send_conference_team_invitation_email,
+        db,
+        email=user.email,
+        first_name=user.first_name or "",
+        last_name=user.last_name or "",
+        conference_name=conference.name,
+        company_name=tenant_name,
+        access_level=access_label,
+        conference_id=conference.id,
+        tenant_id=current_user.tenant_id,
+        support_email=conference.support_email or conference.contact_email or "",
+        base_url=settings.FRONTEND_BASE_URL,
+    )
 
     return UserConferenceAccessResponse.model_validate(access)
 

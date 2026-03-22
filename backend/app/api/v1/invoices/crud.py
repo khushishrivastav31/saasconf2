@@ -6,6 +6,7 @@ Thin wrappers around business logic, handling only HTTP concerns.
 
 import logging
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -55,7 +56,7 @@ async def list_invoices(
     db: DbSessionDep,
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
-    status: str | None = None,
+    status: Literal["draft", "sent", "paid", "overdue", "cancelled"] | None = None,
     recipient_source_type: str | None = None,
     recipient_source_id: UUID | None = None,
 ) -> InvoiceListResponse:

@@ -275,6 +275,7 @@ function ScoreScaleForm({
                     onClick={() => removeOption(index)}
                     className="mt-5 text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                     title="Remove option"
+                    aria-label="Remove option"
                   >
                     <DeleteIcon />
                   </button>

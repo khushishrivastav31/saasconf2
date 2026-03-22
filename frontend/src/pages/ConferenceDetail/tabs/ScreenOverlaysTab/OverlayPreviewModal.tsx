@@ -78,6 +78,7 @@ export function OverlayPreviewModal({ overlay, onDismiss }: OverlayPreviewModalP
         <button
           onClick={handleDismiss}
           className="absolute top-3 right-3 p-1 text-white/60 hover:text-white rounded-full hover:bg-white/10"
+          aria-label="Close preview"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path

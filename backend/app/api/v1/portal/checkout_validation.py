@@ -10,8 +10,10 @@ import logging
 from datetime import date
 from decimal import Decimal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import select
 
 from app.core.dependencies import DbSessionDep
@@ -28,10 +30,13 @@ from .registration import resolve_tenant_and_conference
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/{tenant_slug}/conferences/{conference_slug}/validate-discount/{code}")
+@limiter.limit("10/minute")
 async def validate_discount_code(
+    request: Request,
     tenant_slug: str,
     conference_slug: str,
     code: str,
@@ -132,7 +137,9 @@ class VatCalculationRequest(BaseModel):
 
 
 @router.post("/{tenant_slug}/conferences/{conference_slug}/calculate-vat")
+@limiter.limit("10/minute")
 async def calculate_vat_preview(
+    request: Request,
     tenant_slug: str,
     conference_slug: str,
     data: VatCalculationRequest,
@@ -262,7 +269,9 @@ async def calculate_vat_preview(
 
 
 @router.post("/{tenant_slug}/conferences/{conference_slug}/validate-vat")
+@limiter.limit("10/minute")
 async def validate_vat_public(
+    request: Request,
     tenant_slug: str,
     conference_slug: str,
     db: DbSessionDep,

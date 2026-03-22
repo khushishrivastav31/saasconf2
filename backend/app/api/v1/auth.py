@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.core.applicant_security import generate_email_verification_token
@@ -117,12 +118,13 @@ async def login(
     modules: list[str] = []
     if user.tenant_id:
         result = await db.execute(
-            select(TenantModule).where(TenantModule.tenant_id == user.tenant_id).where(TenantModule.is_enabled == True)
+            select(TenantModule)
+            .where(TenantModule.tenant_id == user.tenant_id)
+            .where(TenantModule.is_enabled == True)
+            .options(selectinload(TenantModule.module))
         )
         tenant_modules = result.scalars().all()
-        # We need to load the module codes
         for tm in tenant_modules:
-            await db.refresh(tm, ["module"])
             if tm.module:
                 modules.append(tm.module.code)
 
@@ -308,11 +310,13 @@ async def refresh_token(
     modules: list[str] = []
     if user.tenant_id:
         result = await db.execute(
-            select(TenantModule).where(TenantModule.tenant_id == user.tenant_id).where(TenantModule.is_enabled == True)
+            select(TenantModule)
+            .where(TenantModule.tenant_id == user.tenant_id)
+            .where(TenantModule.is_enabled == True)
+            .options(selectinload(TenantModule.module))
         )
         tenant_modules = result.scalars().all()
         for tm in tenant_modules:
-            await db.refresh(tm, ["module"])
             if tm.module:
                 modules.append(tm.module.code)
 
@@ -429,11 +433,13 @@ async def get_current_user_info(
 
         # Load modules from DB so assignments are reflected immediately
         result = await db.execute(
-            select(TenantModule).where(TenantModule.tenant_id == user.tenant_id).where(TenantModule.is_enabled == True)
+            select(TenantModule)
+            .where(TenantModule.tenant_id == user.tenant_id)
+            .where(TenantModule.is_enabled == True)
+            .options(selectinload(TenantModule.module))
         )
         tenant_modules = result.scalars().all()
         for tm in tenant_modules:
-            await db.refresh(tm, ["module"])
             if tm.module:
                 modules.append(tm.module.code)
 

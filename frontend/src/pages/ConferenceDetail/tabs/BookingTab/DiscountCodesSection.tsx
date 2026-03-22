@@ -238,6 +238,7 @@ export default function DiscountCodesSection({
                           onClick={() => onEditDiscount(dc)}
                           className="text-gray-400 hover:text-primary-600 transition-colors"
                           title="Edit discount code"
+                          aria-label="Edit discount code"
                         >
                           <EditIcon />
                         </button>
@@ -247,6 +248,7 @@ export default function DiscountCodesSection({
                           }
                           className="text-gray-300 hover:text-red-500 transition-colors"
                           title="Delete discount code"
+                          aria-label="Delete discount code"
                         >
                           <DeleteIcon />
                         </button>

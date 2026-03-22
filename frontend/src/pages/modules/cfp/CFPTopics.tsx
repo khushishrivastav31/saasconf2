@@ -143,6 +143,7 @@ export default function CFPTopics({ isAdmin: isAdminProp }: { isAdmin?: boolean 
                       disabled={!editName.trim() || isSaving}
                       className="p-1.5 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-md disabled:opacity-50"
                       title="Save"
+                      aria-label="Save"
                     >
                       <svg
                         className="w-4 h-4"
@@ -163,6 +164,7 @@ export default function CFPTopics({ isAdmin: isAdminProp }: { isAdmin?: boolean 
                       onClick={cancelEdit}
                       className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
                       title="Cancel"
+                      aria-label="Cancel"
                     >
                       <svg
                         className="w-4 h-4"

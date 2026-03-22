@@ -21,7 +21,7 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -908,10 +908,10 @@ class TestPortalPapers:
         assert del_resp.status_code == 404
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers.send_email_background")
     async def test_create_paper_with_cospeakers(
         self,
-        mock_email: AsyncMock,
+        mock_bg_email: MagicMock,
         client: AsyncClient,
         applicant: CFPApplicant,
         applicant_token: str,
@@ -935,8 +935,8 @@ class TestPortalPapers:
         assert data["cospeakers"][0]["email"] == second_applicant.email
         assert data["cospeakers"][0]["invitation_status"] == "pending"
 
-        # Verify the email invitation was triggered
-        mock_email.assert_called_once()
+        # Verify the background email invitation was triggered
+        mock_bg_email.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)

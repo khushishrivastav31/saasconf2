@@ -139,6 +139,7 @@ export default function MiniRichTextEditor({
               : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
           }`}
           title="Link"
+          aria-label="Link"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path

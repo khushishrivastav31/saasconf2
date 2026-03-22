@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { useDebouncedValue } from '../../../hooks/useDebounce';
+import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
@@ -43,10 +43,21 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
   const queryClient = useQueryClient();
 
   // State
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search);
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterBookingOption, setFilterBookingOption] = useState('');
+  const {
+    search,
+    setSearch,
+    debouncedSearch,
+    status: filterStatus,
+    setStatus: setFilterStatus,
+    bookingOption: filterBookingOption,
+    setBookingOption: setFilterBookingOption,
+    hasActiveFilters,
+    clearAllFilters: clearFilters,
+  } = useUrlFilters({
+    search: '',
+    status: '',
+    bookingOption: '',
+  });
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -366,13 +377,7 @@ export default function AttendeesTab({ conference, isAdmin }: AttendeesTabProps)
     addItemMutation.mutate({ regId: expandedRowId, data: payload });
   }
 
-  // Clear filters
-  const hasActiveFilters = search || filterStatus || filterBookingOption;
-  const clearFilters = () => {
-    setSearch('');
-    setFilterStatus('');
-    setFilterBookingOption('');
-  };
+  // hasActiveFilters and clearFilters provided by useUrlFilters
 
   // Toggle row expansion
   const handleRowClick = useCallback((registrationId: string) => {

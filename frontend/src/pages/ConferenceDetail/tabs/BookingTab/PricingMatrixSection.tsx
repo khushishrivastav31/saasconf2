@@ -288,6 +288,7 @@ export default function PricingMatrixSection({
                               }}
                               className="text-gray-300 hover:text-red-500 transition-colors"
                               title="Delete period"
+                              aria-label="Delete period"
                             >
                               <DeleteIcon />
                             </button>
@@ -536,6 +537,7 @@ export default function PricingMatrixSection({
                         }
                         className="text-gray-300 hover:text-red-500 transition-colors"
                         title="Delete option"
+                        aria-label="Delete option"
                       >
                         <DeleteIcon />
                       </button>

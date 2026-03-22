@@ -200,6 +200,7 @@ function TimeSlotCell({ slot, slotIndex, isAdmin, onUpdate, onDelete }: TimeSlot
                 onClick={handleDelete}
                 className="px-1 py-0.5 text-xs text-red-600 bg-red-50 dark:bg-red-900/30 rounded hover:bg-red-100"
                 title="Delete slot"
+                aria-label="Delete slot"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -351,6 +352,7 @@ function TrackHeaderCell({ track, isAdmin, onUpdate, onDelete }: TrackHeaderCell
                 onClick={handleDelete}
                 className="px-1 py-0.5 text-xs text-red-600 bg-red-50 dark:bg-red-900/30 rounded hover:bg-red-100"
                 title="Delete track"
+                aria-label="Delete track"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -735,6 +737,7 @@ export default function ProgramGrid({
               onClick={onAddTrack}
               className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 dark:text-gray-500 hover:text-primary-600 hover:bg-primary-50 transition-colors"
               title="Add track"
+              aria-label="Add track"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -787,6 +790,7 @@ export default function ProgramGrid({
               onClick={onAddSlot}
               className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 dark:text-gray-500 hover:text-primary-600 hover:bg-primary-50 transition-colors"
               title="Add time slot"
+              aria-label="Add time slot"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path

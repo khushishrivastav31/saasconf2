@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.core.applicant_dependencies import CurrentApplicantDep, DbSessionDep
-from app.core.email import send_cospeaker_invitation_email
+from app.core.email import send_cospeaker_invitation_email, send_email_background
 from app.core.exceptions import AuthorizationError, NotFoundError, SubmissionValidationError, ValidationError
 from app.core.utils import utcnow
 from app.models.associations import ConferenceCFP
@@ -714,7 +714,8 @@ async def _sync_cospeakers(
                 company_name = row[1]
 
             cospeaker_settings = get_settings()
-            await send_cospeaker_invitation_email(
+            send_email_background(
+                send_cospeaker_invitation_email,
                 db,
                 email=applicant.email,
                 paper_title=paper.title,

@@ -3,6 +3,7 @@
 import logging
 import math
 from datetime import date
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Query, Request
@@ -81,8 +82,8 @@ async def list_registrations(
     db: DbSessionDep,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    search: str | None = None,
-    status: str | None = None,
+    search: str | None = Query(None, max_length=200),
+    status: Literal["registered_pending_invoice", "invoiced", "paid", "cancelled"] | None = None,
 ) -> RegistrationListResponse:
     """List registrations for a conference with pagination and filtering."""
     tenant_id = current_user.tenant_id

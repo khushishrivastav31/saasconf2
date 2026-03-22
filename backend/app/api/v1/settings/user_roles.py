@@ -398,7 +398,7 @@ async def list_role_assignments(
     role_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
-    search: str | None = Query(None, description="Search by name or email"),
+    search: str | None = Query(None, max_length=200, description="Search by name or email"),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
 ) -> RoleAssignmentListResponse:
@@ -592,7 +592,7 @@ async def list_assignable_applicants(
     role_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
-    search: str | None = Query(None, description="Search by name or email"),
+    search: str | None = Query(None, max_length=200, description="Search by name or email"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ) -> AssignableApplicantListResponse:

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { queryKeys } from '../../../config/queryKeys';
 import { parseApiError } from '../../../utils/apiError';
-import { useDebouncedValue } from '../../../hooks/useDebounce';
+import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import type { Conference } from '../../../types';
 import Modal from '../../../components/Modal';
 import ConfirmDialog from '../../../components/ConfirmDialog';
@@ -88,9 +88,10 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
   const { showToast } = useToast();
 
   // State
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search);
+  const { search, setSearch, debouncedSearch, page, setPage } = useUrlFilters({
+    search: '',
+    page: 1,
+  });
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Alumni | null>(null);
@@ -307,10 +308,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
           <input
             type="text"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, email, or company..."
             className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-primary-500 focus:border-primary-500"
           />
@@ -555,6 +553,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
                           onClick={() => setDeleteTarget(a)}
                           className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 transition-colors"
                           title="Delete"
+                          aria-label="Delete"
                         >
                           <DeleteIcon />
                         </button>
@@ -579,7 +578,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
             <button
               type="button"
               disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() => setPage(Math.max(1, page - 1))}
               className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:text-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Previous
@@ -590,7 +589,7 @@ export default function AlumniTab({ conference, isAdmin }: AlumniTabProps) {
             <button
               type="button"
               disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
               className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:text-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Next

@@ -123,7 +123,7 @@ async def list_applicant_activities(
     activity_type: str | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
-    search: str | None = Query(None, description="Search by email or name"),
+    search: str | None = Query(None, max_length=200, description="Search by email or name"),
 ) -> ApplicantActivityListResponse:
     """
     List applicant activity logs with filtering, search, and pagination.
@@ -162,7 +162,7 @@ async def list_applicant_activities_grouped(
     activity_type: str | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
-    search: str | None = Query(None, description="Search by email or name"),
+    search: str | None = Query(None, max_length=200, description="Search by email or name"),
 ) -> ApplicantGroupedListResponse:
     """
     List applicant activity logs grouped by applicant.
@@ -263,7 +263,7 @@ async def export_applicant_activities(
     activity_type: str | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
-    search: str | None = Query(None, description="Search by email or name"),
+    search: str | None = Query(None, max_length=200, description="Search by email or name"),
     max_rows: int = Query(10000, ge=1, le=100000, description="Maximum rows to export"),
 ) -> StreamingResponse:
     """

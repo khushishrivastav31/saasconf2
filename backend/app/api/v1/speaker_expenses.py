@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Query
@@ -699,10 +700,10 @@ async def list_speaker_expenses(
     conference_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
-    status: str | None = Query(None),
+    status: Literal["draft", "submitted", "approved", "rejected", "paid"] | None = Query(None),
     category_id: UUID | None = Query(None),
     speaker_name: str | None = Query(None),
-    search: str | None = Query(None),
+    search: str | None = Query(None, max_length=200),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
 ) -> SpeakerExpenseListResponse:

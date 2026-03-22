@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from app.config import get_settings
 from app.core.applicant_security import generate_email_verification_token
 from app.core.dependencies import DbSessionDep, SuperAdminDep, get_client_ip
-from app.core.email import send_tenant_user_welcome_email
+from app.core.email import send_email_background, send_tenant_user_welcome_email
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
@@ -190,7 +190,8 @@ async def create_tenant(
                 if isinstance(cp, dict) and cp.get("email"):
                     tenant_support_email = cp["email"]
                     break
-        await send_tenant_user_welcome_email(
+        send_email_background(
+            send_tenant_user_welcome_email,
             db,
             email=admin_user.email,
             token=raw_token,

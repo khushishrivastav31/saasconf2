@@ -28,7 +28,7 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests-minimum-
 os.environ.setdefault("SUPER_ADMIN_PASSWORD", "testpassword123")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -275,10 +275,10 @@ class TestPaperResponseFields:
         assert data["submitted_at"] is None
 
     @pytest.mark.asyncio
-    @patch("app.api.v1.cfp_portal.papers.send_cospeaker_invitation_email", new_callable=AsyncMock)
+    @patch("app.api.v1.cfp_portal.papers.send_email_background")
     async def test_paper_with_multiple_cospeakers_full_response(
         self,
-        mock_email: AsyncMock,
+        mock_bg_email: MagicMock,
         client: AsyncClient,
         applicant: CFPApplicant,
         applicant_token: str,
@@ -308,7 +308,7 @@ class TestPaperResponseFields:
             assert cs["applicant_id"] is not None
             assert cs["first_name"] is not None
             assert cs["last_name"] is not None
-        assert mock_email.call_count == 2
+        assert mock_bg_email.call_count == 2
 
 
 # ── TestPaperStatusMasking ───────────────────────────────────────────────

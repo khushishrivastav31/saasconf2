@@ -91,7 +91,7 @@ async def _notify_other_participants(
     conference_id: UUID,
 ) -> None:
     """Send email notifications to other participants."""
-    from app.core.email import send_new_message_notification
+    from app.core.email import send_email_background, send_new_message_notification
 
     result = await db.execute(
         select(MessageParticipant).where(
@@ -109,18 +109,16 @@ async def _notify_other_participants(
             link = (
                 f"{settings.FRONTEND_BASE_URL}/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
             )
-            try:
-                await send_new_message_notification(
-                    db,
-                    email=user.email,
-                    first_name=user.first_name or "",
-                    conference_id=conference_id,
-                    conference_name=conference_name,
-                    message_subject=thread.subject,
-                    messages_link=link,
-                )
-            except Exception:
-                logger.exception(f"Failed to send message notification to {user.email}")
+            send_email_background(
+                send_new_message_notification,
+                db,
+                email=user.email,
+                first_name=user.first_name or "",
+                conference_id=conference_id,
+                conference_name=conference_name,
+                message_subject=thread.subject,
+                messages_link=link,
+            )
         elif p.participant_type == "applicant":
             app_result = await db.execute(select(CFPApplicant).where(CFPApplicant.id == p.participant_id))
             applicant = app_result.scalar_one_or_none()
@@ -128,18 +126,16 @@ async def _notify_other_participants(
                 continue
             portal_base = settings.PORTAL_BASE_URL
             link = f"{portal_base}/{tenant_slug}/portal/messages/{thread.id}"
-            try:
-                await send_new_message_notification(
-                    db,
-                    email=applicant.email,
-                    first_name=applicant.first_name,
-                    conference_id=conference_id,
-                    conference_name=conference_name,
-                    message_subject=thread.subject,
-                    messages_link=link,
-                )
-            except Exception:
-                logger.exception(f"Failed to send message notification to {applicant.email}")
+            send_email_background(
+                send_new_message_notification,
+                db,
+                email=applicant.email,
+                first_name=applicant.first_name,
+                conference_id=conference_id,
+                conference_name=conference_name,
+                message_subject=thread.subject,
+                messages_link=link,
+            )
 
 
 async def _fetch_message_attachments(db, message_ids: list[UUID]) -> dict[UUID, list[MessageAttachmentInfo]]:

@@ -92,6 +92,7 @@ function SortableBuiltinField({
               {...attributes}
               {...listeners}
               className="flex-shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none"
+              aria-label="Drag to reorder"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path

@@ -308,6 +308,7 @@ export default function CRUDSettingsTab<
                         onClick={() => handleEdit(item)}
                         className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors mr-2"
                         title="Edit"
+                        aria-label="Edit"
                       >
                         <EditIcon />
                       </button>
@@ -316,6 +317,7 @@ export default function CRUDSettingsTab<
                           disabled
                           className="text-gray-300 dark:text-gray-600 cursor-not-allowed p-1 rounded transition-colors"
                           title={deleteConfig.disabledTitle?.(item) ?? 'Cannot delete'}
+                          aria-label={deleteConfig.disabledTitle?.(item) ?? 'Cannot delete'}
                         >
                           <DeleteIcon />
                         </button>
@@ -324,6 +326,7 @@ export default function CRUDSettingsTab<
                           onClick={() => handleDelete(item)}
                           className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                           title={deleteConfig?.enabledTitle ?? 'Delete'}
+                          aria-label={deleteConfig?.enabledTitle ?? 'Delete'}
                         >
                           <DeleteIcon />
                         </button>

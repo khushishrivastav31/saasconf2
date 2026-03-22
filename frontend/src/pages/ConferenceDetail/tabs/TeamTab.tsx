@@ -372,6 +372,7 @@ function ConferenceTeamTab({
                         onClick={() => startEditing(index)}
                         className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors"
                         title="Edit"
+                        aria-label="Edit"
                       >
                         <EditIcon />
                       </button>
@@ -380,6 +381,7 @@ function ConferenceTeamTab({
                         onClick={() => setRemoveTarget({ index, member })}
                         className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
                         title="Remove from team"
+                        aria-label="Remove from team"
                       >
                         <DeleteIcon />
                       </button>

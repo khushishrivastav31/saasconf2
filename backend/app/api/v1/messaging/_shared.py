@@ -40,7 +40,7 @@ async def _notify_participants(
     base_url: str = "",
 ) -> None:
     """Send email notifications to other participants if they have notifications enabled."""
-    from app.core.email import send_new_message_notification
+    from app.core.email import send_email_background, send_new_message_notification
 
     # Get all participants except the sender
     result = await db.execute(
@@ -59,18 +59,16 @@ async def _notify_participants(
             if not applicant or not applicant.message_notifications_enabled:
                 continue
             messages_link = f"{base_url}/{tenant_slug}/portal/messages/{thread.id}"
-            try:
-                await send_new_message_notification(
-                    db,
-                    email=applicant.email,
-                    first_name=applicant.first_name,
-                    conference_id=conference_id,
-                    conference_name=conference_name,
-                    message_subject=thread.subject,
-                    messages_link=messages_link,
-                )
-            except Exception:
-                logger.exception(f"Failed to send message notification to {applicant.email}")
+            send_email_background(
+                send_new_message_notification,
+                db,
+                email=applicant.email,
+                first_name=applicant.first_name,
+                conference_id=conference_id,
+                conference_name=conference_name,
+                message_subject=thread.subject,
+                messages_link=messages_link,
+            )
         elif p.participant_type == "user":
             user_result = await db.execute(select(User).where(User.id == p.participant_id))
             user = user_result.scalar_one_or_none()
@@ -82,18 +80,16 @@ async def _notify_participants(
             messages_link = (
                 f"{_s.FRONTEND_BASE_URL}/modules/conferences/{conference_id}?section=messaging&thread={thread.id}"
             )
-            try:
-                await send_new_message_notification(
-                    db,
-                    email=user.email,
-                    first_name=user.first_name or "",
-                    conference_id=conference_id,
-                    conference_name=conference_name,
-                    message_subject=thread.subject,
-                    messages_link=messages_link,
-                )
-            except Exception:
-                logger.exception(f"Failed to send message notification to {user.email}")
+            send_email_background(
+                send_new_message_notification,
+                db,
+                email=user.email,
+                first_name=user.first_name or "",
+                conference_id=conference_id,
+                conference_name=conference_name,
+                message_subject=thread.subject,
+                messages_link=messages_link,
+            )
 
 
 async def _check_messaging_access(db, current_user, conference_id: UUID) -> None:

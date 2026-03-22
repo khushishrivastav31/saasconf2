@@ -167,7 +167,7 @@ async def list_audit_logs(
     resource_type: str | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
-    search: str | None = Query(None, description="Search in action, user, IP, or details"),
+    search: str | None = Query(None, max_length=200, description="Search in action, user, IP, or details"),
 ) -> AuditLogListResponse:
     """
     List audit logs with filtering, search, and pagination.
@@ -231,7 +231,7 @@ async def export_audit_logs(
     resource_type: str | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
-    search: str | None = Query(None, description="Search in action, user, IP, or details"),
+    search: str | None = Query(None, max_length=200, description="Search in action, user, IP, or details"),
     max_rows: int = Query(10000, ge=1, le=100000, description="Maximum rows to export"),
 ) -> StreamingResponse:
     """
