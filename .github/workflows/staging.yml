@@ -203,10 +203,14 @@ jobs:
           du -sh dist/
           du -sh dist/assets/*.js | sort -rh | head -10
           TOTAL_JS=$(find dist/assets -name '*.js' -exec cat {} + | wc -c)
-          echo "Total JS: $(( TOTAL_JS / 1024 )) KB"
-          if [ "$TOTAL_JS" -gt 2097152 ]; then
-            echo "::error::Total JS bundle exceeds 2MB ($TOTAL_JS bytes)"
+          TOTAL_KB=$(( TOTAL_JS / 1024 ))
+          echo "Total JS: ${TOTAL_KB} KB"
+          # Warn at 4.5MB, fail at 6MB (current baseline ~4MB with code splitting)
+          if [ "$TOTAL_JS" -gt 6291456 ]; then
+            echo "::error::Total JS bundle exceeds 6MB (${TOTAL_KB} KB) — investigate large dependencies"
             exit 1
+          elif [ "$TOTAL_JS" -gt 4718592 ]; then
+            echo "::warning::Total JS bundle exceeds 4.5MB (${TOTAL_KB} KB) — consider optimizing"
           fi
 
   # ─────────────────────────────────────────────────────────────

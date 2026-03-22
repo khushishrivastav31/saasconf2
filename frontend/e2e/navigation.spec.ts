@@ -1,10 +1,28 @@
 import { test, expect } from '@playwright/test';
 
 import { softVisible } from './helpers/navigation';
+
+/** Navigate to dashboard, re-authenticating if the saved session expired. */
+async function gotoDashboard(page: import('@playwright/test').Page) {
+  await page.goto('/dashboard');
+
+  // If redirected to login, the stored auth state has expired — re-authenticate
+  if (page.url().includes('/login')) {
+    const email = process.env.E2E_ADMIN_EMAIL;
+    const password = process.env.E2E_ADMIN_PASSWORD;
+    if (!email || !password) throw new Error('E2E_ADMIN_EMAIL / PASSWORD required for re-auth');
+    await page.getByPlaceholder(/email/i).fill(email);
+    await page.getByPlaceholder(/password/i).fill(password);
+    await page.getByRole('button', { name: /sign in/i }).click();
+    await expect(page).toHaveURL(/dashboard|conferences/i, { timeout: 15000 });
+  }
+
+  await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible({ timeout: 15000 });
+}
+
 test.describe('Navigation', () => {
   test('should show sidebar navigation with correct links', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible({ timeout: 10000 });
+    await gotoDashboard(page);
 
     // Sidebar should have key navigation items
     const sidebar = page.locator('aside').or(page.locator('nav')).first();
@@ -14,8 +32,7 @@ test.describe('Navigation', () => {
   });
 
   test('should navigate to management or admin pages', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible({ timeout: 10000 });
+    await gotoDashboard(page);
 
     // Admin section is only visible to super_admin; management is visible to tenant_admin+
     const companiesLink = page.getByRole('link', { name: /companies/i });
@@ -45,8 +62,7 @@ test.describe('Navigation', () => {
   });
 
   test('should logout successfully', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible({ timeout: 10000 });
+    await gotoDashboard(page);
 
     // Open user dropdown menu in header
     const userMenuTrigger = page.locator('header button:has(svg)').last();
