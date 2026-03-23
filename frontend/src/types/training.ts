@@ -1,0 +1,115 @@
+import type { SocialLinks } from './common';
+import type { TeamMember } from './conference';
+
+// Training types
+export type TrainingStatus = 'draft' | 'upcoming' | 'ongoing' | 'past';
+
+export { TeamMember };
+
+export interface Training {
+  id: string;
+  tenant_id: string;
+  name: string;
+  abbreviation: string | null;
+  description: string | null;
+  website: string | null;
+  logo_url: string | null;
+  // Contact info
+  support_email: string | null;
+  contact_email: string | null;
+  phone: string | null;
+  // Dates
+  start_date: string | null;
+  end_date: string | null;
+  // Location
+  venue_name: string | null;
+  venue_address: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  timezone: string | null;
+  locale: string | null;
+  venue_type: 'onsite' | 'virtual' | 'hybrid';
+  venue_url: string | null;
+  virtual_platform_url: string | null;
+  // Social links
+  social_links: SocialLinks;
+  // Team
+  team_members: TeamMember[];
+  // Settings
+  settings: Record<string, unknown>;
+  // Currency
+  currency: string | null;
+  invoice_currency: string | null;
+  // Status
+  is_active: boolean;
+  is_published: boolean;
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+  // Computed
+  managers_count: number;
+  team_count: number;
+  status: TrainingStatus;
+}
+
+export interface TrainingCreate {
+  name: string;
+  abbreviation?: string;
+  description?: string;
+  website?: string;
+  logo_url?: string;
+  support_email?: string;
+  contact_email?: string;
+  phone?: string;
+  start_date?: string;
+  end_date?: string;
+  venue_name?: string;
+  venue_address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  timezone?: string;
+  locale?: string;
+  venue_type?: 'onsite' | 'virtual' | 'hybrid';
+  venue_url?: string;
+  virtual_platform_url?: string;
+  social_links?: SocialLinks;
+  team_members?: TeamMember[];
+  settings?: Record<string, unknown>;
+  currency?: string;
+  invoice_currency?: string;
+}
+
+export interface TrainingUpdate {
+  name?: string;
+  abbreviation?: string;
+  description?: string;
+  website?: string;
+  logo_url?: string;
+  support_email?: string;
+  contact_email?: string;
+  phone?: string;
+  start_date?: string;
+  end_date?: string;
+  venue_name?: string;
+  venue_address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  timezone?: string;
+  locale?: string;
+  venue_type?: 'onsite' | 'virtual' | 'hybrid';
+  venue_url?: string;
+  virtual_platform_url?: string;
+  social_links?: SocialLinks;
+  team_members?: TeamMember[];
+  settings?: Record<string, unknown>;
+  currency?: string;
+  invoice_currency?: string | null;
+  is_active?: boolean;
+  is_published?: boolean;
+}

@@ -91,6 +91,7 @@ from app.models.sponsor import Sponsor
 from app.models.sponsor_contract import SponsorContract, SponsorContractVersion
 from app.models.tenant import Tenant
 from app.models.token import RefreshToken
+from app.models.training import Training
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
 from app.models.user_password_reset import UserPasswordReset
@@ -195,6 +196,7 @@ __all__ = [
     "TenantRoleLevel",
     "TenantRoleScope",
     "ThreadFlag",
+    "Training",
     "User",
     "UserConferenceAccess",
     "UserPasswordReset",

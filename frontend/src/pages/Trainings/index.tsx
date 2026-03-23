@@ -31,16 +31,47 @@ export default function Trainings() {
     expandedSections,
     setExpandedSections,
     filteredGroups,
+    setSelectedTrainingId,
+    selectedTraining,
+    refetchTraining,
   } = useTrainingsModule();
 
   return (
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Training Management</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Manage trainings, trainers, registrations, and more.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Training Management
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Manage trainings, trainers, registrations, and more.
+            </p>
+          </div>
+          {selectedTraining && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 rounded-lg">
+              <span className="text-sm text-primary-700 dark:text-primary-300 font-medium">
+                {selectedTraining.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedTrainingId(null)}
+                className="text-primary-400 hover:text-primary-600 dark:hover:text-primary-200"
+                title="Deselect training"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Two-column layout */}
@@ -149,21 +180,34 @@ export default function Trainings() {
                           expandedSections.has(section.id) &&
                           !sidebarCollapsed && (
                             <div className="ml-4 mb-1 space-y-0.5">
-                              {section.children.map((child) => (
-                                <button
-                                  key={child.id}
-                                  type="button"
-                                  onClick={() => setActiveSection(child.id)}
-                                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                                    activeSection === child.id
-                                      ? 'bg-primary-50 text-primary-700 font-medium'
-                                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                  }`}
-                                >
-                                  <child.icon />
-                                  <span className="truncate text-left">{child.name}</span>
-                                </button>
-                              ))}
+                              {section.children.map((child, childIdx) => {
+                                const prevGroup =
+                                  childIdx > 0 ? section.children![childIdx - 1].group : undefined;
+                                const showGroupHeader = child.group && child.group !== prevGroup;
+                                return (
+                                  <div key={child.id}>
+                                    {showGroupHeader && (
+                                      <p
+                                        className={`px-3 text-[9px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 ${childIdx > 0 ? 'pt-2 mt-1 border-t border-gray-200 dark:border-gray-700' : 'pt-1'} pb-0.5`}
+                                      >
+                                        {child.group}
+                                      </p>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveSection(child.id)}
+                                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                        activeSection === child.id
+                                          ? 'bg-primary-50 text-primary-700 font-medium'
+                                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                      }`}
+                                    >
+                                      <child.icon />
+                                      <span className="truncate text-left">{child.name}</span>
+                                    </button>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                       </div>
@@ -179,9 +223,18 @@ export default function Trainings() {
         <div className="flex-1 min-w-0">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <Suspense fallback={<LazyFallback />}>
-              {activeSection === 'team' && <TeamTab />}
+              {activeSection === 'team' && (
+                <TeamTab training={selectedTraining} onUpdate={refetchTraining} />
+              )}
               {activeSection === 'social' && <SocialTab />}
-              {activeSection === 'trainings-list' && <TrainingsListTab />}
+              {activeSection === 'trainings-list' && (
+                <TrainingsListTab
+                  onSelectTraining={(id) => {
+                    setSelectedTrainingId(id);
+                    setActiveSection('team');
+                  }}
+                />
+              )}
               {activeSection === 'registrations' && <RegistrationsTab />}
               {activeSection === 'invoices' && <InvoicesTab />}
               {activeSection === 'payment-reminders' && <PaymentRemindersTab />}

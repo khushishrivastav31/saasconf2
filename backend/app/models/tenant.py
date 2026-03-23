@@ -13,6 +13,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.conference import Conference
     from app.models.module import TenantModule
+    from app.models.training import Training
     from app.models.user import User
 
 
@@ -86,6 +87,9 @@ class Tenant(Base):
     )
     conferences: Mapped[list["Conference"]] = relationship(
         "Conference", back_populates="tenant", cascade="all, delete-orphan"
+    )
+    trainings: Mapped[list["Training"]] = relationship(
+        "Training", back_populates="tenant", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

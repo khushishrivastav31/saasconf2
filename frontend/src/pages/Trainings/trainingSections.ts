@@ -83,6 +83,7 @@ export interface TrainingSectionChild {
   id: TrainingSectionId;
   name: string;
   icon: () => React.JSX.Element;
+  group?: string;
 }
 
 export interface TrainingSectionDef {
@@ -113,51 +114,140 @@ export const sectionGroups: TrainingSectionGroup[] = [
         name: 'Settings',
         icon: SettingsGearIcon,
         children: [
-          { id: 'settings-trainers', name: 'Trainers', icon: TrainersIcon },
-          { id: 'settings-syllabi', name: 'Syllabi', icon: SyllabiIcon },
-          { id: 'settings-trainings', name: 'Trainings', icon: TrainingsSettingsIcon },
-          { id: 'settings-pronoun-options', name: 'Pronoun Options', icon: PronounIcon },
-          { id: 'settings-location-types', name: 'Location Types', icon: LocationTypesIcon },
+          // Training Setup
+          {
+            id: 'settings-trainers',
+            name: 'Trainers',
+            icon: TrainersIcon,
+            group: 'Training Setup',
+          },
+          {
+            id: 'settings-syllabi',
+            name: 'Syllabi',
+            icon: SyllabiIcon,
+            group: 'Training Setup',
+          },
+          {
+            id: 'settings-trainings',
+            name: 'Trainings',
+            icon: TrainingsSettingsIcon,
+            group: 'Training Setup',
+          },
+          {
+            id: 'settings-pronoun-options',
+            name: 'Pronoun Options',
+            icon: PronounIcon,
+            group: 'Training Setup',
+          },
+          {
+            id: 'settings-location-types',
+            name: 'Location Types',
+            icon: LocationTypesIcon,
+            group: 'Training Setup',
+          },
           {
             id: 'settings-registration-portal',
             name: 'Registration Portal',
             icon: PortalIcon,
+            group: 'Training Setup',
           },
-          { id: 'settings-policies', name: 'Policies', icon: PoliciesIcon },
+          {
+            id: 'settings-policies',
+            name: 'Policies',
+            icon: PoliciesIcon,
+            group: 'Training Setup',
+          },
           {
             id: 'settings-registration-questions',
             name: 'Registration Questions',
             icon: RegistrationQuestionsIcon,
+            group: 'Training Setup',
           },
-          { id: 'settings-email', name: 'Email Settings', icon: EmailIcon },
+          // Communication
+          {
+            id: 'settings-email',
+            name: 'Email Settings',
+            icon: EmailIcon,
+            group: 'Communication',
+          },
           {
             id: 'settings-system-email-templates',
             name: 'System Email Templates',
             icon: SystemEmailIcon,
+            group: 'Communication',
           },
-          { id: 'settings-messaging', name: 'Messaging', icon: MessagingSettingsIcon },
+          {
+            id: 'settings-messaging',
+            name: 'Messaging',
+            icon: MessagingSettingsIcon,
+            group: 'Communication',
+          },
           {
             id: 'settings-message-templates',
             name: 'Message Templates',
             icon: MessageTemplatesIcon,
+            group: 'Communication',
           },
-          { id: 'settings-recipient-lists', name: 'Recipient Lists', icon: RecipientListsIcon },
-          { id: 'settings-screen-overlays', name: 'Screen Overlays', icon: ScreenOverlaysIcon },
-          { id: 'settings-currency-tax', name: 'Currency & Tax', icon: CurrencyTaxIcon },
-          { id: 'settings-numbering', name: 'Numbering', icon: NumberingIcon },
-          { id: 'settings-company-data', name: 'Company Data', icon: CompanyDataIcon },
-          { id: 'settings-bank-accounts', name: 'Bank Accounts', icon: BankAccountsIcon },
+          {
+            id: 'settings-recipient-lists',
+            name: 'Recipient Lists',
+            icon: RecipientListsIcon,
+            group: 'Communication',
+          },
+          {
+            id: 'settings-screen-overlays',
+            name: 'Screen Overlays',
+            icon: ScreenOverlaysIcon,
+            group: 'Communication',
+          },
+          // Finance
+          {
+            id: 'settings-currency-tax',
+            name: 'Currency & Tax',
+            icon: CurrencyTaxIcon,
+            group: 'Finance',
+          },
+          {
+            id: 'settings-numbering',
+            name: 'Numbering',
+            icon: NumberingIcon,
+            group: 'Finance',
+          },
+          {
+            id: 'settings-company-data',
+            name: 'Company Data',
+            icon: CompanyDataIcon,
+            group: 'Finance',
+          },
+          {
+            id: 'settings-bank-accounts',
+            name: 'Bank Accounts',
+            icon: BankAccountsIcon,
+            group: 'Finance',
+          },
           {
             id: 'settings-invoice-templates',
             name: 'Invoice Templates',
             icon: InvoiceTemplatesIcon,
+            group: 'Finance',
           },
-          { id: 'settings-zugferd', name: 'ZUGFeRD', icon: ZugferdIcon },
-          { id: 'settings-stripe', name: 'Stripe Setup', icon: StripeIcon },
+          {
+            id: 'settings-zugferd',
+            name: 'ZUGFeRD',
+            icon: ZugferdIcon,
+            group: 'Finance',
+          },
+          {
+            id: 'settings-stripe',
+            name: 'Stripe Setup',
+            icon: StripeIcon,
+            group: 'Finance',
+          },
           {
             id: 'settings-payment-reminders',
             name: 'Payment Reminders',
             icon: PaymentRemindersSettingsIcon,
+            group: 'Finance',
           },
         ],
       },

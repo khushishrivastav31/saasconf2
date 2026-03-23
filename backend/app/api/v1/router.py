@@ -39,6 +39,7 @@ from app.api.v1 import (
     system_email_templates,
     tenant_company,
     tenants,
+    trainings,
     user_conference_access,
     users,
     vat_rates,
@@ -66,7 +67,6 @@ api_router.include_router(
     prefix="/user-conference-access",
     tags=["User Conference Access"],
 )
-
 # Tenant company management (tenant admin)
 api_router.include_router(tenant_company.router, prefix="/my-company", tags=["My Company"])
 
@@ -86,6 +86,7 @@ api_router.include_router(
 
 # Module-specific endpoints (requires module access)
 api_router.include_router(conferences.router, prefix="/conferences", tags=["Conferences"])
+api_router.include_router(trainings.router, prefix="/trainings", tags=["Trainings"])
 api_router.include_router(locations.router, prefix="/locations", tags=["Locations"])
 api_router.include_router(cfp.router, prefix="/cfp", tags=["Call for Papers"])
 

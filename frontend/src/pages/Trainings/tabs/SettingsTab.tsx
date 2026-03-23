@@ -57,7 +57,6 @@ export default function SettingsTab({ activeSection }: SettingsTabProps) {
   const Component = settingsMap[activeSection];
 
   if (!Component) {
-    // Default: show the first settings sub-tab
     return <TrainersSettingsTab />;
   }
 
