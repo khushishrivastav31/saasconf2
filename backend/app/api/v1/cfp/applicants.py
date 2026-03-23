@@ -11,7 +11,7 @@ from app.core.dependencies import (
     TenantAdminDep,
     require_module,
 )
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.core.security import hash_password
 from app.models.applicant_activity import ApplicantActivityLog, ApplicantActivityType
 from app.models.associations import ConferenceCFP
@@ -210,6 +210,16 @@ async def create_applicant(
     db: DbSessionDep,
 ) -> ApplicantResponse:
     """Create a new applicant."""
+    # Check for duplicate email within tenant
+    existing = await db.execute(
+        select(CFPApplicant.id).where(
+            CFPApplicant.tenant_id == current_user.tenant_id,
+            CFPApplicant.email == applicant_data.email,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise ConflictError(f"An applicant with email '{applicant_data.email}' already exists")
+
     social_links_dict = applicant_data.social_links.model_dump() if applicant_data.social_links else {}
     applicant = CFPApplicant(
         tenant_id=current_user.tenant_id,

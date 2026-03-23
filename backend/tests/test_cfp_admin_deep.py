@@ -2144,3 +2144,33 @@ class TestPortalSpeakerFeedback:
         data = resp.json()
         assert data["total"] == 1
         assert data["items"][0]["speaker_feedback"] == "Very good paper"
+
+
+# ============================================================================
+# Admin Applicant CRUD — Duplicate Detection
+# ============================================================================
+
+
+class TestAdminApplicantDuplicate:
+    """Test that creating an applicant with a duplicate email returns 409."""
+
+    @pytest.mark.asyncio
+    async def test_create_duplicate_applicant_returns_409(
+        self,
+        client: AsyncClient,
+        tenant_admin_user: User,
+        applicant: CFPApplicant,
+    ) -> None:
+        """Creating an applicant with the same email twice returns 409."""
+        resp = await client.post(
+            "/api/v1/cfp/applicants",
+            json={
+                "first_name": "Duplicate",
+                "last_name": "User",
+                "email": applicant.email,
+                "password": "Test1234",
+            },
+            headers=_admin_headers(tenant_admin_user),
+        )
+        assert resp.status_code == 409
+        assert "already exists" in resp.json()["detail"]
