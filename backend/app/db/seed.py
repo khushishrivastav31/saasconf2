@@ -57,6 +57,11 @@ async def seed_default_modules(session: AsyncSession) -> None:
             "description": "Create and manage conferences, including basic settings and branding.",
         },
         {
+            "code": "trainings",
+            "name": "Training Management",
+            "description": "Create and manage training courses, workshops, and educational programs.",
+        },
+        {
             "code": "news",
             "name": "News & Newsletters",
             "description": "Publish news articles and newsletters to conference portal users.",

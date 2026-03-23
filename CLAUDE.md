@@ -81,6 +81,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: All 6 phases of performance/reliability plan complete
-- **Status**: Clean — mypy/ruff/tsc/eslint pass, all 1541 frontend + backend tests pass. Not yet committed.
-- **Pending**: User approval to commit phases 5-6
+- **Last completed**: Per-tenant Resend email settings (backend wiring + frontend UI) — awaiting test results
+- **In progress**: Trainings module nav tree (done), module group checkboxes (done), per-tenant Resend (done — tests running)
+- **Status**: mypy, ruff, tsc, eslint all pass — backend + frontend tests running

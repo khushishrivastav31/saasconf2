@@ -2,6 +2,7 @@
 
 Uses Resend API when RESEND_API_KEY is configured,
 otherwise falls back to console logging for development.
+Failures are logged to the email_logs table for admin visibility.
 """
 
 import asyncio
@@ -85,19 +86,29 @@ def send_email_background(
     task.add_done_callback(_background_tasks.discard)
 
 
-def _get_resend():
-    """Get or initialize the Resend client."""
+def _get_resend(api_key: str | None = None):
+    """Get or initialize a Resend client.
+
+    Args:
+        api_key: Optional per-tenant API key. When provided, a fresh client
+                 is created instead of reusing the global singleton.
+    """
     global _resend_client
+    import resend as resend_mod
+
+    if api_key:
+        # Per-tenant key: create a one-off client configuration
+        resend_mod.api_key = api_key
+        return resend_mod
+
     settings = get_settings()
 
     if not settings.RESEND_API_KEY:
         return None
 
     if _resend_client is None:
-        import resend
-
-        resend.api_key = settings.RESEND_API_KEY
-        _resend_client = resend
+        resend_mod.api_key = settings.RESEND_API_KEY
+        _resend_client = resend_mod
 
     return _resend_client
 
@@ -105,6 +116,74 @@ def _get_resend():
 def _log_email(to: str, subject: str, body: str) -> None:
     """Log email to console for development."""
     logger.info(f"=== EMAIL ===\nTo: {to}\nSubject: {subject}\nBody:\n{body}\n=============")
+
+
+async def _log_email_failure(
+    db: AsyncSession,
+    *,
+    tenant_id: UUID | None,
+    conference_id: UUID | None,
+    recipient: str,
+    subject: str,
+    email_type: str,
+    status: str,
+    error: str | None,
+) -> None:
+    """Persist an email delivery failure to the email_logs table."""
+    if not tenant_id:
+        return  # Cannot log without a tenant
+    try:
+        from app.models.email_log import EmailLog
+
+        log_entry = EmailLog(
+            tenant_id=tenant_id,
+            conference_id=conference_id,
+            recipient_email=recipient,
+            subject=subject[:500],
+            email_type=email_type,
+            status=status,
+            error_message=error,
+        )
+        db.add(log_entry)
+        await db.flush()
+    except Exception:
+        logger.warning("Failed to persist email failure log", exc_info=True)
+
+
+class _TenantEmailSettings:
+    """Resolved email settings for a tenant."""
+
+    __slots__ = ("api_key", "from_email", "from_name")
+
+    def __init__(self, api_key: str | None, from_email: str | None, from_name: str | None):
+        self.api_key = api_key
+        self.from_email = from_email
+        self.from_name = from_name
+
+
+async def _get_tenant_email_settings(db: AsyncSession, tenant_id: UUID | None) -> _TenantEmailSettings:
+    """Load per-tenant Resend settings. Returns empty settings if not configured."""
+    if not tenant_id:
+        return _TenantEmailSettings(None, None, None)
+    from app.models.tenant import Tenant
+
+    result = await db.execute(
+        select(
+            Tenant.email_domain,
+            Tenant.resend_api_key,
+            Tenant.resend_from_email,
+            Tenant.resend_from_name,
+        ).where(Tenant.id == tenant_id)
+    )
+    row = result.one_or_none()
+    if not row:
+        return _TenantEmailSettings(None, None, None)
+
+    domain, api_key, from_email, from_name = row
+    # Derive from_email from email_domain if not explicitly set
+    if not from_email and domain:
+        from_email = f"noreply@{domain}"
+    return _TenantEmailSettings(api_key, from_email, from_name)
 
 
 async def send_email(
@@ -115,28 +194,63 @@ async def send_email(
     reply_to: str | None = None,
     attachments: list[dict] | None = None,
     from_email: str | None = None,
+    *,
+    tenant_api_key: str | None = None,
+    tenant_from_name: str | None = None,
+    db: AsyncSession | None = None,
+    tenant_id: UUID | None = None,
+    conference_id: UUID | None = None,
+    email_type: str = "general",
 ) -> bool:
     """
     Send an email using Resend.
 
     Returns True if sent successfully, False otherwise.
-    Falls back to console logging if Resend is not configured.
+    When no API key is configured, logs the failure to email_logs (if db is available)
+    and falls back to console logging.
 
     Args:
         attachments: Optional list of dicts with 'filename' and 'content' (base64-encoded).
         from_email: Optional override for the sender address (e.g. per-tenant domain).
+        tenant_api_key: Per-tenant Resend API key (overrides global key).
+        tenant_from_name: Per-tenant sender display name (overrides global name).
+        db: Database session — when provided with tenant_id, auto-loads per-tenant settings.
+        tenant_id: Tenant UUID — used with db to load per-tenant Resend config.
+        conference_id: Conference UUID — stored in failure logs for context.
+        email_type: Descriptive type for failure logs (e.g. "invoice", "verification").
     """
+    # Auto-load per-tenant settings when db + tenant_id are provided
+    if db is not None and tenant_id is not None and not tenant_api_key:
+        ts = await _get_tenant_email_settings(db, tenant_id)
+        tenant_api_key = ts.api_key
+        if not from_email and ts.from_email:
+            from_email = ts.from_email
+        if not tenant_from_name and ts.from_name:
+            tenant_from_name = ts.from_name
+
     settings = get_settings()
-    resend = _get_resend()
+    resend = _get_resend(api_key=tenant_api_key)
 
     if resend is None:
         _log_email(to, subject, text or html)
-        return True
+        if db is not None:
+            await _log_email_failure(
+                db,
+                tenant_id=tenant_id,
+                conference_id=conference_id,
+                recipient=to,
+                subject=subject,
+                email_type=email_type,
+                status="not_configured",
+                error="No Resend API key configured",
+            )
+        return False
 
     sender = from_email or settings.RESEND_FROM_EMAIL
+    sender_name = tenant_from_name or settings.RESEND_FROM_NAME
     try:
         payload: dict = {
-            "from": f"{settings.RESEND_FROM_NAME} <{sender}>",
+            "from": f"{sender_name} <{sender}>",
             "to": [to],
             "subject": subject,
             "html": html,
@@ -151,6 +265,17 @@ async def send_email(
         return True
     except Exception as e:
         logger.error(f"Failed to send email to {to}: {e}")
+        if db is not None:
+            await _log_email_failure(
+                db,
+                tenant_id=tenant_id,
+                conference_id=conference_id,
+                recipient=to,
+                subject=subject,
+                email_type=email_type,
+                status="failed",
+                error=str(e),
+            )
         return False
 
 
@@ -185,6 +310,7 @@ async def send_verification_email(
     token: str,
     tenant_slug: str,
     conference_id: UUID | None = None,
+    tenant_id: UUID | None = None,
     conference_name: str = "",
     company_name: str = "",
     first_name: str = "",
@@ -220,7 +346,16 @@ async def send_verification_email(
         conference_id=conference_id,
     )
 
-    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
+    return await send_email(
+        email,
+        rendered.subject,
+        rendered.body_html,
+        rendered.body_text,
+        db=db,
+        tenant_id=tenant_id,
+        conference_id=conference_id,
+        email_type="verification",
+    )
 
 
 async def send_submission_confirmation_email(
@@ -228,6 +363,7 @@ async def send_submission_confirmation_email(
     *,
     email: str,
     conference_id: UUID,
+    tenant_id: UUID | None = None,
     conference_name: str,
     company_name: str = "",
     paper_title: str,
@@ -268,7 +404,16 @@ async def send_submission_confirmation_email(
         conference_id=conference_id,
     )
 
-    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
+    return await send_email(
+        email,
+        rendered.subject,
+        rendered.body_html,
+        rendered.body_text,
+        db=db,
+        tenant_id=tenant_id,
+        conference_id=conference_id,
+        email_type="submission_confirmation",
+    )
 
 
 async def send_cospeaker_invitation_email(
@@ -277,6 +422,7 @@ async def send_cospeaker_invitation_email(
     email: str,
     paper_title: str,
     conference_id: UUID,
+    tenant_id: UUID | None = None,
     conference_name: str,
     company_name: str = "",
     main_speaker_name: str,
@@ -314,7 +460,16 @@ async def send_cospeaker_invitation_email(
         conference_id=conference_id,
     )
 
-    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
+    return await send_email(
+        email,
+        rendered.subject,
+        rendered.body_html,
+        rendered.body_text,
+        db=db,
+        tenant_id=tenant_id,
+        conference_id=conference_id,
+        email_type="cospeaker_invitation",
+    )
 
 
 async def send_password_reset_email(
@@ -323,6 +478,7 @@ async def send_password_reset_email(
     email: str,
     token: str,
     conference_id: UUID | None = None,
+    tenant_id: UUID | None = None,
     conference_name: str = "",
     company_name: str = "",
     first_name: str = "",
@@ -355,7 +511,16 @@ async def send_password_reset_email(
         conference_id=conference_id,
     )
 
-    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
+    return await send_email(
+        email,
+        rendered.subject,
+        rendered.body_html,
+        rendered.body_text,
+        db=db,
+        tenant_id=tenant_id,
+        conference_id=conference_id,
+        email_type="password_reset",
+    )
 
 
 async def send_tenant_user_welcome_email(
@@ -363,6 +528,7 @@ async def send_tenant_user_welcome_email(
     *,
     email: str,
     token: str,
+    tenant_id: UUID | None = None,
     company_name: str,
     user_type: str,
     first_name: str = "",
@@ -392,7 +558,16 @@ async def send_tenant_user_welcome_email(
         context,
     )
 
-    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text, from_email=from_email)
+    return await send_email(
+        email,
+        rendered.subject,
+        rendered.body_html,
+        rendered.body_text,
+        from_email=from_email,
+        db=db,
+        tenant_id=tenant_id,
+        email_type="tenant_welcome",
+    )
 
 
 async def send_conference_team_invitation_email(
@@ -433,7 +608,16 @@ async def send_conference_team_invitation_email(
         tenant_id=tenant_id,
     )
 
-    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
+    return await send_email(
+        email,
+        rendered.subject,
+        rendered.body_html,
+        rendered.body_text,
+        db=db,
+        tenant_id=tenant_id,
+        conference_id=conference_id,
+        email_type="team_invitation",
+    )
 
 
 async def send_deadline_reminder(
@@ -483,7 +667,16 @@ async def send_deadline_reminder(
         tenant_id=tenant_id,
     )
 
-    return await send_email(to, rendered.subject, rendered.body_html, rendered.body_text)
+    return await send_email(
+        to,
+        rendered.subject,
+        rendered.body_html,
+        rendered.body_text,
+        db=db,
+        tenant_id=tenant_id,
+        conference_id=conference_id,
+        email_type="deadline_reminder",
+    )
 
 
 async def send_direct_message_email(
@@ -521,7 +714,17 @@ async def send_direct_message_email(
         tenant_id=tenant_id,
     )
 
-    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text, reply_to=reply_to)
+    return await send_email(
+        email,
+        rendered.subject,
+        rendered.body_html,
+        rendered.body_text,
+        reply_to=reply_to,
+        db=db,
+        tenant_id=tenant_id,
+        conference_id=conference_id,
+        email_type="direct_message",
+    )
 
 
 async def send_new_message_notification(
@@ -530,6 +733,7 @@ async def send_new_message_notification(
     email: str,
     first_name: str = "",
     conference_id: UUID,
+    tenant_id: UUID | None = None,
     conference_name: str = "",
     message_subject: str = "",
     messages_link: str = "",
@@ -553,4 +757,13 @@ async def send_new_message_notification(
         conference_id=conference_id,
     )
 
-    return await send_email(email, rendered.subject, rendered.body_html, rendered.body_text)
+    return await send_email(
+        email,
+        rendered.subject,
+        rendered.body_html,
+        rendered.body_text,
+        db=db,
+        tenant_id=tenant_id,
+        conference_id=conference_id,
+        email_type="message_notification",
+    )

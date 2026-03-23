@@ -1,3 +1,5 @@
+import type { TenantRole } from './tenant';
+
 // User types
 export interface User {
   id: string;
@@ -11,6 +13,7 @@ export interface User {
   modules: string[];
   is_active: boolean;
   is_tenant_super_user: boolean;
+  tenant_roles: TenantRole[];
   mfa_enabled: boolean;
   message_notifications_enabled: boolean;
   theme_preference: 'light' | 'dark' | null;

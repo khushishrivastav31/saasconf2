@@ -18,10 +18,10 @@ const CallForPapers = lazy(() => import('./pages/modules/CallForPapers'));
 const Conferences = lazy(() => import('./pages/Conferences'));
 const ConferenceDetail = lazy(() => import('./pages/ConferenceDetail'));
 const ComingSoon = lazy(() => import('./pages/modules/ComingSoon'));
+const Trainings = lazy(() => import('./pages/Trainings'));
 const Team = lazy(() => import('./pages/Team'));
 const MyCompany = lazy(() => import('./pages/MyCompany'));
 const ApplicantActivityLog = lazy(() => import('./pages/ApplicantActivityLog'));
-const SystemEmailTemplates = lazy(() => import('./pages/SystemEmailTemplates'));
 const Handbook = lazy(() => import('./pages/Handbook'));
 
 // Lazy-loaded CFP module pages
@@ -249,15 +249,8 @@ function App() {
               }
             />
 
-            {/* System Email Templates (tenant admin only) */}
-            <Route
-              path="email-templates"
-              element={
-                <TenantOnlyRoute>
-                  <SystemEmailTemplates />
-                </TenantOnlyRoute>
-              }
-            />
+            {/* Redirect old email-templates route to my-company */}
+            <Route path="email-templates" element={<Navigate to="/my-company" replace />} />
 
             {/* Handbook (all authenticated users) */}
             <Route path="handbook" element={<Handbook />} />
@@ -276,6 +269,14 @@ function App() {
               element={
                 <ModuleRoute moduleCode="conferences">
                   <ConferenceDetail />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="modules/trainings"
+              element={
+                <ModuleRoute moduleCode="trainings">
+                  <Trainings />
                 </ModuleRoute>
               }
             />

@@ -223,6 +223,10 @@ async def _create_and_send_reminder(
             subject=rendered.subject,
             html=rendered.body_html,
             text=rendered.body_text,
+            db=db,
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            email_type="payment_reminder",
         )
 
         if email_sent:
@@ -308,7 +312,16 @@ async def _notify_admin(db: AsyncSession, conference: Conference, invoice: Invoi
     )
 
     try:
-        await send_email(to=admin_email, subject=rendered.subject, html=rendered.body_html, text=rendered.body_text)
+        await send_email(
+            to=admin_email,
+            subject=rendered.subject,
+            html=rendered.body_html,
+            text=rendered.body_text,
+            db=db,
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            email_type="admin_notification",
+        )
     except Exception as e:
         logger.error("Failed to send admin notification for invoice %s: %s", invoice.id, e)
 
@@ -365,6 +378,10 @@ async def resend_reminder(
         subject=rendered.subject,
         html=rendered.body_html,
         text=rendered.body_text,
+        db=db,
+        tenant_id=conference.tenant_id,
+        conference_id=conference.id,
+        email_type="payment_reminder",
     )
 
     if email_sent:

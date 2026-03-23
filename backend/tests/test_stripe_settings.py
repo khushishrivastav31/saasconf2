@@ -26,13 +26,20 @@ from tests.conftest import auth_headers
 # -- Helpers ----------------------------------------------------------------
 
 
-def _make_token(user: User, modules: list[str] | None = None) -> str:
+def _make_token(
+    user: User,
+    modules: list[str] | None = None,
+    is_tenant_super_user: bool = False,
+    tenant_roles: list[dict[str, str]] | None = None,
+) -> str:
     """Create a valid JWT access token for a user."""
     return create_access_token(
         user_id=user.id,
         tenant_id=user.tenant_id,
         role=user.role,
         modules=modules or [],
+        is_tenant_super_user=is_tenant_super_user,
+        tenant_roles=tenant_roles,
     )
 
 
@@ -80,7 +87,12 @@ async def tenant_super_user(db_session: AsyncSession, tenant: Tenant) -> User:
 @pytest.fixture()
 def super_user_token(tenant_super_user: User) -> str:
     """Return a valid access token for the tenant super user."""
-    return _make_token(tenant_super_user, modules=["conferences"])
+    return _make_token(
+        tenant_super_user,
+        modules=["conferences"],
+        is_tenant_super_user=True,
+        tenant_roles=[{"scope": "all", "level": "super_user"}],
+    )
 
 
 @pytest.fixture()

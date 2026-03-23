@@ -67,6 +67,44 @@ class UserUpdate(BaseModel):
         return v
 
 
+class TenantRoleResponse(BaseModel):
+    """A single scoped role entry for a tenant user."""
+
+    scope: str
+    level: str
+
+
+class TenantRoleAssignment(BaseModel):
+    """A single role to assign: scope + level."""
+
+    scope: str = Field(..., description="Role scope: all, conferences, trainings, accounting")
+    level: str = Field(..., description="Permission level: super_user, admin, member")
+
+    @field_validator("scope")
+    @classmethod
+    def validate_scope(cls, v: str) -> str:
+        valid = {"all", "conferences", "trainings", "accounting"}
+        if v not in valid:
+            raise ValueError(f"Invalid scope '{v}'. Must be one of: {', '.join(sorted(valid))}")
+        return v
+
+    @field_validator("level")
+    @classmethod
+    def validate_level(cls, v: str) -> str:
+        valid = {"super_user", "admin", "member"}
+        if v not in valid:
+            raise ValueError(f"Invalid level '{v}'. Must be one of: {', '.join(sorted(valid))}")
+        return v
+
+
+class BulkTenantRoleAssignment(BaseModel):
+    """Bulk-set tenant roles for a user. Replaces all existing roles."""
+
+    roles: list[TenantRoleAssignment] = Field(
+        default_factory=list, description="List of roles to assign. Empty list removes all roles."
+    )
+
+
 class UserInDB(UserBase):
     """User schema with database fields."""
 
@@ -76,6 +114,7 @@ class UserInDB(UserBase):
     tenant_id: UUID | None
     is_active: bool
     has_all_conference_access: bool = True
+    tenant_roles: list[TenantRoleResponse] = []
     last_login: datetime | None
     created_at: datetime
     updated_at: datetime
@@ -139,6 +178,7 @@ class TenantUserResponse(BaseModel):
     role: str
     is_active: bool
     has_all_conference_access: bool = True
+    tenant_roles: list[TenantRoleResponse] = []
     last_login: datetime | None
     created_at: datetime
     updated_at: datetime

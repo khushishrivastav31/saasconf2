@@ -3,16 +3,40 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Request
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import select, update
 
 from app.core.dependencies import DbSessionDep, SuperAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditAction, AuditLog
-from app.models.module import TenantModule
+from app.models.module import Module, TenantModule
 from app.models.tenant import Tenant
 from app.schemas.module import TenantModuleAssign, TenantModuleResponse, TenantModuleUpdate
 
 router = APIRouter()
+
+# Module codes that belong to the "Conferences" product group.
+# All other modules (except "trainings") are also in this group.
+CONFERENCES_MODULE_CODES = frozenset(
+    {
+        "conferences",
+        "cfp",
+        "speakers",
+        "sessions",
+        "locations",
+        "attendees",
+        "sponsors",
+        "service_providers",
+        "volunteers",
+        "program",
+        "registration",
+        "analytics",
+        "invoices",
+        "news",
+    }
+)
+
+TRAININGS_MODULE_CODES = frozenset({"trainings"})
 
 
 @router.get("/{tenant_id}/modules", response_model=list[TenantModuleResponse])
@@ -266,3 +290,125 @@ async def revoke_module_from_tenant(
     await db.commit()
 
     return {"message": "Module access revoked successfully"}
+
+
+# ---------------------------------------------------------------------------
+# Batch toggle endpoint — simple Conferences / Trainings checkboxes
+# ---------------------------------------------------------------------------
+
+
+class ModuleGroupToggle(BaseModel):
+    conferences: bool | None = None
+    trainings: bool | None = None
+
+
+class ModuleGroupStatus(BaseModel):
+    conferences: bool
+    trainings: bool
+
+
+@router.get("/{tenant_id}/module-groups", response_model=ModuleGroupStatus)
+async def get_module_groups(
+    tenant_id: UUID,
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+) -> ModuleGroupStatus:
+    """Get the enabled/disabled state of the Conferences and Trainings product groups."""
+    result = await db.execute(select(TenantModule).where(TenantModule.tenant_id == tenant_id))
+    tenant_modules = result.scalars().all()
+
+    # Load module codes
+    module_ids = [tm.module_id for tm in tenant_modules]
+    if module_ids:
+        mod_result = await db.execute(select(Module).where(Module.id.in_(module_ids)))
+        modules_by_id = {m.id: m.code for m in mod_result.scalars().all()}
+    else:
+        modules_by_id = {}
+
+    # Conferences is enabled if the "conferences" module is enabled
+    conferences_enabled = False
+    trainings_enabled = False
+    for tm in tenant_modules:
+        code = modules_by_id.get(tm.module_id)
+        if code == "conferences" and tm.is_enabled:
+            conferences_enabled = True
+        if code == "trainings" and tm.is_enabled:
+            trainings_enabled = True
+
+    return ModuleGroupStatus(conferences=conferences_enabled, trainings=trainings_enabled)
+
+
+@router.put("/{tenant_id}/module-groups", response_model=ModuleGroupStatus)
+async def toggle_module_groups(
+    tenant_id: UUID,
+    data: ModuleGroupToggle,
+    current_user: SuperAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> ModuleGroupStatus:
+    """Batch enable/disable Conferences and/or Trainings module groups."""
+    # Verify tenant
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+    if not tenant:
+        raise NotFoundError(f"Tenant with ID '{tenant_id}' not found")
+
+    # Collect module codes to toggle
+    codes_to_enable: set[str] = set()
+    codes_to_disable: set[str] = set()
+
+    if data.conferences is True:
+        codes_to_enable |= CONFERENCES_MODULE_CODES
+    elif data.conferences is False:
+        codes_to_disable |= CONFERENCES_MODULE_CODES
+
+    if data.trainings is True:
+        codes_to_enable |= TRAININGS_MODULE_CODES
+    elif data.trainings is False:
+        codes_to_disable |= TRAININGS_MODULE_CODES
+
+    # Get module IDs for the codes
+    all_codes = codes_to_enable | codes_to_disable
+    if all_codes:
+        result = await db.execute(select(Module).where(Module.code.in_(all_codes)))
+        modules_map = {m.code: m.id for m in result.scalars().all()}
+
+        enable_ids = [modules_map[c] for c in codes_to_enable if c in modules_map]
+        disable_ids = [modules_map[c] for c in codes_to_disable if c in modules_map]
+
+        if enable_ids:
+            await db.execute(
+                update(TenantModule)
+                .where(TenantModule.tenant_id == tenant_id)
+                .where(TenantModule.module_id.in_(enable_ids))
+                .values(is_enabled=True)
+            )
+
+        if disable_ids:
+            await db.execute(
+                update(TenantModule)
+                .where(TenantModule.tenant_id == tenant_id)
+                .where(TenantModule.module_id.in_(disable_ids))
+                .values(is_enabled=False)
+            )
+
+        # Audit log
+        audit_log = AuditLog(
+            tenant_id=tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.MODULE_UPDATE,
+            resource_type="tenant_module_groups",
+            details={
+                "tenant_name": tenant.name,
+                "conferences": data.conferences,
+                "trainings": data.trainings,
+            },
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+        db.add(audit_log)
+
+        await db.commit()
+
+    # Return current state
+    return await get_module_groups(tenant_id, current_user, db)

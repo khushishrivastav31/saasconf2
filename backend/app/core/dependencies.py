@@ -18,6 +18,14 @@ from app.models.user_conference_access import UserConferenceAccess
 settings = get_settings()
 
 
+class TenantRoleInfo:
+    """A single scoped role entry from the JWT."""
+
+    def __init__(self, scope: str, level: str):
+        self.scope = scope
+        self.level = level
+
+
 class CurrentUser:
     """Container for current user context extracted from JWT."""
 
@@ -27,11 +35,13 @@ class CurrentUser:
         tenant_id: UUID | None,
         role: str,
         modules: list[str],
+        tenant_roles: list[TenantRoleInfo] | None = None,
     ):
         self.user_id = user_id
         self.tenant_id = tenant_id
         self.role = role
         self.modules = modules
+        self.tenant_roles = tenant_roles or []
 
     @property
     def is_super_admin(self) -> bool:
@@ -40,12 +50,31 @@ class CurrentUser:
 
     @property
     def is_tenant_admin(self) -> bool:
-        """Check if user is a tenant admin."""
-        return self.role == UserRole.TENANT_ADMIN.value
+        """Check if user is a tenant admin (backward compat: checks role OR tenant_roles)."""
+        if self.role == UserRole.TENANT_ADMIN.value:
+            return True
+        return any(r.level in ("super_user", "admin") for r in self.tenant_roles)
+
+    @property
+    def is_tenant_super_user(self) -> bool:
+        """Check if user has the super_user level with scope='all'."""
+        return any(r.scope == "all" and r.level == "super_user" for r in self.tenant_roles)
 
     def has_module(self, module_code: str) -> bool:
         """Check if user has access to a specific module."""
         return self.is_super_admin or module_code in self.modules
+
+    def has_scope_admin(self, scope: str) -> bool:
+        """Check if user has admin or super_user level for a given scope."""
+        if self.is_super_admin:
+            return True
+        return any(r.level in ("super_user", "admin") and r.scope in ("all", scope) for r in self.tenant_roles)
+
+    def has_scope_access(self, scope: str) -> bool:
+        """Check if user has any access (member or higher) to a given scope."""
+        if self.is_super_admin:
+            return True
+        return any(r.scope in ("all", scope) for r in self.tenant_roles)
 
 
 async def get_token_from_header(authorization: Annotated[str | None, Header()] = None) -> str:
@@ -104,11 +133,20 @@ async def get_current_user(
         is_super_admin=(role == UserRole.SUPER_ADMIN.value),
     )
 
+    # Parse tenant_roles from JWT payload
+    raw_tenant_roles = payload.get("tenant_roles", [])
+    tenant_roles = [
+        TenantRoleInfo(scope=r["scope"], level=r["level"])
+        for r in raw_tenant_roles
+        if isinstance(r, dict) and "scope" in r and "level" in r
+    ]
+
     return CurrentUser(
         user_id=user_id,
         tenant_id=tenant_id,
         role=role,
         modules=modules,
+        tenant_roles=tenant_roles,
     )
 
 

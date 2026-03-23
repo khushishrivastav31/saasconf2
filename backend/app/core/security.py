@@ -62,6 +62,7 @@ def create_access_token(
     role: str,
     modules: list[str] | None = None,
     is_tenant_super_user: bool = False,
+    tenant_roles: list[dict[str, str]] | None = None,
     token_type: str = "access",
     expires_minutes: int | None = None,
 ) -> str:
@@ -74,6 +75,7 @@ def create_access_token(
         role: User's role
         modules: List of module codes the user has access to
         is_tenant_super_user: Whether the user is the designated super user for their tenant
+        tenant_roles: List of {"scope": ..., "level": ...} dicts for module-scoped roles
         token_type: Token type claim (default ``"access"``, also ``"mfa_pending"``)
         expires_minutes: Override default expiry (for short-lived MFA tokens)
 
@@ -89,6 +91,7 @@ def create_access_token(
         "role": role,
         "modules": modules or [],
         "is_tenant_super_user": is_tenant_super_user,
+        "tenant_roles": tenant_roles or [],
         "exp": expire,
         "iat": utcnow(),
         "type": token_type,

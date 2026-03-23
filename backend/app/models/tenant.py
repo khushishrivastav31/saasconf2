@@ -44,6 +44,11 @@ class Tenant(Base):
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     email_domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    # Per-tenant Resend email settings (overrides global env vars when set)
+    resend_api_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    resend_from_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    resend_from_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     # Contact persons as JSONB array
     # Structure: [{"name": "John Doe", "email": "john@example.com", "phone": "+1234567890", "role": "Manager"}, ...]
     contact_persons: Mapped[list] = mapped_column(JSONB, default=list)

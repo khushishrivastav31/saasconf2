@@ -9,6 +9,7 @@ import asyncio
 import os
 import uuid
 from collections.abc import AsyncGenerator
+from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -27,6 +28,22 @@ os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
 os.environ["RATELIMIT_ENABLED"] = "false"  # Disable rate limiting in tests
 os.environ["TESTING"] = "true"  # Disable background email tasks in tests
+
+@pytest.fixture(autouse=True)
+def _mock_resend_client(request):
+    """Provide a fake Resend client so send_email succeeds without an API key.
+
+    Tests that need the real _get_resend (e.g. test_email.py) can opt out
+    with @pytest.mark.no_mock_email.
+    """
+    if request.node.get_closest_marker("no_mock_email"):
+        yield
+        return
+    mock_resend = MagicMock()
+    mock_resend.Emails.send.return_value = {"id": "test-email-id"}
+    with patch("app.core.email._get_resend", return_value=mock_resend):
+        yield
+
 
 from app.core.security import create_access_token, hash_password
 from app.db.base import Base
@@ -260,13 +277,20 @@ async def regular_user(db_session: AsyncSession, tenant: Tenant) -> User:
 # ── Auth helper fixtures ─────────────────────────────────────────────────
 
 
-def _make_token(user: User, modules: list[str] | None = None) -> str:
+def _make_token(
+    user: User,
+    modules: list[str] | None = None,
+    is_tenant_super_user: bool = False,
+    tenant_roles: list[dict[str, str]] | None = None,
+) -> str:
     """Create a valid JWT access token for a user."""
     return create_access_token(
         user_id=user.id,
         tenant_id=user.tenant_id,
         role=user.role,
         modules=modules or [],
+        is_tenant_super_user=is_tenant_super_user,
+        tenant_roles=tenant_roles,
     )
 
 

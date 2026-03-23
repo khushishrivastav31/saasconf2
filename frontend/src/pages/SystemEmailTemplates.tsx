@@ -47,7 +47,7 @@ function findInvalidPlaceholders(text: string): string[] {
   return used.filter((p) => !VALID_PLACEHOLDERS.includes(p));
 }
 
-function SystemEmailTemplates() {
+function SystemEmailTemplates({ embedded = false }: { embedded?: boolean }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +112,124 @@ function SystemEmailTemplates() {
     }
   };
 
+  const content = isLoading ? (
+    <div className="flex justify-center py-12">
+      <LoadingSpinner />
+    </div>
+  ) : isError ? (
+    <ErrorBanner message={parseApiError(queryError, 'Failed to load templates')} />
+  ) : (
+    <div
+      className={
+        embedded
+          ? 'overflow-hidden'
+          : 'bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg'
+      }
+    >
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Template
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Subject
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Status
+            </th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {templates?.map((template) => (
+            <tr key={template.template_type} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td className="px-6 py-4">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {template.display_name ||
+                    SYSTEM_TEMPLATE_LABELS[template.template_type] ||
+                    template.template_type}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {SYSTEM_TEMPLATE_DESCRIPTIONS[template.template_type] || ''}
+                </div>
+                {!template.id && (
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    Using default template
+                  </div>
+                )}
+              </td>
+              <td className="px-6 py-4">
+                <div className="text-sm text-gray-900 dark:text-gray-100 truncate max-w-md">
+                  {template.subject}
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <StatusBadge isActive={template.is_active} />
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button
+                  onClick={() => handleEdit(template)}
+                  className="text-primary-600 hover:text-primary-900"
+                  title="Edit template"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          ))}
+          {(!templates || templates.length === 0) && (
+            <tr>
+              <td colSpan={4} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                No system email templates found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <div>
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+          Email Templates
+        </h4>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          Organization-wide email templates used across all conferences.
+        </p>
+        {content}
+        <Modal
+          key={editingTemplate?.id ?? 'new'}
+          open={isModalOpen}
+          onClose={handleCloseModal}
+          title={`Edit ${editingTemplate ? SYSTEM_TEMPLATE_LABELS[editingTemplate.template_type] || editingTemplate.template_type : 'Template'}`}
+          size="max-w-4xl"
+        >
+          {editingTemplate && (
+            <SystemEmailTemplateForm
+              template={editingTemplate}
+              onSubmit={handleSubmit}
+              onCancel={handleCloseModal}
+              isSubmitting={updateMutation.isPending}
+              error={error}
+            />
+          )}
+        </Modal>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="sm:flex sm:items-center sm:justify-between mb-6">
@@ -123,97 +241,7 @@ function SystemEmailTemplates() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <LoadingSpinner />
-        </div>
-      ) : isError ? (
-        <ErrorBanner message={parseApiError(queryError, 'Failed to load templates')} />
-      ) : (
-        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Template
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Subject
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {templates?.map((template) => (
-                <tr
-                  key={template.template_type}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {template.display_name ||
-                        SYSTEM_TEMPLATE_LABELS[template.template_type] ||
-                        template.template_type}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {SYSTEM_TEMPLATE_DESCRIPTIONS[template.template_type] || ''}
-                    </div>
-                    {!template.id && (
-                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        Using default template
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 dark:text-gray-100 truncate max-w-md">
-                      {template.subject}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusBadge isActive={template.is_active} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(template)}
-                      className="text-primary-600 hover:text-primary-900"
-                      title="Edit template"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {(!templates || templates.length === 0) && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-6 py-4 text-center text-gray-500 dark:text-gray-400"
-                  >
-                    No system email templates found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {content}
 
       <Modal
         key={editingTemplate?.id ?? 'new'}

@@ -61,16 +61,9 @@ async def get_stripe_settings(
     settings = conference.settings or {}
     stripe_settings = settings.get("stripe", {})
 
-    # Check if current user is tenant super user (via tenant.super_user_id)
-    from app.models.tenant import Tenant
-
-    result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
-    tenant = result.scalar_one()
-    is_tenant_super_user = tenant.super_user_id == current_user.user_id
-
     # Mask secret key for non-super-users
     secret_key = stripe_settings.get("secret_key")
-    if secret_key and not is_tenant_super_user:
+    if secret_key and not current_user.is_tenant_super_user:
         secret_key = _mask_secret_key(secret_key)
 
     return StripeSettingsResponse(
@@ -110,15 +103,8 @@ async def update_stripe_settings(
     """
     await check_conference_admin(conference_id, current_user, db)
 
-    # Check if current user is tenant super user (via tenant.super_user_id)
-    from app.models.tenant import Tenant
-
-    result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
-    tenant = result.scalar_one()
-    is_tenant_super_user = tenant.super_user_id == current_user.user_id
-
     # Only tenant super users can update Stripe settings
-    if not is_tenant_super_user:
+    if not current_user.is_tenant_super_user:
         raise AuthorizationError("Only tenant super users can update Stripe settings")
 
     # Get conference

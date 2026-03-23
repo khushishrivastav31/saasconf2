@@ -172,6 +172,9 @@ disable_error_code = ["arg-type", "attr-defined", "union-attr", "assignment", "r
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+markers = [
+    "no_mock_email: opt out of the autouse _mock_resend_client fixture",
+]
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]

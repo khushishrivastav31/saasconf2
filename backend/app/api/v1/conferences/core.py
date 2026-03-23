@@ -472,13 +472,8 @@ async def delete_conference(
     simply unlinked (handled by CASCADE on junction tables).
     """
     # Check authorization: only SaaS super admin OR tenant super user can delete
-    if not current_user.is_super_admin:
-        # Check if user is the tenant super user
-        tenant_result = await db.execute(select(Tenant.super_user_id).where(Tenant.id == current_user.tenant_id))
-        tenant_super_user_id = tenant_result.scalar_one_or_none()
-
-        if tenant_super_user_id != current_user.user_id:
-            raise AuthorizationError("Only the Tenant Super User or SaaS Super Admin can delete conferences")
+    if not current_user.is_super_admin and not current_user.is_tenant_super_user:
+        raise AuthorizationError("Only the Tenant Super User or SaaS Super Admin can delete conferences")
 
     result = await db.execute(
         select(Conference).where(Conference.id == conference_id).where(_tenant_filter(current_user))
@@ -636,13 +631,7 @@ async def delete_conference_preview(
         raise NotFoundError("Conference not found")
 
     # Check if user can delete
-    can_delete = False
-    if current_user.is_super_admin:
-        can_delete = True
-    else:
-        tenant_result = await db.execute(select(Tenant.super_user_id).where(Tenant.id == current_user.tenant_id))
-        tenant_super_user_id = tenant_result.scalar_one_or_none()
-        can_delete = tenant_super_user_id == current_user.user_id
+    can_delete = current_user.is_super_admin or current_user.is_tenant_super_user
 
     # --- Compute shared delete data (counts, orphans, exclusives) ---
     dd = await compute_conference_delete_data(db, conference_id)

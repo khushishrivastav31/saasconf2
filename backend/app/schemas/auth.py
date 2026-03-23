@@ -29,6 +29,13 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class TenantRoleResponse(BaseModel):
+    """A single scoped role entry."""
+
+    scope: str
+    level: str
+
+
 class UserResponse(BaseModel):
     """User response schema (for /auth/me endpoint)."""
 
@@ -45,6 +52,7 @@ class UserResponse(BaseModel):
     modules: list[str] = []  # List of module codes the user has access to
     is_active: bool
     is_tenant_super_user: bool = False
+    tenant_roles: list[TenantRoleResponse] = []
     mfa_enabled: bool = False
     message_notifications_enabled: bool = True
     theme_preference: str | None = None

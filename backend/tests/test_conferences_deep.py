@@ -70,6 +70,17 @@ def admin_token(tenant_admin_user: User) -> str:
 
 
 @pytest.fixture()
+def super_user_token(tenant_admin_user: User) -> str:
+    """Token with super_user tenant role (for delete/stripe tests)."""
+    return _make_token(
+        tenant_admin_user,
+        modules=["conferences"],
+        is_tenant_super_user=True,
+        tenant_roles=[{"scope": "all", "level": "super_user"}],
+    )
+
+
+@pytest.fixture()
 def user_token(regular_user: User) -> str:
     return _make_token(regular_user, modules=["conferences"])
 
@@ -578,13 +589,9 @@ class TestConferenceDelete:
         tenant: Tenant,
         tenant_with_modules: Tenant,
         tenant_admin_user: User,
-        admin_token: str,
+        super_user_token: str,
     ) -> None:
         """Tenant super user can delete a deactivated conference."""
-        # Set tenant super_user to the admin user
-        tenant.super_user_id = tenant_admin_user.id
-        await db_session.commit()
-
         c = Conference(
             id=uuid.uuid4(),
             tenant_id=tenant.id,
@@ -597,7 +604,7 @@ class TestConferenceDelete:
 
         resp = await client.delete(
             f"{CONF_URL}/{c.id}",
-            headers=auth_headers(admin_token),
+            headers=auth_headers(super_user_token),
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -612,17 +619,13 @@ class TestConferenceDelete:
         db_session: AsyncSession,
         tenant: Tenant,
         tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
+        super_user_token: str,
         conference: Conference,
     ) -> None:
         """Cannot delete an active conference - must deactivate first."""
-        tenant.super_user_id = tenant_admin_user.id
-        await db_session.commit()
-
         resp = await client.delete(
             f"{CONF_URL}/{conference.id}",
-            headers=auth_headers(admin_token),
+            headers=auth_headers(super_user_token),
         )
         assert resp.status_code == 400
         assert "deactivate" in resp.json()["detail"].lower()
@@ -634,12 +637,9 @@ class TestConferenceDelete:
         db_session: AsyncSession,
         tenant: Tenant,
         tenant_with_modules: Tenant,
-        tenant_admin_user: User,
-        admin_token: str,
+        super_user_token: str,
     ) -> None:
         """Delete a conference with linked location and CFP."""
-        tenant.super_user_id = tenant_admin_user.id
-        await db_session.commit()
 
         c = Conference(
             id=uuid.uuid4(),
@@ -675,7 +675,7 @@ class TestConferenceDelete:
 
         resp = await client.delete(
             f"{CONF_URL}/{c.id}",
-            headers=auth_headers(admin_token),
+            headers=auth_headers(super_user_token),
         )
         assert resp.status_code == 200
         data = resp.json()

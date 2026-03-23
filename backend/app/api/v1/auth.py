@@ -3,11 +3,13 @@
 import hashlib
 from datetime import timedelta
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
@@ -37,6 +39,7 @@ from app.models.tenant import Tenant
 from app.models.token import RefreshToken
 from app.models.user import User
 from app.models.user_password_reset import UserPasswordReset
+from app.models.user_tenant_role import UserTenantRole
 from app.models.user_totp import UserTOTP
 from app.schemas.auth import (
     ChangePasswordRequest,
@@ -46,6 +49,7 @@ from app.schemas.auth import (
     MFAVerifyRequest,
     RefreshRequest,
     ResetPasswordRequest,
+    TenantRoleResponse,
     TokenResponse,
     UserPreferencesUpdate,
     UserResponse,
@@ -54,6 +58,12 @@ from app.schemas.auth import (
 settings = get_settings()
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
+
+
+async def _load_tenant_roles(db: AsyncSession, user_id: UUID) -> list[dict[str, str]]:
+    """Load user's tenant roles as a list of {scope, level} dicts for JWT embedding."""
+    result = await db.execute(select(UserTenantRole).where(UserTenantRole.user_id == user_id))
+    return [{"scope": r.scope, "level": r.level} for r in result.scalars().all()]
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -128,6 +138,9 @@ async def login(
             if tm.module:
                 modules.append(tm.module.code)
 
+    # Load tenant roles for JWT
+    tenant_roles = await _load_tenant_roles(db, user.id)
+
     # Check if MFA is enabled — if so, return a temporary MFA token
     totp_result = await db.execute(select(UserTOTP).where(UserTOTP.user_id == user.id, UserTOTP.is_verified.is_(True)))
     if totp_result.scalar_one_or_none():
@@ -137,6 +150,7 @@ async def login(
             role=user.role,
             modules=modules,
             is_tenant_super_user=is_tenant_super_user,
+            tenant_roles=tenant_roles,
             token_type="mfa_pending",
             expires_minutes=5,
         )
@@ -149,6 +163,7 @@ async def login(
         role=user.role,
         modules=modules,
         is_tenant_super_user=is_tenant_super_user,
+        tenant_roles=tenant_roles,
     )
 
     refresh_token, token_hash, expires_at = create_refresh_token(user_id=user.id)
@@ -234,6 +249,7 @@ async def mfa_verify_login(
         role=payload["role"],
         modules=payload.get("modules", []),
         is_tenant_super_user=payload.get("is_tenant_super_user", False),
+        tenant_roles=payload.get("tenant_roles", []),
     )
 
     refresh_tok, tok_hash, expires_at = create_refresh_token(user_id=user.id)
@@ -320,6 +336,9 @@ async def refresh_token(
             if tm.module:
                 modules.append(tm.module.code)
 
+    # Load fresh tenant roles
+    tenant_roles = await _load_tenant_roles(db, user.id)
+
     # Create new access token
     access_token = create_access_token(
         user_id=user.id,
@@ -327,6 +346,7 @@ async def refresh_token(
         role=user.role,
         modules=modules,
         is_tenant_super_user=is_tenant_super_user,
+        tenant_roles=tenant_roles,
     )
 
     # Optionally rotate refresh token (for enhanced security)
@@ -443,6 +463,9 @@ async def get_current_user_info(
             if tm.module:
                 modules.append(tm.module.code)
 
+    # Load fresh tenant roles from DB
+    tenant_roles = await _load_tenant_roles(db, user.id)
+
     return UserResponse(
         id=user.id,
         email=user.email,
@@ -455,6 +478,7 @@ async def get_current_user_info(
         modules=modules,
         is_active=user.is_active,
         is_tenant_super_user=is_tenant_super_user,
+        tenant_roles=[TenantRoleResponse(scope=r["scope"], level=r["level"]) for r in tenant_roles],
         mfa_enabled=mfa_enabled,
         message_notifications_enabled=user.message_notifications_enabled,
         theme_preference=user.theme_preference,

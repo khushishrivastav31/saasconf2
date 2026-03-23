@@ -28,6 +28,7 @@ from app.models.cfp_papers import (
 )
 from app.models.conference import Conference
 from app.models.deadline import Deadline
+from app.models.email_log import EmailLog
 from app.models.fiscal_representative import FiscalRepresentative
 from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
 from app.models.invoice import Invoice
@@ -93,6 +94,7 @@ from app.models.token import RefreshToken
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
 from app.models.user_password_reset import UserPasswordReset
+from app.models.user_tenant_role import TenantRoleLevel, TenantRoleScope, UserTenantRole
 from app.models.user_totp import UserTOTP
 from app.models.volunteer_profile import VolunteerProfile
 from app.models.volunteer_tasks import SessionVolunteerTask, VolunteerAssignment
@@ -133,6 +135,7 @@ __all__ = [
     "DiscountCode",
     "DiscountCodeOption",
     "DynamicRecipientList",
+    "EmailLog",
     "EmailTemplate",
     "ExpenseCategory",
     "ExpenseTier",
@@ -189,11 +192,14 @@ __all__ = [
     "Tenant",
     "TenantLocationType",
     "TenantModule",
+    "TenantRoleLevel",
+    "TenantRoleScope",
     "ThreadFlag",
     "User",
     "UserConferenceAccess",
     "UserPasswordReset",
     "UserTOTP",
+    "UserTenantRole",
     "VolunteerAssignment",
     "VolunteerProfile",
     "VolunteerRole",

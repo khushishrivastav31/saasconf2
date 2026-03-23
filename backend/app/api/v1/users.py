@@ -6,11 +6,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.core.applicant_security import generate_email_verification_token
 from app.core.dependencies import CurrentUserDep, DbSessionDep, TenantAdminDep, get_client_ip
-from app.core.email import _get_tenant_from_email, send_email_background, send_tenant_user_welcome_email
+from app.core.email import send_email_background, send_tenant_user_welcome_email
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
@@ -21,7 +23,10 @@ from app.models.settings import PronounOption
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.models.user_password_reset import UserPasswordReset
+from app.models.user_tenant_role import UserTenantRole
 from app.schemas.user import (
+    BulkTenantRoleAssignment,
+    TenantRoleResponse,
     TenantUserCreate,
     TenantUserResponse,
     UserInDB,
@@ -30,6 +35,12 @@ from app.schemas.user import (
 )
 
 router = APIRouter()
+
+
+async def _get_tenant_roles(db: AsyncSession, user_id: UUID) -> list[TenantRoleResponse]:
+    """Load tenant roles for a user as response objects."""
+    result = await db.execute(select(UserTenantRole).where(UserTenantRole.user_id == user_id))
+    return [TenantRoleResponse(scope=r.scope, level=r.level) for r in result.scalars().all()]
 
 
 @router.get("", response_model=UserListResponse)
@@ -58,8 +69,8 @@ async def list_tenant_users(
             raise ValidationError("Tenant context required")
         query_tenant_id = current_user.tenant_id
 
-    # Build query
-    query = select(User).where(User.tenant_id == query_tenant_id)
+    # Build query — eagerly load tenant_roles
+    query = select(User).where(User.tenant_id == query_tenant_id).options(selectinload(User.tenant_roles))
 
     if search:
         query = query.where(
@@ -86,6 +97,7 @@ async def list_tenant_users(
             role=u.role,
             is_active=u.is_active,
             has_all_conference_access=u.has_all_conference_access,
+            tenant_roles=[TenantRoleResponse(scope=r.scope, level=r.level) for r in u.tenant_roles],
             last_login=u.last_login,
             created_at=u.created_at,
             updated_at=u.updated_at,
@@ -234,22 +246,22 @@ async def create_tenant_user(
                 if isinstance(cp, dict) and cp.get("email"):
                     tenant_support_email = cp["email"]
                     break
-        from_email = await _get_tenant_from_email(db, target_tenant_id)
         user_type = "Administrator" if user.role == UserRole.TENANT_ADMIN.value else "Team Member"
         send_email_background(
             send_tenant_user_welcome_email,
             db,
             email=user.email,
             token=raw_token,
+            tenant_id=target_tenant_id,
             company_name=tenant_name,
             user_type=user_type,
             first_name=user.first_name or "",
             last_name=user.last_name or "",
             support_email=tenant_support_email,
             base_url=frontend_base,
-            from_email=from_email,
         )
 
+    tenant_roles = await _get_tenant_roles(db, user.id)
     return TenantUserResponse(
         id=user.id,
         email=user.email,
@@ -259,6 +271,7 @@ async def create_tenant_user(
         role=user.role,
         is_active=user.is_active,
         has_all_conference_access=user.has_all_conference_access,
+        tenant_roles=tenant_roles,
         last_login=user.last_login,
         created_at=user.created_at,
         updated_at=user.updated_at,
@@ -282,6 +295,7 @@ async def get_tenant_user(
     if not current_user.is_super_admin and user.tenant_id != current_user.tenant_id:
         raise NotFoundError(f"User with ID '{user_id}' not found")
 
+    tenant_roles = await _get_tenant_roles(db, user.id)
     return TenantUserResponse(
         id=user.id,
         email=user.email,
@@ -291,6 +305,7 @@ async def get_tenant_user(
         role=user.role,
         is_active=user.is_active,
         has_all_conference_access=user.has_all_conference_access,
+        tenant_roles=tenant_roles,
         last_login=user.last_login,
         created_at=user.created_at,
         updated_at=user.updated_at,
@@ -359,6 +374,7 @@ async def update_tenant_user(
     await db.commit()
     await db.refresh(user)
 
+    tenant_roles = await _get_tenant_roles(db, user.id)
     return TenantUserResponse(
         id=user.id,
         email=user.email,
@@ -368,6 +384,7 @@ async def update_tenant_user(
         role=user.role,
         is_active=user.is_active,
         has_all_conference_access=user.has_all_conference_access,
+        tenant_roles=tenant_roles,
         last_login=user.last_login,
         created_at=user.created_at,
         updated_at=user.updated_at,
@@ -510,7 +527,6 @@ async def resend_invite(
     # Send invite email
     settings = get_settings()
     frontend_base = settings.FRONTEND_BASE_URL
-    from_email = await _get_tenant_from_email(db, user.tenant_id)
     tenant_result = await db.execute(select(Tenant.name, Tenant.contact_persons).where(Tenant.id == user.tenant_id))
     tenant_row = tenant_result.one_or_none()
     tenant_name = tenant_row[0] if tenant_row else "SaaSConf"
@@ -526,13 +542,127 @@ async def resend_invite(
         db,
         email=user.email,
         token=raw_token,
+        tenant_id=user.tenant_id,
         company_name=tenant_name,
         user_type=user_type,
         first_name=user.first_name or "",
         last_name=user.last_name or "",
         support_email=tenant_support_email,
         base_url=frontend_base,
-        from_email=from_email,
     )
 
     return {"message": f"Invite email has been resent to {user.email}"}
+
+
+@router.get("/{user_id}/tenant-roles", response_model=list[TenantRoleResponse])
+async def get_user_tenant_roles(
+    user_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> list[TenantRoleResponse]:
+    """Get tenant roles for a specific user."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise NotFoundError(f"User with ID '{user_id}' not found")
+
+    if not current_user.is_super_admin and user.tenant_id != current_user.tenant_id:
+        raise NotFoundError(f"User with ID '{user_id}' not found")
+
+    return await _get_tenant_roles(db, user.id)
+
+
+@router.put("/{user_id}/tenant-roles", response_model=list[TenantRoleResponse])
+async def set_user_tenant_roles(
+    user_id: UUID,
+    data: BulkTenantRoleAssignment,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> list[TenantRoleResponse]:
+    """
+    Bulk-set tenant roles for a user. Replaces all existing roles.
+
+    Only super admins and users with scope="all" + level="super_user" can assign
+    the super_user level. Tenant admins can assign admin and member levels.
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise NotFoundError(f"User with ID '{user_id}' not found")
+
+    if not current_user.is_super_admin and user.tenant_id != current_user.tenant_id:
+        raise NotFoundError(f"User with ID '{user_id}' not found")
+
+    # Cannot modify super_admin users
+    if user.role == UserRole.SUPER_ADMIN.value:
+        raise AuthorizationError("Cannot modify roles for super admin users")
+
+    # Cannot modify your own roles (prevents self-demotion)
+    if user.id == current_user.user_id:
+        raise ValidationError("Cannot modify your own roles")
+
+    # Authorization: only super_user-level users (or SaaS super admin) can grant super_user
+    has_super_user_assignment = any(r.level == "super_user" for r in data.roles)
+    if has_super_user_assignment:
+        if not (current_user.is_super_admin or current_user.is_tenant_super_user):
+            raise AuthorizationError("Only super users can grant the super_user level")
+
+    # Validate: scope="all" can only be combined with super_user level
+    for r in data.roles:
+        if r.scope == "all" and r.level != "super_user":
+            raise ValidationError("Scope 'all' can only be assigned with level 'super_user'")
+
+    # Check for duplicate scopes in the request
+    scopes_seen: set[str] = set()
+    for r in data.roles:
+        if r.scope in scopes_seen:
+            raise ValidationError(f"Duplicate scope '{r.scope}' in role assignment")
+        scopes_seen.add(r.scope)
+
+    # Delete existing roles
+    existing = await db.execute(select(UserTenantRole).where(UserTenantRole.user_id == user_id))
+    for role in existing.scalars().all():
+        await db.delete(role)
+    await db.flush()
+
+    # Insert new roles
+    for r in data.roles:
+        db.add(
+            UserTenantRole(
+                user_id=user_id,
+                scope=r.scope,
+                level=r.level,
+                granted_by=current_user.user_id,
+            )
+        )
+
+    # Sync User.role for backward compat:
+    # If user has any admin+ role → tenant_admin; otherwise → user
+    if data.roles:
+        user.role = UserRole.TENANT_ADMIN.value
+    else:
+        user.role = UserRole.USER.value
+
+    # Log action
+    db.add(
+        AuditLog(
+            tenant_id=user.tenant_id,
+            user_id=current_user.user_id,
+            action=AuditAction.USER_UPDATE,
+            resource_type="user",
+            resource_id=user.id,
+            details={
+                "action": "set_tenant_roles",
+                "roles": [{"scope": r.scope, "level": r.level} for r in data.roles],
+            },
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    )
+
+    await db.commit()
+
+    return await _get_tenant_roles(db, user.id)

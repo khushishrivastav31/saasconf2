@@ -497,6 +497,10 @@ async def _send_replacement_emails(
             subject=rendered.subject,
             html=rendered.body_html,
             text=rendered.body_text,
+            db=db,
+            tenant_id=old_tenant_id,
+            conference_id=conference.id,
+            email_type="registration_replacement",
         )
     except Exception as e:
         logger.error(f"Failed to send cancellation email: {e}")
@@ -547,7 +551,16 @@ async def _send_replacement_emails(
             """
             text = f"Welcome to {conference.name}"
 
-        emails_sent["new_attendee"] = await send_email(to=new_registration.email, subject=subject, html=html, text=text)
+        emails_sent["new_attendee"] = await send_email(
+            to=new_registration.email,
+            subject=subject,
+            html=html,
+            text=text,
+            db=db,
+            tenant_id=new_registration.tenant_id,
+            conference_id=conference.id,
+            email_type="registration_replacement",
+        )
     except Exception as e:
         logger.error(f"Failed to send welcome email: {e}")
         emails_sent["new_attendee"] = False

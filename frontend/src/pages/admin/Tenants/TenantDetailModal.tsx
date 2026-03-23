@@ -5,6 +5,7 @@ import type { Tenant } from '../../../types';
 import CompanyInfoTab from './components/CompanyInfoTab';
 import UsersTab from './components/UsersTab';
 import { AddUserModal } from './components/UsersTab';
+import ModulesTab from './components/ModulesTab';
 
 export default function TenantDetailModal({
   tenant,
@@ -13,13 +14,14 @@ export default function TenantDetailModal({
   tenant: Tenant;
   onClose: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'info' | 'users'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'users' | 'modules'>('info');
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const tabs = [
     { id: 'info' as const, name: 'Company Info' },
     { id: 'users' as const, name: 'Users' },
+    { id: 'modules' as const, name: 'Modules' },
   ];
 
   return (
@@ -59,13 +61,13 @@ export default function TenantDetailModal({
         {activeTab === 'users' && (
           <UsersTab
             tenantId={tenant.id}
-            superUserId={tenant.super_user_id}
             onAddUser={() => setIsAddUserOpen(true)}
             onSuperUserChange={() => {
               queryClient.invalidateQueries({ queryKey: ['tenants'] });
             }}
           />
         )}
+        {activeTab === 'modules' && <ModulesTab tenantId={tenant.id} />}
       </div>
 
       {/* Add User Modal */}

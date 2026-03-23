@@ -3,11 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
 import Modal from '../../../../components/Modal';
-import { useAuth } from '../../../../hooks/useAuth';
 import { useSaveStatus } from '../../../../hooks/useSaveStatus';
 import { validateEmail } from '../../../../utils/validators';
+import { parseApiError } from '../../../../utils/apiError';
 import type {
   TenantUser,
+  TenantRole,
   TenantUserCreate,
   TenantUserUpdate,
   PaginatedResponse,
@@ -15,21 +16,16 @@ import type {
 
 export default function UsersTab({
   tenantId,
-  superUserId,
   onAddUser,
   onSuperUserChange,
 }: {
   tenantId: string;
-  superUserId: string | null;
   onAddUser: () => void;
   onSuperUserChange: () => void;
 }) {
-  const { user: currentUser } = useAuth();
-  const isSuperAdmin = currentUser?.role === 'super_admin';
   const queryClient = useQueryClient();
   const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<TenantUser | null>(null);
-  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<TenantUser | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<TenantUser | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['tenant-users', tenantId],
@@ -39,24 +35,12 @@ export default function UsersTab({
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      await api.delete(`/users/${userId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenant-users', tenantId] });
-      // Refresh tenants query in case deleted user was super user
-      onSuperUserChange();
-    },
-  });
-
-  const permanentDeleteMutation = useMutation({
+  const removeMutation = useMutation({
     mutationFn: async (userId: string) => {
       await api.delete(`/users/${userId}?permanent=true`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-users', tenantId] });
-      // Refresh tenants query in case deleted user was super user
       onSuperUserChange();
     },
   });
@@ -113,20 +97,34 @@ export default function UsersTab({
                     {user.email}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center gap-2">
-                      {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '-'}
-                      {user.id === superUserId && (
-                        <span className="px-1.5 py-0.5 text-xs font-semibold rounded bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
-                          Super User
-                        </span>
-                      )}
-                    </div>
+                    {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '-'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                     {user.pronouns || '-'}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <span className="capitalize">{user.role.replace('_', ' ')}</span>
+                    <div className="flex flex-wrap gap-1">
+                      {user.tenant_roles && user.tenant_roles.length > 0 ? (
+                        user.tenant_roles.map((r) => (
+                          <span
+                            key={r.scope}
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                              r.scope === 'all' && r.level === 'super_user'
+                                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                                : r.level === 'admin'
+                                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                            }`}
+                          >
+                            {r.scope === 'all'
+                              ? 'Super User'
+                              : `${r.scope.charAt(0).toUpperCase() + r.scope.slice(1)} ${r.level.charAt(0).toUpperCase() + r.level.slice(1)}`}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">No roles</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <span
@@ -160,47 +158,25 @@ export default function UsersTab({
                           />
                         </svg>
                       </button>
-                      {user.is_active ? (
-                        <button
-                          onClick={() => setDeleteTarget(user)}
-                          className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
-                          title="Deactivate"
+                      <button
+                        onClick={() => setRemoveTarget(user)}
+                        className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                        title="Delete user"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                            />
-                          </svg>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setPermanentDeleteTarget(user)}
-                          className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
-                          title="Permanently Delete"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
-                      )}
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -216,8 +192,6 @@ export default function UsersTab({
         <EditUserModal
           user={editingUser}
           tenantId={tenantId}
-          superUserId={superUserId}
-          isSuperAdmin={isSuperAdmin}
           onSuperUserChange={onSuperUserChange}
           onClose={() => {
             setEditingUser(null);
@@ -229,27 +203,16 @@ export default function UsersTab({
       )}
 
       <ConfirmDialog
-        open={!!deleteTarget}
-        title="Deactivate User"
-        message={`Are you sure you want to deactivate "${deleteTarget?.email}"? The user will no longer be able to log in.`}
-        confirmLabel="Deactivate"
+        open={!!removeTarget}
+        title="Delete User"
+        message={`Are you sure you want to permanently delete "${removeTarget?.email}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
         onConfirm={() => {
-          if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
-          setDeleteTarget(null);
+          if (removeTarget) removeMutation.mutate(removeTarget.id);
+          setRemoveTarget(null);
         }}
-        onCancel={() => setDeleteTarget(null)}
-      />
-
-      <ConfirmDialog
-        open={!!permanentDeleteTarget}
-        title="Permanently Delete User"
-        message={`Are you sure you want to PERMANENTLY delete "${permanentDeleteTarget?.email}"? This action cannot be undone and the user record will be completely removed from the system.`}
-        confirmLabel="Delete Permanently"
-        onConfirm={() => {
-          if (permanentDeleteTarget) permanentDeleteMutation.mutate(permanentDeleteTarget.id);
-          setPermanentDeleteTarget(null);
-        }}
-        onCancel={() => setPermanentDeleteTarget(null)}
+        onCancel={() => setRemoveTarget(null)}
       />
     </div>
   );
@@ -258,18 +221,15 @@ export default function UsersTab({
 function EditUserModal({
   user,
   tenantId,
-  superUserId,
-  isSuperAdmin,
   onSuperUserChange,
   onClose,
 }: {
   user: TenantUser;
   tenantId: string;
-  superUserId: string | null;
-  isSuperAdmin: boolean;
   onSuperUserChange: () => void;
   onClose: () => void;
 }) {
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState<TenantUserUpdate>({
     email: user.email,
     first_name: user.first_name ?? '',
@@ -282,12 +242,14 @@ function EditUserModal({
   const [emailError, setEmailError] = useState<string | null>(null);
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
   const [errorMessage, setErrorMessage] = useState('');
-  const [isCurrentSuperUser, setIsCurrentSuperUser] = useState(user.id === superUserId);
 
-  // Sync local state when superUserId prop changes (after query invalidation)
+  // Tenant roles state
+  const [tenantRoles, setTenantRoles] = useState<TenantRole[]>(user.tenant_roles || []);
+  const isSuperUser = tenantRoles.some((r) => r.scope === 'all' && r.level === 'super_user');
+
   useEffect(() => {
-    setIsCurrentSuperUser(user.id === superUserId);
-  }, [user.id, superUserId]);
+    setTenantRoles(user.tenant_roles || []);
+  }, [user.tenant_roles]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: TenantUserUpdate) => {
@@ -308,40 +270,44 @@ function EditUserModal({
     },
   });
 
-  const assignSuperUserMutation = useMutation({
-    mutationFn: async () => {
-      await api.put(`/admin/tenants/${tenantId}/super-user?user_id=${user.id}`);
+  const saveRolesMutation = useMutation({
+    mutationFn: async (roles: TenantRole[]) => {
+      await api.put(`/users/${user.id}/tenant-roles`, { roles });
     },
     onSuccess: () => {
-      setIsCurrentSuperUser(true);
+      queryClient.invalidateQueries({ queryKey: ['tenant-users', tenantId] });
       onSuperUserChange();
     },
-    onError: (error: unknown) => {
-      const err = error as { response?: { data?: { detail?: string } } };
-      setErrorMessage(err.response?.data?.detail || 'Failed to assign super user');
+    onError: (err) => {
+      setErrorMessage(parseApiError(err));
     },
   });
 
-  const removeSuperUserMutation = useMutation({
-    mutationFn: async () => {
-      await api.delete(`/admin/tenants/${tenantId}/super-user`);
-    },
-    onSuccess: () => {
-      setIsCurrentSuperUser(false);
-      onSuperUserChange();
-    },
-    onError: (error: unknown) => {
-      const err = error as { response?: { data?: { detail?: string } } };
-      setErrorMessage(err.response?.data?.detail || 'Failed to remove super user');
-    },
-  });
+  const handleRoleToggle = (scope: TenantRole['scope'], level: TenantRole['level']) => {
+    let newRoles: TenantRole[];
+    const existing = tenantRoles.find((r) => r.scope === scope);
+    if (existing) {
+      if (existing.level === level) {
+        newRoles = tenantRoles.filter((r) => r.scope !== scope);
+      } else {
+        newRoles = tenantRoles.map((r) => (r.scope === scope ? { ...r, level } : r));
+      }
+    } else {
+      newRoles = [...tenantRoles, { scope, level }];
+    }
+    setTenantRoles(newRoles);
+    saveRolesMutation.mutate(newRoles);
+  };
 
   const handleSuperUserToggle = () => {
-    if (isCurrentSuperUser) {
-      removeSuperUserMutation.mutate();
+    let newRoles: TenantRole[];
+    if (isSuperUser) {
+      newRoles = tenantRoles.filter((r) => !(r.scope === 'all' && r.level === 'super_user'));
     } else {
-      assignSuperUserMutation.mutate();
+      newRoles = [{ scope: 'all', level: 'super_user' }];
     }
+    setTenantRoles(newRoles);
+    saveRolesMutation.mutate(newRoles);
   };
 
   const handleSave = () => {
@@ -453,56 +419,89 @@ function EditUserModal({
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
-          <select
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-            value={formData.role}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                role: e.target.value as 'tenant_admin' | 'user',
-              })
-            }
-          >
-            <option value="user">User</option>
-            <option value="tenant_admin">Tenant Admin</option>
-          </select>
-        </div>
+        {/* Roles */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Roles</h4>
 
-        {isSuperAdmin && (
-          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+          {/* Super User toggle */}
+          <div className="flex items-center justify-between mb-2 py-1.5 px-2 bg-purple-50 dark:bg-purple-900/20 rounded">
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Tenant Super User
-              </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Can delete deactivated conferences
+              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                Super User
+              </span>
+              <p className="text-xs text-purple-500 dark:text-purple-400">
+                Full access + Stripe keys, deletion
               </p>
             </div>
             <button
               type="button"
               onClick={handleSuperUserToggle}
-              disabled={assignSuperUserMutation.isPending || removeSuperUserMutation.isPending}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 ${
-                isCurrentSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'
+              disabled={saveRolesMutation.isPending}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 ${
+                isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'
               }`}
             >
               <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  isCurrentSuperUser ? 'translate-x-5' : 'translate-x-0'
+                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  isSuperUser ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
             </button>
           </div>
-        )}
+
+          {/* Per-scope roles */}
+          {!isSuperUser && (
+            <div className="space-y-1.5">
+              {(
+                [
+                  { scope: 'conferences' as const, label: 'Conferences' },
+                  { scope: 'trainings' as const, label: 'Trainings' },
+                  { scope: 'accounting' as const, label: 'Accounting' },
+                ] as const
+              ).map(({ scope, label }) => {
+                const current = tenantRoles.find((r) => r.scope === scope);
+                return (
+                  <div
+                    key={scope}
+                    className="flex items-center justify-between py-1 px-2 bg-gray-50 dark:bg-gray-900 rounded"
+                  >
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
+                    <div className="flex gap-1">
+                      {(
+                        [
+                          { level: 'admin' as const, label: 'Admin' },
+                          { level: 'member' as const, label: 'Member' },
+                        ] as const
+                      ).map(({ level, label: lvlLabel }) => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => handleRoleToggle(scope, level)}
+                          className={`px-2 py-0.5 text-xs font-medium rounded transition-colors ${
+                            current?.level === level
+                              ? level === 'admin'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-600 text-white'
+                              : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {lvlLabel}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Active</label>
           <button
             type="button"
             onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
               formData.is_active ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'
             }`}
           >

@@ -154,6 +154,10 @@ async def send_invoice_email(
             html=rendered.body_html,
             text=rendered.body_text,
             attachments=[attachment],
+            db=db,
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            email_type="invoice",
         )
 
     except Exception as e:
@@ -274,6 +278,10 @@ async def send_registration_cancellation_email(
             subject=rendered.subject,
             html=rendered.body_html,
             text=rendered.body_text,
+            db=db,
+            tenant_id=tenant_id,
+            conference_id=conference_id,
+            email_type="cancellation",
         )
 
     except Exception as e:

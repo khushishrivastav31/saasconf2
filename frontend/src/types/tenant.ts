@@ -24,6 +24,10 @@ export interface Tenant {
   website: string | null;
   logo_url: string | null;
   email_domain: string | null;
+  // Resend email settings
+  resend_api_key: string | null;
+  resend_from_email: string | null;
+  resend_from_name: string | null;
   // Contact persons
   contact_persons: ContactPerson[];
   // Comments
@@ -50,6 +54,10 @@ export interface TenantCreate {
   vat_number?: string;
   website?: string;
   email_domain?: string;
+  // Resend email settings
+  resend_api_key?: string;
+  resend_from_email?: string;
+  resend_from_name?: string;
   // Contact persons
   contact_persons?: ContactPerson[];
   // Comments
@@ -73,6 +81,10 @@ export interface TenantUpdate {
   vat_number?: string;
   website?: string;
   email_domain?: string;
+  // Resend email settings
+  resend_api_key?: string;
+  resend_from_email?: string;
+  resend_from_name?: string;
   contact_persons?: ContactPerson[];
   comments?: string;
 }
@@ -141,6 +153,11 @@ export interface TenantModuleUpdate {
 }
 
 // Tenant User types
+export interface TenantRole {
+  scope: 'all' | 'conferences' | 'trainings' | 'accounting';
+  level: 'super_user' | 'admin' | 'member';
+}
+
 export interface TenantUser {
   id: string;
   email: string;
@@ -150,6 +167,7 @@ export interface TenantUser {
   role: 'tenant_admin' | 'user';
   is_active: boolean;
   has_all_conference_access: boolean;
+  tenant_roles: TenantRole[];
   last_login: string | null;
   created_at: string;
   updated_at: string;

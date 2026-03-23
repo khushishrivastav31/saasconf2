@@ -90,6 +90,10 @@ async def send_registration_invoice_email(
             text=rendered.body_text,
             reply_to=support_email,
             attachments=[attachment],
+            db=db,
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            email_type="registration_invoice",
         )
 
         if success:
@@ -172,6 +176,10 @@ async def send_attendee_welcome_email(
             html=rendered.body_html,
             text=rendered.body_text,
             reply_to=support_email,
+            db=db,
+            tenant_id=conference.tenant_id,
+            conference_id=conference.id,
+            email_type="attendee_welcome",
         )
 
         if success:

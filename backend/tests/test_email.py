@@ -31,6 +31,8 @@ from app.core.email_templates import (
     replace_placeholders,
 )
 
+pytestmark = pytest.mark.no_mock_email
+
 # ---------------------------------------------------------------------------
 # _get_resend tests
 # ---------------------------------------------------------------------------
@@ -135,7 +137,7 @@ class TestSendEmail:
                 text="Hello",
             )
 
-        assert result is True
+        assert result is False
         assert "To: test@example.com" in caplog.text
 
     @pytest.mark.asyncio
@@ -149,7 +151,7 @@ class TestSendEmail:
                 text="Plain text content",
             )
 
-        assert result is True
+        assert result is False
 
     @pytest.mark.asyncio
     async def test_send_email_uses_html_when_no_text(self, capsys):
@@ -162,7 +164,7 @@ class TestSendEmail:
                 text=None,
             )
 
-        assert result is True
+        assert result is False
 
     @pytest.mark.asyncio
     async def test_send_email_success_with_resend(self):

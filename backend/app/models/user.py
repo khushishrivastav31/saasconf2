@@ -14,6 +14,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.tenant import Tenant
     from app.models.user_conference_access import UserConferenceAccess
+    from app.models.user_tenant_role import UserTenantRole
 
 
 class UserRole(StrEnum):
@@ -63,6 +64,12 @@ class User(Base):
     conference_access: Mapped[list["UserConferenceAccess"]] = relationship(
         "UserConferenceAccess",
         foreign_keys="UserConferenceAccess.user_id",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    tenant_roles: Mapped[list["UserTenantRole"]] = relationship(
+        "UserTenantRole",
+        foreign_keys="UserTenantRole.user_id",
         back_populates="user",
         cascade="all, delete-orphan",
     )

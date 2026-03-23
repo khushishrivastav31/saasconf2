@@ -563,6 +563,9 @@ async def send_contract(
             subject=body.subject,
             html=body.body_html,
             attachments=email_attachments,
+            db=db,
+            tenant_id=current_user.tenant_id,
+            email_type="sponsor_contract",
         )
         if success:
             sent_count += 1

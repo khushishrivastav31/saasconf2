@@ -9,6 +9,7 @@ import { validateEmail } from '../utils/validators';
 import { useSaveStatus } from '../hooks/useSaveStatus';
 import type {
   TenantUser,
+  TenantRole,
   TenantUserCreate,
   TenantUserUpdate,
   PaginatedResponse,
@@ -21,8 +22,7 @@ export default function Team() {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [deactivateTarget, setDeactivateTarget] = useState<TenantUser | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<TenantUser | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<TenantUser | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -34,25 +34,13 @@ export default function Team() {
     },
   });
 
-  const deactivateMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      await api.put(`/users/${userId}`, { is_active: false });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-users'] });
-      setDeactivateTarget(null);
-      setError(null);
-    },
-    onError: (err) => setError(parseApiError(err)),
-  });
-
-  const deleteMutation = useMutation({
+  const removeMutation = useMutation({
     mutationFn: async (userId: string) => {
       await api.delete(`/users/${userId}?permanent=true`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-users'] });
-      setDeleteTarget(null);
+      setRemoveTarget(null);
       setError(null);
     },
     onError: (err) => setError(parseApiError(err)),
@@ -81,11 +69,24 @@ export default function Team() {
       )
     : users;
 
-  const roleLabel = (role: string) => (role === 'tenant_admin' ? 'Admin' : 'Read-only');
-  const roleBadge = (role: string) =>
-    role === 'tenant_admin'
-      ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+  const scopeLabels: Record<string, string> = {
+    all: 'Super User',
+    conferences: 'Conferences',
+    trainings: 'Trainings',
+    accounting: 'Accounting',
+  };
+  const levelLabels: Record<string, string> = {
+    super_user: 'Super User',
+    admin: 'Admin',
+    member: 'Member',
+  };
+  const roleBadgeColor = (scope: string, level: string) => {
+    if (scope === 'all' && level === 'super_user')
+      return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300';
+    if (level === 'admin')
+      return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
+    return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+  };
 
   return (
     <div>
@@ -190,11 +191,22 @@ export default function Team() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${roleBadge(user.role)}`}
-                    >
-                      {roleLabel(user.role)}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {user.tenant_roles && user.tenant_roles.length > 0 ? (
+                        user.tenant_roles.map((r) => (
+                          <span
+                            key={r.scope}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${roleBadgeColor(r.scope, r.level)}`}
+                          >
+                            {r.scope === 'all'
+                              ? scopeLabels.all
+                              : `${scopeLabels[r.scope] || r.scope} ${levelLabels[r.level] || r.level}`}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">No roles</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <span
@@ -241,47 +253,25 @@ export default function Team() {
                           />
                         </svg>
                       </button>
-                      {user.is_active ? (
-                        <button
-                          onClick={() => setDeactivateTarget(user)}
-                          className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
-                          title="Deactivate"
+                      <button
+                        onClick={() => setRemoveTarget(user)}
+                        className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
+                        title="Remove member"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                            />
-                          </svg>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setDeleteTarget(user)}
-                          className="text-gray-400 hover:text-red-500 p-1 rounded transition-colors"
-                          title="Delete permanently"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
-                      )}
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -321,29 +311,17 @@ export default function Team() {
         />
       )}
 
-      {/* Confirm Deactivate */}
+      {/* Confirm Remove */}
       <ConfirmDialog
-        open={!!deactivateTarget}
-        title="Deactivate Member"
-        message={`Are you sure you want to deactivate "${deactivateTarget?.email}"? They will no longer be able to log in.`}
-        confirmLabel="Deactivate"
-        onConfirm={() => {
-          if (deactivateTarget) deactivateMutation.mutate(deactivateTarget.id);
-        }}
-        onCancel={() => setDeactivateTarget(null)}
-      />
-
-      {/* Confirm Delete */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Delete Member Permanently"
-        message={`Are you sure you want to permanently delete "${deleteTarget?.email}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        open={!!removeTarget}
+        title="Remove Team Member"
+        message={`Are you sure you want to permanently remove "${removeTarget?.email}" from the team? This will delete the user account and cannot be undone.`}
+        confirmLabel="Remove"
         variant="danger"
         onConfirm={() => {
-          if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+          if (removeTarget) removeMutation.mutate(removeTarget.id);
         }}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={() => setRemoveTarget(null)}
       />
     </div>
   );
@@ -363,6 +341,17 @@ function AddMemberModal({
   const [errorMessage, setErrorMessage] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
 
+  // Roles state
+  const [tenantRoles, setTenantRoles] = useState<TenantRole[]>([]);
+  const isSuperUser = tenantRoles.some((r) => r.scope === 'all' && r.level === 'super_user');
+  const hasConferenceRole = isSuperUser || tenantRoles.some((r) => r.scope === 'conferences');
+
+  // Conference access state
+  const [hasAllConferenceAccess, setHasAllConferenceAccess] = useState(true);
+  const [selectedConferences, setSelectedConferences] = useState<
+    { conferenceId: string; accessLevel: 'admin' | 'read_only' }[]
+  >([]);
+
   const { data: pronounData } = useQuery({
     queryKey: ['user-pronoun-options'],
     queryFn: async () => {
@@ -371,9 +360,38 @@ function AddMemberModal({
     },
   });
 
+  const { data: conferencesData } = useQuery({
+    queryKey: ['conferences-for-access'],
+    queryFn: async () => {
+      const res = await api.get<PaginatedResponse<Conference>>('/conferences?page_size=100');
+      return res.data;
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: TenantUserCreate) => {
-      await api.post('/users', data);
+      const res = await api.post<{ id: string }>('/users', data);
+      const userId = res.data.id;
+
+      // Set tenant roles if any
+      if (tenantRoles.length > 0) {
+        await api.put(`/users/${userId}/tenant-roles`, { roles: tenantRoles });
+      }
+
+      // Set conference access
+      if (hasAllConferenceAccess) {
+        await api.put(`/users/${userId}`, { has_all_conference_access: true });
+      } else {
+        // Grant individual conference access
+        for (const conf of selectedConferences) {
+          await api.post('/user-conference-access', {
+            user_id: userId,
+            conference_id: conf.conferenceId,
+            access_level: conf.accessLevel,
+          });
+        }
+      }
+
       return data;
     },
     onSuccess: (data) => {
@@ -383,6 +401,27 @@ function AddMemberModal({
     onError: (err) => setErrorMessage(parseApiError(err)),
   });
 
+  const handleRoleToggle = (scope: TenantRole['scope'], level: TenantRole['level']) => {
+    const existing = tenantRoles.find((r) => r.scope === scope);
+    if (existing) {
+      if (existing.level === level) {
+        setTenantRoles(tenantRoles.filter((r) => r.scope !== scope));
+      } else {
+        setTenantRoles(tenantRoles.map((r) => (r.scope === scope ? { ...r, level } : r)));
+      }
+    } else {
+      setTenantRoles([...tenantRoles, { scope, level }]);
+    }
+  };
+
+  const handleSuperUserToggle = () => {
+    if (isSuperUser) {
+      setTenantRoles(tenantRoles.filter((r) => !(r.scope === 'all' && r.level === 'super_user')));
+    } else {
+      setTenantRoles([{ scope: 'all', level: 'super_user' }]);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (emailError) return;
@@ -390,115 +429,313 @@ function AddMemberModal({
     createMutation.mutate(formData);
   };
 
+  const assignedIds = new Set(selectedConferences.map((c) => c.conferenceId));
+  const availableConferences = conferencesData?.items.filter((c) => !assignedIds.has(c.id)) || [];
+
   return (
-    <Modal open={true} onClose={() => onClose()} title="Add Team Member" size="max-w-md">
+    <Modal open={true} onClose={() => onClose()} title="Add Team Member" size="max-w-4xl">
       <form onSubmit={handleSubmit}>
-        <div className="px-6 py-4 space-y-4">
+        <div className="px-6 py-4">
           {errorMessage && (
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-3 text-sm text-red-700 dark:text-red-300">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-3 text-sm text-red-700 dark:text-red-300 mb-4">
               {errorMessage}
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Email *
-            </label>
-            <input
-              type="email"
-              required
-              className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              onBlur={(e) => setEmailError(validateEmail(e.target.value))}
-            />
-            {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
-          </div>
+          <div className="grid grid-cols-[2fr_3fr] gap-6">
+            {/* Left column - User details */}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm ${emailError ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'}`}
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+                />
+                {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                First Name *
-              </label>
-              <input
-                type="text"
-                required
-                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Last Name *
-              </label>
-              <input
-                type="text"
-                required
-                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-              />
-            </div>
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                  />
+                </div>
+              </div>
 
-          {pronounData && pronounData.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Pronouns
-              </label>
-              <select
-                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-                value={formData.pronouns || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, pronouns: e.target.value || undefined })
-                }
-              >
-                <option value="">Select pronouns...</option>
-                {pronounData.map((opt) => (
-                  <option key={opt.id} value={opt.name}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+              {pronounData && pronounData.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Pronouns
+                  </label>
+                  <select
+                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
+                    value={formData.pronouns || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, pronouns: e.target.value || undefined })
+                    }
+                  >
+                    <option value="">Select pronouns...</option>
+                    {pronounData.map((opt) => (
+                      <option key={opt.id} value={opt.name}>
+                        {opt.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Access Level
-            </label>
-            <select
-              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-              value={formData.role}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  role: e.target.value as 'tenant_admin' | 'user',
-                })
-              }
-            >
-              <option value="user">Read-only</option>
-              <option value="tenant_admin">Admin</option>
-            </select>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Read-only users can view all data but cannot create, edit, or delete.
-            </p>
+              {/* Roles */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Roles</h4>
+
+                {/* Super User toggle */}
+                <div className="flex items-center justify-between mb-2 py-1 px-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+                  <div>
+                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                      Super User
+                    </span>
+                    <p className="text-xs text-purple-500 dark:text-purple-400">
+                      Full access to everything
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSuperUserToggle}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                      isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isSuperUser ? 'translate-x-4' : 'translate-x-0'}`}
+                    />
+                  </button>
+                </div>
+
+                {/* Per-scope roles (only shown when not Super User) */}
+                {!isSuperUser && (
+                  <div className="space-y-1.5">
+                    {(
+                      [
+                        { scope: 'conferences' as const, label: 'Conferences' },
+                        { scope: 'trainings' as const, label: 'Trainings' },
+                        { scope: 'accounting' as const, label: 'Accounting' },
+                      ] as const
+                    ).map(({ scope, label }) => {
+                      const current = tenantRoles.find((r) => r.scope === scope);
+                      return (
+                        <div
+                          key={scope}
+                          className="flex items-center justify-between py-1 px-2 bg-gray-50 dark:bg-gray-900 rounded"
+                        >
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
+                          <div className="flex gap-1">
+                            {(
+                              [
+                                { level: 'admin' as const, label: 'Admin' },
+                                { level: 'member' as const, label: 'Member' },
+                              ] as const
+                            ).map(({ level, label: lvlLabel }) => (
+                              <button
+                                key={level}
+                                type="button"
+                                onClick={() => handleRoleToggle(scope, level)}
+                                className={`px-2 py-0.5 text-xs font-medium rounded transition-colors ${
+                                  current?.level === level
+                                    ? level === 'admin'
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-gray-600 text-white'
+                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                                }`}
+                              >
+                                {lvlLabel}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right column - Conference access */}
+            <div className="border-l border-gray-200 dark:border-gray-700 pl-6 min-w-0">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                Conference Access
+              </h4>
+
+              {!hasConferenceRole ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                  Assign a Conferences role to configure access.
+                </p>
+              ) : (
+                <>
+                  <label className="flex items-center gap-2 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={hasAllConferenceAccess}
+                      onChange={(e) => setHasAllConferenceAccess(e.target.checked)}
+                      className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      All Conferences
+                    </span>
+                  </label>
+
+                  {!hasAllConferenceAccess && (
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 p-2 max-h-48 overflow-y-auto">
+                      {selectedConferences.length > 0 ? (
+                        <div className="space-y-1.5 mb-2">
+                          {selectedConferences.map((access) => {
+                            const conf = conferencesData?.items.find(
+                              (c) => c.id === access.conferenceId
+                            );
+                            return (
+                              <div
+                                key={access.conferenceId}
+                                className="flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5"
+                              >
+                                <span className="text-sm text-gray-900 dark:text-gray-100 truncate">
+                                  {conf?.name || access.conferenceId}
+                                </span>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <select
+                                    value={access.accessLevel}
+                                    onChange={(e) =>
+                                      setSelectedConferences((prev) =>
+                                        prev.map((c) =>
+                                          c.conferenceId === access.conferenceId
+                                            ? {
+                                                ...c,
+                                                accessLevel: e.target.value as
+                                                  | 'admin'
+                                                  | 'read_only',
+                                              }
+                                            : c
+                                        )
+                                      )
+                                    }
+                                    className="text-xs border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                                  >
+                                    <option value="read_only">Read-only</option>
+                                    <option value="admin">Admin</option>
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setSelectedConferences((prev) =>
+                                        prev.filter((c) => c.conferenceId !== access.conferenceId)
+                                      )
+                                    }
+                                    className="text-red-500 hover:text-red-700 p-0.5"
+                                  >
+                                    <svg
+                                      className="w-3.5 h-3.5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                      />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          No access granted yet.
+                        </p>
+                      )}
+
+                      {availableConferences.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            id="add-conference-select-create"
+                            className="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                            defaultValue=""
+                          >
+                            <option value="" disabled>
+                              Add conference...
+                            </option>
+                            {availableConferences.map((conf) => (
+                              <option key={conf.id} value={conf.id}>
+                                {conf.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const select = document.getElementById(
+                                'add-conference-select-create'
+                              ) as HTMLSelectElement;
+                              if (select.value) {
+                                setSelectedConferences((prev) => [
+                                  ...prev,
+                                  { conferenceId: select.value, accessLevel: 'read_only' },
+                                ]);
+                                select.value = '';
+                              }
+                            }}
+                            className="shrink-0 px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end gap-3">
+        <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex justify-end gap-3">
           <button
             type="button"
             onClick={() => onClose()}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="px-4 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={createMutation.isPending || !!emailError}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
+            className="px-4 py-1.5 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
           >
             {createMutation.isPending ? 'Inviting...' : 'Invite Member'}
           </button>
@@ -522,6 +759,11 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
   const [newPassword, setNewPassword] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
 
+  // Tenant roles state — initialized from user prop
+  const [tenantRoles, setTenantRoles] = useState<TenantRole[]>(user.tenant_roles || []);
+  const isSuperUser = tenantRoles.some((r) => r.scope === 'all' && r.level === 'super_user');
+  const hasConferenceRole = isSuperUser || tenantRoles.some((r) => r.scope === 'conferences');
+
   // Sync formData when user prop changes (e.g., after query refetch)
   useEffect(() => {
     setFormData((prev) => ({
@@ -529,6 +771,11 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
       has_all_conference_access: user.has_all_conference_access,
     }));
   }, [user.has_all_conference_access]);
+
+  // Sync tenant roles when user prop changes
+  useEffect(() => {
+    setTenantRoles(user.tenant_roles || []);
+  }, [user.tenant_roles]);
 
   const { data: pronounData } = useQuery({
     queryKey: ['user-pronoun-options'],
@@ -627,6 +874,53 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
     },
   });
 
+  // Save tenant roles mutation
+  const saveRolesMutation = useMutation({
+    mutationFn: async (roles: TenantRole[]) => {
+      await api.put(`/users/${user.id}/tenant-roles`, { roles });
+    },
+    onMutate: () => {
+      setSaving();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team-users'] });
+      setSaved();
+    },
+    onError: (err) => {
+      setSaveError();
+      setErrorMessage(parseApiError(err));
+    },
+  });
+
+  const handleRoleToggle = (scope: TenantRole['scope'], level: TenantRole['level']) => {
+    let newRoles: TenantRole[];
+    const existing = tenantRoles.find((r) => r.scope === scope);
+    if (existing) {
+      // Remove if same level, update if different
+      if (existing.level === level) {
+        newRoles = tenantRoles.filter((r) => r.scope !== scope);
+      } else {
+        newRoles = tenantRoles.map((r) => (r.scope === scope ? { ...r, level } : r));
+      }
+    } else {
+      newRoles = [...tenantRoles, { scope, level }];
+    }
+    setTenantRoles(newRoles);
+    saveRolesMutation.mutate(newRoles);
+  };
+
+  const handleSuperUserToggle = () => {
+    let newRoles: TenantRole[];
+    if (isSuperUser) {
+      newRoles = tenantRoles.filter((r) => !(r.scope === 'all' && r.level === 'super_user'));
+    } else {
+      // Super user replaces all other roles
+      newRoles = [{ scope: 'all', level: 'super_user' }];
+    }
+    setTenantRoles(newRoles);
+    saveRolesMutation.mutate(newRoles);
+  };
+
   // Update access level mutation
   const updateAccessMutation = useMutation({
     mutationFn: async ({
@@ -719,43 +1013,100 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {pronounData && pronounData.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Pronouns
-                  </label>
-                  <select
-                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
-                    value={formData.pronouns || ''}
-                    onChange={(e) =>
-                      setFormData({ ...formData, pronouns: e.target.value || undefined })
-                    }
-                  >
-                    <option value="">Select...</option>
-                    {pronounData.map((opt) => (
-                      <option key={opt.id} value={opt.name}>
-                        {opt.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            {pronounData && pronounData.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Role
+                  Pronouns
                 </label>
                 <select
                   className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-1.5 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-gray-100 sm:text-sm"
-                  value={formData.role}
+                  value={formData.pronouns || ''}
                   onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value as 'tenant_admin' | 'user' })
+                    setFormData({ ...formData, pronouns: e.target.value || undefined })
                   }
                 >
-                  <option value="user">Read-only</option>
-                  <option value="tenant_admin">Admin</option>
+                  <option value="">Select...</option>
+                  {pronounData.map((opt) => (
+                    <option key={opt.id} value={opt.name}>
+                      {opt.name}
+                    </option>
+                  ))}
                 </select>
               </div>
+            )}
+
+            {/* Roles */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Roles</h4>
+
+              {/* Super User toggle */}
+              <div className="flex items-center justify-between mb-2 py-1 px-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+                <div>
+                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                    Super User
+                  </span>
+                  <p className="text-xs text-purple-500 dark:text-purple-400">
+                    Full access to everything
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSuperUserToggle}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                    isSuperUser ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isSuperUser ? 'translate-x-4' : 'translate-x-0'}`}
+                  />
+                </button>
+              </div>
+
+              {/* Per-scope roles (only shown when not Super User) */}
+              {!isSuperUser && (
+                <div className="space-y-1.5">
+                  {(
+                    [
+                      { scope: 'conferences' as const, label: 'Conferences' },
+                      { scope: 'trainings' as const, label: 'Trainings' },
+                      { scope: 'accounting' as const, label: 'Accounting' },
+                    ] as const
+                  ).map(({ scope, label }) => {
+                    const current = tenantRoles.find((r) => r.scope === scope);
+                    return (
+                      <div
+                        key={scope}
+                        className="flex items-center justify-between py-1 px-2 bg-gray-50 dark:bg-gray-900 rounded"
+                      >
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
+                        <div className="flex gap-1">
+                          {(
+                            [
+                              { level: 'admin' as const, label: 'Admin' },
+                              { level: 'member' as const, label: 'Member' },
+                            ] as const
+                          ).map(({ level, label: lvlLabel }) => (
+                            <button
+                              key={level}
+                              type="button"
+                              onClick={() => handleRoleToggle(scope, level)}
+                              className={`px-2 py-0.5 text-xs font-medium rounded transition-colors ${
+                                current?.level === level
+                                  ? level === 'admin'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-600 text-white'
+                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                              }`}
+                            >
+                              {lvlLabel}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between py-1">
@@ -763,7 +1114,7 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
                   formData.is_active ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
                 }`}
               >
@@ -794,134 +1145,144 @@ function EditMemberModal({ user, onClose }: { user: TenantUser; onClose: () => v
               Conference Access
             </h4>
 
-            <label className="flex items-center gap-2 mb-2">
-              <input
-                type="checkbox"
-                checked={formData.has_all_conference_access}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setFormData({ ...formData, has_all_conference_access: newValue });
-                  setSaving();
-                  try {
-                    await api.put(`/users/${user.id}`, { has_all_conference_access: newValue });
-                    queryClient.invalidateQueries({ queryKey: ['team-users'] });
-                    setSaved();
-                  } catch (err) {
-                    setSaveError();
-                    setErrorMessage(parseApiError(err));
-                    setFormData({ ...formData, has_all_conference_access: !newValue });
-                  }
-                }}
-                className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">All Conferences</span>
-            </label>
+            {!hasConferenceRole ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                Assign a Conferences role to configure access.
+              </p>
+            ) : (
+              <>
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.has_all_conference_access}
+                    onChange={async (e) => {
+                      const newValue = e.target.checked;
+                      setFormData({ ...formData, has_all_conference_access: newValue });
+                      setSaving();
+                      try {
+                        await api.put(`/users/${user.id}`, {
+                          has_all_conference_access: newValue,
+                        });
+                        queryClient.invalidateQueries({ queryKey: ['team-users'] });
+                        setSaved();
+                      } catch (err) {
+                        setSaveError();
+                        setErrorMessage(parseApiError(err));
+                        setFormData({ ...formData, has_all_conference_access: !newValue });
+                      }
+                    }}
+                    className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">All Conferences</span>
+                </label>
 
-            {!formData.has_all_conference_access && (
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 p-2 max-h-48 overflow-y-auto">
-                {userAccessData && userAccessData.items.length > 0 ? (
-                  <div className="space-y-1.5 mb-2">
-                    {userAccessData.items.map((access) => (
-                      <div
-                        key={access.id}
-                        className="flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5"
-                      >
-                        <span className="text-sm text-gray-900 dark:text-gray-100 truncate">
-                          {access.conference_name}
-                        </span>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <select
-                            value={access.access_level}
-                            onChange={(e) =>
-                              updateAccessMutation.mutate({
-                                accessId: access.id,
-                                accessLevel: e.target.value as 'admin' | 'read_only',
-                              })
-                            }
-                            className="text-xs border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                {!formData.has_all_conference_access && (
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 p-2 max-h-48 overflow-y-auto">
+                    {userAccessData && userAccessData.items.length > 0 ? (
+                      <div className="space-y-1.5 mb-2">
+                        {userAccessData.items.map((access) => (
+                          <div
+                            key={access.id}
+                            className="flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5"
                           >
-                            <option value="read_only">Read-only</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => revokeAccessMutation.mutate(access.id)}
-                            disabled={revokeAccessMutation.isPending}
-                            className="text-red-500 hover:text-red-700 p-0.5"
-                          >
-                            <svg
-                              className="w-3.5 h-3.5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                            <span className="text-sm text-gray-900 dark:text-gray-100 truncate">
+                              {access.conference_name}
+                            </span>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <select
+                                value={access.access_level}
+                                onChange={(e) =>
+                                  updateAccessMutation.mutate({
+                                    accessId: access.id,
+                                    accessLevel: e.target.value as 'admin' | 'read_only',
+                                  })
+                                }
+                                className="text-xs border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                              >
+                                <option value="read_only">Read-only</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => revokeAccessMutation.mutate(access.id)}
+                                disabled={revokeAccessMutation.isPending}
+                                className="text-red-500 hover:text-red-700 p-0.5"
+                              >
+                                <svg
+                                  className="w-3.5 h-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        No access granted yet.
+                      </p>
+                    )}
+
+                    {conferencesData &&
+                      (() => {
+                        const assignedIds = new Set(
+                          userAccessData?.items.map((a) => a.conference_id) || []
+                        );
+                        const availableConferences = conferencesData.items.filter(
+                          (c) => !assignedIds.has(c.id)
+                        );
+                        if (availableConferences.length === 0) return null;
+
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <select
+                              id="add-conference-select"
+                              className="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
+                              defaultValue=""
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                              <option value="" disabled>
+                                Add conference...
+                              </option>
+                              {availableConferences.map((conf) => (
+                                <option key={conf.id} value={conf.id}>
+                                  {conf.name}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const select = document.getElementById(
+                                  'add-conference-select'
+                                ) as HTMLSelectElement;
+                                if (select.value) {
+                                  grantAccessMutation.mutate({
+                                    conferenceId: select.value,
+                                    accessLevel: 'read_only',
+                                  });
+                                  select.value = '';
+                                }
+                              }}
+                              disabled={grantAccessMutation.isPending}
+                              className="shrink-0 px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700 disabled:opacity-50"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        );
+                      })()}
                   </div>
-                ) : (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    No access granted yet.
-                  </p>
                 )}
-
-                {conferencesData &&
-                  (() => {
-                    const assignedIds = new Set(
-                      userAccessData?.items.map((a) => a.conference_id) || []
-                    );
-                    const availableConferences = conferencesData.items.filter(
-                      (c) => !assignedIds.has(c.id)
-                    );
-                    if (availableConferences.length === 0) return null;
-
-                    return (
-                      <div className="flex items-center gap-1.5">
-                        <select
-                          id="add-conference-select"
-                          className="flex-1 min-w-0 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100"
-                          defaultValue=""
-                        >
-                          <option value="" disabled>
-                            Add conference...
-                          </option>
-                          {availableConferences.map((conf) => (
-                            <option key={conf.id} value={conf.id}>
-                              {conf.name}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const select = document.getElementById(
-                              'add-conference-select'
-                            ) as HTMLSelectElement;
-                            if (select.value) {
-                              grantAccessMutation.mutate({
-                                conferenceId: select.value,
-                                accessLevel: 'read_only',
-                              });
-                              select.value = '';
-                            }
-                          }}
-                          disabled={grantAccessMutation.isPending}
-                          className="shrink-0 px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700 disabled:opacity-50"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    );
-                  })()}
-              </div>
+              </>
             )}
           </div>
         </div>
