@@ -44,8 +44,9 @@ async def list_registration_question_answers(
 
     # Build question lookup from settings
     rq = (conference.settings or {}).get("registration_questions", {})
+    questions_list = rq if isinstance(rq, list) else rq.get("questions", [])
     question_map: dict[str, str] = {}
-    for q in rq.get("questions", []):
+    for q in questions_list:
         question_map[q["id"]] = q.get("text", "Unknown question")
 
     # Count distinct applicants with answers
@@ -154,7 +155,7 @@ async def get_registration_question_answer_stats(
 
     # Get question definitions
     rq = (conference.settings or {}).get("registration_questions", {})
-    questions = rq.get("questions", [])
+    questions = rq if isinstance(rq, list) else rq.get("questions", [])
 
     # Load ALL answers for this conference
     answers_result = await db.execute(
@@ -253,7 +254,7 @@ async def export_registration_question_answers(
 
     # Get question definitions
     rq = (conference.settings or {}).get("registration_questions", {})
-    questions = rq.get("questions", [])
+    questions = rq if isinstance(rq, list) else rq.get("questions", [])
 
     # Load ALL answers
     answers_result = await db.execute(

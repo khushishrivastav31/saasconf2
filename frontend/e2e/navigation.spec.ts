@@ -54,6 +54,7 @@ test.describe('Navigation', () => {
   });
 
   test('should navigate between main sections', async ({ page }) => {
+    await gotoDashboard(page);
     await page.goto('/modules/conferences');
     await expect(page.getByRole('heading', { name: /conferences/i })).toBeVisible({ timeout: 10000 });
 
