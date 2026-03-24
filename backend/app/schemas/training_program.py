@@ -74,3 +74,44 @@ class ProgramYearTrainingResponse(BaseModel):
     start_date: date
     created_at: datetime
     updated_at: datetime
+    trainer_assignments: list["PlacementTrainerResponse"] = Field(default_factory=list)
+
+
+# --- Placement Trainer Assignments ---
+
+
+class PlacementTrainerCreate(BaseModel):
+    """Schema for assigning a trainer to a placement."""
+
+    trainer_id: UUID
+
+
+class PlacementTrainerResponse(BaseModel):
+    """Schema for a trainer assignment response."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    placement_id: UUID
+    trainer_id: UUID
+    trainer_first_name: str
+    trainer_last_name: str
+    created_at: datetime
+
+
+class TrainerConflict(BaseModel):
+    """Describes a scheduling conflict for a trainer."""
+
+    type: str  # "unavailability" | "double_booking"
+    description: str
+    start_date: date
+    end_date: date
+    other_training_name: str | None = None
+    other_placement_id: UUID | None = None
+
+
+class AvailabilityCheckResponse(BaseModel):
+    """Response for trainer availability check."""
+
+    available: bool
+    conflicts: list[TrainerConflict]

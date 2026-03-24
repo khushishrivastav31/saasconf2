@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
-  message: string;
+  message: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'danger' | 'warning';
@@ -80,7 +80,7 @@ export default function ConfirmDialog({
             >
               {title}
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{message}</p>
+            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{message}</div>
           </div>
         </div>
         <div className="mt-6 flex justify-end gap-3">

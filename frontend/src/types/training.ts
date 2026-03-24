@@ -410,4 +410,30 @@ export interface ProgramYearTraining {
   start_date: string;
   created_at: string;
   updated_at: string;
+  trainer_assignments: PlacementTrainerAssignment[];
+}
+
+// Trainer assigned to a placement
+export interface PlacementTrainerAssignment {
+  id: string;
+  placement_id: string;
+  trainer_id: string;
+  trainer_first_name: string;
+  trainer_last_name: string;
+  created_at: string;
+}
+
+// Conflict when assigning a trainer
+export interface TrainerConflict {
+  type: 'unavailability' | 'double_booking';
+  description: string;
+  start_date: string;
+  end_date: string;
+  other_training_name?: string;
+  other_placement_id?: string;
+}
+
+export interface AvailabilityCheckResponse {
+  available: boolean;
+  conflicts: TrainerConflict[];
 }

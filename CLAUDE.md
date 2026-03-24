@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Drag-and-drop training scheduling on program year calendar. Migrations 160-162 (duration→int, color field, program_year_trainings table, parallel placements). Backend: ProgramYearTraining model + 3 API endpoints (GET/POST/DELETE). Frontend: TrainingCatalogSidebar, CalendarTrainingBar, YearCalendarGrid with droppable cells + lane rows, DesignProgramTab DnD orchestrator. 8 placement tests green. Color picker in training settings.
-- **Status**: mypy pass, ruff pass, tsc pass, eslint pass, 1632 frontend tests pass. Backend full suite pending.
+- **Last completed**: Assign Trainers tab — PlacementTrainer model + migration 165, schemas, 3 API endpoints (assign/remove/check-trainer), availability conflict detection (unavailability + double-booking), ReadOnlyCalendarGrid + ReadOnlyTrainingBar components, AssignTrainersTab with trainer filter + conflict dialog. Shared calendarUtils.ts extracted. ConfirmDialog updated to accept ReactNode message. 17 placement trainer tests green.
+- **Status**: mypy pass, ruff pass, tsc pass, eslint pass, 1632 frontend tests pass. Backend full suite running. Ready to commit after user approval.

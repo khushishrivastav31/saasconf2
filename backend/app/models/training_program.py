@@ -13,6 +13,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.location import Location
     from app.models.tenant import Tenant
+    from app.models.trainer import Trainer
     from app.models.training import Training
 
 
@@ -79,6 +80,9 @@ class ProgramYearTraining(Base):
     program_year: Mapped["TrainingProgramYear"] = relationship("TrainingProgramYear", back_populates="placements")
     training: Mapped["Training"] = relationship("Training", lazy="joined")
     location: Mapped["Location | None"] = relationship("Location", lazy="joined")
+    trainer_assignments: Mapped[list["PlacementTrainer"]] = relationship(
+        "PlacementTrainer", back_populates="placement", cascade="all, delete-orphan", lazy="selectin"
+    )
 
     __table_args__ = (
         Index("idx_pyt_tenant", "tenant_id"),
@@ -88,3 +92,39 @@ class ProgramYearTraining(Base):
 
     def __repr__(self) -> str:
         return f"<ProgramYearTraining {self.training_id} @ {self.start_date}>"
+
+
+class PlacementTrainer(Base):
+    """A trainer assigned to a training placement."""
+
+    __tablename__ = "placement_trainers"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    placement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("program_year_trainings.id", ondelete="CASCADE"), nullable=False
+    )
+    trainer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trainers.id", ondelete="CASCADE"), nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    placement: Mapped["ProgramYearTraining"] = relationship("ProgramYearTraining", back_populates="trainer_assignments")
+    trainer: Mapped["Trainer"] = relationship("Trainer", lazy="joined")
+
+    __table_args__ = (
+        UniqueConstraint("placement_id", "trainer_id", name="uq_placement_trainer"),
+        Index("idx_pt_tenant", "tenant_id"),
+        Index("idx_pt_placement", "placement_id"),
+        Index("idx_pt_trainer", "trainer_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<PlacementTrainer {self.trainer_id} → {self.placement_id}>"
