@@ -5,7 +5,19 @@ from datetime import datetime
 from decimal import Decimal
 from typing import ClassVar
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -54,9 +66,10 @@ class VolunteerRole(Base):
 
 class TenantLocationType(Base):
     """
-    Conference-scoped location type definitions.
+    Location type definitions — either conference-scoped or tenant-level.
 
-    Each conference has its own set of location types.
+    Conference-scoped types have a conference_id set. Tenant-level types
+    (used by trainings) have conference_id = NULL.
     The locations.location_type column stores the type's slug value as a plain string.
     """
 
@@ -68,10 +81,10 @@ class TenantLocationType(Base):
         ForeignKey("tenants.id", ondelete="CASCADE"),
         nullable=False,
     )
-    conference_id: Mapped[uuid.UUID] = mapped_column(
+    conference_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("conferences.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     slug: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -86,7 +99,21 @@ class TenantLocationType(Base):
     __table_args__ = (
         Index("idx_tenant_location_types_tenant", "tenant_id"),
         Index("idx_tenant_location_types_conference", "conference_id"),
-        Index("idx_tenant_location_types_slug", "tenant_id", "conference_id", "slug", unique=True),
+        Index(
+            "idx_tenant_location_types_slug_conf",
+            "tenant_id",
+            "conference_id",
+            "slug",
+            unique=True,
+            postgresql_where=text("conference_id IS NOT NULL"),
+        ),
+        Index(
+            "idx_tenant_location_types_slug_tenant",
+            "tenant_id",
+            "slug",
+            unique=True,
+            postgresql_where=text("conference_id IS NULL"),
+        ),
     )
 
     def __repr__(self) -> str:

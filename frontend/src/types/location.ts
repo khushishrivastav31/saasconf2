@@ -1,4 +1,4 @@
-import type { LocationContactPerson } from "./common";
+import type { LocationContactPerson } from './common';
 
 // Location types (values come from tenant configuration)
 export type LocationType = string;
@@ -64,7 +64,7 @@ export interface LocationCreate {
   virtual_url?: string;
   virtual_platform?: string;
   contact_persons?: LocationContactPerson[];
-  conference_id: string;
+  conference_id?: string;
 }
 
 export interface LocationUpdate {

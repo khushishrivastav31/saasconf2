@@ -189,7 +189,7 @@ export interface UserRoleUpdate {
 export interface TenantLocationType {
   id: string;
   tenant_id: string;
-  conference_id: string;
+  conference_id: string | null;
   name: string;
   slug: string;
   description: string | null;

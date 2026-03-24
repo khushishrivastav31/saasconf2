@@ -124,7 +124,7 @@ class LocationCreate(LocationBase):
     """Schema for creating a location."""
 
     parent_id: UUID | None = None
-    conference_id: UUID
+    conference_id: UUID | None = None
 
 
 class LocationUpdate(BaseModel):

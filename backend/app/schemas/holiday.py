@@ -1,6 +1,7 @@
 """Holiday configuration and proxy schemas."""
 
 from datetime import date, datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -105,3 +106,17 @@ class CountrySubdivision(BaseModel):
 
     code: str
     name: str
+
+
+# --- Aggregated holiday dates ---
+
+
+class HolidayDateEntry(BaseModel):
+    """A single holiday/blocked date for the year calendar grid."""
+
+    date: date
+    name: str
+    type: Literal["public", "custom"]
+    country_code: str | None = None
+    is_national: bool | None = None
+    counties: list[str] | None = None

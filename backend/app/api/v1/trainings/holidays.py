@@ -20,6 +20,7 @@ from app.schemas.holiday import (
     HolidayConfigCreate,
     HolidayConfigResponse,
     HolidayConfigUpdate,
+    HolidayDateEntry,
     PublicHolidayItem,
 )
 
@@ -59,6 +60,116 @@ def _blocked_day_tenant_filter(current_user: TenantAdminDep):
     if current_user.is_super_admin:
         return literal(True)
     return CustomBlockedDay.tenant_id == current_user.tenant_id
+
+
+# ---------------------------------------------------------------------------
+# Aggregated holiday dates (for calendar grid)
+# Must be declared BEFORE /{country_code}/{year} to avoid route conflict.
+# ---------------------------------------------------------------------------
+
+
+@router.get("/dates/{year}", response_model=list[HolidayDateEntry])
+async def list_holiday_dates(
+    year: int,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> list[HolidayDateEntry]:
+    """Return all active holiday + blocked dates for a year, merged and sorted.
+
+    Combines public holidays (from Nager.Date, filtered by tenant configs)
+    with custom blocked days into a single sorted list for the calendar grid.
+    """
+    import datetime as _dt
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # 1. Fetch tenant's holiday configs for this year
+    configs_result = await db.execute(
+        select(TenantHolidayConfig).where(
+            TenantHolidayConfig.tenant_id == current_user.tenant_id,
+            TenantHolidayConfig.year == year,
+        )
+    )
+    configs = list(configs_result.scalars().all())
+
+    # date_str -> HolidayDateEntry (dedup by date, first wins)
+    dates_map: dict[str, HolidayDateEntry] = {}
+
+    # 2. For each config, fetch public holidays and apply filters
+    for config in configs:
+        try:
+            data = await _cached_get(f"{NAGER_BASE}/PublicHolidays/{year}/{config.country_code}")
+        except Exception:
+            logger.warning("Failed to fetch holidays for %s/%s", config.country_code, year)
+            continue
+
+        for h in data:
+            is_global = h.get("global", False)
+            counties = h.get("counties")
+
+            # Apply national/regional filters
+            if is_global and not config.national_holidays_enabled:
+                continue
+            if not is_global:
+                if not config.regional_holidays_enabled:
+                    continue
+                if config.regional_code and counties:
+                    if config.regional_code not in counties:
+                        continue
+
+            date_str = h["date"]
+            if date_str not in dates_map:
+                dates_map[date_str] = HolidayDateEntry(
+                    date=_dt.date.fromisoformat(date_str),
+                    name=h.get("localName", h.get("name", "")),
+                    type="public",
+                    country_code=config.country_code,
+                    is_national=is_global,
+                    counties=counties,
+                )
+
+    # 3. Fetch custom blocked days for this year
+    blocked_result = await db.execute(
+        select(CustomBlockedDay).where(
+            CustomBlockedDay.tenant_id == current_user.tenant_id,
+            CustomBlockedDay.year == year,
+        )
+    )
+    for bd in blocked_result.scalars().all():
+        date_str = bd.date.isoformat()
+        if date_str not in dates_map:
+            dates_map[date_str] = HolidayDateEntry(
+                date=bd.date,
+                name=bd.name,
+                type="custom",
+            )
+
+    # Also include recurring blocked days from other years
+    recurring_result = await db.execute(
+        select(CustomBlockedDay).where(
+            CustomBlockedDay.tenant_id == current_user.tenant_id,
+            CustomBlockedDay.is_recurring.is_(True),
+            CustomBlockedDay.year != year,
+        )
+    )
+    for bd in recurring_result.scalars().all():
+        # Map to the requested year
+        try:
+            mapped_date = bd.date.replace(year=year)
+        except ValueError:
+            # e.g. Feb 29 in a non-leap year
+            continue
+        date_str = mapped_date.isoformat()
+        if date_str not in dates_map:
+            dates_map[date_str] = HolidayDateEntry(
+                date=mapped_date,
+                name=bd.name,
+                type="custom",
+            )
+
+    # 4. Return sorted by date
+    return sorted(dates_map.values(), key=lambda e: e.date)
 
 
 # ---------------------------------------------------------------------------

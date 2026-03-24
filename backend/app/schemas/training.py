@@ -19,8 +19,9 @@ class TrainingBase(BaseModel):
     abbreviation: str | None = Field(None, max_length=50)
     description: str | None = None
     content: str | None = None
-    duration: str | None = Field(None, max_length=100)
+    duration: int | None = Field(None, ge=1, le=365)
     website: str | None = Field(None, max_length=500)
+    color: str | None = Field(None, max_length=7, pattern=r"^#[0-9A-Fa-f]{6}$")
 
     # Pricing
     regular_price: Decimal | None = None
@@ -115,8 +116,9 @@ class TrainingUpdate(BaseModel):
     abbreviation: str | None = Field(None, max_length=50)
     description: str | None = None
     content: str | None = None
-    duration: str | None = Field(None, max_length=100)
+    duration: int | None = Field(None, ge=1, le=365)
     website: str | None = Field(None, max_length=500)
+    color: str | None = Field(None, max_length=7, pattern=r"^#[0-9A-Fa-f]{6}$")
     logo_url: str | None = Field(None, max_length=500)
 
     # Pricing
@@ -204,8 +206,9 @@ class TrainingResponse(BaseModel):
     abbreviation: str | None
     description: str | None
     content: str | None = None
-    duration: str | None = None
+    duration: int | None = None
     website: str | None
+    color: str | None = None
     logo_url: str | None
 
     # Pricing

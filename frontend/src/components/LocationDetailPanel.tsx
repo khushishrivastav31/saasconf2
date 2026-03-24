@@ -113,16 +113,27 @@ export default function LocationDetailPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.id]);
 
+  const hasConference = !!location.conference_ids?.length;
+
   const { data: locationTypesData } = useQuery({
-    queryKey: queryKeys.locations.types(location.conference_ids?.[0] ?? ''),
+    queryKey: hasConference
+      ? queryKeys.locations.types(location.conference_ids![0])
+      : ['tenant-location-types'],
     queryFn: async () => {
-      const response = await api.get<{
-        items: TenantLocationType[];
-        total: number;
-      }>(`/conferences/${location.conference_ids[0]}/settings/location-types`);
+      if (hasConference) {
+        const response = await api.get<{
+          items: TenantLocationType[];
+          total: number;
+        }>(`/conferences/${location.conference_ids![0]}/settings/location-types`);
+        return response.data;
+      }
+      // Fallback: fetch tenant-level location types (for training locations)
+      const response = await api.get<{ items: TenantLocationType[]; total: number }>(
+        '/trainings/location-types'
+      );
       return response.data;
     },
-    enabled: !propLocationTypes && !!location.conference_ids?.length,
+    enabled: !propLocationTypes,
   });
 
   const locationTypes = propLocationTypes || locationTypesData?.items || [];
@@ -157,6 +168,14 @@ export default function LocationDetailPanel({
     const finalData = { ...formData };
     if (newContact.first_name.trim() && newContact.last_name.trim()) {
       finalData.contact_persons = [...(finalData.contact_persons || []), { ...newContact }];
+    }
+    // Normalize empty phone/email to undefined so backend receives null
+    if (finalData.contact_persons) {
+      finalData.contact_persons = finalData.contact_persons.map((cp) => ({
+        ...cp,
+        phone: cp.phone?.trim() || undefined,
+        email: cp.email?.trim() || undefined,
+      }));
     }
     setSaving();
     try {

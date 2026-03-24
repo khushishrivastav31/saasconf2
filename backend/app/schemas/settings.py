@@ -76,7 +76,7 @@ class LocationTypeResponse(BaseModel):
 
     id: UUID
     tenant_id: UUID
-    conference_id: UUID
+    conference_id: UUID | None
     name: str
     slug: str
     description: str | None

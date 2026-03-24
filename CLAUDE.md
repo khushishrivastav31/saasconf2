@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Trainer unavailability feature (migration 159, model, schemas, API, frontend UI with tabs), Holidays settings tab, Trainer detail view restructuring (tabs, save in header, trainings catalog with search)
-- **Status**: Clean — all checks pass (mypy, ruff, tsc, eslint). Migrations 158+159 applied. 20 new backend tests. Uncommitted.
+- **Last completed**: Drag-and-drop training scheduling on program year calendar. Migrations 160-162 (duration→int, color field, program_year_trainings table, parallel placements). Backend: ProgramYearTraining model + 3 API endpoints (GET/POST/DELETE). Frontend: TrainingCatalogSidebar, CalendarTrainingBar, YearCalendarGrid with droppable cells + lane rows, DesignProgramTab DnD orchestrator. 8 placement tests green. Color picker in training settings.
+- **Status**: mypy pass, ruff pass, tsc pass, eslint pass, 1632 frontend tests pass. Backend full suite pending.

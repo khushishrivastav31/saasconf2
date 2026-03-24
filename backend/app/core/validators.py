@@ -36,11 +36,17 @@ def validate_phone(value: str | None) -> str | None:
     Returns the E.164 normalized value if valid, raises ValueError if invalid.
     Can be used directly in Pydantic field_validator decorators.
     """
-    if value is None or value == "":
+    if value is None:
         return value
+    value = value.strip()
+    if value == "":
+        return None
+    # Convert "00" international dialing prefix to "+" for libphonenumber
+    if value.startswith("00"):
+        value = "+" + value[2:]
     try:
         parsed = phonenumbers.parse(value, None)
-        if not phonenumbers.is_valid_number(parsed):
+        if not phonenumbers.is_possible_number(parsed):
             raise ValueError("Invalid phone number. Use international format with country code, e.g. +49123456789")
         return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
     except phonenumbers.NumberParseException as e:

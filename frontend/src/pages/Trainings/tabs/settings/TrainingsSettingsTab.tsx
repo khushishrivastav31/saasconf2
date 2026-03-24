@@ -32,7 +32,8 @@ const QUERY_KEY = ['trainings-catalog'];
 const emptyCreate: TrainingCreate = {
   name: '',
   slug: '',
-  duration: '',
+  duration: undefined,
+  color: undefined,
   description: '',
   content: '',
   regular_price: null,
@@ -115,7 +116,8 @@ export default function TrainingsSettingsTab() {
       setEditForm({
         name: selectedItem.name,
         slug: selectedItem.slug || '',
-        duration: selectedItem.duration || '',
+        duration: selectedItem.duration ?? undefined,
+        color: selectedItem.color ?? undefined,
         description: selectedItem.description || '',
         content: selectedItem.content || '',
         regular_price: selectedItem.regular_price,
@@ -222,16 +224,42 @@ export default function TrainingsSettingsTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <div>
-          <label className={labelCls}>Duration</label>
+          <label className={labelCls}>Duration (days)</label>
           <input
-            type="text"
+            type="number"
+            min={1}
+            max={365}
             className={inputCls}
-            value={form.duration || ''}
-            onChange={(e) => setForm({ ...form, duration: e.target.value })}
-            placeholder="e.g. 3 days"
+            value={form.duration ?? ''}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                duration: e.target.value ? Number(e.target.value) : undefined,
+              })
+            }
+            placeholder="e.g. 3"
           />
+        </div>
+        <div>
+          <label className={labelCls}>Color</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              className="h-[38px] w-12 cursor-pointer rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-0.5"
+              value={form.color || '#4F46E5'}
+              onChange={(e) => setForm({ ...form, color: e.target.value })}
+            />
+            <input
+              type="text"
+              className={inputCls}
+              value={form.color || ''}
+              onChange={(e) => setForm({ ...form, color: e.target.value || undefined })}
+              placeholder="#4F46E5"
+              maxLength={7}
+            />
+          </div>
         </div>
         <div>
           <label className={labelCls}>Language</label>
@@ -476,8 +504,11 @@ export default function TrainingsSettingsTab() {
                       }`}
                     >
                       <span
-                        className={`shrink-0 w-2 h-2 rounded-full ${t.is_active ? 'bg-green-400' : 'bg-gray-300 dark:bg-gray-600'}`}
-                        title={t.is_active ? 'Active' : 'Inactive'}
+                        className="shrink-0 w-2 h-2 rounded-full"
+                        style={{
+                          backgroundColor: t.color || (t.is_active ? '#4ade80' : '#d1d5db'),
+                        }}
+                        title={t.color ? `Color: ${t.color}` : t.is_active ? 'Active' : 'Inactive'}
                       />
                       <div className="min-w-0">
                         <span className="block truncate">{t.name}</span>

@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -83,7 +83,8 @@ class Training(Base):
     abbreviation: Mapped[str | None] = mapped_column(String(50), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
-    duration: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    duration: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    color: Mapped[str | None] = mapped_column(String(7), nullable=True)
     website: Mapped[str | None] = mapped_column(String(500), nullable=True)
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 

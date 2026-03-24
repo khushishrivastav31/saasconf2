@@ -14,7 +14,8 @@ export interface Training {
   abbreviation: string | null;
   description: string | null;
   content: string | null;
-  duration: string | null;
+  duration: number | null;
+  color: string | null;
   website: string | null;
   logo_url: string | null;
   // Pricing
@@ -77,8 +78,9 @@ export interface TrainingCreate {
   abbreviation?: string;
   description?: string;
   content?: string;
-  duration?: string;
+  duration?: number;
   website?: string;
+  color?: string;
   regular_price?: number | null;
   early_bird_price?: number | null;
   language_id?: string | null;
@@ -116,7 +118,8 @@ export interface TrainingUpdate {
   abbreviation?: string;
   description?: string;
   content?: string;
-  duration?: string;
+  duration?: number;
+  color?: string;
   website?: string;
   regular_price?: number | null;
   early_bird_price?: number | null;
@@ -370,6 +373,16 @@ export interface CustomBlockedDay {
   updated_at: string;
 }
 
+// Aggregated holiday date (for calendar grid)
+export interface HolidayDateEntry {
+  date: string;
+  name: string;
+  type: 'public' | 'custom';
+  country_code: string | null;
+  is_national: boolean | null;
+  counties: string[] | null;
+}
+
 // Training Program Year
 export interface TrainingProgramYear {
   id: string;
@@ -377,6 +390,24 @@ export interface TrainingProgramYear {
   year: number;
   status: 'draft' | 'published';
   notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Training placement on program year calendar
+export interface ProgramYearTraining {
+  id: string;
+  program_year_id: string;
+  training_id: string;
+  training_name: string;
+  training_slug: string | null;
+  training_abbreviation: string | null;
+  training_duration: number | null;
+  training_color: string | null;
+  location_id: string | null;
+  location_name: string | null;
+  location_code: string | null;
+  start_date: string;
   created_at: string;
   updated_at: string;
 }

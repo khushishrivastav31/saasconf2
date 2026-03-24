@@ -72,6 +72,7 @@ def _build_training_response(training: Training) -> TrainingResponse:
         content=training.content,
         duration=training.duration,
         website=training.website,
+        color=training.color,
         logo_url=training.logo_url,
         regular_price=training.regular_price,
         early_bird_price=training.early_bird_price,

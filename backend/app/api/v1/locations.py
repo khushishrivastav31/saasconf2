@@ -78,6 +78,24 @@ def build_location_response(
     )
 
 
+@router.get("/types", dependencies=[Depends(require_module(MODULE_CODE))])
+async def list_location_types_for_tenant(
+    current_user: CurrentUserDep,
+    db: DbSessionDep,
+) -> list[dict]:
+    """List active tenant-level location types (conference_id IS NULL, for trainings)."""
+    result = await db.execute(
+        select(TenantLocationType)
+        .where(
+            TenantLocationType.tenant_id == current_user.tenant_id,
+            TenantLocationType.conference_id.is_(None),
+            TenantLocationType.is_active == True,
+        )
+        .order_by(TenantLocationType.name)
+    )
+    return [{"id": str(t.id), "slug": t.slug, "name": t.name, "is_active": t.is_active} for t in result.scalars()]
+
+
 @router.get("", response_model=LocationListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
 async def list_locations(
     current_user: CurrentUserDep,
@@ -283,15 +301,16 @@ async def create_location(
 ) -> LocationResponse:
     """Create a new location."""
 
-    # Validate conference exists and belongs to tenant
-    conf_result = await db.execute(
-        select(Conference).where(
-            Conference.id == location_data.conference_id,
-            Conference.tenant_id == current_user.tenant_id,
+    # Validate conference exists and belongs to tenant (if provided)
+    if location_data.conference_id:
+        conf_result = await db.execute(
+            select(Conference).where(
+                Conference.id == location_data.conference_id,
+                Conference.tenant_id == current_user.tenant_id,
+            )
         )
-    )
-    if not conf_result.scalar_one_or_none():
-        raise NotFoundError(f"Conference with ID '{location_data.conference_id}' not found")
+        if not conf_result.scalar_one_or_none():
+            raise NotFoundError(f"Conference with ID '{location_data.conference_id}' not found")
 
     # Validate parent if provided
     if location_data.parent_id:
@@ -356,13 +375,14 @@ async def create_location(
     db.add(location)
     await db.flush()
 
-    # Create conference association
-    db.add(
-        ConferenceLocation(
-            conference_id=location_data.conference_id,
-            location_id=location.id,
+    # Create conference association if conference_id provided
+    if location_data.conference_id:
+        db.add(
+            ConferenceLocation(
+                conference_id=location_data.conference_id,
+                location_id=location.id,
+            )
         )
-    )
 
     # Audit log
     audit_log = AuditLog(
@@ -380,7 +400,8 @@ async def create_location(
     await db.commit()
     await db.refresh(location)
 
-    return build_location_response(location, conference_ids=[location_data.conference_id])
+    conf_ids = [location_data.conference_id] if location_data.conference_id else []
+    return build_location_response(location, conference_ids=conf_ids)
 
 
 @router.get("/{location_id}", response_model=LocationResponse, dependencies=[Depends(require_module(MODULE_CODE))])
@@ -471,7 +492,7 @@ async def update_location(
         action="location.update",
         resource_type="location",
         resource_id=location.id,
-        details=update_data,
+        details={k: str(v) if isinstance(v, UUID) else v for k, v in update_data.items()},
         ip_address=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
