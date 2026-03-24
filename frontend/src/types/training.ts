@@ -10,10 +10,27 @@ export interface Training {
   id: string;
   tenant_id: string;
   name: string;
+  slug: string | null;
   abbreviation: string | null;
   description: string | null;
+  content: string | null;
+  duration: string | null;
   website: string | null;
   logo_url: string | null;
+  // Pricing
+  regular_price: number | null;
+  early_bird_price: number | null;
+  // Catalog references
+  language_id: string | null;
+  language_name: string | null;
+  second_language_id: string | null;
+  second_language_name: string | null;
+  syllabus_id: string | null;
+  syllabus_name: string | null;
+  theme_id: string | null;
+  theme_name: string | null;
+  certification_body_id: string | null;
+  certification_body_name: string | null;
   // Contact info
   support_email: string | null;
   contact_email: string | null;
@@ -56,9 +73,19 @@ export interface Training {
 
 export interface TrainingCreate {
   name: string;
+  slug?: string;
   abbreviation?: string;
   description?: string;
+  content?: string;
+  duration?: string;
   website?: string;
+  regular_price?: number | null;
+  early_bird_price?: number | null;
+  language_id?: string | null;
+  second_language_id?: string | null;
+  syllabus_id?: string | null;
+  theme_id?: string | null;
+  certification_body_id?: string | null;
   logo_url?: string;
   support_email?: string;
   contact_email?: string;
@@ -85,9 +112,19 @@ export interface TrainingCreate {
 
 export interface TrainingUpdate {
   name?: string;
+  slug?: string;
   abbreviation?: string;
   description?: string;
+  content?: string;
+  duration?: string;
   website?: string;
+  regular_price?: number | null;
+  early_bird_price?: number | null;
+  language_id?: string | null;
+  second_language_id?: string | null;
+  syllabus_id?: string | null;
+  theme_id?: string | null;
+  certification_body_id?: string | null;
   logo_url?: string;
   support_email?: string;
   contact_email?: string;
@@ -112,4 +149,120 @@ export interface TrainingUpdate {
   invoice_currency?: string | null;
   is_active?: boolean;
   is_published?: boolean;
+}
+
+// Training Theme (like CFP Topics)
+export interface TrainingTheme {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string | null;
+  language_id: string | null;
+  language_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Training Language
+export interface TrainingLanguage {
+  id: string;
+  tenant_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Certification Body (like Service Provider)
+export interface CertificationBodyContact {
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  comment: string | null;
+}
+
+export interface CertificationBody {
+  id: string;
+  tenant_id: string;
+  company_name: string;
+  service_description: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  vat_number: string | null;
+  contact_persons: CertificationBodyContact[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CertificationBodyCreate {
+  company_name: string;
+  service_description?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  country?: string | null;
+  vat_number?: string | null;
+  contact_persons?: CertificationBodyContact[];
+}
+
+export interface CertificationBodyUpdate {
+  company_name?: string;
+  service_description?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  country?: string | null;
+  vat_number?: string | null;
+  contact_persons?: CertificationBodyContact[];
+}
+
+// Syllabus
+export interface Syllabus {
+  id: string;
+  tenant_id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  price: number | null;
+  certification_body_id: string | null;
+  certification_body_name: string | null;
+  language_id: string | null;
+  language_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SyllabusCreate {
+  slug: string;
+  name: string;
+  description?: string | null;
+  price?: number | null;
+  certification_body_id?: string | null;
+  language_id?: string | null;
+}
+
+export interface SyllabusUpdate {
+  slug?: string;
+  name?: string;
+  description?: string | null;
+  price?: number | null;
+  certification_body_id?: string | null;
+  language_id?: string | null;
 }

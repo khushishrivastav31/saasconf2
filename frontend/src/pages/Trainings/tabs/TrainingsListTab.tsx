@@ -34,14 +34,16 @@ const TrainingRow = memo(function TrainingRow({
   training,
   onSelect,
   onDelete,
+  isSelected,
 }: {
   training: Training;
   onSelect: (id: string) => void;
   onDelete: (training: Training) => void;
+  isSelected: boolean;
 }) {
   return (
     <tr
-      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+      className={`cursor-pointer ${isSelected ? 'bg-primary-50 dark:bg-primary-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
       onClick={() => onSelect(training.id)}
     >
       <td className="px-4 py-3">
@@ -81,9 +83,10 @@ const TrainingRow = memo(function TrainingRow({
 
 interface Props {
   onSelectTraining?: (id: string) => void;
+  selectedTrainingId?: string | null;
 }
 
-export default function TrainingsListTab({ onSelectTraining }: Props) {
+export default function TrainingsListTab({ onSelectTraining, selectedTrainingId }: Props) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -266,6 +269,7 @@ export default function TrainingsListTab({ onSelectTraining }: Props) {
                     training={training}
                     onSelect={handleSelect}
                     onDelete={handleDelete}
+                    isSelected={training.id === selectedTrainingId}
                   />
                 ))}
               </tbody>

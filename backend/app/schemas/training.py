@@ -1,6 +1,7 @@
 """Training schemas."""
 
 from datetime import date, datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -14,9 +15,23 @@ class TrainingBase(BaseModel):
     """Base training schema with common fields."""
 
     name: str = Field(..., min_length=2, max_length=255)
+    slug: str | None = Field(None, max_length=100)
     abbreviation: str | None = Field(None, max_length=50)
     description: str | None = None
+    content: str | None = None
+    duration: str | None = Field(None, max_length=100)
     website: str | None = Field(None, max_length=500)
+
+    # Pricing
+    regular_price: Decimal | None = None
+    early_bird_price: Decimal | None = None
+
+    # Catalog references
+    language_id: UUID | None = None
+    second_language_id: UUID | None = None
+    syllabus_id: UUID | None = None
+    theme_id: UUID | None = None
+    certification_body_id: UUID | None = None
 
     @field_validator("abbreviation")
     @classmethod
@@ -25,9 +40,9 @@ class TrainingBase(BaseModel):
             raise ValueError("Abbreviation must not contain spaces")
         return v
 
-    @field_validator("description")
+    @field_validator("description", "content")
     @classmethod
-    def sanitize_description(cls, v: str | None) -> str | None:
+    def sanitize_html_fields(cls, v: str | None) -> str | None:
         return sanitize_html(v) if v else v
 
 
@@ -96,10 +111,24 @@ class TrainingUpdate(BaseModel):
     """Schema for updating a training."""
 
     name: str | None = Field(None, min_length=2, max_length=255)
+    slug: str | None = Field(None, max_length=100)
     abbreviation: str | None = Field(None, max_length=50)
     description: str | None = None
+    content: str | None = None
+    duration: str | None = Field(None, max_length=100)
     website: str | None = Field(None, max_length=500)
     logo_url: str | None = Field(None, max_length=500)
+
+    # Pricing
+    regular_price: Decimal | None = None
+    early_bird_price: Decimal | None = None
+
+    # Catalog references
+    language_id: UUID | None = None
+    second_language_id: UUID | None = None
+    syllabus_id: UUID | None = None
+    theme_id: UUID | None = None
+    certification_body_id: UUID | None = None
 
     # Contact info
     support_email: str | None = Field(None, max_length=255)
@@ -147,6 +176,11 @@ class TrainingUpdate(BaseModel):
             raise ValueError("Abbreviation must not contain spaces")
         return v
 
+    @field_validator("description", "content")
+    @classmethod
+    def sanitize_html_fields(cls, v: str | None) -> str | None:
+        return sanitize_html(v) if v else v
+
     @field_validator("support_email", "contact_email")
     @classmethod
     def check_emails(cls, v: str | None) -> str | None:
@@ -166,10 +200,29 @@ class TrainingResponse(BaseModel):
     id: UUID
     tenant_id: UUID
     name: str
+    slug: str | None = None
     abbreviation: str | None
     description: str | None
+    content: str | None = None
+    duration: str | None = None
     website: str | None
     logo_url: str | None
+
+    # Pricing
+    regular_price: Decimal | None = None
+    early_bird_price: Decimal | None = None
+
+    # Catalog references
+    language_id: UUID | None = None
+    language_name: str | None = None
+    second_language_id: UUID | None = None
+    second_language_name: str | None = None
+    syllabus_id: UUID | None = None
+    syllabus_name: str | None = None
+    theme_id: UUID | None = None
+    theme_name: str | None = None
+    certification_body_id: UUID | None = None
+    certification_body_name: str | None = None
 
     # Contact info
     support_email: str | None = None
@@ -228,3 +281,78 @@ class TrainingListResponse(BaseModel):
     page: int
     page_size: int
     pages: int
+
+
+# --- Theme Schemas ---
+
+
+class TrainingThemeCreate(BaseModel):
+    """Schema for creating a training theme."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str | None = None
+    language_id: UUID | None = None
+
+
+class TrainingThemeUpdate(BaseModel):
+    """Schema for updating a training theme."""
+
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    language_id: UUID | None = None
+
+
+class TrainingThemeResponse(BaseModel):
+    """Training theme response schema."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tenant_id: UUID
+    name: str
+    description: str | None
+    language_id: UUID | None = None
+    language_name: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TrainingThemeListResponse(BaseModel):
+    """Training theme list response."""
+
+    items: list[TrainingThemeResponse]
+    total: int
+
+
+# --- Language Schemas ---
+
+
+class TrainingLanguageCreate(BaseModel):
+    """Schema for creating a training language."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+
+
+class TrainingLanguageUpdate(BaseModel):
+    """Schema for updating a training language."""
+
+    name: str | None = Field(None, min_length=1, max_length=255)
+
+
+class TrainingLanguageResponse(BaseModel):
+    """Training language response schema."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tenant_id: UUID
+    name: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class TrainingLanguageListResponse(BaseModel):
+    """Training language list response."""
+
+    items: list[TrainingLanguageResponse]
+    total: int

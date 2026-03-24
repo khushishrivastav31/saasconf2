@@ -5,6 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.dependencies import (
@@ -35,6 +36,9 @@ from ._shared import (
 )
 
 router = APIRouter()
+# detail_router holds /{training_id} routes and must be included AFTER
+# sub-routers (themes, languages) so the path param doesn't shadow them.
+detail_router = APIRouter()
 
 
 @router.get("", response_model=TrainingListResponse, dependencies=[Depends(require_module(MODULE_CODE))])
@@ -48,7 +52,17 @@ async def list_trainings(
     is_active: bool | None = None,
 ) -> TrainingListResponse:
     """List trainings for the current tenant."""
-    query = select(Training).where(_tenant_filter(current_user))
+    query = (
+        select(Training)
+        .options(
+            selectinload(Training.language),
+            selectinload(Training.second_language),
+            selectinload(Training.syllabus),
+            selectinload(Training.theme),
+            selectinload(Training.certification_body_rel),
+        )
+        .where(_tenant_filter(current_user))
+    )
 
     accessible_ids = await _get_accessible_training_ids(db, current_user)
     if accessible_ids is not None:
@@ -109,10 +123,20 @@ async def create_training(
     training = Training(
         tenant_id=current_user.tenant_id,
         name=training_data.name,
+        slug=training_data.slug,
         abbreviation=training_data.abbreviation,
         description=training_data.description,
+        content=training_data.content,
+        duration=training_data.duration,
         website=training_data.website,
         logo_url=training_data.logo_url,
+        regular_price=training_data.regular_price,
+        early_bird_price=training_data.early_bird_price,
+        language_id=training_data.language_id,
+        second_language_id=training_data.second_language_id,
+        syllabus_id=training_data.syllabus_id,
+        theme_id=training_data.theme_id,
+        certification_body_id=training_data.certification_body_id,
         start_date=training_data.start_date,
         end_date=training_data.end_date,
         venue_name=training_data.venue_name,
@@ -158,14 +182,27 @@ async def create_training(
     return _build_training_response(training)
 
 
-@router.get("/{training_id}", response_model=TrainingResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@detail_router.get(
+    "/{training_id}", response_model=TrainingResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def get_training(
     training_id: UUID,
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> TrainingResponse:
     """Get a training by ID."""
-    result = await db.execute(select(Training).where(Training.id == training_id).where(_tenant_filter(current_user)))
+    result = await db.execute(
+        select(Training)
+        .options(
+            selectinload(Training.language),
+            selectinload(Training.second_language),
+            selectinload(Training.syllabus),
+            selectinload(Training.theme),
+            selectinload(Training.certification_body_rel),
+        )
+        .where(Training.id == training_id)
+        .where(_tenant_filter(current_user))
+    )
     training = result.scalar_one_or_none()
 
     if not training:
@@ -178,7 +215,9 @@ async def get_training(
     return _build_training_response(training)
 
 
-@router.put("/{training_id}", response_model=TrainingResponse, dependencies=[Depends(require_module(MODULE_CODE))])
+@detail_router.put(
+    "/{training_id}", response_model=TrainingResponse, dependencies=[Depends(require_module(MODULE_CODE))]
+)
 async def update_training(
     training_id: UUID,
     training_data: TrainingUpdate,
@@ -187,7 +226,18 @@ async def update_training(
     request: Request,
 ) -> TrainingResponse:
     """Update a training."""
-    result = await db.execute(select(Training).where(Training.id == training_id).where(_tenant_filter(current_user)))
+    result = await db.execute(
+        select(Training)
+        .options(
+            selectinload(Training.language),
+            selectinload(Training.second_language),
+            selectinload(Training.syllabus),
+            selectinload(Training.theme),
+            selectinload(Training.certification_body_rel),
+        )
+        .where(Training.id == training_id)
+        .where(_tenant_filter(current_user))
+    )
     training = result.scalar_one_or_none()
 
     if not training:
@@ -248,7 +298,7 @@ async def update_training(
     return _build_training_response(training)
 
 
-@router.delete("/{training_id}", dependencies=[Depends(require_module(MODULE_CODE))])
+@detail_router.delete("/{training_id}", dependencies=[Depends(require_module(MODULE_CODE))])
 async def delete_training(
     training_id: UUID,
     current_user: CurrentUserDep,

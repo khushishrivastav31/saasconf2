@@ -2,9 +2,8 @@ import { lazy, Suspense } from 'react';
 import { useTrainingsModule } from './useTrainingsModule';
 
 // Lazy-loaded tab components
-const TeamTab = lazy(() => import('./tabs/TeamTab'));
-const SocialTab = lazy(() => import('./tabs/SocialTab'));
 const TrainingsListTab = lazy(() => import('./tabs/TrainingsListTab'));
+const TeamTab = lazy(() => import('./tabs/TeamTab'));
 const SettingsTab = lazy(() => import('./tabs/SettingsTab'));
 const RegistrationsTab = lazy(() => import('./tabs/RegistrationsTab'));
 const InvoicesTab = lazy(() => import('./tabs/InvoicesTab'));
@@ -223,17 +222,18 @@ export default function Trainings() {
         <div className="flex-1 min-w-0">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <Suspense fallback={<LazyFallback />}>
-              {activeSection === 'team' && (
-                <TeamTab training={selectedTraining} onUpdate={refetchTraining} />
-              )}
-              {activeSection === 'social' && <SocialTab />}
               {activeSection === 'trainings-list' && (
-                <TrainingsListTab
-                  onSelectTraining={(id) => {
-                    setSelectedTrainingId(id);
-                    setActiveSection('team');
-                  }}
-                />
+                <>
+                  <TrainingsListTab
+                    onSelectTraining={(id) => setSelectedTrainingId(id)}
+                    selectedTrainingId={selectedTraining?.id ?? null}
+                  />
+                  {selectedTraining && (
+                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                      <TeamTab training={selectedTraining} onUpdate={refetchTraining} />
+                    </div>
+                  )}
+                </>
               )}
               {activeSection === 'registrations' && <RegistrationsTab />}
               {activeSection === 'invoices' && <InvoicesTab />}

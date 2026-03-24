@@ -2,7 +2,10 @@ import { lazy, Suspense } from 'react';
 import type { TrainingSectionId } from '../trainingSections';
 
 const TrainersSettingsTab = lazy(() => import('./settings/TrainersSettingsTab'));
-const SyllabiSettingsTab = lazy(() => import('./settings/SyllabiSettingsTab'));
+const ThemeSettingsTab = lazy(() => import('./settings/ThemeSettingsTab'));
+const LanguagesSettingsTab = lazy(() => import('./settings/LanguagesSettingsTab'));
+const CertificationBodiesTab = lazy(() => import('./settings/CertificationBodiesTab'));
+const SyllabiTab = lazy(() => import('./settings/SyllabiTab'));
 const TrainingsSettingsTab = lazy(() => import('./settings/TrainingsSettingsTab'));
 const PronounOptionsTab = lazy(() => import('./settings/PronounOptionsTab'));
 const LocationTypesTab = lazy(() => import('./settings/LocationTypesTab'));
@@ -26,7 +29,10 @@ const PaymentRemindersSettingsTab = lazy(() => import('./settings/PaymentReminde
 
 const settingsMap: Record<string, React.LazyExoticComponent<() => React.JSX.Element>> = {
   'settings-trainers': TrainersSettingsTab,
-  'settings-syllabi': SyllabiSettingsTab,
+  'settings-theme': ThemeSettingsTab,
+  'settings-languages': LanguagesSettingsTab,
+  'settings-certification-bodies': CertificationBodiesTab,
+  'settings-syllabi': SyllabiTab,
   'settings-trainings': TrainingsSettingsTab,
   'settings-pronoun-options': PronounOptionsTab,
   'settings-location-types': LocationTypesTab,

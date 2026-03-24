@@ -4,14 +4,67 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.certification_body import CertificationBody
+    from app.models.syllabus import Syllabus
     from app.models.tenant import Tenant
+
+
+class TrainingTheme(Base):
+    """Training theme — a simple named tag (like CFP Topics)."""
+
+    __tablename__ = "training_themes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    language_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("training_languages.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    tenant: Mapped["Tenant"] = relationship("Tenant")
+    language: Mapped["TrainingLanguage | None"] = relationship("TrainingLanguage", lazy="joined")
+
+    def __repr__(self) -> str:
+        return f"<TrainingTheme {self.name}>"
+
+
+class TrainingLanguage(Base):
+    """Training language — a simple named tag (e.g. Deutsch, English)."""
+
+    __tablename__ = "training_languages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    tenant: Mapped["Tenant"] = relationship("Tenant")
+
+    def __repr__(self) -> str:
+        return f"<TrainingLanguage {self.name}>"
 
 
 class Training(Base):
@@ -26,10 +79,34 @@ class Training(Base):
 
     # Basic info
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str | None] = mapped_column(String(100), nullable=True)
     abbreviation: Mapped[str | None] = mapped_column(String(50), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    duration: Mapped[str | None] = mapped_column(String(100), nullable=True)
     website: Mapped[str | None] = mapped_column(String(500), nullable=True)
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # Pricing
+    regular_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    early_bird_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+
+    # Catalog references
+    language_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("training_languages.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    second_language_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("training_languages.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    syllabus_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("syllabi.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    theme_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("training_themes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    certification_body_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("certification_bodies.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     # Contact info for templates
     support_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -80,6 +157,15 @@ class Training(Base):
 
     # Relationships
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="trainings")
+    language: Mapped["TrainingLanguage | None"] = relationship(
+        "TrainingLanguage", foreign_keys=[language_id], lazy="joined"
+    )
+    second_language: Mapped["TrainingLanguage | None"] = relationship(
+        "TrainingLanguage", foreign_keys=[second_language_id], lazy="joined"
+    )
+    syllabus: Mapped["Syllabus | None"] = relationship("Syllabus", lazy="joined")
+    theme: Mapped["TrainingTheme | None"] = relationship("TrainingTheme", lazy="joined")
+    certification_body_rel: Mapped["CertificationBody | None"] = relationship("CertificationBody", lazy="joined")
 
     def __repr__(self) -> str:
         return f"<Training {self.name} ({self.abbreviation})>"

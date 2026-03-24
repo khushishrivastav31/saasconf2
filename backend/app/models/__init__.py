@@ -15,6 +15,7 @@ from app.models.booking import (
     DiscountCodeOption,
 )
 from app.models.budget import Budget, BudgetCategory, BudgetLineItem
+from app.models.certification_body import CertificationBody
 from app.models.cfp import CallForPapers, CFPCommitteeMember, CFPTopic, Submission
 from app.models.cfp_applicants import CFPApplicant
 from app.models.cfp_papers import (
@@ -70,6 +71,7 @@ from app.models.review import (
 )
 from app.models.screen_overlay import ScreenOverlay
 from app.models.service_provider import ServiceProvider
+from app.models.syllabus import Syllabus
 from app.models.settings import (
     CFPCommitteeRole,
     ConferenceCurrency,
@@ -91,7 +93,7 @@ from app.models.sponsor import Sponsor
 from app.models.sponsor_contract import SponsorContract, SponsorContractVersion
 from app.models.tenant import Tenant
 from app.models.token import RefreshToken
-from app.models.training import Training
+from app.models.training import Training, TrainingLanguage, TrainingTheme
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
 from app.models.user_password_reset import UserPasswordReset
@@ -126,6 +128,7 @@ __all__ = [
     "CFPPaperCospeaker",
     "CFPTopic",
     "CallForPapers",
+    "CertificationBody",
     "Conference",
     "ConferenceCFP",
     "ConferenceCurrency",
@@ -190,6 +193,7 @@ __all__ = [
     "SponsorContractVersion",
     "SponsorPackage",
     "Submission",
+    "Syllabus",
     "Tenant",
     "TenantLocationType",
     "TenantModule",
@@ -197,6 +201,8 @@ __all__ = [
     "TenantRoleScope",
     "ThreadFlag",
     "Training",
+    "TrainingLanguage",
+    "TrainingTheme",
     "User",
     "UserConferenceAccess",
     "UserPasswordReset",

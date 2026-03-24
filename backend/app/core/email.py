@@ -63,6 +63,36 @@ async def _send_with_retry(
                 logger.error(f"Email send failed after {max_retries} attempts: {e}", exc_info=True)
 
 
+async def _send_with_fresh_session(
+    send_fn: Callable[..., Awaitable[bool]],
+    *args: Any,
+    max_retries: int = 3,
+    **kwargs: Any,
+) -> None:
+    """Run email send with a fresh DB session to avoid concurrent connection usage.
+
+    Background email tasks must not share the request-scoped DB session because
+    asyncpg forbids concurrent operations on the same connection. This wrapper
+    replaces any AsyncSession positional arg with a fresh session.
+    """
+    from app.db.session import async_session_maker
+
+    # Replace AsyncSession args with a fresh session
+    args_list = list(args)
+    session_idx: int | None = None
+    for i, arg in enumerate(args_list):
+        if isinstance(arg, AsyncSession):
+            session_idx = i
+            break
+
+    if session_idx is not None:
+        async with async_session_maker() as fresh_db:
+            args_list[session_idx] = fresh_db
+            await _send_with_retry(send_fn, *args_list, max_retries=max_retries, **kwargs)
+    else:
+        await _send_with_retry(send_fn, *args, max_retries=max_retries, **kwargs)
+
+
 def send_email_background(
     send_fn: Callable[..., Awaitable[bool]],
     *args: Any,
@@ -75,11 +105,14 @@ def send_email_background(
     the caller does not need to know whether the email succeeded (e.g.
     notifications, confirmations).  Password-reset and verification emails
     should still be awaited directly so the user gets immediate feedback.
+
+    Creates a fresh DB session for the background task to avoid sharing the
+    request-scoped session (which causes asyncpg InterfaceError).
     """
     if os.environ.get("TESTING") == "true":
         return
     task = asyncio.create_task(
-        _send_with_retry(send_fn, *args, max_retries=max_retries, **kwargs),
+        _send_with_fresh_session(send_fn, *args, max_retries=max_retries, **kwargs),
         name=f"email-retry-{send_fn.__name__}",
     )
     _background_tasks.add(task)
@@ -556,6 +589,7 @@ async def send_tenant_user_welcome_email(
         db,
         EmailTemplateType.TENANT_USER_WELCOME,
         context,
+        tenant_id=tenant_id,
     )
 
     return await send_email(

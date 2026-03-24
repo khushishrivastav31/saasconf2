@@ -81,6 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Per-tenant Resend email settings (backend wiring + frontend UI) — awaiting test results
-- **In progress**: Trainings module nav tree (done), module group checkboxes (done), per-tenant Resend (done — tests running)
-- **Status**: mypy, ruff, tsc, eslint all pass — backend + frontend tests running
+- **Last completed**: Training model + team members (9c54b3f), CFP duplicate applicant fix (23fcd29)
+- **Status**: Clean — all checks pass, 2625 backend + 1632 frontend tests green. CI/CD pipeline running.

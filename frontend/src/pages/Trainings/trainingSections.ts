@@ -1,14 +1,15 @@
 import type React from 'react';
 import {
-  UsersIcon,
-  ShareIcon,
   TrainingsIcon,
   SettingsGearIcon,
   TrainersIcon,
-  SyllabiIcon,
+  ThemeIcon,
   TrainingsSettingsIcon,
   PronounIcon,
   LocationTypesIcon,
+  LanguagesIcon,
+  CertificationBodyIcon,
+  SyllabiIcon,
   PortalIcon,
   PoliciesIcon,
   RegistrationQuestionsIcon,
@@ -42,8 +43,6 @@ import {
 
 export type TrainingSectionId =
   // Top-level
-  | 'team'
-  | 'social'
   | 'trainings-list'
   | 'settings'
   | 'registrations'
@@ -53,9 +52,12 @@ export type TrainingSectionId =
   | 'news'
   // Settings children
   | 'settings-trainers'
-  | 'settings-syllabi'
+  | 'settings-theme'
+  | 'settings-languages'
   | 'settings-trainings'
   | 'settings-pronoun-options'
+  | 'settings-certification-bodies'
+  | 'settings-syllabi'
   | 'settings-location-types'
   | 'settings-registration-portal'
   | 'settings-policies'
@@ -106,9 +108,7 @@ export const sectionGroups: TrainingSectionGroup[] = [
   {
     name: 'Setup',
     sections: [
-      { id: 'team', name: 'Team', icon: UsersIcon },
-      { id: 'social', name: 'Social Media', icon: ShareIcon },
-      { id: 'trainings-list', name: 'Trainings', icon: TrainingsIcon },
+      { id: 'trainings-list', name: 'Training Programs', icon: TrainingsIcon },
       {
         id: 'settings',
         name: 'Settings',
@@ -122,14 +122,32 @@ export const sectionGroups: TrainingSectionGroup[] = [
             group: 'Training Setup',
           },
           {
+            id: 'settings-theme',
+            name: 'Themes',
+            icon: ThemeIcon,
+            group: 'Training Setup',
+          },
+          {
+            id: 'settings-languages',
+            name: 'Languages',
+            icon: LanguagesIcon,
+            group: 'Training Setup',
+          },
+          {
+            id: 'settings-certification-bodies',
+            name: 'Certification Bodies',
+            icon: CertificationBodyIcon,
+            group: 'Training Setup',
+          },
+          {
             id: 'settings-syllabi',
-            name: 'Syllabi',
+            name: 'Syllabus',
             icon: SyllabiIcon,
             group: 'Training Setup',
           },
           {
             id: 'settings-trainings',
-            name: 'Trainings',
+            name: 'Training Catalog',
             icon: TrainingsSettingsIcon,
             group: 'Training Setup',
           },
