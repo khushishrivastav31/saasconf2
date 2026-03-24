@@ -33,6 +33,8 @@ class TrainingProgramYearResponse(BaseModel):
     year: int
     status: str
     notes: str | None = None
+    published_version: int = 0
+    published_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -115,3 +117,65 @@ class AvailabilityCheckResponse(BaseModel):
 
     available: bool
     conflicts: list[TrainerConflict]
+
+
+# --- Program Snapshots ---
+
+
+class ProgramSnapshotResponse(BaseModel):
+    """Schema for a program snapshot (version history entry)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    program_year_id: UUID
+    version: int
+    published_at: datetime
+    published_by: UUID | None = None
+    snapshot_data: list[dict] = Field(default_factory=list)
+
+
+class ProgramSnapshotListItem(BaseModel):
+    """Lightweight snapshot entry without full data (for version list)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    version: int
+    published_at: datetime
+    published_by: UUID | None = None
+
+
+class PlacementChangeResponse(BaseModel):
+    """A single placement change in the diff."""
+
+    change_type: str  # "added" | "removed" | "modified"
+    placement_id: str
+    training_name: str
+    training_slug: str | None = None
+    start_date: str
+    duration: int
+    location_name: str | None = None
+    location_code: str | None = None
+    changes: list[str] = Field(default_factory=list)
+    old_trainer_names: list[str] = Field(default_factory=list)
+    new_trainer_names: list[str] = Field(default_factory=list)
+
+
+class TrainerChangeResponse(BaseModel):
+    """Changes affecting a specific trainer."""
+
+    trainer_id: str
+    trainer_name: str
+    added_trainings: list[str] = Field(default_factory=list)
+    removed_trainings: list[str] = Field(default_factory=list)
+    modified_trainings: list[str] = Field(default_factory=list)
+
+
+class ProgramDiffResponse(BaseModel):
+    """Full diff between current program and last published snapshot."""
+
+    has_changes: bool
+    placement_changes: list[PlacementChangeResponse] = Field(default_factory=list)
+    affected_trainer_ids: list[str] = Field(default_factory=list)
+    per_trainer_changes: list[TrainerChangeResponse] = Field(default_factory=list)

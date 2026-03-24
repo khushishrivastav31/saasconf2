@@ -9,6 +9,7 @@ import { registrationFinanceCategory } from './sections/registrationFinance';
 import { communicationsCategory } from './sections/communications';
 import { insightsCategory } from './sections/insights';
 import { appendixCategory } from './sections/appendix';
+import { trainingsCategory } from './sections/trainings';
 
 export interface HandbookSection {
   id: string;
@@ -34,6 +35,7 @@ export const handbookCategories: HandbookCategory[] = [
   registrationFinanceCategory,
   communicationsCategory,
   insightsCategory,
+  trainingsCategory,
   appendixCategory,
 ];
 

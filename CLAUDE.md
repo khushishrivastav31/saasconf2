@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Assign Trainers tab — PlacementTrainer model + migration 165, schemas, 3 API endpoints (assign/remove/check-trainer), availability conflict detection (unavailability + double-booking), ReadOnlyCalendarGrid + ReadOnlyTrainingBar components, AssignTrainersTab with trainer filter + conflict dialog. Shared calendarUtils.ts extracted. ConfirmDialog updated to accept ReactNode message. 17 placement trainer tests green.
-- **Status**: mypy pass, ruff pass, tsc pass, eslint pass, 1632 frontend tests pass. Backend full suite running. Ready to commit after user approval.
+- **Last completed**: Final Program feature — ProgramSnapshot model + migration 166, snapshot & diff service (program_snapshot.py), trainer schedule PDF generator (trainer_schedule_pdf.py), enhanced publish endpoint with snapshot creation + email notifications, preview-changes + confirm-update + snapshots API endpoints, FinalProgramTab with publish/update workflow, ChangesPreviewDialog with per-trainer change breakdown, ConfirmDialog enhanced with 'primary' variant + wide option. 14 snapshot tests green. Handbook updated with Training Programs category (Design/Assign/Final).
+- **Status**: All checks pass — mypy, ruff, tsc, eslint. 1632 frontend tests green. Full backend suite running.

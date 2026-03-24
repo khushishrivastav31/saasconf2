@@ -5,7 +5,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from app.models.tenant import Tenant
     from app.models.trainer import Trainer
     from app.models.training import Training
+    from app.models.user import User
 
 
 class TrainingProgramYear(Base):
@@ -30,6 +31,8 @@ class TrainingProgramYear(Base):
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="draft", server_default="draft")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    published_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -40,6 +43,12 @@ class TrainingProgramYear(Base):
     tenant: Mapped["Tenant"] = relationship("Tenant")
     placements: Mapped[list["ProgramYearTraining"]] = relationship(
         "ProgramYearTraining", back_populates="program_year", cascade="all, delete-orphan"
+    )
+    snapshots: Mapped[list["ProgramSnapshot"]] = relationship(
+        "ProgramSnapshot",
+        back_populates="program_year",
+        cascade="all, delete-orphan",
+        order_by="ProgramSnapshot.version.desc()",
     )
 
     __table_args__ = (
@@ -128,3 +137,41 @@ class PlacementTrainer(Base):
 
     def __repr__(self) -> str:
         return f"<PlacementTrainer {self.trainer_id} → {self.placement_id}>"
+
+
+class ProgramSnapshot(Base):
+    """A snapshot of the published program state at a specific version."""
+
+    __tablename__ = "program_snapshots"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    program_year_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("training_program_years.id", ondelete="CASCADE"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot_data: Mapped[list] = mapped_column(JSONB, nullable=False)
+    published_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    program_year: Mapped["TrainingProgramYear"] = relationship("TrainingProgramYear", back_populates="snapshots")
+    publisher: Mapped["User | None"] = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("program_year_id", "version", name="uq_snapshot_version"),
+        Index("idx_ps_tenant", "tenant_id"),
+        Index("idx_ps_program_year", "program_year_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ProgramSnapshot v{self.version} for {self.program_year_id}>"

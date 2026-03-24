@@ -390,6 +390,8 @@ export interface TrainingProgramYear {
   year: number;
   status: 'draft' | 'published';
   notes: string | null;
+  published_version: number;
+  published_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -436,4 +438,60 @@ export interface TrainerConflict {
 export interface AvailabilityCheckResponse {
   available: boolean;
   conflicts: TrainerConflict[];
+}
+
+// Program snapshots & diff
+export interface ProgramSnapshotListItem {
+  id: string;
+  version: number;
+  published_at: string;
+  published_by: string | null;
+}
+
+export interface ProgramSnapshot extends ProgramSnapshotListItem {
+  program_year_id: string;
+  snapshot_data: ProgramSnapshotEntry[];
+}
+
+export interface ProgramSnapshotEntry {
+  placement_id: string;
+  training_name: string;
+  training_slug: string | null;
+  training_abbreviation: string | null;
+  training_color: string | null;
+  start_date: string;
+  duration: number;
+  location_name: string | null;
+  location_code: string | null;
+  trainer_ids: string[];
+  trainer_names: string[];
+}
+
+export interface PlacementChangeResponse {
+  change_type: 'added' | 'removed' | 'modified';
+  placement_id: string;
+  training_name: string;
+  training_slug: string | null;
+  start_date: string;
+  duration: number;
+  location_name: string | null;
+  location_code: string | null;
+  changes: string[];
+  old_trainer_names: string[];
+  new_trainer_names: string[];
+}
+
+export interface TrainerChangeResponse {
+  trainer_id: string;
+  trainer_name: string;
+  added_trainings: string[];
+  removed_trainings: string[];
+  modified_trainings: string[];
+}
+
+export interface ProgramDiffResponse {
+  has_changes: boolean;
+  placement_changes: PlacementChangeResponse[];
+  affected_trainer_ids: string[];
+  per_trainer_changes: TrainerChangeResponse[];
 }
