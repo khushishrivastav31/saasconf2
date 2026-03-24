@@ -5,8 +5,8 @@ Revises: 154
 Create Date: 2026-03-24
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
 
 revision = "155"
@@ -26,11 +26,21 @@ def upgrade() -> None:
     # Foreign key references
     op.add_column(
         "trainings",
-        sa.Column("language_id", UUID(as_uuid=True), sa.ForeignKey("training_languages.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "language_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("training_languages.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
     )
     op.add_column(
         "trainings",
-        sa.Column("second_language_id", UUID(as_uuid=True), sa.ForeignKey("training_languages.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "second_language_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("training_languages.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
     )
     op.add_column(
         "trainings",
@@ -38,11 +48,18 @@ def upgrade() -> None:
     )
     op.add_column(
         "trainings",
-        sa.Column("theme_id", UUID(as_uuid=True), sa.ForeignKey("training_themes.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "theme_id", UUID(as_uuid=True), sa.ForeignKey("training_themes.id", ondelete="SET NULL"), nullable=True
+        ),
     )
     op.add_column(
         "trainings",
-        sa.Column("certification_body_id", UUID(as_uuid=True), sa.ForeignKey("certification_bodies.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "certification_body_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("certification_bodies.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
     )
 
     # Indexes on FK columns
@@ -53,9 +70,7 @@ def upgrade() -> None:
     op.create_index("ix_trainings_certification_body_id", "trainings", ["certification_body_id"])
 
     # Unique partial index on (slug, tenant_id) where slug is not null
-    op.execute(
-        "CREATE UNIQUE INDEX uq_trainings_slug_tenant ON trainings (slug, tenant_id) WHERE slug IS NOT NULL"
-    )
+    op.execute("CREATE UNIQUE INDEX uq_trainings_slug_tenant ON trainings (slug, tenant_id) WHERE slug IS NOT NULL")
 
 
 def downgrade() -> None:

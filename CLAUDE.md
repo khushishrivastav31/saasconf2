@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Training model + team members (9c54b3f), CFP duplicate applicant fix (23fcd29)
-- **Status**: Clean — all checks pass, 2625 backend + 1632 frontend tests green. CI/CD pipeline running.
+- **Last completed**: Training catalog settings tab + email placeholder fix (ebe0106), Trainers tab with M2M + photo upload (uncommitted)
+- **Status**: Clean — all checks pass (mypy, ruff, tsc, eslint). Migration 156 applied.

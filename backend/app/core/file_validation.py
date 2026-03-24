@@ -18,6 +18,7 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "screen_overlay_image": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "badge_qr_logo": {"image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"},
     "badge_conditional_image": {"image/jpeg", "image/png", "image/webp", "image/gif"},
+    "trainer_photo": {"image/jpeg", "image/png", "image/webp"},
     "sponsor_package_contract": {
         "application/pdf",
         "application/msword",

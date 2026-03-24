@@ -52,11 +52,7 @@ async def list_syllabi(
     db: DbSessionDep,
 ) -> SyllabusListResponse:
     """List all syllabi for the current tenant."""
-    query = (
-        select(Syllabus)
-        .where(Syllabus.tenant_id == current_user.tenant_id)
-        .order_by(Syllabus.name)
-    )
+    query = select(Syllabus).where(Syllabus.tenant_id == current_user.tenant_id).order_by(Syllabus.name)
     result = await db.execute(query)
     items = list(result.scalars().unique().all())
 

@@ -71,7 +71,6 @@ from app.models.review import (
 )
 from app.models.screen_overlay import ScreenOverlay
 from app.models.service_provider import ServiceProvider
-from app.models.syllabus import Syllabus
 from app.models.settings import (
     CFPCommitteeRole,
     ConferenceCurrency,
@@ -91,8 +90,10 @@ from app.models.speaker_expense import (
 )
 from app.models.sponsor import Sponsor
 from app.models.sponsor_contract import SponsorContract, SponsorContractVersion
+from app.models.syllabus import Syllabus
 from app.models.tenant import Tenant
 from app.models.token import RefreshToken
+from app.models.trainer import Trainer
 from app.models.training import Training, TrainingLanguage, TrainingTheme
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
@@ -200,6 +201,7 @@ __all__ = [
     "TenantRoleLevel",
     "TenantRoleScope",
     "ThreadFlag",
+    "Trainer",
     "Training",
     "TrainingLanguage",
     "TrainingTheme",

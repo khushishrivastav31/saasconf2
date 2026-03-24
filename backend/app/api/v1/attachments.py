@@ -29,6 +29,7 @@ ALLOWED_ENTITY_TYPES = {
     "screen_overlay_image",
     "invoice",
     "speaker_expense",
+    "trainer_photo",
 }
 
 
@@ -112,7 +113,7 @@ async def upload_attachment(
     # Validate MIME type via magic bytes
     content_type = file.content_type or "application/octet-stream"
     verified_type = validate_upload(file_data, content_type, entity_type)
-    if entity_type in {"applicant_picture", "sponsor_logo"}:
+    if entity_type in {"applicant_picture", "sponsor_logo", "trainer_photo"}:
         file_data = strip_image_metadata(file_data, verified_type)
         file_size = len(file_data)
     safe_filename = sanitize_filename(file.filename or "unnamed")

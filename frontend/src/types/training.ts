@@ -266,3 +266,51 @@ export interface SyllabusUpdate {
   certification_body_id?: string | null;
   language_id?: string | null;
 }
+
+// Trainer
+export interface TrainerNameRef {
+  id: string;
+  name: string;
+}
+
+export interface Trainer {
+  id: string;
+  tenant_id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  vita: string | null;
+  is_active: boolean;
+  is_internal: boolean;
+  training_ids: string[];
+  language_ids: string[];
+  trainings: TrainerNameRef[];
+  languages: TrainerNameRef[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TrainerCreate {
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  phone?: string | null;
+  vita?: string | null;
+  is_active?: boolean;
+  is_internal?: boolean;
+  training_ids?: string[];
+  language_ids?: string[];
+}
+
+export interface TrainerUpdate {
+  first_name?: string;
+  last_name?: string;
+  email?: string | null;
+  phone?: string | null;
+  vita?: string | null;
+  is_active?: boolean;
+  is_internal?: boolean;
+  training_ids?: string[];
+  language_ids?: string[];
+}
