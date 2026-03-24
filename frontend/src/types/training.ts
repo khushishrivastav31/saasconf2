@@ -273,6 +273,16 @@ export interface TrainerNameRef {
   name: string;
 }
 
+export interface TrainerUnavailability {
+  id: string;
+  trainer_id: string;
+  start_date: string;
+  end_date: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Trainer {
   id: string;
   tenant_id: string;
@@ -287,6 +297,7 @@ export interface Trainer {
   language_ids: string[];
   trainings: TrainerNameRef[];
   languages: TrainerNameRef[];
+  unavailability: TrainerUnavailability[];
   created_at: string;
   updated_at: string;
 }
@@ -313,4 +324,59 @@ export interface TrainerUpdate {
   is_internal?: boolean;
   training_ids?: string[];
   language_ids?: string[];
+}
+
+// Holiday Config
+export interface HolidayConfig {
+  id: string;
+  tenant_id: string;
+  country_code: string;
+  year: number;
+  national_holidays_enabled: boolean;
+  regional_holidays_enabled: boolean;
+  regional_code: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PublicHoliday {
+  date: string;
+  local_name: string;
+  name: string;
+  country_code: string;
+  is_global: boolean;
+  counties: string[] | null;
+  types: string[];
+}
+
+export interface AvailableCountry {
+  country_code: string;
+  name: string;
+}
+
+export interface CountrySubdivision {
+  code: string;
+  name: string;
+}
+
+export interface CustomBlockedDay {
+  id: string;
+  tenant_id: string;
+  date: string;
+  name: string;
+  year: number;
+  is_recurring: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Training Program Year
+export interface TrainingProgramYear {
+  id: string;
+  tenant_id: string;
+  year: number;
+  status: 'draft' | 'published';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }

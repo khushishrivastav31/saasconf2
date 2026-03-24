@@ -26,6 +26,8 @@ const InvoiceTemplatesTab = lazy(() => import('./settings/InvoiceTemplatesTab'))
 const ZugferdTab = lazy(() => import('./settings/ZugferdTab'));
 const StripeSetupTab = lazy(() => import('./settings/StripeSetupTab'));
 const PaymentRemindersSettingsTab = lazy(() => import('./settings/PaymentRemindersSettingsTab'));
+const HolidaysSettingsTab = lazy(() => import('./settings/HolidaysSettingsTab'));
+const OfferTemplatesTab = lazy(() => import('./settings/OfferTemplatesTab'));
 
 const settingsMap: Record<string, React.LazyExoticComponent<() => React.JSX.Element>> = {
   'settings-trainers': TrainersSettingsTab,
@@ -53,6 +55,8 @@ const settingsMap: Record<string, React.LazyExoticComponent<() => React.JSX.Elem
   'settings-zugferd': ZugferdTab,
   'settings-stripe': StripeSetupTab,
   'settings-payment-reminders': PaymentRemindersSettingsTab,
+  'settings-holidays': HolidaysSettingsTab,
+  'settings-offer-templates': OfferTemplatesTab,
 };
 
 interface SettingsTabProps {

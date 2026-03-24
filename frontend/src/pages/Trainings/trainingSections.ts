@@ -35,15 +35,24 @@ import {
   AnalyticsIcon,
   RevenueIcon,
   StatisticsIcon,
+  HolidaysIcon,
+  InhouseTrainingsIcon,
+  CustomersIcon,
+  AttendeesIcon,
+  OfferTemplatesIcon,
 } from './icons';
 
 // ---------------------------------------------------------------------------
 // Section navigation types
 // ---------------------------------------------------------------------------
 
-export type TrainingSectionId =
+/** Static section IDs known at compile time. */
+export type StaticSectionId =
   // Top-level
-  | 'trainings-list'
+  | 'program'
+  | 'inhouse-trainings'
+  | 'customers'
+  | 'attendees'
   | 'settings'
   | 'registrations'
   | 'invoices'
@@ -58,6 +67,7 @@ export type TrainingSectionId =
   | 'settings-pronoun-options'
   | 'settings-certification-bodies'
   | 'settings-syllabi'
+  | 'settings-holidays'
   | 'settings-location-types'
   | 'settings-registration-portal'
   | 'settings-policies'
@@ -76,10 +86,19 @@ export type TrainingSectionId =
   | 'settings-zugferd'
   | 'settings-stripe'
   | 'settings-payment-reminders'
+  | 'settings-offer-templates'
   // Analytics children
   | 'analytics'
   | 'analytics-revenue'
   | 'analytics-statistics';
+
+/**
+ * Section IDs include static IDs plus dynamic program-year IDs
+ * like `program-2026-design`, `program-2026-trainers`, `program-2026-final`.
+ */
+export type TrainingSectionId =
+  | StaticSectionId
+  | `program-${number}-${'design' | 'trainers' | 'final'}`;
 
 export interface TrainingSectionChild {
   id: TrainingSectionId;
@@ -108,7 +127,10 @@ export const sectionGroups: TrainingSectionGroup[] = [
   {
     name: 'Setup',
     sections: [
-      { id: 'trainings-list', name: 'Training Programs', icon: TrainingsIcon },
+      { id: 'program', name: 'Training Program', icon: TrainingsIcon, children: [] },
+      { id: 'inhouse-trainings', name: 'Inhouse Trainings', icon: InhouseTrainingsIcon },
+      { id: 'customers', name: 'Customers', icon: CustomersIcon },
+      { id: 'attendees', name: 'Attendees', icon: AttendeesIcon },
       {
         id: 'settings',
         name: 'Settings',
@@ -161,6 +183,12 @@ export const sectionGroups: TrainingSectionGroup[] = [
             id: 'settings-location-types',
             name: 'Location Types',
             icon: LocationTypesIcon,
+            group: 'Training Setup',
+          },
+          {
+            id: 'settings-holidays',
+            name: 'Holidays',
+            icon: HolidaysIcon,
             group: 'Training Setup',
           },
           {
@@ -266,6 +294,13 @@ export const sectionGroups: TrainingSectionGroup[] = [
             name: 'Payment Reminders',
             icon: PaymentRemindersSettingsIcon,
             group: 'Finance',
+          },
+          // Offers
+          {
+            id: 'settings-offer-templates',
+            name: 'Offer Templates',
+            icon: OfferTemplatesIcon,
+            group: 'Offers',
           },
         ],
       },

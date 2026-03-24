@@ -32,6 +32,7 @@ from app.models.deadline import Deadline
 from app.models.email_log import EmailLog
 from app.models.fiscal_representative import FiscalRepresentative
 from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
+from app.models.holiday_config import CustomBlockedDay, TenantHolidayConfig
 from app.models.invoice import Invoice
 from app.models.invoice_event import InvoiceEvent
 from app.models.location import Location
@@ -93,8 +94,9 @@ from app.models.sponsor_contract import SponsorContract, SponsorContractVersion
 from app.models.syllabus import Syllabus
 from app.models.tenant import Tenant
 from app.models.token import RefreshToken
-from app.models.trainer import Trainer
+from app.models.trainer import Trainer, TrainerUnavailability
 from app.models.training import Training, TrainingLanguage, TrainingTheme
+from app.models.training_program import TrainingProgramYear
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
 from app.models.user_password_reset import UserPasswordReset
@@ -136,6 +138,7 @@ __all__ = [
     "ConferenceLocation",
     "ConferencePaperFormSchema",
     "CospeakerInvitationStatus",
+    "CustomBlockedDay",
     "Deadline",
     "DiscountCode",
     "DiscountCodeOption",
@@ -196,14 +199,17 @@ __all__ = [
     "Submission",
     "Syllabus",
     "Tenant",
+    "TenantHolidayConfig",
     "TenantLocationType",
     "TenantModule",
     "TenantRoleLevel",
     "TenantRoleScope",
     "ThreadFlag",
     "Trainer",
+    "TrainerUnavailability",
     "Training",
     "TrainingLanguage",
+    "TrainingProgramYear",
     "TrainingTheme",
     "User",
     "UserConferenceAccess",

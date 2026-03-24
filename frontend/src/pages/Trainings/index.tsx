@@ -1,9 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { useTrainingsModule } from './useTrainingsModule';
 
 // Lazy-loaded tab components
-const TrainingsListTab = lazy(() => import('./tabs/TrainingsListTab'));
-const TeamTab = lazy(() => import('./tabs/TeamTab'));
+const ProgramYearManager = lazy(() => import('./tabs/program/ProgramYearManager'));
+const DesignProgramTab = lazy(() => import('./tabs/program/DesignProgramTab'));
+const AssignTrainersTab = lazy(() => import('./tabs/program/AssignTrainersTab'));
+const FinalProgramTab = lazy(() => import('./tabs/program/FinalProgramTab'));
 const SettingsTab = lazy(() => import('./tabs/SettingsTab'));
 const RegistrationsTab = lazy(() => import('./tabs/RegistrationsTab'));
 const InvoicesTab = lazy(() => import('./tabs/InvoicesTab'));
@@ -21,6 +23,13 @@ function LazyFallback() {
   );
 }
 
+/** Parse dynamic program section IDs like "program-2026-design" */
+function parseProgramSection(section: string): { year: number; tab: string } | null {
+  const match = section.match(/^program-(\d{4})-(design|trainers|final)$/);
+  if (!match) return null;
+  return { year: Number(match[1]), tab: match[2] };
+}
+
 export default function Trainings() {
   const {
     activeSection,
@@ -30,10 +39,10 @@ export default function Trainings() {
     expandedSections,
     setExpandedSections,
     filteredGroups,
-    setSelectedTrainingId,
-    selectedTraining,
-    refetchTraining,
+    programYears,
   } = useTrainingsModule();
+
+  const programInfo = useMemo(() => parseProgramSection(activeSection), [activeSection]);
 
   return (
     <div>
@@ -48,28 +57,6 @@ export default function Trainings() {
               Manage trainings, trainers, registrations, and more.
             </p>
           </div>
-          {selectedTraining && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 rounded-lg">
-              <span className="text-sm text-primary-700 dark:text-primary-300 font-medium">
-                {selectedTraining.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => setSelectedTrainingId(null)}
-                className="text-primary-400 hover:text-primary-600 dark:hover:text-primary-200"
-                title="Deselect training"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -141,7 +128,7 @@ export default function Trainings() {
                             <section.icon />
                             {!sidebarCollapsed && <span className="ml-3">{section.name}</span>}
                           </button>
-                          {section.children && !sidebarCollapsed && (
+                          {section.children && section.children.length > 0 && !sidebarCollapsed && (
                             <button
                               onClick={() =>
                                 setExpandedSections((prev) => {
@@ -176,6 +163,7 @@ export default function Trainings() {
                         </div>
                         {/* Expandable children */}
                         {section.children &&
+                          section.children.length > 0 &&
                           expandedSections.has(section.id) &&
                           !sidebarCollapsed && (
                             <div className="ml-4 mb-1 space-y-0.5">
@@ -187,7 +175,7 @@ export default function Trainings() {
                                   <div key={child.id}>
                                     {showGroupHeader && (
                                       <p
-                                        className={`px-3 text-[9px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 ${childIdx > 0 ? 'pt-2 mt-1 border-t border-gray-200 dark:border-gray-700' : 'pt-1'} pb-0.5`}
+                                        className={`px-3 font-semibold tracking-wider text-gray-400 dark:text-gray-500 ${childIdx > 0 ? 'pt-2 mt-1 border-t border-gray-200 dark:border-gray-700' : 'pt-1'} pb-0.5 ${/^\d{4}$/.test(child.group!) ? 'text-xs' : 'text-[9px] uppercase'}`}
                                       >
                                         {child.group}
                                       </p>
@@ -222,18 +210,38 @@ export default function Trainings() {
         <div className="flex-1 min-w-0">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <Suspense fallback={<LazyFallback />}>
-              {activeSection === 'trainings-list' && (
-                <>
-                  <TrainingsListTab
-                    onSelectTraining={(id) => setSelectedTrainingId(id)}
-                    selectedTrainingId={selectedTraining?.id ?? null}
-                  />
-                  {selectedTraining && (
-                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                      <TeamTab training={selectedTraining} onUpdate={refetchTraining} />
-                    </div>
-                  )}
-                </>
+              {activeSection === 'program' && (
+                <ProgramYearManager
+                  programYears={programYears}
+                  onNavigateToYear={(year) => setActiveSection(`program-${year}-design`)}
+                />
+              )}
+              {programInfo?.tab === 'design' && <DesignProgramTab year={programInfo.year} />}
+              {programInfo?.tab === 'trainers' && <AssignTrainersTab year={programInfo.year} />}
+              {programInfo?.tab === 'final' && <FinalProgramTab year={programInfo.year} />}
+              {activeSection === 'inhouse-trainings' && (
+                <div className="text-center py-12">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Inhouse Trainings
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Coming soon.</p>
+                </div>
+              )}
+              {activeSection === 'customers' && (
+                <div className="text-center py-12">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Customers
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Coming soon.</p>
+                </div>
+              )}
+              {activeSection === 'attendees' && (
+                <div className="text-center py-12">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Attendees
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Coming soon.</p>
+                </div>
               )}
               {activeSection === 'registrations' && <RegistrationsTab />}
               {activeSection === 'invoices' && <InvoicesTab />}

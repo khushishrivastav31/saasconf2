@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Training catalog settings tab + email placeholder fix (ebe0106), Trainers tab with M2M + photo upload (uncommitted)
-- **Status**: Clean — all checks pass (mypy, ruff, tsc, eslint). Migration 156 applied.
+- **Last completed**: Trainer unavailability feature (migration 159, model, schemas, API, frontend UI with tabs), Holidays settings tab, Trainer detail view restructuring (tabs, save in header, trainings catalog with search)
+- **Status**: Clean — all checks pass (mypy, ruff, tsc, eslint). Migrations 158+159 applied. 20 new backend tests. Uncommitted.

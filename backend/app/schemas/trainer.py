@@ -1,9 +1,10 @@
 """Trainer schemas."""
 
-from datetime import datetime
+from datetime import date, datetime
+from typing import Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.html_sanitize import sanitize_html
 from app.core.validators import validate_email, validate_phone
@@ -76,6 +77,52 @@ class TrainerNameRef(BaseModel):
     name: str
 
 
+# --- Trainer Unavailability ---
+
+
+class TrainerUnavailabilityCreate(BaseModel):
+    """Schema for creating a trainer unavailability entry."""
+
+    start_date: date
+    end_date: date
+    description: str | None = Field(None, max_length=255)
+
+    @model_validator(mode="after")
+    def check_dates(self) -> Self:
+        if self.end_date < self.start_date:
+            raise ValueError("end_date must be >= start_date")
+        return self
+
+
+class TrainerUnavailabilityUpdate(BaseModel):
+    """Schema for updating a trainer unavailability entry."""
+
+    start_date: date | None = None
+    end_date: date | None = None
+    description: str | None = Field(None, max_length=255)
+
+    @model_validator(mode="after")
+    def check_dates(self) -> Self:
+        if self.start_date is not None and self.end_date is not None:
+            if self.end_date < self.start_date:
+                raise ValueError("end_date must be >= start_date")
+        return self
+
+
+class TrainerUnavailabilityResponse(BaseModel):
+    """Schema for trainer unavailability response."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    trainer_id: UUID
+    start_date: date
+    end_date: date
+    description: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class TrainerResponse(BaseModel):
     """Schema for trainer response."""
 
@@ -94,5 +141,6 @@ class TrainerResponse(BaseModel):
     language_ids: list[UUID] = Field(default_factory=list)
     trainings: list[TrainerNameRef] = Field(default_factory=list)
     languages: list[TrainerNameRef] = Field(default_factory=list)
+    unavailability: list[TrainerUnavailabilityResponse] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime

@@ -9,8 +9,16 @@ from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.models.audit import AuditLog
-from app.models.trainer import Trainer, trainer_languages, trainer_trainings
-from app.schemas.trainer import TrainerCreate, TrainerNameRef, TrainerResponse, TrainerUpdate
+from app.models.trainer import Trainer, TrainerUnavailability, trainer_languages, trainer_trainings
+from app.schemas.trainer import (
+    TrainerCreate,
+    TrainerNameRef,
+    TrainerResponse,
+    TrainerUnavailabilityCreate,
+    TrainerUnavailabilityResponse,
+    TrainerUnavailabilityUpdate,
+    TrainerUpdate,
+)
 
 router = APIRouter(prefix="/trainers", tags=["trainers"])
 
@@ -36,6 +44,7 @@ def _build_response(trainer: Trainer) -> TrainerResponse:
         language_ids=[lang.id for lang in trainer.languages],
         trainings=[TrainerNameRef(id=t.id, name=t.name) for t in trainer.trainings],
         languages=[TrainerNameRef(id=lang.id, name=lang.name) for lang in trainer.languages],
+        unavailability=[TrainerUnavailabilityResponse.model_validate(u) for u in trainer.unavailability],
         created_at=trainer.created_at,
         updated_at=trainer.updated_at,
     )
@@ -233,3 +242,167 @@ async def delete_trainer(
     await db.commit()
 
     return {"message": "Trainer deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Trainer Unavailability CRUD
+# ---------------------------------------------------------------------------
+
+
+async def _get_trainer_or_404(trainer_id: UUID, current_user: TenantAdminDep, db: DbSessionDep) -> Trainer:
+    result = await db.execute(select(Trainer).where(Trainer.id == trainer_id, _tenant_filter(current_user)))
+    trainer = result.scalar_one_or_none()
+    if not trainer:
+        from app.core.exceptions import NotFoundError
+
+        raise NotFoundError("Trainer not found")
+    return trainer
+
+
+@router.get("/{trainer_id}/unavailability", response_model=list[TrainerUnavailabilityResponse])
+async def list_unavailability(
+    trainer_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> list[TrainerUnavailabilityResponse]:
+    """List unavailability entries for a trainer."""
+    await _get_trainer_or_404(trainer_id, current_user, db)
+    result = await db.execute(
+        select(TrainerUnavailability)
+        .where(TrainerUnavailability.trainer_id == trainer_id)
+        .order_by(TrainerUnavailability.start_date)
+    )
+    entries = list(result.scalars().all())
+    return [TrainerUnavailabilityResponse.model_validate(e) for e in entries]
+
+
+@router.post("/{trainer_id}/unavailability", response_model=TrainerUnavailabilityResponse, status_code=201)
+async def create_unavailability(
+    trainer_id: UUID,
+    payload: TrainerUnavailabilityCreate,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> TrainerUnavailabilityResponse:
+    """Create an unavailability entry for a trainer."""
+    trainer = await _get_trainer_or_404(trainer_id, current_user, db)
+    entry = TrainerUnavailability(
+        tenant_id=current_user.tenant_id,
+        trainer_id=trainer_id,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        description=payload.description,
+    )
+    db.add(entry)
+    await db.flush()
+
+    audit_log = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="trainer_unavailability.create",
+        resource_type="trainer_unavailability",
+        resource_id=entry.id,
+        details={
+            "trainer": f"{trainer.first_name} {trainer.last_name}",
+            "start_date": str(payload.start_date),
+            "end_date": str(payload.end_date),
+        },
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+    await db.commit()
+    await db.refresh(entry)
+    return TrainerUnavailabilityResponse.model_validate(entry)
+
+
+@router.put("/{trainer_id}/unavailability/{entry_id}", response_model=TrainerUnavailabilityResponse)
+async def update_unavailability(
+    trainer_id: UUID,
+    entry_id: UUID,
+    payload: TrainerUnavailabilityUpdate,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> TrainerUnavailabilityResponse:
+    """Update an unavailability entry."""
+    await _get_trainer_or_404(trainer_id, current_user, db)
+    result = await db.execute(
+        select(TrainerUnavailability).where(
+            TrainerUnavailability.id == entry_id,
+            TrainerUnavailability.trainer_id == trainer_id,
+        )
+    )
+    entry = result.scalar_one_or_none()
+    if not entry:
+        from app.core.exceptions import NotFoundError
+
+        raise NotFoundError("Unavailability entry not found")
+
+    if payload.start_date is not None:
+        entry.start_date = payload.start_date
+    if payload.end_date is not None:
+        entry.end_date = payload.end_date
+    if payload.description is not None:
+        entry.description = payload.description or None
+
+    # Cross-validate final dates
+    if entry.end_date < entry.start_date:
+        from app.core.exceptions import ValidationError
+
+        raise ValidationError("end_date must be >= start_date")
+
+    audit_log = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="trainer_unavailability.update",
+        resource_type="trainer_unavailability",
+        resource_id=entry.id,
+        details={"start_date": str(entry.start_date), "end_date": str(entry.end_date)},
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+    await db.commit()
+    await db.refresh(entry)
+    return TrainerUnavailabilityResponse.model_validate(entry)
+
+
+@router.delete("/{trainer_id}/unavailability/{entry_id}")
+async def delete_unavailability(
+    trainer_id: UUID,
+    entry_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    request: Request,
+) -> dict:
+    """Delete an unavailability entry."""
+    await _get_trainer_or_404(trainer_id, current_user, db)
+    result = await db.execute(
+        select(TrainerUnavailability).where(
+            TrainerUnavailability.id == entry_id,
+            TrainerUnavailability.trainer_id == trainer_id,
+        )
+    )
+    entry = result.scalar_one_or_none()
+    if not entry:
+        from app.core.exceptions import NotFoundError
+
+        raise NotFoundError("Unavailability entry not found")
+
+    details = {"start_date": str(entry.start_date), "end_date": str(entry.end_date)}
+    await db.delete(entry)
+
+    audit_log = AuditLog(
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.user_id,
+        action="trainer_unavailability.delete",
+        resource_type="trainer_unavailability",
+        resource_id=entry_id,
+        details=details,
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
+    db.add(audit_log)
+    await db.commit()
+    return {"message": "Unavailability entry deleted"}

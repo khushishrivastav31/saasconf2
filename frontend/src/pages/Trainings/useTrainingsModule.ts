@@ -2,9 +2,14 @@ import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../config/api';
-import type { Training } from '../../types/training';
-import type { TrainingSectionId, TrainingSectionGroup } from './trainingSections';
+import type { Training, TrainingProgramYear } from '../../types/training';
+import type {
+  TrainingSectionId,
+  TrainingSectionGroup,
+  TrainingSectionChild,
+} from './trainingSections';
 import { sectionGroups } from './trainingSections';
+import { DesignProgramIcon, AssignTrainersIcon, FinalProgramIcon } from './icons';
 
 export interface UseTrainingsModuleReturn {
   activeSection: TrainingSectionId;
@@ -19,6 +24,8 @@ export interface UseTrainingsModuleReturn {
   selectedTraining: Training | undefined;
   isLoadingTraining: boolean;
   refetchTraining: () => void;
+  programYears: TrainingProgramYear[];
+  refetchProgramYears: () => void;
 }
 
 export function useTrainingsModule(): UseTrainingsModuleReturn {
@@ -39,11 +46,25 @@ export function useTrainingsModule(): UseTrainingsModuleReturn {
           }
         }
       }
+      // Auto-expand program parent for program-YYYY-* sections
+      if (sectionParam.startsWith('program-') && sectionParam !== 'program') {
+        initial.add('program');
+      }
     }
     return initial;
   });
 
-  const activeSection: TrainingSectionId = sectionParam ?? 'trainings-list';
+  const activeSection: TrainingSectionId = sectionParam ?? 'program';
+
+  // Fetch program years for dynamic sidebar
+  const { data: programYears = [], refetch: refetchProgramYears } = useQuery({
+    queryKey: ['training-program-years'],
+    queryFn: async () => {
+      const res = await api.get<TrainingProgramYear[]>('/trainings/programs/years');
+      return res.data;
+    },
+    staleTime: 30_000,
+  });
 
   const setSelectedTrainingId = useCallback(
     (id: string | null) => {
@@ -99,12 +120,57 @@ export function useTrainingsModule(): UseTrainingsModuleReturn {
           }
         }
       }
+      // Auto-expand program parent for dynamic program children
+      if (id === 'program' || id.startsWith('program-')) {
+        setExpandedSections((prev) => {
+          const next = new Set(prev);
+          next.add('program');
+          return next;
+        });
+      }
     },
     [searchParams, setSearchParams]
   );
 
-  // For now, show all groups (no module-based filtering needed at this level)
-  const filteredGroups = useMemo(() => sectionGroups, []);
+  // Build dynamic sidebar groups with program year children
+  const filteredGroups = useMemo(() => {
+    // Build dynamic children for the "Training Program" section
+    const programChildren: TrainingSectionChild[] = [];
+    for (const py of programYears) {
+      const yearStr = String(py.year);
+      programChildren.push(
+        {
+          id: `program-${py.year}-design` as TrainingSectionId,
+          name: 'Design Program',
+          icon: DesignProgramIcon,
+          group: yearStr,
+        },
+        {
+          id: `program-${py.year}-trainers` as TrainingSectionId,
+          name: 'Assign Trainers',
+          icon: AssignTrainersIcon,
+          group: yearStr,
+        },
+        {
+          id: `program-${py.year}-final` as TrainingSectionId,
+          name: 'Final Program',
+          icon: FinalProgramIcon,
+          group: yearStr,
+        }
+      );
+    }
+
+    // Clone sectionGroups and inject dynamic children into the program section
+    return sectionGroups.map((group) => ({
+      ...group,
+      sections: group.sections.map((section) => {
+        if (section.id === 'program') {
+          return { ...section, children: programChildren };
+        }
+        return section;
+      }),
+    }));
+  }, [programYears]);
 
   return {
     activeSection,
@@ -119,5 +185,7 @@ export function useTrainingsModule(): UseTrainingsModuleReturn {
     selectedTraining,
     isLoadingTraining,
     refetchTraining: handleRefetchTraining,
+    programYears,
+    refetchProgramYears,
   };
 }

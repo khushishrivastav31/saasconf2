@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import type {
   Trainer,
   TrainerCreate,
+  TrainerUnavailability,
   TrainerUpdate,
   Training,
   TrainingLanguage,
@@ -234,6 +235,224 @@ const TrainerAvatar = React.memo(function TrainerAvatar({
   );
 });
 
+/* ─── Trainer Unavailability sub-component ────────────────────── */
+
+const TrainerUnavailabilitySection = React.memo(function TrainerUnavailabilitySection({
+  trainerId,
+  entries,
+}: {
+  trainerId: string;
+  entries: TrainerUnavailability[];
+}) {
+  const queryClient = useQueryClient();
+  const [showAdd, setShowAdd] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState('');
+
+  const isValid = startDate && endDate && endDate >= startDate;
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      await api.post(`/trainings/trainers/${trainerId}/unavailability`, {
+        start_date: startDate,
+        end_date: endDate,
+        description: description || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      setShowAdd(false);
+      setStartDate('');
+      setEndDate('');
+      setDescription('');
+      setError('');
+    },
+    onError: (err) => setError(parseApiError(err)),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      await api.delete(`/trainings/trainers/${trainerId}/unavailability/${entryId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+    onError: (err) => setError(parseApiError(err)),
+  });
+
+  const handleDelete = useCallback(
+    (entryId: string) => {
+      deleteMutation.mutate(entryId);
+    },
+    [deleteMutation]
+  );
+
+  const sorted = useMemo(
+    () => [...entries].sort((a, b) => a.start_date.localeCompare(b.start_date)),
+    [entries]
+  );
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          Blocked Date Ranges
+        </h4>
+        {!showAdd && (
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add
+          </button>
+        )}
+      </div>
+
+      {error && <ErrorBanner message={error} />}
+
+      {/* Add form */}
+      {showAdd && (
+        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-3 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md px-2.5 py-1.5 text-sm focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || undefined}
+                className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md px-2.5 py-1.5 text-sm focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Description
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Vacation, Conference, Sick leave"
+              maxLength={255}
+              className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md px-2.5 py-1.5 text-sm focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+          {startDate && endDate && endDate < startDate && (
+            <p className="text-xs text-red-600 dark:text-red-400">
+              End date must be on or after start date.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => createMutation.mutate()}
+              disabled={!isValid || createMutation.isPending}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md disabled:opacity-50"
+            >
+              {createMutation.isPending ? 'Adding...' : 'Add'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAdd(false);
+                setStartDate('');
+                setEndDate('');
+                setDescription('');
+                setError('');
+              }}
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Entries table */}
+      {sorted.length === 0 ? (
+        <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+          No unavailability entries.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400 text-xs">
+                <th className="py-1.5 pr-3 font-medium">Start</th>
+                <th className="py-1.5 pr-3 font-medium">End</th>
+                <th className="py-1.5 pr-3 font-medium">Description</th>
+                <th className="py-1.5 w-8"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((e) => (
+                <tr key={e.id} className="border-b border-gray-100 dark:border-gray-700/50">
+                  <td className="py-1.5 pr-3 text-gray-900 dark:text-gray-100 whitespace-nowrap text-xs">
+                    {e.start_date}
+                  </td>
+                  <td className="py-1.5 pr-3 text-gray-900 dark:text-gray-100 whitespace-nowrap text-xs">
+                    {e.end_date}
+                  </td>
+                  <td className="py-1.5 pr-3 text-gray-700 dark:text-gray-300 text-xs">
+                    {e.description || <span className="text-gray-400 dark:text-gray-500">—</span>}
+                  </td>
+                  <td className="py-1.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(e.id)}
+                      className="text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                      title="Delete"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+});
+
 /* ─── Main component ──────────────────────────────────────────── */
 
 export default function TrainersSettingsTab() {
@@ -276,8 +495,8 @@ export default function TrainersSettingsTab() {
   });
 
   const items = useMemo(() => data?.items || [], [data?.items]);
-  const allTrainings = trainingsData?.items || [];
-  const allLanguages = langData?.items || [];
+  const allTrainings = useMemo(() => trainingsData?.items || [], [trainingsData?.items]);
+  const allLanguages = useMemo(() => langData?.items || [], [langData?.items]);
   const selectedItem = items.find((t) => t.id === selectedId);
 
   // Auto-select first item
@@ -406,6 +625,20 @@ export default function TrainersSettingsTab() {
     }
   };
 
+  const [trainingSearch, setTrainingSearch] = useState('');
+  const [detailTab, setDetailTab] = useState<'profile' | 'catalog' | 'unavailability'>('profile');
+
+  // Reset detail tab when selection changes
+  useEffect(() => {
+    setDetailTab('profile');
+  }, [selectedId]);
+
+  const filteredTrainings = useMemo(() => {
+    if (!trainingSearch.trim()) return allTrainings;
+    const q = trainingSearch.toLowerCase();
+    return allTrainings.filter((t) => t.name.toLowerCase().includes(q));
+  }, [allTrainings, trainingSearch]);
+
   const renderForm = (
     form: TrainerCreate | TrainerUpdate,
     setForm: (f: TrainerCreate | TrainerUpdate) => void,
@@ -413,7 +646,11 @@ export default function TrainersSettingsTab() {
     isPending: boolean,
     isCreate: boolean
   ) => (
-    <form onSubmit={onSubmit} className="space-y-5">
+    <form
+      onSubmit={onSubmit}
+      className="space-y-5"
+      id={isCreate ? 'create-trainer-form' : 'edit-trainer-form'}
+    >
       {/* Name row */}
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -500,35 +737,7 @@ export default function TrainersSettingsTab() {
         </div>
       </div>
 
-      {/* Assigned Trainings */}
-      {allTrainings.length > 0 && (
-        <div>
-          <label className={labelCls}>Assigned Trainings</label>
-          <div className="mt-1 max-h-36 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-2 space-y-1 bg-white dark:bg-gray-800">
-            {allTrainings.map((t) => (
-              <label
-                key={t.id}
-                className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 px-1 rounded"
-              >
-                <input
-                  type="checkbox"
-                  checked={(form.training_ids || []).includes(t.id)}
-                  onChange={() =>
-                    toggleMulti(form.training_ids || [], t.id, (ids) =>
-                      setForm({ ...form, training_ids: ids })
-                    )
-                  }
-                  className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                />
-                <span className="truncate">{t.name}</span>
-                {!t.is_active && <span className="text-xs text-gray-400">(inactive)</span>}
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Assigned Languages */}
+      {/* Languages */}
       {allLanguages.length > 0 && (
         <div>
           <label className={labelCls}>Languages</label>
@@ -568,16 +777,16 @@ export default function TrainersSettingsTab() {
         />
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-2 pt-1">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
-        >
-          {isPending ? 'Saving...' : isCreate ? 'Create' : 'Save'}
-        </button>
-        {isCreate && (
+      {/* Actions — only for create form (edit uses header button) */}
+      {isCreate && (
+        <div className="flex gap-2 pt-1">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
+          >
+            {isPending ? 'Creating...' : 'Create'}
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -593,8 +802,8 @@ export default function TrainersSettingsTab() {
           >
             Cancel
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </form>
   );
 
@@ -748,6 +957,7 @@ export default function TrainersSettingsTab() {
           <div className="flex-1 min-w-0">
             {selectedItem ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                {/* Header with Save + Delete */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -758,33 +968,188 @@ export default function TrainersSettingsTab() {
                       {!selectedItem.is_active && ' (inactive)'}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setDeleteTarget(selectedItem)}
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
-                    title="Delete"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {(detailTab === 'profile' || detailTab === 'catalog') && (
+                      <button
+                        type="submit"
+                        form="edit-trainer-form"
+                        disabled={updateMutation.isPending}
+                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                      >
+                        {updateMutation.isPending ? 'Saving...' : 'Save'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(selectedItem)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                      title="Delete"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className="px-6 py-5 space-y-6">
-                  {/* Photo upload */}
-                  <TrainerPhoto trainerId={selectedItem.id} />
 
-                  {/* Edit form */}
-                  {renderForm(
-                    editForm,
-                    (f) => setEditForm(f as TrainerUpdate),
-                    handleEditSubmit,
-                    updateMutation.isPending,
-                    false
+                {/* Tabs */}
+                <div className="border-b border-gray-200 dark:border-gray-700 px-6">
+                  <nav className="flex gap-6 -mb-px">
+                    <button
+                      type="button"
+                      onClick={() => setDetailTab('profile')}
+                      className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                        detailTab === 'profile'
+                          ? 'border-primary-600 text-primary-600'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDetailTab('catalog')}
+                      className={`py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                        detailTab === 'catalog'
+                          ? 'border-primary-600 text-primary-600'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      Trainings Catalog
+                      {(editForm.training_ids || []).length > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                          {(editForm.training_ids || []).length}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDetailTab('unavailability')}
+                      className={`py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                        detailTab === 'unavailability'
+                          ? 'border-primary-600 text-primary-600'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      Unavailability
+                      {(selectedItem.unavailability?.length ?? 0) > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                          {selectedItem.unavailability?.length}
+                        </span>
+                      )}
+                    </button>
+                  </nav>
+                </div>
+
+                {/* Tab content */}
+                <div className="px-6 py-5">
+                  {detailTab === 'profile' && (
+                    <div className="space-y-6">
+                      {/* Photo upload */}
+                      <TrainerPhoto trainerId={selectedItem.id} />
+
+                      {/* Edit form */}
+                      {renderForm(
+                        editForm,
+                        (f) => setEditForm(f as TrainerUpdate),
+                        handleEditSubmit,
+                        updateMutation.isPending,
+                        false
+                      )}
+                    </div>
+                  )}
+                  {detailTab === 'catalog' && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          Trainings Catalog
+                          {(editForm.training_ids || []).length > 0 && (
+                            <span className="ml-1.5 text-xs font-normal text-gray-400 dark:text-gray-500">
+                              ({(editForm.training_ids || []).length} of {allTrainings.length}{' '}
+                              selected)
+                            </span>
+                          )}
+                        </h4>
+                      </div>
+                      {allTrainings.length > 8 && (
+                        <div className="relative mb-3">
+                          <input
+                            type="text"
+                            value={trainingSearch}
+                            onChange={(e) => setTrainingSearch(e.target.value)}
+                            placeholder="Search trainings..."
+                            className="block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md pl-8 pr-3 py-1.5 text-sm focus:ring-primary-500 focus:border-primary-500"
+                          />
+                          <svg
+                            className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="max-h-112 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-2 space-y-0.5 bg-white dark:bg-gray-800">
+                        {filteredTrainings.length === 0 ? (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 py-2 px-1">
+                            {trainingSearch
+                              ? 'No trainings match your search.'
+                              : 'No trainings available.'}
+                          </p>
+                        ) : (
+                          filteredTrainings.map((t) => {
+                            const checked = (editForm.training_ids || []).includes(t.id);
+                            return (
+                              <label
+                                key={t.id}
+                                className={`flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 px-2 py-1.5 rounded ${
+                                  checked
+                                    ? 'text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/20'
+                                    : 'text-gray-700 dark:text-gray-300'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() =>
+                                    toggleMulti(editForm.training_ids || [], t.id, (ids) =>
+                                      setEditForm({ ...editForm, training_ids: ids })
+                                    )
+                                  }
+                                  className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 shrink-0"
+                                />
+                                <span className="truncate">{t.name}</span>
+                                {!t.is_active && (
+                                  <span className="text-xs text-gray-400 shrink-0">(inactive)</span>
+                                )}
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {detailTab === 'unavailability' && (
+                    <TrainerUnavailabilitySection
+                      trainerId={selectedItem.id}
+                      entries={selectedItem.unavailability ?? []}
+                    />
                   )}
                 </div>
               </div>
