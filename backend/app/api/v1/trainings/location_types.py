@@ -210,9 +210,7 @@ async def delete_location_type(
     ).scalar() or 0
 
     if usage_count > 0:
-        raise ValidationError(
-            f"Cannot delete location type '{entity.name}': {usage_count} location(s) are using it"
-        )
+        raise ValidationError(f"Cannot delete location type '{entity.name}': {usage_count} location(s) are using it")
 
     await db.delete(entity)
     await db.commit()
