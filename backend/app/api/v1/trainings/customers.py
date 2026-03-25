@@ -47,7 +47,27 @@ async def list_customers(
 
     items_q = base.order_by(Customer.name).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(items_q)
-    items = [CustomerResponse.model_validate(c) for c in result.scalars().all()]
+    customers = result.scalars().all()
+
+    # Check which customers have inhouse trainings
+    from app.models.inhouse_training import InhouseTraining
+
+    customer_ids = [c.id for c in customers]
+    if customer_ids:
+        ih_counts = await db.execute(
+            select(InhouseTraining.customer_id, func.count())
+            .where(InhouseTraining.customer_id.in_(customer_ids))
+            .group_by(InhouseTraining.customer_id)
+        )
+        ih_map = {row[0]: row[1] for row in ih_counts.all()}
+    else:
+        ih_map = {}
+
+    items = []
+    for c in customers:
+        resp = CustomerResponse.model_validate(c)
+        resp.has_inhouse_trainings = ih_map.get(c.id, 0) > 0
+        items.append(resp)
 
     return {"items": items, "total": total, "page": page, "page_size": page_size}
 

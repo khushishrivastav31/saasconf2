@@ -1,9 +1,17 @@
 """Schemas for customer management."""
 
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class ContactPerson(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    email: str | None = Field(None, max_length=255)
+    phone: str | None = Field(None, max_length=50)
+    role: str | None = Field(None, max_length=100)
 
 
 class CustomerCreate(BaseModel):
@@ -17,6 +25,9 @@ class CustomerCreate(BaseModel):
     postal_code: str | None = Field(None, max_length=20)
     country: str | None = Field(None, max_length=2)
     vat_number: str | None = Field(None, max_length=50)
+    contact_persons: list[ContactPerson] = Field(default_factory=list)
+    price: Decimal | None = Field(None, ge=0)
+    currency: str | None = Field(None, max_length=3)
     notes: str | None = None
     is_active: bool = True
 
@@ -32,6 +43,9 @@ class CustomerUpdate(BaseModel):
     postal_code: str | None = None
     country: str | None = None
     vat_number: str | None = None
+    contact_persons: list[ContactPerson] | None = None
+    price: Decimal | None = None
+    currency: str | None = None
     notes: str | None = None
     is_active: bool | None = None
 
@@ -49,8 +63,12 @@ class CustomerResponse(BaseModel):
     postal_code: str | None = None
     country: str | None = None
     vat_number: str | None = None
+    contact_persons: list[ContactPerson] = Field(default_factory=list)
+    price: Decimal | None = None
+    currency: str | None = None
     notes: str | None = None
     is_active: bool
+    has_inhouse_trainings: bool = False
     created_at: datetime
     updated_at: datetime
 
