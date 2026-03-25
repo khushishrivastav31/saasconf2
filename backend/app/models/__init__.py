@@ -28,11 +28,13 @@ from app.models.cfp_papers import (
     PaperStatus,
 )
 from app.models.conference import Conference
+from app.models.customer import Customer
 from app.models.deadline import Deadline
 from app.models.email_log import EmailLog
 from app.models.fiscal_representative import FiscalRepresentative
 from app.models.form_schema import ConferencePaperFormSchema, PaperFormField
 from app.models.holiday_config import CustomBlockedDay, TenantHolidayConfig
+from app.models.inhouse_training import InhouseTraining
 from app.models.invoice import Invoice
 from app.models.invoice_event import InvoiceEvent
 from app.models.location import Location
@@ -139,6 +141,7 @@ __all__ = [
     "ConferencePaperFormSchema",
     "CospeakerInvitationStatus",
     "CustomBlockedDay",
+    "Customer",
     "Deadline",
     "DiscountCode",
     "DiscountCodeOption",
@@ -148,6 +151,7 @@ __all__ = [
     "ExpenseCategory",
     "ExpenseTier",
     "FiscalRepresentative",
+    "InhouseTraining",
     "Invoice",
     "InvoiceEvent",
     "Location",

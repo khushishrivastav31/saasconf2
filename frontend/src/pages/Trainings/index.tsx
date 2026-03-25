@@ -10,6 +10,8 @@ const ProgramYearManager = lazy(() => import('./tabs/program/ProgramYearManager'
 const DesignProgramTab = lazy(() => import('./tabs/program/DesignProgramTab'));
 const AssignTrainersTab = lazy(() => import('./tabs/program/AssignTrainersTab'));
 const FinalProgramTab = lazy(() => import('./tabs/program/FinalProgramTab'));
+const CustomersTab = lazy(() => import('./tabs/CustomersTab'));
+const InhouseTrainingsTab = lazy(() => import('./tabs/InhouseTrainingsTab'));
 const SettingsTab = lazy(() => import('./tabs/SettingsTab'));
 const RegistrationsTab = lazy(() => import('./tabs/RegistrationsTab'));
 const InvoicesTab = lazy(() => import('./tabs/InvoicesTab'));
@@ -337,14 +339,7 @@ export default function Trainings() {
               {programInfo?.tab === 'design' && <DesignProgramTab year={programInfo.year} />}
               {programInfo?.tab === 'trainers' && <AssignTrainersTab year={programInfo.year} />}
               {programInfo?.tab === 'final' && <FinalProgramTab year={programInfo.year} />}
-              {activeSection === 'inhouse-trainings' && (
-                <div className="text-center py-12">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    Inhouse Trainings
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Coming soon.</p>
-                </div>
-              )}
+              {activeSection === 'inhouse-trainings' && <InhouseTrainingsTab />}
               {activeSection === 'offer-management' && (
                 <div className="text-center py-12">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -353,14 +348,7 @@ export default function Trainings() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">Coming soon.</p>
                 </div>
               )}
-              {activeSection === 'customers' && (
-                <div className="text-center py-12">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    Customers
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Coming soon.</p>
-                </div>
-              )}
+              {activeSection === 'customers' && <CustomersTab />}
               {activeSection === 'attendees' && (
                 <div className="text-center py-12">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
