@@ -23,9 +23,13 @@ DEFAULT_FINANCE: dict = {
     "currency": "EUR",
     "invoice_currency": "EUR",
     "invoice_exchange_rate": None,
-    "number_format": "european",
+    "number_format_preset": "european",
+    "decimal_separator": ",",
+    "thousands_separator": ".",
+    "currency_position": "after",
     "vat_rules": [],
     "eu_countries": [],
+    "vat_rates": {},
     "invoice_number_template": "TR-[YYYY]-[Count]",
     "invoice_counter_reset": "yearly",
     "invoice_counter_value": 1,
@@ -87,6 +91,35 @@ def _val(finance: dict, key: str, fallback: object = None) -> object:
     return finance.get(key, default)
 
 
+# ── Number format preset resolution ──────────────────────────────
+
+NUMBER_FORMAT_PRESETS: dict[str, dict[str, str]] = {
+    "us_uk": {"decimal_separator": ".", "thousands_separator": ",", "currency_position": "before"},
+    "european": {"decimal_separator": ",", "thousands_separator": ".", "currency_position": "after"},
+    "swiss": {"decimal_separator": ".", "thousands_separator": "'", "currency_position": "before"},
+    "french": {"decimal_separator": ",", "thousands_separator": " ", "currency_position": "after"},
+    "indian": {"decimal_separator": ".", "thousands_separator": ",", "currency_position": "before"},
+    "no_separator": {"decimal_separator": ".", "thousands_separator": "", "currency_position": "before"},
+}
+
+
+def _build_currency_tax_response(f: dict) -> dict:
+    from app.core.default_settings import DEFAULT_EU_COUNTRIES, DEFAULT_VAT_RULES
+
+    return {
+        "currency": _val(f, "currency"),
+        "invoice_currency": _val(f, "invoice_currency"),
+        "invoice_exchange_rate": _val(f, "invoice_exchange_rate"),
+        "number_format_preset": _val(f, "number_format_preset"),
+        "decimal_separator": _val(f, "decimal_separator"),
+        "thousands_separator": _val(f, "thousands_separator"),
+        "currency_position": _val(f, "currency_position"),
+        "vat_rules": f.get("vat_rules") or DEFAULT_VAT_RULES,
+        "eu_countries": f.get("eu_countries") or DEFAULT_EU_COUNTRIES,
+        "vat_rates": f.get("vat_rates", {}),
+    }
+
+
 # ── Currency & Tax ───────────────────────────────────────────────
 
 
@@ -94,35 +127,40 @@ def _val(finance: dict, key: str, fallback: object = None) -> object:
 async def get_currency_tax(current_user: TenantAdminDep, db: DbSessionDep) -> dict:
     tenant = await _get_tenant(db, current_user)
     f = _get_finance(tenant)
-    return {
-        "currency": _val(f, "currency"),
-        "invoice_currency": _val(f, "invoice_currency"),
-        "invoice_exchange_rate": _val(f, "invoice_exchange_rate"),
-        "number_format": _val(f, "number_format"),
-        "vat_rules": _val(f, "vat_rules"),
-        "eu_countries": _val(f, "eu_countries"),
-    }
+    return _build_currency_tax_response(f)
 
 
 @router.put("/currency-tax")
 async def update_currency_tax(data: dict, current_user: TenantAdminDep, db: DbSessionDep) -> dict:
     tenant = await _get_tenant(db, current_user)
     f = _get_finance(tenant)
-    for key in ("currency", "invoice_currency", "invoice_exchange_rate", "number_format", "vat_rules", "eu_countries"):
+
+    for key in (
+        "currency",
+        "invoice_currency",
+        "invoice_exchange_rate",
+        "vat_rules",
+        "eu_countries",
+        "vat_rates",
+    ):
         if key in data:
             f[key] = data[key]
+
+    # Resolve number format preset to separators
+    if "number_format_preset" in data:
+        preset_code = data["number_format_preset"]
+        f["number_format_preset"] = preset_code
+        fmt = NUMBER_FORMAT_PRESETS.get(preset_code)
+        if fmt:
+            f["decimal_separator"] = fmt["decimal_separator"]
+            f["thousands_separator"] = fmt["thousands_separator"]
+            f["currency_position"] = fmt["currency_position"]
+
     _save_finance(tenant, f)
     await db.commit()
     await db.refresh(tenant)
     f = _get_finance(tenant)
-    return {
-        "currency": _val(f, "currency"),
-        "invoice_currency": _val(f, "invoice_currency"),
-        "invoice_exchange_rate": _val(f, "invoice_exchange_rate"),
-        "number_format": _val(f, "number_format"),
-        "vat_rules": _val(f, "vat_rules"),
-        "eu_countries": _val(f, "eu_countries"),
-    }
+    return _build_currency_tax_response(f)
 
 
 # ── Numbering ────────────────────────────────────────────────────

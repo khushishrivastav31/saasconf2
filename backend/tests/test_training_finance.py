@@ -15,7 +15,7 @@ async def finance_tenant(db_session: AsyncSession, tenant):
         "training_finance": {
             "currency": "USD",
             "invoice_currency": "USD",
-            "number_format": "us_uk",
+            "number_format_preset": "us_uk",
             "company_info": {"name": "Test Corp", "city": "Berlin", "country": "DE"},
             "bank_accounts": [
                 {"bank_name": "Deutsche Bank", "iban": "DE89370400440532013000", "bic": "COBADEFFXXX", "is_default": True}
@@ -41,7 +41,7 @@ async def test_currency_tax_defaults(client: AsyncClient, tenant_admin_token):
     assert resp.status_code == 200
     data = resp.json()
     assert data["currency"] == "EUR"
-    assert data["number_format"] == "european"
+    assert data["number_format_preset"] == "european"
 
 
 @pytest.mark.asyncio
@@ -49,11 +49,11 @@ async def test_currency_tax_update(client: AsyncClient, tenant_admin_token):
     resp = await client.put(
         "/api/v1/trainings/finance/currency-tax",
         headers={AUTH: f"Bearer {tenant_admin_token}"},
-        json={"currency": "USD", "number_format": "us_uk"},
+        json={"currency": "USD", "number_format_preset": "us_uk"},
     )
     assert resp.status_code == 200
     assert resp.json()["currency"] == "USD"
-    assert resp.json()["number_format"] == "us_uk"
+    assert resp.json()["number_format_preset"] == "us_uk"
 
 
 # ── Numbering ────────────────────────────────────────────────────
