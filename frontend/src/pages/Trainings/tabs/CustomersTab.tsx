@@ -497,9 +497,6 @@ export default function CustomersTab() {
                   Company
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Contact Person
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   City
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -519,9 +516,6 @@ export default function CustomersTab() {
                 >
                   <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                     {customer.name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                    {customer.contact_person || '-'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                     {customer.city || '-'}
