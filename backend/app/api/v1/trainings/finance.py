@@ -314,6 +314,95 @@ async def update_invoice_templates(data: dict, current_user: TenantAdminDep, db:
     }
 
 
+@router.post("/invoice-templates/preview")
+async def preview_training_invoice_pdf(
+    data: dict,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    template_type: str = "bank_transfer",
+):
+    """Generate preview PDF with unsaved training invoice settings."""
+    from datetime import date, timedelta
+    from io import BytesIO
+
+    from fastapi.responses import StreamingResponse
+
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+
+    # Build preview settings from tenant finance + unsaved overrides
+    preview_settings: dict = {
+        "invoice_company_info": f.get("company_info", DEFAULT_FINANCE["company_info"]),
+        "invoice_header_html": data.get("invoice_header_html", f.get("invoice_header_html", "")),
+        "invoice_footer_html": data.get("invoice_footer_html", f.get("invoice_footer_html", "")),
+        "invoice_page_format": f.get("invoice_page_format", "A4"),
+    }
+
+    if "invoice_company_info" in data:
+        existing = preview_settings.get("invoice_company_info", {})
+        preview_settings["invoice_company_info"] = {**existing, **data["invoice_company_info"]}
+
+    # Resolve template HTML for the requested type
+    templates = data.get("invoice_templates", f.get("invoice_templates", {}))
+    if template_type in templates:
+        preview_settings["invoice_template_html"] = templates[template_type]
+    elif data.get("invoice_template_html"):
+        preview_settings["invoice_template_html"] = data["invoice_template_html"]
+
+    # Mock invoice data
+    currency = f.get("currency", "EUR")
+    mock_invoice_data = {
+        "invoice_number": "PREVIEW-2026-00001",
+        "issue_date": date.today(),
+        "due_date": date.today() + timedelta(days=30),
+        "recipient_name": "Sample Customer Ltd",
+        "recipient_address_line1": "123 Example Street",
+        "recipient_address_line2": None,
+        "recipient_city": "Sample City",
+        "recipient_postal_code": "12345",
+        "recipient_country": "Germany",
+        "recipient_vat_number": "DE123456789",
+        "line_items": [
+            {
+                "description": "Training Registration - Standard",
+                "quantity": 2,
+                "unit_price": 250.00,
+                "discount": 0.00,
+                "total": 500.00,
+            }
+        ],
+        "subtotal": 500.00,
+        "tax_rate": 19.0,
+        "tax_amount": 95.00,
+        "total": 595.00,
+        "currency": currency,
+        "notes": "Sample training invoice for preview purposes.",
+    }
+
+    from app.core.invoice_pdf import generate_invoice_pdf_from_data
+
+    # Create a minimal mock conference-like object for PDF generation
+    class _MockConference:
+        def __init__(self, t: Tenant, settings: dict, curr: str):
+            self.id = t.id
+            self.tenant_id = t.id
+            self.tenant = t
+            self.name = "Training Invoice Preview"
+            self.settings = settings
+            self.currency = curr
+
+    mock_conf = _MockConference(tenant, preview_settings, currency)
+    pdf_bytes = await generate_invoice_pdf_from_data(
+        invoice_data=mock_invoice_data, settings=preview_settings, conference=mock_conf, db=db
+    )
+
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline; filename=invoice_preview.pdf"},
+    )
+
+
 # ── ZUGFeRD ──────────────────────────────────────────────────────
 
 

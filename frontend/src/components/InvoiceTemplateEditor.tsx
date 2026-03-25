@@ -46,7 +46,8 @@ function formatHtml(html: string): string {
 }
 
 interface InvoiceTemplateEditorProps {
-  conferenceId: string;
+  conferenceId?: string;
+  previewUrl?: string;
   value: string;
   onChange: (value: string) => void;
   headerValue?: string;
@@ -248,6 +249,7 @@ const QUICK_TEMPLATES = [
 
 export default function InvoiceTemplateEditor({
   conferenceId,
+  previewUrl,
   value,
   onChange,
   headerValue = '',
@@ -300,11 +302,11 @@ export default function InvoiceTemplateEditor({
         invoice_footer_html: footerValue,
       };
 
-      const res = await api.post(
-        `/conferences/${conferenceId}/settings/invoice-settings/preview`,
-        payload,
-        { responseType: 'blob', params: { template_type: templateType } }
-      );
+      const url = previewUrl || `/conferences/${conferenceId}/settings/invoice-settings/preview`;
+      const res = await api.post(url, payload, {
+        responseType: 'blob',
+        params: { template_type: templateType },
+      });
 
       const blob = new Blob([res.data], { type: 'application/pdf' });
       return new Promise<string>((resolve, reject) => {
