@@ -185,9 +185,10 @@ async def delete_offer_template(
 @router.post("/{template_id}/upload", response_model=OfferTemplateResponse)
 async def upload_offer_template_file(
     template_id: UUID,
+    file: UploadFile = File(...),
+    *,
     current_user: TenantAdminDep,
     db: DbSessionDep,
-    file: UploadFile = File(...),
 ) -> OfferTemplateResponse:
     """Upload or replace the template file."""
     template = await _get_or_404(template_id, current_user, db)

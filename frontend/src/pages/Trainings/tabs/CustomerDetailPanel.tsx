@@ -574,7 +574,9 @@ function DocumentsTab({ customerId }: { customerId: string }) {
       fd.append('file', file);
       fd.append('entity_type', 'customer');
       fd.append('entity_id', customerId);
-      await api.post('/attachments', fd);
+      await api.post('/attachments', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['training-customers', customerId, 'documents'] });
