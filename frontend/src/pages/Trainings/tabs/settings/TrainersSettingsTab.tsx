@@ -455,6 +455,168 @@ const TrainerUnavailabilitySection = React.memo(function TrainerUnavailabilitySe
   );
 });
 
+/* ─── Trainer Schedule sub-component ─────────────────────────── */
+
+const MONTH_NAMES = [
+  '',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+interface ScheduleItem {
+  assignment_id: string;
+  placement_id: string;
+  training_id: string;
+  training_name: string;
+  start_date: string;
+  location_name: string | null;
+  location_city: string | null;
+  year: number;
+  month: number;
+}
+
+const TrainerScheduleSection = React.memo(function TrainerScheduleSection({
+  trainerId,
+}: {
+  trainerId: string;
+}) {
+  const [yearFilter, setYearFilter] = useState<string>('');
+  const [search, setSearch] = useState('');
+
+  const { data: schedule = [], isLoading } = useQuery<ScheduleItem[]>({
+    queryKey: ['trainer-schedule', trainerId, yearFilter],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (yearFilter) params.year = yearFilter;
+      const res = await api.get(`/trainings/trainers/${trainerId}/schedule`, { params });
+      return res.data;
+    },
+  });
+
+  // Get unique years for the filter dropdown
+  const availableYears = useMemo(() => {
+    const years = new Set(schedule.map((s) => s.year));
+    return [...years].sort((a, b) => b - a);
+  }, [schedule]);
+
+  // Apply search filter client-side
+  const filtered = useMemo(() => {
+    if (!search) return schedule;
+    const q = search.toLowerCase();
+    return schedule.filter(
+      (s) =>
+        s.training_name.toLowerCase().includes(q) ||
+        s.location_name?.toLowerCase().includes(q) ||
+        s.location_city?.toLowerCase().includes(q)
+    );
+  }, [schedule, search]);
+
+  // Group by month
+  const grouped = useMemo(() => {
+    const groups: Record<string, ScheduleItem[]> = {};
+    for (const item of filtered) {
+      const key = `${item.year}-${String(item.month).padStart(2, '0')}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    }
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filtered]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex items-center gap-3">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search trainings..."
+          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100 focus:ring-primary-500 focus:border-primary-500"
+        />
+        <select
+          value={yearFilter}
+          onChange={(e) => setYearFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
+        >
+          <option value="">All years</option>
+          {availableYears.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Schedule grouped by month */}
+      {grouped.length === 0 ? (
+        <div className="text-center py-8 text-gray-400 dark:text-gray-500">
+          <p className="text-sm">No assigned trainings found.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {grouped.map(([key, items]) => {
+            const [yr, mo] = key.split('-').map(Number);
+            return (
+              <div key={key}>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  {MONTH_NAMES[mo]} {yr}
+                </h4>
+                <div className="space-y-1.5">
+                  {items.map((item) => (
+                    <div
+                      key={item.assignment_id}
+                      className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900 rounded-md"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {item.training_name}
+                        </p>
+                        {(item.location_name || item.location_city) && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {[item.location_name, item.location_city].filter(Boolean).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0 ml-3 font-mono">
+                        {new Date(item.start_date).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="text-xs text-gray-400 dark:text-gray-500">
+        {filtered.length} training{filtered.length !== 1 ? 's' : ''} assigned
+      </p>
+    </div>
+  );
+});
+
 /* ─── Main component ──────────────────────────────────────────── */
 
 export default function TrainersSettingsTab() {
@@ -643,7 +805,9 @@ export default function TrainersSettingsTab() {
   };
 
   const [trainingSearch, setTrainingSearch] = useState('');
-  const [detailTab, setDetailTab] = useState<'profile' | 'catalog' | 'unavailability'>('profile');
+  const [detailTab, setDetailTab] = useState<'profile' | 'catalog' | 'unavailability' | 'schedule'>(
+    'profile'
+  );
 
   // Reset detail tab when selection changes
   useEffect(() => {
@@ -1084,6 +1248,17 @@ export default function TrainersSettingsTab() {
                         </span>
                       )}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setDetailTab('schedule')}
+                      className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                        detailTab === 'schedule'
+                          ? 'border-primary-600 text-primary-600'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      Schedule
+                    </button>
                   </nav>
                 </div>
 
@@ -1186,6 +1361,9 @@ export default function TrainersSettingsTab() {
                       trainerId={selectedItem.id}
                       entries={selectedItem.unavailability ?? []}
                     />
+                  )}
+                  {detailTab === 'schedule' && (
+                    <TrainerScheduleSection trainerId={selectedItem.id} />
                   )}
                 </div>
               </div>

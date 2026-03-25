@@ -420,3 +420,74 @@ async def delete_unavailability(
     db.add(audit_log)
     await db.commit()
     return {"message": "Unavailability entry deleted"}
+
+
+# ── Trainer Schedule ─────────────────────────────────────────────
+
+
+@router.get("/{trainer_id}/schedule")
+async def get_trainer_schedule(
+    trainer_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+    year: int | None = Query(None, description="Filter by program year"),
+    search: str | None = Query(None, description="Search by training name"),
+) -> list[dict]:
+    """Get all training placements assigned to this trainer, sorted by date.
+
+    Returns placements grouped by month with training name, dates, and location.
+    """
+    from sqlalchemy.orm import joinedload
+
+    from app.models.training_program import PlacementTrainer, ProgramYearTraining, TrainingProgramYear
+
+    await _get_trainer_or_404(trainer_id, current_user, db)
+
+    query = (
+        select(PlacementTrainer)
+        .join(ProgramYearTraining, PlacementTrainer.placement_id == ProgramYearTraining.id)
+        .join(TrainingProgramYear, ProgramYearTraining.program_year_id == TrainingProgramYear.id)
+        .options(
+            joinedload(PlacementTrainer.placement)
+            .joinedload(ProgramYearTraining.training),
+            joinedload(PlacementTrainer.placement)
+            .joinedload(ProgramYearTraining.location),
+        )
+        .where(
+            PlacementTrainer.trainer_id == trainer_id,
+            PlacementTrainer.tenant_id == current_user.tenant_id,
+        )
+        .order_by(ProgramYearTraining.start_date)
+    )
+
+    if year:
+        query = query.where(TrainingProgramYear.year == year)
+
+    result = await db.execute(query)
+    assignments = result.scalars().unique().all()
+
+    items = []
+    for a in assignments:
+        p = a.placement
+        if not p:
+            continue
+
+        training_name = p.training.name if p.training else "Unknown"
+
+        # Apply search filter on training name
+        if search and search.lower() not in training_name.lower():
+            continue
+
+        items.append({
+            "assignment_id": str(a.id),
+            "placement_id": str(p.id),
+            "training_id": str(p.training_id),
+            "training_name": training_name,
+            "start_date": p.start_date.isoformat(),
+            "location_name": p.location.name if p.location else None,
+            "location_city": p.location.city if p.location else None,
+            "year": p.start_date.year,
+            "month": p.start_date.month,
+        })
+
+    return items
