@@ -233,7 +233,7 @@ jobs:
         working-directory: backend
         run: |
           pip install pip-audit
-          pip-audit -r requirements.txt
+          pip-audit -r requirements.txt --ignore-vuln CVE-2026-4539  # pygments 2.19.2 — no fix available yet
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
