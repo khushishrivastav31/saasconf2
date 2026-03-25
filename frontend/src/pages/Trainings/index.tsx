@@ -80,7 +80,7 @@ export default function Trainings() {
 
   const deleteMutation = useMutation({
     mutationFn: async (yearId: string) => {
-      await api.delete(`/trainings/programs/${yearId}`);
+      await api.delete(`/trainings/programs/years/${yearId}`);
     },
     onSuccess: () => {
       refetchProgramYears();
