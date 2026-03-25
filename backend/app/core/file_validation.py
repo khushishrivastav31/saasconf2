@@ -28,6 +28,7 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
         "text/rtf",
         "text/plain",
         "application/vnd.oasis.opendocument.text",
+        "application/zip",  # DOCX/ODT detected as ZIP by magic bytes
     },
     "sponsor_package_contract": {
         "application/pdf",
@@ -65,6 +66,10 @@ _FALLBACK_MIME_TYPES = {
     "image/svg+xml",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/msword",
+    "application/rtf",
+    "text/rtf",
+    "application/vnd.oasis.opendocument.text",
 }
 
 # Extensions commonly associated with executable/script types — stripped from filenames
