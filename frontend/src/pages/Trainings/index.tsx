@@ -1,4 +1,8 @@
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useState, useMemo, useCallback, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../../config/api';
+import { useToast } from '../../components/Toast';
+import { parseApiError } from '../../utils/apiError';
 import { useTrainingsModule } from './useTrainingsModule';
 
 // Lazy-loaded tab components
@@ -40,9 +44,56 @@ export default function Trainings() {
     setExpandedSections,
     filteredGroups,
     programYears,
+    refetchProgramYears,
   } = useTrainingsModule();
 
   const programInfo = useMemo(() => parseProgramSection(activeSection), [activeSection]);
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  // Track which program years are collapsed in the sidebar
+  const [collapsedYears, setCollapsedYears] = useState<Set<string>>(new Set());
+  const [yearToDelete, setYearToDelete] = useState<{ id: string; year: number } | null>(null);
+
+  // Auto-collapse past years: only latest year expanded
+  const latestYear = useMemo(
+    () => (programYears.length > 0 ? Math.max(...programYears.map((py) => py.year)) : null),
+    [programYears]
+  );
+
+  useEffect(() => {
+    if (programYears.length > 1 && latestYear) {
+      setCollapsedYears(
+        new Set(programYears.filter((py) => py.year !== latestYear).map((py) => String(py.year)))
+      );
+    }
+  }, [programYears, latestYear]);
+
+  const toggleYearCollapse = useCallback((year: string) => {
+    setCollapsedYears((prev) => {
+      const next = new Set(prev);
+      if (next.has(year)) next.delete(year);
+      else next.add(year);
+      return next;
+    });
+  }, []);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (yearId: string) => {
+      await api.delete(`/trainings/programs/${yearId}`);
+    },
+    onSuccess: () => {
+      refetchProgramYears();
+      queryClient.invalidateQueries({ queryKey: ['training-program-years'] });
+      showToast('Program year deleted', 'success');
+      setYearToDelete(null);
+      setActiveSection('program');
+    },
+    onError: (err) => {
+      showToast(parseApiError(err), 'error');
+      setYearToDelete(null);
+    },
+  });
 
   return (
     <div>
@@ -171,27 +222,93 @@ export default function Trainings() {
                                 const prevGroup =
                                   childIdx > 0 ? section.children![childIdx - 1].group : undefined;
                                 const showGroupHeader = child.group && child.group !== prevGroup;
+                                const isYearGroup = child.group && /^\d{4}$/.test(child.group);
+                                const isYearCollapsed =
+                                  isYearGroup && collapsedYears.has(child.group!);
+                                const isLatestYearGroup =
+                                  isYearGroup && Number(child.group) === latestYear;
+                                const yearObj = isYearGroup
+                                  ? programYears.find((py) => py.year === Number(child.group))
+                                  : null;
+
+                                // Skip rendering children of collapsed years
+                                if (isYearGroup && isYearCollapsed && !showGroupHeader) return null;
+
                                 return (
                                   <div key={child.id}>
-                                    {showGroupHeader && (
+                                    {showGroupHeader && isYearGroup ? (
+                                      <div
+                                        className={`flex items-center justify-between ${childIdx > 0 ? 'pt-2 mt-1 border-t border-gray-200 dark:border-gray-700' : 'pt-1'} pb-0.5`}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleYearCollapse(child.group!)}
+                                          className="flex items-center gap-1 px-3 text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                                        >
+                                          <svg
+                                            className={`w-3 h-3 transition-transform ${isYearCollapsed ? '' : 'rotate-90'}`}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M9 5l7 7-7 7"
+                                            />
+                                          </svg>
+                                          {child.group}
+                                        </button>
+                                        {!isLatestYearGroup && yearObj && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setYearToDelete({
+                                                id: yearObj.id,
+                                                year: yearObj.year,
+                                              })
+                                            }
+                                            className="p-0.5 mr-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                            title={`Delete ${child.group}`}
+                                          >
+                                            <svg
+                                              className="w-3.5 h-3.5"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                              />
+                                            </svg>
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : showGroupHeader ? (
                                       <p
-                                        className={`px-3 font-semibold tracking-wider text-gray-400 dark:text-gray-500 ${childIdx > 0 ? 'pt-2 mt-1 border-t border-gray-200 dark:border-gray-700' : 'pt-1'} pb-0.5 ${/^\d{4}$/.test(child.group!) ? 'text-xs' : 'text-[9px] uppercase'}`}
+                                        className={`px-3 font-semibold tracking-wider text-gray-400 dark:text-gray-500 ${childIdx > 0 ? 'pt-2 mt-1 border-t border-gray-200 dark:border-gray-700' : 'pt-1'} pb-0.5 text-[9px] uppercase`}
                                       >
                                         {child.group}
                                       </p>
+                                    ) : null}
+                                    {!isYearCollapsed && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setActiveSection(child.id)}
+                                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                          activeSection === child.id
+                                            ? 'bg-primary-50 text-primary-700 font-medium'
+                                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        }`}
+                                      >
+                                        <child.icon />
+                                        <span className="truncate text-left">{child.name}</span>
+                                      </button>
                                     )}
-                                    <button
-                                      type="button"
-                                      onClick={() => setActiveSection(child.id)}
-                                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-                                        activeSection === child.id
-                                          ? 'bg-primary-50 text-primary-700 font-medium'
-                                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                      }`}
-                                    >
-                                      <child.icon />
-                                      <span className="truncate text-left">{child.name}</span>
-                                    </button>
                                   </div>
                                 );
                               })}
@@ -267,6 +384,36 @@ export default function Trainings() {
           </div>
         </div>
       </div>
+
+      {/* Delete year confirmation dialog */}
+      {yearToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Delete Program Year {yearToDelete.year}?
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              This will permanently delete the {yearToDelete.year} program year and all its
+              placements. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setYearToDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(yearToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
