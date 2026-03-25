@@ -10,6 +10,7 @@ import type {
   Training,
   TrainingLanguage,
 } from '../../../../types/training';
+import type { PronounOption } from '../../../../types/conference';
 import type { Attachment } from '../../../../types/attachment';
 import { parseApiError } from '../../../../utils/apiError';
 import { ErrorBanner } from '../../../../components/common/ErrorBanner';
@@ -29,6 +30,7 @@ const emptyCreate: TrainerCreate = {
   last_name: '',
   email: null,
   phone: null,
+  pronouns: null,
   vita: null,
   is_active: true,
   is_internal: true,
@@ -494,9 +496,23 @@ export default function TrainersSettingsTab() {
     },
   });
 
+  // Fetch pronoun options (tenant-scoped)
+  const { data: pronounOptionsData } = useQuery({
+    queryKey: queryKeys.pronounOptions,
+    queryFn: async () => {
+      const res = await api.get<{ items: PronounOption[] }>('/pronoun-options');
+      return res.data.items;
+    },
+    staleTime: 60_000,
+  });
+
   const items = useMemo(() => data?.items || [], [data?.items]);
   const allTrainings = useMemo(() => trainingsData?.items || [], [trainingsData?.items]);
   const allLanguages = useMemo(() => langData?.items || [], [langData?.items]);
+  const activePronounOptions = useMemo(
+    () => (pronounOptionsData || []).filter((o) => o.is_active),
+    [pronounOptionsData]
+  );
   const selectedItem = items.find((t) => t.id === selectedId);
 
   // Auto-select first item
@@ -514,6 +530,7 @@ export default function TrainersSettingsTab() {
         last_name: selectedItem.last_name,
         email: selectedItem.email,
         phone: selectedItem.phone,
+        pronouns: selectedItem.pronouns,
         vita: selectedItem.vita || '',
         is_active: selectedItem.is_active,
         is_internal: selectedItem.is_internal,
@@ -696,6 +713,25 @@ export default function TrainersSettingsTab() {
           />
         </div>
       </div>
+
+      {/* Pronouns */}
+      {activePronounOptions.length > 0 && (
+        <div>
+          <label className={labelCls}>Pronouns</label>
+          <select
+            className={inputCls}
+            value={form.pronouns || ''}
+            onChange={(e) => setForm({ ...form, pronouns: e.target.value || null })}
+          >
+            <option value="">Select pronouns...</option>
+            {activePronounOptions.map((opt) => (
+              <option key={opt.id} value={opt.name}>
+                {opt.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Type + Active row */}
       <div className="flex items-center gap-6">

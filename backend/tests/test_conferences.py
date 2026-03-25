@@ -100,7 +100,7 @@ async def test_create_conference_seeds_default_settings(
     tenant_admin_user: User,
     tenant_admin_token: str,
 ) -> None:
-    """Creating a conference via API seeds default pronoun options and volunteer roles."""
+    """Creating a conference via API seeds default pronoun options (tenant-scoped) and volunteer roles."""
     # Create conference
     response = await client.post(
         BASE_URL,
@@ -110,9 +110,9 @@ async def test_create_conference_seeds_default_settings(
     assert response.status_code == 201
     conference_id = response.json()["id"]
 
-    # Check that pronouns were seeded
+    # Check that pronouns were seeded (tenant-scoped endpoint)
     pronouns_response = await client.get(
-        f"{BASE_URL}/{conference_id}/settings/pronouns",
+        "/api/v1/pronoun-options",
         headers=auth_headers(tenant_admin_token),
     )
     assert pronouns_response.status_code == 200

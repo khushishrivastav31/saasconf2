@@ -50,6 +50,33 @@ export const trainingsCategory: HandbookCategory = {
       ),
     },
     {
+      id: '10-2b-trainer-settings',
+      title: 'Trainer Settings',
+      categoryId: 'category-10',
+      content: () => (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Manage trainer profiles and settings used across the training module.</p>
+<strong>Trainer Profiles:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">Create and edit trainer profiles with name, email, phone, pronouns, and bio (vita)</li>
+<li class="text-gray-700 dark:text-gray-300">Upload a trainer photo</li>
+<li class="text-gray-700 dark:text-gray-300">Mark trainers as internal or external</li>
+<li class="text-gray-700 dark:text-gray-300">Assign trainings and languages to trainers</li>
+<li class="text-gray-700 dark:text-gray-300">Manage unavailability periods per trainer</li>
+</ul>
+<strong>Pronoun Options:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">Pronoun options are managed at the tenant level via <strong>Pronoun Options</strong> in the main navigation</li>
+<li class="text-gray-700 dark:text-gray-300">The same options are shared across conferences (registration, CFP) and trainings (trainer profiles)</li>
+<li class="text-gray-700 dark:text-gray-300">Active options appear as a dropdown on the trainer form</li>
+<li class="text-gray-700 dark:text-gray-300">The selected pronoun is stored as a plain text string on the trainer profile</li>
+</ul>`,
+          }}
+        />
+      ),
+    },
+    {
       id: '10-3-final-program',
       title: 'Final Program',
       categoryId: 'category-10',

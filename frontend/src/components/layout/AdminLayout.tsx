@@ -145,6 +145,19 @@ function ActivityIcon() {
   );
 }
 
+function PronounIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+      />
+    </svg>
+  );
+}
+
 function BookIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -400,6 +413,25 @@ export default function AdminLayout() {
                     >
                       <TeamIcon />
                       {!sidebarCollapsed && <span className="ml-3">Team</span>}
+                    </Link>
+                  )}
+                  {/* Pronoun Options - tenant admin only */}
+                  {user?.role === 'tenant_admin' && (
+                    <Link
+                      to="/pronoun-options"
+                      onClick={() => setSidebarOpen(false)}
+                      title={sidebarCollapsed ? 'Pronoun Options' : undefined}
+                      aria-current={location.pathname === '/pronoun-options' ? 'page' : undefined}
+                      className={`flex items-center py-2 text-sm font-medium rounded-md ${
+                        sidebarCollapsed ? 'justify-center px-2' : 'px-3'
+                      } ${
+                        location.pathname === '/pronoun-options'
+                          ? 'bg-gray-800 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      }`}
+                    >
+                      <PronounIcon />
+                      {!sidebarCollapsed && <span className="ml-3">Pronoun Options</span>}
                     </Link>
                   )}
                   {/* Applicant Activity - tenant admin only */}

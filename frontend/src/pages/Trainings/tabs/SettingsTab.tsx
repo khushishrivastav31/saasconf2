@@ -7,7 +7,6 @@ const LanguagesSettingsTab = lazy(() => import('./settings/LanguagesSettingsTab'
 const CertificationBodiesTab = lazy(() => import('./settings/CertificationBodiesTab'));
 const SyllabiTab = lazy(() => import('./settings/SyllabiTab'));
 const TrainingsSettingsTab = lazy(() => import('./settings/TrainingsSettingsTab'));
-const PronounOptionsTab = lazy(() => import('./settings/PronounOptionsTab'));
 const LocationsTab = lazy(() => import('./settings/LocationsTab'));
 const LocationTypesTab = lazy(() => import('./settings/LocationTypesTab'));
 const RegistrationPortalTab = lazy(() => import('./settings/RegistrationPortalTab'));
@@ -37,7 +36,6 @@ const settingsMap: Record<string, React.LazyExoticComponent<() => React.JSX.Elem
   'settings-certification-bodies': CertificationBodiesTab,
   'settings-syllabi': SyllabiTab,
   'settings-trainings': TrainingsSettingsTab,
-  'settings-pronoun-options': PronounOptionsTab,
   'settings-locations': LocationsTab,
   'settings-location-types': LocationTypesTab,
   'settings-registration-portal': RegistrationPortalTab,

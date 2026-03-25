@@ -65,6 +65,7 @@ class Trainer(Base):
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    pronouns: Mapped[str | None] = mapped_column(String(100), nullable=True)
     vita: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")

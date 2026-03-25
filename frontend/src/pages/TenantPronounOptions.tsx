@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { Conference, PronounOption, PronounOptionCreate, PronounOptionUpdate } from '../types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '../config/api';
+import { queryKeys } from '../config/queryKeys';
+import type { PronounOption, PronounOptionCreate } from '../types/conference';
 import { parseApiError } from '../utils/apiError';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -7,52 +10,74 @@ import StatusBadge from '../components/common/StatusBadge';
 import { ErrorBanner } from '../components/common/ErrorBanner';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import ModalFooter from '../components/common/ModalFooter';
-import { useSettingsCrud } from '../hooks/useSettingsCrud';
 
-// --- Pronoun Options Tab -----------------------------------------------------
+interface PronounListResponse {
+  items: PronounOption[];
+  total: number;
+}
 
-export default function PronounOptionsTab({
-  conference,
-  isAdmin,
-}: {
-  conference: Conference;
-  isAdmin: boolean;
-}) {
+export default function TenantPronounOptions() {
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPronoun, setEditingPronoun] = useState<PronounOption | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PronounOption | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const {
     data,
     isLoading,
     isError,
-    queryError,
-    createMutation,
-    updateMutation,
-    deleteMutation,
-    error,
-    setError,
-  } = useSettingsCrud<PronounOption, PronounOptionCreate, PronounOptionUpdate>({
-    conferenceId: conference.id,
-    endpoint: 'pronouns',
-    queryKey: 'pronoun-options',
-    onCreateSuccess: () => {
-      setIsModalOpen(false);
+    error: queryError,
+  } = useQuery({
+    queryKey: queryKeys.pronounOptions,
+    queryFn: async () => {
+      const res = await api.get<PronounListResponse>('/pronoun-options');
+      return res.data;
     },
-    onUpdateSuccess: () => {
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (payload: PronounOptionCreate) => {
+      const res = await api.post<PronounOption>('/pronoun-options', payload);
+      return res.data;
+    },
+    onSuccess: () => {
+      setIsModalOpen(false);
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.pronounOptions });
+    },
+    onError: (err: unknown) => setError(parseApiError(err)),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data: payload }: { id: string; data: PronounOptionCreate }) => {
+      const res = await api.put<PronounOption>(`/pronoun-options/${id}`, payload);
+      return res.data;
+    },
+    onSuccess: () => {
       setEditingPronoun(null);
       setIsModalOpen(false);
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.pronounOptions });
     },
+    onError: (err: unknown) => setError(parseApiError(err)),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/pronoun-options/${id}`);
+    },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.pronounOptions });
+    },
+    onError: (err: unknown) => setError(parseApiError(err)),
   });
 
   const handleEdit = (pronoun: PronounOption) => {
     setEditingPronoun(pronoun);
     setIsModalOpen(true);
     setError(null);
-  };
-
-  const handleDelete = (pronoun: PronounOption) => {
-    setDeleteTarget(pronoun);
   };
 
   const handleCloseModal = () => {
@@ -70,26 +95,24 @@ export default function PronounOptionsTab({
   };
 
   return (
-    <div>
-      <div className="sm:flex sm:items-center sm:justify-between mb-4">
+    <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Pronoun Options</h2>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Pronoun Options</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage available pronouns for user profiles.
+            Manage pronoun options available across all conferences and training programs.
           </p>
         </div>
-        {isAdmin && (
-          <button
-            onClick={() => {
-              setEditingPronoun(null);
-              setIsModalOpen(true);
-              setError(null);
-            }}
-            className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-          >
-            Add Pronoun
-          </button>
-        )}
+        <button
+          onClick={() => {
+            setEditingPronoun(null);
+            setIsModalOpen(true);
+            setError(null);
+          }}
+          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+        >
+          Add Pronoun
+        </button>
       </div>
 
       {!isModalOpen && <ErrorBanner message={error} />}
@@ -109,11 +132,9 @@ export default function PronounOptionsTab({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                {isAdmin && (
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
-                )}
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -127,29 +148,27 @@ export default function PronounOptionsTab({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <StatusBadge isActive={pronoun.is_active} />
                   </td>
-                  {isAdmin && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleEdit(pronoun)}
-                        className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors mr-2"
-                        title="Edit"
-                        aria-label="Edit"
-                      >
-                        <EditIcon />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(pronoun)}
-                        className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
-                        title="Delete"
-                        aria-label="Delete"
-                      >
-                        <DeleteIcon />
-                      </button>
-                    </td>
-                  )}
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => handleEdit(pronoun)}
+                      className="text-gray-400 dark:text-gray-500 hover:text-primary-600 p-1 rounded transition-colors mr-2"
+                      title="Edit"
+                      aria-label="Edit"
+                    >
+                      <EditIcon />
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(pronoun)}
+                      className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1 rounded transition-colors"
+                      title="Delete"
+                      aria-label="Delete"
+                    >
+                      <DeleteIcon />
+                    </button>
+                  </td>
                 </tr>
               ))}
-              {data?.items.length === 0 && (
+              {data?.items?.length === 0 && (
                 <tr>
                   <td
                     colSpan={3}

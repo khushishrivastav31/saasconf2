@@ -21,7 +21,6 @@ vi.mock('../settings/ReviewCriteriaTab', () => ({ default: () => <div>ReviewCrit
 vi.mock('../settings/PaperFormBuilderTab', () => ({
   default: () => <div>PaperFormBuilderTab</div>,
 }));
-vi.mock('../../PronounOptionsTab', () => ({ default: () => <div>PronounOptionsTab</div> }));
 vi.mock('../settings/EmailTemplatesTab', () => ({ default: () => <div>EmailTemplatesTab</div> }));
 vi.mock('../settings/EmailSettingsTab', () => ({ default: () => <div>EmailSettingsTab</div> }));
 vi.mock('../settings/MessagingSettingsTab', () => ({

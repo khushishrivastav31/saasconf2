@@ -5,7 +5,6 @@ import {
   TrainersIcon,
   ThemeIcon,
   TrainingsSettingsIcon,
-  PronounIcon,
   LocationsIcon,
   LocationTypesIcon,
   LanguagesIcon,
@@ -65,7 +64,6 @@ export type StaticSectionId =
   | 'settings-theme'
   | 'settings-languages'
   | 'settings-trainings'
-  | 'settings-pronoun-options'
   | 'settings-certification-bodies'
   | 'settings-syllabi'
   | 'settings-holidays'
@@ -173,12 +171,6 @@ export const sectionGroups: TrainingSectionGroup[] = [
             id: 'settings-trainings',
             name: 'Training Catalog',
             icon: TrainingsSettingsIcon,
-            group: 'Training Setup',
-          },
-          {
-            id: 'settings-pronoun-options',
-            name: 'Pronoun Options',
-            icon: PronounIcon,
             group: 'Training Setup',
           },
           {

@@ -21,7 +21,7 @@ from datetime import timedelta
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -776,14 +776,17 @@ async def seed_default_settings(
         conference.settings = merged
         flag_modified(conference, "settings")
 
-    # Seed Pronoun Options
-    for name in DEFAULT_PRONOUNS:
-        option = PronounOption(
-            tenant_id=tenant_id,
-            conference_id=conference_id,
-            name=name,
-        )
-        db.add(option)
+    # Seed Pronoun Options (tenant-scoped — only if none exist for tenant)
+    existing_pronouns = await db.execute(
+        select(func.count()).select_from(PronounOption).where(PronounOption.tenant_id == tenant_id)
+    )
+    if existing_pronouns.scalar() == 0:
+        for name in DEFAULT_PRONOUNS:
+            option = PronounOption(
+                tenant_id=tenant_id,
+                name=name,
+            )
+            db.add(option)
 
     # Seed Volunteer Roles
     for role_data in DEFAULT_VOLUNTEER_ROLES:

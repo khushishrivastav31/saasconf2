@@ -27,6 +27,7 @@ from app.api.v1 import (
     portal,
     portal_templates,
     program,
+    pronoun_options,
     registration_question_answers,
     registrations,
     screen_overlays,
@@ -76,6 +77,9 @@ api_router.include_router(
     prefix="/system-email-templates",
     tags=["System Email Templates"],
 )
+
+# Pronoun options (tenant-scoped, shared across conferences and trainings)
+api_router.include_router(pronoun_options.router, prefix="/pronoun-options", tags=["Pronoun Options"])
 
 # Applicant activity logs (tenant admin)
 api_router.include_router(

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
+import { queryKeys } from '../../../../config/queryKeys';
 import { useSaveStatus } from '../../../../hooks/useSaveStatus';
 import { useAuthMedia } from '../../../../hooks/useAuthMedia';
 import { validatePhone, validateEmail } from '../../../../utils/validators';
@@ -103,14 +104,11 @@ export function ApplicantForm({
   const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
 
   const { data: pronounOptions } = useQuery({
-    queryKey: ['pronoun-options', conferenceId],
+    queryKey: queryKeys.pronounOptions,
     queryFn: async () => {
-      const response = await api.get<{ items: PronounOption[] }>(
-        `/conferences/${conferenceId}/settings/pronouns`
-      );
+      const response = await api.get<{ items: PronounOption[] }>('/pronoun-options');
       return response.data.items.filter((p) => p.is_active);
     },
-    enabled: !!conferenceId,
   });
 
   const { data: userRoles } = useQuery({

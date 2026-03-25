@@ -12,7 +12,7 @@ from app.db.session import async_session_maker
 from app.models.conference import Conference
 from app.models.module import Module
 from app.models.platform_currency import PlatformCurrency
-from app.models.settings import PronounOption
+from app.models.settings import VolunteerRole
 from app.models.user import User, UserRole
 
 logger = logging.getLogger(__name__)
@@ -186,14 +186,14 @@ async def seed_default_currencies(session: AsyncSession) -> None:
 async def seed_conference_defaults(session: AsyncSession) -> None:
     """Backfill default settings for conferences that are missing them.
 
-    Checks each conference for pronoun options as a proxy for whether
+    Checks each conference for volunteer roles as a proxy for whether
     seed_default_settings() has already run. Populates: volunteer roles,
     committee roles, pronouns, score scales, review criteria.
     """
     from app.core.default_settings import seed_default_settings
 
-    # Find conferences that have no pronoun options (= never seeded)
-    subq = select(PronounOption.conference_id).group_by(PronounOption.conference_id).having(func.count() > 0).subquery()
+    # Find conferences that have no volunteer roles (= never seeded)
+    subq = select(VolunteerRole.conference_id).group_by(VolunteerRole.conference_id).having(func.count() > 0).subquery()
     result = await session.execute(select(Conference).where(Conference.id.notin_(select(subq.c.conference_id))))
     conferences = result.scalars().all()
 

@@ -15,7 +15,6 @@ from .invoice_settings import router as invoice_settings_router
 from .location_types import router as location_types_router
 from .payment_reminder_settings import router as payment_reminder_settings_router
 from .policies import router as policies_router
-from .pronouns import router as pronouns_router
 from .registration_questions import router as registration_questions_router
 from .review_criteria import router as review_criteria_router
 from .review_form_settings import router as review_form_settings_router
@@ -46,7 +45,6 @@ router.include_router(score_scales_router)
 router.include_router(review_criteria_router)
 router.include_router(review_questions_router)
 router.include_router(review_form_settings_router)
-router.include_router(pronouns_router)
 router.include_router(email_templates_router)
 router.include_router(invoice_settings_router)
 router.include_router(payment_reminder_settings_router)

@@ -304,11 +304,10 @@ export interface SessionTypeUpdate {
   is_active?: boolean;
 }
 
-// Pronoun Option types (conference-scoped settings)
+// Pronoun Option types (tenant-scoped)
 export interface PronounOption {
   id: string;
   tenant_id: string;
-  conference_id: string;
   name: string;
   is_active: boolean;
   created_at: string;

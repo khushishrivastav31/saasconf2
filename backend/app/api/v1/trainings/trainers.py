@@ -9,7 +9,12 @@ from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.pagination import calculate_pages, paginate
 from app.core.search import unaccent_ilike
 from app.models.audit import AuditLog
-from app.models.trainer import Trainer, TrainerUnavailability, trainer_languages, trainer_trainings
+from app.models.trainer import (
+    Trainer,
+    TrainerUnavailability,
+    trainer_languages,
+    trainer_trainings,
+)
 from app.schemas.trainer import (
     TrainerCreate,
     TrainerNameRef,
@@ -37,6 +42,7 @@ def _build_response(trainer: Trainer) -> TrainerResponse:
         last_name=trainer.last_name,
         email=trainer.email,
         phone=trainer.phone,
+        pronouns=trainer.pronouns,
         vita=trainer.vita,
         is_active=trainer.is_active,
         is_internal=trainer.is_internal,
@@ -94,6 +100,11 @@ async def list_trainers(
     }
 
 
+# ---------------------------------------------------------------------------
+# Trainer CRUD (single item)
+# ---------------------------------------------------------------------------
+
+
 @router.get("/{trainer_id}", response_model=TrainerResponse)
 async def get_trainer(
     trainer_id: UUID,
@@ -124,6 +135,7 @@ async def create_trainer(
         last_name=payload.last_name,
         email=payload.email,
         phone=payload.phone,
+        pronouns=payload.pronouns,
         vita=payload.vita,
         is_active=payload.is_active,
         is_internal=payload.is_internal,
@@ -180,6 +192,8 @@ async def update_trainer(
         trainer.email = payload.email or None
     if payload.phone is not None:
         trainer.phone = payload.phone or None
+    if payload.pronouns is not None:
+        trainer.pronouns = payload.pronouns or None
     if payload.vita is not None:
         trainer.vita = payload.vita or None
     if payload.is_active is not None:

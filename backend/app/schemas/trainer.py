@@ -17,6 +17,7 @@ class TrainerCreate(BaseModel):
     last_name: str = Field(..., min_length=1, max_length=100)
     email: str | None = Field(None, max_length=255)
     phone: str | None = Field(None, max_length=50)
+    pronouns: str | None = Field(None, max_length=100)
     vita: str | None = None
     is_active: bool = True
     is_internal: bool = True
@@ -46,6 +47,7 @@ class TrainerUpdate(BaseModel):
     last_name: str | None = Field(None, min_length=1, max_length=100)
     email: str | None = Field(None, max_length=255)
     phone: str | None = Field(None, max_length=50)
+    pronouns: str | None = Field(None, max_length=100)
     vita: str | None = None
     is_active: bool | None = None
     is_internal: bool | None = None
@@ -134,6 +136,7 @@ class TrainerResponse(BaseModel):
     last_name: str
     email: str | None = None
     phone: str | None = None
+    pronouns: str | None = None
     vita: str | None = None
     is_active: bool
     is_internal: bool

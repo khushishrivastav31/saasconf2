@@ -514,14 +514,13 @@ async def list_portal_pronoun_options(
     current: CurrentApplicantDep,
     db: DbSessionDep,
 ) -> list[dict]:
-    """List active pronoun options across all conferences in the applicant's tenant."""
+    """List active pronoun options for the applicant's tenant."""
     result = await db.execute(
         select(PronounOption.name)
         .where(
             PronounOption.tenant_id == current.tenant_id,
             PronounOption.is_active == True,
         )
-        .distinct()
         .order_by(PronounOption.name)
     )
     names = result.scalars().all()

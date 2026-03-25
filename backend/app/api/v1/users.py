@@ -119,7 +119,7 @@ async def list_user_pronoun_options(
     current_user: CurrentUserDep,
     db: DbSessionDep,
 ) -> list[dict]:
-    """List distinct active pronoun names across all conferences in the tenant."""
+    """List active pronoun options for the tenant."""
     if current_user.tenant_id is None:
         return []
 
@@ -129,7 +129,6 @@ async def list_user_pronoun_options(
             PronounOption.tenant_id == current_user.tenant_id,
             PronounOption.is_active == True,
         )
-        .distinct()
         .order_by(PronounOption.name)
     )
     names = result.scalars().all()

@@ -173,6 +173,7 @@ export const queryKeys = {
   // ── Settings ────────────────────────────────────────────────────
   settings: {
     platformCurrencies: ['platform-currencies'] as const,
+    /** @deprecated Use queryKeys.pronounOptions instead */
     pronounOptions: (conferenceId: string) => ['pronoun-options', conferenceId] as const,
     paperFormSchema: (conferenceId: string) => ['paper-form-schema', conferenceId] as const,
     paperFormVariants: (conferenceId: string) => ['paper-form-variants', conferenceId] as const,
@@ -229,6 +230,12 @@ export const queryKeys = {
       ['analytics-stats-attendees-per-day', conferenceId] as const,
     statsTutorials: (conferenceId: string) => ['analytics-stats-tutorials', conferenceId] as const,
   },
+
+  // ── Tenant-scoped pronoun options ────────────────────────────
+  pronounOptions: ['pronoun-options'] as const,
+
+  // ── Trainers ───────────────────────────────────────────────────
+  trainers: {},
 
   // ── Team & Users ────────────────────────────────────────────────
   team: {

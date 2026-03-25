@@ -39,7 +39,6 @@ from app.models.settings import (
     CFPCommitteeRole,
     ConferenceCurrency,
     EmailTemplate,
-    PronounOption,
     SessionType,
     SponsorPackage,
     TenantLocationType,
@@ -107,7 +106,7 @@ async def duplicate_conference(
     new_id = new_conf.id
 
     # ── 3. Copy simple config tables (no parent-child FKs) ───────────────
-    await _copy_simple_rows(db, PronounOption, source_id, new_id, tenant_id, ["name", "is_active"])
+    # Note: PronounOption is tenant-scoped (not conference-scoped) so no copying needed
     await _copy_simple_rows(db, VolunteerRole, source_id, new_id, tenant_id, ["name", "description", "is_active"])
     await _copy_simple_rows(db, CFPCommitteeRole, source_id, new_id, tenant_id, ["name", "description", "is_active"])
     await _copy_simple_rows(

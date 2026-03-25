@@ -22,6 +22,7 @@ const Trainings = lazy(() => import('./pages/Trainings'));
 const Team = lazy(() => import('./pages/Team'));
 const MyCompany = lazy(() => import('./pages/MyCompany'));
 const ApplicantActivityLog = lazy(() => import('./pages/ApplicantActivityLog'));
+const TenantPronounOptions = lazy(() => import('./pages/TenantPronounOptions'));
 const Handbook = lazy(() => import('./pages/Handbook'));
 
 // Lazy-loaded CFP module pages
@@ -236,6 +237,16 @@ function App() {
                 <TenantAdminRoute>
                   <Team />
                 </TenantAdminRoute>
+              }
+            />
+
+            {/* Pronoun Options (tenant admin) */}
+            <Route
+              path="pronoun-options"
+              element={
+                <TenantOnlyRoute>
+                  <TenantPronounOptions />
+                </TenantOnlyRoute>
               }
             />
 

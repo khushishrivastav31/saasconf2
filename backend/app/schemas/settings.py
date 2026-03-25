@@ -278,7 +278,7 @@ class CFPCommitteeRoleListResponse(BaseModel):
     total: int
 
 
-# --- Pronoun Option Schemas (conference-scoped) ---
+# --- Pronoun Option Schemas (tenant-scoped) ---
 
 
 class PronounOptionCreate(BaseModel):
@@ -302,7 +302,6 @@ class PronounOptionResponse(BaseModel):
 
     id: UUID
     tenant_id: UUID
-    conference_id: UUID
     name: str
     is_active: bool
     created_at: datetime

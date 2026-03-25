@@ -293,6 +293,7 @@ export interface Trainer {
   last_name: string;
   email: string | null;
   phone: string | null;
+  pronouns: string | null;
   vita: string | null;
   is_active: boolean;
   is_internal: boolean;
@@ -310,6 +311,7 @@ export interface TrainerCreate {
   last_name: string;
   email?: string | null;
   phone?: string | null;
+  pronouns?: string | null;
   vita?: string | null;
   is_active?: boolean;
   is_internal?: boolean;
@@ -322,6 +324,7 @@ export interface TrainerUpdate {
   last_name?: string;
   email?: string | null;
   phone?: string | null;
+  pronouns?: string | null;
   vita?: string | null;
   is_active?: boolean;
   is_internal?: boolean;

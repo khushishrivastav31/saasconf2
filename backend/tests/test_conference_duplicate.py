@@ -39,7 +39,6 @@ from app.models.settings import (
     CFPCommitteeRole,
     ConferenceCurrency,
     EmailTemplate,
-    PronounOption,
     SessionType,
     SponsorPackage,
     TenantLocationType,
@@ -312,17 +311,6 @@ class TestDuplicateBasic:
 
 
 class TestDuplicateSimpleModels:
-    async def test_pronouns_copied(self, db_session: AsyncSession, source_conference: Conference) -> None:
-        source_count = await _count(db_session, PronounOption, source_conference.id)
-        assert source_count > 0  # seed creates pronouns
-
-        req = DuplicateConferenceRequest(name="Copy", abbreviation="CP")
-        new_conf = await duplicate_conference(db_session, source_conference.id, source_conference.tenant_id, req)
-        await db_session.commit()
-
-        new_count = await _count(db_session, PronounOption, new_conf.id)
-        assert new_count == source_count
-
     async def test_volunteer_roles_copied(self, db_session: AsyncSession, source_conference: Conference) -> None:
         source_count = await _count(db_session, VolunteerRole, source_conference.id)
         req = DuplicateConferenceRequest(name="Copy", abbreviation="CP")

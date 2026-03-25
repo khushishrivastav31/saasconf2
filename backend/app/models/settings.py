@@ -288,10 +288,11 @@ class CFPCommitteeRole(Base):
 
 class PronounOption(Base):
     """
-    Conference-scoped pronoun option definitions.
+    Tenant-scoped pronoun option definitions.
 
-    Each conference has its own set of pronoun options.
-    The users.pronouns and cfp_applicants.pronouns columns store the pronoun name as a plain string.
+    Shared across all conferences and trainings within a tenant.
+    The users.pronouns, cfp_applicants.pronouns, and trainers.pronouns columns
+    store the pronoun name as a plain string.
     """
 
     __tablename__ = "pronoun_options"
@@ -300,11 +301,6 @@ class PronounOption(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    conference_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("conferences.id", ondelete="CASCADE"),
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -317,8 +313,7 @@ class PronounOption(Base):
 
     __table_args__ = (
         Index("idx_pronoun_options_tenant", "tenant_id"),
-        Index("idx_pronoun_options_conference", "conference_id"),
-        Index("idx_pronoun_options_name", "tenant_id", "conference_id", "name", unique=True),
+        Index("idx_pronoun_options_name", "tenant_id", "name", unique=True),
     )
 
     def __repr__(self) -> str:

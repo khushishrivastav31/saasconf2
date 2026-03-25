@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import { validateEmail } from '../../../../utils/validators';
-import type { AttendeeData } from '../../../../types';
+import type { AttendeeData, PronounOption } from '../../../../types';
 
 interface AttendeeFieldsProps {
   data: AttendeeData;
@@ -15,19 +15,17 @@ interface AttendeeFieldsProps {
 export default function AttendeeFields({
   data,
   onChange,
-  conferenceId,
+  conferenceId: _conferenceId,
   prefix,
 }: AttendeeFieldsProps) {
   const p = prefix ? `${prefix}-` : '';
   const [emailError, setEmailError] = useState<string | null>(null);
 
   const { data: pronounOptions } = useQuery({
-    queryKey: queryKeys.settings.pronounOptions(conferenceId),
+    queryKey: queryKeys.pronounOptions,
     queryFn: async () => {
-      const res = await api.get<{ id: string; name: string }[]>(
-        `/conferences/${conferenceId}/settings/pronouns`
-      );
-      return res.data;
+      const res = await api.get<{ items: PronounOption[] }>('/pronoun-options');
+      return res.data.items.filter((p) => p.is_active);
     },
   });
 

@@ -65,7 +65,7 @@ describe('ReplaceAttendeeModal', () => {
     vi.clearAllMocks();
 
     vi.mocked(api.get).mockImplementation((url: string) => {
-      if (url.includes('/settings/pronouns')) {
+      if (url === '/pronoun-options') {
         return Promise.resolve({ data: { items: mockPronounOptions } });
       }
       if (url.includes('/booking-options')) {
@@ -162,9 +162,7 @@ describe('ReplaceAttendeeModal', () => {
       );
 
       await waitFor(() => {
-        expect(vi.mocked(api.get)).toHaveBeenCalledWith(
-          `/conferences/${conferenceId}/settings/pronouns`
-        );
+        expect(vi.mocked(api.get)).toHaveBeenCalledWith(`/pronoun-options`);
         expect(vi.mocked(api.get)).toHaveBeenCalledWith(
           `/conferences/${conferenceId}/booking-options`
         );

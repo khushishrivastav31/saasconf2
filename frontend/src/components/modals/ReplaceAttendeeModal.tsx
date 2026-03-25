@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '../../config/api';
+import { queryKeys } from '../../config/queryKeys';
 import { validateEmail, validatePhone } from '../../utils/validators';
 import type { PronounOption } from '../../types';
 
@@ -58,16 +59,13 @@ export default function ReplaceAttendeeModal({
   const [addItemType, setAddItemType] = useState<'booking_option' | 'tutorial'>('booking_option');
   const [addItemOptionId, setAddItemOptionId] = useState('');
 
-  // Fetch pronoun options
+  // Fetch pronoun options (tenant-scoped)
   const { data: pronounOptions } = useQuery({
-    queryKey: ['pronoun-options', conferenceId],
+    queryKey: queryKeys.pronounOptions,
     queryFn: async () => {
-      const response = await api.get<{ items: PronounOption[] }>(
-        `/conferences/${conferenceId}/settings/pronouns`
-      );
+      const response = await api.get<{ items: PronounOption[] }>('/pronoun-options');
       return response.data.items.filter((p) => p.is_active);
     },
-    enabled: !!conferenceId,
   });
 
   // Fetch booking options
