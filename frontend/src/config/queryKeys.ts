@@ -234,6 +234,9 @@ export const queryKeys = {
   // ── Tenant-scoped pronoun options ────────────────────────────
   pronounOptions: ['pronoun-options'] as const,
 
+  // ── Training Policies ─────────────────────────────────────────
+  trainingPolicies: ['training-policies'] as const,
+
   // ── Trainers ───────────────────────────────────────────────────
   trainers: {},
 

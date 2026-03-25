@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Tenant-scoped pronoun options refactor — migration 168 (deduplicate + drop conference_id + drop trainer_pronoun_options), new `/pronoun-options` tenant-level CRUD API, TenantPronounOptions.tsx page with sidebar nav, updated all consumers (AttendeeFields, ApplicantForm, ReplaceAttendeeModal, TrainersSettingsTab, Team, ProfilePage), removed old conference-scoped and trainer-scoped pronoun endpoints/tabs/types. Handbook updated.
-- **Status**: All checks pass — mypy, ruff, tsc, eslint. 1632 frontend tests green. 2696 backend tests green (60 skipped).
+- **Last completed**: Training Policies tab — tenant-scoped policies stored in `tenant.settings["training_policies"]`, new GET/PUT `/trainings/policies` endpoint, extracted shared `PolicyCard` component + `policyConstants.ts`, refactored conference PoliciesTab to use shared component, implemented training PoliciesTab, 8 backend + 6 frontend tests, handbook updated.
+- **Status**: All checks pass — mypy, ruff, tsc, eslint. 1638 frontend tests green. 2704 backend tests green (60 skipped).

@@ -77,6 +77,25 @@ export const trainingsCategory: HandbookCategory = {
       ),
     },
     {
+      id: '10-2c-policies',
+      title: 'Training Policies',
+      categoryId: 'category-10',
+      content: () => (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Configure legal and compliance policies displayed on training registration portals.</p>
+<strong>What you can do:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300">Enable/disable 5 policy types: Privacy Policy, Cookies Policy, Imprint, Terms &amp; Conditions, Code of Conduct</li>
+<li class="text-gray-700 dark:text-gray-300">Set each policy as an <strong>External URL</strong> (opens in new tab) or <strong>Inline Content</strong> (rich text, opens in modal)</li>
+<li class="text-gray-700 dark:text-gray-300">When Terms &amp; Conditions are enabled, a consent checkbox is required during registration</li>
+</ul>
+<strong>Scope:</strong> Training policies are configured at the tenant level and shared across all trainings. Navigate to <strong>Trainings &rarr; Settings &rarr; Policies</strong>.`,
+          }}
+        />
+      ),
+    },
+    {
       id: '10-3-final-program',
       title: 'Final Program',
       categoryId: 'category-10',
