@@ -118,7 +118,9 @@ export default function OfferTemplatesTab() {
     mutationFn: async ({ id, file }: { id: string; file: File }) => {
       const fd = new FormData();
       fd.append('file', file);
-      return (await api.post(`/trainings/offer-templates/${id}/upload`, fd)).data;
+      fd.append('entity_type', 'offer_template');
+      fd.append('entity_id', id);
+      return (await api.post('/attachments', fd)).data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QK });

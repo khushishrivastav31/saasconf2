@@ -30,6 +30,7 @@ ALLOWED_ENTITY_TYPES = {
     "invoice",
     "speaker_expense",
     "trainer_photo",
+    "offer_template",
 }
 
 
