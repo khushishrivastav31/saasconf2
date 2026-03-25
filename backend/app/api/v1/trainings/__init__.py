@@ -2,11 +2,13 @@
 
 from .certification_bodies import router as certification_bodies_router
 from .core import detail_router, router  # core has root-level routes (GET /, POST /)
+from .email_settings import router as email_settings_router
 from .holidays import router as holidays_router
 from .languages import router as languages_router
 from .location_types import router as location_types_router
 from .policies import router as policies_router
 from .programs import router as programs_router
+from .registration_questions import router as registration_questions_router
 from .syllabi import router as syllabi_router
 from .themes import router as themes_router
 from .trainers import router as trainers_router
@@ -21,6 +23,8 @@ router.include_router(trainers_router)
 router.include_router(programs_router)
 router.include_router(holidays_router)
 router.include_router(policies_router)
+router.include_router(registration_questions_router)
+router.include_router(email_settings_router)
 router.include_router(location_types_router)
 router.include_router(detail_router)
 

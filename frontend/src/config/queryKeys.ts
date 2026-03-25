@@ -237,6 +237,13 @@ export const queryKeys = {
   // ── Training Policies ─────────────────────────────────────────
   trainingPolicies: ['training-policies'] as const,
 
+  // ── Training Registration Questions ──────────────────────────
+  trainingRegistrationQuestions: ['training-registration-questions'] as const,
+
+  // ── Training Email Settings + Templates ──────────────────────
+  trainingEmailSettings: ['training-email-settings'] as const,
+  trainingEmailTemplates: ['training-email-templates'] as const,
+
   // ── Trainers ───────────────────────────────────────────────────
   trainers: {},
 
