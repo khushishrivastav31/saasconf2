@@ -20,17 +20,21 @@ export interface Customer {
   contact_person: string | null;
   email: string | null;
   phone: string | null;
+  website: string | null;
   address_line1: string | null;
   address_line2: string | null;
   city: string | null;
+  state: string | null;
   postal_code: string | null;
   country: string | null;
   vat_number: string | null;
+  comments: string | null;
   contact_persons: {
-    name: string;
+    first_name: string;
+    last_name: string;
     email: string | null;
     phone: string | null;
-    role: string | null;
+    comment: string | null;
   }[];
   price: number | null;
   currency: string | null;

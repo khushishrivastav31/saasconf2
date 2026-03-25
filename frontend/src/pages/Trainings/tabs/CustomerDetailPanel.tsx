@@ -7,15 +7,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
 import { parseApiError } from '../../../utils/apiError';
-import { COUNTRY_OPTIONS } from '../../../config/countries';
+import { COUNTRIES_BY_CONTINENT } from '../../../config/countries';
 import VatNumberInput from '../../../components/common/VatNumberInput';
+import RichTextEditor from '../../../components/common/RichTextEditor';
+import ContactPersonList from '../../../components/ContactPersonList';
+import type { LocationContactPerson } from '../../../types';
 import type { Customer } from './CustomersTab';
 
 interface ContactPerson {
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string | null;
   phone: string | null;
-  role: string | null;
+  comment: string | null;
 }
 
 interface CustomerForm {
@@ -23,12 +27,15 @@ interface CustomerForm {
   contact_person: string | null;
   email: string | null;
   phone: string | null;
+  website: string | null;
   address_line1: string | null;
   address_line2: string | null;
   city: string | null;
+  state: string | null;
   postal_code: string | null;
   country: string | null;
   vat_number: string | null;
+  comments: string | null;
   price: number | null;
   currency: string | null;
   notes: string | null;
@@ -50,17 +57,27 @@ function formFromCustomer(c: Customer): CustomerForm {
     contact_person: c.contact_person,
     email: c.email,
     phone: c.phone,
+    website: c.website,
     address_line1: c.address_line1,
     address_line2: c.address_line2,
     city: c.city,
+    state: c.state,
     postal_code: c.postal_code,
     country: c.country,
     vat_number: c.vat_number,
+    comments: c.comments,
     price: c.price,
     currency: c.currency,
     notes: c.notes,
     is_active: c.is_active,
-    contact_persons: c.contact_persons ?? [],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    contact_persons: (c.contact_persons ?? []).map((cp: any) => ({
+      first_name: cp.first_name ?? cp.name ?? '',
+      last_name: cp.last_name ?? '',
+      email: cp.email ?? null,
+      phone: cp.phone ?? null,
+      comment: cp.comment ?? cp.role ?? null,
+    })),
   };
 }
 
@@ -94,6 +111,13 @@ export default function CustomerDetailPanel({
   const [activeTab, setActiveTab] = useState<TabId>('details');
   const [form, setForm] = useState<CustomerForm>(formFromCustomer(customer));
   const [isDirty, setIsDirty] = useState(false);
+  const [newContact, setNewContact] = useState<LocationContactPerson>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
+  });
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Reset form when customer changes
@@ -117,7 +141,17 @@ export default function CustomerDetailPanel({
   // ---- Save mutation ----
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const res = await api.put(`/trainings/customers/${customer.id}`, form);
+      const payload = {
+        ...form,
+        contact_persons: (form.contact_persons ?? []).map((c) => ({
+          first_name: c.first_name,
+          last_name: c.last_name,
+          email: c.email || null,
+          phone: c.phone || null,
+          comment: c.comment || null,
+        })),
+      };
+      const res = await api.put(`/trainings/customers/${customer.id}`, payload);
       return res.data as Customer;
     },
     onSuccess: () => {
@@ -266,13 +300,38 @@ export default function CustomerDetailPanel({
           />
         )}
         {activeTab === 'contacts' && (
-          <ContactsTab
-            contacts={form.contact_persons}
-            onChange={(contacts) => {
-              setForm((prev) => ({ ...prev, contact_persons: contacts }));
+          <ContactPersonList
+            contacts={(form.contact_persons ?? []) as LocationContactPerson[]}
+            newContact={newContact}
+            setNewContact={setNewContact}
+            addContact={() => {
+              if (!newContact.first_name && !newContact.last_name) return;
+              setForm((prev) => ({
+                ...prev,
+                contact_persons: [
+                  ...(prev.contact_persons ?? []),
+                  { ...newContact } as ContactPerson,
+                ],
+              }));
+              setNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
               setIsDirty(true);
             }}
-            inputClass={inputClass}
+            removeContact={(index) => {
+              setForm((prev) => ({
+                ...prev,
+                contact_persons: (prev.contact_persons ?? []).filter((_, i) => i !== index),
+              }));
+              setIsDirty(true);
+            }}
+            updateContact={(index, contact) => {
+              setForm((prev) => ({
+                ...prev,
+                contact_persons: (prev.contact_persons ?? []).map((c, i) =>
+                  i === index ? (contact as ContactPerson) : c
+                ),
+              }));
+              setIsDirty(true);
+            }}
           />
         )}
         {activeTab === 'offers' && (
@@ -393,6 +452,19 @@ function DetailsTab({
         </div>
       </div>
 
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Website
+        </label>
+        <input
+          type="text"
+          placeholder="example.com"
+          className={inputClass}
+          value={form.website ?? ''}
+          onChange={(e) => updateField('website', e.target.value || null)}
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -418,7 +490,7 @@ function DetailsTab({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             City
@@ -428,6 +500,17 @@ function DetailsTab({
             className={inputClass}
             value={form.city ?? ''}
             onChange={(e) => updateField('city', e.target.value || null)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            State
+          </label>
+          <input
+            type="text"
+            className={inputClass}
+            value={form.state ?? ''}
+            onChange={(e) => updateField('state', e.target.value || null)}
           />
         </div>
         <div>
@@ -450,11 +533,15 @@ function DetailsTab({
             value={form.country ?? ''}
             onChange={(e) => updateField('country', e.target.value || null)}
           >
-            <option value="">Select...</option>
-            {COUNTRY_OPTIONS.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name}
-              </option>
+            <option value="">Select a country</option>
+            {COUNTRIES_BY_CONTINENT.map((group) => (
+              <optgroup key={group.continent} label={group.continent}>
+                {group.countries.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
@@ -496,6 +583,17 @@ function DetailsTab({
             onChange={(e) => updateField('currency', e.target.value.toUpperCase() || null)}
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Comments
+        </label>
+        <RichTextEditor
+          value={form.comments ?? ''}
+          onChange={(html) => updateField('comments', html || null)}
+          rows={2}
+        />
       </div>
 
       <div>
@@ -627,177 +725,6 @@ function LogoUpload({ customerId }: { customerId: string }) {
             Remove
           </button>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Tab 2: Contacts
-// ---------------------------------------------------------------------------
-
-function ContactsTab({
-  contacts,
-  onChange,
-  inputClass,
-}: {
-  contacts: ContactPerson[];
-  onChange: (contacts: ContactPerson[]) => void;
-  inputClass: string;
-}) {
-  const [newContact, setNewContact] = useState<ContactPerson>({
-    name: '',
-    email: null,
-    phone: null,
-    role: null,
-  });
-
-  const addContact = () => {
-    if (!newContact.name.trim()) return;
-    onChange([...contacts, { ...newContact }]);
-    setNewContact({ name: '', email: null, phone: null, role: null });
-  };
-
-  const removeContact = (index: number) => {
-    onChange(contacts.filter((_, i) => i !== index));
-  };
-
-  const updateContact = (index: number, field: keyof ContactPerson, value: string | null) => {
-    const updated = contacts.map((c, i) => (i === index ? { ...c, [field]: value } : c));
-    onChange(updated);
-  };
-
-  return (
-    <div className="space-y-4">
-      {contacts.length === 0 && (
-        <p className="text-sm text-gray-400 dark:text-gray-500">No contact persons yet.</p>
-      )}
-
-      {contacts.map((contact, idx) => (
-        <div
-          key={idx}
-          className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
-        >
-          <div className="flex items-start justify-between mb-3">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-              Contact {idx + 1}
-            </span>
-            <button
-              type="button"
-              onClick={() => removeContact(idx)}
-              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs"
-            >
-              Remove
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Name *
-              </label>
-              <input
-                type="text"
-                className={inputClass}
-                value={contact.name}
-                onChange={(e) => updateContact(idx, 'name', e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Role
-              </label>
-              <input
-                type="text"
-                className={inputClass}
-                value={contact.role ?? ''}
-                onChange={(e) => updateContact(idx, 'role', e.target.value || null)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                className={inputClass}
-                value={contact.email ?? ''}
-                onChange={(e) => updateContact(idx, 'email', e.target.value || null)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Phone
-              </label>
-              <input
-                type="text"
-                className={inputClass}
-                value={contact.phone ?? ''}
-                onChange={(e) => updateContact(idx, 'phone', e.target.value || null)}
-              />
-            </div>
-          </div>
-        </div>
-      ))}
-
-      {/* Add new contact */}
-      <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
-        <h5 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">
-          Add Contact Person
-        </h5>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Name *
-            </label>
-            <input
-              type="text"
-              className={inputClass}
-              value={newContact.name}
-              onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Role
-            </label>
-            <input
-              type="text"
-              className={inputClass}
-              value={newContact.role ?? ''}
-              onChange={(e) => setNewContact({ ...newContact, role: e.target.value || null })}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              className={inputClass}
-              value={newContact.email ?? ''}
-              onChange={(e) => setNewContact({ ...newContact, email: e.target.value || null })}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Phone
-            </label>
-            <input
-              type="text"
-              className={inputClass}
-              value={newContact.phone ?? ''}
-              onChange={(e) => setNewContact({ ...newContact, phone: e.target.value || null })}
-            />
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={addContact}
-          disabled={!newContact.name.trim()}
-          className="mt-3 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          + Add
-        </button>
       </div>
     </div>
   );
