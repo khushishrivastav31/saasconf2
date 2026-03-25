@@ -7,7 +7,11 @@ import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
 import { parseApiError } from '../../../utils/apiError';
 import CustomerDetailPanel from './CustomerDetailPanel';
-import { COUNTRY_OPTIONS } from '../../../config/countries';
+import { COUNTRY_OPTIONS, COUNTRIES_BY_CONTINENT } from '../../../config/countries';
+import RichTextEditor from '../../../components/common/RichTextEditor';
+import ContactPersonList from '../../../components/ContactPersonList';
+import VatNumberInput from '../../../components/common/VatNumberInput';
+import type { LocationContactPerson } from '../../../types';
 
 export interface Customer {
   id: string;
@@ -50,9 +54,11 @@ interface CreateForm {
   postal_code: string;
   country: string;
   vat_number: string;
+  comments: string;
   price: string;
   currency: string;
   is_active: boolean;
+  contact_persons: LocationContactPerson[];
 }
 
 const EMPTY_CREATE: CreateForm = {
@@ -68,9 +74,11 @@ const EMPTY_CREATE: CreateForm = {
   postal_code: '',
   country: '',
   vat_number: '',
+  comments: '',
   price: '',
   currency: '',
   is_active: true,
+  contact_persons: [],
 };
 
 const QK = ['training-customers'];
@@ -87,6 +95,13 @@ export default function CustomersTab() {
   const [selected, setSelected] = useState<Customer | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE);
+  const [createNewContact, setCreateNewContact] = useState<LocationContactPerson>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    comment: '',
+  });
 
   const { data, isLoading } = useQuery<{
     items: Customer[];
@@ -110,8 +125,36 @@ export default function CustomersTab() {
     queryClient.invalidateQueries({ queryKey: QK });
   }, [queryClient]);
 
+  const addCreateContact = () => {
+    if (!createNewContact.first_name && !createNewContact.last_name) return;
+    setCreateForm((prev) => ({
+      ...prev,
+      contact_persons: [...(prev.contact_persons || []), { ...createNewContact }],
+    }));
+    setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
+  };
+
+  const removeCreateContact = (index: number) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      contact_persons: (prev.contact_persons || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateCreateContact = (index: number, contact: LocationContactPerson) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      contact_persons: (prev.contact_persons || []).map((c, i) => (i === index ? contact : c)),
+    }));
+  };
+
   const createMutation = useMutation({
     mutationFn: async (form: CreateForm) => {
+      // Include any in-progress contact person
+      const finalContacts = [...(form.contact_persons || [])];
+      if (createNewContact.first_name.trim() || createNewContact.last_name.trim()) {
+        finalContacts.push({ ...createNewContact });
+      }
       const payload: Record<string, unknown> = {
         name: form.name,
         contact_person: form.contact_person || null,
@@ -120,13 +163,21 @@ export default function CustomersTab() {
         address_line1: form.address_line1 || null,
         address_line2: form.address_line2 || null,
         city: form.city || null,
+        state: form.state || null,
         postal_code: form.postal_code || null,
         country: form.country || null,
         vat_number: form.vat_number || null,
+        comments: form.comments || null,
         price: form.price ? parseFloat(form.price) : null,
         currency: form.currency || null,
         is_active: form.is_active,
-        contact_persons: [],
+        contact_persons: finalContacts.map((c) => ({
+          first_name: c.first_name,
+          last_name: c.last_name,
+          email: c.email || null,
+          phone: c.phone || null,
+          comment: c.comment || null,
+        })),
       };
       const res = await api.post('/trainings/customers', payload);
       return res.data as Customer;
@@ -136,6 +187,7 @@ export default function CustomersTab() {
       showToast('Customer created', 'success');
       setIsAdding(false);
       setCreateForm(EMPTY_CREATE);
+      setCreateNewContact({ first_name: '', last_name: '', email: '', phone: '', comment: '' });
       setSelected(newCustomer);
     },
     onError: (err) => showToast(parseApiError(err), 'error'),
@@ -248,37 +300,6 @@ export default function CustomersTab() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Price
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className={inputClass}
-                value={createForm.price}
-                onChange={(e) => setCreateForm({ ...createForm, price: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Currency
-              </label>
-              <input
-                type="text"
-                maxLength={3}
-                placeholder="EUR"
-                className={inputClass}
-                value={createForm.currency}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, currency: e.target.value.toUpperCase() })
-                }
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Phone
               </label>
               <input
@@ -372,25 +393,63 @@ export default function CustomersTab() {
                 onChange={(e) => setCreateForm({ ...createForm, country: e.target.value })}
               >
                 <option value="">Select a country</option>
-                {COUNTRY_OPTIONS.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.name}
-                  </option>
+                {COUNTRIES_BY_CONTINENT.map((group) => (
+                  <optgroup key={group.continent} label={group.continent}>
+                    {group.countries.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
           </div>
 
+          {/* VAT Number */}
+          <VatNumberInput
+            value={createForm.vat_number}
+            onChange={(val) => setCreateForm({ ...createForm, vat_number: val })}
+            country={createForm.country || undefined}
+            placeholder="e.g., DE123456789"
+          />
+
+          {/* Comments */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              VAT Number
+              Comments
             </label>
-            <input
-              type="text"
-              className={inputClass}
-              value={createForm.vat_number}
-              onChange={(e) => setCreateForm({ ...createForm, vat_number: e.target.value })}
+            <RichTextEditor
+              value={createForm.comments}
+              onChange={(html) => setCreateForm({ ...createForm, comments: html })}
+              rows={2}
             />
+          </div>
+
+          {/* Contact Persons */}
+          <ContactPersonList
+            contacts={createForm.contact_persons || []}
+            newContact={createNewContact}
+            setNewContact={setCreateNewContact}
+            addContact={addCreateContact}
+            removeContact={removeCreateContact}
+            updateContact={updateCreateContact}
+          />
+
+          {/* Visible checkbox */}
+          <div>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={createForm.is_active}
+                onChange={(e) => setCreateForm({ ...createForm, is_active: e.target.checked })}
+                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-medium">Visible</span>
+                <span className="text-gray-500 dark:text-gray-400 ml-1">(show on website)</span>
+              </span>
+            </label>
           </div>
 
           <div className="flex gap-2 pt-1">
@@ -406,6 +465,13 @@ export default function CustomersTab() {
               onClick={() => {
                 setIsAdding(false);
                 setCreateForm(EMPTY_CREATE);
+                setCreateNewContact({
+                  first_name: '',
+                  last_name: '',
+                  email: '',
+                  phone: '',
+                  comment: '',
+                });
               }}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
             >
