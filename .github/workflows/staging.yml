@@ -384,7 +384,7 @@ jobs:
 
             # Wait for backend to be healthy before running migrations
             echo "Waiting for backend to be healthy..."
-            sleep 15
+            sleep 30
 
             # Run database migrations — fail the deploy if migrations fail
             echo "Running database migrations..."
@@ -430,10 +430,10 @@ jobs:
       - name: Health check
         run: |
           echo "Waiting for services to stabilize..."
-          sleep 10
+          sleep 20
 
-          # Retry health checks up to 5 times with 10s intervals
-          for i in 1 2 3 4 5; do
+          # Retry health checks up to 8 times with 15s intervals
+          for i in 1 2 3 4 5 6 7 8; do
             echo "Health check attempt $i/5..."
             HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://api.staging.sonrisa.ventures/health 2>&1) || true
             echo "  HTTP status: $HTTP_CODE"
@@ -441,13 +441,13 @@ jobs:
               echo "Backend is healthy"
               break
             fi
-            if [ "$i" -eq 5 ]; then
-              echo "Backend health check failed after 5 attempts"
+            if [ "$i" -eq 8 ]; then
+              echo "Backend health check failed after 8 attempts"
               echo "=== Full curl output ==="
               curl -sv --max-time 10 https://api.staging.sonrisa.ventures/health 2>&1 || true
               exit 1
             fi
-            sleep 10
+            sleep 15
           done
 
           for i in 1 2 3 4 5; do
