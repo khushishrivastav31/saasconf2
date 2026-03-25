@@ -292,12 +292,7 @@ export default function CustomerDetailPanel({
       {/* Tab content */}
       <div className="p-6">
         {activeTab === 'details' && (
-          <DetailsTab
-            form={form}
-            updateField={updateField}
-            inputClass={inputClass}
-            customerId={customer.id}
-          />
+          <DetailsTab form={form} updateField={updateField} inputClass={inputClass} />
         )}
         {activeTab === 'contacts' && (
           <ContactPersonList
@@ -390,18 +385,13 @@ function DetailsTab({
   form,
   updateField,
   inputClass,
-  customerId,
 }: {
   form: CustomerForm;
   updateField: (key: keyof CustomerForm, value: unknown) => void;
   inputClass: string;
-  customerId: string;
 }) {
   return (
     <div className="space-y-5">
-      {/* Logo upload */}
-      <LogoUpload customerId={customerId} />
-
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -416,20 +406,6 @@ function DetailsTab({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Contact Person
-          </label>
-          <input
-            type="text"
-            className={inputClass}
-            value={form.contact_person ?? ''}
-            onChange={(e) => updateField('contact_person', e.target.value || null)}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Email
           </label>
           <input
@@ -439,30 +415,33 @@ function DetailsTab({
             onChange={(e) => updateField('email', e.target.value || null)}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Phone
           </label>
           <input
             type="text"
+            placeholder="+491234545 or 00491234566"
             className={inputClass}
             value={form.phone ?? ''}
             onChange={(e) => updateField('phone', e.target.value || null)}
           />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Website
-        </label>
-        <input
-          type="text"
-          placeholder="example.com"
-          className={inputClass}
-          value={form.website ?? ''}
-          onChange={(e) => updateField('website', e.target.value || null)}
-        />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Website
+          </label>
+          <input
+            type="text"
+            placeholder="example.com"
+            className={inputClass}
+            value={form.website ?? ''}
+            onChange={(e) => updateField('website', e.target.value || null)}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -554,37 +533,6 @@ function DetailsTab({
         placeholder="e.g., DE123456789"
       />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Price
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            className={inputClass}
-            value={form.price ?? ''}
-            onChange={(e) =>
-              updateField('price', e.target.value ? parseFloat(e.target.value) : null)
-            }
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Currency
-          </label>
-          <input
-            type="text"
-            maxLength={3}
-            placeholder="EUR"
-            className={inputClass}
-            value={form.currency ?? ''}
-            onChange={(e) => updateField('currency', e.target.value.toUpperCase() || null)}
-          />
-        </div>
-      </div>
-
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Comments
@@ -594,137 +542,6 @@ function DetailsTab({
           onChange={(html) => updateField('comments', html || null)}
           rows={2}
         />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Notes
-        </label>
-        <textarea
-          rows={3}
-          className={inputClass}
-          value={form.notes ?? ''}
-          onChange={(e) => updateField('notes', e.target.value || null)}
-        />
-      </div>
-
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={form.is_active}
-          onChange={(e) => updateField('is_active', e.target.checked)}
-          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
-      </label>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Logo Upload sub-component
-// ---------------------------------------------------------------------------
-
-function LogoUpload({ customerId }: { customerId: string }) {
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const { data: logoData } = useQuery<{ items: Attachment[] }>({
-    queryKey: ['training-customers', customerId, 'logo'],
-    queryFn: async () => {
-      const res = await api.get('/attachments', {
-        params: { entity_type: 'customer_logo', entity_id: customerId },
-      });
-      return res.data;
-    },
-  });
-
-  const logo = useMemo(() => logoData?.items?.[0] ?? null, [logoData]);
-
-  const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('entity_type', 'customer_logo');
-      fd.append('entity_id', customerId);
-      await api.post('/attachments', fd);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['training-customers', customerId, 'logo'] });
-      showToast('Logo uploaded', 'success');
-    },
-    onError: (err) => showToast(parseApiError(err), 'error'),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/attachments/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['training-customers', customerId, 'logo'] });
-      showToast('Logo removed', 'success');
-    },
-    onError: (err) => showToast(parseApiError(err), 'error'),
-  });
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) uploadMutation.mutate(file);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  return (
-    <div className="flex items-center gap-4">
-      <div className="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
-        {logo ? (
-          <img
-            src={`/api/v1/attachments/${logo.id}/download`}
-            alt="Logo"
-            className="w-full h-full object-contain"
-          />
-        ) : (
-          <svg
-            className="w-8 h-8 text-gray-300 dark:text-gray-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z"
-            />
-          </svg>
-        )}
-      </div>
-      <div className="flex gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadMutation.isPending}
-          className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-        >
-          {uploadMutation.isPending ? 'Uploading...' : 'Upload Logo'}
-        </button>
-        {logo && (
-          <button
-            type="button"
-            onClick={() => deleteMutation.mutate(logo.id)}
-            disabled={deleteMutation.isPending}
-            className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
-          >
-            Remove
-          </button>
-        )}
       </div>
     </div>
   );
