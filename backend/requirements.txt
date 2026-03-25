@@ -72,7 +72,7 @@ python-multipart==0.0.22
 python-stdnum==2.2
 PyYAML==6.0.3
 redis==7.3.0
-requests==2.32.5
+requests==2.33.0
 resend==2.23.0
 rsa==4.9.1
 rstr==3.2.2

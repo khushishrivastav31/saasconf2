@@ -3,13 +3,12 @@
 from io import BytesIO
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request, UploadFile
+from fastapi import APIRouter, File, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, literal, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.exceptions import NotFoundError
-from app.core.file_validation import validate_upload
 from app.models.attachment import Attachment
 from app.models.audit import AuditLog
 from app.models.offer_template import OfferTemplate
@@ -186,14 +185,24 @@ async def delete_offer_template(
 @router.post("/{template_id}/upload", response_model=OfferTemplateResponse)
 async def upload_offer_template_file(
     template_id: UUID,
-    file: UploadFile,
     current_user: TenantAdminDep,
     db: DbSessionDep,
+    file: UploadFile = File(...),
 ) -> OfferTemplateResponse:
     """Upload or replace the template file."""
     template = await _get_or_404(template_id, current_user, db)
     file_data = await file.read()
-    validate_upload(file_data, file.content_type or "application/octet-stream", ENTITY_TYPE)
+
+    if not file_data:
+        from app.core.exceptions import ValidationError
+
+        raise ValidationError("Empty file upload is not allowed")
+
+    # Max 10MB
+    if len(file_data) > 10 * 1024 * 1024:
+        from app.core.exceptions import ValidationError
+
+        raise ValidationError("File size exceeds 10MB limit")
 
     # Replace existing attachment if any
     existing = await _get_file(template_id, db)
