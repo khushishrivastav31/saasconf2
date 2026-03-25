@@ -448,10 +448,8 @@ async def get_trainer_schedule(
         .join(ProgramYearTraining, PlacementTrainer.placement_id == ProgramYearTraining.id)
         .join(TrainingProgramYear, ProgramYearTraining.program_year_id == TrainingProgramYear.id)
         .options(
-            joinedload(PlacementTrainer.placement)
-            .joinedload(ProgramYearTraining.training),
-            joinedload(PlacementTrainer.placement)
-            .joinedload(ProgramYearTraining.location),
+            joinedload(PlacementTrainer.placement).joinedload(ProgramYearTraining.training),
+            joinedload(PlacementTrainer.placement).joinedload(ProgramYearTraining.location),
         )
         .where(
             PlacementTrainer.trainer_id == trainer_id,
@@ -478,16 +476,18 @@ async def get_trainer_schedule(
         if search and search.lower() not in training_name.lower():
             continue
 
-        items.append({
-            "assignment_id": str(a.id),
-            "placement_id": str(p.id),
-            "training_id": str(p.training_id),
-            "training_name": training_name,
-            "start_date": p.start_date.isoformat(),
-            "location_name": p.location.name if p.location else None,
-            "location_city": p.location.city if p.location else None,
-            "year": p.start_date.year,
-            "month": p.start_date.month,
-        })
+        items.append(
+            {
+                "assignment_id": str(a.id),
+                "placement_id": str(p.id),
+                "training_id": str(p.training_id),
+                "training_name": training_name,
+                "start_date": p.start_date.isoformat(),
+                "location_name": p.location.name if p.location else None,
+                "location_city": p.location.city if p.location else None,
+                "year": p.start_date.year,
+                "month": p.start_date.month,
+            }
+        )
 
     return items

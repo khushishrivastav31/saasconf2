@@ -176,7 +176,9 @@ async def delete_program_year(
     if program_year.year >= current_calendar_year and program_year.status != "draft":
         from app.core.exceptions import ValidationError
 
-        raise ValidationError("Only draft program years can be deleted. Published current/future years cannot be removed.")
+        raise ValidationError(
+            "Only draft program years can be deleted. Published current/future years cannot be removed."
+        )
 
     year_value = program_year.year
     await db.delete(program_year)
