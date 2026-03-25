@@ -42,8 +42,16 @@ interface CreateForm {
   contact_person: string;
   email: string;
   phone: string;
+  website: string;
+  address_line1: string;
+  address_line2: string;
   city: string;
+  state: string;
+  postal_code: string;
   country: string;
+  vat_number: string;
+  price: string;
+  currency: string;
   is_active: boolean;
 }
 
@@ -52,8 +60,16 @@ const EMPTY_CREATE: CreateForm = {
   contact_person: '',
   email: '',
   phone: '',
+  website: '',
+  address_line1: '',
+  address_line2: '',
   city: '',
+  state: '',
+  postal_code: '',
   country: '',
+  vat_number: '',
+  price: '',
+  currency: '',
   is_active: true,
 };
 
@@ -101,8 +117,14 @@ export default function CustomersTab() {
         contact_person: form.contact_person || null,
         email: form.email || null,
         phone: form.phone || null,
+        address_line1: form.address_line1 || null,
+        address_line2: form.address_line2 || null,
         city: form.city || null,
+        postal_code: form.postal_code || null,
         country: form.country || null,
+        vat_number: form.vat_number || null,
+        price: form.price ? parseFloat(form.price) : null,
+        currency: form.currency || null,
         is_active: form.is_active,
         contact_persons: [],
       };
@@ -210,44 +232,103 @@ export default function CustomersTab() {
         >
           <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">New Customer</h5>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Company Name *
+            </label>
+            <input
+              type="text"
+              required
+              className={inputClass}
+              value={createForm.name}
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Company Name *
+                Price
               </label>
               <input
-                type="text"
-                required
+                type="number"
+                step="0.01"
+                min="0"
                 className={inputClass}
-                value={createForm.name}
-                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                value={createForm.price}
+                onChange={(e) => setCreateForm({ ...createForm, price: e.target.value })}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Contact Person
+                Currency
               </label>
               <input
                 type="text"
+                maxLength={3}
+                placeholder="EUR"
                 className={inputClass}
-                value={createForm.contact_person}
-                onChange={(e) => setCreateForm({ ...createForm, contact_person: e.target.value })}
+                value={createForm.currency}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, currency: e.target.value.toUpperCase() })
+                }
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email
+                Phone
               </label>
               <input
-                type="email"
+                type="text"
+                placeholder="+491234545 or 00491234566"
                 className={inputClass}
-                value={createForm.email}
-                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                value={createForm.phone}
+                onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Website
+              </label>
+              <input
+                type="text"
+                placeholder="example.com"
+                className={inputClass}
+                value={createForm.website}
+                onChange={(e) => setCreateForm({ ...createForm, website: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Address Line 1
+              </label>
+              <input
+                type="text"
+                className={inputClass}
+                value={createForm.address_line1}
+                onChange={(e) => setCreateForm({ ...createForm, address_line1: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Address Line 2
+              </label>
+              <input
+                type="text"
+                className={inputClass}
+                value={createForm.address_line2}
+                onChange={(e) => setCreateForm({ ...createForm, address_line2: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 City
@@ -261,6 +342,28 @@ export default function CustomersTab() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                State
+              </label>
+              <input
+                type="text"
+                className={inputClass}
+                value={createForm.state}
+                onChange={(e) => setCreateForm({ ...createForm, state: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Postal Code
+              </label>
+              <input
+                type="text"
+                className={inputClass}
+                value={createForm.postal_code}
+                onChange={(e) => setCreateForm({ ...createForm, postal_code: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Country
               </label>
               <select
@@ -268,7 +371,7 @@ export default function CustomersTab() {
                 value={createForm.country}
                 onChange={(e) => setCreateForm({ ...createForm, country: e.target.value })}
               >
-                <option value="">Select...</option>
+                <option value="">Select a country</option>
                 {COUNTRY_OPTIONS.map((c) => (
                   <option key={c.code} value={c.code}>
                     {c.name}
@@ -276,6 +379,18 @@ export default function CustomersTab() {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              VAT Number
+            </label>
+            <input
+              type="text"
+              className={inputClass}
+              value={createForm.vat_number}
+              onChange={(e) => setCreateForm({ ...createForm, vat_number: e.target.value })}
+            />
           </div>
 
           <div className="flex gap-2 pt-1">
