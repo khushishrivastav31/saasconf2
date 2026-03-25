@@ -276,9 +276,10 @@ async def _send_trainer_emails(
     """Send schedule emails to trainers (fire-and-forget background tasks)."""
     from app.core.email import send_email, send_email_background
     from app.core.trainer_schedule_pdf import generate_trainer_schedule_pdf
-
-    # Build trainer_id → email/name map
     from app.db.session import async_session_maker
+    from app.models.tenant import Tenant
+
+    from .email_settings import TEMPLATES_KEY, TRAINING_DEFAULT_TEMPLATES
 
     async with async_session_maker() as db:
         trainer_result = await db.execute(
@@ -288,6 +289,21 @@ async def _send_trainer_emails(
             )
         )
         trainers = {str(t.id): t for t in trainer_result.scalars().all()}
+
+        tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+        tenant = tenant_result.scalar_one()
+
+    # Load customizable templates (fall back to defaults)
+    saved_templates = (tenant.settings or {}).get(TEMPLATES_KEY, {})
+    company_name = tenant.name or ""
+
+    def _get_template(template_type: str) -> tuple[str, str]:
+        """Return (subject, body_html) from saved template or defaults."""
+        saved = saved_templates.get(template_type, {})
+        defaults = TRAINING_DEFAULT_TEMPLATES.get(template_type, {})
+        subj = saved.get("subject") or defaults.get("subject", "")
+        body = saved.get("body_html") or defaults.get("body_html", "")
+        return subj, body
 
     for tid in trainer_ids:
         trainer = trainers.get(tid)
@@ -318,7 +334,7 @@ async def _send_trainer_emails(
             "type": "application/pdf",
         }
 
-        # Build email body
+        # Build email from customizable template
         if is_update and diff:
             tc = diff.per_trainer_changes.get(tid)
             changes_html = ""
@@ -333,23 +349,23 @@ async def _send_trainer_emails(
                 if items:
                     changes_html = f"<h3>Changes</h3><ul>{''.join(items)}</ul>"
 
-            subject = f"Updated Training Schedule {year}"
-            html_body = f"""
-            <p>Dear {trainer.first_name},</p>
-            <p>Your training schedule for {year} has been updated.</p>
-            {changes_html}
-            <p>Please find your updated schedule attached.</p>
-            <p>Best regards</p>
-            """
+            subject, html_body = _get_template("training_schedule_update")
         else:
-            subject = f"Your Training Schedule {year}"
-            html_body = f"""
-            <p>Dear {trainer.first_name},</p>
-            <p>Your training schedule for {year} has been finalized.
-            Please find your personal schedule attached.</p>
-            <p>You have {len(trainer_placements)} training{"s" if len(trainer_placements) != 1 else ""} scheduled.</p>
-            <p>Best regards</p>
-            """
+            changes_html = ""
+            subject, html_body = _get_template("training_schedule_publish")
+
+        # Replace placeholders
+        replacements = {
+            "[First Name]": trainer.first_name or "",
+            "[Last Name]": trainer.last_name or "",
+            "[Year]": str(year),
+            "[Training Count]": str(len(trainer_placements)),
+            "[Changes]": changes_html,
+            "[Company Name]": company_name,
+        }
+        for placeholder, value in replacements.items():
+            subject = subject.replace(placeholder, value)
+            html_body = html_body.replace(placeholder, value)
 
         send_email_background(
             send_email,

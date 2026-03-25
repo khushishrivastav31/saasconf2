@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Training Policies tab — tenant-scoped policies stored in `tenant.settings["training_policies"]`, new GET/PUT `/trainings/policies` endpoint, extracted shared `PolicyCard` component + `policyConstants.ts`, refactored conference PoliciesTab to use shared component, implemented training PoliciesTab, 8 backend + 6 frontend tests, handbook updated.
-- **Status**: All checks pass — mypy, ruff, tsc, eslint. 1638 frontend tests green. 2704 backend tests green (60 skipped).
+- **Last completed**: Training Email Settings + Templates — tenant-scoped email settings (toggle, header/footer) + 7 email template types (registration + invoicing) stored in tenant.settings JSONB, full CRUD API with defaults/reset, EmailSettingsTab + SystemEmailTemplatesTab with edit modal, 8 backend + 8 frontend tests. Also: Training Registration Questions tab + Training Policies tab (earlier this session).
+- **Status**: All checks pass — mypy, ruff, tsc, eslint. 1651 frontend tests green. Backend feature tests green.
