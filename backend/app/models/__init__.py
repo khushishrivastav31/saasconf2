@@ -50,6 +50,7 @@ from app.models.messaging import (
 )
 from app.models.module import Module, TenantModule
 from app.models.news import NewsArticle
+from app.models.offer_template import OfferTemplate
 from app.models.paper_form_variant import PaperFormVariant, PaperFormVariantField
 from app.models.payment_reminder import PaymentReminder
 from app.models.platform_currency import PlatformCurrency
@@ -161,6 +162,7 @@ __all__ = [
     "MessageThread",
     "Module",
     "NewsArticle",
+    "OfferTemplate",
     "PaperFormField",
     "PaperFormVariant",
     "PaperFormVariantField",

@@ -20,6 +20,15 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
     "badge_conditional_image": {"image/jpeg", "image/png", "image/webp", "image/gif"},
     "trainer_photo": {"image/jpeg", "image/png", "image/webp"},
     "customer_logo": {"image/jpeg", "image/png", "image/webp", "image/gif"},
+    "offer_template": {
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/rtf",
+        "text/rtf",
+        "text/plain",
+        "application/vnd.oasis.opendocument.text",
+    },
     "sponsor_package_contract": {
         "application/pdf",
         "application/msword",
