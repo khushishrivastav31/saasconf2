@@ -225,8 +225,9 @@ export default function Trainings() {
                                 const isYearGroup = child.group && /^\d{4}$/.test(child.group);
                                 const isYearCollapsed =
                                   isYearGroup && collapsedYears.has(child.group!);
-                                const isLatestYearGroup =
-                                  isYearGroup && Number(child.group) === latestYear;
+                                const currentCalendarYear = new Date().getFullYear();
+                                const isPastYear =
+                                  isYearGroup && Number(child.group) < currentCalendarYear;
                                 const yearObj = isYearGroup
                                   ? programYears.find((py) => py.year === Number(child.group))
                                   : null;
@@ -260,7 +261,7 @@ export default function Trainings() {
                                           </svg>
                                           {child.group}
                                         </button>
-                                        {!isLatestYearGroup && yearObj && (
+                                        {isPastYear && yearObj && (
                                           <button
                                             type="button"
                                             onClick={() =>
