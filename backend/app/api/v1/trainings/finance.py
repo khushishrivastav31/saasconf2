@@ -58,6 +58,7 @@ DEFAULT_FINANCE: dict = {
     "stripe": {
         "publishable_key": "",
         "secret_key": "",
+        "webhook_secret": "",
         "is_enabled": False,
         "bank_transfer_countries": [],
     },
@@ -441,10 +442,11 @@ async def get_stripe(current_user: TenantAdminDep, db: DbSessionDep) -> dict:
     tenant = await _get_tenant(db, current_user)
     f = _get_finance(tenant)
     stripe = f.get("stripe", DEFAULT_FINANCE["stripe"])
-    # Mask secret key for non-super-users
+    # Mask secrets for non-super-users
     result = {**stripe}
     if not current_user.is_super_admin and not current_user.is_tenant_super_user:
         result["secret_key"] = _mask_key(result.get("secret_key", ""))
+        result["webhook_secret"] = _mask_key(result.get("webhook_secret", ""))
     return result
 
 
@@ -453,10 +455,10 @@ async def update_stripe(data: dict, current_user: TenantAdminDep, db: DbSessionD
     tenant = await _get_tenant(db, current_user)
     f = _get_finance(tenant)
     stripe = f.get("stripe", {**DEFAULT_FINANCE["stripe"]})
-    for key in ("publishable_key", "secret_key", "is_enabled", "bank_transfer_countries"):
+    for key in ("publishable_key", "secret_key", "webhook_secret", "is_enabled", "bank_transfer_countries"):
         if key in data:
             # Don't overwrite with masked value
-            if key == "secret_key" and data[key] and "****" in str(data[key]):
+            if key in ("secret_key", "webhook_secret") and data[key] and "****" in str(data[key]):
                 continue
             stripe[key] = data[key]
     f["stripe"] = stripe
@@ -467,6 +469,7 @@ async def update_stripe(data: dict, current_user: TenantAdminDep, db: DbSessionD
     result = {**f.get("stripe", DEFAULT_FINANCE["stripe"])}
     if not current_user.is_super_admin and not current_user.is_tenant_super_user:
         result["secret_key"] = _mask_key(result.get("secret_key", ""))
+        result["webhook_secret"] = _mask_key(result.get("webhook_secret", ""))
     return result
 
 

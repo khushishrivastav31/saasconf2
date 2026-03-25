@@ -1,3 +1,10 @@
+/**
+ * Stripe Setup Tab (Training)
+ *
+ * Configure Stripe API keys for payment processing.
+ * Includes publishable key, secret key, webhook URL, webhook signing secret,
+ * and bank transfer countries. Tenant-scoped — shared across all trainings.
+ */
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
@@ -9,6 +16,7 @@ import { COUNTRY_OPTIONS } from '../../../../config/countries';
 interface StripeSettings {
   publishable_key: string;
   secret_key: string;
+  webhook_secret: string;
   is_enabled: boolean;
   bank_transfer_countries: string[];
 }
@@ -16,6 +24,7 @@ interface StripeSettings {
 const DEFAULTS: StripeSettings = {
   publishable_key: '',
   secret_key: '',
+  webhook_secret: '',
   is_enabled: false,
   bank_transfer_countries: [],
 };
@@ -35,6 +44,8 @@ export default function StripeSetupTab() {
   const [form, setForm] = useState<StripeSettings>(DEFAULTS);
   const [isDirty, setIsDirty] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
+  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+  const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
 
   useEffect(() => {
@@ -76,6 +87,14 @@ export default function StripeSetupTab() {
     [form.bank_transfer_countries]
   );
 
+  const webhookUrl = `${window.location.origin}/api/v1/stripe/webhook`;
+
+  const copyWebhookUrl = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopiedWebhookUrl(true);
+    setTimeout(() => setCopiedWebhookUrl(false), 2000);
+  };
+
   const mutation = useMutation({
     mutationFn: async (payload: StripeSettings) => {
       await api.put('/trainings/finance/stripe', payload);
@@ -98,13 +117,13 @@ export default function StripeSetupTab() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
       </div>
     );
   }
 
   const inputClass =
-    'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500';
+    'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
   const sectionClass =
     'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6';
 
@@ -114,7 +133,8 @@ export default function StripeSetupTab() {
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Stripe Setup</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Configure Stripe payment processing for training invoices.
+            Configure Stripe API keys for payment processing. Only tenant super users can edit these
+            settings.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -136,25 +156,22 @@ export default function StripeSetupTab() {
         </div>
       </div>
 
-      {/* API Keys */}
-      <div className={sectionClass + ' space-y-4'}>
+      {/* API Keys + Webhook */}
+      <div className={sectionClass + ' space-y-5'}>
+        {/* Enable toggle */}
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
             checked={form.is_enabled}
             onChange={(e) => updateField('is_enabled', e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
           />
-          <div>
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              Enable Stripe integration
-            </span>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Accept credit card payments for training invoices.
-            </p>
-          </div>
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            Enable Stripe integration
+          </span>
         </label>
 
+        {/* Publishable Key */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Publishable Key
@@ -171,6 +188,7 @@ export default function StripeSetupTab() {
           </p>
         </div>
 
+        {/* Secret Key */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Secret Key
@@ -192,7 +210,58 @@ export default function StripeSetupTab() {
             </button>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Secret key starting with sk_test_ or sk_live_. Stored encrypted.
+            Secret key starting with sk_test_ or sk_live_
+          </p>
+        </div>
+
+        {/* Webhook URL */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Webhook URL
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={webhookUrl}
+              readOnly
+              className={inputClass + ' font-mono bg-gray-50 dark:bg-gray-900 flex-1'}
+            />
+            <button
+              type="button"
+              onClick={copyWebhookUrl}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              {copiedWebhookUrl ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Configure this URL in your Stripe Dashboard &rarr; Webhooks
+          </p>
+        </div>
+
+        {/* Webhook Signing Secret */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Webhook Signing Secret
+          </label>
+          <div className="relative">
+            <input
+              type={showWebhookSecret ? 'text' : 'password'}
+              value={form.webhook_secret}
+              onChange={(e) => updateField('webhook_secret', e.target.value)}
+              placeholder="whsec_..."
+              className={inputClass + ' font-mono pr-16'}
+            />
+            <button
+              type="button"
+              onClick={() => setShowWebhookSecret(!showWebhookSecret)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200"
+            >
+              {showWebhookSecret ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Signing secret from Stripe Dashboard (whsec_...). Used to verify webhook authenticity.
           </p>
         </div>
       </div>
@@ -232,7 +301,7 @@ export default function StripeSetupTab() {
                   type="checkbox"
                   checked={selectedCountrySet.has(c.code)}
                   onChange={() => toggleCountry(c.code)}
-                  className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="font-mono text-gray-400 dark:text-gray-500">{c.code}</span>
                 <span className="truncate">{c.name}</span>
