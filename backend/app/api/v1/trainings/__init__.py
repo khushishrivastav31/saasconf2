@@ -3,6 +3,7 @@
 from .certification_bodies import router as certification_bodies_router
 from .core import detail_router, router  # core has root-level routes (GET /, POST /)
 from .email_settings import router as email_settings_router
+from .finance import router as finance_router
 from .holidays import router as holidays_router
 from .languages import router as languages_router
 from .location_types import router as location_types_router
@@ -25,6 +26,7 @@ router.include_router(holidays_router)
 router.include_router(policies_router)
 router.include_router(registration_questions_router)
 router.include_router(email_settings_router)
+router.include_router(finance_router)
 router.include_router(location_types_router)
 router.include_router(detail_router)
 

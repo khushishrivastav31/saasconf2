@@ -244,6 +244,9 @@ export const queryKeys = {
   trainingEmailSettings: ['training-email-settings'] as const,
   trainingEmailTemplates: ['training-email-templates'] as const,
 
+  // ── Training Finance ──────────────────────────────────────────────
+  trainingFinance: ['training-finance'] as const,
+
   // ── Trainers ───────────────────────────────────────────────────
   trainers: {},
 

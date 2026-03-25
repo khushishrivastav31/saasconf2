@@ -1,0 +1,373 @@
+"""Training finance settings endpoints.
+
+All training finance settings are tenant-scoped, stored in
+tenant.settings["training_finance"]. Covers: currency & tax, numbering,
+company data, bank accounts, invoice templates, ZUGFeRD, Stripe,
+and payment reminders.
+"""
+
+from fastapi import APIRouter
+from sqlalchemy import select
+from sqlalchemy.orm.attributes import flag_modified
+
+from app.core.dependencies import DbSessionDep, TenantAdminDep
+from app.core.exceptions import ValidationError
+from app.core.html_sanitize import sanitize_html
+from app.models.tenant import Tenant
+
+router = APIRouter(prefix="/finance", tags=["training-finance"])
+
+SETTINGS_KEY = "training_finance"
+
+DEFAULT_FINANCE: dict = {
+    "currency": "EUR",
+    "invoice_currency": "EUR",
+    "invoice_exchange_rate": None,
+    "number_format": "european",
+    "vat_rules": [],
+    "eu_countries": [],
+    "invoice_number_template": "TR-[YYYY]-[Count]",
+    "invoice_counter_reset": "yearly",
+    "invoice_counter_value": 1,
+    "cancellation_number_template": "TR-CN-[YYYY]-[Count]",
+    "cancellation_counter_reset": "yearly",
+    "cancellation_counter_value": 1,
+    "company_info": {
+        "name": "",
+        "address_line1": "",
+        "address_line2": "",
+        "city": "",
+        "postal_code": "",
+        "country": "",
+        "vat_number": "",
+        "tax_id": "",
+        "phone": "",
+        "email": "",
+        "footer_text": "",
+    },
+    "bank_accounts": [],
+    "invoice_templates": {},
+    "invoice_header_html": "",
+    "invoice_footer_html": "",
+    "invoice_page_format": "A4",
+    "zugferd_enabled": False,
+    "stripe": {
+        "publishable_key": "",
+        "secret_key": "",
+        "is_enabled": False,
+        "bank_transfer_countries": [],
+    },
+    "payment_reminders": {
+        "enabled": True,
+        "first_reminder_days": 2,
+        "second_reminder_days": 17,
+        "notify_admin_after_second": True,
+    },
+}
+
+
+async def _get_tenant(db: DbSessionDep, current_user: TenantAdminDep) -> Tenant:
+    result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
+    return result.scalar_one()
+
+
+def _get_finance(tenant: Tenant) -> dict:
+    return (tenant.settings or {}).get(SETTINGS_KEY, {})
+
+
+def _save_finance(tenant: Tenant, finance: dict) -> None:
+    settings = tenant.settings or {}
+    settings[SETTINGS_KEY] = finance
+    tenant.settings = settings
+    flag_modified(tenant, "settings")
+
+
+def _val(finance: dict, key: str, fallback: object = None) -> object:
+    default = DEFAULT_FINANCE.get(key, fallback)
+    return finance.get(key, default)
+
+
+# ── Currency & Tax ───────────────────────────────────────────────
+
+
+@router.get("/currency-tax")
+async def get_currency_tax(current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    return {
+        "currency": _val(f, "currency"),
+        "invoice_currency": _val(f, "invoice_currency"),
+        "invoice_exchange_rate": _val(f, "invoice_exchange_rate"),
+        "number_format": _val(f, "number_format"),
+        "vat_rules": _val(f, "vat_rules"),
+        "eu_countries": _val(f, "eu_countries"),
+    }
+
+
+@router.put("/currency-tax")
+async def update_currency_tax(data: dict, current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    for key in ("currency", "invoice_currency", "invoice_exchange_rate", "number_format", "vat_rules", "eu_countries"):
+        if key in data:
+            f[key] = data[key]
+    _save_finance(tenant, f)
+    await db.commit()
+    await db.refresh(tenant)
+    f = _get_finance(tenant)
+    return {
+        "currency": _val(f, "currency"),
+        "invoice_currency": _val(f, "invoice_currency"),
+        "invoice_exchange_rate": _val(f, "invoice_exchange_rate"),
+        "number_format": _val(f, "number_format"),
+        "vat_rules": _val(f, "vat_rules"),
+        "eu_countries": _val(f, "eu_countries"),
+    }
+
+
+# ── Numbering ────────────────────────────────────────────────────
+
+
+@router.get("/numbering")
+async def get_numbering(current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    return {
+        "invoice_number_template": _val(f, "invoice_number_template"),
+        "invoice_counter_reset": _val(f, "invoice_counter_reset"),
+        "invoice_counter_value": _val(f, "invoice_counter_value"),
+        "cancellation_number_template": _val(f, "cancellation_number_template"),
+        "cancellation_counter_reset": _val(f, "cancellation_counter_reset"),
+        "cancellation_counter_value": _val(f, "cancellation_counter_value"),
+    }
+
+
+@router.put("/numbering")
+async def update_numbering(data: dict, current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    for key in (
+        "invoice_number_template",
+        "invoice_counter_reset",
+        "invoice_counter_value",
+        "cancellation_number_template",
+        "cancellation_counter_reset",
+        "cancellation_counter_value",
+    ):
+        if key in data:
+            f[key] = data[key]
+    _save_finance(tenant, f)
+    await db.commit()
+    await db.refresh(tenant)
+    f = _get_finance(tenant)
+    return {
+        "invoice_number_template": _val(f, "invoice_number_template"),
+        "invoice_counter_reset": _val(f, "invoice_counter_reset"),
+        "invoice_counter_value": _val(f, "invoice_counter_value"),
+        "cancellation_number_template": _val(f, "cancellation_number_template"),
+        "cancellation_counter_reset": _val(f, "cancellation_counter_reset"),
+        "cancellation_counter_value": _val(f, "cancellation_counter_value"),
+    }
+
+
+# ── Company Data ─────────────────────────────────────────────────
+
+
+@router.get("/company-data")
+async def get_company_data(current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    return {"company_info": f.get("company_info", DEFAULT_FINANCE["company_info"])}
+
+
+@router.put("/company-data")
+async def update_company_data(data: dict, current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    if "company_info" in data:
+        info = data["company_info"]
+        if isinstance(info, dict):
+            # Sanitize text fields
+            for key in ("name", "address_line1", "address_line2", "footer_text"):
+                if info.get(key):
+                    info[key] = sanitize_html(info[key])
+            f["company_info"] = info
+    _save_finance(tenant, f)
+    await db.commit()
+    await db.refresh(tenant)
+    f = _get_finance(tenant)
+    return {"company_info": f.get("company_info", DEFAULT_FINANCE["company_info"])}
+
+
+# ── Bank Accounts ────────────────────────────────────────────────
+
+
+@router.get("/bank-accounts")
+async def get_bank_accounts(current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    return {"bank_accounts": f.get("bank_accounts", [])}
+
+
+@router.put("/bank-accounts")
+async def update_bank_accounts(data: dict, current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    if "bank_accounts" in data:
+        accounts = data["bank_accounts"]
+        if not isinstance(accounts, list):
+            raise ValidationError("bank_accounts must be an array")
+        # Validate: at most one default
+        defaults = [a for a in accounts if a.get("is_default")]
+        if len(defaults) > 1:
+            raise ValidationError("Only one bank account can be marked as default")
+        f["bank_accounts"] = accounts
+    _save_finance(tenant, f)
+    await db.commit()
+    await db.refresh(tenant)
+    f = _get_finance(tenant)
+    return {"bank_accounts": f.get("bank_accounts", [])}
+
+
+# ── Invoice Templates ────────────────────────────────────────────
+
+
+@router.get("/invoice-templates")
+async def get_invoice_templates(current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    return {
+        "invoice_templates": f.get("invoice_templates", {}),
+        "invoice_header_html": f.get("invoice_header_html", ""),
+        "invoice_footer_html": f.get("invoice_footer_html", ""),
+        "invoice_page_format": f.get("invoice_page_format", "A4"),
+    }
+
+
+@router.put("/invoice-templates")
+async def update_invoice_templates(data: dict, current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    if "invoice_templates" in data:
+        templates = data["invoice_templates"]
+        if isinstance(templates, dict):
+            for key, html in templates.items():
+                if html:
+                    templates[key] = sanitize_html(html)
+            f["invoice_templates"] = templates
+    if "invoice_header_html" in data:
+        f["invoice_header_html"] = sanitize_html(data["invoice_header_html"]) if data["invoice_header_html"] else ""
+    if "invoice_footer_html" in data:
+        f["invoice_footer_html"] = sanitize_html(data["invoice_footer_html"]) if data["invoice_footer_html"] else ""
+    if "invoice_page_format" in data:
+        fmt = data["invoice_page_format"]
+        if fmt not in ("A4", "Letter", "Legal", "A5", "B5", "Tabloid"):
+            raise ValidationError(f"Invalid page format: {fmt}")
+        f["invoice_page_format"] = fmt
+    _save_finance(tenant, f)
+    await db.commit()
+    await db.refresh(tenant)
+    f = _get_finance(tenant)
+    return {
+        "invoice_templates": f.get("invoice_templates", {}),
+        "invoice_header_html": f.get("invoice_header_html", ""),
+        "invoice_footer_html": f.get("invoice_footer_html", ""),
+        "invoice_page_format": f.get("invoice_page_format", "A4"),
+    }
+
+
+# ── ZUGFeRD ──────────────────────────────────────────────────────
+
+
+@router.get("/zugferd")
+async def get_zugferd(current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    return {"zugferd_enabled": f.get("zugferd_enabled", False)}
+
+
+@router.put("/zugferd")
+async def update_zugferd(data: dict, current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    if "zugferd_enabled" in data:
+        f["zugferd_enabled"] = bool(data["zugferd_enabled"])
+    _save_finance(tenant, f)
+    await db.commit()
+    await db.refresh(tenant)
+    f = _get_finance(tenant)
+    return {"zugferd_enabled": f.get("zugferd_enabled", False)}
+
+
+# ── Stripe ───────────────────────────────────────────────────────
+
+
+def _mask_key(key: str) -> str:
+    """Mask a secret key, showing only first 3 and last 3 chars."""
+    if not key or len(key) < 10:
+        return key
+    return key[:3] + "****" + key[-3:]
+
+
+@router.get("/stripe")
+async def get_stripe(current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    stripe = f.get("stripe", DEFAULT_FINANCE["stripe"])
+    # Mask secret key for non-super-users
+    result = {**stripe}
+    if not current_user.is_super_admin and not current_user.is_tenant_super_user:
+        result["secret_key"] = _mask_key(result.get("secret_key", ""))
+    return result
+
+
+@router.put("/stripe")
+async def update_stripe(data: dict, current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    stripe = f.get("stripe", {**DEFAULT_FINANCE["stripe"]})
+    for key in ("publishable_key", "secret_key", "is_enabled", "bank_transfer_countries"):
+        if key in data:
+            # Don't overwrite with masked value
+            if key == "secret_key" and data[key] and "****" in str(data[key]):
+                continue
+            stripe[key] = data[key]
+    f["stripe"] = stripe
+    _save_finance(tenant, f)
+    await db.commit()
+    await db.refresh(tenant)
+    f = _get_finance(tenant)
+    result = {**f.get("stripe", DEFAULT_FINANCE["stripe"])}
+    if not current_user.is_super_admin and not current_user.is_tenant_super_user:
+        result["secret_key"] = _mask_key(result.get("secret_key", ""))
+    return result
+
+
+# ── Payment Reminders ────────────────────────────────────────────
+
+
+@router.get("/payment-reminders")
+async def get_payment_reminders(current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    return f.get("payment_reminders", DEFAULT_FINANCE["payment_reminders"])
+
+
+@router.put("/payment-reminders")
+async def update_payment_reminders(data: dict, current_user: TenantAdminDep, db: DbSessionDep) -> dict:
+    tenant = await _get_tenant(db, current_user)
+    f = _get_finance(tenant)
+    pr = f.get("payment_reminders", {**DEFAULT_FINANCE["payment_reminders"]})
+    for key in ("enabled", "first_reminder_days", "second_reminder_days", "notify_admin_after_second"):
+        if key in data:
+            pr[key] = data[key]
+    if isinstance(pr.get("first_reminder_days"), int) and pr["first_reminder_days"] < 1:
+        raise ValidationError("first_reminder_days must be at least 1")
+    if isinstance(pr.get("second_reminder_days"), int) and pr["second_reminder_days"] < 1:
+        raise ValidationError("second_reminder_days must be at least 1")
+    f["payment_reminders"] = pr
+    _save_finance(tenant, f)
+    await db.commit()
+    await db.refresh(tenant)
+    f = _get_finance(tenant)
+    return f.get("payment_reminders", DEFAULT_FINANCE["payment_reminders"])

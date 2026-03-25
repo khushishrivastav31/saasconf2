@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Training Email Settings + Templates — tenant-scoped email settings (toggle, header/footer) + 7 email template types (registration + invoicing) stored in tenant.settings JSONB, full CRUD API with defaults/reset, EmailSettingsTab + SystemEmailTemplatesTab with edit modal, 8 backend + 8 frontend tests. Also: Training Registration Questions tab + Training Policies tab (earlier this session).
-- **Status**: All checks pass — mypy, ruff, tsc, eslint. 1651 frontend tests green. Backend feature tests green.
+- **Last completed**: Training Finance Settings (all 8 tabs) — Currency & Tax, Numbering, Company Data, Bank Accounts, Invoice Templates, ZUGFeRD, Stripe, Payment Reminders. All tenant-scoped in `tenant.settings["training_finance"]` JSONB. Single `finance.py` backend API with 16 endpoints. 21 backend tests. Also earlier: Policies, Registration Questions, Email Settings/Templates tabs.
+- **Status**: All checks pass — mypy, ruff, tsc, eslint. 1651 frontend tests green. 21 finance backend tests green.

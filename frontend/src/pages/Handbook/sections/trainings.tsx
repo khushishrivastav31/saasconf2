@@ -144,6 +144,30 @@ export const trainingsCategory: HandbookCategory = {
       ),
     },
     {
+      id: '10-2f-finance',
+      title: 'Finance Settings',
+      categoryId: 'category-10',
+      content: () => (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Configure financial settings for training invoicing and payments.</p>
+<strong>8 Finance Tabs:</strong>
+<ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
+<li class="text-gray-700 dark:text-gray-300"><strong>Currency &amp; Tax</strong> — Set transaction/invoice currencies, number format, exchange rate, and VAT decision rules</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Numbering</strong> — Configure invoice and cancellation number templates with auto-incrementing counters</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Company Data</strong> — Set company name, address, VAT/tax IDs, contact info. Auto-populate from My Company</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Bank Accounts</strong> — Manage multiple bank accounts with IBAN/BIC, set default for invoices</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Invoice Templates</strong> — Customize invoice body HTML for bank transfer, credit card, and credit note types. Set header/footer and page format</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>ZUGFeRD</strong> — Enable/disable EN16931 e-invoicing (auto-configured from company data)</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Stripe Setup</strong> — Configure Stripe payment keys and bank transfer countries</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Payment Reminders</strong> — Enable reminders with configurable day intervals and admin notification</li>
+</ul>
+<strong>Scope:</strong> All finance settings are configured at the tenant level and shared across all trainings. Navigate to <strong>Trainings &rarr; Settings &rarr; Finance</strong> section.`,
+          }}
+        />
+      ),
+    },
+    {
       id: '10-3-final-program',
       title: 'Final Program',
       categoryId: 'category-10',
