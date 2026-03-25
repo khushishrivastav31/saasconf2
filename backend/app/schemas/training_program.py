@@ -9,7 +9,15 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class TrainingProgramYearCreate(BaseModel):
     """Schema for creating a training program year."""
 
-    year: int = Field(..., ge=2020, le=2099)
+    year: int = Field(..., le=2099)
+
+    @field_validator("year")
+    @classmethod
+    def year_not_in_past(cls, v: int) -> int:
+        current_year = date.today().year
+        if v < current_year:
+            raise ValueError(f"Year must be {current_year} or later")
+        return v
 
 
 class TrainingProgramYearUpdate(BaseModel):
