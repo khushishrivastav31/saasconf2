@@ -78,7 +78,7 @@ export default function ProgramYearManager({ programYears, onNavigateToYear }: P
               </label>
               <input
                 type="number"
-                min={2020}
+                min={new Date().getFullYear()}
                 max={2099}
                 className="w-32 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md shadow-sm py-2 px-3 sm:text-sm"
                 value={newYear}
