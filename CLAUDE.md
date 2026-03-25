@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Final Program feature — ProgramSnapshot model + migration 166, snapshot & diff service (program_snapshot.py), trainer schedule PDF generator (trainer_schedule_pdf.py), enhanced publish endpoint with snapshot creation + email notifications, preview-changes + confirm-update + snapshots API endpoints, FinalProgramTab with publish/update workflow, ChangesPreviewDialog with per-trainer change breakdown, ConfirmDialog enhanced with 'primary' variant + wide option. 14 snapshot tests green. Handbook updated with Training Programs category (Design/Assign/Final).
-- **Status**: All checks pass — mypy, ruff, tsc, eslint. 1632 frontend tests green. Full backend suite running.
+- **Last completed**: Tenant-scoped pronoun options refactor — migration 168 (deduplicate + drop conference_id + drop trainer_pronoun_options), new `/pronoun-options` tenant-level CRUD API, TenantPronounOptions.tsx page with sidebar nav, updated all consumers (AttendeeFields, ApplicantForm, ReplaceAttendeeModal, TrainersSettingsTab, Team, ProfilePage), removed old conference-scoped and trainer-scoped pronoun endpoints/tabs/types. Handbook updated.
+- **Status**: All checks pass — mypy, ruff, tsc, eslint. 1632 frontend tests green. 2696 backend tests green (60 skipped).
