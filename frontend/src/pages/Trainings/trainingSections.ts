@@ -51,6 +51,7 @@ export type StaticSectionId =
   // Top-level
   | 'program'
   | 'inhouse-trainings'
+  | 'offer-management'
   | 'customers'
   | 'attendees'
   | 'settings'
@@ -129,6 +130,7 @@ export const sectionGroups: TrainingSectionGroup[] = [
     sections: [
       { id: 'program', name: 'Training Program', icon: TrainingsIcon, children: [] },
       { id: 'inhouse-trainings', name: 'Inhouse Trainings', icon: InhouseTrainingsIcon },
+      { id: 'offer-management', name: 'Offer Management', icon: OfferTemplatesIcon },
       { id: 'customers', name: 'Customers', icon: CustomersIcon },
       { id: 'attendees', name: 'Attendees', icon: AttendeesIcon },
       {
