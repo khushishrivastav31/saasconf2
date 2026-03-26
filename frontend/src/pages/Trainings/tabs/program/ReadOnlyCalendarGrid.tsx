@@ -201,6 +201,7 @@ function renderReadOnlyLane(
         dateRange={`${formatDateDE(startStr)} → ${formatDateDE(endStr)}`}
         locationName={p.location_name}
         locationCode={p.location_code}
+        placementType={p.placement_type}
         trainerAssignments={p.trainer_assignments || []}
         isSelected={p.id === selectedPlacementId}
         onClick={onClickPlacement}

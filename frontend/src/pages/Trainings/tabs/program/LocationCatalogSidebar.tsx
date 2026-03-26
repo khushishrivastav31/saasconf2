@@ -100,7 +100,7 @@ const LocationCatalogSidebar = React.memo(function LocationCatalogSidebar({
           className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
         />
       )}
-      <div className="space-y-1 max-h-48 overflow-y-auto">
+      <div className="space-y-1 max-h-40 overflow-y-auto">
         {filtered.map((l) => (
           <DraggableLocationCard key={l.id} location={l} />
         ))}

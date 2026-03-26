@@ -24,6 +24,7 @@ import type {
   HolidayDateEntry,
 } from '../../../../types/training';
 import type { Location } from '../../../../types/location';
+import PlacementTypeSidebar from './PlacementTypeSidebar';
 
 interface Props {
   year: number;
@@ -170,13 +171,15 @@ export default function DesignProgramTab({ year }: Props) {
       data,
     }: {
       placementId: string;
-      data: { location_id?: string | null; placement_type?: string };
+      data: { location_id?: string | null; placement_type?: string; start_date?: string };
     }) => {
       if (!programYear) throw new Error('No program year');
+      console.log('Updating placement:', placementId, data);
       const res = await api.put<ProgramYearTraining>(
         `/trainings/programs/years/${programYear.id}/trainings/${placementId}`,
         data
       );
+      console.log('Update result:', res.data);
       return res.data;
     },
     onSuccess: () => {
@@ -258,14 +261,22 @@ export default function DesignProgramTab({ year }: Props) {
     [updatePlacement]
   );
 
+  const [activeDragType, setActiveDragType] = useState<string | null>(null);
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const data = event.active.data.current;
     if (data?.type === 'training') {
       setActiveDrag(data.training as Training);
       setActiveDragLocation(null);
+      setActiveDragType(null);
     } else if (data?.type === 'location') {
       setActiveDragLocation(data.location as Location);
       setActiveDrag(null);
+      setActiveDragType(null);
+    } else if (data?.type === 'placement-type') {
+      setActiveDragType(data.placementType as string);
+      setActiveDrag(null);
+      setActiveDragLocation(null);
     }
   }, []);
 
@@ -273,6 +284,7 @@ export default function DesignProgramTab({ year }: Props) {
     (event: DragEndEvent) => {
       setActiveDrag(null);
       setActiveDragLocation(null);
+      setActiveDragType(null);
 
       const { active, over } = event;
       if (!over || !active.data.current) return;
@@ -297,8 +309,15 @@ export default function DesignProgramTab({ year }: Props) {
         const placementId = dropData.placementId as string;
         handleChangeLocation(placementId, location.id);
       }
+
+      // Placement type dropped on training bar → assign type
+      if (dragData.type === 'placement-type' && dropData.type === 'placement') {
+        const placementType = dragData.placementType as string;
+        const placementId = dropData.placementId as string;
+        handleChangePlacementType(placementId, placementType);
+      }
     },
-    [year, createPlacement, handleChangeLocation]
+    [year, createPlacement, handleChangeLocation, handleChangePlacementType]
   );
 
   const handleRemovePlacement = useCallback(
@@ -350,6 +369,7 @@ export default function DesignProgramTab({ year }: Props) {
           <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 pr-4 self-start sticky top-4 max-h-[calc(100vh-8rem)] overflow-y-auto">
             <TrainingCatalogSidebar trainings={trainings} isLoading={trainingsLoading} />
             <LocationCatalogSidebar locations={locations} />
+            <PlacementTypeSidebar />
           </div>
           <div className="flex-1 min-w-0">
             <YearCalendarGrid
@@ -368,9 +388,10 @@ export default function DesignProgramTab({ year }: Props) {
       <DragOverlay>
         {activeDrag ? (
           <div
-            className="px-3 py-2 rounded-md text-white shadow-2xl opacity-90 text-sm font-medium"
+            className="px-3 py-2 rounded-md text-white shadow-lg text-sm font-medium pointer-events-none"
             style={{
               backgroundColor: activeDrag.color || '#6B7280',
+              opacity: 0.45,
               minWidth: 120,
             }}
           >
@@ -401,6 +422,14 @@ export default function DesignProgramTab({ year }: Props) {
             {activeDragLocation.code
               ? `${activeDragLocation.code} — ${activeDragLocation.name}`
               : activeDragLocation.name}
+          </div>
+        ) : activeDragType ? (
+          <div
+            className={`px-3 py-2 rounded-md shadow-2xl opacity-90 text-sm font-medium text-white ${
+              activeDragType === 'inhouse' ? 'bg-amber-600' : 'bg-teal-600'
+            }`}
+          >
+            {activeDragType === 'inhouse' ? 'Inhouse' : 'Hybrid'}
           </div>
         ) : null}
       </DragOverlay>

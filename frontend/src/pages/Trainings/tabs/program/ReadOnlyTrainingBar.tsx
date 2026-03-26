@@ -12,6 +12,7 @@ interface ReadOnlyTrainingBarProps {
   dateRange: string;
   locationName: string | null;
   locationCode: string | null;
+  placementType?: string;
   trainerAssignments: PlacementTrainerAssignment[];
   isSelected: boolean;
   onClick: (placementId: string) => void;
@@ -31,6 +32,7 @@ const ReadOnlyTrainingBar = React.memo(function ReadOnlyTrainingBar({
   dateRange,
   locationName,
   locationCode,
+  placementType,
   trainerAssignments,
   isSelected,
   onClick,
@@ -66,6 +68,17 @@ const ReadOnlyTrainingBar = React.memo(function ReadOnlyTrainingBar({
         onClick={() => onClick(placementId)}
       >
         <span className="truncate">{slug}</span>
+        {placementType && placementType !== 'open' && (
+          <span
+            className={`flex-shrink-0 text-[9px] px-1 py-px rounded font-bold ${
+              placementType === 'inhouse'
+                ? 'bg-amber-200/80 text-amber-900 dark:bg-amber-800/60 dark:text-amber-200'
+                : 'bg-teal-200/80 text-teal-900 dark:bg-teal-800/60 dark:text-teal-200'
+            }`}
+          >
+            {placementType === 'inhouse' ? 'IH' : 'HY'}
+          </span>
+        )}
         {locationLabel && (
           <span
             className="flex-shrink-0 text-[10px] px-1 rounded bg-white/60 dark:bg-gray-900/60"

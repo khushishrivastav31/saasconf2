@@ -315,6 +315,18 @@ export default function AssignTrainersTab({ year }: Props) {
               <div>
                 <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {selectedSlug}
+                  {selectedPlacement.placement_type &&
+                    selectedPlacement.placement_type !== 'open' && (
+                      <span
+                        className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                          selectedPlacement.placement_type === 'inhouse'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                            : 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300'
+                        }`}
+                      >
+                        {selectedPlacement.placement_type === 'inhouse' ? 'IH' : 'HY'}
+                      </span>
+                    )}
                   <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">
                     {formatDateDE(selectedPlacement.start_date)}
                     {selectedPlacement.training_duration

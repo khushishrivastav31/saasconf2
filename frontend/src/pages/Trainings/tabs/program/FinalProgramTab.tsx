@@ -152,38 +152,51 @@ export default function FinalProgramTab({ year }: Props) {
     previewMutation.mutate();
   }, [previewMutation]);
 
+  // Build a lookup from live placements for fields not in older snapshots
+  const livePlacementMap = useMemo(() => {
+    const map = new Map<string, ProgramYearTraining>();
+    for (const p of placements) map.set(p.id, p);
+    return map;
+  }, [placements]);
+
   // Convert snapshot data to ProgramYearTraining format for the grid
   const snapshotPlacements: ProgramYearTraining[] = useMemo(() => {
     if (!latestSnapshot?.snapshot_data) return [];
-    return latestSnapshot.snapshot_data.map((entry) => ({
-      id: entry.placement_id,
-      program_year_id: programYear?.id ?? '',
-      training_id: '',
-      training_name: entry.training_name,
-      training_slug: entry.training_slug,
-      training_abbreviation: entry.training_abbreviation,
-      training_duration: entry.duration,
-      training_color: entry.training_color,
-      location_id: null,
-      location_name: entry.location_name,
-      location_code: entry.location_code,
-      start_date: entry.start_date,
-      placement_type: (entry.placement_type || 'open') as 'open' | 'inhouse' | 'hybrid',
-      created_at: '',
-      updated_at: '',
-      trainer_assignments: entry.trainer_ids.map((tid, idx) => {
-        const nameParts = (entry.trainer_names[idx] || '').split(' ');
-        return {
-          id: `snap-${tid}-${entry.placement_id}`,
-          placement_id: entry.placement_id,
-          trainer_id: tid,
-          trainer_first_name: nameParts[0] || '',
-          trainer_last_name: nameParts.slice(1).join(' ') || '',
-          created_at: '',
-        };
-      }),
-    }));
-  }, [latestSnapshot, programYear?.id]);
+    return latestSnapshot.snapshot_data.map((entry) => {
+      const live = livePlacementMap.get(entry.placement_id);
+      return {
+        id: entry.placement_id,
+        program_year_id: programYear?.id ?? '',
+        training_id: '',
+        training_name: entry.training_name,
+        training_slug: entry.training_slug,
+        training_abbreviation: entry.training_abbreviation,
+        training_duration: entry.duration,
+        training_color: entry.training_color,
+        location_id: null,
+        location_name: entry.location_name,
+        location_code: entry.location_code,
+        start_date: entry.start_date,
+        placement_type: (live?.placement_type || entry.placement_type || 'open') as
+          | 'open'
+          | 'inhouse'
+          | 'hybrid',
+        created_at: '',
+        updated_at: '',
+        trainer_assignments: entry.trainer_ids.map((tid, idx) => {
+          const nameParts = (entry.trainer_names[idx] || '').split(' ');
+          return {
+            id: `snap-${tid}-${entry.placement_id}`,
+            placement_id: entry.placement_id,
+            trainer_id: tid,
+            trainer_first_name: nameParts[0] || '',
+            trainer_last_name: nameParts.slice(1).join(' ') || '',
+            created_at: '',
+          };
+        }),
+      };
+    });
+  }, [latestSnapshot, programYear?.id, livePlacementMap]);
 
   if (!programYear) {
     return (
@@ -296,6 +309,17 @@ export default function FinalProgramTab({ year }: Props) {
                   <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     {slug}
                   </span>
+                  {selected.placement_type && selected.placement_type !== 'open' && (
+                    <span
+                      className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                        selected.placement_type === 'inhouse'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                          : 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300'
+                      }`}
+                    >
+                      {selected.placement_type === 'inhouse' ? 'IH' : 'HY'}
+                    </span>
+                  )}
                   <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
                     {formatDateDE(selected.start_date)}
                     {selected.training_duration ? ` (${selected.training_duration}d)` : ''}

@@ -91,7 +91,7 @@ const TrainingCatalogSidebar = React.memo(function TrainingCatalogSidebar({
           No trainings found
         </p>
       ) : (
-        <div className="space-y-1.5 max-h-[calc(100vh-380px)] overflow-y-auto">
+        <div className="space-y-1.5 max-h-40 overflow-y-auto">
           {filtered.map((t) => (
             <DraggableCard key={t.id} training={t} />
           ))}

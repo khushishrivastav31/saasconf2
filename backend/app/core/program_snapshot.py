@@ -33,6 +33,7 @@ def build_snapshot(placements: list[ProgramYearTraining]) -> list[dict[str, Any]
                 "location_id": str(p.location_id) if p.location_id else None,
                 "location_name": p.location.name if p.location else None,
                 "location_code": p.location.code if p.location else None,
+                "placement_type": p.placement_type or "open",
                 "trainer_ids": trainer_ids,
                 "trainer_names": trainer_names,
             }

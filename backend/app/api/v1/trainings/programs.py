@@ -724,6 +724,7 @@ def _placement_to_response(p: ProgramYearTraining) -> ProgramYearTrainingRespons
         location_name=p.location.name if p.location else None,
         location_code=p.location.code if p.location else None,
         start_date=p.start_date,
+        placement_type=p.placement_type or "open",
         created_at=p.created_at,
         updated_at=p.updated_at,
         trainer_assignments=trainer_assignments,
