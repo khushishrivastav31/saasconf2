@@ -153,7 +153,12 @@ async def delete_customer(
     db: DbSessionDep,
     request: Request,
 ) -> dict:
-    """Delete a customer (only if no inhouse trainings linked)."""
+    """Delete a customer (only if no inhouse trainings linked). Requires tenant super user."""
+    if not current_user.is_super_admin and not current_user.is_tenant_super_user:
+        from app.core.exceptions import ForbiddenError
+
+        raise ForbiddenError("Only tenant super users can delete customers")
+
     from app.models.inhouse_training import InhouseTraining
 
     result = await db.execute(select(Customer).where(Customer.id == customer_id, _tenant_filter(current_user)))

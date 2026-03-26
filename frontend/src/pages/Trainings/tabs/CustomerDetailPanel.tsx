@@ -14,7 +14,7 @@ import ContactPersonList from '../../../components/ContactPersonList';
 import type { LocationContactPerson } from '../../../types';
 import { queryKeys } from '../../../config/queryKeys';
 import { usePlatformCurrencies } from '../../../hooks/api/usePlatformCurrencies';
-import type { CustomerOffer, AvailablePlacement } from '../../../types/training';
+import type { CustomerOffer, AvailablePlacement, OfferAttendee } from '../../../types/training';
 import type { Customer } from './CustomersTab';
 import OfferDocumentsSection from './OfferDocumentsSection';
 
@@ -580,6 +580,466 @@ const PLACEMENT_TYPE_COLORS: Record<string, string> = {
   open: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
 };
 
+// ---------------------------------------------------------------------------
+// Attendee row — inline-editable row within an expanded placement
+// ---------------------------------------------------------------------------
+
+interface AttendeeFormData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  certification: boolean;
+  exam_mode: string;
+  extra_time: boolean;
+  exam_language: string;
+  comments: string;
+}
+
+function emptyAttendeeForm(): AttendeeFormData {
+  return {
+    first_name: '',
+    last_name: '',
+    email: '',
+    certification: false,
+    exam_mode: '',
+    extra_time: false,
+    exam_language: '',
+    comments: '',
+  };
+}
+
+function attendeeToForm(a: OfferAttendee): AttendeeFormData {
+  return {
+    first_name: a.first_name,
+    last_name: a.last_name,
+    email: a.email ?? '',
+    certification: a.certification,
+    exam_mode: a.exam_mode ?? '',
+    extra_time: a.extra_time,
+    exam_language: a.exam_language ?? '',
+    comments: a.comments ?? '',
+  };
+}
+
+const AttendeeRow = React.memo(function AttendeeRow({
+  attendee,
+  offerId,
+  placementId,
+  languages,
+  isNew,
+  onCancelNew,
+}: {
+  attendee: OfferAttendee | null;
+  offerId: string;
+  placementId: string;
+  languages: Array<{ id: string; name: string }>;
+  isNew?: boolean;
+  onCancelNew?: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [form, setForm] = useState<AttendeeFormData>(
+    attendee ? attendeeToForm(attendee) : emptyAttendeeForm()
+  );
+  const [isDirty, setIsDirty] = useState(false);
+
+  const inputClass =
+    'block w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100';
+  const checkboxClass =
+    'rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500';
+
+  const invalidateAttendees = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.offerAttendees(offerId, placementId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.customerOffers('') });
+    // Update trainer schedule to reflect new attendee counts
+    queryClient.invalidateQueries({ queryKey: ['trainer-schedule'] });
+    queryClient.invalidateQueries({ queryKey: ['all-offers'] });
+  }, [queryClient, offerId, placementId]);
+
+  const updateField = useCallback((key: keyof AttendeeFormData, value: unknown) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setIsDirty(true);
+  }, []);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email || null,
+        certification: form.certification,
+        exam_mode: form.exam_mode || null,
+        extra_time: form.extra_time,
+        exam_language: form.exam_language || null,
+        comments: form.comments || null,
+      };
+      if (isNew) {
+        await api.post(`/trainings/offers/${offerId}/attendees`, {
+          ...payload,
+          placement_id: placementId,
+        });
+      } else if (attendee) {
+        await api.put(`/trainings/offers/${offerId}/attendees/${attendee.id}`, payload);
+      }
+    },
+    onSuccess: () => {
+      invalidateAttendees();
+      setIsDirty(false);
+      if (isNew && onCancelNew) onCancelNew();
+      showToast(isNew ? 'Attendee added' : 'Attendee updated', 'success');
+    },
+    onError: (err) => showToast(parseApiError(err), 'error'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!attendee) return;
+      await api.delete(`/trainings/offers/${offerId}/attendees/${attendee.id}`);
+    },
+    onSuccess: () => {
+      invalidateAttendees();
+      showToast('Attendee deleted', 'success');
+    },
+    onError: (err) => showToast(parseApiError(err), 'error'),
+  });
+
+  const canSave = form.first_name.trim() && form.last_name.trim() && (isDirty || isNew);
+
+  return (
+    <tr className="bg-gray-50/50 dark:bg-gray-900/30">
+      <td className="px-2 py-1.5">
+        <input
+          type="text"
+          className={inputClass}
+          placeholder="First name"
+          value={form.first_name}
+          onChange={(e) => updateField('first_name', e.target.value)}
+        />
+      </td>
+      <td className="px-2 py-1.5">
+        <input
+          type="text"
+          className={inputClass}
+          placeholder="Last name"
+          value={form.last_name}
+          onChange={(e) => updateField('last_name', e.target.value)}
+        />
+      </td>
+      <td className="px-2 py-1.5">
+        <input
+          type="email"
+          className={inputClass}
+          placeholder="Email"
+          value={form.email}
+          onChange={(e) => updateField('email', e.target.value)}
+        />
+      </td>
+      <td className="px-2 py-1.5 text-center">
+        <input
+          type="checkbox"
+          className={checkboxClass}
+          checked={form.certification}
+          onChange={(e) => updateField('certification', e.target.checked)}
+        />
+      </td>
+      <td className="px-2 py-1.5">
+        <select
+          className={inputClass}
+          value={form.exam_mode}
+          onChange={(e) => updateField('exam_mode', e.target.value)}
+        >
+          <option value="">--</option>
+          <option value="onsite">Onsite</option>
+          <option value="online">Online</option>
+        </select>
+      </td>
+      <td className="px-2 py-1.5 text-center">
+        <input
+          type="checkbox"
+          className={checkboxClass}
+          checked={form.extra_time}
+          onChange={(e) => updateField('extra_time', e.target.checked)}
+        />
+      </td>
+      <td className="px-2 py-1.5">
+        <select
+          className={inputClass}
+          value={form.exam_language}
+          onChange={(e) => updateField('exam_language', e.target.value)}
+        >
+          <option value="">--</option>
+          {languages.map((l) => (
+            <option key={l.id} value={l.name}>
+              {l.name}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="px-2 py-1.5">
+        <input
+          type="text"
+          className={inputClass + ' min-w-40'}
+          placeholder="Comments"
+          value={form.comments}
+          onChange={(e) => updateField('comments', e.target.value)}
+        />
+      </td>
+      <td className="px-2 py-1.5 text-right whitespace-nowrap">
+        <div className="flex items-center justify-end gap-1">
+          {canSave && (
+            <button
+              type="button"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+              className="text-xs px-2 py-0.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              {saveMutation.isPending ? '...' : 'Save'}
+            </button>
+          )}
+          {isNew ? (
+            <button
+              type="button"
+              onClick={onCancelNew}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-0.5"
+              title="Cancel"
+            >
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+              className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5 transition-colors"
+              title="Delete attendee"
+            >
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Expandable placement row with attendees
+// ---------------------------------------------------------------------------
+
+const PlacementRowWithAttendees = React.memo(function PlacementRowWithAttendees({
+  placement,
+  offerId,
+  offerAttendeeLimit,
+  totalAttendeeCount,
+  onRemove,
+}: {
+  placement: {
+    id: string;
+    training_name: string;
+    training_slug: string | null;
+    start_date: string;
+    location_name: string | null;
+    placement_type: string;
+  };
+  offerId: string;
+  offerAttendeeLimit: number | null;
+  totalAttendeeCount: number;
+  onRemove: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [showNewRow, setShowNewRow] = useState(false);
+
+  // Fetch available languages for exam language dropdown
+  const { data: languagesData } = useQuery<{ items: Array<{ id: string; name: string }> }>({
+    queryKey: ['training-languages'],
+    queryFn: async () => {
+      const res = await api.get('/trainings/languages');
+      return res.data;
+    },
+    staleTime: 60_000,
+  });
+  const languages = useMemo(() => languagesData?.items ?? [], [languagesData]);
+
+  const { data: attendeesData } = useQuery<OfferAttendee[]>({
+    queryKey: queryKeys.offerAttendees(offerId, placement.id),
+    queryFn: async () => {
+      const res = await api.get(
+        `/trainings/offers/${offerId}/attendees?placement_id=${placement.id}`
+      );
+      return res.data;
+    },
+    enabled: expanded,
+    staleTime: 5_000,
+  });
+  const attendees = useMemo(() => attendeesData ?? [], [attendeesData]);
+
+  return (
+    <>
+      <tr
+        className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+        onClick={() => setExpanded((prev) => !prev)}
+      >
+        <td className="px-4 py-2 text-gray-400">
+          <svg
+            className={`w-4 h-4 transition-transform ${expanded ? 'rotate-90' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
+          {placement.training_slug || placement.training_name}
+          {attendees.length > 0 && (
+            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+              {attendees.length} attendee{attendees.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+          {new Date(placement.start_date).toLocaleDateString()}
+        </td>
+        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+          {placement.location_name || '-'}
+        </td>
+        <td className="px-4 py-2">
+          <span
+            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${PLACEMENT_TYPE_COLORS[placement.placement_type] || PLACEMENT_TYPE_COLORS.open}`}
+          >
+            {placement.placement_type}
+          </span>
+        </td>
+        <td className="px-4 py-2 text-right">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+            title="Remove from offer"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={6} className="px-0 py-0">
+            <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
+              {attendees.length > 0 || showNewRow ? (
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-24">
+                        First Name
+                      </th>
+                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-24">
+                        Last Name
+                      </th>
+                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">
+                        Email
+                      </th>
+                      <th className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-10">
+                        Cert
+                      </th>
+                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-20">
+                        Exam
+                      </th>
+                      <th className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-14">
+                        Extra
+                      </th>
+                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-16">
+                        Lang
+                      </th>
+                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase min-w-40">
+                        Comments
+                      </th>
+                      <th className="px-2 py-1.5 w-20" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {attendees.map((a) => (
+                      <AttendeeRow
+                        key={a.id}
+                        attendee={a}
+                        offerId={offerId}
+                        placementId={placement.id}
+                        languages={languages}
+                      />
+                    ))}
+                    {showNewRow && (
+                      <AttendeeRow
+                        attendee={null}
+                        offerId={offerId}
+                        placementId={placement.id}
+                        languages={languages}
+                        isNew
+                        onCancelNew={() => setShowNewRow(false)}
+                      />
+                    )}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-xs text-gray-400 dark:text-gray-500 py-3 text-center">
+                  No attendees yet.
+                </p>
+              )}
+              <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                {!showNewRow && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewRow(true)}
+                    className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                  >
+                    + Add Attendee
+                  </button>
+                )}
+                {offerAttendeeLimit != null && totalAttendeeCount > offerAttendeeLimit && (
+                  <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    Warning: {totalAttendeeCount} attendees exceed the offer limit of{' '}
+                    {offerAttendeeLimit}
+                  </span>
+                )}
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+});
+
 interface OfferForm {
   attendees: number | null;
   training_price: number | null;
@@ -693,7 +1153,7 @@ function OffersTab({
       const res = await api.get('/trainings/offers/available-placements');
       return res.data;
     },
-    enabled: showCreate || showAddPlacements,
+    staleTime: 10_000,
   });
   const availablePlacements = useMemo(() => availableData ?? [], [availableData]);
 
@@ -711,6 +1171,7 @@ function OffersTab({
 
   const invalidateOffers = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.customerOffers(customerId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.availablePlacements });
   }, [queryClient, customerId]);
 
   // Keep selectedOffer in sync with refetched data
@@ -1100,6 +1561,7 @@ function OffersTab({
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-6" />
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                       Training
                     </th>
@@ -1117,46 +1579,14 @@ function OffersTab({
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {(selectedOffer.placements ?? []).map((p) => (
-                    <tr key={p.id}>
-                      <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
-                        {p.training_slug || p.training_name}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-                        {new Date(p.start_date).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-                        {p.location_name || '-'}
-                      </td>
-                      <td className="px-4 py-2">
-                        <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${PLACEMENT_TYPE_COLORS[p.placement_type] || PLACEMENT_TYPE_COLORS.open}`}
-                        >
-                          {p.placement_type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setRemoveConfirm(p.id)}
-                          className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                          title="Remove from offer"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
+                    <PlacementRowWithAttendees
+                      key={p.id}
+                      placement={p}
+                      offerId={selectedOffer.id}
+                      offerAttendeeLimit={selectedOffer.attendees}
+                      totalAttendeeCount={selectedOffer.attendee_count ?? 0}
+                      onRemove={() => setRemoveConfirm(p.id)}
+                    />
                   ))}
                 </tbody>
               </table>

@@ -483,6 +483,7 @@ interface ScheduleItem {
   location_city: string | null;
   placement_type: string;
   customer_name: string | null;
+  attendee_count: number;
   year: number;
   month: number;
 }
@@ -604,6 +605,12 @@ const TrainerScheduleSection = React.memo(function TrainerScheduleSection({
                           {item.customer_name && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                               {item.customer_name}
+                            </span>
+                          )}
+                          {item.attendee_count > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                              {item.attendee_count}{' '}
+                              {item.attendee_count === 1 ? 'attendee' : 'attendees'}
                             </span>
                           )}
                         </p>

@@ -64,6 +64,7 @@ class CustomerOfferResponse(BaseModel):
     comments: str | None = None
     notes: str | None = None
     placements: list[OfferPlacementInfo] = Field(default_factory=list)
+    attendee_count: int = 0
     created_at: datetime
     updated_at: datetime
 

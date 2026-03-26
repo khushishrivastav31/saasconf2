@@ -14,6 +14,7 @@ from app.core.search import unaccent_ilike
 from app.models.audit import AuditLog
 from app.models.customer import Customer
 from app.models.customer_offer import CustomerOffer
+from app.models.offer_attendee import OfferAttendee
 from app.models.training_program import ProgramYearTraining
 from app.schemas.customer_offer import (
     AddPlacementsRequest,
@@ -34,7 +35,9 @@ def _tenant_filter(current_user: TenantAdminDep):
     return CustomerOffer.tenant_id == current_user.tenant_id
 
 
-def _offer_to_response(offer: CustomerOffer, placements: list[ProgramYearTraining]) -> CustomerOfferResponse:
+def _offer_to_response(
+    offer: CustomerOffer, placements: list[ProgramYearTraining], attendee_count: int = 0
+) -> CustomerOfferResponse:
     """Build a CustomerOfferResponse from an offer and its placements."""
     placement_infos = []
     for p in placements:
@@ -63,9 +66,16 @@ def _offer_to_response(offer: CustomerOffer, placements: list[ProgramYearTrainin
         comments=offer.comments,
         notes=offer.notes,
         placements=placement_infos,
+        attendee_count=attendee_count,
         created_at=offer.created_at,
         updated_at=offer.updated_at,
     )
+
+
+async def _count_offer_attendees(db: DbSessionDep, offer_id: UUID) -> int:
+    """Count attendees for an offer."""
+    result = await db.execute(select(func.count()).where(OfferAttendee.offer_id == offer_id))
+    return result.scalar() or 0
 
 
 async def _load_offer_placements(db: DbSessionDep, offer_id: UUID, tenant_id: UUID) -> list[ProgramYearTraining]:
@@ -192,7 +202,8 @@ async def list_offers(
     items = []
     for offer in offers:
         placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
-        items.append(_offer_to_response(offer, placements))
+        ac = await _count_offer_attendees(db, offer.id)
+        items.append(_offer_to_response(offer, placements, ac))
 
     return {"items": items, "total": total, "skip": skip, "limit": limit}
 
@@ -214,7 +225,8 @@ async def get_offer(
         raise NotFoundError("Offer not found")
 
     placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
-    return _offer_to_response(offer, placements)
+    ac = await _count_offer_attendees(db, offer.id)
+    return _offer_to_response(offer, placements, ac)
 
 
 @router.post("", response_model=CustomerOfferResponse, status_code=201)
@@ -286,7 +298,8 @@ async def create_offer(
     )
     offer = result.scalar_one()
     loaded_placements = await _load_offer_placements(db, offer.id, tenant_id)
-    return _offer_to_response(offer, loaded_placements)
+    ac = await _count_offer_attendees(db, offer.id)
+    return _offer_to_response(offer, loaded_placements, ac)
 
 
 @router.put("/{offer_id}", response_model=CustomerOfferResponse)
@@ -329,7 +342,8 @@ async def update_offer(
     await db.refresh(offer)
 
     placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
-    return _offer_to_response(offer, placements)
+    ac = await _count_offer_attendees(db, offer.id)
+    return _offer_to_response(offer, placements, ac)
 
 
 @router.post("/{offer_id}/placements", response_model=CustomerOfferResponse)
@@ -370,7 +384,8 @@ async def add_placements(
     await db.commit()
 
     loaded_placements = await _load_offer_placements(db, offer.id, offer.tenant_id)
-    return _offer_to_response(offer, loaded_placements)
+    ac = await _count_offer_attendees(db, offer.id)
+    return _offer_to_response(offer, loaded_placements, ac)
 
 
 @router.delete("/{offer_id}/placements/{placement_id}")

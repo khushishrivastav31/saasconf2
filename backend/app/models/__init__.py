@@ -51,6 +51,7 @@ from app.models.messaging import (
 )
 from app.models.module import Module, TenantModule
 from app.models.news import NewsArticle
+from app.models.offer_attendee import OfferAttendee
 from app.models.offer_document import OfferDocument, OfferDocumentVersion
 from app.models.offer_template import OfferTemplate
 from app.models.paper_form_variant import PaperFormVariant, PaperFormVariantField
@@ -165,6 +166,7 @@ __all__ = [
     "MessageThread",
     "Module",
     "NewsArticle",
+    "OfferAttendee",
     "OfferDocument",
     "OfferDocumentVersion",
     "OfferTemplate",

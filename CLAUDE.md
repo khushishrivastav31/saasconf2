@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Offer Document system — OfferDocument + OfferDocumentVersion models, migration 175, schema, API with 10 endpoints (CRUD, upload, download DOCX/PDF, send email, version history). Multiple documents per offer. Reuses sponsor contract conversion functions.
-- **Status**: All checks pass — mypy (532 files), ruff check + format. Migration 175 applied successfully.
+- **Last completed**: Offer Placement Attendees — OfferAttendee model, migration 176, schema, API with 4 endpoints (list/create/update/delete). Expandable placement rows in CustomerDetailPanel with inline-editable attendee table. attendee_count added to CustomerOfferResponse.
+- **Status**: All checks pass — mypy (536 files), ruff, tsc, eslint. Migration 176 applied.

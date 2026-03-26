@@ -423,7 +423,7 @@ function OfferDocumentsSection({
       const res = await api.get(`/trainings/offers/${offerId}/documents/${selectedDocId}/versions`);
       return res.data;
     },
-    enabled: showVersions && !!selectedDocId,
+    enabled: !!selectedDocId,
   });
   const versions = useMemo(() => versionsData ?? [], [versionsData]);
 
@@ -431,6 +431,9 @@ function OfferDocumentsSection({
     queryClient.invalidateQueries({ queryKey: queryKeys.offerDocuments(offerId) });
     if (selectedDocId) {
       queryClient.invalidateQueries({ queryKey: queryKeys.offerDocument(offerId, selectedDocId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.offerDocumentVersions(offerId, selectedDocId),
+      });
     }
   }, [queryClient, offerId, selectedDocId]);
 

@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
-from sqlalchemy import literal, select
+from sqlalchemy import func, literal, select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
 from app.core.pagination import calculate_pages, paginate
@@ -231,7 +231,12 @@ async def delete_trainer(
     db: DbSessionDep,
     request: Request,
 ) -> dict:
-    """Delete a trainer."""
+    """Delete a trainer. Requires tenant super user."""
+    if not current_user.is_super_admin and not current_user.is_tenant_super_user:
+        from app.core.exceptions import ForbiddenError
+
+        raise ForbiddenError("Only tenant super users can delete trainers")
+
     result = await db.execute(select(Trainer).where(Trainer.id == trainer_id, _tenant_filter(current_user)))
     trainer = result.scalar_one_or_none()
     if not trainer:
@@ -465,6 +470,20 @@ async def get_trainer_schedule(
     result = await db.execute(query)
     assignments = result.scalars().unique().all()
 
+    # Batch-load attendee counts per placement
+    placement_ids = [a.placement.id for a in assignments if a.placement]
+    attendee_counts: dict[str, int] = {}
+    if placement_ids:
+        from app.models.offer_attendee import OfferAttendee
+
+        count_result = await db.execute(
+            select(OfferAttendee.placement_id, func.count())
+            .where(OfferAttendee.placement_id.in_(placement_ids))
+            .group_by(OfferAttendee.placement_id)
+        )
+        for pid, cnt in count_result.all():
+            attendee_counts[str(pid)] = cnt
+
     items = []
     for a in assignments:
         p = a.placement
@@ -488,6 +507,7 @@ async def get_trainer_schedule(
                 "location_city": p.location.city if p.location else None,
                 "placement_type": p.placement_type or "open",
                 "customer_name": p.customer.name if p.customer else None,
+                "attendee_count": attendee_counts.get(str(p.id), 0),
                 "year": p.start_date.year,
                 "month": p.start_date.month,
             }

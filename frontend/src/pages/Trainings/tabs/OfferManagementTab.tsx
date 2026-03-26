@@ -125,6 +125,24 @@ export default function OfferManagementTab() {
     return counts;
   }, [offersRaw]);
 
+  const stats = useMemo(() => {
+    const all = offersRaw ?? [];
+    const byStatus: Record<string, { count: number; training: number; cert: number }> = {};
+    for (const s of STATUS_OPTIONS) byStatus[s] = { count: 0, training: 0, cert: 0 };
+    let totalTraining = 0;
+    let totalCert = 0;
+    for (const o of all) {
+      const s = byStatus[o.status] ?? { count: 0, training: 0, cert: 0 };
+      s.count += 1;
+      s.training += Number(o.training_price) || 0;
+      s.cert += Number(o.certification_price) || 0;
+      byStatus[o.status] = s;
+      totalTraining += Number(o.training_price) || 0;
+      totalCert += Number(o.certification_price) || 0;
+    }
+    return { byStatus, totalTraining, totalCert, totalOffers: all.length };
+  }, [offersRaw]);
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ offerId, status }: { offerId: string; status: string }) => {
       await api.put(`/trainings/offers/${offerId}`, { status });
@@ -155,6 +173,102 @@ export default function OfferManagementTab() {
           )}
         </h2>
       </div>
+
+      {/* Stats */}
+      {(offersRaw ?? []).length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+          {STATUS_OPTIONS.map((s) => {
+            const d = stats.byStatus[s];
+            return (
+              <div
+                key={s}
+                className={`rounded-lg border p-3 cursor-pointer transition-colors ${
+                  statusFilter === s
+                    ? 'border-primary-300 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/20'
+                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+                onClick={() => setStatusFilter(statusFilter === s ? '' : s)}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span
+                    className={`text-xs font-semibold uppercase ${STATUS_COLORS[s].split(' ').slice(0, 2).join(' ')} px-1.5 py-0.5 rounded-full`}
+                  >
+                    {s}
+                  </span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    {d.count}
+                  </span>
+                </div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 space-y-0.5">
+                  <div className="flex justify-between">
+                    <span>Training</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {d.training.toLocaleString('de-DE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{' '}
+                      €
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Cert.</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {d.cert.toLocaleString('de-DE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{' '}
+                      €
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {/* Total */}
+          <div className="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 p-3 col-span-2 lg:col-span-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
+                Total
+              </span>
+              <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                {stats.totalOffers}
+              </span>
+            </div>
+            <div className="text-[10px] text-gray-500 dark:text-gray-400 space-y-0.5">
+              <div className="flex justify-between">
+                <span>Training Revenue</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {stats.totalTraining.toLocaleString('de-DE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{' '}
+                  €
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Certification Revenue</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {stats.totalCert.toLocaleString('de-DE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{' '}
+                  €
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-0.5 mt-0.5">
+                <span className="font-semibold">Grand Total</span>
+                <span className="font-bold text-gray-900 dark:text-gray-100">
+                  {(stats.totalTraining + stats.totalCert).toLocaleString('de-DE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{' '}
+                  €
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">

@@ -529,6 +529,24 @@ export interface CustomerOffer {
   comments: string | null;
   notes: string | null;
   placements: OfferPlacementInfo[];
+  attendee_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OfferAttendee {
+  id: string;
+  tenant_id: string;
+  offer_id: string;
+  placement_id: string | null;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  certification: boolean;
+  exam_mode: 'onsite' | 'online' | null;
+  extra_time: boolean;
+  exam_language: string | null;
+  comments: string | null;
   created_at: string;
   updated_at: string;
 }
