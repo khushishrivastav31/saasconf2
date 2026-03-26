@@ -56,6 +56,7 @@ class ProgramYearTrainingCreate(BaseModel):
     training_id: UUID
     start_date: date
     location_id: UUID | None = None
+    placement_type: str = Field("open", pattern=r"^(open|inhouse|hybrid)$")
 
 
 class ProgramYearTrainingUpdate(BaseModel):
@@ -63,6 +64,7 @@ class ProgramYearTrainingUpdate(BaseModel):
 
     location_id: UUID | None = None
     start_date: date | None = None
+    placement_type: str | None = Field(None, pattern=r"^(open|inhouse|hybrid)$")
 
 
 class ProgramYearTrainingResponse(BaseModel):
@@ -82,6 +84,7 @@ class ProgramYearTrainingResponse(BaseModel):
     location_name: str | None = None
     location_code: str | None = None
     start_date: date
+    placement_type: str = "open"
     created_at: datetime
     updated_at: datetime
     trainer_assignments: list["PlacementTrainerResponse"] = Field(default_factory=list)

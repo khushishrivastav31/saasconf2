@@ -168,6 +168,7 @@ export default function FinalProgramTab({ year }: Props) {
       location_name: entry.location_name,
       location_code: entry.location_code,
       start_date: entry.start_date,
+      placement_type: (entry.placement_type || 'open') as 'open' | 'inhouse' | 'hybrid',
       created_at: '',
       updated_at: '',
       trainer_assignments: entry.trainer_ids.map((tid, idx) => {

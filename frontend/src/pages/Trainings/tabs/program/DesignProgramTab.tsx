@@ -170,7 +170,7 @@ export default function DesignProgramTab({ year }: Props) {
       data,
     }: {
       placementId: string;
-      data: { location_id: string | null };
+      data: { location_id?: string | null; placement_type?: string };
     }) => {
       if (!programYear) throw new Error('No program year');
       const res = await api.put<ProgramYearTraining>(
@@ -247,6 +247,13 @@ export default function DesignProgramTab({ year }: Props) {
   const handleChangeLocation = useCallback(
     (placementId: string, locationId: string | null) => {
       updatePlacement.mutate({ placementId, data: { location_id: locationId } });
+    },
+    [updatePlacement]
+  );
+
+  const handleChangePlacementType = useCallback(
+    (placementId: string, placementType: string) => {
+      updatePlacement.mutate({ placementId, data: { placement_type: placementType } });
     },
     [updatePlacement]
   );
@@ -352,6 +359,7 @@ export default function DesignProgramTab({ year }: Props) {
               locations={locations}
               onRemovePlacement={handleRemovePlacement}
               onChangeLocation={handleChangeLocation}
+              onChangePlacementType={handleChangePlacementType}
             />
           </div>
         </div>

@@ -12,9 +12,11 @@ interface CalendarTrainingBarProps {
   dateRange: string;
   locationName: string | null;
   locationCode: string | null;
+  placementType: string;
   locations: Location[];
   onRemove: () => void;
   onChangeLocation: (placementId: string, locationId: string | null) => void;
+  onChangePlacementType: (placementId: string, type: string) => void;
 }
 
 const CalendarTrainingBar = React.memo(function CalendarTrainingBar({
@@ -27,9 +29,11 @@ const CalendarTrainingBar = React.memo(function CalendarTrainingBar({
   dateRange,
   locationName,
   locationCode,
+  placementType,
   locations,
   onRemove,
   onChangeLocation,
+  onChangePlacementType,
 }: CalendarTrainingBarProps) {
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `bar-${placementId}`,
@@ -67,9 +71,20 @@ const CalendarTrainingBar = React.memo(function CalendarTrainingBar({
         onClick={() => setShowLocationPicker(!showLocationPicker)}
       >
         <span className="truncate">{slug}</span>
+        {placementType !== 'open' && (
+          <span
+            className={`shrink-0 text-[9px] px-1 rounded font-bold uppercase ${
+              placementType === 'inhouse'
+                ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'
+                : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+            }`}
+          >
+            {placementType === 'inhouse' ? 'IH' : 'HY'}
+          </span>
+        )}
         {locationLabel && (
           <span
-            className="flex-shrink-0 text-[10px] px-1 rounded bg-white/60 dark:bg-gray-900/60"
+            className="shrink-0 text-[10px] px-1 rounded bg-white/60 dark:bg-gray-900/60"
             style={{ color }}
           >
             {locationLabel}
@@ -122,6 +137,28 @@ const CalendarTrainingBar = React.memo(function CalendarTrainingBar({
               No locations available
             </p>
           )}
+          <div className="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
+            <p className="px-3 py-0.5 text-[10px] font-semibold uppercase text-gray-400 dark:text-gray-500">
+              Type
+            </p>
+            {(['open', 'inhouse', 'hybrid'] as const).map((type) => (
+              <button
+                key={type}
+                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                  placementType === type
+                    ? 'text-primary-600 font-medium'
+                    : 'text-gray-900 dark:text-gray-100'
+                }`}
+                onClick={() => {
+                  onChangePlacementType(placementId, type);
+                  setShowLocationPicker(false);
+                }}
+              >
+                {type === 'open' ? 'Open' : type === 'inhouse' ? 'Inhouse' : 'Hybrid'}
+                {placementType === type && ' ✓'}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </td>

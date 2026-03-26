@@ -413,6 +413,7 @@ export interface ProgramYearTraining {
   location_name: string | null;
   location_code: string | null;
   start_date: string;
+  placement_type: 'open' | 'inhouse' | 'hybrid';
   created_at: string;
   updated_at: string;
   trainer_assignments: PlacementTrainerAssignment[];
@@ -468,6 +469,7 @@ export interface ProgramSnapshotEntry {
   location_code: string | null;
   trainer_ids: string[];
   trainer_names: string[];
+  placement_type?: string;
 }
 
 export interface PlacementChangeResponse {

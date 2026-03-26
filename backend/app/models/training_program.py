@@ -76,6 +76,7 @@ class ProgramYearTraining(Base):
         UUID(as_uuid=True), ForeignKey("trainings.id", ondelete="CASCADE"), nullable=False
     )
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    placement_type: Mapped[str] = mapped_column(String(20), default="open", server_default="open")
     location_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("locations.id", ondelete="SET NULL"), nullable=True
     )
