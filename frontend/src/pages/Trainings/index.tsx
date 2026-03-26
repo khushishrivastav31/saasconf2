@@ -11,7 +11,7 @@ const DesignProgramTab = lazy(() => import('./tabs/program/DesignProgramTab'));
 const AssignTrainersTab = lazy(() => import('./tabs/program/AssignTrainersTab'));
 const FinalProgramTab = lazy(() => import('./tabs/program/FinalProgramTab'));
 const CustomersTab = lazy(() => import('./tabs/CustomersTab'));
-const InhouseTrainingsTab = lazy(() => import('./tabs/InhouseTrainingsTab'));
+const OfferManagementTab = lazy(() => import('./tabs/OfferManagementTab'));
 const SettingsTab = lazy(() => import('./tabs/SettingsTab'));
 const RegistrationsTab = lazy(() => import('./tabs/RegistrationsTab'));
 const InvoicesTab = lazy(() => import('./tabs/InvoicesTab'));
@@ -168,7 +168,29 @@ export default function Trainings() {
                       <div key={section.id}>
                         <div className="flex items-center">
                           <button
-                            onClick={() => setActiveSection(section.id)}
+                            onClick={() => {
+                              if (section.id === 'program' && programYears.length > 0) {
+                                // Expand the program section in sidebar
+                                setExpandedSections((prev) => {
+                                  const next = new Set(prev);
+                                  next.add('program');
+                                  return next;
+                                });
+                                // Auto-expand current year (uncollapse it)
+                                const currentYear = new Date().getFullYear();
+                                const target =
+                                  programYears.find((y) => y.year === currentYear) ??
+                                  programYears[0];
+                                if (target) {
+                                  setCollapsedYears((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(String(target.year));
+                                    return next;
+                                  });
+                                }
+                              }
+                              setActiveSection(section.id);
+                            }}
                             title={sidebarCollapsed ? section.name : undefined}
                             className={`flex-1 flex items-center rounded-md mb-0.5 ${
                               sidebarCollapsed ? 'justify-center px-2 py-2' : 'px-3 py-2'
@@ -339,15 +361,7 @@ export default function Trainings() {
               {programInfo?.tab === 'design' && <DesignProgramTab year={programInfo.year} />}
               {programInfo?.tab === 'trainers' && <AssignTrainersTab year={programInfo.year} />}
               {programInfo?.tab === 'final' && <FinalProgramTab year={programInfo.year} />}
-              {activeSection === 'inhouse-trainings' && <InhouseTrainingsTab />}
-              {activeSection === 'offer-management' && (
-                <div className="text-center py-12">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    Offer Management
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Coming soon.</p>
-                </div>
-              )}
+              {activeSection === 'offer-management' && <OfferManagementTab />}
               {activeSection === 'customers' && <CustomersTab />}
               {activeSection === 'attendees' && (
                 <div className="text-center py-12">

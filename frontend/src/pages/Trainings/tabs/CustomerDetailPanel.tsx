@@ -103,16 +103,20 @@ type TabId = (typeof TABS)[number]['id'];
 
 export default function CustomerDetailPanel({
   customer,
+  initialOfferId,
+  initialTab,
   onBack,
   onSaved,
 }: {
   customer: Customer;
+  initialOfferId?: string;
+  initialTab?: string;
   onBack: () => void;
   onSaved: () => void;
 }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<TabId>('details');
+  const [activeTab, setActiveTab] = useState<TabId>((initialTab as TabId) || 'details');
   const [form, setForm] = useState<CustomerForm>(formFromCustomer(customer));
   const [isDirty, setIsDirty] = useState(false);
   const [newContact, setNewContact] = useState<LocationContactPerson>({
@@ -337,6 +341,7 @@ export default function CustomerDetailPanel({
           <OffersTab
             customerId={customer.id}
             customerName={customer.name}
+            initialOfferId={initialOfferId}
             contactPersons={(form.contact_persons ?? []).map((cp) => ({
               first_name: cp.first_name,
               last_name: cp.last_name,
@@ -618,7 +623,7 @@ const OfferRow = React.memo(function OfferRow({
         </span>
       </td>
       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-        {offer.placements.length}
+        {offer.placements?.length ?? 0}
       </td>
       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
         {offer.training_price != null
@@ -640,10 +645,12 @@ const OfferRow = React.memo(function OfferRow({
 function OffersTab({
   customerId,
   customerName,
+  initialOfferId,
   contactPersons,
 }: {
   customerId: string;
   customerName: string;
+  initialOfferId?: string;
   contactPersons: Array<{ first_name: string; last_name: string; email: string; phone?: string }>;
 }) {
   const queryClient = useQueryClient();
@@ -651,6 +658,7 @@ function OffersTab({
   const { data: currencies = [] } = usePlatformCurrencies();
 
   const [selectedOffer, setSelectedOffer] = useState<CustomerOffer | null>(null);
+  const [initialOfferHandled, setInitialOfferHandled] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [editForm, setEditForm] = useState<OfferForm | null>(null);
   const [showAddPlacements, setShowAddPlacements] = useState(false);
@@ -673,7 +681,7 @@ function OffersTab({
     queryKey: queryKeys.customerOffers(customerId),
     queryFn: async () => {
       const res = await api.get(`/trainings/offers?customer_id=${customerId}`);
-      return res.data;
+      return res.data.items ?? res.data;
     },
   });
   const offers = useMemo(() => offersData ?? [], [offersData]);
@@ -705,6 +713,19 @@ function OffersTab({
     queryClient.invalidateQueries({ queryKey: queryKeys.customerOffers(customerId) });
   }, [queryClient, customerId]);
 
+  // Keep selectedOffer in sync with refetched data
+  React.useEffect(() => {
+    if (selectedOffer && offers.length > 0) {
+      const fresh = offers.find((o) => o.id === selectedOffer.id);
+      if (fresh) {
+        setSelectedOffer(fresh);
+      } else {
+        setSelectedOffer(null);
+        setEditForm(null);
+      }
+    }
+  }, [offers]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Select offer and init edit form
   const handleSelectOffer = useCallback((offer: CustomerOffer) => {
     setSelectedOffer(offer);
@@ -719,6 +740,17 @@ function OffersTab({
     });
     setShowCreate(false);
   }, []);
+
+  // Auto-select offer from deep link
+  React.useEffect(() => {
+    if (initialOfferId && !initialOfferHandled && offers.length > 0) {
+      const target = offers.find((o) => o.id === initialOfferId);
+      if (target) {
+        handleSelectOffer(target);
+      }
+      setInitialOfferHandled(true);
+    }
+  }, [initialOfferId, initialOfferHandled, offers, handleSelectOffer]);
 
   const handleBackToList = useCallback(() => {
     setSelectedOffer(null);
@@ -1049,7 +1081,7 @@ function OffersTab({
         <div>
           <div className="flex items-center justify-between mb-2">
             <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Assigned Trainings ({selectedOffer.placements.length})
+              Assigned Trainings ({selectedOffer.placements?.length ?? 0})
             </h5>
             <button
               type="button"
@@ -1063,7 +1095,7 @@ function OffersTab({
             </button>
           </div>
 
-          {selectedOffer.placements.length > 0 ? (
+          {(selectedOffer.placements?.length ?? 0) > 0 ? (
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
@@ -1084,7 +1116,7 @@ function OffersTab({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {selectedOffer.placements.map((p) => (
+                  {(selectedOffer.placements ?? []).map((p) => (
                     <tr key={p.id}>
                       <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
                         {p.training_slug || p.training_name}
@@ -1149,7 +1181,7 @@ function OffersTab({
             ) : (
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-48 overflow-y-auto bg-white dark:bg-gray-800">
                 {placementsByYear.map(({ year, placements }) => {
-                  const existingIds = new Set(selectedOffer.placements.map((p) => p.id));
+                  const existingIds = new Set((selectedOffer.placements ?? []).map((p) => p.id));
                   const filtered = placements.filter((p) => !existingIds.has(p.id));
                   if (filtered.length === 0) return null;
                   return (
@@ -1317,20 +1349,25 @@ function OffersTab({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Status
           </label>
-          <select
-            className={inputClass + ' max-w-xs'}
-            value={editForm.status}
-            onChange={(e) =>
-              setEditForm((prev) =>
-                prev ? { ...prev, status: e.target.value as OfferForm['status'] } : prev
-              )
-            }
-          >
-            <option value="draft">Draft</option>
-            <option value="sent">Sent</option>
-            <option value="rejected">Rejected</option>
-            <option value="accepted">Accepted</option>
-          </select>
+          {editForm.status === 'draft' ? (
+            <span className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              Draft — send a document to change status
+            </span>
+          ) : (
+            <select
+              className={inputClass + ' max-w-xs'}
+              value={editForm.status}
+              onChange={(e) =>
+                setEditForm((prev) =>
+                  prev ? { ...prev, status: e.target.value as OfferForm['status'] } : prev
+                )
+              }
+            >
+              <option value="sent">Sent</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          )}
         </div>
 
         {/* Comments */}

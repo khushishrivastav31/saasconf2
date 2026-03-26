@@ -134,21 +134,52 @@ async def _get_user(db: DbSessionDep, user_id: UUID) -> User:
 @router.post("", response_model=OfferDocumentResponse, status_code=201)
 async def create_document(
     offer_id: UUID,
-    file: UploadFile,
     current_user: TenantAdminDep,
     db: DbSessionDep,
     request: Request,
+    template_id: UUID | None = None,
+    file: UploadFile | None = None,
 ) -> OfferDocumentResponse:
-    """Create a new document from an uploaded file (Word/RTF/text/PDF)."""
+    """Create a new document from an offer template or uploaded file."""
     offer = await _get_offer(db, offer_id, current_user.tenant_id)
 
-    # Read and validate file
-    file_data = await file.read()
-    if not file_data:
-        raise ValidationError("Uploaded file is empty")
+    if template_id:
+        # Fetch template attachment
+        from app.models.attachment import Attachment
+        from app.models.offer_template import OfferTemplate
 
-    content_type = file.content_type or "application/octet-stream"
-    validated_type = validate_upload(file_data, content_type, "offer_document")
+        tmpl = (
+            await db.execute(
+                select(OfferTemplate).where(
+                    OfferTemplate.id == template_id,
+                    OfferTemplate.tenant_id == current_user.tenant_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if not tmpl:
+            raise NotFoundError("Offer template not found")
+
+        attachment = (
+            await db.execute(
+                select(Attachment).where(
+                    Attachment.entity_type == "offer_template",
+                    Attachment.entity_id == template_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if not attachment or not attachment.file_data:
+            raise ValidationError("Template has no file uploaded")
+
+        file_data = attachment.file_data
+        content_type = attachment.content_type or "application/octet-stream"
+    elif file:
+        file_data = await file.read()
+        if not file_data:
+            raise ValidationError("Uploaded file is empty")
+        content_type = file.content_type or "application/octet-stream"
+        validate_upload(file_data, content_type, "offer_document")
+    else:
+        raise ValidationError("Either template_id or file is required")
 
     # Fetch user for initials
     user = await _get_user(db, current_user.user_id)
@@ -158,7 +189,7 @@ async def create_document(
     base_filename = _generate_document_filename(customer_name, user.first_name or "", user.last_name or "")
 
     # Convert to HTML
-    html_content = _convert_to_html(file_data, validated_type)
+    html_content = _convert_to_html(file_data, content_type)
     is_editable = html_content is not None
 
     # Sanitize HTML if present
@@ -169,7 +200,7 @@ async def create_document(
         tenant_id=current_user.tenant_id,
         offer_id=offer_id,
         filename=base_filename,
-        content_type=validated_type,
+        content_type=content_type,
         file_data=file_data,
         file_size=len(file_data),
         html_content=html_content,
@@ -189,7 +220,7 @@ async def create_document(
         details={
             "offer_id": str(offer_id),
             "filename": base_filename,
-            "content_type": validated_type,
+            "content_type": content_type,
             "file_size": len(file_data),
         },
         ip_address=get_client_ip(request),
@@ -442,6 +473,11 @@ async def send_document(
 
         if doc.status == "draft":
             doc.status = "sent"
+
+        # Also update the parent offer status to "sent" if it's still draft
+        offer = await _get_offer(db, offer_id, current_user.tenant_id)
+        if offer.status == "draft":
+            offer.status = "sent"
 
     audit_log = AuditLog(
         tenant_id=current_user.tenant_id,

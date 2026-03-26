@@ -36,7 +36,6 @@ import {
   RevenueIcon,
   StatisticsIcon,
   HolidaysIcon,
-  InhouseTrainingsIcon,
   CustomersIcon,
   AttendeesIcon,
   OfferTemplatesIcon,
@@ -50,7 +49,6 @@ import {
 export type StaticSectionId =
   // Top-level
   | 'program'
-  | 'inhouse-trainings'
   | 'offer-management'
   | 'customers'
   | 'attendees'
@@ -129,22 +127,16 @@ export const sectionGroups: TrainingSectionGroup[] = [
     name: 'Setup',
     sections: [
       { id: 'program', name: 'Training Program', icon: TrainingsIcon, children: [] },
-      { id: 'inhouse-trainings', name: 'Inhouse Trainings', icon: InhouseTrainingsIcon },
       { id: 'offer-management', name: 'Offer Management', icon: OfferTemplatesIcon },
       { id: 'customers', name: 'Customers', icon: CustomersIcon },
       { id: 'attendees', name: 'Attendees', icon: AttendeesIcon },
+      { id: 'settings-trainers', name: 'Trainers', icon: TrainersIcon },
       {
         id: 'settings',
         name: 'Settings',
         icon: SettingsGearIcon,
         children: [
           // Training Setup
-          {
-            id: 'settings-trainers',
-            name: 'Trainers',
-            icon: TrainersIcon,
-            group: 'Training Setup',
-          },
           {
             id: 'settings-theme',
             name: 'Themes',

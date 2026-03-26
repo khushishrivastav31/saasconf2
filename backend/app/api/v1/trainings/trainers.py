@@ -450,6 +450,7 @@ async def get_trainer_schedule(
         .options(
             joinedload(PlacementTrainer.placement).joinedload(ProgramYearTraining.training),
             joinedload(PlacementTrainer.placement).joinedload(ProgramYearTraining.location),
+            joinedload(PlacementTrainer.placement).joinedload(ProgramYearTraining.customer),
         )
         .where(
             PlacementTrainer.trainer_id == trainer_id,
@@ -485,6 +486,8 @@ async def get_trainer_schedule(
                 "start_date": p.start_date.isoformat(),
                 "location_name": p.location.name if p.location else None,
                 "location_city": p.location.city if p.location else None,
+                "placement_type": p.placement_type or "open",
+                "customer_name": p.customer.name if p.customer else None,
                 "year": p.start_date.year,
                 "month": p.start_date.month,
             }

@@ -2,7 +2,7 @@
  * OfferDocumentsSection — Documents sub-section inside the Offer detail view.
  * Follows patterns from SponsorContractTab.
  */
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
@@ -43,8 +43,6 @@ const DOC_STATUS_COLORS: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
   sent: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
 };
-
-const ACCEPTED_TYPES = '.doc,.docx,.rtf,.txt,.pdf';
 
 // ---------------------------------------------------------------------------
 // Send Modal
@@ -377,8 +375,7 @@ function OfferDocumentsSection({
 }: OfferDocumentsSectionProps) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState<string>('');
   const [isContentDirty, setIsContentDirty] = useState(false);
@@ -397,10 +394,27 @@ function OfferDocumentsSection({
   });
   const documents = useMemo(() => docsData ?? [], [docsData]);
 
-  const selectedDoc = useMemo(
-    () => documents.find((d) => d.id === selectedDocId) ?? null,
-    [documents, selectedDocId]
-  );
+  // Fetch full document detail (with html_content) when selected
+  const { data: selectedDocDetail } = useQuery<OfferDocument>({
+    queryKey: queryKeys.offerDocument(offerId, selectedDocId ?? ''),
+    queryFn: async () => {
+      const res = await api.get(`/trainings/offers/${offerId}/documents/${selectedDocId}`);
+      return res.data;
+    },
+    enabled: !!selectedDocId,
+  });
+
+  const selectedDoc = useMemo(() => {
+    if (selectedDocDetail) return selectedDocDetail;
+    return documents.find((d) => d.id === selectedDocId) ?? null;
+  }, [selectedDocDetail, documents, selectedDocId]);
+
+  // Update editor content when full doc loads
+  React.useEffect(() => {
+    if (selectedDocDetail?.html_content && !isContentDirty) {
+      setEditContent(selectedDocDetail.html_content);
+    }
+  }, [selectedDocDetail, isContentDirty]);
 
   // Fetch versions when expanded
   const { data: versionsData } = useQuery<OfferDocumentVersion[]>({
@@ -415,7 +429,10 @@ function OfferDocumentsSection({
 
   const invalidateDocs = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.offerDocuments(offerId) });
-  }, [queryClient, offerId]);
+    if (selectedDocId) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.offerDocument(offerId, selectedDocId) });
+    }
+  }, [queryClient, offerId, selectedDocId]);
 
   // Select document
   const handleSelectDoc = useCallback((doc: OfferDocument) => {
@@ -427,18 +444,31 @@ function OfferDocumentsSection({
   }, []);
 
   // Upload mutation
-  const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await api.post(`/trainings/offers/${offerId}/documents`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+  // Fetch available offer templates
+  const { data: templatesData } = useQuery<
+    Array<{ id: string; name: string; language: string | null }>
+  >({
+    queryKey: ['offer-templates-list'],
+    queryFn: async () => {
+      const res = await api.get('/trainings/offer-templates', {
+        params: { page_size: 100, is_active: true },
       });
+      return res.data.items ?? res.data;
+    },
+    staleTime: 60_000,
+  });
+  const templates = useMemo(() => templatesData ?? [], [templatesData]);
+
+  const createFromTemplateMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      const res = await api.post(
+        `/trainings/offers/${offerId}/documents?template_id=${templateId}`
+      );
       return res.data as OfferDocument;
     },
     onSuccess: (newDoc) => {
       invalidateDocs();
-      showToast('Template uploaded', 'success');
+      showToast('Document created from template', 'success');
       handleSelectDoc(newDoc);
     },
     onError: (err) => showToast(parseApiError(err), 'error'),
@@ -479,20 +509,6 @@ function OfferDocumentsSection({
       setConfirmDeleteId(null);
     },
   });
-
-  const handleUpload = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) uploadMutation.mutate(file);
-      // Reset input so same file can be re-uploaded
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    },
-    [uploadMutation]
-  );
 
   const handleDownload = useCallback(async () => {
     if (!selectedDoc) return;
@@ -565,28 +581,45 @@ function OfferDocumentsSection({
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleUpload}
-          disabled={uploadMutation.isPending}
-          className="text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md px-2.5 py-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
-        >
-          {uploadMutation.isPending ? 'Uploading...' : '+ Upload Template'}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ACCEPTED_TYPES}
-          className="hidden"
-          onChange={handleFileChange}
-        />
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowTemplatePicker((prev) => !prev)}
+            disabled={createFromTemplateMutation.isPending || templates.length === 0}
+            className="text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md px-2.5 py-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
+          >
+            {createFromTemplateMutation.isPending ? 'Creating...' : '+ From Template'}
+          </button>
+          {showTemplatePicker && templates.length > 0 && (
+            <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className="w-full text-left px-3 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => {
+                    createFromTemplateMutation.mutate(t.id);
+                    setShowTemplatePicker(false);
+                  }}
+                >
+                  {t.name}
+                  {t.language && (
+                    <span className="ml-1.5 text-[10px] text-gray-400 dark:text-gray-500">
+                      ({t.language})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
         <div className="text-center py-4 text-gray-400 text-sm">Loading documents...</div>
       ) : documents.length === 0 ? (
         <p className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-          No documents yet. Upload a template to get started.
+          No documents yet. Choose a template to get started.
         </p>
       ) : (
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">

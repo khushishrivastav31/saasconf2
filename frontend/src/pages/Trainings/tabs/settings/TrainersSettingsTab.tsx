@@ -481,6 +481,8 @@ interface ScheduleItem {
   start_date: string;
   location_name: string | null;
   location_city: string | null;
+  placement_type: string;
+  customer_name: string | null;
   year: number;
   month: number;
 }
@@ -586,8 +588,24 @@ const TrainerScheduleSection = React.memo(function TrainerScheduleSection({
                       className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900 rounded-md"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate flex items-center gap-1.5">
                           {item.training_name}
+                          {item.placement_type && item.placement_type !== 'open' && (
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                                item.placement_type === 'inhouse'
+                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                                  : 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300'
+                              }`}
+                            >
+                              {item.placement_type === 'inhouse' ? 'Inhouse' : 'Hybrid'}
+                            </span>
+                          )}
+                          {item.customer_name && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                              {item.customer_name}
+                            </span>
+                          )}
                         </p>
                         {(item.location_name || item.location_city) && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">

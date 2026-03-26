@@ -1,7 +1,8 @@
 /**
  * Customers Tab — Table list with click-to-detail panel pattern.
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
@@ -125,6 +126,21 @@ export default function CustomersTab() {
   const customers = useMemo(() => data?.items ?? [], [data]);
   const customerCount = customers.length;
 
+  // Deep-link: auto-select customer from URL params
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const cid = searchParams.get('customerId');
+    if (cid && customers.length > 0 && !selected) {
+      const c = customers.find((cu) => cu.id === cid);
+      if (c) {
+        setSelected(c);
+        // Clean up URL params
+        searchParams.delete('customerId');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [customers, searchParams, setSearchParams, selected]);
+
   const refetch = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: QK });
   }, [queryClient]);
@@ -230,10 +246,11 @@ export default function CustomersTab() {
         </div>
         <CustomerDetailPanel
           customer={selected}
+          initialOfferId={searchParams.get('offerId') ?? undefined}
+          initialTab={searchParams.get('tab') ?? undefined}
           onBack={() => setSelected(null)}
           onSaved={() => {
             refetch();
-            // Re-select the customer with updated data after refetch
           }}
         />
       </div>
