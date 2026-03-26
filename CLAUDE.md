@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Training Finance Settings (all 8 tabs) — Currency & Tax, Numbering, Company Data, Bank Accounts, Invoice Templates, ZUGFeRD, Stripe, Payment Reminders. All tenant-scoped in `tenant.settings["training_finance"]` JSONB. Single `finance.py` backend API with 16 endpoints. 21 backend tests. Also earlier: Policies, Registration Questions, Email Settings/Templates tabs.
-- **Status**: All checks pass — mypy, ruff, tsc, eslint. 1651 frontend tests green. 21 finance backend tests green.
+- **Last completed**: Offer Document system — OfferDocument + OfferDocumentVersion models, migration 175, schema, API with 10 endpoints (CRUD, upload, download DOCX/PDF, send email, version history). Multiple documents per offer. Reuses sponsor contract conversion functions.
+- **Status**: All checks pass — mypy (532 files), ruff check + format. Migration 175 applied successfully.

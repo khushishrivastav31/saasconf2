@@ -13,6 +13,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.customer import Customer
+    from app.models.offer_document import OfferDocument
     from app.models.training_program import ProgramYearTraining
 
 
@@ -47,6 +48,12 @@ class CustomerOffer(Base):
     customer: Mapped["Customer"] = relationship("Customer", lazy="joined")
     placements: Mapped[list["ProgramYearTraining"]] = relationship(
         "ProgramYearTraining", back_populates="offer", lazy="selectin"
+    )
+    documents: Mapped[list["OfferDocument"]] = relationship(
+        "OfferDocument",
+        back_populates="offer",
+        cascade="all, delete-orphan",
+        order_by="OfferDocument.created_at.desc()",
     )
 
     __table_args__ = (

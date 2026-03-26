@@ -542,3 +542,33 @@ export interface AvailablePlacement {
   placement_type: string;
   program_year: number;
 }
+
+// Offer Documents
+export interface OfferDocument {
+  id: string;
+  offer_id: string;
+  filename: string;
+  content_type: string | null;
+  file_size: number | null;
+  html_content: string | null;
+  is_editable: boolean;
+  version: number;
+  version_count: number;
+  status: string;
+  last_sent_at: string | null;
+  sent_to: Array<{ email: string; sent_at: string; version: number }> | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OfferDocumentVersion {
+  id: string;
+  version: number;
+  filename: string;
+  content_type: string | null;
+  file_size: number | null;
+  html_content: string | null;
+  created_by: string | null;
+  created_at: string;
+}

@@ -38,6 +38,16 @@ ALLOWED_MIME_TYPES: dict[str, set[str]] = {
         "text/rtf",
         "application/rtf",
     },
+    "offer_document": {
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/rtf",
+        "text/rtf",
+        "text/plain",
+        "application/vnd.oasis.opendocument.text",
+        "application/zip",  # DOCX/ODT detected as ZIP by magic bytes
+    },
 }
 
 # Default allowed types for general attachments

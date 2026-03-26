@@ -9,6 +9,7 @@ from .holidays import router as holidays_router
 from .inhouse import router as inhouse_router
 from .languages import router as languages_router
 from .location_types import router as location_types_router
+from .offer_documents import router as offer_documents_router
 from .offer_templates import router as offer_templates_router
 from .offers import router as offers_router
 from .policies import router as policies_router
@@ -34,6 +35,7 @@ router.include_router(finance_router)
 router.include_router(customers_router)
 router.include_router(inhouse_router)
 router.include_router(offers_router)
+router.include_router(offer_documents_router)
 router.include_router(offer_templates_router)
 router.include_router(location_types_router)
 router.include_router(detail_router)

@@ -16,6 +16,7 @@ import { queryKeys } from '../../../config/queryKeys';
 import { usePlatformCurrencies } from '../../../hooks/api/usePlatformCurrencies';
 import type { CustomerOffer, AvailablePlacement } from '../../../types/training';
 import type { Customer } from './CustomersTab';
+import OfferDocumentsSection from './OfferDocumentsSection';
 
 interface ContactPerson {
   first_name: string;
@@ -332,7 +333,18 @@ export default function CustomerDetailPanel({
             }}
           />
         )}
-        {activeTab === 'offers' && <OffersTab customerId={customer.id} />}
+        {activeTab === 'offers' && (
+          <OffersTab
+            customerId={customer.id}
+            customerName={customer.name}
+            contactPersons={(form.contact_persons ?? []).map((cp) => ({
+              first_name: cp.first_name,
+              last_name: cp.last_name,
+              email: cp.email ?? '',
+              phone: cp.phone ?? undefined,
+            }))}
+          />
+        )}
         {activeTab === 'documents' && <DocumentsTab customerId={customer.id} />}
         {activeTab === 'invoices' && (
           <div className="text-center py-12 text-gray-400 dark:text-gray-500">
@@ -625,7 +637,15 @@ const OfferRow = React.memo(function OfferRow({
   );
 });
 
-function OffersTab({ customerId }: { customerId: string }) {
+function OffersTab({
+  customerId,
+  customerName,
+  contactPersons,
+}: {
+  customerId: string;
+  customerName: string;
+  contactPersons: Array<{ first_name: string; last_name: string; email: string; phone?: string }>;
+}) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: currencies = [] } = usePlatformCurrencies();
@@ -1199,6 +1219,14 @@ function OffersTab({ customerId }: { customerId: string }) {
             </div>
           </div>
         )}
+
+        {/* Documents */}
+        <OfferDocumentsSection
+          offerId={selectedOffer.id}
+          offerNumber={selectedOffer.offer_number}
+          customerName={customerName}
+          contactPersons={contactPersons}
+        />
 
         {/* Pricing */}
         <div>
