@@ -13,6 +13,7 @@ interface ReadOnlyTrainingBarProps {
   locationName: string | null;
   locationCode: string | null;
   placementType?: string;
+  customerName?: string | null;
   trainerAssignments: PlacementTrainerAssignment[];
   isSelected: boolean;
   onClick: (placementId: string) => void;
@@ -33,6 +34,7 @@ const ReadOnlyTrainingBar = React.memo(function ReadOnlyTrainingBar({
   locationName,
   locationCode,
   placementType,
+  customerName,
   trainerAssignments,
   isSelected,
   onClick,
@@ -85,6 +87,11 @@ const ReadOnlyTrainingBar = React.memo(function ReadOnlyTrainingBar({
             style={{ color }}
           >
             {locationLabel}
+          </span>
+        )}
+        {customerName && (
+          <span className="flex-shrink-0 text-[9px] px-1 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-medium truncate max-w-15">
+            {customerName}
           </span>
         )}
         {trainerAssignments.length > 0 && colSpan >= 3 && (

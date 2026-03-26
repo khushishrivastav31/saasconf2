@@ -236,6 +236,7 @@ function renderLane(
         locationName={p.location_name}
         locationCode={p.location_code}
         placementType={p.placement_type || 'open'}
+        customerName={p.customer_name}
         locations={locations}
         onRemove={() => onRemove(p.id)}
         onChangeLocation={onChangeLocation}

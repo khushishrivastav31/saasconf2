@@ -13,6 +13,7 @@ interface CalendarTrainingBarProps {
   locationName: string | null;
   locationCode: string | null;
   placementType: string;
+  customerName?: string | null;
   locations: Location[];
   onRemove: () => void;
   onChangeLocation: (placementId: string, locationId: string | null) => void;
@@ -30,6 +31,7 @@ const CalendarTrainingBar = React.memo(function CalendarTrainingBar({
   locationName,
   locationCode,
   placementType,
+  customerName,
   locations,
   onRemove,
   onChangeLocation,
@@ -88,6 +90,11 @@ const CalendarTrainingBar = React.memo(function CalendarTrainingBar({
             style={{ color }}
           >
             {locationLabel}
+          </span>
+        )}
+        {customerName && (
+          <span className="shrink-0 text-[9px] px-1 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-medium truncate max-w-15">
+            {customerName}
           </span>
         )}
         {hasWarning && (

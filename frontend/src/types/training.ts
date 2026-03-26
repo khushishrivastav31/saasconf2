@@ -414,6 +414,9 @@ export interface ProgramYearTraining {
   location_code: string | null;
   start_date: string;
   placement_type: 'open' | 'inhouse' | 'hybrid';
+  customer_id?: string | null;
+  customer_name?: string | null;
+  offer_id?: string | null;
   created_at: string;
   updated_at: string;
   trainer_assignments: PlacementTrainerAssignment[];
@@ -499,4 +502,43 @@ export interface ProgramDiffResponse {
   placement_changes: PlacementChangeResponse[];
   affected_trainer_ids: string[];
   per_trainer_changes: TrainerChangeResponse[];
+}
+
+// Customer Offers
+export interface OfferPlacementInfo {
+  id: string;
+  training_name: string;
+  training_slug: string | null;
+  start_date: string;
+  location_name: string | null;
+  placement_type: string;
+  program_year: number;
+}
+
+export interface CustomerOffer {
+  id: string;
+  tenant_id: string;
+  customer_id: string;
+  customer_name: string;
+  offer_number: string;
+  status: 'draft' | 'sent' | 'rejected' | 'accepted';
+  attendees: number | null;
+  training_price: number | null;
+  certification_price: number | null;
+  currency: string;
+  comments: string | null;
+  notes: string | null;
+  placements: OfferPlacementInfo[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AvailablePlacement {
+  id: string;
+  training_name: string;
+  training_slug: string | null;
+  start_date: string;
+  location_name: string | null;
+  placement_type: string;
+  program_year: number;
 }

@@ -11,6 +11,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.customer import Customer
+    from app.models.customer_offer import CustomerOffer
     from app.models.location import Location
     from app.models.tenant import Tenant
     from app.models.trainer import Trainer
@@ -80,6 +82,12 @@ class ProgramYearTraining(Base):
     location_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("locations.id", ondelete="SET NULL"), nullable=True
     )
+    offer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("customer_offers.id", ondelete="SET NULL"), nullable=True
+    )
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -90,6 +98,8 @@ class ProgramYearTraining(Base):
     program_year: Mapped["TrainingProgramYear"] = relationship("TrainingProgramYear", back_populates="placements")
     training: Mapped["Training"] = relationship("Training", lazy="joined")
     location: Mapped["Location | None"] = relationship("Location", lazy="joined")
+    offer: Mapped["CustomerOffer | None"] = relationship("CustomerOffer", back_populates="placements", lazy="joined")
+    customer: Mapped["Customer | None"] = relationship("Customer", lazy="joined")
     trainer_assignments: Mapped[list["PlacementTrainer"]] = relationship(
         "PlacementTrainer", back_populates="placement", cascade="all, delete-orphan", lazy="selectin"
     )
@@ -98,6 +108,8 @@ class ProgramYearTraining(Base):
         Index("idx_pyt_tenant", "tenant_id"),
         Index("idx_pyt_program_year", "program_year_id"),
         Index("idx_pyt_location", "location_id"),
+        Index("idx_pyt_offer", "offer_id"),
+        Index("idx_pyt_customer", "customer_id"),
     )
 
     def __repr__(self) -> str:

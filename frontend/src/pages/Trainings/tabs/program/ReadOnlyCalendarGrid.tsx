@@ -202,6 +202,7 @@ function renderReadOnlyLane(
         locationName={p.location_name}
         locationCode={p.location_code}
         placementType={p.placement_type}
+        customerName={p.customer_name}
         trainerAssignments={p.trainer_assignments || []}
         isSelected={p.id === selectedPlacementId}
         onClick={onClickPlacement}

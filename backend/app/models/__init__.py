@@ -29,6 +29,7 @@ from app.models.cfp_papers import (
 )
 from app.models.conference import Conference
 from app.models.customer import Customer
+from app.models.customer_offer import CustomerOffer
 from app.models.deadline import Deadline
 from app.models.email_log import EmailLog
 from app.models.fiscal_representative import FiscalRepresentative
@@ -143,6 +144,7 @@ __all__ = [
     "CospeakerInvitationStatus",
     "CustomBlockedDay",
     "Customer",
+    "CustomerOffer",
     "Deadline",
     "DiscountCode",
     "DiscountCodeOption",

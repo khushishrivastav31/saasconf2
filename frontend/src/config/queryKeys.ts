@@ -247,6 +247,10 @@ export const queryKeys = {
   // ── Training Finance ──────────────────────────────────────────────
   trainingFinance: ['training-finance'] as const,
 
+  // ── Customer Offers ──────────────────────────────────────────
+  customerOffers: (customerId: string) => ['customer-offers', customerId] as const,
+  availablePlacements: ['available-placements'] as const,
+
   // ── Trainers ───────────────────────────────────────────────────
   trainers: {},
 
