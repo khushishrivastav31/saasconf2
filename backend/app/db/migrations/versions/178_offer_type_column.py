@@ -4,8 +4,8 @@ Revision ID: 178
 Revises: 177
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "178"
 down_revision = "177"
