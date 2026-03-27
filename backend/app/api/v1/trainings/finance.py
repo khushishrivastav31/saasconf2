@@ -391,6 +391,14 @@ async def preview_training_invoice_pdf(
             self.name = "Training Invoice Preview"
             self.settings = settings
             self.currency = curr
+            self.invoice_currency = curr
+            self.contact_email = t.resend_from_email or ""
+            self.support_email = ""
+            self.phone = t.phone or ""
+            self.logo_url = t.logo_url
+            self.abbreviation = ""
+            self.vat_number = t.vat_number or ""
+            self.country = t.country or ""
 
     mock_conf = _MockConference(tenant, preview_settings, currency)
     pdf_bytes = await generate_invoice_pdf_from_data(

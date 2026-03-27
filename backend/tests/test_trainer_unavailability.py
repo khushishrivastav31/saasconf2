@@ -451,10 +451,18 @@ class TestCascadeDelete:
         trainer: Trainer,
         sample_entry: TrainerUnavailability,
     ) -> None:
-        # Delete the trainer
+        # Delete requires super user
+        super_token = _make_token(tenant_admin_user, modules=["trainings"])
+        super_token = create_access_token(
+            user_id=tenant_admin_user.id,
+            tenant_id=tenant_admin_user.tenant_id,
+            role=tenant_admin_user.role,
+            modules=["trainings"],
+            is_tenant_super_user=True,
+        )
         response = await client.delete(
             f"/api/v1/trainings/trainers/{trainer.id}",
-            headers=auth_headers(admin_token),
+            headers=auth_headers(super_token),
         )
         assert response.status_code == 200
 
