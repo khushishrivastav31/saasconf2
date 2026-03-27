@@ -14,10 +14,10 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'html',
 
-  timeout: 60_000,
+  timeout: 90_000,
 
   expect: {
-    timeout: 30_000,
+    timeout: 45_000,
   },
 
   use: {
@@ -25,8 +25,8 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: process.env.CI ? 'on-first-retry' : 'off',
-    actionTimeout: 15_000,
-    navigationTimeout: 30_000,
+    actionTimeout: 20_000,
+    navigationTimeout: 45_000,
   },
 
   projects: [

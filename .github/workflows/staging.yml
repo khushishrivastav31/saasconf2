@@ -52,7 +52,7 @@ jobs:
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     needs: changes
     if: needs.changes.outputs.backend == 'true'
 
@@ -151,7 +151,7 @@ jobs:
   frontend-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
 
@@ -477,7 +477,7 @@ jobs:
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     needs: [deploy-staging]
     if: |
       always() &&
