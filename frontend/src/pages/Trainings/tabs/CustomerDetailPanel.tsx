@@ -1120,11 +1120,13 @@ function OffersTab({
   const [selectedOffer, setSelectedOffer] = useState<CustomerOffer | null>(null);
   const [initialOfferHandled, setInitialOfferHandled] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [offerType, setOfferType] = useState<'inhouse' | 'open' | null>(null);
   const [editForm, setEditForm] = useState<OfferForm | null>(null);
   const [showAddPlacements, setShowAddPlacements] = useState(false);
   const [addPlacementIds, setAddPlacementIds] = useState<string[]>([]);
   const [removeConfirm, setRemoveConfirm] = useState<string | null>(null);
   const [confirmDeleteOffer, setConfirmDeleteOffer] = useState(false);
+  const [placementSearch, setPlacementSearch] = useState('');
 
   const [createForm, setCreateForm] = useState<CreateOfferForm>({
     placement_ids: [],
@@ -1146,32 +1148,49 @@ function OffersTab({
   });
   const offers = useMemo(() => offersData ?? [], [offersData]);
 
-  // Fetch available placements
+  // Determine offer type: from offerType state when creating, or from offer's stored offer_type
+  const placementTypeFilter = showCreate
+    ? (offerType ?? undefined)
+    : showAddPlacements && selectedOffer
+      ? selectedOffer.offer_type
+      : undefined;
   const { data: availableData } = useQuery<AvailablePlacement[]>({
-    queryKey: queryKeys.availablePlacements,
+    queryKey: queryKeys.availablePlacements(placementTypeFilter),
     queryFn: async () => {
-      const res = await api.get('/trainings/offers/available-placements');
+      const params = placementTypeFilter ? `?type=${placementTypeFilter}` : '';
+      const res = await api.get(`/trainings/offers/available-placements${params}`);
       return res.data;
     },
     staleTime: 10_000,
   });
   const availablePlacements = useMemo(() => availableData ?? [], [availableData]);
 
-  // Group available placements by year
+  // Group available placements by year, filtered by search
   const placementsByYear = useMemo(() => {
+    const searchLower = placementSearch.toLowerCase().trim();
+    const filtered = searchLower
+      ? availablePlacements.filter(
+          (p) =>
+            p.training_name.toLowerCase().includes(searchLower) ||
+            (p.training_slug?.toLowerCase().includes(searchLower) ?? false) ||
+            (p.location_name?.toLowerCase().includes(searchLower) ?? false) ||
+            p.start_date.includes(searchLower) ||
+            new Date(p.start_date).toLocaleDateString('de-DE').includes(searchLower)
+        )
+      : availablePlacements;
     const grouped: Record<number, AvailablePlacement[]> = {};
-    for (const p of availablePlacements) {
+    for (const p of filtered) {
       if (!grouped[p.program_year]) grouped[p.program_year] = [];
       grouped[p.program_year].push(p);
     }
     return Object.entries(grouped)
       .sort(([a], [b]) => Number(b) - Number(a))
       .map(([year, placements]) => ({ year: Number(year), placements }));
-  }, [availablePlacements]);
+  }, [availablePlacements, placementSearch]);
 
   const invalidateOffers = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.customerOffers(customerId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.availablePlacements });
+    queryClient.invalidateQueries({ queryKey: ['available-placements'] });
   }, [queryClient, customerId]);
 
   // Keep selectedOffer in sync with refetched data
@@ -1226,6 +1245,7 @@ function OffersTab({
     mutationFn: async () => {
       const res = await api.post('/trainings/offers', {
         customer_id: customerId,
+        offer_type: offerType ?? 'inhouse',
         placement_ids: createForm.placement_ids,
         attendees: createForm.attendees,
         training_price: createForm.training_price,
@@ -1240,6 +1260,7 @@ function OffersTab({
       invalidateOffers();
       showToast('Offer created', 'success');
       setShowCreate(false);
+      setOfferType(null);
       setCreateForm({
         placement_ids: [],
         attendees: null,
@@ -1317,11 +1338,10 @@ function OffersTab({
       );
       return res.data as CustomerOffer;
     },
-    onSuccess: (updated) => {
+    onSuccess: () => {
       invalidateOffers();
       showToast('Training removed from offer', 'success');
       setRemoveConfirm(null);
-      if (updated) handleSelectOffer(updated);
     },
     onError: (err) => {
       showToast(parseApiError(err), 'error');
@@ -1334,13 +1354,24 @@ function OffersTab({
 
   // ---------- CREATE FORM ----------
   if (showCreate) {
+    const createTitle =
+      offerType === 'open' ? 'Create Open Training Offer' : 'Create Inhouse/Hybrid Offer';
+    const placementLabel =
+      offerType === 'open'
+        ? 'Select Open Training Placements'
+        : 'Select Trainings (Inhouse/Hybrid placements)';
     return (
       <div className="space-y-5">
         <div className="flex items-center justify-between">
-          <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">Create Offer</h4>
+          <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            {createTitle}
+          </h4>
           <button
             type="button"
-            onClick={() => setShowCreate(false)}
+            onClick={() => {
+              setShowCreate(false);
+              setOfferType(null);
+            }}
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
           >
             Cancel
@@ -1350,8 +1381,16 @@ function OffersTab({
         {/* Placement selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Select Trainings (Inhouse/Hybrid placements)
+            {placementLabel}
           </label>
+          {/* Search bar for placements */}
+          <input
+            type="text"
+            placeholder="Search placements..."
+            className="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100 mb-2"
+            value={placementSearch}
+            onChange={(e) => setPlacementSearch(e.target.value)}
+          />
           {placementsByYear.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500">
               No available placements found.
@@ -1495,7 +1534,10 @@ function OffersTab({
         <div className="flex justify-end gap-2">
           <button
             type="button"
-            onClick={() => setShowCreate(false)}
+            onClick={() => {
+              setShowCreate(false);
+              setOfferType(null);
+            }}
             className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
@@ -1834,53 +1876,64 @@ function OffersTab({
         </div>
 
         {/* Remove placement confirm dialog */}
-        {removeConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Remove from offer?
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                Also delete this placement from the program?
-              </p>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRemoveConfirm(null)}
-                  className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    removePlacementMutation.mutate({
-                      placementId: removeConfirm,
-                      deleteFromProgram: false,
-                    })
-                  }
-                  disabled={removePlacementMutation.isPending}
-                  className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  Remove only
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    removePlacementMutation.mutate({
-                      placementId: removeConfirm,
-                      deleteFromProgram: true,
-                    })
-                  }
-                  disabled={removePlacementMutation.isPending}
-                  className="px-4 py-2 text-sm text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
-                >
-                  Remove &amp; delete
-                </button>
+        {removeConfirm &&
+          (() => {
+            const removePlacement = (selectedOffer.placements ?? []).find(
+              (p) => p.id === removeConfirm
+            );
+            const isOpen = removePlacement?.placement_type === 'open';
+            return (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Remove from offer?
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                    {isOpen
+                      ? 'This open training will be removed from the offer but stays in the program.'
+                      : 'Also delete this placement from the program?'}
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRemoveConfirm(null)}
+                      className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removePlacementMutation.mutate({
+                          placementId: removeConfirm,
+                          deleteFromProgram: false,
+                        })
+                      }
+                      disabled={removePlacementMutation.isPending}
+                      className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {isOpen ? 'Remove' : 'Remove only'}
+                    </button>
+                    {!isOpen && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removePlacementMutation.mutate({
+                            placementId: removeConfirm,
+                            deleteFromProgram: true,
+                          })
+                        }
+                        disabled={removePlacementMutation.isPending}
+                        className="px-4 py-2 text-sm text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                      >
+                        Remove &amp; delete
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            );
+          })()}
 
         {/* Delete offer confirm dialog */}
         {confirmDeleteOffer && (
@@ -1929,13 +1982,30 @@ function OffersTab({
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          className="px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-        >
-          + Create Offer
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setOfferType('inhouse');
+              setShowCreate(true);
+              setCreateForm((prev) => ({ ...prev, placement_ids: [] }));
+            }}
+            className="px-3 py-1.5 text-sm font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors"
+          >
+            + Inhouse/Hybrid Offer
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOfferType('open');
+              setShowCreate(true);
+              setCreateForm((prev) => ({ ...prev, placement_ids: [] }));
+            }}
+            className="px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+          >
+            + Open Training Offer
+          </button>
+        </div>
       </div>
 
       {isLoading ? (

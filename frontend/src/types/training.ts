@@ -520,6 +520,7 @@ export interface CustomerOffer {
   tenant_id: string;
   customer_id: string;
   customer_name: string;
+  offer_type: 'inhouse' | 'open';
   offer_number: string;
   status: 'draft' | 'sent' | 'rejected' | 'accepted';
   attendees: number | null;

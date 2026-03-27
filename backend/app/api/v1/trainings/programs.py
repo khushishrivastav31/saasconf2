@@ -158,9 +158,9 @@ async def delete_program_year(
 ) -> dict:
     """Delete a training program year. Requires tenant super user."""
     if not current_user.is_super_admin and not current_user.is_tenant_super_user:
-        from app.core.exceptions import ForbiddenError
+        from app.core.exceptions import AuthorizationError
 
-        raise ForbiddenError("Only tenant super users can delete program years")
+        raise AuthorizationError("Only tenant super users can delete program years")
 
     result = await db.execute(
         select(TrainingProgramYear).where(

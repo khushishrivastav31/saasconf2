@@ -233,9 +233,9 @@ async def delete_trainer(
 ) -> dict:
     """Delete a trainer. Requires tenant super user."""
     if not current_user.is_super_admin and not current_user.is_tenant_super_user:
-        from app.core.exceptions import ForbiddenError
+        from app.core.exceptions import AuthorizationError
 
-        raise ForbiddenError("Only tenant super users can delete trainers")
+        raise AuthorizationError("Only tenant super users can delete trainers")
 
     result = await db.execute(select(Trainer).where(Trainer.id == trainer_id, _tenant_filter(current_user)))
     trainer = result.scalar_one_or_none()

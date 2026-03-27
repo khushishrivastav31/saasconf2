@@ -249,7 +249,8 @@ export const queryKeys = {
 
   // ── Customer Offers ──────────────────────────────────────────
   customerOffers: (customerId: string) => ['customer-offers', customerId] as const,
-  availablePlacements: ['available-placements'] as const,
+  availablePlacements: (type?: string) =>
+    type ? (['available-placements', type] as const) : (['available-placements'] as const),
 
   // ── Offer Attendees ────────────────────────────────────────
   offerAttendees: (offerId: string, placementId: string) =>

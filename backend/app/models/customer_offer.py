@@ -14,6 +14,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.customer import Customer
     from app.models.offer_document import OfferDocument
+    from app.models.offer_placement import OfferPlacement
     from app.models.training_program import ProgramYearTraining
 
 
@@ -31,6 +32,7 @@ class CustomerOffer(Base):
     )
 
     offer_number: Mapped[str] = mapped_column(String(50), nullable=False)
+    offer_type: Mapped[str] = mapped_column(String(20), default="inhouse", server_default="inhouse")
     status: Mapped[str] = mapped_column(String(20), default="draft", server_default="draft")
     attendees: Mapped[int | None] = mapped_column(Integer, nullable=True)
     training_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
@@ -48,6 +50,9 @@ class CustomerOffer(Base):
     customer: Mapped["Customer"] = relationship("Customer", lazy="joined")
     placements: Mapped[list["ProgramYearTraining"]] = relationship(
         "ProgramYearTraining", back_populates="offer", lazy="selectin"
+    )
+    offer_placements: Mapped[list["OfferPlacement"]] = relationship(
+        "OfferPlacement", back_populates="offer", cascade="all, delete-orphan"
     )
     documents: Mapped[list["OfferDocument"]] = relationship(
         "OfferDocument",

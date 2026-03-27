@@ -155,9 +155,9 @@ async def delete_customer(
 ) -> dict:
     """Delete a customer (only if no inhouse trainings linked). Requires tenant super user."""
     if not current_user.is_super_admin and not current_user.is_tenant_super_user:
-        from app.core.exceptions import ForbiddenError
+        from app.core.exceptions import AuthorizationError
 
-        raise ForbiddenError("Only tenant super users can delete customers")
+        raise AuthorizationError("Only tenant super users can delete customers")
 
     from app.models.inhouse_training import InhouseTraining
 

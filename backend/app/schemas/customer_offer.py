@@ -25,6 +25,7 @@ class CustomerOfferCreate(BaseModel):
     """Schema for creating a customer offer."""
 
     customer_id: UUID
+    offer_type: str = Field("inhouse", pattern=r"^(inhouse|open)$")
     placement_ids: list[UUID] = Field(default_factory=list)
     attendees: int | None = None
     training_price: Decimal | None = None
@@ -56,6 +57,7 @@ class CustomerOfferResponse(BaseModel):
     customer_id: UUID
     customer_name: str
     offer_number: str
+    offer_type: str = "inhouse"
     status: str
     attendees: int | None = None
     training_price: Decimal | None = None

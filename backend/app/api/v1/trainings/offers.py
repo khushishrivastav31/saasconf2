@@ -15,6 +15,7 @@ from app.models.audit import AuditLog
 from app.models.customer import Customer
 from app.models.customer_offer import CustomerOffer
 from app.models.offer_attendee import OfferAttendee
+from app.models.offer_placement import OfferPlacement
 from app.models.training_program import ProgramYearTraining
 from app.schemas.customer_offer import (
     AddPlacementsRequest,
@@ -58,6 +59,7 @@ def _offer_to_response(
         customer_id=offer.customer_id,
         customer_name=offer.customer.name if offer.customer else "Unknown",
         offer_number=offer.offer_number,
+        offer_type=offer.offer_type or "inhouse",
         status=offer.status,
         attendees=offer.attendees,
         training_price=offer.training_price,
@@ -79,17 +81,18 @@ async def _count_offer_attendees(db: DbSessionDep, offer_id: UUID) -> int:
 
 
 async def _load_offer_placements(db: DbSessionDep, offer_id: UUID, tenant_id: UUID) -> list[ProgramYearTraining]:
-    """Load placements linked to an offer with their relationships."""
+    """Load placements linked to an offer via the offer_placements join table."""
     result = await db.execute(
         select(ProgramYearTraining)
+        .join(OfferPlacement, OfferPlacement.placement_id == ProgramYearTraining.id)
         .options(
             joinedload(ProgramYearTraining.training),
             joinedload(ProgramYearTraining.location),
             joinedload(ProgramYearTraining.program_year),
         )
         .where(
-            ProgramYearTraining.offer_id == offer_id,
-            ProgramYearTraining.tenant_id == tenant_id,
+            OfferPlacement.offer_id == offer_id,
+            OfferPlacement.tenant_id == tenant_id,
         )
         .order_by(ProgramYearTraining.start_date)
     )
@@ -106,7 +109,11 @@ async def _generate_offer_number(db: DbSessionDep, tenant_id: UUID) -> str:
 async def _validate_placements_for_offer(
     db: DbSessionDep, placement_ids: list[UUID], tenant_id: UUID
 ) -> list[ProgramYearTraining]:
-    """Validate that placements are inhouse/hybrid and unassigned."""
+    """Validate placements for assignment to an offer.
+
+    - inhouse/hybrid: must not already have offer_id set (exclusive assignment)
+    - open: always allowed (shared across multiple offers)
+    """
     if not placement_ids:
         return []
 
@@ -128,12 +135,11 @@ async def _validate_placements_for_offer(
         raise ValidationError("One or more placements not found")
 
     for p in placements:
-        if p.placement_type not in ("inhouse", "hybrid"):
-            raise ValidationError(
-                f"Placement {p.id} is type '{p.placement_type}'. Only inhouse/hybrid placements can be assigned to offers."
-            )
-        if p.offer_id is not None:
-            raise ValidationError(f"Placement {p.id} is already assigned to offer {p.offer_id}")
+        # Inhouse placements are always exclusive (one customer)
+        if p.placement_type == "inhouse":
+            if p.offer_id is not None:
+                raise ValidationError(f"Placement {p.id} is already assigned to offer {p.offer_id}")
+        # Open and hybrid placements are shared (multiple customers can book)
 
     return placements
 
@@ -142,22 +148,41 @@ async def _validate_placements_for_offer(
 async def list_available_placements(
     current_user: TenantAdminDep,
     db: DbSessionDep,
+    type: str | None = Query(None, pattern=r"^(inhouse|open)$"),
 ) -> list[OfferPlacementInfo]:
-    """List all inhouse/hybrid placements that are not yet assigned to an offer."""
-    result = await db.execute(
+    """List available placements for offer assignment.
+
+    - type=inhouse: inhouse/hybrid placements not yet assigned (exclusive)
+    - type=open: all open placements (shared across offers)
+    - no type: all available placements (backward compat)
+    """
+    query = (
         select(ProgramYearTraining)
         .options(
             joinedload(ProgramYearTraining.training),
             joinedload(ProgramYearTraining.location),
             joinedload(ProgramYearTraining.program_year),
         )
-        .where(
-            ProgramYearTraining.tenant_id == current_user.tenant_id,
-            ProgramYearTraining.placement_type.in_(["inhouse", "hybrid"]),
+        .where(ProgramYearTraining.tenant_id == current_user.tenant_id)
+    )
+
+    if type == "inhouse":
+        # Inhouse offers: only inhouse placements (exclusive, must be unassigned)
+        query = query.where(
+            ProgramYearTraining.placement_type == "inhouse",
             ProgramYearTraining.offer_id.is_(None),
         )
-        .order_by(ProgramYearTraining.start_date)
-    )
+    elif type == "open":
+        # Open offers: open + hybrid placements (shared, no exclusive check)
+        query = query.where(ProgramYearTraining.placement_type.in_(["open", "hybrid"]))
+    else:
+        # All: inhouse unassigned + open/hybrid shared
+        query = query.where(
+            (ProgramYearTraining.placement_type.in_(["inhouse"]) & ProgramYearTraining.offer_id.is_(None))
+            | (ProgramYearTraining.placement_type.in_(["open", "hybrid"]))
+        )
+
+    result = await db.execute(query.order_by(ProgramYearTraining.start_date))
     placements = list(result.scalars().unique().all())
     return [
         OfferPlacementInfo(
@@ -260,6 +285,7 @@ async def create_offer(
         tenant_id=tenant_id,
         customer_id=payload.customer_id,
         offer_number=offer_number,
+        offer_type=payload.offer_type,
         attendees=payload.attendees,
         training_price=payload.training_price,
         certification_price=payload.certification_price,
@@ -270,10 +296,21 @@ async def create_offer(
     db.add(offer)
     await db.flush()
 
-    # Link placements to offer
+    # Link placements to offer via join table + direct FK for inhouse/hybrid
     for p in placements:
-        p.offer_id = offer.id
-        p.customer_id = payload.customer_id
+        # Always insert into join table
+        db.add(
+            OfferPlacement(
+                tenant_id=tenant_id,
+                offer_id=offer.id,
+                placement_id=p.id,
+            )
+        )
+        # For inhouse/hybrid: also set direct FK (for calendar display)
+        if p.placement_type == "inhouse":
+            p.offer_id = offer.id
+            p.customer_id = payload.customer_id
+        # For open: do NOT set offer_id/customer_id on the placement
 
     audit_log = AuditLog(
         tenant_id=tenant_id,
@@ -367,8 +404,18 @@ async def add_placements(
     placements = await _validate_placements_for_offer(db, payload.placement_ids, offer.tenant_id)
 
     for p in placements:
-        p.offer_id = offer.id
-        p.customer_id = offer.customer_id
+        # Always insert into join table
+        db.add(
+            OfferPlacement(
+                tenant_id=offer.tenant_id,
+                offer_id=offer.id,
+                placement_id=p.id,
+            )
+        )
+        # For inhouse/hybrid: also set direct FK
+        if p.placement_type == "inhouse":
+            p.offer_id = offer.id
+            p.customer_id = offer.customer_id
 
     audit_log = AuditLog(
         tenant_id=current_user.tenant_id,
@@ -405,24 +452,38 @@ async def remove_placement(
     if not offer_result.scalar_one_or_none():
         raise NotFoundError("Offer not found")
 
-    # Find placement
+    # Find the join table entry
+    op_result = await db.execute(
+        select(OfferPlacement).where(
+            OfferPlacement.offer_id == offer_id,
+            OfferPlacement.placement_id == placement_id,
+            OfferPlacement.tenant_id == current_user.tenant_id,
+        )
+    )
+    offer_placement = op_result.scalar_one_or_none()
+    if not offer_placement:
+        raise NotFoundError("Placement not found on this offer")
+
+    # Delete the join table entry
+    await db.delete(offer_placement)
+
+    # Load the actual placement for FK clearing / program deletion
     placement_result = await db.execute(
         select(ProgramYearTraining).where(
             ProgramYearTraining.id == placement_id,
-            ProgramYearTraining.offer_id == offer_id,
             ProgramYearTraining.tenant_id == current_user.tenant_id,
         )
     )
     placement = placement_result.scalar_one_or_none()
-    if not placement:
-        raise NotFoundError("Placement not found on this offer")
 
-    if delete_from_program:
+    if placement and delete_from_program:
         await db.delete(placement)
         action = "customer_offer.remove_placement_and_delete"
     else:
-        placement.offer_id = None
-        placement.customer_id = None
+        # For inhouse/hybrid: clear direct FK
+        if placement and placement.placement_type == "inhouse":
+            placement.offer_id = None
+            placement.customer_id = None
         action = "customer_offer.remove_placement"
 
     audit_log = AuditLog(
@@ -454,7 +515,7 @@ async def delete_offer(
     if not offer:
         raise NotFoundError("Offer not found")
 
-    # Unlink all placements
+    # Unlink inhouse/hybrid placements (clear direct FK); join table entries cascade-delete
     placements_result = await db.execute(
         select(ProgramYearTraining).where(
             ProgramYearTraining.offer_id == offer_id,
