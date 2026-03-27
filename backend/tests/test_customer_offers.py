@@ -428,36 +428,63 @@ async def test_available_placements(
     hybrid_placement: ProgramYearTraining,
     open_placement: ProgramYearTraining,
 ) -> None:
-    """List unassigned inhouse/hybrid placements."""
+    """List available placements — all types when no filter."""
     token = _make_token(admin_o)
     resp = await client.get(f"{BASE}/available-placements", headers=auth_headers(token))
     assert resp.status_code == 200
     data = resp.json()
-    # Should include inhouse and hybrid but not open
     ids = {p["id"] for p in data}
+    # All types should be included (inhouse unassigned, hybrid, open)
     assert str(inhouse_placement.id) in ids
     assert str(hybrid_placement.id) in ids
-    assert str(open_placement.id) not in ids
+    assert str(open_placement.id) in ids
 
 
 @pytest.mark.asyncio
-async def test_cannot_assign_open_placement(
+async def test_available_placements_filtered_by_type(
+    client: AsyncClient,
+    admin_o: User,
+    inhouse_placement: ProgramYearTraining,
+    hybrid_placement: ProgramYearTraining,
+    open_placement: ProgramYearTraining,
+) -> None:
+    """Filter available placements by type."""
+    token = _make_token(admin_o)
+    # Inhouse filter: only inhouse (not hybrid, not open)
+    resp = await client.get(f"{BASE}/available-placements?type=inhouse", headers=auth_headers(token))
+    assert resp.status_code == 200
+    ids = {p["id"] for p in resp.json()}
+    assert str(inhouse_placement.id) in ids
+    assert str(open_placement.id) not in ids
+
+    # Open filter: open + hybrid
+    resp = await client.get(f"{BASE}/available-placements?type=open", headers=auth_headers(token))
+    assert resp.status_code == 200
+    ids = {p["id"] for p in resp.json()}
+    assert str(open_placement.id) in ids
+    assert str(hybrid_placement.id) in ids
+    assert str(inhouse_placement.id) not in ids
+
+
+@pytest.mark.asyncio
+async def test_can_assign_open_placement(
     client: AsyncClient,
     admin_o: User,
     customer_o: Customer,
     open_placement: ProgramYearTraining,
 ) -> None:
-    """Validation error when assigning an open placement to an offer."""
+    """Open placements can be assigned to offers (shared)."""
     token = _make_token(admin_o)
     resp = await client.post(
         BASE,
         json={
             "customer_id": str(customer_o.id),
+            "offer_type": "open",
             "placement_ids": [str(open_placement.id)],
         },
         headers=auth_headers(token),
     )
-    assert resp.status_code == 422 or resp.status_code == 400
+    assert resp.status_code == 201
 
 
 @pytest.mark.asyncio
