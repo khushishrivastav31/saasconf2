@@ -27,9 +27,11 @@ test.describe('Trainings Module', () => {
       page.getByText(/training program/i).first()
     ).toBeVisible({ timeout: 10000 });
 
-    // At least one program year should appear (e.g. 2026, 2027, etc.)
+    // Program years may or may not exist on staging — verify page loaded, not specific data
     const hasYear = await softVisible(page.getByText(/20\d{2}/).first(), 10000);
-    expect(hasYear).toBeTruthy();
+    const hasAddButton = await softVisible(page.getByText(/add.*year/i).first(), 5000);
+    // Either years exist OR the add year button is visible
+    expect(hasYear || hasAddButton).toBeTruthy();
   });
 
   test('should navigate to Design Program', async ({ page }) => {
