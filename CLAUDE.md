@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Offer Placement Attendees — OfferAttendee model, migration 176, schema, API with 4 endpoints (list/create/update/delete). Expandable placement rows in CustomerDetailPanel with inline-editable attendee table. attendee_count added to CustomerOfferResponse.
-- **Status**: All checks pass — mypy (536 files), ruff, tsc, eslint. Migration 176 applied.
+- **Last completed**: Trainer schedule calendar view — monthly Google Calendar-style grid with holidays/blocked days, multi-day training bars with colors, month navigation, list/calendar toggle. Backend returns training_duration, training_color, training_slug in schedule endpoint.
+- **Status**: All checks pass — mypy, ruff, tsc, eslint.

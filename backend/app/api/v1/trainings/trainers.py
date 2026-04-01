@@ -508,6 +508,9 @@ async def get_trainer_schedule(
                 "placement_type": p.placement_type or "open",
                 "customer_name": p.customer.name if p.customer else None,
                 "attendee_count": attendee_counts.get(str(p.id), 0),
+                "training_duration": p.training.duration if p.training else 1,
+                "training_color": p.training.color if p.training else None,
+                "training_slug": p.training.slug if p.training else None,
                 "year": p.start_date.year,
                 "month": p.start_date.month,
             }
