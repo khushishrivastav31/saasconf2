@@ -103,8 +103,6 @@ const TEXT_GROUPS: { title: string; keys: { key: string; label: string }[] }[] =
 
 interface PortalSettings {
   enabled: boolean;
-  registration_start_date: string | null;
-  registration_end_date: string | null;
   success_message: string;
   default_language: string;
   available_languages: string[];
@@ -125,8 +123,6 @@ export default function RegistrationPortalTab() {
   });
 
   const [enabled, setEnabled] = useState(false);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [defaultLanguage, setDefaultLanguage] = useState('en');
   const [availableLanguages, setAvailableLanguages] = useState<string[]>(['en', 'de']);
@@ -137,8 +133,6 @@ export default function RegistrationPortalTab() {
   useEffect(() => {
     if (settings) {
       setEnabled(settings.enabled);
-      setStartDate(settings.registration_start_date || '');
-      setEndDate(settings.registration_end_date || '');
       setSuccessMessage(settings.success_message || '');
       setDefaultLanguage(settings.default_language || 'en');
       setAvailableLanguages(settings.available_languages || ['en', 'de']);
@@ -162,8 +156,6 @@ export default function RegistrationPortalTab() {
   const handleSave = useCallback(() => {
     saveMutation.mutate({
       enabled,
-      registration_start_date: startDate || null,
-      registration_end_date: endDate || null,
       success_message: successMessage,
       default_language: defaultLanguage,
       available_languages: availableLanguages,
@@ -172,8 +164,6 @@ export default function RegistrationPortalTab() {
     });
   }, [
     enabled,
-    startDate,
-    endDate,
     successMessage,
     defaultLanguage,
     availableLanguages,
@@ -365,37 +355,6 @@ export default function RegistrationPortalTab() {
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
               The portal opens in this language by default
             </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Registration Period */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Registration Period
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Start Date
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              End Date
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-800 dark:text-gray-100"
-            />
           </div>
         </div>
       </div>
