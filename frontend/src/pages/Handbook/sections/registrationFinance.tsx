@@ -4,6 +4,7 @@ export const registrationFinanceCategory: HandbookCategory = {
   id: 'category-5',
   name: 'Registration & Finance',
   description: '',
+  moduleCode: 'conferences',
   sections: [
     {
       id: '5-1-booking-options',

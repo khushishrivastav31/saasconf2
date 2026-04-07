@@ -4,6 +4,7 @@ export const eventSetupCategory: HandbookCategory = {
   id: 'category-1',
   name: 'Event Setup',
   description: '',
+  moduleCode: 'conferences',
   sections: [
     {
       id: '1-1-details',

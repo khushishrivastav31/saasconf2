@@ -1,25 +1,53 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { handbookSections, handbookCategories } from './handbookSections';
-import { useAuth } from '../../hooks/useAuth';
+import {
+  conferenceHandbookCategories,
+  trainingHandbookCategories,
+  type HandbookSection,
+} from './handbookSections';
 
-export default function Handbook() {
-  const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState(handbookSections[0]?.id || '');
+export type HandbookType = 'conferences' | 'trainings';
+
+interface HandbookProps {
+  type: HandbookType;
+}
+
+export default function Handbook({ type }: HandbookProps) {
+  const categories = useMemo(
+    () => (type === 'trainings' ? trainingHandbookCategories : conferenceHandbookCategories),
+    [type],
+  );
+
+  const allSections = useMemo(
+    () => categories.flatMap((cat) => cat.sections),
+    [categories],
+  );
+
+  const [activeSection, setActiveSection] = useState(allSections[0]?.id || '');
   const [tocOpen, setTocOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const [sectionTexts, setSectionTexts] = useState<Record<string, string>>({});
 
+  const title = type === 'trainings' ? 'Training Handbook' : 'Conference Handbook';
+
+  // Reset state when type changes
+  useEffect(() => {
+    setActiveSection(allSections[0]?.id || '');
+    setSearchQuery('');
+    setCollapsedCategories(new Set());
+    setTocOpen(false);
+  }, [type, allSections]);
+
   // After first render, extract text content from each section for search indexing
   useEffect(() => {
     const texts: Record<string, string> = {};
-    for (const section of handbookSections) {
+    for (const section of allSections) {
       const el = sectionRefs.current[section.id];
       texts[section.id] = (el?.textContent ?? section.title).toLowerCase();
     }
     setSectionTexts(texts);
-  }, []);
+  }, [allSections]);
 
   // Scroll-aware active section tracking
   useEffect(() => {
@@ -33,17 +61,17 @@ export default function Handbook() {
           }
         }
       },
-      { rootMargin: '-80px 0px -60% 0px', threshold: 0 }
+      { rootMargin: '-80px 0px -60% 0px', threshold: 0 },
     );
 
     const refs = sectionRefs.current;
-    for (const section of handbookSections) {
+    for (const section of allSections) {
       const el = refs[section.id];
       if (el) observer.observe(el);
     }
 
     return () => observer.disconnect();
-  }, [searchQuery]);
+  }, [searchQuery, allSections]);
 
   // Scroll to hash on mount
   useEffect(() => {
@@ -63,23 +91,13 @@ export default function Handbook() {
     if (!searchQuery.trim()) return null; // null = show all
     const q = searchQuery.toLowerCase();
     return new Set(
-      handbookSections
-        .filter((s) => (sectionTexts[s.id] ?? s.title.toLowerCase()).includes(q))
-        .map((s) => s.id)
+      allSections
+        .filter((s: HandbookSection) => (sectionTexts[s.id] ?? s.title.toLowerCase()).includes(q))
+        .map((s: HandbookSection) => s.id),
     );
-  }, [searchQuery, sectionTexts]);
+  }, [searchQuery, sectionTexts, allSections]);
 
-  const resultCount = matchingSectionIds?.size ?? handbookSections.length;
-
-  // Filter categories by user modules
-  const visibleCategories = useMemo(() => {
-    return handbookCategories.filter((category) => {
-      // Show if no moduleCode (general content)
-      if (!category.moduleCode) return true;
-      // Show if user has this module enabled
-      return user?.modules?.includes(category.moduleCode);
-    });
-  }, [user?.modules]);
+  const resultCount = matchingSectionIds?.size ?? allSections.length;
 
   // Toggle category collapse
   const toggleCategory = useCallback((categoryId: string) => {
@@ -101,7 +119,7 @@ export default function Handbook() {
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 hidden sm:block">
-              Admin Handbook
+              {title}
             </h1>
             <div className="relative flex-1 sm:max-w-md">
               <svg
@@ -184,10 +202,10 @@ export default function Handbook() {
             </button>
             {tocOpen && (
               <nav className="mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-2 max-h-80 overflow-y-auto">
-                {visibleCategories.map((category) => {
+                {categories.map((category) => {
                   const isCollapsed = collapsedCategories.has(category.id);
                   const hasVisibleSections = category.sections.some(
-                    (s) => !matchingSectionIds || matchingSectionIds.has(s.id)
+                    (s) => !matchingSectionIds || matchingSectionIds.has(s.id),
                   );
 
                   if (!hasVisibleSections && searchQuery) return null;
@@ -249,10 +267,10 @@ export default function Handbook() {
               <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 px-2">
                 Contents
               </h2>
-              {visibleCategories.map((category) => {
+              {categories.map((category) => {
                 const isCollapsed = collapsedCategories.has(category.id);
                 const hasVisibleSections = category.sections.some(
-                  (s) => !matchingSectionIds || matchingSectionIds.has(s.id)
+                  (s) => !matchingSectionIds || matchingSectionIds.has(s.id),
                 );
 
                 if (!hasVisibleSections && searchQuery) return null;
@@ -263,12 +281,7 @@ export default function Handbook() {
                       onClick={() => toggleCategory(category.id)}
                       className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
                     >
-                      <span className="flex items-center gap-2">
-                        {category.moduleCode && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
-                        )}
-                        {category.name}
-                      </span>
+                      <span>{category.name}</span>
                       <svg
                         className={`w-3 h-3 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
                         fill="none"
@@ -313,7 +326,7 @@ export default function Handbook() {
 
           {/* Content area */}
           <div className="flex-1 min-w-0 space-y-8">
-            {handbookSections.map((section) => {
+            {allSections.map((section) => {
               const hidden = matchingSectionIds && !matchingSectionIds.has(section.id);
               return (
                 <section

@@ -4,6 +4,7 @@ export const peopleCategory: HandbookCategory = {
   id: 'category-3',
   name: 'People',
   description: '',
+  moduleCode: 'conferences',
   sections: [
     {
       id: '3-1-program-committee',

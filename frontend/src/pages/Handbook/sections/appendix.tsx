@@ -4,6 +4,7 @@ export const appendixCategory: HandbookCategory = {
   id: 'category-appendix',
   name: 'Appendix',
   description: '',
+  moduleCode: 'conferences',
   sections: [
     {
       id: 'appendix',

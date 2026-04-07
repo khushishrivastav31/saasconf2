@@ -9,9 +9,11 @@ import ThemeToggle from '../ThemeToggle';
 import ChangePasswordModal from '../ChangePasswordModal';
 import type { GlobalUnreadCountResponse } from '../../types/messaging';
 
-const navigation = [
-  { name: 'Welcome', href: '/dashboard', icon: HomeIcon },
-  { name: 'Handbook', href: '/handbook', icon: BookIcon },
+const baseNavigation = [{ name: 'Welcome', href: '/dashboard', icon: HomeIcon }];
+
+const handbookLinks = [
+  { name: 'Conference Handbook', href: '/handbook/conferences', icon: BookIcon, moduleCode: 'conferences' },
+  { name: 'Training Handbook', href: '/handbook/trainings', icon: BookIcon, moduleCode: 'trainings' },
 ];
 
 const adminNavigation = [
@@ -300,7 +302,7 @@ export default function AdminLayout() {
             aria-label="Main navigation"
           >
             <div className="space-y-1">
-              {navigation.map((item) => {
+              {baseNavigation.map((item) => {
                 const isActive =
                   location.pathname === item.href || location.pathname.startsWith(item.href + '/');
                 return (
@@ -323,6 +325,35 @@ export default function AdminLayout() {
                   </Link>
                 );
               })}
+              {handbookLinks
+                .filter(
+                  (h) =>
+                    user?.role === 'super_admin' || user?.modules?.includes(h.moduleCode),
+                )
+                .map((item) => {
+                  const isActive =
+                    location.pathname === item.href ||
+                    location.pathname.startsWith(item.href + '/');
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      title={sidebarCollapsed ? item.name : undefined}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`flex items-center py-2 text-sm font-medium rounded-md ${
+                        sidebarCollapsed ? 'justify-center px-2' : 'px-3'
+                      } ${
+                        isActive
+                          ? 'bg-gray-800 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      }`}
+                    >
+                      <item.icon />
+                      {!sidebarCollapsed && <span className="ml-3">{item.name}</span>}
+                    </Link>
+                  );
+                })}
             </div>
 
             {/* Module Navigation */}

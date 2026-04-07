@@ -134,6 +134,18 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function HandbookRedirect() {
+  const { user } = useAuth();
+  // Redirect to first available handbook based on user's modules
+  if (user?.role === 'super_admin' || user?.modules?.includes('conferences')) {
+    return <Navigate to="/handbook/conferences" replace />;
+  }
+  if (user?.modules?.includes('trainings')) {
+    return <Navigate to="/handbook/trainings" replace />;
+  }
+  return <Navigate to="/dashboard" replace />;
+}
+
 function ModuleRoute({ children, moduleCode }: { children: React.ReactNode; moduleCode: string }) {
   const { user } = useAuth();
 
@@ -263,8 +275,24 @@ function App() {
             {/* Redirect old email-templates route to my-company */}
             <Route path="email-templates" element={<Navigate to="/my-company" replace />} />
 
-            {/* Handbook (all authenticated users) */}
-            <Route path="handbook" element={<Handbook />} />
+            {/* Handbook — separate routes per module */}
+            <Route
+              path="handbook/conferences"
+              element={
+                <ModuleRoute moduleCode="conferences">
+                  <Handbook type="conferences" />
+                </ModuleRoute>
+              }
+            />
+            <Route
+              path="handbook/trainings"
+              element={
+                <ModuleRoute moduleCode="trainings">
+                  <Handbook type="trainings" />
+                </ModuleRoute>
+              }
+            />
+            <Route path="handbook" element={<HandbookRedirect />} />
 
             {/* Module routes */}
             <Route

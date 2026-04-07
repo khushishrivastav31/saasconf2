@@ -4,6 +4,7 @@ export const communicationsCategory: HandbookCategory = {
   id: 'category-6',
   name: 'Communications',
   description: '',
+  moduleCode: 'conferences',
   sections: [
     {
       id: '6-1-messages',

@@ -4,6 +4,7 @@ export const partnershipsCategory: HandbookCategory = {
   id: 'category-4',
   name: 'Partnerships',
   description: '',
+  moduleCode: 'conferences',
   sections: [
     {
       id: '4-1-sponsors',

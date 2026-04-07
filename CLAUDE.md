@@ -81,5 +81,5 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Trainer schedule calendar view — monthly Google Calendar-style grid with holidays/blocked days, multi-day training bars with colors, month navigation, list/calendar toggle. Backend returns training_duration, training_color, training_slug in schedule endpoint.
-- **Status**: All checks pass — mypy, ruff, tsc, eslint.
+- **Last completed**: Split handbook into Conference Handbook and Training Handbook — two separate routes (/handbook/conferences, /handbook/trainings) with module-based access control. Created comprehensive training handbook with 8 category files covering all training features. Sidebar shows conditional links based on user modules.
+- **Status**: All checks pass — tsc, eslint.

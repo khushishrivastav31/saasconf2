@@ -4,6 +4,7 @@ export const contentCategory: HandbookCategory = {
   id: 'category-2',
   name: 'Content',
   description: '',
+  moduleCode: 'conferences',
   sections: [
     {
       id: '2-1-call-for-papers',

@@ -4,6 +4,7 @@ export const insightsCategory: HandbookCategory = {
   id: 'category-7',
   name: 'Insights',
   description: '',
+  moduleCode: 'conferences',
   sections: [
     {
       id: '7-1-analytics',
