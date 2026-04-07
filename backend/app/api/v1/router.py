@@ -202,11 +202,13 @@ api_router.include_router(global_unread_router, prefix="/messaging", tags=["Mess
 # File attachments
 api_router.include_router(attachments.router, prefix="/attachments", tags=["Attachments"])
 
+# Public Registration Portal (public endpoints, no auth required)
+# Must be before CFP Portal — cfp_portal has a catch-all /{tenant_slug}/{abbreviation}
+# that would match /portal/{tenant}/trainings otherwise.
+api_router.include_router(portal.router, tags=["Public Portal"])
+
 # CFP Applicant Portal (public + applicant-auth endpoints)
 api_router.include_router(cfp_portal.router, tags=["CFP Portal"])
-
-# Public Registration Portal (public endpoints, no auth required)
-api_router.include_router(portal.router, tags=["Public Portal"])
 
 # Portal Templates (downloadable CSS templates)
 api_router.include_router(portal_templates.router, tags=["Portal Templates"])

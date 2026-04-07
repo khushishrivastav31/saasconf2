@@ -14,6 +14,7 @@ from .offer_documents import router as offer_documents_router
 from .offer_templates import router as offer_templates_router
 from .offers import router as offers_router
 from .policies import router as policies_router
+from .portal_settings import router as portal_settings_router
 from .programs import router as programs_router
 from .registration_questions import router as registration_questions_router
 from .syllabi import router as syllabi_router
@@ -39,6 +40,7 @@ router.include_router(offers_router)
 router.include_router(offer_attendees_router)
 router.include_router(offer_documents_router)
 router.include_router(offer_templates_router)
+router.include_router(portal_settings_router)
 router.include_router(location_types_router)
 router.include_router(detail_router)
 

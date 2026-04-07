@@ -71,6 +71,7 @@ const MyExpensesPage = lazy(() => import('./pages/portal/PortalExpensesTab'));
 
 // Lazy-loaded public registration portal
 const PublicRegistrationPage = lazy(() => import('./pages/PublicRegistration'));
+const PublicTrainingPortalPage = lazy(() => import('./pages/PublicTrainingPortal'));
 
 function LazyFallback() {
   return (
@@ -431,6 +432,16 @@ function App() {
             element={
               <ErrorBoundary>
                 <PublicRegistrationPage />
+              </ErrorBoundary>
+            }
+          />
+
+          {/* Public Training Portal — public route */}
+          <Route
+            path=":tenantSlug/trainings/register/*"
+            element={
+              <ErrorBoundary>
+                <PublicTrainingPortalPage />
               </ErrorBoundary>
             }
           />
