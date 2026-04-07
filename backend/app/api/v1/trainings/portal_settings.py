@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import copy
+
 from fastapi import APIRouter
 from sqlalchemy.orm import attributes
 
+from app.api.v1.portal.training_portal import DEFAULT_PORTAL_TEXTS
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.models.tenant import Tenant
 
@@ -20,6 +23,16 @@ async def _get_tenant(db: DbSessionDep, current_user: TenantAdminDep) -> Tenant:
 
         raise HTTPException(status_code=404, detail="Tenant not found")
     return tenant
+
+
+def _merge_portal_texts(custom: dict) -> dict:
+    """Merge custom portal texts with defaults — defaults fill any missing keys."""
+    result = copy.deepcopy(DEFAULT_PORTAL_TEXTS)
+    for lang, texts in custom.items():
+        if lang not in result:
+            result[lang] = {}
+        result[lang].update(texts)
+    return result
 
 
 @router.get("")
@@ -38,7 +51,7 @@ async def get_portal_settings(
         "success_message": settings.get("success_message", ""),
         "default_language": settings.get("default_language", "en"),
         "available_languages": settings.get("available_languages", ["en", "de"]),
-        "portal_texts": settings.get("portal_texts", {}),
+        "portal_texts": _merge_portal_texts(settings.get("portal_texts", {})),
         "theme": settings.get(
             "theme",
             {
