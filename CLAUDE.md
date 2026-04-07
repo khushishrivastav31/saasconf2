@@ -81,5 +81,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Training Registration Portal — full stack: data model (migration 179), public API (search/list/filters/detail/register), frontend search page with smart filters and training cards, admin portal settings (enable/disable, theme, dates), registration form with bulk attendee add, billing, payment method, order summary, and confirmation page. Route: /{tenantSlug}/trainings.
+- **Last completed**: Multi-language support for training portal — DE/EN language switcher, usePortalTexts hook with admin-editable texts, portal-config public endpoint, language stored per registration/attendee (migration 180). All portal components use t() for translatable strings. CI fix: ruff format migration 179.
+- **In progress**: Remaining multilingual work — email template language tabs, admin portal text editor, default DE email templates.
 - **Status**: All checks pass — mypy, ruff, tsc, eslint.

@@ -13,7 +13,7 @@ interface RegistrationResult {
   payment_method: string;
 }
 
-export default function TrainingConfirmation() {
+export default function TrainingConfirmation({ t }: { lang: string; t: (key: string) => string }) {
   const location = useLocation();
   const navigate = useNavigate();
   const result = location.state?.registrationResult as RegistrationResult | undefined;
@@ -45,7 +45,7 @@ export default function TrainingConfirmation() {
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Registration Successful!
+          {t('confirmation_title')}
         </h1>
 
         <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -87,7 +87,7 @@ export default function TrainingConfirmation() {
           onClick={() => navigate('../../', { replace: true })}
           className="px-6 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 border border-primary-300 dark:border-primary-700 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20"
         >
-          Browse more trainings
+          {t('btn_browse_more')}
         </button>
       </div>
     </div>

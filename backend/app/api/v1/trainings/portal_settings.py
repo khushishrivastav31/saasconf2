@@ -36,6 +36,9 @@ async def get_portal_settings(
         "registration_start_date": settings.get("registration_start_date"),
         "registration_end_date": settings.get("registration_end_date"),
         "success_message": settings.get("success_message", ""),
+        "default_language": settings.get("default_language", "en"),
+        "available_languages": settings.get("available_languages", ["en", "de"]),
+        "portal_texts": settings.get("portal_texts", {}),
         "theme": settings.get(
             "theme",
             {
@@ -72,6 +75,12 @@ async def update_portal_settings(
         portal["success_message"] = data["success_message"] or ""
     if "theme" in data and isinstance(data["theme"], dict):
         portal["theme"] = data["theme"]
+    if "default_language" in data:
+        portal["default_language"] = data["default_language"] or "en"
+    if "available_languages" in data and isinstance(data["available_languages"], list):
+        portal["available_languages"] = data["available_languages"]
+    if "portal_texts" in data and isinstance(data["portal_texts"], dict):
+        portal["portal_texts"] = data["portal_texts"]
 
     settings[SETTINGS_KEY] = portal
     tenant.settings = settings
@@ -84,5 +93,8 @@ async def update_portal_settings(
         "registration_start_date": portal.get("registration_start_date"),
         "registration_end_date": portal.get("registration_end_date"),
         "success_message": portal.get("success_message", ""),
+        "default_language": portal.get("default_language", "en"),
+        "available_languages": portal.get("available_languages", ["en", "de"]),
+        "portal_texts": portal.get("portal_texts", {}),
         "theme": portal.get("theme", {}),
     }

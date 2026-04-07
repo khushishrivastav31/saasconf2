@@ -8,9 +8,14 @@ import { useQuery } from '@tanstack/react-query';
 import publicApi from '../../config/publicApi';
 import SmartFilters from './components/SmartFilters';
 import TrainingCard from './components/TrainingCard';
+import LanguageSwitcher from './components/LanguageSwitcher';
 
 interface TrainingSearchProps {
   tenantSlug: string;
+  lang: string;
+  setLang: (lang: string) => void;
+  availableLanguages: string[];
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
 export interface PublicTraining {
@@ -81,7 +86,13 @@ function buildParams(filters: ActiveFilters, page: number) {
   return params;
 }
 
-const TrainingSearch = React.memo(function TrainingSearch({ tenantSlug }: TrainingSearchProps) {
+const TrainingSearch = React.memo(function TrainingSearch({
+  tenantSlug,
+  lang,
+  setLang,
+  availableLanguages,
+  t,
+}: TrainingSearchProps) {
   const [filters, setFilters] = useState<ActiveFilters>(emptyFilters);
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -155,13 +166,18 @@ const TrainingSearch = React.memo(function TrainingSearch({ tenantSlug }: Traini
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Training Catalog
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Browse available trainings and register
-          </p>
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
+              {t('search_title')}
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('search_subtitle')}</p>
+          </div>
+          <LanguageSwitcher
+            lang={lang}
+            availableLanguages={availableLanguages}
+            onChangeLang={setLang}
+          />
         </div>
       </header>
 
@@ -185,7 +201,7 @@ const TrainingSearch = React.memo(function TrainingSearch({ tenantSlug }: Traini
               </svg>
               <input
                 type="text"
-                placeholder="Search trainings by name, location, certification..."
+                placeholder={t('search_placeholder')}
                 value={filters.search}
                 onChange={(e) => updateFilter('search', e.target.value)}
                 className="w-full pl-10 pr-4 py-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -196,7 +212,7 @@ const TrainingSearch = React.memo(function TrainingSearch({ tenantSlug }: Traini
               onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
               className="lg:hidden px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium"
             >
-              Filters
+              {t('filters')}
               {hasActiveFilters && (
                 <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-primary-600 text-white rounded-full">
                   !
@@ -217,6 +233,7 @@ const TrainingSearch = React.memo(function TrainingSearch({ tenantSlug }: Traini
               onUpdateFilter={updateFilter}
               onClear={clearFilters}
               hasActiveFilters={hasActiveFilters}
+              t={t}
             />
           </aside>
 
@@ -242,31 +259,36 @@ const TrainingSearch = React.memo(function TrainingSearch({ tenantSlug }: Traini
                   />
                 </svg>
                 <h3 className="mt-3 text-lg font-medium text-gray-900 dark:text-gray-100">
-                  No trainings found
+                  {t('no_results')}
                 </h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {hasActiveFilters
-                    ? 'Try adjusting your filters or search terms.'
-                    : 'No trainings are currently available for registration.'}
+                  {hasActiveFilters ? t('no_results_hint') : t('no_results')}
                 </p>
                 {hasActiveFilters && (
                   <button
                     onClick={clearFilters}
                     className="mt-4 text-sm text-primary-600 dark:text-primary-400 hover:underline"
                   >
-                    Clear all filters
+                    {t('filter_clear')}
                   </button>
                 )}
               </div>
             ) : (
               <>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  Showing {trainingsData.items.length} of {trainingsData.total} training
-                  {trainingsData.total !== 1 ? 's' : ''}
+                  {t('showing_results', {
+                    count: trainingsData.items.length,
+                    total: trainingsData.total,
+                  })}
                 </p>
                 <div className="space-y-4">
-                  {trainingsData.items.map((t) => (
-                    <TrainingCard key={t.placement_id} training={t} tenantSlug={tenantSlug} />
+                  {trainingsData.items.map((item) => (
+                    <TrainingCard
+                      key={item.placement_id}
+                      training={item}
+                      tenantSlug={tenantSlug}
+                      t={t}
+                    />
                   ))}
                 </div>
 

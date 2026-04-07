@@ -67,9 +67,7 @@ def upgrade() -> None:
     op.create_index("idx_training_reg_contact_email", "training_registrations", ["contact_email"])
 
     # RLS policy
-    op.execute(
-        "ALTER TABLE training_registrations ENABLE ROW LEVEL SECURITY"
-    )
+    op.execute("ALTER TABLE training_registrations ENABLE ROW LEVEL SECURITY")
     op.execute(
         """CREATE POLICY training_registrations_tenant_isolation ON training_registrations
         USING (tenant_id = current_setting('app.current_tenant_id')::uuid)"""
@@ -99,9 +97,7 @@ def upgrade() -> None:
     op.create_index("idx_training_reg_att_reg", "training_registration_attendees", ["registration_id"])
 
     # RLS policy
-    op.execute(
-        "ALTER TABLE training_registration_attendees ENABLE ROW LEVEL SECURITY"
-    )
+    op.execute("ALTER TABLE training_registration_attendees ENABLE ROW LEVEL SECURITY")
     op.execute(
         """CREATE POLICY training_reg_att_tenant_isolation ON training_registration_attendees
         USING (tenant_id = current_setting('app.current_tenant_id')::uuid)"""

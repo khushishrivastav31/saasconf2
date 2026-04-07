@@ -9,6 +9,7 @@ import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import publicApi from '../../config/publicApi';
 import type { PublicTraining } from './TrainingSearch';
+import LanguageSwitcher from './components/LanguageSwitcher';
 
 interface Attendee {
   first_name: string;
@@ -47,10 +48,18 @@ const emptyBilling: BillingInfo = {
 
 interface TrainingRegistrationFormProps {
   tenantSlug: string;
+  lang: string;
+  setLang: (lang: string) => void;
+  availableLanguages: string[];
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
 const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
   tenantSlug,
+  lang,
+  setLang,
+  availableLanguages,
+  t,
 }: TrainingRegistrationFormProps) {
   const { placementId } = useParams<{ placementId: string }>();
   const navigate = useNavigate();
@@ -176,11 +185,12 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
           last_name: a.last_name,
           email: a.email,
         })),
+        language: lang,
         honeypot_field: '',
         form_start_timestamp: Date.now() / 1000,
       });
     },
-    [attendees, billing, placementId, registerMutation]
+    [attendees, billing, placementId, registerMutation, lang]
   );
 
   if (isLoading) {
@@ -217,7 +227,14 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-3xl mx-auto px-4 py-8">
-        {/* Training Header */}
+        {/* Language + Training Header */}
+        <div className="flex justify-end mb-3">
+          <LanguageSwitcher
+            lang={lang}
+            availableLanguages={availableLanguages}
+            onChangeLang={setLang}
+          />
+        </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
             {training.training_name}
@@ -250,7 +267,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                Attendees ({attendees.length})
+                {t('section_attendees')} ({attendees.length})
               </h2>
               <div className="flex gap-2">
                 <button
@@ -351,7 +368,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                Billing Information
+                {t('section_billing')}
               </h2>
               <button
                 type="button"
@@ -418,7 +435,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
               {/* Contact person */}
               <div className="sm:col-span-2 mt-2">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Contact Person
+                  {t('section_contact')}
                 </h3>
               </div>
               <input
@@ -457,7 +474,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
             {/* Payment method */}
             <div className="mt-4">
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Payment Method
+                {t('section_payment')}
               </h3>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -489,7 +506,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
           {/* Order Summary */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Order Summary
+              {t('section_summary')}
             </h2>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-gray-700 dark:text-gray-300">

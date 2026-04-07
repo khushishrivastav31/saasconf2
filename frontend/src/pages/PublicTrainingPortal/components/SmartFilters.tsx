@@ -12,6 +12,7 @@ interface SmartFiltersProps {
   onUpdateFilter: <K extends keyof ActiveFilters>(key: K, value: ActiveFilters[K]) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
+  t: (key: string) => string;
 }
 
 const SmartFilters = React.memo(function SmartFilters({
@@ -20,17 +21,18 @@ const SmartFilters = React.memo(function SmartFilters({
   onUpdateFilter,
   onClear,
   hasActiveFilters,
+  t,
 }: SmartFiltersProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Filters</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('filters')}</h3>
         {hasActiveFilters && (
           <button
             onClick={onClear}
             className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
           >
-            Clear all
+            {t('filter_clear')}
           </button>
         )}
       </div>
@@ -38,7 +40,7 @@ const SmartFilters = React.memo(function SmartFilters({
       {/* Date Range */}
       <div>
         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-          Date Range
+          {t('filter_date')}
         </label>
         <div className="flex gap-2">
           <input
@@ -62,7 +64,7 @@ const SmartFilters = React.memo(function SmartFilters({
 
       {/* Location */}
       {filterValues && filterValues.locations.length > 0 && (
-        <FilterSection title="Location">
+        <FilterSection title={t('filter_location')}>
           {filterValues.locations.map((loc) => (
             <CheckboxItem
               key={loc.value}
@@ -85,7 +87,7 @@ const SmartFilters = React.memo(function SmartFilters({
 
       {/* Language */}
       {filterValues && filterValues.languages.length > 0 && (
-        <FilterSection title="Language">
+        <FilterSection title={t('filter_language')}>
           {filterValues.languages.map((lang) => (
             <RadioItem
               key={lang.id}
@@ -102,7 +104,7 @@ const SmartFilters = React.memo(function SmartFilters({
 
       {/* Certification Body */}
       {filterValues && filterValues.certification_bodies.length > 0 && (
-        <FilterSection title="Certification">
+        <FilterSection title={t('filter_certification')}>
           {filterValues.certification_bodies.map((cb) => (
             <RadioItem
               key={cb.id}
@@ -122,7 +124,7 @@ const SmartFilters = React.memo(function SmartFilters({
 
       {/* Theme */}
       {filterValues && filterValues.themes.length > 0 && (
-        <FilterSection title="Theme">
+        <FilterSection title={t('filter_theme')}>
           {filterValues.themes.map((theme) => (
             <RadioItem
               key={theme.id}
@@ -139,7 +141,7 @@ const SmartFilters = React.memo(function SmartFilters({
 
       {/* Placement Type */}
       {filterValues && filterValues.types.length > 1 && (
-        <FilterSection title="Type">
+        <FilterSection title={t('filter_type')}>
           {filterValues.types.map((t) => (
             <RadioItem
               key={t.value}

@@ -10,16 +10,18 @@ import type { PublicTraining } from '../TrainingSearch';
 interface TrainingCardProps {
   training: PublicTraining;
   tenantSlug: string;
+  t: (key: string) => string;
 }
 
 const TrainingCard = React.memo(function TrainingCard({
-  training: t,
+  training: tr,
   tenantSlug,
+  t,
 }: TrainingCardProps) {
   const navigate = useNavigate();
-  const price = t.early_bird_price || t.regular_price;
-  const startDate = t.start_date
-    ? new Date(t.start_date + 'T00:00:00').toLocaleDateString('en-GB', {
+  const price = tr.early_bird_price || tr.regular_price;
+  const startDate = tr.start_date
+    ? new Date(tr.start_date + 'T00:00:00').toLocaleDateString('en-GB', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -32,7 +34,7 @@ const TrainingCard = React.memo(function TrainingCard({
         <div className="flex-1 min-w-0">
           {/* Training name */}
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
-            {t.training_name}
+            {tr.training_name}
           </h3>
 
           {/* Meta row */}
@@ -48,13 +50,13 @@ const TrainingCard = React.memo(function TrainingCard({
                   />
                 </svg>
                 {startDate}
-                {t.duration && t.duration > 1 && (
-                  <span className="text-gray-400 dark:text-gray-500">({t.duration} days)</span>
+                {tr.duration && tr.duration > 1 && (
+                  <span className="text-gray-400 dark:text-gray-500">({tr.duration} days)</span>
                 )}
               </span>
             )}
 
-            {(t.location_name || t.location_city) && (
+            {(tr.location_name || tr.location_city) && (
               <span className="flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -70,7 +72,7 @@ const TrainingCard = React.memo(function TrainingCard({
                     d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
                   />
                 </svg>
-                {[t.location_name, t.location_city].filter(Boolean).join(', ')}
+                {[tr.location_name, tr.location_city].filter(Boolean).join(', ')}
               </span>
             )}
           </div>
@@ -80,44 +82,44 @@ const TrainingCard = React.memo(function TrainingCard({
             {/* Placement type */}
             <span
               className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
-                t.placement_type === 'hybrid'
+                tr.placement_type === 'hybrid'
                   ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300'
                   : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
               }`}
             >
-              {t.placement_type === 'hybrid' ? 'Hybrid' : 'Open'}
+              {tr.placement_type === 'hybrid' ? 'Hybrid' : 'Open'}
             </span>
 
-            {t.language_name && (
+            {tr.language_name && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                {t.language_name}
+                {tr.language_name}
               </span>
             )}
 
-            {t.certification_body_name && (
+            {tr.certification_body_name && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                {t.certification_body_name}
+                {tr.certification_body_name}
               </span>
             )}
 
-            {t.theme_name && (
+            {tr.theme_name && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                {t.theme_name}
+                {tr.theme_name}
               </span>
             )}
           </div>
 
           {/* Trainers */}
-          {t.trainers.length > 0 && (
+          {tr.trainers.length > 0 && (
             <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-              Trainer{t.trainers.length > 1 ? 's' : ''}: {t.trainers.join(', ')}
+              Trainer{tr.trainers.length > 1 ? 's' : ''}: {tr.trainers.join(', ')}
             </p>
           )}
 
           {/* Description excerpt */}
-          {t.training_description && (
+          {tr.training_description && (
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-              {t.training_description}
+              {tr.training_description}
             </p>
           )}
         </div>
@@ -127,23 +129,25 @@ const TrainingCard = React.memo(function TrainingCard({
           {price && (
             <div>
               <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                {t.currency === 'EUR' ? '\u20AC' : t.currency === 'USD' ? '$' : t.currency}{' '}
+                {tr.currency === 'EUR' ? '\u20AC' : tr.currency === 'USD' ? '$' : tr.currency}{' '}
                 {Number(price).toLocaleString('de-DE', { minimumFractionDigits: 0 })}
               </p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500">per person</p>
-              {t.early_bird_price && t.regular_price && t.early_bird_price !== t.regular_price && (
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 line-through">
-                  {t.currency === 'EUR' ? '\u20AC' : t.currency}{' '}
-                  {Number(t.regular_price).toLocaleString('de-DE', { minimumFractionDigits: 0 })}
-                </p>
-              )}
+              <p className="text-[11px] text-gray-400 dark:text-gray-500">{t('per_person')}</p>
+              {tr.early_bird_price &&
+                tr.regular_price &&
+                tr.early_bird_price !== tr.regular_price && (
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 line-through">
+                    {tr.currency === 'EUR' ? '\u20AC' : tr.currency}{' '}
+                    {Number(tr.regular_price).toLocaleString('de-DE', { minimumFractionDigits: 0 })}
+                  </p>
+                )}
             </div>
           )}
           <button
-            onClick={() => navigate(`/${tenantSlug}/trainings/register/${t.placement_id}/form`)}
+            onClick={() => navigate(`/${tenantSlug}/trainings/register/${tr.placement_id}/form`)}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors whitespace-nowrap"
           >
-            Register
+            {t('btn_register')}
           </button>
         </div>
       </div>

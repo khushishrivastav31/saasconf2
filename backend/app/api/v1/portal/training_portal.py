@@ -26,6 +26,103 @@ from app.models.training_program import (
 router = APIRouter()
 
 
+# ── Default portal texts ─────────────────────────────────────────
+
+DEFAULT_PORTAL_TEXTS: dict[str, dict[str, str]] = {
+    "en": {
+        "search_title": "Training Catalog",
+        "search_subtitle": "Browse available trainings and register",
+        "search_placeholder": "Search trainings by name, location, certification...",
+        "filter_date": "Date Range",
+        "filter_location": "Location",
+        "filter_language": "Language",
+        "filter_certification": "Certification",
+        "filter_theme": "Theme",
+        "filter_type": "Type",
+        "filter_clear": "Clear all",
+        "btn_register": "Register",
+        "btn_add_attendee": "+ Add",
+        "btn_bulk_add": "Bulk add",
+        "btn_submit": "Register & Pay",
+        "section_attendees": "Attendees",
+        "section_billing": "Billing Information",
+        "section_contact": "Contact Person",
+        "section_payment": "Payment Method",
+        "section_summary": "Order Summary",
+        "section_terms": "I agree to the terms and conditions and acknowledge the privacy policy.",
+        "label_first_name": "First name",
+        "label_last_name": "Last name",
+        "label_email": "Email",
+        "label_company": "Company name (optional)",
+        "label_street": "Street address",
+        "label_postal": "Postal code",
+        "label_city": "City",
+        "label_country": "Country code (e.g. DE)",
+        "label_vat": "VAT number (optional)",
+        "label_phone": "Phone",
+        "label_bank_transfer": "Bank Transfer",
+        "label_credit_card": "Credit Card",
+        "per_person": "per person",
+        "total": "Total",
+        "confirmation_title": "Registration Successful!",
+        "confirmation_message": "Thank you for registering. You will receive a confirmation email.",
+        "btn_browse_more": "Browse more trainings",
+        "no_results": "No trainings found",
+        "no_results_hint": "Try adjusting your filters or search terms.",
+        "showing_results": "Showing {count} of {total} trainings",
+        "filters": "Filters",
+        "copy_from_attendee": "Copy from first attendee",
+        "processing": "Processing...",
+        "days": "days",
+    },
+    "de": {
+        "search_title": "Schulungskatalog",
+        "search_subtitle": "Verfügbare Schulungen durchsuchen und anmelden",
+        "search_placeholder": "Schulungen suchen nach Name, Ort, Zertifizierung...",
+        "filter_date": "Zeitraum",
+        "filter_location": "Standort",
+        "filter_language": "Sprache",
+        "filter_certification": "Zertifizierung",
+        "filter_theme": "Thema",
+        "filter_type": "Typ",
+        "filter_clear": "Alle zurücksetzen",
+        "btn_register": "Anmelden",
+        "btn_add_attendee": "+ Hinzufügen",
+        "btn_bulk_add": "Mehrere hinzufügen",
+        "btn_submit": "Anmelden & Bezahlen",
+        "section_attendees": "Teilnehmer",
+        "section_billing": "Rechnungsinformationen",
+        "section_contact": "Ansprechpartner",
+        "section_payment": "Zahlungsmethode",
+        "section_summary": "Bestellübersicht",
+        "section_terms": "Ich stimme den Allgemeinen Geschäftsbedingungen zu und akzeptiere die Datenschutzrichtlinie.",
+        "label_first_name": "Vorname",
+        "label_last_name": "Nachname",
+        "label_email": "E-Mail",
+        "label_company": "Firmenname (optional)",
+        "label_street": "Straße",
+        "label_postal": "PLZ",
+        "label_city": "Ort",
+        "label_country": "Ländercode (z.B. DE)",
+        "label_vat": "USt-IdNr. (optional)",
+        "label_phone": "Telefon",
+        "label_bank_transfer": "Banküberweisung",
+        "label_credit_card": "Kreditkarte",
+        "per_person": "pro Person",
+        "total": "Gesamt",
+        "confirmation_title": "Anmeldung erfolgreich!",
+        "confirmation_message": "Vielen Dank für Ihre Anmeldung. Sie erhalten eine Bestätigungs-E-Mail.",
+        "btn_browse_more": "Weitere Schulungen durchsuchen",
+        "no_results": "Keine Schulungen gefunden",
+        "no_results_hint": "Versuchen Sie, Ihre Filter oder Suchbegriffe anzupassen.",
+        "showing_results": "{count} von {total} Schulungen",
+        "filters": "Filter",
+        "copy_from_attendee": "Vom ersten Teilnehmer übernehmen",
+        "processing": "Wird verarbeitet...",
+        "days": "Tage",
+    },
+}
+
 # ── Helpers ──────────────────────────────────────────────────────
 
 
@@ -310,6 +407,22 @@ async def get_training_filters(
     }
 
 
+@router.get("/{tenant_slug}/trainings/portal-config")
+async def get_portal_config(
+    tenant_slug: str,
+    db: DbSessionDep,
+) -> dict:
+    """Get portal configuration: available languages, default language, and translated texts."""
+    tenant = await _resolve_tenant(db, tenant_slug)
+    portal = (tenant.settings or {}).get("training_portal", {})
+
+    return {
+        "default_language": portal.get("default_language", "en"),
+        "available_languages": portal.get("available_languages", ["en", "de"]),
+        "portal_texts": portal.get("portal_texts", DEFAULT_PORTAL_TEXTS),
+    }
+
+
 @router.get("/{tenant_slug}/trainings/{placement_id}")
 async def get_public_training_detail(
     tenant_slug: str,
@@ -377,6 +490,7 @@ class TrainingRegistrationRequest(BaseModel):
     placement_id: UUID
     billing: TrainingBillingInput
     attendees: list[TrainingAttendeeInput]
+    language: str = "en"
     discount_code: str | None = None
     recaptcha_token: str | None = None
     honeypot_field: str | None = None
@@ -469,6 +583,7 @@ async def register_for_training(
         tenant_id=tenant.id,
         placement_id=data.placement_id,
         status="registered",
+        language=data.language,
         company_name=data.billing.company_name,
         street=data.billing.street,
         postal_code=data.billing.postal_code,
@@ -499,6 +614,7 @@ async def register_for_training(
             first_name=att.first_name,
             last_name=att.last_name,
             email=att.email,
+            language=data.language,
         )
         db.add(attendee)
         attendee_records.append(attendee)
