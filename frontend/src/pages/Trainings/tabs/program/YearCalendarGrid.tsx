@@ -82,6 +82,7 @@ interface YearCalendarGridProps {
   onRemovePlacement: (placementId: string) => void;
   onChangeLocation: (placementId: string, locationId: string | null) => void;
   onChangePlacementType: (placementId: string, type: string) => void;
+  onToggleGuaranteed?: (placementId: string) => void;
 }
 
 const YearCalendarGrid = React.memo(function YearCalendarGrid({
@@ -92,6 +93,7 @@ const YearCalendarGrid = React.memo(function YearCalendarGrid({
   onRemovePlacement,
   onChangeLocation,
   onChangePlacementType,
+  onToggleGuaranteed,
 }: YearCalendarGridProps) {
   const { holidayMap, grid } = useMemo(() => buildGrid(year, holidayDates), [year, holidayDates]);
 
@@ -156,7 +158,8 @@ const YearCalendarGrid = React.memo(function YearCalendarGrid({
                         locations,
                         handleRemove,
                         onChangeLocation,
-                        onChangePlacementType
+                        onChangePlacementType,
+                        onToggleGuaranteed
                       )}
                     </tr>
                   ))}
@@ -195,7 +198,8 @@ function renderLane(
   locations: Location[],
   onRemove: (id: string) => void,
   onChangeLocation: (placementId: string, locationId: string | null) => void,
-  onChangePlacementType: (placementId: string, type: string) => void
+  onChangePlacementType: (placementId: string, type: string) => void,
+  onToggleGuaranteed?: (placementId: string) => void
 ): React.ReactNode[] {
   const cells: React.ReactNode[] = [];
   let currentDay = 1;
@@ -237,10 +241,12 @@ function renderLane(
         locationCode={p.location_code}
         placementType={p.placement_type || 'open'}
         customerName={p.customer_name}
+        isGuaranteed={p.is_guaranteed}
         locations={locations}
         onRemove={() => onRemove(p.id)}
         onChangeLocation={onChangeLocation}
         onChangePlacementType={onChangePlacementType}
+        onToggleGuaranteed={onToggleGuaranteed}
       />
     );
 

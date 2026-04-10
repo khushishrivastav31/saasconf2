@@ -81,6 +81,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: Multi-language support for training portal — DE/EN language switcher, usePortalTexts hook with admin-editable texts, portal-config public endpoint, language stored per registration/attendee (migration 180). All portal components use t() for translatable strings. CI fix: ruff format migration 179.
-- **In progress**: Remaining multilingual work — email template language tabs, admin portal text editor, default DE email templates.
+- **Last completed**: "Guaranteed" flag for training placements — migration 181 (is_guaranteed column), manual toggle via PATCH endpoint + CalendarTrainingBar dropdown, auto-guarantee logic after registration (configurable threshold in portal settings), green badge on TrainingCard/calendar bars/FinalProgramTab, portal texts EN+DE, admin threshold setting in RegistrationPortalTab.
+- **In progress**: Remaining multilingual work — email template language tabs, default DE email templates.
 - **Status**: All checks pass — mypy, ruff, tsc, eslint.

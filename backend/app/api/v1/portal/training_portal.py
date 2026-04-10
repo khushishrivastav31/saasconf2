@@ -74,6 +74,18 @@ DEFAULT_PORTAL_TEXTS: dict[str, dict[str, str]] = {
         "copy_from_attendee": "Copy from first attendee",
         "processing": "Processing...",
         "days": "days",
+        "guaranteed": "Guaranteed",
+        "label_certification_exam": "Certification Exam",
+        "label_exam_none": "No exam",
+        "label_exam_onsite": "On-site",
+        "label_exam_online": "Online",
+        "label_exam_language": "Exam language",
+        "label_extra_time": "Extra time (foreign language)",
+        "label_subtotal": "Subtotal",
+        "label_vat_amount": "VAT ({rate}%)",
+        "label_total": "Total",
+        "attendee": "attendee",
+        "attendees_plural": "attendees",
     },
     "de": {
         "search_title": "Schulungskatalog",
@@ -120,6 +132,18 @@ DEFAULT_PORTAL_TEXTS: dict[str, dict[str, str]] = {
         "copy_from_attendee": "Vom ersten Teilnehmer übernehmen",
         "processing": "Wird verarbeitet...",
         "days": "Tage",
+        "guaranteed": "Garantiert",
+        "label_certification_exam": "Zertifizierungsprüfung",
+        "label_exam_none": "Keine Prüfung",
+        "label_exam_onsite": "Vor Ort",
+        "label_exam_online": "Online",
+        "label_exam_language": "Prüfungssprache",
+        "label_extra_time": "Zusatzzeit (Fremdsprache)",
+        "label_subtotal": "Zwischensumme",
+        "label_vat_amount": "MwSt. ({rate}%)",
+        "label_total": "Gesamt",
+        "attendee": "Teilnehmer",
+        "attendees_plural": "Teilnehmer",
     },
 }
 
@@ -157,6 +181,7 @@ def _build_placement_query(tenant_id: UUID):
         .options(
             joinedload(ProgramYearTraining.training).joinedload(Training.language),
             joinedload(ProgramYearTraining.training).joinedload(Training.theme),
+            joinedload(ProgramYearTraining.training).joinedload(Training.syllabus),
             joinedload(ProgramYearTraining.location),
         )
         .where(
@@ -169,7 +194,39 @@ def _build_placement_query(tenant_id: UUID):
     )
 
 
-def _placement_to_dict(p: ProgramYearTraining) -> dict:
+def _get_tenant_country(tenant: Tenant) -> str:
+    """Get tenant's country as ISO code — from tenant.country, then finance company_info."""
+    from app.core.vat_validation import normalize_country
+
+    raw = tenant.country or ""
+    if not raw:
+        finance = (tenant.settings or {}).get("training_finance", {})
+        company_info = finance.get("company_info", {})
+        raw = company_info.get("country", "") or ""
+    if not raw:
+        return ""
+    # normalize_country handles both "Germany" → "DE" and "DE" → "DE"
+    return normalize_country(raw) or raw.upper()
+
+
+def _get_tenant_city(tenant: Tenant) -> str:
+    """Get tenant's city for location fallback."""
+    return tenant.city or ""
+
+
+def _resolve_location_display(loc: Location | None, tenant_city: str = "") -> str | None:
+    """Resolve the display city for a location: city → 'Online' if virtual → tenant city fallback."""
+    if not loc:
+        return tenant_city or None
+    if loc.city:
+        return loc.city
+    name_lower = (loc.name or "").lower()
+    if "online" in name_lower or "virtual" in name_lower:
+        return loc.name
+    return tenant_city or None
+
+
+def _placement_to_dict(p: ProgramYearTraining, tenant_country: str = "", tenant_city: str = "") -> dict:
     """Convert a placement to a public-facing dict."""
     t = p.training
     loc = p.location
@@ -191,7 +248,7 @@ def _placement_to_dict(p: ProgramYearTraining) -> dict:
         "duration": t.duration if t else 1,
         "placement_type": p.placement_type or "open",
         "location_name": loc.name if loc else None,
-        "location_city": loc.city if loc else None,
+        "location_city": _resolve_location_display(loc, tenant_city),
         "language_name": t.language.name if t and t.language else None,
         "language_id": str(t.language_id) if t and t.language_id else None,
         "syllabus_name": t.syllabus.name if t and t.syllabus else None,
@@ -203,6 +260,9 @@ def _placement_to_dict(p: ProgramYearTraining) -> dict:
         "currency": t.currency or "EUR" if t else "EUR",
         "trainers": trainer_names,
         "logo_url": t.logo_url if t else None,
+        "is_guaranteed": p.is_guaranteed or False,
+        "exam_price": str(t.syllabus.price) if t and t.syllabus and t.syllabus.price else None,
+        "location_country": (loc.country if loc and loc.country else tenant_country) or None,
     }
 
 
@@ -220,7 +280,7 @@ async def list_public_trainings(
     language_id: UUID | None = Query(None, description="Filter: language ID"),
     syllabus_id: UUID | None = Query(None, description="Filter: syllabus ID"),
     theme_id: UUID | None = Query(None, description="Filter: theme ID"),
-    placement_type: str | None = Query(None, description="Filter: open or hybrid"),
+    guaranteed: bool | None = Query(None, description="Filter: guaranteed only"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
 ) -> dict:
@@ -246,9 +306,10 @@ async def list_public_trainings(
         query = query.where(ProgramYearTraining.start_date <= date_to)
 
     if location:
-        cities = [c.strip().lower() for c in location.split(",") if c.strip()]
-        if cities:
-            query = query.where(func.lower(Location.city).in_(cities))
+        values = [c.strip().lower() for c in location.split(",") if c.strip()]
+        if values:
+            loc_label = func.coalesce(func.nullif(Location.city, ""), Location.name)
+            query = query.where(func.lower(loc_label).in_(values))
 
     if language_id:
         query = query.where(Training.language_id == language_id)
@@ -256,8 +317,8 @@ async def list_public_trainings(
         query = query.where(Training.syllabus_id == syllabus_id)
     if theme_id:
         query = query.where(Training.theme_id == theme_id)
-    if placement_type and placement_type in ("open", "hybrid"):
-        query = query.where(ProgramYearTraining.placement_type == placement_type)
+    if guaranteed is True:
+        query = query.where(ProgramYearTraining.is_guaranteed.is_(True))
 
     # Count total
     count_query = select(func.count()).select_from(query.subquery())
@@ -267,9 +328,11 @@ async def list_public_trainings(
     query = query.order_by(ProgramYearTraining.start_date).offset((page - 1) * per_page).limit(per_page)
     result = await db.execute(query)
     placements = result.scalars().unique().all()
+    tc = _get_tenant_country(tenant)
+    t_city = _get_tenant_city(tenant)
 
     return {
-        "items": [_placement_to_dict(p) for p in placements],
+        "items": [_placement_to_dict(p, tc, t_city) for p in placements],
         "total": total,
         "page": page,
         "per_page": per_page,
@@ -288,7 +351,7 @@ async def get_training_filters(
     language_id: UUID | None = Query(None),
     syllabus_id: UUID | None = Query(None),
     theme_id: UUID | None = Query(None),
-    placement_type: str | None = Query(None),
+    guaranteed: bool | None = Query(None),
 ) -> dict:
     """Get available filter values with counts, considering current active filters."""
     tenant = await _resolve_tenant(db, tenant_slug)
@@ -308,33 +371,45 @@ async def get_training_filters(
     if date_to:
         base = base.where(ProgramYearTraining.start_date <= date_to)
     if location:
-        cities = [c.strip().lower() for c in location.split(",") if c.strip()]
-        if cities:
-            base = base.where(func.lower(Location.city).in_(cities))
+        values = [c.strip().lower() for c in location.split(",") if c.strip()]
+        if values:
+            loc_label = func.coalesce(func.nullif(Location.city, ""), Location.name)
+            base = base.where(func.lower(loc_label).in_(values))
     if language_id:
         base = base.where(Training.language_id == language_id)
     if syllabus_id:
         base = base.where(Training.syllabus_id == syllabus_id)
     if theme_id:
         base = base.where(Training.theme_id == theme_id)
-    if placement_type and placement_type in ("open", "hybrid"):
-        base = base.where(ProgramYearTraining.placement_type == placement_type)
+    if guaranteed is True:
+        base = base.where(ProgramYearTraining.is_guaranteed.is_(True))
 
     # Get matching placement IDs
     sub = base.with_only_columns(ProgramYearTraining.id).subquery()
 
-    # Location counts
+    # Location counts — resolve display label per location
+    tenant_city = _get_tenant_city(tenant)
     loc_q = (
-        select(Location.city, func.count(ProgramYearTraining.id))
+        select(Location.city, Location.name, func.count(ProgramYearTraining.id))
         .select_from(ProgramYearTraining)
         .join(Location, ProgramYearTraining.location_id == Location.id)
         .where(ProgramYearTraining.id.in_(select(sub.c.id)))
-        .where(Location.city.isnot(None))
-        .group_by(Location.city)
-        .order_by(func.count(ProgramYearTraining.id).desc())
+        .group_by(Location.city, Location.name)
     )
     loc_result = await db.execute(loc_q)
-    locations = [{"value": city, "count": cnt} for city, cnt in loc_result.all()]
+    loc_counts: dict[str, int] = {}
+    for city, name, cnt in loc_result.all():
+        label = _resolve_location_display(
+            type("L", (), {"city": city, "name": name})(),
+            tenant_city,  # type: ignore[arg-type]
+        )
+        if label:
+            loc_counts[label] = loc_counts.get(label, 0) + cnt
+    locations = sorted(
+        [{"value": k, "count": v} for k, v in loc_counts.items()],
+        key=lambda x: x["count"],
+        reverse=True,
+    )
 
     # Language counts
     lang_q = (
@@ -375,14 +450,11 @@ async def get_training_filters(
     theme_result = await db.execute(theme_q)
     themes = [{"id": str(tid), "name": name, "count": cnt} for tid, name, cnt in theme_result.all()]
 
-    # Placement type counts
-    type_q = (
-        select(ProgramYearTraining.placement_type, func.count(ProgramYearTraining.id))
-        .where(ProgramYearTraining.id.in_(select(sub.c.id)))
-        .group_by(ProgramYearTraining.placement_type)
+    # Guaranteed count
+    guaranteed_q = select(func.count(ProgramYearTraining.id)).where(
+        ProgramYearTraining.id.in_(select(sub.c.id)), ProgramYearTraining.is_guaranteed.is_(True)
     )
-    type_result = await db.execute(type_q)
-    types = [{"value": pt, "count": cnt} for pt, cnt in type_result.all()]
+    guaranteed_count = (await db.execute(guaranteed_q)).scalar() or 0
 
     # Date range
     date_q = select(func.min(ProgramYearTraining.start_date), func.max(ProgramYearTraining.start_date)).where(
@@ -400,7 +472,7 @@ async def get_training_filters(
         "languages": languages,
         "syllabi": syllabi,
         "themes": themes,
-        "types": types,
+        "guaranteed_count": guaranteed_count,
         "date_range": date_range,
     }
 
@@ -414,10 +486,36 @@ async def get_portal_config(
     tenant = await _resolve_tenant(db, tenant_slug)
     portal = (tenant.settings or {}).get("training_portal", {})
 
+    # Merge custom texts with defaults so new keys are always present
+    import copy
+
+    custom_texts = portal.get("portal_texts", {})
+    merged_texts = copy.deepcopy(DEFAULT_PORTAL_TEXTS)
+    for lang, texts in custom_texts.items():
+        if lang not in merged_texts:
+            merged_texts[lang] = {}
+        merged_texts[lang].update(texts)
+
+    # Fetch exam languages (training languages for this tenant)
+    lang_result = await db.execute(
+        select(TrainingLanguage.id, TrainingLanguage.name)
+        .where(TrainingLanguage.tenant_id == tenant.id)
+        .order_by(TrainingLanguage.name)
+    )
+    exam_languages = [{"id": str(lid), "name": name} for lid, name in lang_result.all()]
+
+    # Expose VAT config for client-side price calculation
+    finance = (tenant.settings or {}).get("training_finance", {})
+
     return {
+        "exam_languages": exam_languages,
         "default_language": portal.get("default_language", "en"),
         "available_languages": portal.get("available_languages", ["en", "de"]),
-        "portal_texts": portal.get("portal_texts", DEFAULT_PORTAL_TEXTS),
+        "portal_texts": merged_texts,
+        "vat_rates": finance.get("vat_rates", {}),
+        "vat_rules": finance.get("vat_rules", []),
+        "eu_countries": finance.get("eu_countries", []),
+        "tenant_country": _get_tenant_country(tenant),
     }
 
 
@@ -457,7 +555,7 @@ async def get_public_training_detail(
     if not placement:
         raise HTTPException(status_code=404, detail="Training not found or not available")
 
-    return _placement_to_dict(placement)
+    return _placement_to_dict(placement, _get_tenant_country(tenant), _get_tenant_city(tenant))
 
 
 # ── Registration ─────────────────────────────────────────────────
@@ -467,6 +565,9 @@ class TrainingAttendeeInput(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr
+    exam_mode: str = "none"  # "none" | "onsite" | "online"
+    exam_language: str | None = None
+    extra_time: bool = False
 
 
 class TrainingBillingInput(BaseModel):
@@ -538,7 +639,10 @@ async def register_for_training(
         select(ProgramYearTraining)
         .join(Training, ProgramYearTraining.training_id == Training.id)
         .join(TrainingProgramYear, ProgramYearTraining.program_year_id == TrainingProgramYear.id)
-        .options(joinedload(ProgramYearTraining.training))
+        .options(
+            joinedload(ProgramYearTraining.training).joinedload(Training.syllabus),
+            joinedload(ProgramYearTraining.location),
+        )
         .where(
             ProgramYearTraining.id == data.placement_id,
             ProgramYearTraining.tenant_id == tenant.id,
@@ -566,14 +670,82 @@ async def register_for_training(
         raise HTTPException(status_code=422, detail="Invalid submission")
 
     # Set RLS context
-    await db.execute(text("SET app.current_tenant_id = :tid"), {"tid": str(tenant.id)})
+    await db.execute(text("SELECT set_config('app.current_tenant_id', :tid, true)"), {"tid": str(tenant.id)})
 
     # Calculate pricing
     training = placement.training
     price_per_person = float(training.regular_price or 0) if training else 0
     num_attendees = len(data.attendees)
-    subtotal = price_per_person * num_attendees
+
+    # Exam fee — per attendee who opts in
+    exam_unit_price = (
+        float(training.syllabus.price) if training and training.syllabus and training.syllabus.price else 0
+    )
+    exam_attendees = sum(1 for a in data.attendees if a.exam_mode != "none") if exam_unit_price else 0
+    training_subtotal = price_per_person * num_attendees
+    exam_subtotal = exam_unit_price * exam_attendees
+    subtotal = training_subtotal + exam_subtotal
     currency = training.currency or "EUR" if training else "EUR"
+
+    # VAT calculation — apply VAT Decision Table rules
+    finance_settings = (tenant.settings or {}).get("training_finance", {})
+    vat_rates = finance_settings.get("vat_rates", {})
+    vat_rules: list[dict] = finance_settings.get("vat_rules", [])
+    eu_countries: list[str] = finance_settings.get("eu_countries", [])
+    company_info = finance_settings.get("company_info", {})
+    tenant_country = (company_info.get("country", "") or "").upper()
+
+    # Location country — fall back to tenant country if not set on location
+    location_country = ""
+    if placement.location and placement.location.country:
+        location_country = placement.location.country.upper()
+    if not location_country:
+        location_country = tenant_country
+
+    billing_country = (data.billing.country or "").upper()
+
+    # Determine attendance type — check resolved city (includes tenant city fallback)
+    resolved_city = _resolve_location_display(placement.location, _get_tenant_city(tenant)) or ""
+    is_virtual = "online" in resolved_city.lower() or "virtual" in resolved_city.lower()
+    attendance_type = "virtual" if is_virtual else "in_person"
+
+    # Determine customer type: B2B if company + VAT number, else B2C
+    customer_type = "b2b" if data.billing.company_name and data.billing.vat_number else "b2c"
+
+    # Determine customer location relative to tenant
+    if billing_country == tenant_country:
+        customer_location = "domestic"
+    elif billing_country.upper() in [c.upper() for c in eu_countries]:
+        customer_location = "eu"
+    else:
+        customer_location = "non_eu"
+
+    # Find matching VAT rule
+    vat_rate = 0.0
+    charge_vat = False
+    for rule in vat_rules:
+        if (
+            rule.get("attendance_type", "") == attendance_type
+            and rule.get("customer_type", "") == customer_type
+            and rule.get("customer_location", "") == customer_location
+        ):
+            charge_vat = rule.get("charge_vat", False)
+            if charge_vat:
+                source = rule.get("vat_rate_source", "")
+                if source in ("training_country", "conference"):
+                    vat_rate = float(vat_rates.get(location_country, 0))
+                elif source in ("customer_country", "customer"):
+                    vat_rate = float(vat_rates.get(billing_country, 0))
+            break
+
+    # Fallback: if no rules configured, use training location country rate
+    if not vat_rules and location_country:
+        vat_rate = float(vat_rates.get(location_country, 0))
+
+    vat_amount = 0.0
+    if vat_rate:
+        vat_amount = round(subtotal * vat_rate / 100, 2)
+    total = round(subtotal + vat_amount, 2)
 
     # Create registration
     registration = TrainingRegistration(
@@ -596,8 +768,8 @@ async def register_for_training(
         payment_intent_id=data.billing.payment_intent_id,
         discount_code=data.discount_code,
         subtotal=subtotal,
-        vat_amount=0,
-        total=subtotal,
+        vat_amount=vat_amount,
+        total=total,
         currency=currency,
     )
     db.add(registration)
@@ -613,12 +785,37 @@ async def register_for_training(
             last_name=att.last_name,
             email=att.email,
             language=data.language,
+            include_exam=att.exam_mode != "none",
+            exam_language=att.exam_language if att.exam_mode != "none" else None,
+            exam_mode=att.exam_mode if att.exam_mode != "none" else None,
+            extra_time=att.extra_time,
         )
         db.add(attendee)
         attendee_records.append(attendee)
 
     await db.commit()
     await db.refresh(registration)
+
+    # Auto-guarantee: check if attendee count meets threshold
+    auto_threshold = portal_settings.get("auto_guarantee_threshold")
+    if auto_threshold and not placement.is_guaranteed:
+        from app.models.training_registration import TrainingRegistrationAttendee as TRAModel
+
+        count_q = (
+            select(func.count(TRAModel.id))
+            .join(
+                TrainingRegistration,
+                TRAModel.registration_id == TrainingRegistration.id,
+            )
+            .where(
+                TrainingRegistration.placement_id == placement.id,
+                TrainingRegistration.tenant_id == tenant.id,
+            )
+        )
+        total_attendees = (await db.execute(count_q)).scalar() or 0
+        if total_attendees >= int(auto_threshold):
+            placement.is_guaranteed = True
+            await db.commit()
 
     return {
         "registration_id": str(registration.id),

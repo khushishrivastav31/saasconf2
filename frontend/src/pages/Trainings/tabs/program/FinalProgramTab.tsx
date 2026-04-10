@@ -140,6 +140,27 @@ export default function FinalProgramTab({ year }: Props) {
     },
   });
 
+  // Toggle guaranteed mutation
+  const toggleGuaranteed = useMutation({
+    mutationFn: async (placementId: string) => {
+      if (!programYear) throw new Error('No program year');
+      const res = await api.patch<ProgramYearTraining>(
+        `/trainings/programs/years/${programYear.id}/trainings/${placementId}/guaranteed`
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['program-year-trainings', programYear?.id] });
+    },
+  });
+
+  const handleToggleGuaranteed = useCallback(
+    (placementId: string) => {
+      toggleGuaranteed.mutate(placementId);
+    },
+    [toggleGuaranteed]
+  );
+
   const handleClickPlacement = useCallback((placementId: string) => {
     setSelectedPlacementId((prev) => (prev === placementId ? null : placementId));
   }, []);
@@ -181,6 +202,7 @@ export default function FinalProgramTab({ year }: Props) {
           | 'open'
           | 'inhouse'
           | 'hybrid',
+        is_guaranteed: live?.is_guaranteed ?? false,
         created_at: '',
         updated_at: '',
         trainer_assignments: entry.trainer_ids.map((tid, idx) => {
@@ -283,6 +305,7 @@ export default function FinalProgramTab({ year }: Props) {
           placements={snapshotPlacements}
           selectedPlacementId={selectedPlacementId}
           onClickPlacement={handleClickPlacement}
+          onToggleGuaranteed={handleToggleGuaranteed}
         />
       ) : (
         <ReadOnlyCalendarGrid
@@ -291,6 +314,7 @@ export default function FinalProgramTab({ year }: Props) {
           placements={placements}
           selectedPlacementId={selectedPlacementId}
           onClickPlacement={handleClickPlacement}
+          onToggleGuaranteed={handleToggleGuaranteed}
         />
       )}
 
@@ -320,6 +344,21 @@ export default function FinalProgramTab({ year }: Props) {
                       {selected.placement_type === 'inhouse' ? 'IH' : 'HY'}
                     </span>
                   )}
+                  <button
+                    onClick={() => handleToggleGuaranteed(selected.id)}
+                    className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-medium cursor-pointer transition-colors ${
+                      selected.is_guaranteed
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                        : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                    title={
+                      selected.is_guaranteed
+                        ? 'Click to remove guaranteed'
+                        : 'Click to mark as guaranteed'
+                    }
+                  >
+                    {selected.is_guaranteed ? 'Guaranteed' : 'Not guaranteed'}
+                  </button>
                   <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
                     {formatDateDE(selected.start_date)}
                     {selected.training_duration ? ` (${selected.training_duration}d)` : ''}

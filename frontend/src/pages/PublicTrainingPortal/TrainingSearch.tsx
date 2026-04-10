@@ -40,6 +40,9 @@ export interface PublicTraining {
   currency: string;
   trainers: string[];
   logo_url: string | null;
+  is_guaranteed: boolean;
+  exam_price: string | null;
+  location_country: string | null;
 }
 
 export interface FilterValues {
@@ -47,7 +50,7 @@ export interface FilterValues {
   languages: { id: string; name: string; count: number }[];
   syllabi: { id: string; name: string; count: number }[];
   themes: { id: string; name: string; count: number }[];
-  types: { value: string; count: number }[];
+  guaranteed_count: number;
   date_range: { min: string | null; max: string | null };
 }
 
@@ -59,7 +62,7 @@ export interface ActiveFilters {
   language_id: string;
   syllabus_id: string;
   theme_id: string;
-  placement_type: string;
+  guaranteed: boolean;
 }
 
 const emptyFilters: ActiveFilters = {
@@ -70,7 +73,7 @@ const emptyFilters: ActiveFilters = {
   language_id: '',
   syllabus_id: '',
   theme_id: '',
-  placement_type: '',
+  guaranteed: false,
 };
 
 function buildParams(filters: ActiveFilters, page: number) {
@@ -82,7 +85,7 @@ function buildParams(filters: ActiveFilters, page: number) {
   if (filters.language_id) params.language_id = filters.language_id;
   if (filters.syllabus_id) params.syllabus_id = filters.syllabus_id;
   if (filters.theme_id) params.theme_id = filters.theme_id;
-  if (filters.placement_type) params.placement_type = filters.placement_type;
+  if (filters.guaranteed) params.guaranteed = 'true';
   return params;
 }
 
@@ -119,7 +122,7 @@ const TrainingSearch = React.memo(function TrainingSearch({
     if (filters.language_id) p.language_id = filters.language_id;
     if (filters.syllabus_id) p.syllabus_id = filters.syllabus_id;
     if (filters.theme_id) p.theme_id = filters.theme_id;
-    if (filters.placement_type) p.placement_type = filters.placement_type;
+    if (filters.guaranteed) p.guaranteed = 'true';
     return p;
   }, [filters]);
 
@@ -156,7 +159,7 @@ const TrainingSearch = React.memo(function TrainingSearch({
       filters.language_id !== '' ||
       filters.syllabus_id !== '' ||
       filters.theme_id !== '' ||
-      filters.placement_type !== '',
+      filters.guaranteed,
     [filters]
   );
 

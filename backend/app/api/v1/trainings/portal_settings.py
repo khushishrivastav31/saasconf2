@@ -52,6 +52,7 @@ async def get_portal_settings(
         "default_language": settings.get("default_language", "en"),
         "available_languages": settings.get("available_languages", ["en", "de"]),
         "portal_texts": _merge_portal_texts(settings.get("portal_texts", {})),
+        "auto_guarantee_threshold": settings.get("auto_guarantee_threshold"),
         "theme": settings.get(
             "theme",
             {
@@ -94,6 +95,9 @@ async def update_portal_settings(
         portal["available_languages"] = data["available_languages"]
     if "portal_texts" in data and isinstance(data["portal_texts"], dict):
         portal["portal_texts"] = data["portal_texts"]
+    if "auto_guarantee_threshold" in data:
+        val = data["auto_guarantee_threshold"]
+        portal["auto_guarantee_threshold"] = int(val) if val else None
 
     settings[SETTINGS_KEY] = portal
     tenant.settings = settings
@@ -109,5 +113,6 @@ async def update_portal_settings(
         "default_language": portal.get("default_language", "en"),
         "available_languages": portal.get("available_languages", ["en", "de"]),
         "portal_texts": portal.get("portal_texts", {}),
+        "auto_guarantee_threshold": portal.get("auto_guarantee_threshold"),
         "theme": portal.get("theme", {}),
     }

@@ -733,6 +733,7 @@ def _placement_to_response(p: ProgramYearTraining) -> ProgramYearTrainingRespons
         customer_id=p.customer_id,
         customer_name=p.customer.name if p.customer else None,
         offer_id=p.offer_id,
+        is_guaranteed=p.is_guaranteed or False,
         created_at=p.created_at,
         updated_at=p.updated_at,
         trainer_assignments=trainer_assignments,
@@ -901,6 +902,44 @@ async def update_year_training(
     db.expire(placement)
 
     # Reload with relationships
+    result = await db.execute(
+        select(ProgramYearTraining)
+        .options(
+            joinedload(ProgramYearTraining.training),
+            joinedload(ProgramYearTraining.location),
+            selectinload(ProgramYearTraining.trainer_assignments).joinedload(PlacementTrainer.trainer),
+        )
+        .where(ProgramYearTraining.id == placement_id)
+    )
+    placement = result.scalar_one()
+    return _placement_to_response(placement)
+
+
+@router.patch("/{year_id}/trainings/{placement_id}/guaranteed", response_model=ProgramYearTrainingResponse)
+async def toggle_placement_guaranteed(
+    year_id: UUID,
+    placement_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> ProgramYearTrainingResponse:
+    """Toggle the is_guaranteed flag on a placement."""
+    result = await db.execute(
+        select(ProgramYearTraining).where(
+            ProgramYearTraining.id == placement_id,
+            ProgramYearTraining.program_year_id == year_id,
+            ProgramYearTraining.tenant_id == current_user.tenant_id,
+        )
+    )
+    placement = result.scalar_one_or_none()
+    if not placement:
+        from app.core.exceptions import NotFoundError
+
+        raise NotFoundError("Placement not found")
+
+    placement.is_guaranteed = not placement.is_guaranteed
+    await db.commit()
+    db.expire(placement)
+
     result = await db.execute(
         select(ProgramYearTraining)
         .options(

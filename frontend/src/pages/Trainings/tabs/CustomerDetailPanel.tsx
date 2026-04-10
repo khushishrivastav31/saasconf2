@@ -706,136 +706,144 @@ const AttendeeRow = React.memo(function AttendeeRow({
   const canSave = form.first_name.trim() && form.last_name.trim() && (isDirty || isNew);
 
   return (
-    <tr className="bg-gray-50/50 dark:bg-gray-900/30">
-      <td className="px-2 py-1.5">
-        <input
-          type="text"
-          className={inputClass}
-          placeholder="First name"
-          value={form.first_name}
-          onChange={(e) => updateField('first_name', e.target.value)}
-        />
-      </td>
-      <td className="px-2 py-1.5">
-        <input
-          type="text"
-          className={inputClass}
-          placeholder="Last name"
-          value={form.last_name}
-          onChange={(e) => updateField('last_name', e.target.value)}
-        />
-      </td>
-      <td className="px-2 py-1.5">
-        <input
-          type="email"
-          className={inputClass}
-          placeholder="Email"
-          value={form.email}
-          onChange={(e) => updateField('email', e.target.value)}
-        />
-      </td>
-      <td className="px-2 py-1.5 text-center">
-        <input
-          type="checkbox"
-          className={checkboxClass}
-          checked={form.certification}
-          onChange={(e) => updateField('certification', e.target.checked)}
-        />
-      </td>
-      <td className="px-2 py-1.5">
-        <select
-          className={inputClass}
-          value={form.exam_mode}
-          onChange={(e) => updateField('exam_mode', e.target.value)}
-        >
-          <option value="">--</option>
-          <option value="onsite">Onsite</option>
-          <option value="online">Online</option>
-        </select>
-      </td>
-      <td className="px-2 py-1.5 text-center">
-        <input
-          type="checkbox"
-          className={checkboxClass}
-          checked={form.extra_time}
-          onChange={(e) => updateField('extra_time', e.target.checked)}
-        />
-      </td>
-      <td className="px-2 py-1.5">
-        <select
-          className={inputClass}
-          value={form.exam_language}
-          onChange={(e) => updateField('exam_language', e.target.value)}
-        >
-          <option value="">--</option>
-          {languages.map((l) => (
-            <option key={l.id} value={l.name}>
-              {l.name}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td className="px-2 py-1.5">
-        <input
-          type="text"
-          className={inputClass + ' min-w-40'}
-          placeholder="Comments"
-          value={form.comments}
-          onChange={(e) => updateField('comments', e.target.value)}
-        />
-      </td>
-      <td className="px-2 py-1.5 text-right whitespace-nowrap">
-        <div className="flex items-center justify-end gap-1">
-          {canSave && (
-            <button
-              type="button"
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending}
-              className="text-xs px-2 py-0.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+    <tr className="bg-gray-200 dark:bg-gray-900/70">
+      <td colSpan={4} className="px-2 py-2">
+        <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 space-y-2 bg-white dark:bg-gray-800">
+          {/* Row 1: Name, Email, Comments, Actions */}
+          <div className="flex gap-2 items-start">
+            <input
+              type="text"
+              className={inputClass + ' flex-1'}
+              placeholder="First name"
+              value={form.first_name}
+              onChange={(e) => updateField('first_name', e.target.value)}
+            />
+            <input
+              type="text"
+              className={inputClass + ' flex-1'}
+              placeholder="Last name"
+              value={form.last_name}
+              onChange={(e) => updateField('last_name', e.target.value)}
+            />
+            <input
+              type="email"
+              className={inputClass + ' flex-1'}
+              placeholder="Email"
+              value={form.email}
+              onChange={(e) => updateField('email', e.target.value)}
+            />
+            <input
+              type="text"
+              className={inputClass + ' flex-1'}
+              placeholder="Comments"
+              value={form.comments}
+              onChange={(e) => updateField('comments', e.target.value)}
+            />
+            <div className="flex items-center gap-1 shrink-0">
+              {canSave && (
+                <button
+                  type="button"
+                  onClick={() => saveMutation.mutate()}
+                  disabled={saveMutation.isPending}
+                  className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {saveMutation.isPending ? '...' : 'Save'}
+                </button>
+              )}
+              {isNew ? (
+                <button
+                  type="button"
+                  onClick={onCancelNew}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-0.5"
+                  title="Cancel"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => deleteMutation.mutate()}
+                  disabled={deleteMutation.isPending}
+                  className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5 transition-colors"
+                  title="Delete attendee"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+          {/* Row 2: Certification exam options */}
+          <div className="flex items-center gap-2">
+            <select
+              className={`${inputClass} w-auto ${
+                form.certification
+                  ? 'border-blue-400 bg-blue-50 text-blue-800 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300'
+                  : ''
+              }`}
+              value={form.certification ? form.exam_mode || 'onsite' : 'none'}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'none') {
+                  updateField('certification', false);
+                  updateField('exam_mode', '');
+                } else {
+                  updateField('certification', true);
+                  updateField('exam_mode', val);
+                }
+              }}
             >
-              {saveMutation.isPending ? '...' : 'Save'}
-            </button>
-          )}
-          {isNew ? (
-            <button
-              type="button"
-              onClick={onCancelNew}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-0.5"
-              title="Cancel"
-            >
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
-              className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5 transition-colors"
-              title="Delete attendee"
-            >
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </button>
-          )}
+              <option value="none">No exam</option>
+              <option value="onsite">Exam: On-site</option>
+              <option value="online">Exam: Online</option>
+            </select>
+            {form.certification && (
+              <>
+                <select
+                  className={inputClass + ' w-auto max-w-28'}
+                  value={form.exam_language}
+                  onChange={(e) => updateField('exam_language', e.target.value)}
+                >
+                  <option value="">Exam language</option>
+                  {languages.map((l) => (
+                    <option key={l.id} value={l.name}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+                <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    className={checkboxClass}
+                    checked={form.extra_time}
+                    onChange={(e) => updateField('extra_time', e.target.checked)}
+                  />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Extra time (foreign language)
+                  </span>
+                </label>
+              </>
+            )}
+          </div>
         </div>
       </td>
     </tr>
@@ -959,33 +967,9 @@ const PlacementRowWithAttendees = React.memo(function PlacementRowWithAttendees(
             <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
               {attendees.length > 0 || showNewRow ? (
                 <table className="min-w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-24">
-                        First Name
-                      </th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-24">
-                        Last Name
-                      </th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">
-                        Email
-                      </th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-10">
-                        Cert
-                      </th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-20">
-                        Exam
-                      </th>
-                      <th className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-14">
-                        Extra
-                      </th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase w-16">
-                        Lang
-                      </th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase min-w-40">
-                        Comments
-                      </th>
-                      <th className="px-2 py-1.5 w-20" />
+                  <thead className="sr-only">
+                    <tr>
+                      <th colSpan={4}>Attendee</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -1016,15 +1000,14 @@ const PlacementRowWithAttendees = React.memo(function PlacementRowWithAttendees(
                 </p>
               )}
               <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3">
-                {!showNewRow && (
-                  <button
-                    type="button"
-                    onClick={() => setShowNewRow(true)}
-                    className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                  >
-                    + Add Attendee
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowNewRow(true)}
+                  disabled={showNewRow}
+                  className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  + Add Attendee
+                </button>
                 {offerAttendeeLimit != null && totalAttendeeCount > offerAttendeeLimit && (
                   <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                     Warning: {totalAttendeeCount} attendees exceed the offer limit of{' '}

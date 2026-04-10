@@ -61,6 +61,7 @@ interface ReadOnlyCalendarGridProps {
   placements: ProgramYearTraining[];
   selectedPlacementId: string | null;
   onClickPlacement: (placementId: string) => void;
+  onToggleGuaranteed?: (placementId: string) => void;
 }
 
 const ReadOnlyCalendarGrid = React.memo(function ReadOnlyCalendarGrid({
@@ -69,6 +70,7 @@ const ReadOnlyCalendarGrid = React.memo(function ReadOnlyCalendarGrid({
   placements,
   selectedPlacementId,
   onClickPlacement,
+  onToggleGuaranteed,
 }: ReadOnlyCalendarGridProps) {
   const { holidayMap, grid } = useMemo(() => buildGrid(year, holidayDates), [year, holidayDates]);
 
@@ -124,7 +126,8 @@ const ReadOnlyCalendarGrid = React.memo(function ReadOnlyCalendarGrid({
                         year,
                         monthIdx,
                         selectedPlacementId,
-                        onClickPlacement
+                        onClickPlacement,
+                        onToggleGuaranteed
                       )}
                     </tr>
                   ))}
@@ -161,7 +164,8 @@ function renderReadOnlyLane(
   year: number,
   monthIdx: number,
   selectedPlacementId: string | null,
-  onClickPlacement: (placementId: string) => void
+  onClickPlacement: (placementId: string) => void,
+  onToggleGuaranteed?: (placementId: string) => void
 ): React.ReactNode[] {
   const cells: React.ReactNode[] = [];
   let currentDay = 1;
@@ -203,9 +207,11 @@ function renderReadOnlyLane(
         locationCode={p.location_code}
         placementType={p.placement_type}
         customerName={p.customer_name}
+        isGuaranteed={p.is_guaranteed}
         trainerAssignments={p.trainer_assignments || []}
         isSelected={p.id === selectedPlacementId}
         onClick={onClickPlacement}
+        onToggleGuaranteed={onToggleGuaranteed}
       />
     );
 

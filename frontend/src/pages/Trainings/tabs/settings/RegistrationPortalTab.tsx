@@ -107,6 +107,7 @@ interface PortalSettings {
   default_language: string;
   available_languages: string[];
   portal_texts: Record<string, Record<string, string>>;
+  auto_guarantee_threshold: number | null;
   theme: Record<string, string>;
 }
 
@@ -128,6 +129,7 @@ export default function RegistrationPortalTab() {
   const [availableLanguages, setAvailableLanguages] = useState<string[]>(['en', 'de']);
   const [portalTexts, setPortalTexts] = useState<Record<string, Record<string, string>>>({});
   const [activeTextLang, setActiveTextLang] = useState('en');
+  const [autoGuaranteeThreshold, setAutoGuaranteeThreshold] = useState<string>('');
   const [theme, setTheme] = useState<Record<string, string>>(DEFAULT_THEME);
 
   useEffect(() => {
@@ -137,6 +139,9 @@ export default function RegistrationPortalTab() {
       setDefaultLanguage(settings.default_language || 'en');
       setAvailableLanguages(settings.available_languages || ['en', 'de']);
       setPortalTexts(settings.portal_texts || {});
+      setAutoGuaranteeThreshold(
+        settings.auto_guarantee_threshold != null ? String(settings.auto_guarantee_threshold) : ''
+      );
       setTheme({ ...DEFAULT_THEME, ...settings.theme });
     }
   }, [settings]);
@@ -160,6 +165,7 @@ export default function RegistrationPortalTab() {
       default_language: defaultLanguage,
       available_languages: availableLanguages,
       portal_texts: portalTexts,
+      auto_guarantee_threshold: autoGuaranteeThreshold ? Number(autoGuaranteeThreshold) : null,
       theme,
     });
   }, [
@@ -168,6 +174,7 @@ export default function RegistrationPortalTab() {
     defaultLanguage,
     availableLanguages,
     portalTexts,
+    autoGuaranteeThreshold,
     theme,
     saveMutation,
   ]);
@@ -356,6 +363,31 @@ export default function RegistrationPortalTab() {
               The portal opens in this language by default
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Auto-Guarantee Threshold */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          Auto-Guarantee
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Automatically mark a training as &quot;Guaranteed&quot; when the number of registered
+          attendees reaches this threshold. Leave empty to disable.
+        </p>
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            Minimum attendees
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={999}
+            value={autoGuaranteeThreshold}
+            onChange={(e) => setAutoGuaranteeThreshold(e.target.value)}
+            placeholder="Disabled"
+            className="w-28 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          />
         </div>
       </div>
 

@@ -14,10 +14,12 @@ interface CalendarTrainingBarProps {
   locationCode: string | null;
   placementType: string;
   customerName?: string | null;
+  isGuaranteed?: boolean;
   locations: Location[];
   onRemove: () => void;
   onChangeLocation: (placementId: string, locationId: string | null) => void;
   onChangePlacementType: (placementId: string, type: string) => void;
+  onToggleGuaranteed?: (placementId: string) => void;
 }
 
 const CalendarTrainingBar = React.memo(function CalendarTrainingBar({
@@ -32,10 +34,12 @@ const CalendarTrainingBar = React.memo(function CalendarTrainingBar({
   locationCode,
   placementType,
   customerName,
+  isGuaranteed,
   locations,
   onRemove,
   onChangeLocation,
   onChangePlacementType,
+  onToggleGuaranteed,
 }: CalendarTrainingBarProps) {
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `bar-${placementId}`,
@@ -72,7 +76,14 @@ const CalendarTrainingBar = React.memo(function CalendarTrainingBar({
         title={`${name}\n${dateRange}${locationName ? `\nLocation: ${locationName}` : ''}`}
         onClick={() => setShowLocationPicker(!showLocationPicker)}
       >
-        <span className="truncate">{slug}</span>
+        <span className="truncate">
+          {slug}
+          {isGuaranteed && (
+            <span className="text-green-500" title="Guaranteed">
+              *
+            </span>
+          )}
+        </span>
         {placementType !== 'open' && (
           <span
             className={`shrink-0 text-[9px] px-1 rounded font-bold uppercase ${
@@ -118,6 +129,47 @@ const CalendarTrainingBar = React.memo(function CalendarTrainingBar({
           ref={pickerRef}
           className="absolute z-50 top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[180px] max-h-48 overflow-y-auto"
         >
+          {onToggleGuaranteed && (
+            <>
+              <button
+                className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                onClick={() => {
+                  onToggleGuaranteed(placementId);
+                  setShowLocationPicker(false);
+                }}
+              >
+                <span
+                  className={`w-3 h-3 rounded border ${isGuaranteed ? 'bg-green-500 border-green-500' : 'border-gray-400 dark:border-gray-500'}`}
+                >
+                  {isGuaranteed && (
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                </span>
+                <span
+                  className={
+                    isGuaranteed
+                      ? 'text-green-700 dark:text-green-300 font-medium'
+                      : 'text-gray-900 dark:text-gray-100'
+                  }
+                >
+                  Guaranteed
+                </span>
+              </button>
+              <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+            </>
+          )}
           <button
             className="w-full text-left px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={() => {

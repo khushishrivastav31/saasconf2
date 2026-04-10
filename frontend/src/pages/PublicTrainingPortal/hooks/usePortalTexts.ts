@@ -8,10 +8,37 @@ import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import publicApi from '../../../config/publicApi';
 
+interface VatRule {
+  attendance_type: string;
+  customer_type: string;
+  customer_location: string;
+  charge_vat: boolean;
+  vat_rate_source: string;
+  reverse_charge: boolean;
+  oss: boolean;
+}
+
+export interface VatConfig {
+  vat_rates: Record<string, number>;
+  vat_rules: VatRule[];
+  eu_countries: string[];
+  tenant_country: string;
+}
+
+interface ExamLanguage {
+  id: string;
+  name: string;
+}
+
 interface PortalConfig {
   default_language: string;
   available_languages: string[];
   portal_texts: Record<string, Record<string, string>>;
+  exam_languages: ExamLanguage[];
+  vat_rates: Record<string, number>;
+  vat_rules: VatRule[];
+  eu_countries: string[];
+  tenant_country: string;
 }
 
 /** Default EN texts used when API hasn't loaded yet */
@@ -22,9 +49,7 @@ const FALLBACK_EN: Record<string, string> = {
   filter_date: 'Date Range',
   filter_location: 'Location',
   filter_language: 'Language',
-  filter_certification: 'Certification',
-  filter_theme: 'Theme',
-  filter_type: 'Type',
+  filter_syllabus: 'Syllabus',
   filter_clear: 'Clear all',
   btn_register: 'Register',
   btn_add_attendee: '+ Add',
@@ -60,6 +85,18 @@ const FALLBACK_EN: Record<string, string> = {
   copy_from_attendee: 'Copy from first attendee',
   processing: 'Processing...',
   days: 'days',
+  guaranteed: 'Guaranteed',
+  label_certification_exam: 'Certification Exam',
+  label_exam_none: 'No exam',
+  label_exam_onsite: 'On-site',
+  label_exam_online: 'Online',
+  label_exam_language: 'Exam language',
+  label_extra_time: 'Extra time (foreign language)',
+  label_subtotal: 'Subtotal',
+  label_vat_amount: 'VAT ({rate}%)',
+  label_total: 'Total',
+  attendee: 'attendee',
+  attendees_plural: 'attendees',
 };
 
 export function usePortalTexts(tenantSlug: string, lang: string) {
@@ -98,5 +135,12 @@ export function usePortalTexts(tenantSlug: string, lang: string) {
     config,
     defaultLanguage: config?.default_language || 'en',
     availableLanguages: config?.available_languages || ['en', 'de'],
+    examLanguages: config?.exam_languages || [],
+    vatConfig: {
+      vat_rates: config?.vat_rates || {},
+      vat_rules: config?.vat_rules || [],
+      eu_countries: config?.eu_countries || [],
+      tenant_country: config?.tenant_country || '',
+    } as VatConfig,
   };
 }

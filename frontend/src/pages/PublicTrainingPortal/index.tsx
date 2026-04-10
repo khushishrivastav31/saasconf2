@@ -21,7 +21,10 @@ function TrainingPortal() {
   }, [tenantSlug, navigate]);
 
   const { lang, setLang } = usePortalLanguage();
-  const { t, availableLanguages } = usePortalTexts(tenantSlug || '', lang);
+  const { t, availableLanguages, vatConfig, examLanguages } = usePortalTexts(
+    tenantSlug || '',
+    lang
+  );
 
   if (!tenantSlug) return null;
 
@@ -48,6 +51,8 @@ function TrainingPortal() {
             setLang={setLang}
             availableLanguages={availableLanguages}
             t={t}
+            vatConfig={vatConfig}
+            examLanguages={examLanguages}
           />
         }
       />

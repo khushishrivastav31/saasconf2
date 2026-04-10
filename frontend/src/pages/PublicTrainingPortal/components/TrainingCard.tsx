@@ -33,8 +33,13 @@ const TrainingCard = React.memo(function TrainingCard({
       <div className="sm:flex sm:items-start sm:justify-between sm:gap-4">
         <div className="flex-1 min-w-0">
           {/* Training name */}
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
-            {tr.training_name}
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="truncate">{tr.training_name}</span>
+            {tr.is_guaranteed && (
+              <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                {t('guaranteed')}
+              </span>
+            )}
           </h3>
 
           {/* Meta row */}
@@ -56,7 +61,7 @@ const TrainingCard = React.memo(function TrainingCard({
               </span>
             )}
 
-            {(tr.location_name || tr.location_city) && (
+            {tr.location_city && (
               <span className="flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -72,24 +77,13 @@ const TrainingCard = React.memo(function TrainingCard({
                     d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
                   />
                 </svg>
-                {[tr.location_name, tr.location_city].filter(Boolean).join(', ')}
+                {tr.location_city}
               </span>
             )}
           </div>
 
           {/* Tags */}
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {/* Placement type */}
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
-                tr.placement_type === 'hybrid'
-                  ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300'
-                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-              }`}
-            >
-              {tr.placement_type === 'hybrid' ? 'Hybrid' : 'Open'}
-            </span>
-
             {tr.language_name && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                 {tr.language_name}
@@ -99,12 +93,6 @@ const TrainingCard = React.memo(function TrainingCard({
             {tr.syllabus_name && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                 {tr.syllabus_name}
-              </span>
-            )}
-
-            {tr.theme_name && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                {tr.theme_name}
               </span>
             )}
           </div>

@@ -417,6 +417,7 @@ export interface ProgramYearTraining {
   customer_id?: string | null;
   customer_name?: string | null;
   offer_id?: string | null;
+  is_guaranteed?: boolean;
   created_at: string;
   updated_at: string;
   trainer_assignments: PlacementTrainerAssignment[];

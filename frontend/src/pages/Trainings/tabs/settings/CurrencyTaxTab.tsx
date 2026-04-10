@@ -99,8 +99,8 @@ const LOCATION_OPTIONS = [
 ];
 
 const RATE_SOURCE_OPTIONS = [
-  { value: 'conference', label: 'Training country' },
-  { value: 'customer', label: "Customer's country" },
+  { value: 'training_country', label: 'Training country' },
+  { value: 'customer_country', label: "Customer's country" },
   { value: 'none', label: 'None' },
 ];
 
@@ -109,7 +109,7 @@ const EMPTY_RULE: VatRule = {
   customer_type: 'b2b',
   customer_location: 'domestic',
   charge_vat: true,
-  vat_rate_source: 'conference',
+  vat_rate_source: 'training_country',
   reverse_charge: false,
   oss: false,
   note: '',

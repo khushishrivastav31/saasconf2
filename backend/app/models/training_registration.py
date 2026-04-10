@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -102,6 +102,10 @@ class TrainingRegistrationAttendee(Base):
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     language: Mapped[str] = mapped_column(String(5), nullable=False, default="en")
+    include_exam: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    exam_language: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    exam_mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    extra_time: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

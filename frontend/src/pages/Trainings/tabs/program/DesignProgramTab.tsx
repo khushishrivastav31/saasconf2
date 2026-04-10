@@ -261,6 +261,26 @@ export default function DesignProgramTab({ year }: Props) {
     [updatePlacement]
   );
 
+  const toggleGuaranteed = useMutation({
+    mutationFn: async (placementId: string) => {
+      if (!programYear) throw new Error('No program year');
+      const res = await api.patch<ProgramYearTraining>(
+        `/trainings/programs/years/${programYear.id}/trainings/${placementId}/guaranteed`
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['program-year-trainings', programYear?.id] });
+    },
+  });
+
+  const handleToggleGuaranteed = useCallback(
+    (placementId: string) => {
+      toggleGuaranteed.mutate(placementId);
+    },
+    [toggleGuaranteed]
+  );
+
   const [activeDragType, setActiveDragType] = useState<string | null>(null);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -380,6 +400,7 @@ export default function DesignProgramTab({ year }: Props) {
               onRemovePlacement={handleRemovePlacement}
               onChangeLocation={handleChangeLocation}
               onChangePlacementType={handleChangePlacementType}
+              onToggleGuaranteed={handleToggleGuaranteed}
             />
           </div>
         </div>

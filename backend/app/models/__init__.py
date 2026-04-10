@@ -104,6 +104,7 @@ from app.models.token import RefreshToken
 from app.models.trainer import Trainer, TrainerUnavailability
 from app.models.training import Training, TrainingLanguage, TrainingTheme
 from app.models.training_program import PlacementTrainer, ProgramYearTraining, TrainingProgramYear
+from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
 from app.models.user import User
 from app.models.user_conference_access import UserConferenceAccess
 from app.models.user_password_reset import UserPasswordReset
@@ -227,6 +228,8 @@ __all__ = [
     "Training",
     "TrainingLanguage",
     "TrainingProgramYear",
+    "TrainingRegistration",
+    "TrainingRegistrationAttendee",
     "TrainingTheme",
     "User",
     "UserConferenceAccess",

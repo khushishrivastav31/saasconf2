@@ -47,14 +47,14 @@ const SmartFilters = React.memo(function SmartFilters({
             type="date"
             value={filters.date_from}
             onChange={(e) => onUpdateFilter('date_from', e.target.value)}
-            min={filterValues?.date_range?.min || undefined}
+            min={new Date().toISOString().slice(0, 10)}
             className="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
           <input
             type="date"
             value={filters.date_to}
             onChange={(e) => onUpdateFilter('date_to', e.target.value)}
-            max={filterValues?.date_range?.max || undefined}
+            min={filters.date_from || new Date().toISOString().slice(0, 10)}
             className="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
         </div>
@@ -113,33 +113,15 @@ const SmartFilters = React.memo(function SmartFilters({
         </FilterSection>
       )}
 
-      {/* Theme */}
-      {filterValues && filterValues.themes.length > 0 && (
-        <FilterSection title={t('filter_theme')}>
-          {filterValues.themes.map((theme) => (
-            <CheckboxItem
-              key={theme.id}
-              label={theme.name}
-              count={theme.count}
-              checked={filters.theme_id === theme.id}
-              onChange={(checked) => onUpdateFilter('theme_id', checked ? theme.id : '')}
-            />
-          ))}
-        </FilterSection>
-      )}
-
-      {/* Placement Type */}
-      {filterValues && filterValues.types.length > 1 && (
-        <FilterSection title={t('filter_type')}>
-          {filterValues.types.map((tp) => (
-            <CheckboxItem
-              key={tp.value}
-              label={tp.value === 'open' ? 'Open' : 'Hybrid'}
-              count={tp.count}
-              checked={filters.placement_type === tp.value}
-              onChange={(checked) => onUpdateFilter('placement_type', checked ? tp.value : '')}
-            />
-          ))}
+      {/* Guaranteed */}
+      {filterValues && filterValues.guaranteed_count > 0 && (
+        <FilterSection title={t('guaranteed')}>
+          <CheckboxItem
+            label={t('guaranteed')}
+            count={filterValues.guaranteed_count}
+            checked={filters.guaranteed}
+            onChange={(checked) => onUpdateFilter('guaranteed', checked)}
+          />
         </FilterSection>
       )}
     </div>
