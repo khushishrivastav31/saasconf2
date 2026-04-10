@@ -194,9 +194,7 @@ def _placement_to_dict(p: ProgramYearTraining) -> dict:
         "location_city": loc.city if loc else None,
         "language_name": t.language.name if t and t.language else None,
         "language_id": str(t.language_id) if t and t.language_id else None,
-        "certification_body_name": (
-            t.certification_body.name if t and hasattr(t, "certification_body") and t.certification_body else None
-        ),
+        "certification_body_name": (t.certification_body_rel.company_name if t and t.certification_body_rel else None),
         "certification_body_id": str(t.certification_body_id) if t and t.certification_body_id else None,
         "theme_name": t.theme.name if t and t.theme else None,
         "theme_id": str(t.theme_id) if t and t.theme_id else None,
@@ -238,7 +236,7 @@ async def list_public_trainings(
             | func.lower(Training.description).contains(search.lower())
             | func.lower(Location.name).contains(search.lower())
             | func.lower(Location.city).contains(search.lower())
-            | func.lower(CertificationBody.name).contains(search.lower())
+            | func.lower(CertificationBody.company_name).contains(search.lower())
             | func.lower(TrainingTheme.name).contains(search.lower())
         )
 
@@ -353,12 +351,12 @@ async def get_training_filters(
 
     # Certification body counts
     cert_q = (
-        select(CertificationBody.id, CertificationBody.name, func.count(ProgramYearTraining.id))
+        select(CertificationBody.id, CertificationBody.company_name, func.count(ProgramYearTraining.id))
         .select_from(ProgramYearTraining)
         .join(Training, ProgramYearTraining.training_id == Training.id)
         .join(CertificationBody, Training.certification_body_id == CertificationBody.id)
         .where(ProgramYearTraining.id.in_(select(sub.c.id)))
-        .group_by(CertificationBody.id, CertificationBody.name)
+        .group_by(CertificationBody.id, CertificationBody.company_name)
         .order_by(func.count(ProgramYearTraining.id).desc())
     )
     cert_result = await db.execute(cert_q)
