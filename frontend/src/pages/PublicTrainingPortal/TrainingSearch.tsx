@@ -31,8 +31,8 @@ export interface PublicTraining {
   location_city: string | null;
   language_name: string | null;
   language_id: string | null;
-  certification_body_name: string | null;
-  certification_body_id: string | null;
+  syllabus_name: string | null;
+  syllabus_id: string | null;
   theme_name: string | null;
   theme_id: string | null;
   regular_price: string | null;
@@ -45,7 +45,7 @@ export interface PublicTraining {
 export interface FilterValues {
   locations: { value: string; count: number }[];
   languages: { id: string; name: string; count: number }[];
-  certification_bodies: { id: string; name: string; count: number }[];
+  syllabi: { id: string; name: string; count: number }[];
   themes: { id: string; name: string; count: number }[];
   types: { value: string; count: number }[];
   date_range: { min: string | null; max: string | null };
@@ -57,7 +57,7 @@ export interface ActiveFilters {
   date_to: string;
   location: string[];
   language_id: string;
-  certification_body_id: string;
+  syllabus_id: string;
   theme_id: string;
   placement_type: string;
 }
@@ -68,7 +68,7 @@ const emptyFilters: ActiveFilters = {
   date_to: '',
   location: [],
   language_id: '',
-  certification_body_id: '',
+  syllabus_id: '',
   theme_id: '',
   placement_type: '',
 };
@@ -80,7 +80,7 @@ function buildParams(filters: ActiveFilters, page: number) {
   if (filters.date_to) params.date_to = filters.date_to;
   if (filters.location.length > 0) params.location = filters.location.join(',');
   if (filters.language_id) params.language_id = filters.language_id;
-  if (filters.certification_body_id) params.certification_body_id = filters.certification_body_id;
+  if (filters.syllabus_id) params.syllabus_id = filters.syllabus_id;
   if (filters.theme_id) params.theme_id = filters.theme_id;
   if (filters.placement_type) params.placement_type = filters.placement_type;
   return params;
@@ -117,7 +117,7 @@ const TrainingSearch = React.memo(function TrainingSearch({
     if (filters.date_to) p.date_to = filters.date_to;
     if (filters.location.length > 0) p.location = filters.location.join(',');
     if (filters.language_id) p.language_id = filters.language_id;
-    if (filters.certification_body_id) p.certification_body_id = filters.certification_body_id;
+    if (filters.syllabus_id) p.syllabus_id = filters.syllabus_id;
     if (filters.theme_id) p.theme_id = filters.theme_id;
     if (filters.placement_type) p.placement_type = filters.placement_type;
     return p;
@@ -154,7 +154,7 @@ const TrainingSearch = React.memo(function TrainingSearch({
       filters.date_to !== '' ||
       filters.location.length > 0 ||
       filters.language_id !== '' ||
-      filters.certification_body_id !== '' ||
+      filters.syllabus_id !== '' ||
       filters.theme_id !== '' ||
       filters.placement_type !== '',
     [filters]

@@ -56,7 +56,7 @@ const TEXT_GROUPS: { title: string; keys: { key: string; label: string }[] }[] =
       { key: 'filter_date', label: 'Date range' },
       { key: 'filter_location', label: 'Location' },
       { key: 'filter_language', label: 'Language' },
-      { key: 'filter_certification', label: 'Certification' },
+      { key: 'filter_syllabus', label: 'Syllabus' },
       { key: 'filter_theme', label: 'Theme' },
       { key: 'filter_type', label: 'Type' },
       { key: 'filter_clear', label: 'Clear all' },

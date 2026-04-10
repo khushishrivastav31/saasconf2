@@ -14,8 +14,8 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import joinedload
 
 from app.core.dependencies import DbSessionDep
-from app.models.certification_body import CertificationBody
 from app.models.location import Location
+from app.models.syllabus import Syllabus
 from app.models.tenant import Tenant
 from app.models.training import Training, TrainingLanguage, TrainingTheme
 from app.models.training_program import (
@@ -36,7 +36,7 @@ DEFAULT_PORTAL_TEXTS: dict[str, dict[str, str]] = {
         "filter_date": "Date Range",
         "filter_location": "Location",
         "filter_language": "Language",
-        "filter_certification": "Certification",
+        "filter_syllabus": "Syllabus",
         "filter_theme": "Theme",
         "filter_type": "Type",
         "filter_clear": "Clear all",
@@ -78,11 +78,11 @@ DEFAULT_PORTAL_TEXTS: dict[str, dict[str, str]] = {
     "de": {
         "search_title": "Schulungskatalog",
         "search_subtitle": "Verfügbare Schulungen durchsuchen und anmelden",
-        "search_placeholder": "Schulungen suchen nach Name, Ort, Zertifizierung...",
+        "search_placeholder": "Schulungen suchen nach Name, Ort, Lehrplan...",
         "filter_date": "Zeitraum",
         "filter_location": "Standort",
         "filter_language": "Sprache",
-        "filter_certification": "Zertifizierung",
+        "filter_syllabus": "Lehrplan",
         "filter_theme": "Thema",
         "filter_type": "Typ",
         "filter_clear": "Alle zurücksetzen",
@@ -152,7 +152,7 @@ def _build_placement_query(tenant_id: UUID):
         .join(TrainingProgramYear, ProgramYearTraining.program_year_id == TrainingProgramYear.id)
         .outerjoin(Location, ProgramYearTraining.location_id == Location.id)
         .outerjoin(TrainingLanguage, Training.language_id == TrainingLanguage.id)
-        .outerjoin(CertificationBody, Training.certification_body_id == CertificationBody.id)
+        .outerjoin(Syllabus, Training.syllabus_id == Syllabus.id)
         .outerjoin(TrainingTheme, Training.theme_id == TrainingTheme.id)
         .options(
             joinedload(ProgramYearTraining.training).joinedload(Training.language),
@@ -194,8 +194,8 @@ def _placement_to_dict(p: ProgramYearTraining) -> dict:
         "location_city": loc.city if loc else None,
         "language_name": t.language.name if t and t.language else None,
         "language_id": str(t.language_id) if t and t.language_id else None,
-        "certification_body_name": (t.certification_body_rel.company_name if t and t.certification_body_rel else None),
-        "certification_body_id": str(t.certification_body_id) if t and t.certification_body_id else None,
+        "syllabus_name": t.syllabus.name if t and t.syllabus else None,
+        "syllabus_id": str(t.syllabus_id) if t and t.syllabus_id else None,
         "theme_name": t.theme.name if t and t.theme else None,
         "theme_id": str(t.theme_id) if t and t.theme_id else None,
         "regular_price": str(t.regular_price) if t and t.regular_price else None,
@@ -218,7 +218,7 @@ async def list_public_trainings(
     date_to: date | None = Query(None, description="Filter: start date to"),
     location: str | None = Query(None, description="Filter: location city (comma-separated)"),
     language_id: UUID | None = Query(None, description="Filter: language ID"),
-    certification_body_id: UUID | None = Query(None, description="Filter: certification body ID"),
+    syllabus_id: UUID | None = Query(None, description="Filter: syllabus ID"),
     theme_id: UUID | None = Query(None, description="Filter: theme ID"),
     placement_type: str | None = Query(None, description="Filter: open or hybrid"),
     page: int = Query(1, ge=1),
@@ -236,7 +236,7 @@ async def list_public_trainings(
             | func.lower(Training.description).contains(search.lower())
             | func.lower(Location.name).contains(search.lower())
             | func.lower(Location.city).contains(search.lower())
-            | func.lower(CertificationBody.company_name).contains(search.lower())
+            | func.lower(Syllabus.name).contains(search.lower())
             | func.lower(TrainingTheme.name).contains(search.lower())
         )
 
@@ -252,8 +252,8 @@ async def list_public_trainings(
 
     if language_id:
         query = query.where(Training.language_id == language_id)
-    if certification_body_id:
-        query = query.where(Training.certification_body_id == certification_body_id)
+    if syllabus_id:
+        query = query.where(Training.syllabus_id == syllabus_id)
     if theme_id:
         query = query.where(Training.theme_id == theme_id)
     if placement_type and placement_type in ("open", "hybrid"):
@@ -286,7 +286,7 @@ async def get_training_filters(
     date_to: date | None = Query(None),
     location: str | None = Query(None),
     language_id: UUID | None = Query(None),
-    certification_body_id: UUID | None = Query(None),
+    syllabus_id: UUID | None = Query(None),
     theme_id: UUID | None = Query(None),
     placement_type: str | None = Query(None),
 ) -> dict:
@@ -313,8 +313,8 @@ async def get_training_filters(
             base = base.where(func.lower(Location.city).in_(cities))
     if language_id:
         base = base.where(Training.language_id == language_id)
-    if certification_body_id:
-        base = base.where(Training.certification_body_id == certification_body_id)
+    if syllabus_id:
+        base = base.where(Training.syllabus_id == syllabus_id)
     if theme_id:
         base = base.where(Training.theme_id == theme_id)
     if placement_type and placement_type in ("open", "hybrid"):
@@ -349,18 +349,18 @@ async def get_training_filters(
     lang_result = await db.execute(lang_q)
     languages = [{"id": str(lid), "name": name, "count": cnt} for lid, name, cnt in lang_result.all()]
 
-    # Certification body counts
+    # Syllabus counts
     cert_q = (
-        select(CertificationBody.id, CertificationBody.company_name, func.count(ProgramYearTraining.id))
+        select(Syllabus.id, Syllabus.name, func.count(ProgramYearTraining.id))
         .select_from(ProgramYearTraining)
         .join(Training, ProgramYearTraining.training_id == Training.id)
-        .join(CertificationBody, Training.certification_body_id == CertificationBody.id)
+        .join(Syllabus, Training.syllabus_id == Syllabus.id)
         .where(ProgramYearTraining.id.in_(select(sub.c.id)))
-        .group_by(CertificationBody.id, CertificationBody.company_name)
+        .group_by(Syllabus.id, Syllabus.name)
         .order_by(func.count(ProgramYearTraining.id).desc())
     )
     cert_result = await db.execute(cert_q)
-    certification_bodies = [{"id": str(cid), "name": name, "count": cnt} for cid, name, cnt in cert_result.all()]
+    syllabi = [{"id": str(cid), "name": name, "count": cnt} for cid, name, cnt in cert_result.all()]
 
     # Theme counts
     theme_q = (
@@ -398,7 +398,7 @@ async def get_training_filters(
     return {
         "locations": locations,
         "languages": languages,
-        "certification_bodies": certification_bodies,
+        "syllabi": syllabi,
         "themes": themes,
         "types": types,
         "date_range": date_range,
