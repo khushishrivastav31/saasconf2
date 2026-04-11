@@ -246,26 +246,13 @@ export default function CompanyDataTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <VatNumberInput
-              value={form.vat_number}
-              onChange={(val) => update('vat_number', val)}
-              country={form.country}
-              label="VAT Number"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Tax ID
-            </label>
-            <input
-              type="text"
-              value={form.tax_id}
-              onChange={(e) => update('tax_id', e.target.value)}
-              className={inputClass}
-            />
-          </div>
+        <div>
+          <VatNumberInput
+            value={form.vat_number}
+            onChange={(val) => update('vat_number', val)}
+            country={form.country}
+            label="VAT Number"
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
