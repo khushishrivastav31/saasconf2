@@ -21,10 +21,15 @@ function TrainingPortal() {
   }, [tenantSlug, navigate]);
 
   const { lang, setLang } = usePortalLanguage();
-  const { t, availableLanguages, vatConfig, examLanguages } = usePortalTexts(
-    tenantSlug || '',
-    lang
-  );
+  const {
+    t,
+    availableLanguages,
+    vatConfig,
+    examLanguages,
+    stripeEnabled,
+    stripePublishableKey,
+    bankTransferCountries,
+  } = usePortalTexts(tenantSlug || '', lang);
 
   if (!tenantSlug) return null;
 
@@ -53,6 +58,9 @@ function TrainingPortal() {
             t={t}
             vatConfig={vatConfig}
             examLanguages={examLanguages}
+            stripeEnabled={stripeEnabled}
+            stripePublishableKey={stripePublishableKey}
+            bankTransferCountries={bankTransferCountries}
           />
         }
       />

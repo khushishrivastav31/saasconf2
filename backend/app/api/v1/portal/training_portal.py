@@ -57,7 +57,7 @@ DEFAULT_PORTAL_TEXTS: dict[str, dict[str, str]] = {
         "label_street": "Street address",
         "label_postal": "Postal code",
         "label_city": "City",
-        "label_country": "Country code (e.g. DE)",
+        "label_country": "Country",
         "label_vat": "VAT number (optional)",
         "label_phone": "Phone",
         "label_bank_transfer": "Bank Transfer",
@@ -115,7 +115,7 @@ DEFAULT_PORTAL_TEXTS: dict[str, dict[str, str]] = {
         "label_street": "Straße",
         "label_postal": "PLZ",
         "label_city": "Ort",
-        "label_country": "Ländercode (z.B. DE)",
+        "label_country": "Land",
         "label_vat": "USt-IdNr. (optional)",
         "label_phone": "Telefon",
         "label_bank_transfer": "Banküberweisung",
@@ -516,6 +516,9 @@ async def get_portal_config(
         "vat_rules": finance.get("vat_rules", []),
         "eu_countries": finance.get("eu_countries", []),
         "tenant_country": _get_tenant_country(tenant),
+        "stripe_enabled": finance.get("stripe", {}).get("is_enabled", False),
+        "stripe_publishable_key": finance.get("stripe", {}).get("publishable_key", ""),
+        "bank_transfer_countries": finance.get("stripe", {}).get("bank_transfer_countries", []),
     }
 
 
@@ -752,7 +755,9 @@ async def register_for_training(
         id=_uuid.uuid4(),
         tenant_id=tenant.id,
         placement_id=data.placement_id,
-        status="registered",
+        status="paid"
+        if data.billing.payment_method == "credit_card" and data.billing.payment_intent_id
+        else "registered",
         language=data.language,
         company_name=data.billing.company_name,
         street=data.billing.street,
@@ -826,3 +831,91 @@ async def register_for_training(
         "currency": registration.currency,
         "payment_method": registration.payment_method,
     }
+
+
+# ── Stripe Payment ──────────────────────────────────────────────────
+
+
+class _PaymentIntentRequest(BaseModel):
+    total: float
+    currency: str = "EUR"
+
+
+@router.post("/{tenant_slug}/trainings/create-payment-intent")
+async def create_training_payment_intent(
+    tenant_slug: str,
+    data: _PaymentIntentRequest,
+    db: DbSessionDep,
+) -> dict:
+    """Create Stripe PaymentIntent for training registration (no auth)."""
+    import stripe as stripe_lib
+
+    tenant = await _resolve_tenant(db, tenant_slug)
+    finance = (tenant.settings or {}).get("training_finance", {})
+    stripe_cfg = finance.get("stripe", {})
+
+    if not stripe_cfg.get("is_enabled"):
+        raise HTTPException(status_code=400, detail="Stripe is not enabled")
+
+    secret_key = stripe_cfg.get("secret_key")
+    publishable_key = stripe_cfg.get("publishable_key")
+    if not secret_key or not publishable_key:
+        raise HTTPException(status_code=400, detail="Stripe keys not configured")
+
+    if data.total <= 0:
+        raise HTTPException(status_code=400, detail="Total must be greater than 0")
+
+    try:
+        stripe_lib.api_key = secret_key
+        pi = stripe_lib.PaymentIntent.create(
+            amount=int(data.total * 100),
+            currency=data.currency.lower(),
+            metadata={
+                "system": "saasconf",
+                "tenant_id": str(tenant.id),
+                "context": "training",
+                "preview": "true",
+            },
+        )
+        return {
+            "payment_intent_id": pi.id,
+            "client_secret": pi.client_secret,
+            "publishable_key": publishable_key,
+        }
+    except stripe_lib.error.StripeError as e:
+        raise HTTPException(status_code=500, detail=f"Stripe error: {e!s}") from e
+
+
+@router.put("/{tenant_slug}/trainings/update-payment-intent/{payment_intent_id}")
+async def update_training_payment_intent(
+    tenant_slug: str,
+    payment_intent_id: str,
+    data: _PaymentIntentRequest,
+    db: DbSessionDep,
+) -> dict:
+    """Update Stripe PaymentIntent amount (no auth)."""
+    import stripe as stripe_lib
+
+    tenant = await _resolve_tenant(db, tenant_slug)
+    finance = (tenant.settings or {}).get("training_finance", {})
+    stripe_cfg = finance.get("stripe", {})
+
+    if not stripe_cfg.get("is_enabled"):
+        raise HTTPException(status_code=400, detail="Stripe is not enabled")
+
+    secret_key = stripe_cfg.get("secret_key")
+    if not secret_key:
+        raise HTTPException(status_code=400, detail="Stripe secret key not configured")
+
+    if data.total <= 0:
+        raise HTTPException(status_code=400, detail="Total must be greater than 0")
+
+    try:
+        stripe_lib.api_key = secret_key
+        pi = stripe_lib.PaymentIntent.modify(
+            payment_intent_id,
+            amount=int(data.total * 100),
+        )
+        return {"success": True, "payment_intent_id": pi.id, "amount": data.total}
+    except stripe_lib.error.StripeError as e:
+        raise HTTPException(status_code=500, detail=f"Stripe error: {e!s}") from e

@@ -12,6 +12,8 @@ import { COUNTRY_OPTIONS } from '../../config/countries';
 import VatNumberInput from '../../components/common/VatNumberInput';
 import type { PublicTraining } from './TrainingSearch';
 import type { VatConfig } from './hooks/usePortalTexts';
+import { useTrainingStripePayment } from './hooks/useTrainingStripePayment';
+import InlineStripePayment from '../PublicRegistration/components/InlineStripePayment';
 import LanguageSwitcher from './components/LanguageSwitcher';
 
 interface Attendee {
@@ -67,6 +69,9 @@ interface TrainingRegistrationFormProps {
   t: (key: string, vars?: Record<string, string | number>) => string;
   vatConfig?: VatConfig;
   examLanguages?: { id: string; name: string }[];
+  stripeEnabled?: boolean;
+  stripePublishableKey?: string;
+  bankTransferCountries?: string[];
 }
 
 const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
@@ -77,6 +82,9 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
   t,
   vatConfig,
   examLanguages = [],
+  stripeEnabled = false,
+  stripePublishableKey = '',
+  bankTransferCountries = [],
 }: TrainingRegistrationFormProps) {
   const { placementId } = useParams<{ placementId: string }>();
   const navigate = useNavigate();
@@ -230,7 +238,61 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
   const currency = training?.currency || 'EUR';
   const currencySymbol = currency === 'EUR' ? '\u20AC' : currency === 'USD' ? '$' : currency;
 
-  // Submit
+  // Stripe payment
+  const {
+    paymentIntentId,
+    clientSecret,
+    publishableKey: stripeKey,
+    stripePromise,
+    attemptingPayment,
+    setAttemptingPayment,
+    bankTransferAvailable,
+    creditCardAvailable,
+  } = useTrainingStripePayment({
+    tenantSlug,
+    stripeEnabled,
+    stripePublishableKey,
+    bankTransferCountries,
+    billingCountry: billing.country,
+    paymentMethod: billing.payment_method,
+    setPaymentMethod: (method) => setBilling((p) => ({ ...p, payment_method: method })),
+    paymentAmount: totalPrice,
+  });
+
+  // Register (called after payment confirmation for credit card, or directly for bank transfer)
+  const doRegister = useCallback(
+    (intentId?: string | null) => {
+      registerMutation.mutate({
+        placement_id: placementId,
+        billing: {
+          ...billing,
+          company_name: billing.company_name || null,
+          vat_number: billing.vat_number || null,
+          contact_phone: billing.contact_phone || null,
+          payment_intent_id: intentId || null,
+        },
+        attendees: attendees.map((a) => ({
+          first_name: a.first_name,
+          last_name: a.last_name,
+          email: a.email,
+          exam_mode: hasExam ? a.exam_mode : 'none',
+          exam_language: a.exam_mode !== 'none' ? a.exam_language || null : null,
+          extra_time: a.exam_mode !== 'none' ? a.extra_time : false,
+        })),
+        language: lang,
+        honeypot_field: '',
+        form_start_timestamp: Date.now() / 1000,
+      });
+    },
+    [attendees, billing, placementId, registerMutation, lang, hasExam]
+  );
+
+  // Stripe payment success → create registration with payment_intent_id
+  const handlePaymentComplete = useCallback(() => {
+    doRegister(paymentIntentId);
+  }, [doRegister, paymentIntentId]);
+
+  // Submit handler
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -252,28 +314,15 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
         return;
       }
 
-      registerMutation.mutate({
-        placement_id: placementId,
-        billing: {
-          ...billing,
-          company_name: billing.company_name || null,
-          vat_number: billing.vat_number || null,
-          contact_phone: billing.contact_phone || null,
-        },
-        attendees: attendees.map((a) => ({
-          first_name: a.first_name,
-          last_name: a.last_name,
-          email: a.email,
-          exam_mode: hasExam ? a.exam_mode : 'none',
-          exam_language: a.exam_mode !== 'none' ? a.exam_language || null : null,
-          extra_time: a.exam_mode !== 'none' ? a.extra_time : false,
-        })),
-        language: lang,
-        honeypot_field: '',
-        form_start_timestamp: Date.now() / 1000,
-      });
+      if (billing.payment_method === 'credit_card' && creditCardAvailable) {
+        // Trigger Stripe payment confirmation → onSuccess calls doRegister
+        setAttemptingPayment(true);
+      } else {
+        // Bank transfer → register directly
+        doRegister();
+      }
     },
-    [attendees, billing, placementId, registerMutation, lang, hasExam]
+    [attendees, billing, creditCardAvailable, setAttemptingPayment, doRegister]
   );
 
   if (isLoading) {
@@ -623,29 +672,53 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
                 {t('section_payment')}
               </h3>
               <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="bank_transfer"
-                    checked={billing.payment_method === 'bank_transfer'}
-                    onChange={() => setBilling((p) => ({ ...p, payment_method: 'bank_transfer' }))}
-                    className="text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Bank Transfer</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="credit_card"
-                    checked={billing.payment_method === 'credit_card'}
-                    onChange={() => setBilling((p) => ({ ...p, payment_method: 'credit_card' }))}
-                    className="text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Credit Card</span>
-                </label>
+                {bankTransferAvailable && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      value="bank_transfer"
+                      checked={billing.payment_method === 'bank_transfer'}
+                      onChange={() =>
+                        setBilling((p) => ({ ...p, payment_method: 'bank_transfer' }))
+                      }
+                      className="text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {t('label_bank_transfer')}
+                    </span>
+                  </label>
+                )}
+                {creditCardAvailable && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      value="credit_card"
+                      checked={billing.payment_method === 'credit_card'}
+                      onChange={() => setBilling((p) => ({ ...p, payment_method: 'credit_card' }))}
+                      className="text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {t('label_credit_card')}
+                    </span>
+                  </label>
+                )}
               </div>
+              {billing.payment_method === 'credit_card' && creditCardAvailable && (
+                <InlineStripePayment
+                  clientSecret={clientSecret}
+                  publishableKey={stripeKey}
+                  stripePromise={stripePromise}
+                  billingName={`${billing.contact_first_name} ${billing.contact_last_name}`.trim()}
+                  onSuccess={handlePaymentComplete}
+                  onError={(msg) => {
+                    setAttemptingPayment(false);
+                    setError(msg);
+                  }}
+                  isSubmitting={attemptingPayment}
+                />
+              )}
             </div>
           </div>
 
@@ -730,10 +803,10 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
           {/* Submit */}
           <button
             type="submit"
-            disabled={registerMutation.isPending || !termsAccepted}
+            disabled={registerMutation.isPending || attemptingPayment || !termsAccepted}
             className="w-full py-3 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-50 transition-colors"
           >
-            {registerMutation.isPending
+            {registerMutation.isPending || attemptingPayment
               ? t('processing')
               : `${t('btn_submit')} ${currencySymbol} ${totalPrice.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`}
           </button>

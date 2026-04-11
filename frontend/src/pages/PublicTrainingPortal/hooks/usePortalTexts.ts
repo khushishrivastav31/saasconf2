@@ -39,6 +39,9 @@ interface PortalConfig {
   vat_rules: VatRule[];
   eu_countries: string[];
   tenant_country: string;
+  stripe_enabled: boolean;
+  stripe_publishable_key: string;
+  bank_transfer_countries: string[];
 }
 
 /** Default EN texts used when API hasn't loaded yet */
@@ -68,7 +71,7 @@ const FALLBACK_EN: Record<string, string> = {
   label_street: 'Street address',
   label_postal: 'Postal code',
   label_city: 'City',
-  label_country: 'Country code (e.g. DE)',
+  label_country: 'Country',
   label_vat: 'VAT number (optional)',
   label_phone: 'Phone',
   label_bank_transfer: 'Bank Transfer',
@@ -136,6 +139,9 @@ export function usePortalTexts(tenantSlug: string, lang: string) {
     defaultLanguage: config?.default_language || 'en',
     availableLanguages: config?.available_languages || ['en', 'de'],
     examLanguages: config?.exam_languages || [],
+    stripeEnabled: config?.stripe_enabled ?? false,
+    stripePublishableKey: config?.stripe_publishable_key ?? '',
+    bankTransferCountries: config?.bank_transfer_countries ?? [],
     vatConfig: {
       vat_rates: config?.vat_rates || {},
       vat_rules: config?.vat_rules || [],
