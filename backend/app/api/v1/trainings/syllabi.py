@@ -33,6 +33,7 @@ def _build_response(s: Syllabus) -> SyllabusResponse:
         name=s.name,
         description=s.description,
         price=float(s.price) if s.price is not None else None,
+        exam_cost=float(s.exam_cost) if s.exam_cost is not None else None,
         certification_body_id=s.certification_body_id,
         certification_body_name=s.certification_body.company_name if s.certification_body else None,
         language_id=s.language_id,
@@ -80,6 +81,7 @@ async def create_syllabus(
         name=data.name,
         description=data.description,
         price=data.price,
+        exam_cost=data.exam_cost,
         certification_body_id=data.certification_body_id,
         language_id=data.language_id,
     )

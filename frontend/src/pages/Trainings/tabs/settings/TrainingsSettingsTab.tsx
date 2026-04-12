@@ -15,6 +15,7 @@ import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
+import TrainingFilesSection from './TrainingFilesSection';
 
 interface ListResponse<T> {
   items: T[];
@@ -53,6 +54,7 @@ export default function TrainingsSettingsTab() {
   const [createForm, setCreateForm] = useState<TrainingCreate>({ ...emptyCreate });
   const [editForm, setEditForm] = useState<TrainingUpdate>({});
   const [deleteTarget, setDeleteTarget] = useState<Training | null>(null);
+  const [detailTab, setDetailTab] = useState<'details' | 'files'>('details');
 
   // Fetch trainings
   const { data, isLoading } = useQuery({
@@ -556,13 +558,35 @@ export default function TrainingsSettingsTab() {
                     </svg>
                   </button>
                 </div>
+                <div className="border-b border-gray-200 dark:border-gray-700 px-6">
+                  <nav className="flex gap-6 -mb-px">
+                    {(['details', 'files'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setDetailTab(tab)}
+                        className={`py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                          detailTab === tab
+                            ? 'border-primary-600 text-primary-600 dark:text-primary-400'
+                            : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        {tab === 'details' ? 'Details' : 'Files'}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
                 <div className="px-6 py-5">
-                  {renderForm(
-                    editForm,
-                    (f) => setEditForm(f as TrainingUpdate),
-                    handleEditSubmit,
-                    updateMutation.isPending,
-                    false
+                  {detailTab === 'details' ? (
+                    renderForm(
+                      editForm,
+                      (f) => setEditForm(f as TrainingUpdate),
+                      handleEditSubmit,
+                      updateMutation.isPending,
+                      false
+                    )
+                  ) : (
+                    <TrainingFilesSection trainingId={selectedItem.id} />
                   )}
                 </div>
               </div>

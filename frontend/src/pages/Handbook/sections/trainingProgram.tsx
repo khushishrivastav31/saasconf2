@@ -22,6 +22,7 @@ export const trainingProgramCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300">Assign locations to placements via a dropdown on the training bar</li>
 <li class="text-gray-700 dark:text-gray-300">View weekends (blue) and holidays/blocked days (purple) on the grid</li>
 <li class="text-gray-700 dark:text-gray-300">Remove or reposition placements by dragging</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Mark as Guaranteed:</strong> Click a training bar to open the dropdown, then toggle the "Guaranteed" checkbox. Guaranteed trainings show a green <strong>*</strong> after the name on the calendar</li>
 <li class="text-gray-700 dark:text-gray-300">Delete old program years (tenant super users only)</li>
 <li class="text-gray-700 dark:text-gray-300">Collapse/expand program years in the sidebar</li>
 </ul>
@@ -73,6 +74,7 @@ export const trainingProgramCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300"><strong>Change Preview:</strong> Before confirming, a dialog shows what changed — grouped by placement and trainer, color-coded (green=added, red=removed, amber=modified)</li>
 <li class="text-gray-700 dark:text-gray-300"><strong>Version History:</strong> Each publish creates a versioned snapshot</li>
 <li class="text-gray-700 dark:text-gray-300">Read-only calendar view of the published program with placement type and customer name badges</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Guaranteed toggle:</strong> Click a training bar to toggle guaranteed status. Guaranteed trainings show a green <strong>*</strong> after the name and a "Guaranteed" / "Not guaranteed" badge in the detail popup</li>
 </ul>
 <strong>Email behavior:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">

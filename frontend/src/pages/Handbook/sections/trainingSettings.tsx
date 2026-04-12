@@ -22,6 +22,7 @@ export const trainingSettingsCategory: HandbookCategory = {
 <li class="text-gray-700 dark:text-gray-300">Assign languages and themes</li>
 <li class="text-gray-700 dark:text-gray-300">Link to certification bodies and syllabi</li>
 <li class="text-gray-700 dark:text-gray-300">Add a website URL and logo</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Files tab:</strong> Upload and manage file attachments per training (documents, syllabi, materials). Click a training, then switch to the "Files" sub-tab</li>
 </ul>
 <p class="text-gray-700 dark:text-gray-300 my-2">Trainings from the catalog appear in the Design Program sidebar for drag-and-drop scheduling.</p>`,
           }}
@@ -131,6 +132,8 @@ export const trainingSettingsCategory: HandbookCategory = {
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
 <li class="text-gray-700 dark:text-gray-300">Define curriculum/syllabus versions</li>
 <li class="text-gray-700 dark:text-gray-300">Link trainings to specific syllabus versions</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Exam Price:</strong> The price charged to participants for the certification exam</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Exam Cost:</strong> The cost paid to the certification body for conducting the exam</li>
 </ul>`,
           }}
         />

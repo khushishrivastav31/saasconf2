@@ -36,6 +36,7 @@ class Syllabus(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    exam_cost: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
 
     # Relationships
     certification_body_id: Mapped[uuid.UUID | None] = mapped_column(

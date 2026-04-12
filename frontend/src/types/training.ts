@@ -244,6 +244,7 @@ export interface Syllabus {
   name: string;
   description: string | null;
   price: number | null;
+  exam_cost: number | null;
   certification_body_id: string | null;
   certification_body_name: string | null;
   language_id: string | null;
@@ -257,6 +258,7 @@ export interface SyllabusCreate {
   name: string;
   description?: string | null;
   price?: number | null;
+  exam_cost?: number | null;
   certification_body_id?: string | null;
   language_id?: string | null;
 }
@@ -266,6 +268,7 @@ export interface SyllabusUpdate {
   name?: string;
   description?: string | null;
   price?: number | null;
+  exam_cost?: number | null;
   certification_body_id?: string | null;
   language_id?: string | null;
 }

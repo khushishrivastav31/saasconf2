@@ -13,6 +13,7 @@ import { ErrorBanner } from '../../../../components/common/ErrorBanner';
 import { LoadingSpinner } from '../../../../components/common/LoadingSpinner';
 import RichTextEditor from '../../../../components/common/RichTextEditor';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
+import { useToast } from '../../../../components/Toast';
 
 interface ListResponse<T> {
   items: T[];
@@ -26,12 +27,14 @@ const emptyCreate: SyllabusCreate = {
   name: '',
   description: '',
   price: null,
+  exam_cost: null,
   certification_body_id: null,
   language_id: null,
 };
 
 export default function SyllabiTab() {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +89,7 @@ export default function SyllabiTab() {
         name: selectedItem.name,
         description: selectedItem.description || '',
         price: selectedItem.price,
+        exam_cost: selectedItem.exam_cost,
         certification_body_id: selectedItem.certification_body_id,
         language_id: selectedItem.language_id,
       });
@@ -103,6 +107,7 @@ export default function SyllabiTab() {
       setCreateForm({ ...emptyCreate });
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       setSelectedId(newItem.id);
+      showToast('Syllabus created', 'success');
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, 'Failed to create syllabus'));
@@ -116,6 +121,7 @@ export default function SyllabiTab() {
     onSuccess: () => {
       setError(null);
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      showToast('Syllabus saved', 'success');
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, 'Failed to update syllabus'));
@@ -131,6 +137,7 @@ export default function SyllabiTab() {
       setDeleteTarget(null);
       setSelectedId(null);
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      showToast('Syllabus deleted', 'success');
     },
     onError: (err: unknown) => {
       setError(parseApiError(err, 'Failed to delete syllabus'));
@@ -207,6 +214,22 @@ export default function SyllabiTab() {
               setForm({
                 ...form,
                 price: e.target.value ? parseFloat(e.target.value) : null,
+              })
+            }
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Exam Cost</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            className={inputCls}
+            value={form.exam_cost ?? ''}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                exam_cost: e.target.value ? parseFloat(e.target.value) : null,
               })
             }
           />

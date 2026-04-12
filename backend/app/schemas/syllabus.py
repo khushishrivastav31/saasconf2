@@ -13,6 +13,7 @@ class SyllabusCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
     price: float | None = Field(None, ge=0)
+    exam_cost: float | None = Field(None, ge=0)
     certification_body_id: UUID | None = None
     language_id: UUID | None = None
 
@@ -24,6 +25,7 @@ class SyllabusUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
     price: float | None = Field(None, ge=0)
+    exam_cost: float | None = Field(None, ge=0)
     certification_body_id: UUID | None = None
     language_id: UUID | None = None
 
@@ -39,6 +41,7 @@ class SyllabusResponse(BaseModel):
     name: str
     description: str | None = None
     price: float | None = None
+    exam_cost: float | None = None
     certification_body_id: UUID | None = None
     certification_body_name: str | None = None
     language_id: UUID | None = None

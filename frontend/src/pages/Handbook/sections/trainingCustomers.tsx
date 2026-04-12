@@ -109,8 +109,9 @@ export const trainingCustomersCategory: HandbookCategory = {
             __html: `<p class="text-gray-700 dark:text-gray-300 my-2">Add attendee details per placement within an offer. Visible in the offer detail, under each training placement.</p>
 <strong>What you can do:</strong>
 <ul class="list-disc list-inside space-y-1.5 my-3 ml-2">
-<li class="text-gray-700 dark:text-gray-300">Add attendees with first name, last name, email, and exam language</li>
-<li class="text-gray-700 dark:text-gray-300">Exam language is a dropdown populated from configured training languages</li>
+<li class="text-gray-700 dark:text-gray-300">Add attendees with first name, last name, email, and comments</li>
+<li class="text-gray-700 dark:text-gray-300"><strong>Certification Exam:</strong> Per attendee, select exam mode — "No exam", "Exam: On-site", or "Exam: Online"</li>
+<li class="text-gray-700 dark:text-gray-300">When an exam is selected, choose the <strong>Exam language</strong> from the configured training languages and optionally enable <strong>Extra time</strong> (for foreign language candidates)</li>
 <li class="text-gray-700 dark:text-gray-300">Add multiple attendees per placement</li>
 <li class="text-gray-700 dark:text-gray-300">If the number of attendees exceeds the offer's defined attendee count, a warning is shown</li>
 <li class="text-gray-700 dark:text-gray-300">Remove individual attendees</li>
