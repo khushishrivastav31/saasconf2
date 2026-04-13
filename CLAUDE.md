@@ -81,6 +81,6 @@ Detailed docs are in `.claude/docs/` — read on-demand when working on specific
 **After every response**, keep this section updated with current work state.
 
 ### Current Work State
-- **Last completed**: "Guaranteed" flag for training placements — migration 181 (is_guaranteed column), manual toggle via PATCH endpoint + CalendarTrainingBar dropdown, auto-guarantee logic after registration (configurable threshold in portal settings), green badge on TrainingCard/calendar bars/FinalProgramTab, portal texts EN+DE, admin threshold setting in RegistrationPortalTab.
-- **In progress**: Remaining multilingual work — email template language tabs, default DE email templates.
+- **Last completed**: Training invoice feature parity with conference invoices — migration 186 (related_invoice_id), cancel→credit note, mark-paid, reopen, delete endpoints; InvoicesTab rewritten with click-to-detail panel (Details + Line Items tabs, footer actions), credit note sub-rows with ↳ grouping, Type/Status badges, linked navigation between invoice and credit note.
+- **In progress**: Nothing — awaiting user approval to commit.
 - **Status**: All checks pass — mypy, ruff, tsc, eslint.

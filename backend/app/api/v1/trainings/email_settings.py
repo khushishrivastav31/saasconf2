@@ -143,6 +143,7 @@ TRAINING_DEFAULT_TEMPLATES: dict[str, dict[str, str]] = {
             "<p>Please find attached your invoice <strong>[Invoice Number]</strong> "
             "for <strong>[Training Name]</strong>.</p>"
             "<p>Amount due: <strong>[Amount Due]</strong><br>Due date: <strong>[Due Date]</strong></p>"
+            "[Payment Link]"
             "<p>Best regards,<br>[Company Name]</p>"
         ),
         "body_text": (

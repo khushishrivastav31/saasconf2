@@ -7,6 +7,7 @@ from .email_settings import router as email_settings_router
 from .finance import router as finance_router
 from .holidays import router as holidays_router
 from .inhouse import router as inhouse_router
+from .invoices import router as invoices_router
 from .languages import router as languages_router
 from .location_types import router as location_types_router
 from .offer_attendees import router as offer_attendees_router
@@ -17,6 +18,7 @@ from .policies import router as policies_router
 from .portal_settings import router as portal_settings_router
 from .programs import router as programs_router
 from .registration_questions import router as registration_questions_router
+from .registrations import router as registrations_router
 from .syllabi import router as syllabi_router
 from .themes import router as themes_router
 from .trainers import router as trainers_router
@@ -41,6 +43,8 @@ router.include_router(offer_attendees_router)
 router.include_router(offer_documents_router)
 router.include_router(offer_templates_router)
 router.include_router(portal_settings_router)
+router.include_router(registrations_router)
+router.include_router(invoices_router)
 router.include_router(location_types_router)
 router.include_router(detail_router)
 
