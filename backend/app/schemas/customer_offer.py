@@ -33,6 +33,7 @@ class CustomerOfferCreate(BaseModel):
     currency: str = "EUR"
     comments: str | None = None
     notes: str | None = None
+    po_number: str | None = None
 
 
 class CustomerOfferUpdate(BaseModel):
@@ -45,6 +46,7 @@ class CustomerOfferUpdate(BaseModel):
     currency: str | None = None
     comments: str | None = None
     notes: str | None = None
+    po_number: str | None = None
 
 
 class CustomerOfferResponse(BaseModel):
@@ -65,6 +67,7 @@ class CustomerOfferResponse(BaseModel):
     currency: str
     comments: str | None = None
     notes: str | None = None
+    po_number: str | None = None
     placements: list[OfferPlacementInfo] = Field(default_factory=list)
     attendee_count: int = 0
     created_at: datetime

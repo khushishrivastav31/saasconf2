@@ -40,6 +40,7 @@ class CustomerOffer(Base):
     currency: Mapped[str] = mapped_column(String(3), default="EUR", server_default="EUR")
     comments: Mapped[str | None] = mapped_column(Text, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    po_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

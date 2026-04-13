@@ -67,6 +67,7 @@ def _offer_to_response(
         currency=offer.currency,
         comments=offer.comments,
         notes=offer.notes,
+        po_number=offer.po_number,
         placements=placement_infos,
         attendee_count=attendee_count,
         created_at=offer.created_at,
@@ -292,6 +293,7 @@ async def create_offer(
         currency=payload.currency,
         comments=comments,
         notes=payload.notes,
+        po_number=payload.po_number,
     )
     db.add(offer)
     await db.flush()

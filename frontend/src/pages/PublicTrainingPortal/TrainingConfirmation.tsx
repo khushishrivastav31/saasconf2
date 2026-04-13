@@ -1,7 +1,7 @@
 /**
  * Training Registration Confirmation
  */
-import { useLocation, useNavigate } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 
 interface RegistrationResult {
   registration_id: string;
@@ -14,6 +14,7 @@ interface RegistrationResult {
 }
 
 export default function TrainingConfirmation({ t }: { lang: string; t: (key: string) => string }) {
+  const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   const result = location.state?.registrationResult as RegistrationResult | undefined;
@@ -84,7 +85,7 @@ export default function TrainingConfirmation({ t }: { lang: string; t: (key: str
         </div>
 
         <button
-          onClick={() => navigate('../../', { replace: true })}
+          onClick={() => navigate(`/${tenantSlug}/trainings/register`, { replace: true })}
           className="px-6 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 border border-primary-300 dark:border-primary-700 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20"
         >
           {t('btn_browse_more')}

@@ -112,6 +112,7 @@ export interface SectionDef {
   icon: () => React.JSX.Element;
   moduleCode?: string; // If set, only show when user has this module assigned
   children?: SectionChild[];
+  hasSubContent?: boolean; // Show chevron indicator without expandable children
 }
 
 export interface SectionGroup {
@@ -130,7 +131,7 @@ export const sectionGroups: SectionGroup[] = [
       { id: 'details', name: 'Details', icon: InfoIcon },
       { id: 'team', name: 'Team', icon: UsersIcon },
       { id: 'social', name: 'Social Media', icon: ShareIcon },
-      { id: 'settings', name: 'Settings', icon: SettingsGearIcon },
+      { id: 'settings', name: 'Settings', icon: SettingsGearIcon, hasSubContent: true },
       { id: 'deadlines', name: 'Deadlines', icon: DeadlinesIcon },
       { id: 'locations', name: 'Locations', icon: MapIcon, moduleCode: 'locations' },
     ],

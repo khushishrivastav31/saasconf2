@@ -2,12 +2,16 @@
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.training_invoice import TrainingInvoice
 
 
 class TrainingRegistration(Base):
@@ -50,6 +54,7 @@ class TrainingRegistration(Base):
     # Payment
     payment_method: Mapped[str] = mapped_column(String(20), nullable=False, default="bank_transfer")
     payment_intent_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    po_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Pricing
     discount_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -70,6 +75,9 @@ class TrainingRegistration(Base):
     # Relationships
     attendees: Mapped[list["TrainingRegistrationAttendee"]] = relationship(
         back_populates="registration", cascade="all, delete-orphan", lazy="selectin"
+    )
+    invoice: Mapped["TrainingInvoice | None"] = relationship(
+        "TrainingInvoice", back_populates="registration", uselist=False, lazy="joined"
     )
 
     __table_args__ = (

@@ -533,6 +533,7 @@ export interface CustomerOffer {
   currency: string;
   comments: string | null;
   notes: string | null;
+  po_number: string | null;
   placements: OfferPlacementInfo[];
   attendee_count: number;
   created_at: string;

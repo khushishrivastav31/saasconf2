@@ -303,7 +303,7 @@ export const sectionGroups: TrainingSectionGroup[] = [
   {
     name: 'Operations',
     sections: [
-      { id: 'registrations', name: 'Registrations', icon: RegistrationIcon },
+      { id: 'registrations', name: 'Training Registrations', icon: RegistrationIcon },
       { id: 'invoices', name: 'Invoices', icon: InvoicesIcon },
       { id: 'payment-reminders', name: 'Payment Reminders', icon: PaymentRemindersIcon },
     ],

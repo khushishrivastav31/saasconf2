@@ -586,6 +586,7 @@ class TrainingBillingInput(BaseModel):
     contact_phone: str | None = None
     payment_method: str = "bank_transfer"
     payment_intent_id: str | None = None
+    po_number: str | None = None
 
 
 class TrainingRegistrationRequest(BaseModel):
@@ -771,6 +772,7 @@ async def register_for_training(
         contact_phone=data.billing.contact_phone,
         payment_method=data.billing.payment_method,
         payment_intent_id=data.billing.payment_intent_id,
+        po_number=data.billing.po_number,
         discount_code=data.discount_code,
         subtotal=subtotal,
         vat_amount=vat_amount,
@@ -822,6 +824,33 @@ async def register_for_training(
             placement.is_guaranteed = True
             await db.commit()
 
+    # Create invoice
+    from app.core.training_invoice_generation import create_invoice_for_training_registration
+
+    invoice = await create_invoice_for_training_registration(db, registration, tenant)
+    await db.commit()
+
+    # Send emails as background tasks
+    from app.core.email import send_email_background
+    from app.core.training_registration_emails import (
+        send_training_confirmation_email,
+        send_training_invoice_email,
+    )
+
+    if invoice:
+        send_email_background(
+            send_training_invoice_email,
+            invoice=invoice,
+            registration=registration,
+            tenant=tenant,
+        )
+
+    send_email_background(
+        send_training_confirmation_email,
+        registration=registration,
+        tenant=tenant,
+    )
+
     return {
         "registration_id": str(registration.id),
         "status": registration.status,
@@ -830,6 +859,7 @@ async def register_for_training(
         "total": str(registration.total),
         "currency": registration.currency,
         "payment_method": registration.payment_method,
+        "invoice_number": invoice.invoice_number if invoice else None,
     }
 
 

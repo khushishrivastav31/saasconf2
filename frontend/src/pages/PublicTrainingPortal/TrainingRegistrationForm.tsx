@@ -32,6 +32,7 @@ interface BillingInfo {
   city: string;
   country: string;
   vat_number: string;
+  po_number: string;
   contact_first_name: string;
   contact_last_name: string;
   contact_email: string;
@@ -54,6 +55,7 @@ const emptyBilling: BillingInfo = {
   city: '',
   country: '',
   vat_number: '',
+  po_number: '',
   contact_first_name: '',
   contact_last_name: '',
   contact_email: '',
@@ -113,7 +115,10 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
       return res.data;
     },
     onSuccess: (data) => {
-      navigate('../confirmation', { state: { registrationResult: data }, replace: true });
+      navigate(`/${tenantSlug}/trainings/register/${placementId}/confirmation`, {
+        state: { registrationResult: data },
+        replace: true,
+      });
     },
     onError: (err: Error) => {
       setError(err.message || 'Registration failed. Please try again.');
@@ -268,6 +273,7 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
           ...billing,
           company_name: billing.company_name || null,
           vat_number: billing.vat_number || null,
+          po_number: billing.po_number || null,
           contact_phone: billing.contact_phone || null,
           payment_intent_id: intentId || null,
         },
@@ -289,8 +295,9 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
 
   // Stripe payment success → create registration with payment_intent_id
   const handlePaymentComplete = useCallback(() => {
+    setAttemptingPayment(false);
     doRegister(paymentIntentId);
-  }, [doRegister, paymentIntentId]);
+  }, [doRegister, paymentIntentId, setAttemptingPayment]);
 
   // Submit handler
   const handleSubmit = useCallback(
@@ -625,6 +632,13 @@ const TrainingRegistrationForm = React.memo(function TrainingRegistrationForm({
                 placeholder={t('label_vat')}
                 apiClient={publicApi}
                 endpoint="/portal/vat/validate"
+              />
+              <input
+                type="text"
+                value={billing.po_number}
+                onChange={(e) => setBilling((p) => ({ ...p, po_number: e.target.value }))}
+                placeholder="PO Number (optional)"
+                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100"
               />
 
               {/* Contact person */}

@@ -1031,6 +1031,7 @@ interface OfferForm {
   status: 'draft' | 'sent' | 'rejected' | 'accepted';
   comments: string | null;
   notes: string | null;
+  po_number: string | null;
 }
 
 interface CreateOfferForm {
@@ -1041,6 +1042,7 @@ interface CreateOfferForm {
   currency: string;
   comments: string | null;
   notes: string | null;
+  po_number: string | null;
 }
 
 const OfferRow = React.memo(function OfferRow({
@@ -1119,6 +1121,7 @@ function OffersTab({
     currency: 'EUR',
     comments: null,
     notes: null,
+    po_number: null,
   });
 
   // Fetch offers
@@ -1200,6 +1203,7 @@ function OffersTab({
       status: offer.status,
       comments: offer.comments,
       notes: offer.notes,
+      po_number: offer.po_number,
     });
     setShowCreate(false);
   }, []);
@@ -1236,6 +1240,7 @@ function OffersTab({
         currency: createForm.currency,
         comments: createForm.comments,
         notes: createForm.notes,
+        po_number: createForm.po_number,
       });
       return res.data as CustomerOffer;
     },
@@ -1252,6 +1257,7 @@ function OffersTab({
         currency: 'EUR',
         comments: null,
         notes: null,
+        po_number: null,
       });
       handleSelectOffer(newOffer);
     },
@@ -1499,6 +1505,20 @@ function OffersTab({
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              PO Number
+            </label>
+            <input
+              type="text"
+              className={inputClass}
+              value={createForm.po_number ?? ''}
+              onChange={(e) =>
+                setCreateForm((prev) => ({ ...prev, po_number: e.target.value || null }))
+              }
+              placeholder="Optional"
+            />
           </div>
         </div>
 
@@ -1797,6 +1817,22 @@ function OffersTab({
               </select>
             </div>
           </div>
+        </div>
+
+        {/* PO Number */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            PO Number
+          </label>
+          <input
+            type="text"
+            className={inputClass + ' max-w-xs'}
+            value={editForm.po_number ?? ''}
+            onChange={(e) =>
+              setEditForm((prev) => (prev ? { ...prev, po_number: e.target.value || null } : prev))
+            }
+            placeholder="Optional"
+          />
         </div>
 
         {/* Status */}
