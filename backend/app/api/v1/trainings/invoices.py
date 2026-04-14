@@ -257,24 +257,28 @@ async def get_pending_invoicing(
             placement_status[pid]["has_attendees"] = True
             placement_status[pid]["attendee_count"] = cnt
 
-        # Registrations per placement
-        reg_q = await db.execute(
-            select(TrainingRegistration.placement_id)
-            .where(TrainingRegistration.placement_id.in_(all_placement_ids))
-            .distinct()
-        )
-        for (pid,) in reg_q.all():
-            placement_status[pid]["has_registrations"] = True
+        # Registrations + invoices per placement — only for inhouse/hybrid placements
+        # (for open placements, registrations may come from the portal and are unrelated to the offer)
+        inhouse_pids = {
+            pid for pid, pd in placement_details.items() if pd.get("placement_type") in ("inhouse", "hybrid")
+        }
+        if inhouse_pids:
+            reg_q = await db.execute(
+                select(TrainingRegistration.placement_id)
+                .where(TrainingRegistration.placement_id.in_(inhouse_pids))
+                .distinct()
+            )
+            for (pid,) in reg_q.all():
+                placement_status[pid]["has_registrations"] = True
 
-        # Invoices per placement (via registration)
-        inv_q = await db.execute(
-            select(TrainingRegistration.placement_id)
-            .join(TrainingInvoice, TrainingInvoice.training_registration_id == TrainingRegistration.id)
-            .where(TrainingRegistration.placement_id.in_(all_placement_ids))
-            .distinct()
-        )
-        for (pid,) in inv_q.all():
-            placement_status[pid]["has_invoices"] = True
+            inv_q = await db.execute(
+                select(TrainingRegistration.placement_id)
+                .join(TrainingInvoice, TrainingInvoice.training_registration_id == TrainingRegistration.id)
+                .where(TrainingRegistration.placement_id.in_(inhouse_pids))
+                .distinct()
+            )
+            for (pid,) in inv_q.all():
+                placement_status[pid]["has_invoices"] = True
 
     accepted_offers = []
     for offer in offers:
