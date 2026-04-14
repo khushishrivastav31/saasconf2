@@ -55,6 +55,7 @@ export type StaticSectionId =
   | 'settings'
   | 'registrations'
   | 'invoices'
+  | 'pending-invoicing'
   | 'payment-reminders'
   | 'messages'
   | 'news'
@@ -305,6 +306,7 @@ export const sectionGroups: TrainingSectionGroup[] = [
     sections: [
       { id: 'registrations', name: 'Training Registrations', icon: RegistrationIcon },
       { id: 'invoices', name: 'Invoices', icon: InvoicesIcon },
+      { id: 'pending-invoicing', name: 'Pending Invoicing', icon: InvoicesIcon },
       { id: 'payment-reminders', name: 'Payment Reminders', icon: PaymentRemindersIcon },
     ],
   },

@@ -115,6 +115,166 @@ async def list_training_invoices(
     return {"items": items, "total": total, "page": page, "per_page": per_page}
 
 
+@router.get("/pending")
+async def get_pending_invoicing(
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Return uninvoiced registrations and accepted offers with placements."""
+    from sqlalchemy.orm import selectinload
+
+    from app.models.customer_offer import CustomerOffer
+
+    tenant_id = current_user.tenant_id
+
+    # ── Uninvoiced registrations ──────────────────────────────────────────────
+    invoiced_reg_ids = select(TrainingInvoice.training_registration_id).where(
+        TrainingInvoice.training_registration_id.is_not(None),
+        TrainingInvoice.tenant_id == tenant_id,
+    )
+    reg_result = await db.execute(
+        select(TrainingRegistration)
+        .where(
+            TrainingRegistration.tenant_id == tenant_id,
+            TrainingRegistration.status != "cancelled",
+            ~TrainingRegistration.id.in_(invoiced_reg_ids),
+        )
+        .options(joinedload(TrainingRegistration.attendees))
+        .order_by(TrainingRegistration.created_at.desc())
+    )
+    regs = reg_result.scalars().unique().all()
+
+    # Enrich with training info
+    reg_placement_ids = {r.placement_id for r in regs}
+    training_info: dict[UUID, dict] = {}
+    if reg_placement_ids:
+        t_result = await db.execute(
+            select(
+                ProgramYearTraining.id,
+                Training.name,
+                ProgramYearTraining.start_date,
+            )
+            .join(Training, ProgramYearTraining.training_id == Training.id)
+            .where(ProgramYearTraining.id.in_(reg_placement_ids))
+        )
+        for pid, tname, sdate in t_result.all():
+            training_info[pid] = {"name": tname, "start_date": sdate.isoformat() if sdate else None}
+
+    uninvoiced_registrations = []
+    for reg in regs:
+        pinfo = training_info.get(reg.placement_id, {})
+        uninvoiced_registrations.append(
+            {
+                "id": str(reg.id),
+                "placement_id": str(reg.placement_id),
+                "training_name": pinfo.get("name", "Unknown"),
+                "training_date": pinfo.get("start_date"),
+                "contact_first_name": reg.contact_first_name,
+                "contact_last_name": reg.contact_last_name,
+                "contact_email": reg.contact_email,
+                "company_name": reg.company_name,
+                "status": reg.status,
+                "payment_method": reg.payment_method,
+                "total": str(reg.total) if reg.total else None,
+                "currency": reg.currency,
+                "attendee_count": len(reg.attendees),
+                "created_at": reg.created_at.isoformat() if reg.created_at else None,
+            }
+        )
+
+    # ── Accepted offers with placements ───────────────────────────────────────
+    offer_result = await db.execute(
+        select(CustomerOffer)
+        .where(
+            CustomerOffer.tenant_id == tenant_id,
+            CustomerOffer.status == "accepted",
+        )
+        .options(selectinload(CustomerOffer.placements))
+    )
+    offers = offer_result.scalars().unique().all()
+
+    # Gather all placement IDs from offers to check registrations/invoices
+    all_placement_ids: set[UUID] = set()
+    for offer in offers:
+        for p in offer.placements:
+            all_placement_ids.add(p.id)
+
+    # Placement → has_registrations, has_invoices
+    placement_reg_status: dict[UUID, dict[str, bool]] = {
+        pid: {"has_registrations": False, "has_invoices": False} for pid in all_placement_ids
+    }
+
+    if all_placement_ids:
+        # Registrations per placement
+        reg_q = await db.execute(
+            select(TrainingRegistration.placement_id)
+            .where(TrainingRegistration.placement_id.in_(all_placement_ids))
+            .distinct()
+        )
+        for (pid,) in reg_q.all():
+            placement_reg_status[pid]["has_registrations"] = True
+
+        # Invoices per placement (via registration)
+        inv_q = await db.execute(
+            select(TrainingRegistration.placement_id)
+            .join(TrainingInvoice, TrainingInvoice.training_registration_id == TrainingRegistration.id)
+            .where(TrainingRegistration.placement_id.in_(all_placement_ids))
+            .distinct()
+        )
+        for (pid,) in inv_q.all():
+            placement_reg_status[pid]["has_invoices"] = True
+
+    # Training names for offer placements
+    offer_placement_ids = all_placement_ids - reg_placement_ids  # avoid re-fetching
+    if offer_placement_ids:
+        t2 = await db.execute(
+            select(ProgramYearTraining.id, Training.name, ProgramYearTraining.start_date)
+            .join(Training, ProgramYearTraining.training_id == Training.id)
+            .where(ProgramYearTraining.id.in_(offer_placement_ids))
+        )
+        for pid, tname, sdate in t2.all():
+            training_info[pid] = {"name": tname, "start_date": sdate.isoformat() if sdate else None}
+
+    accepted_offers = []
+    for offer in offers:
+        if not offer.placements:
+            continue
+        placements_data = []
+        for p in offer.placements:
+            pinfo = training_info.get(p.id, {})
+            status = placement_reg_status.get(p.id, {})
+            placements_data.append(
+                {
+                    "id": str(p.id),
+                    "training_name": pinfo.get("name", "Unknown"),
+                    "start_date": pinfo.get("start_date"),
+                    "placement_type": p.placement_type,
+                    "has_registrations": status.get("has_registrations", False),
+                    "has_invoices": status.get("has_invoices", False),
+                }
+            )
+        accepted_offers.append(
+            {
+                "id": str(offer.id),
+                "offer_number": offer.offer_number,
+                "customer_name": offer.customer.name if offer.customer else "—",
+                "status": offer.status,
+                "attendees": offer.attendees,
+                "training_price": str(offer.training_price) if offer.training_price else None,
+                "certification_price": str(offer.certification_price) if offer.certification_price else None,
+                "currency": offer.currency,
+                "po_number": offer.po_number,
+                "created_at": offer.created_at.isoformat() if offer.created_at else None,
+                "placements": placements_data,
+            }
+        )
+
+    return {
+        "uninvoiced_registrations": uninvoiced_registrations,
+        "accepted_offers": accepted_offers,
+    }
+
+
 @router.get("/{invoice_id}")
 async def get_training_invoice(
     invoice_id: UUID,

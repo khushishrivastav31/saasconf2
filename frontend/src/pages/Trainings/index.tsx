@@ -15,6 +15,7 @@ const OfferManagementTab = lazy(() => import('./tabs/OfferManagementTab'));
 const SettingsTab = lazy(() => import('./tabs/SettingsTab'));
 const RegistrationsTab = lazy(() => import('./tabs/RegistrationsTab'));
 const InvoicesTab = lazy(() => import('./tabs/InvoicesTab'));
+const PendingInvoicingTab = lazy(() => import('./tabs/PendingInvoicingTab'));
 const PaymentRemindersTab = lazy(() => import('./tabs/PaymentRemindersTab'));
 const MessagesTab = lazy(() => import('./tabs/MessagesTab'));
 const NewsTab = lazy(() => import('./tabs/NewsTab'));
@@ -373,6 +374,7 @@ export default function Trainings() {
               )}
               {activeSection === 'registrations' && <RegistrationsTab />}
               {activeSection === 'invoices' && <InvoicesTab />}
+              {activeSection === 'pending-invoicing' && <PendingInvoicingTab />}
               {activeSection === 'payment-reminders' && <PaymentRemindersTab />}
               {activeSection === 'messages' && <MessagesTab />}
               {activeSection === 'news' && <NewsTab />}
