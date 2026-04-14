@@ -239,19 +239,34 @@ async def get_pending_invoicing(
             # Also populate training_info for later use
             training_info[pid] = {"name": tname, "start_date": sdate.isoformat() if sdate else None}
 
-    # Placement → has_registrations, has_invoices
-    placement_reg_status: dict[UUID, dict[str, bool]] = {
-        pid: {"has_registrations": False, "has_invoices": False} for pid in all_placement_ids
+    # Placement → has_attendees, has_registrations, has_invoices, attendee_count
+    from app.models.offer_attendee import OfferAttendee
+
+    placement_status: dict[UUID, dict] = {
+        pid: {"has_attendees": False, "attendee_count": 0, "has_registrations": False, "has_invoices": False}
+        for pid in all_placement_ids
     }
     if all_placement_ids:
+        # Offer attendees per placement
+        att_q = await db.execute(
+            select(OfferAttendee.placement_id, func.count(OfferAttendee.id))
+            .where(OfferAttendee.placement_id.in_(all_placement_ids))
+            .group_by(OfferAttendee.placement_id)
+        )
+        for pid, cnt in att_q.all():
+            placement_status[pid]["has_attendees"] = True
+            placement_status[pid]["attendee_count"] = cnt
+
+        # Registrations per placement
         reg_q = await db.execute(
             select(TrainingRegistration.placement_id)
             .where(TrainingRegistration.placement_id.in_(all_placement_ids))
             .distinct()
         )
         for (pid,) in reg_q.all():
-            placement_reg_status[pid]["has_registrations"] = True
+            placement_status[pid]["has_registrations"] = True
 
+        # Invoices per placement (via registration)
         inv_q = await db.execute(
             select(TrainingRegistration.placement_id)
             .join(TrainingInvoice, TrainingInvoice.training_registration_id == TrainingRegistration.id)
@@ -259,7 +274,7 @@ async def get_pending_invoicing(
             .distinct()
         )
         for (pid,) in inv_q.all():
-            placement_reg_status[pid]["has_invoices"] = True
+            placement_status[pid]["has_invoices"] = True
 
     accepted_offers = []
     for offer in offers:
@@ -269,15 +284,17 @@ async def get_pending_invoicing(
         placements_data = []
         for pid in pids:
             pd = placement_details.get(pid, {})
-            status = placement_reg_status.get(pid, {})
+            ps = placement_status.get(pid, {})
             placements_data.append(
                 {
                     "id": str(pid),
                     "training_name": pd.get("name", "Unknown"),
                     "start_date": pd.get("start_date"),
                     "placement_type": pd.get("placement_type", "unknown"),
-                    "has_registrations": status.get("has_registrations", False),
-                    "has_invoices": status.get("has_invoices", False),
+                    "has_attendees": ps.get("has_attendees", False),
+                    "attendee_count": ps.get("attendee_count", 0),
+                    "has_registrations": ps.get("has_registrations", False),
+                    "has_invoices": ps.get("has_invoices", False),
                 }
             )
         accepted_offers.append(

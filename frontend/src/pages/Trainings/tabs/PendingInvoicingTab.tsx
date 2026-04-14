@@ -32,6 +32,8 @@ interface OfferPlacement {
   training_name: string;
   start_date: string | null;
   placement_type: string;
+  has_attendees: boolean;
+  attendee_count: number;
   has_registrations: boolean;
   has_invoices: boolean;
 }
@@ -272,10 +274,7 @@ export default function PendingInvoicingTab() {
                     <div className="divide-y divide-gray-100 dark:divide-gray-800">
                       {offer.placements.map((p) => (
                         <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                          <PlacementStatusIcon
-                            hasRegistrations={p.has_registrations}
-                            hasInvoices={p.has_invoices}
-                          />
+                          <PlacementStatusIcon p={p} />
                           <span className="text-gray-900 dark:text-gray-100">
                             {p.training_name}
                           </span>
@@ -285,11 +284,13 @@ export default function PendingInvoicingTab() {
                           <span className="text-xs text-gray-400 capitalize">
                             {p.placement_type}
                           </span>
+                          {p.attendee_count > 0 && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                              {p.attendee_count} attendee{p.attendee_count !== 1 ? 's' : ''}
+                            </span>
+                          )}
                           <span className="ml-auto">
-                            <PlacementStatusLabel
-                              hasRegistrations={p.has_registrations}
-                              hasInvoices={p.has_invoices}
-                            />
+                            <PlacementStatusLabel p={p} />
                           </span>
                         </div>
                       ))}
@@ -306,15 +307,8 @@ export default function PendingInvoicingTab() {
 }
 
 // ── Placement status indicators ──────────────────────────────────────────────
-function PlacementStatusIcon({
-  hasRegistrations,
-  hasInvoices,
-}: {
-  hasRegistrations: boolean;
-  hasInvoices: boolean;
-}) {
-  if (hasInvoices) {
-    // Green check
+function PlacementStatusIcon({ p }: { p: OfferPlacement }) {
+  if (p.has_invoices) {
     return (
       <svg
         className="w-4 h-4 text-green-500 shrink-0"
@@ -331,8 +325,7 @@ function PlacementStatusIcon({
       </svg>
     );
   }
-  if (hasRegistrations) {
-    // Amber warning — registered but no invoice
+  if (p.has_registrations || p.has_attendees) {
     return (
       <svg
         className="w-4 h-4 text-amber-500 shrink-0"
@@ -349,7 +342,6 @@ function PlacementStatusIcon({
       </svg>
     );
   }
-  // Red — no registrations at all
   return (
     <svg
       className="w-4 h-4 text-red-400 shrink-0"
@@ -367,24 +359,23 @@ function PlacementStatusIcon({
   );
 }
 
-function PlacementStatusLabel({
-  hasRegistrations,
-  hasInvoices,
-}: {
-  hasRegistrations: boolean;
-  hasInvoices: boolean;
-}) {
-  if (hasInvoices) {
+function PlacementStatusLabel({ p }: { p: OfferPlacement }) {
+  if (p.has_invoices) {
     return <span className="text-xs text-green-600 dark:text-green-400 font-medium">Invoiced</span>;
   }
-  if (hasRegistrations) {
+  if (p.has_registrations) {
     return (
       <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
         Registered, not invoiced
       </span>
     );
   }
-  return (
-    <span className="text-xs text-red-500 dark:text-red-400 font-medium">No registrations</span>
-  );
+  if (p.has_attendees) {
+    return (
+      <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+        Attendees assigned, not invoiced
+      </span>
+    );
+  }
+  return <span className="text-xs text-red-500 dark:text-red-400 font-medium">No activity</span>;
 }
