@@ -11,6 +11,7 @@ from app.core.exceptions import NotFoundError, ValidationError
 from app.models.audit import AuditLog
 from app.models.customer_offer import CustomerOffer
 from app.models.offer_attendee import OfferAttendee
+from app.models.offer_placement import OfferPlacement
 from app.models.training_program import ProgramYearTraining
 from app.schemas.offer_attendee import OfferAttendeeCreate, OfferAttendeeResponse, OfferAttendeeUpdate
 
@@ -31,7 +32,12 @@ async def _get_offer(db: DbSessionDep, offer_id: UUID, tenant_id: UUID) -> Custo
 
 
 async def _validate_placement(db: DbSessionDep, placement_id: UUID, offer_id: UUID, tenant_id: UUID) -> None:
-    """Validate that a placement belongs to the tenant and is linked to the offer."""
+    """Validate that a placement belongs to the tenant and is linked to the offer.
+
+    Checks both the direct FK (ProgramYearTraining.offer_id) for inhouse placements
+    and the OfferPlacement join table for open placements.
+    """
+    # Check direct FK (inhouse/hybrid placements)
     result = await db.execute(
         select(ProgramYearTraining).where(
             ProgramYearTraining.id == placement_id,
@@ -39,8 +45,20 @@ async def _validate_placement(db: DbSessionDep, placement_id: UUID, offer_id: UU
             ProgramYearTraining.offer_id == offer_id,
         )
     )
-    if not result.scalar_one_or_none():
-        raise ValidationError("Placement not found on this offer")
+    if result.scalar_one_or_none():
+        return
+
+    # Check join table (open placements)
+    join_result = await db.execute(
+        select(OfferPlacement).where(
+            OfferPlacement.offer_id == offer_id,
+            OfferPlacement.placement_id == placement_id,
+        )
+    )
+    if join_result.scalar_one_or_none():
+        return
+
+    raise ValidationError("Placement not found on this offer")
 
 
 @router.get("", response_model=list[OfferAttendeeResponse])

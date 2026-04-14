@@ -121,7 +121,6 @@ async def get_pending_invoicing(
     db: DbSessionDep,
 ) -> dict:
     """Return uninvoiced registrations and accepted offers with placements."""
-    from sqlalchemy.orm import selectinload
 
     from app.models.customer_offer import CustomerOffer
 
@@ -183,29 +182,68 @@ async def get_pending_invoicing(
         )
 
     # ── Accepted offers with placements ───────────────────────────────────────
+    from app.models.offer_placement import OfferPlacement
+
     offer_result = await db.execute(
-        select(CustomerOffer)
-        .where(
+        select(CustomerOffer).where(
             CustomerOffer.tenant_id == tenant_id,
             CustomerOffer.status == "accepted",
         )
-        .options(selectinload(CustomerOffer.placements))
     )
     offers = offer_result.scalars().unique().all()
+    offer_ids = [o.id for o in offers]
 
-    # Gather all placement IDs from offers to check registrations/invoices
+    # Get placement IDs per offer via OfferPlacement join table (works for both open and inhouse)
+    offer_placement_map: dict[UUID, list[UUID]] = {oid: [] for oid in offer_ids}
+    if offer_ids:
+        op_result = await db.execute(
+            select(OfferPlacement.offer_id, OfferPlacement.placement_id).where(OfferPlacement.offer_id.in_(offer_ids))
+        )
+        for oid, pid in op_result.all():
+            offer_placement_map[oid].append(pid)
+
+    # Also check direct FK (ProgramYearTraining.offer_id) for placements not in join table
+    if offer_ids:
+        direct_result = await db.execute(
+            select(ProgramYearTraining.offer_id, ProgramYearTraining.id).where(
+                ProgramYearTraining.offer_id.in_(offer_ids)
+            )
+        )
+        for oid, pid in direct_result.all():
+            if pid not in offer_placement_map[oid]:
+                offer_placement_map[oid].append(pid)
+
     all_placement_ids: set[UUID] = set()
-    for offer in offers:
-        for p in offer.placements:
-            all_placement_ids.add(p.id)
+    for pids in offer_placement_map.values():
+        all_placement_ids.update(pids)
+
+    # Load placement details
+    placement_details: dict[UUID, dict] = {}
+    if all_placement_ids:
+        pd_result = await db.execute(
+            select(
+                ProgramYearTraining.id,
+                Training.name,
+                ProgramYearTraining.start_date,
+                ProgramYearTraining.placement_type,
+            )
+            .join(Training, ProgramYearTraining.training_id == Training.id)
+            .where(ProgramYearTraining.id.in_(all_placement_ids))
+        )
+        for pid, tname, sdate, ptype in pd_result.all():
+            placement_details[pid] = {
+                "name": tname,
+                "start_date": sdate.isoformat() if sdate else None,
+                "placement_type": ptype,
+            }
+            # Also populate training_info for later use
+            training_info[pid] = {"name": tname, "start_date": sdate.isoformat() if sdate else None}
 
     # Placement → has_registrations, has_invoices
     placement_reg_status: dict[UUID, dict[str, bool]] = {
         pid: {"has_registrations": False, "has_invoices": False} for pid in all_placement_ids
     }
-
     if all_placement_ids:
-        # Registrations per placement
         reg_q = await db.execute(
             select(TrainingRegistration.placement_id)
             .where(TrainingRegistration.placement_id.in_(all_placement_ids))
@@ -214,7 +252,6 @@ async def get_pending_invoicing(
         for (pid,) in reg_q.all():
             placement_reg_status[pid]["has_registrations"] = True
 
-        # Invoices per placement (via registration)
         inv_q = await db.execute(
             select(TrainingRegistration.placement_id)
             .join(TrainingInvoice, TrainingInvoice.training_registration_id == TrainingRegistration.id)
@@ -224,31 +261,21 @@ async def get_pending_invoicing(
         for (pid,) in inv_q.all():
             placement_reg_status[pid]["has_invoices"] = True
 
-    # Training names for offer placements
-    offer_placement_ids = all_placement_ids - reg_placement_ids  # avoid re-fetching
-    if offer_placement_ids:
-        t2 = await db.execute(
-            select(ProgramYearTraining.id, Training.name, ProgramYearTraining.start_date)
-            .join(Training, ProgramYearTraining.training_id == Training.id)
-            .where(ProgramYearTraining.id.in_(offer_placement_ids))
-        )
-        for pid, tname, sdate in t2.all():
-            training_info[pid] = {"name": tname, "start_date": sdate.isoformat() if sdate else None}
-
     accepted_offers = []
     for offer in offers:
-        if not offer.placements:
+        pids = offer_placement_map.get(offer.id, [])
+        if not pids:
             continue
         placements_data = []
-        for p in offer.placements:
-            pinfo = training_info.get(p.id, {})
-            status = placement_reg_status.get(p.id, {})
+        for pid in pids:
+            pd = placement_details.get(pid, {})
+            status = placement_reg_status.get(pid, {})
             placements_data.append(
                 {
-                    "id": str(p.id),
-                    "training_name": pinfo.get("name", "Unknown"),
-                    "start_date": pinfo.get("start_date"),
-                    "placement_type": p.placement_type,
+                    "id": str(pid),
+                    "training_name": pd.get("name", "Unknown"),
+                    "start_date": pd.get("start_date"),
+                    "placement_type": pd.get("placement_type", "unknown"),
                     "has_registrations": status.get("has_registrations", False),
                     "has_invoices": status.get("has_invoices", False),
                 }
