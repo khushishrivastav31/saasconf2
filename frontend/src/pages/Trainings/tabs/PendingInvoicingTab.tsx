@@ -49,6 +49,8 @@ interface AcceptedOffer {
   currency: string;
   po_number: string | null;
   created_at: string | null;
+  invoice_count: number;
+  invoiced_total: string;
   placements: OfferPlacement[];
 }
 
@@ -264,6 +266,12 @@ export default function PendingInvoicingTab() {
                       {offer.attendees && (
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {offer.attendees} attendee{offer.attendees !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {offer.invoice_count > 0 && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          {offer.invoice_count} invoice{offer.invoice_count !== 1 ? 's' : ''} —{' '}
+                          {formatAmount(offer.invoiced_total, offer.currency)}
                         </span>
                       )}
                       <span className="ml-auto text-sm font-medium text-gray-900 dark:text-gray-100 tabular-nums">

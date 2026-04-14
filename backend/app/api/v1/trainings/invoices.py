@@ -43,6 +43,7 @@ def _invoice_to_dict(inv: TrainingInvoice, training_name: str = "—") -> dict:
         "total": str(inv.total) if inv.total else None,
         "currency": inv.currency,
         "related_invoice_id": str(inv.related_invoice_id) if inv.related_invoice_id else None,
+        "offer_id": str(inv.offer_id) if inv.offer_id else None,
         "stripe_payment_link_url": inv.stripe_payment_link_url,
         "created_at": inv.created_at.isoformat() if inv.created_at else None,
     }
@@ -104,15 +105,75 @@ async def list_training_invoices(
     reg_ids = {inv.training_registration_id for inv in invoices if inv.training_registration_id}
     training_info = await _get_training_names(db, reg_ids)
 
-    items = [
-        _invoice_to_dict(
-            inv,
-            training_info.get(inv.training_registration_id, "—") if inv.training_registration_id else "—",
+    # Fetch offer numbers for offer-linked invoices
+    offer_ids = {inv.offer_id for inv in invoices if inv.offer_id}
+    offer_numbers: dict[UUID, str] = {}
+    if offer_ids:
+        from app.models.customer_offer import CustomerOffer
+
+        on_result = await db.execute(
+            select(CustomerOffer.id, CustomerOffer.offer_number).where(CustomerOffer.id.in_(offer_ids))
         )
-        for inv in invoices
-    ]
+        offer_numbers = {oid: onum for oid, onum in on_result.all()}
+
+    items = []
+    for inv in invoices:
+        training_name = "—"
+        if inv.training_registration_id:
+            training_name = training_info.get(inv.training_registration_id, "—")
+        elif inv.offer_id:
+            training_name = offer_numbers.get(inv.offer_id, "—")
+        d = _invoice_to_dict(inv, training_name)
+        items.append(d)
 
     return {"items": items, "total": total, "page": page, "per_page": per_page}
+
+
+@router.get("/by-customer/{customer_id}")
+async def list_invoices_by_customer(
+    customer_id: UUID,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """List training invoices linked to a customer's offers."""
+    from app.models.customer_offer import CustomerOffer
+
+    # Get all offer IDs for this customer
+    offer_result = await db.execute(
+        select(CustomerOffer.id).where(
+            CustomerOffer.customer_id == customer_id,
+            CustomerOffer.tenant_id == current_user.tenant_id,
+        )
+    )
+    offer_ids = [oid for (oid,) in offer_result.all()]
+
+    if not offer_ids:
+        return {"items": []}
+
+    # Get invoices linked to these offers
+    inv_result = await db.execute(
+        select(TrainingInvoice)
+        .where(
+            TrainingInvoice.offer_id.in_(offer_ids),
+            TrainingInvoice.tenant_id == current_user.tenant_id,
+        )
+        .order_by(TrainingInvoice.created_at.desc())
+    )
+    invoices = inv_result.scalars().all()
+
+    # Build offer number map
+    on_result = await db.execute(
+        select(CustomerOffer.id, CustomerOffer.offer_number).where(CustomerOffer.id.in_(offer_ids))
+    )
+    offer_numbers = {oid: onum for oid, onum in on_result.all()}
+
+    items = []
+    for inv in invoices:
+        d = _invoice_to_dict(inv)
+        d["offer_number"] = offer_numbers.get(inv.offer_id, "—") if inv.offer_id else "—"
+        items.append(d)
+
+    return {"items": items}
 
 
 @router.get("/pending")
@@ -280,11 +341,38 @@ async def get_pending_invoicing(
             for (pid,) in inv_q.all():
                 placement_status[pid]["has_invoices"] = True
 
+    # Check which offers already have invoices (non-cancelled) — use subtotal (net, excl. VAT)
+    offer_invoice_stats: dict[UUID, dict] = {}
+    if offer_ids:
+        oi_result = await db.execute(
+            select(
+                TrainingInvoice.offer_id,
+                func.count(TrainingInvoice.id),
+                func.coalesce(func.sum(TrainingInvoice.subtotal), 0),
+            )
+            .where(
+                TrainingInvoice.offer_id.in_(offer_ids),
+                TrainingInvoice.status != "cancelled",
+                TrainingInvoice.template_type != "credit_note",
+            )
+            .group_by(TrainingInvoice.offer_id)
+        )
+        for oid, cnt, net_amount in oi_result.all():
+            offer_invoice_stats[oid] = {"count": cnt, "total": float(net_amount)}
+
     accepted_offers = []
     for offer in offers:
         pids = offer_placement_map.get(offer.id, [])
         if not pids:
             continue
+
+        inv_stats = offer_invoice_stats.get(offer.id, {"count": 0, "total": 0})
+
+        # Skip fully invoiced offers (invoiced net >= quoted net)
+        offer_net = float(offer.training_price or 0) + float(offer.certification_price or 0)
+        if inv_stats["count"] > 0 and inv_stats["total"] >= offer_net - 0.01:
+            continue
+
         placements_data = []
         for pid in pids:
             pd = placement_details.get(pid, {})
@@ -313,6 +401,8 @@ async def get_pending_invoicing(
                 "currency": offer.currency,
                 "po_number": offer.po_number,
                 "created_at": offer.created_at.isoformat() if offer.created_at else None,
+                "invoice_count": inv_stats["count"],
+                "invoiced_total": str(inv_stats["total"]),
                 "placements": placements_data,
             }
         )
@@ -365,6 +455,7 @@ async def get_training_invoice(
         "notes": inv.notes,
         "language": inv.language,
         "related_invoice_id": str(inv.related_invoice_id) if inv.related_invoice_id else None,
+        "offer_id": str(inv.offer_id) if inv.offer_id else None,
         "stripe_payment_link_url": inv.stripe_payment_link_url,
         "created_at": inv.created_at.isoformat() if inv.created_at else None,
     }
@@ -433,6 +524,150 @@ async def update_training_invoice_status(
     await db.commit()
 
     return {"id": str(inv.id), "status": inv.status}
+
+
+class UpdateDraftInvoiceRequest(BaseModel):
+    template_type: str | None = None
+    issue_date: str | None = None
+    due_date: str | None = None
+    recipient_name: str | None = None
+    recipient_email: str | None = None
+    recipient_address_line1: str | None = None
+    recipient_city: str | None = None
+    recipient_postal_code: str | None = None
+    recipient_country: str | None = None
+    recipient_vat_number: str | None = None
+    payment_method: str | None = None
+    line_items: list[dict] | None = None
+    subtotal: float | None = None
+    tax_rate: float | None = None
+    tax_amount: float | None = None
+    total: float | None = None
+    currency: str | None = None
+    notes: str | None = None
+    po_number: str | None = None
+
+
+@router.put("/{invoice_id}")
+async def update_draft_invoice(
+    invoice_id: UUID,
+    data: UpdateDraftInvoiceRequest,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Update a draft training invoice. Only draft invoices can be edited."""
+    result = await db.execute(
+        select(TrainingInvoice).where(
+            TrainingInvoice.id == invoice_id,
+            TrainingInvoice.tenant_id == current_user.tenant_id,
+        )
+    )
+    inv = result.scalar_one_or_none()
+    if not inv:
+        raise NotFoundError("Invoice not found")
+
+    if inv.status != "draft":
+        raise HTTPException(status_code=422, detail="Only draft invoices can be edited.")
+
+    update_fields = data.model_dump(exclude_unset=True)
+
+    # Convert date strings
+    if "issue_date" in update_fields:
+        update_fields["issue_date"] = (
+            date.fromisoformat(update_fields["issue_date"]) if update_fields["issue_date"] else None
+        )
+    if "due_date" in update_fields:
+        update_fields["due_date"] = date.fromisoformat(update_fields["due_date"]) if update_fields["due_date"] else None
+
+    # Convert numeric fields to Decimal
+    for field in ("subtotal", "tax_rate", "tax_amount", "total"):
+        if field in update_fields and update_fields[field] is not None:
+            update_fields[field] = Decimal(str(update_fields[field]))
+
+    for field, value in update_fields.items():
+        setattr(inv, field, value)
+
+    await db.commit()
+    await db.refresh(inv)
+
+    return _invoice_to_dict(inv)
+
+
+@router.post("/{invoice_id}/send")
+async def send_draft_invoice(
+    invoice_id: UUID,
+    data: UpdateDraftInvoiceRequest,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Save and send a draft training invoice — assigns number, sets status to sent."""
+    result = await db.execute(
+        select(TrainingInvoice).where(
+            TrainingInvoice.id == invoice_id,
+            TrainingInvoice.tenant_id == current_user.tenant_id,
+        )
+    )
+    inv = result.scalar_one_or_none()
+    if not inv:
+        raise NotFoundError("Invoice not found")
+
+    if inv.status != "draft":
+        raise HTTPException(status_code=422, detail="Only draft invoices can be sent.")
+
+    # Apply any field updates (same as PUT)
+    update_fields = data.model_dump(exclude_unset=True)
+    if "issue_date" in update_fields:
+        update_fields["issue_date"] = (
+            date.fromisoformat(update_fields["issue_date"]) if update_fields["issue_date"] else date.today()
+        )
+    if "due_date" in update_fields:
+        update_fields["due_date"] = date.fromisoformat(update_fields["due_date"]) if update_fields["due_date"] else None
+    for field in ("subtotal", "tax_rate", "tax_amount", "total"):
+        if field in update_fields and update_fields[field] is not None:
+            update_fields[field] = Decimal(str(update_fields[field]))
+    for field, value in update_fields.items():
+        setattr(inv, field, value)
+
+    # Assign invoice number + set status
+    from app.core.training_invoice_number import generate_training_invoice_number
+
+    inv.invoice_number = await generate_training_invoice_number(db, current_user.tenant_id)
+    inv.status = "sent"
+    if not inv.issue_date:
+        inv.issue_date = date.today()
+    if not inv.due_date:
+        from datetime import timedelta
+
+        inv.due_date = inv.issue_date + timedelta(days=30)
+
+    await db.commit()
+    await db.refresh(inv)
+
+    # Send email + Stripe payment link
+    tenant = await db.get(Tenant, current_user.tenant_id)
+    payment_link_url: str | None = None
+
+    if inv.template_type == "credit_card" and tenant:
+        try:
+            from app.core.training_stripe_helper import create_training_payment_link
+
+            link_id, payment_link_url = await create_training_payment_link(db, tenant, inv)
+            inv.stripe_payment_link_id = link_id
+            inv.stripe_payment_link_url = payment_link_url
+            await db.commit()
+            await db.refresh(inv)
+        except Exception as exc:
+            logger.warning("Failed to create Stripe payment link for invoice %s: %s", inv.id, exc)
+
+    if inv.recipient_email and tenant:
+        try:
+            from app.core.training_registration_emails import send_training_invoice_email
+
+            await send_training_invoice_email(db, inv, None, tenant, payment_link_url=payment_link_url)
+        except Exception as exc:
+            logger.warning("Failed to send invoice email %s: %s", inv.id, exc)
+
+    return _invoice_to_dict(inv)
 
 
 @router.post("/{invoice_id}/resend")
@@ -706,6 +941,15 @@ async def create_training_invoice(
 
     issue_date = date.fromisoformat(data.issue_date) if data.issue_date else None
     due_date = date.fromisoformat(data.due_date) if data.due_date else None
+
+    # Default dates when sending
+    if data.status == "sent":
+        from datetime import timedelta
+
+        if not issue_date:
+            issue_date = date.today()
+        if not due_date:
+            due_date = issue_date + timedelta(days=30)
 
     reg_id: UUID | None = None
     if data.training_registration_id:

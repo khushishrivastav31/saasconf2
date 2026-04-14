@@ -5,9 +5,11 @@
  * date, guaranteed badge, and registration count. Groups are collapsible.
  * Individual registrations expand to show attendee details.
  */
-import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useMemo, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router';
 import api from '../../../config/api';
+import { useToast } from '../../../components/Toast';
 
 interface Attendee {
   id: string;
@@ -39,12 +41,32 @@ interface Registration {
   attendees: Attendee[];
 }
 
+interface OfferAttendeeItem {
+  id: string;
+  placement_id: string;
+  training_name: string;
+  training_date: string | null;
+  is_guaranteed: boolean;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  offer_id: string;
+  offer_number: string;
+  customer_id: string;
+  customer_name: string;
+  certification: boolean;
+  exam_mode: string | null;
+  exam_language: string | null;
+  extra_time: boolean;
+}
+
 interface TrainingGroup {
   placementId: string;
   trainingName: string;
   trainingDate: string | null;
   isGuaranteed: boolean;
   registrations: Registration[];
+  offerAttendees: OfferAttendeeItem[];
   totalAttendees: number;
 }
 
@@ -64,7 +86,7 @@ const formatAmount = (amt: string | null, currency: string) => {
   return `${sym}\u00A0${Number(amt).toLocaleString('de-DE', { minimumFractionDigits: 2 })}`;
 };
 
-function buildGroups(items: Registration[]): TrainingGroup[] {
+function buildGroups(items: Registration[], offerAtts: OfferAttendeeItem[]): TrainingGroup[] {
   const map = new Map<string, TrainingGroup>();
   for (const reg of items) {
     const existing = map.get(reg.placement_id);
@@ -78,19 +100,53 @@ function buildGroups(items: Registration[]): TrainingGroup[] {
         trainingDate: reg.training_date,
         isGuaranteed: reg.is_guaranteed,
         registrations: [reg],
+        offerAttendees: [],
         totalAttendees: reg.attendee_count,
       });
     }
   }
-  return Array.from(map.values());
+  // Merge offer attendees into groups (or create new groups)
+  for (const oa of offerAtts) {
+    const existing = map.get(oa.placement_id);
+    if (existing) {
+      existing.offerAttendees.push(oa);
+      existing.totalAttendees += 1;
+    } else {
+      map.set(oa.placement_id, {
+        placementId: oa.placement_id,
+        trainingName: oa.training_name,
+        trainingDate: oa.training_date,
+        isGuaranteed: oa.is_guaranteed,
+        registrations: [],
+        offerAttendees: [oa],
+        totalAttendees: 1,
+      });
+    }
+  }
+  // Sort by training date ascending (nearest future first, nulls last)
+  const groups = Array.from(map.values());
+  groups.sort((a, b) => {
+    if (!a.trainingDate && !b.trainingDate) return 0;
+    if (!a.trainingDate) return 1;
+    if (!b.trainingDate) return -1;
+    return a.trainingDate.localeCompare(b.trainingDate);
+  });
+  return groups;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
+interface ExamLanguage {
+  id: string;
+  name: string;
+}
+
 export default function RegistrationsTab() {
+  const [, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [showPast, setShowPast] = useState(false);
   const [page, setPage] = useState(1);
 
   // Track collapsed groups (all groups expanded by default)
@@ -107,18 +163,42 @@ export default function RegistrationsTab() {
     return p;
   }, [search, statusFilter, dateFrom, dateTo, page]);
 
+  const { data: langData } = useQuery({
+    queryKey: ['training-exam-languages'],
+    queryFn: async () => {
+      const res = await api.get('/trainings/languages');
+      return (res.data.items ?? res.data) as ExamLanguage[];
+    },
+    staleTime: 60_000,
+  });
+  const examLanguages = useMemo(() => langData ?? [], [langData]);
+
   const { data, isLoading } = useQuery({
     queryKey: ['training-registrations', params],
     queryFn: async () => {
       const res = await api.get('/trainings/registrations', { params });
-      return res.data as { items: Registration[]; total: number; page: number; per_page: number };
+      return res.data as {
+        items: Registration[];
+        offer_attendees: OfferAttendeeItem[];
+        total: number;
+        page: number;
+        per_page: number;
+      };
     },
   });
 
   const items = useMemo(() => data?.items ?? [], [data]);
+  const offerAttendees = useMemo(() => data?.offer_attendees ?? [], [data]);
   const total = data?.total ?? 0;
   const totalPages = data ? Math.ceil(data.total / data.per_page) : 0;
-  const groups = useMemo(() => buildGroups(items), [items]);
+  const allGroups = useMemo(() => buildGroups(items, offerAttendees), [items, offerAttendees]);
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const groups = useMemo(
+    () =>
+      showPast ? allGroups : allGroups.filter((g) => !g.trainingDate || g.trainingDate >= today),
+    [allGroups, showPast, today]
+  );
+  const hiddenCount = allGroups.length - groups.length;
 
   const toggleGroup = (placementId: string) => {
     setCollapsedGroups((prev) => {
@@ -190,6 +270,15 @@ export default function RegistrationsTab() {
           title="Training date to"
           className={inputCls}
         />
+        <label className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showPast}
+            onChange={(e) => setShowPast(e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+          />
+          Show past{hiddenCount > 0 ? ` (${hiddenCount})` : ''}
+        </label>
       </div>
 
       {isLoading ? (
@@ -238,10 +327,24 @@ export default function RegistrationsTab() {
                       </span>
                     )}
                     <span className="ml-auto text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                      {group.registrations.length} registration
-                      {group.registrations.length !== 1 ? 's' : ''}
-                      {' \u00B7 '}
-                      {group.totalAttendees} attendee{group.totalAttendees !== 1 ? 's' : ''}
+                      {group.registrations.length > 0 && (
+                        <>
+                          {group.registrations.length} registration
+                          {group.registrations.length !== 1 ? 's' : ''}
+                        </>
+                      )}
+                      {group.registrations.length > 0 &&
+                        group.offerAttendees.length > 0 &&
+                        ' \u00B7 '}
+                      {group.offerAttendees.length > 0 && (
+                        <>
+                          {group.offerAttendees.length} offer attendee
+                          {group.offerAttendees.length !== 1 ? 's' : ''}
+                        </>
+                      )}
+                      {(group.registrations.length > 0 || group.offerAttendees.length > 0) &&
+                        ' \u00B7 '}
+                      {group.totalAttendees} total
                     </span>
                   </button>
 
@@ -278,8 +381,31 @@ export default function RegistrationsTab() {
                             <RegistrationRow
                               key={reg.id}
                               reg={reg}
+                              examLanguages={examLanguages}
                               expanded={isExpanded}
                               onToggle={() => setExpandedRegId(isExpanded ? null : reg.id)}
+                            />
+                          );
+                        })}
+                        {groupOfferAttendeesByOffer(group.offerAttendees).map((oag) => {
+                          const oaExpanded = expandedRegId === `oa-${oag.offerId}`;
+                          return (
+                            <OfferAttendeeRow
+                              key={`oag-${oag.offerId}`}
+                              group={oag}
+                              examLanguages={examLanguages}
+                              expanded={oaExpanded}
+                              onToggle={() =>
+                                setExpandedRegId(oaExpanded ? null : `oa-${oag.offerId}`)
+                              }
+                              onNavigate={() =>
+                                setSearchParams({
+                                  section: 'customers',
+                                  customerId: oag.customerId,
+                                  offerId: oag.offerId,
+                                  tab: 'offers',
+                                })
+                              }
                             />
                           );
                         })}
@@ -324,11 +450,51 @@ function RegistrationRow({
   reg,
   expanded,
   onToggle,
+  examLanguages,
 }: {
   reg: Registration;
   expanded: boolean;
   onToggle: () => void;
+  examLanguages: ExamLanguage[];
 }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  const updateAttendee = useMutation({
+    mutationFn: ({
+      attId,
+      payload,
+    }: {
+      attId: string;
+      payload: Record<string, string | boolean | null>;
+    }) => api.patch(`/trainings/registrations/${reg.id}/attendees/${attId}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-registrations'] });
+      showToast('Attendee updated', 'success');
+    },
+    onError: () => showToast('Failed to update attendee', 'error'),
+  });
+
+  const handleChange = useCallback(
+    (attId: string, field: string, value: string | boolean) => {
+      const payload: Record<string, string | boolean | null> = { [field]: value };
+      // Sync include_exam flag with exam_mode
+      if (field === 'exam_mode') {
+        if (value === 'none') {
+          payload.exam_mode = null;
+          payload.include_exam = false;
+        } else {
+          payload.include_exam = true;
+        }
+      }
+      updateAttendee.mutate({ attId, payload });
+    },
+    [updateAttendee]
+  );
+
+  const selectCls =
+    'px-1 py-0.5 text-xs border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 dark:text-gray-100';
+
   return (
     <>
       <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={onToggle}>
@@ -387,11 +553,223 @@ function RegistrationRow({
                         {att.first_name} {att.last_name}
                       </td>
                       <td className="py-1 pr-4">{att.email}</td>
-                      <td className="py-1 pr-4 capitalize">
-                        {att.exam_mode && att.exam_mode !== 'none' ? att.exam_mode : '—'}
+                      <td className="py-1 pr-4" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          className={selectCls}
+                          value={att.exam_mode || 'none'}
+                          onChange={(e) => handleChange(att.id, 'exam_mode', e.target.value)}
+                        >
+                          <option value="none">—</option>
+                          <option value="online">Online</option>
+                          <option value="onsite">Onsite</option>
+                        </select>
                       </td>
-                      <td className="py-1 pr-4">{att.exam_language || '—'}</td>
-                      <td className="py-1">{att.extra_time ? 'Yes' : '—'}</td>
+                      <td className="py-1 pr-4" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          className={selectCls}
+                          value={att.exam_language || ''}
+                          onChange={(e) => handleChange(att.id, 'exam_language', e.target.value)}
+                        >
+                          <option value="">—</option>
+                          {examLanguages.map((el) => (
+                            <option key={el.id} value={el.name}>
+                              {el.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-1" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={att.extra_time}
+                          onChange={(e) => handleChange(att.id, 'extra_time', e.target.checked)}
+                          className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+// ── Offer attendee grouping + row ─────────────────────────────────────────────
+interface OfferAttendeeGroup {
+  offerId: string;
+  offerNumber: string;
+  customerId: string;
+  customerName: string;
+  attendees: OfferAttendeeItem[];
+}
+
+function groupOfferAttendeesByOffer(items: OfferAttendeeItem[]): OfferAttendeeGroup[] {
+  const map = new Map<string, OfferAttendeeGroup>();
+  for (const oa of items) {
+    const existing = map.get(oa.offer_id);
+    if (existing) {
+      existing.attendees.push(oa);
+    } else {
+      map.set(oa.offer_id, {
+        offerId: oa.offer_id,
+        offerNumber: oa.offer_number,
+        customerId: oa.customer_id,
+        customerName: oa.customer_name,
+        attendees: [oa],
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
+function OfferAttendeeRow({
+  group,
+  expanded,
+  onToggle,
+  onNavigate,
+  examLanguages,
+}: {
+  group: OfferAttendeeGroup;
+  expanded: boolean;
+  onToggle: () => void;
+  onNavigate: () => void;
+  examLanguages: ExamLanguage[];
+}) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  const updateMutation = useMutation({
+    mutationFn: ({
+      attId,
+      payload,
+    }: {
+      attId: string;
+      payload: Record<string, string | boolean | null>;
+    }) => api.patch(`/trainings/offers/${group.offerId}/attendees/${attId}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-registrations'] });
+      queryClient.invalidateQueries({ queryKey: ['offer-attendees'] });
+      showToast('Attendee updated', 'success');
+    },
+    onError: () => showToast('Failed to update attendee', 'error'),
+  });
+
+  const handleChange = useCallback(
+    (attId: string, field: string, value: string | boolean) => {
+      const payload: Record<string, string | boolean | null> = { [field]: value };
+      // Sync certification flag with exam_mode
+      if (field === 'exam_mode') {
+        if (value === 'none') {
+          payload.exam_mode = null;
+          payload.certification = false;
+        } else {
+          payload.certification = true;
+        }
+      }
+      updateMutation.mutate({ attId, payload });
+    },
+    [updateMutation]
+  );
+
+  const selectCls =
+    'px-1 py-0.5 text-xs border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 dark:text-gray-100';
+
+  return (
+    <>
+      <tr
+        className="bg-purple-50/40 dark:bg-purple-900/5 hover:bg-purple-50 dark:hover:bg-purple-900/10 cursor-pointer"
+        onClick={onToggle}
+      >
+        <td className="px-3 py-2 text-gray-400">
+          <svg
+            className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </td>
+        <td className="px-3 py-2 text-gray-900 dark:text-gray-100">{group.customerName}</td>
+        <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
+          {group.attendees[0]?.email || '—'}
+        </td>
+        <td className="px-3 py-2 text-center text-gray-600 dark:text-gray-400">
+          {group.attendees.length}
+        </td>
+        <td className="px-3 py-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onNavigate();
+            }}
+            className="inline-flex px-2 py-0.5 rounded text-[11px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+          >
+            {group.offerNumber}
+          </button>
+        </td>
+        <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">—</td>
+        <td className="px-3 py-2 text-right text-xs text-gray-400">—</td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={7} className="px-0 py-0">
+            <div className="bg-purple-50/30 dark:bg-purple-900/5 px-8 py-3 border-t border-gray-200 dark:border-gray-700">
+              <table className="min-w-full text-xs">
+                <thead>
+                  <tr className="text-gray-500 dark:text-gray-400 uppercase text-[10px]">
+                    <th className="text-left py-1 pr-4">Name</th>
+                    <th className="text-left py-1 pr-4">Email</th>
+                    <th className="text-left py-1 pr-4">Exam</th>
+                    <th className="text-left py-1 pr-4">Language</th>
+                    <th className="text-left py-1">Extra Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.attendees.map((att) => (
+                    <tr key={att.id} className="text-gray-700 dark:text-gray-300">
+                      <td className="py-1 pr-4">
+                        {att.first_name} {att.last_name}
+                      </td>
+                      <td className="py-1 pr-4">{att.email || '—'}</td>
+                      <td className="py-1 pr-4" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          className={selectCls}
+                          value={att.exam_mode || 'none'}
+                          onChange={(e) => handleChange(att.id, 'exam_mode', e.target.value)}
+                        >
+                          <option value="none">—</option>
+                          <option value="online">Online</option>
+                          <option value="onsite">Onsite</option>
+                        </select>
+                      </td>
+                      <td className="py-1 pr-4" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          className={selectCls}
+                          value={att.exam_language || ''}
+                          onChange={(e) => handleChange(att.id, 'exam_language', e.target.value)}
+                        >
+                          <option value="">—</option>
+                          {examLanguages.map((el) => (
+                            <option key={el.id} value={el.name}>
+                              {el.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-1" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={att.extra_time}
+                          onChange={(e) => handleChange(att.id, 'extra_time', e.target.checked)}
+                          className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

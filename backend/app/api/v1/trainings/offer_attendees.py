@@ -4,6 +4,7 @@ import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep, get_client_ip
@@ -184,6 +185,47 @@ async def update_attendee(
     await db.commit()
     await db.refresh(attendee)
 
+    return OfferAttendeeResponse.model_validate(attendee)
+
+
+class PatchOfferAttendeeExam(BaseModel):
+    """Patch exam fields on an offer attendee."""
+
+    exam_mode: str | None = None
+    exam_language: str | None = None
+    extra_time: bool | None = None
+    certification: bool | None = None
+
+
+@router.patch("/{attendee_id}")
+async def patch_attendee(
+    offer_id: UUID,
+    attendee_id: UUID,
+    payload: PatchOfferAttendeeExam,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> OfferAttendeeResponse:
+    """Patch exam fields on an offer attendee."""
+    tenant_id = current_user.tenant_id
+    await _get_offer(db, offer_id, tenant_id)
+
+    result = await db.execute(
+        select(OfferAttendee).where(
+            OfferAttendee.id == attendee_id,
+            OfferAttendee.offer_id == offer_id,
+            OfferAttendee.tenant_id == tenant_id,
+        )
+    )
+    attendee = result.scalar_one_or_none()
+    if not attendee:
+        raise NotFoundError("Attendee not found")
+
+    update_fields = payload.model_dump(exclude_unset=True)
+    for field, value in update_fields.items():
+        setattr(attendee, field, value)
+
+    await db.commit()
+    await db.refresh(attendee)
     return OfferAttendeeResponse.model_validate(attendee)
 
 

@@ -40,6 +40,11 @@ class TrainingInvoice(Base):
         ForeignKey("training_registrations.id", ondelete="SET NULL"),
         nullable=True,
     )
+    offer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("customer_offers.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     # Invoice identification
     invoice_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -117,6 +122,7 @@ class TrainingInvoice(Base):
         Index("idx_training_invoices_registration", "training_registration_id"),
         Index("idx_training_invoices_status", "status"),
         Index("idx_training_invoices_stripe", "stripe_payment_intent_id"),
+        Index("idx_training_invoices_offer", "offer_id"),
         Index("idx_training_invoices_stripe_link", "stripe_payment_link_id"),
         Index("idx_training_invoices_related", "related_invoice_id"),
         Index(

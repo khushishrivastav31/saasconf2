@@ -6,6 +6,7 @@
  */
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router';
 import api from '../../../config/api';
 import { useToast } from '../../../components/Toast';
 
@@ -854,6 +855,172 @@ function ReplaceForm({
   );
 }
 
+// ── Draft details editor ──────────────────────────────────────────────────────
+function DraftDetailsEditor(props: {
+  editRecipientName: string;
+  setEditRecipientName: (v: string) => void;
+  editRecipientEmail: string;
+  setEditRecipientEmail: (v: string) => void;
+  editAddress: string;
+  setEditAddress: (v: string) => void;
+  editCity: string;
+  setEditCity: (v: string) => void;
+  editPostalCode: string;
+  setEditPostalCode: (v: string) => void;
+  editCountry: string;
+  setEditCountry: (v: string) => void;
+  editVat: string;
+  setEditVat: (v: string) => void;
+  editIssueDate: string;
+  setEditIssueDate: (v: string) => void;
+  editDueDate: string;
+  setEditDueDate: (v: string) => void;
+  editNotes: string;
+  setEditNotes: (v: string) => void;
+  templateType: string;
+  currency: string | null;
+}) {
+  const inputCls =
+    'w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100';
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+            Template Type
+          </label>
+          <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md text-sm">
+            <TypeBadge type={props.templateType} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+            Issue Date
+          </label>
+          <input
+            type="date"
+            value={props.editIssueDate}
+            onChange={(e) => props.setEditIssueDate(e.target.value)}
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+            Due Date
+          </label>
+          <input
+            type="date"
+            value={props.editDueDate}
+            onChange={(e) => props.setEditDueDate(e.target.value)}
+            className={inputCls}
+          />
+        </div>
+      </div>
+      <div>
+        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Recipient</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              Name
+            </label>
+            <input
+              type="text"
+              value={props.editRecipientName}
+              onChange={(e) => props.setEditRecipientName(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              value={props.editRecipientEmail}
+              onChange={(e) => props.setEditRecipientEmail(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              Address
+            </label>
+            <input
+              type="text"
+              value={props.editAddress}
+              onChange={(e) => props.setEditAddress(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              City
+            </label>
+            <input
+              type="text"
+              value={props.editCity}
+              onChange={(e) => props.setEditCity(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              Postal Code
+            </label>
+            <input
+              type="text"
+              value={props.editPostalCode}
+              onChange={(e) => props.setEditPostalCode(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              Country
+            </label>
+            <input
+              type="text"
+              value={props.editCountry}
+              onChange={(e) => props.setEditCountry(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              VAT Number
+            </label>
+            <input
+              type="text"
+              value={props.editVat}
+              onChange={(e) => props.setEditVat(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              Currency
+            </label>
+            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-gray-900 dark:text-gray-100">
+              {props.currency ?? '—'}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+          Notes
+        </label>
+        <textarea
+          value={props.editNotes}
+          onChange={(e) => props.setEditNotes(e.target.value)}
+          rows={3}
+          className={inputCls}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ── Detail panel ──────────────────────────────────────────────────────────────
 type DetailTab = 'details' | 'line_items';
 
@@ -868,8 +1035,12 @@ function DetailPanel({
   onMarkPaid,
   onReopen,
   onReplace,
+  onSave,
+  onSend,
   isResending,
   isMutating,
+  isSaving,
+  isSending,
 }: {
   inv: TrainingInvoice;
   allInvoices: TrainingInvoice[];
@@ -881,11 +1052,80 @@ function DetailPanel({
   onMarkPaid: () => void;
   onReopen: () => void;
   onReplace: () => void;
+  onSave: (data: Record<string, unknown>) => void;
+  onSend: (data: Record<string, unknown>) => void;
   isResending: boolean;
   isMutating: boolean;
+  isSaving: boolean;
+  isSending: boolean;
 }) {
   const [tab, setTab] = useState<DetailTab>('details');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const isDraft = inv.status === 'draft';
+
+  // Draft edit state
+  const [editRecipientName, setEditRecipientName] = useState(inv.recipient_name);
+  const [editRecipientEmail, setEditRecipientEmail] = useState(inv.recipient_email ?? '');
+  const [editAddress, setEditAddress] = useState(inv.recipient_address_line1 ?? '');
+  const [editCity, setEditCity] = useState(inv.recipient_city ?? '');
+  const [editPostalCode, setEditPostalCode] = useState(inv.recipient_postal_code ?? '');
+  const [editCountry, setEditCountry] = useState(inv.recipient_country ?? '');
+  const [editVat, setEditVat] = useState(inv.recipient_vat_number ?? '');
+  const [editIssueDate, setEditIssueDate] = useState(inv.issue_date ?? '');
+  const [editDueDate, setEditDueDate] = useState(inv.due_date ?? '');
+  const [editNotes, setEditNotes] = useState(inv.notes ?? '');
+  const [editLineItems, setEditLineItems] = useState<LineItemInput[]>(() =>
+    ((inv.line_items as LineItem[]) ?? []).map((li) => ({
+      description: li.description,
+      quantity: String(li.quantity),
+      unit_price: String(li.unit_price),
+    }))
+  );
+  const [editTaxRate, setEditTaxRate] = useState(
+    inv.tax_rate ? String(parseFloat(String(inv.tax_rate))) : '0'
+  );
+
+  const editSubtotal = useMemo(
+    () =>
+      editLineItems.reduce(
+        (s, li) => s + (parseFloat(li.quantity) || 0) * (parseFloat(li.unit_price) || 0),
+        0
+      ),
+    [editLineItems]
+  );
+  const editTaxAmount = useMemo(
+    () => (editSubtotal * (parseFloat(editTaxRate) || 0)) / 100,
+    [editSubtotal, editTaxRate]
+  );
+  const editTotal = editSubtotal + editTaxAmount;
+
+  const buildDraftPayload = () => ({
+    recipient_name: editRecipientName,
+    recipient_email: editRecipientEmail || null,
+    recipient_address_line1: editAddress || null,
+    recipient_city: editCity || null,
+    recipient_postal_code: editPostalCode || null,
+    recipient_country: editCountry || null,
+    recipient_vat_number: editVat || null,
+    issue_date: editIssueDate || null,
+    due_date: editDueDate || null,
+    notes: editNotes || null,
+    line_items: editLineItems
+      .filter((li) => li.description.trim())
+      .map((li) => ({
+        description: li.description,
+        quantity: parseFloat(li.quantity) || 1,
+        unit_price: parseFloat(li.unit_price) || 0,
+        total: (parseFloat(li.quantity) || 1) * (parseFloat(li.unit_price) || 0),
+      })),
+    subtotal: editSubtotal,
+    tax_rate: parseFloat(editTaxRate) || 0,
+    tax_amount: editTaxAmount,
+    total: editTotal,
+  });
+
+  const handleSaveDraft = () => onSave(buildDraftPayload());
+  const handleSendDraft = () => onSend(buildDraftPayload());
 
   // Reset tab when invoice changes
   useEffect(() => {
@@ -1018,7 +1258,34 @@ function DetailPanel({
 
         {/* Tab content */}
         <div className="px-6 py-6">
-          {tab === 'details' && (
+          {tab === 'details' && isDraft && (
+            <DraftDetailsEditor
+              editRecipientName={editRecipientName}
+              setEditRecipientName={setEditRecipientName}
+              editRecipientEmail={editRecipientEmail}
+              setEditRecipientEmail={setEditRecipientEmail}
+              editAddress={editAddress}
+              setEditAddress={setEditAddress}
+              editCity={editCity}
+              setEditCity={setEditCity}
+              editPostalCode={editPostalCode}
+              setEditPostalCode={setEditPostalCode}
+              editCountry={editCountry}
+              setEditCountry={setEditCountry}
+              editVat={editVat}
+              setEditVat={setEditVat}
+              editIssueDate={editIssueDate}
+              setEditIssueDate={setEditIssueDate}
+              editDueDate={editDueDate}
+              setEditDueDate={setEditDueDate}
+              editNotes={editNotes}
+              setEditNotes={setEditNotes}
+              templateType={inv.template_type}
+              currency={inv.currency}
+            />
+          )}
+
+          {tab === 'details' && !isDraft && (
             <div className="space-y-6">
               {/* Identification */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1182,75 +1449,94 @@ function DetailPanel({
 
           {tab === 'line_items' && (
             <div>
-              {lineItems.length === 0 ? (
-                <div className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
-                  No line items.
-                </div>
+              {isDraft ? (
+                <>
+                  <LineItemsEditor
+                    items={editLineItems}
+                    currency={inv.currency ?? 'EUR'}
+                    onChange={setEditLineItems}
+                  />
+                  <InvoiceTotalsEditor
+                    sym={inv.currency === 'EUR' ? '€' : (inv.currency ?? '')}
+                    subtotal={editSubtotal}
+                    taxRate={editTaxRate}
+                    taxAmount={editTaxAmount}
+                    total={editTotal}
+                    onTaxRateChange={setEditTaxRate}
+                  />
+                </>
               ) : (
-                <table className="min-w-full text-sm mb-6">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="py-2 text-left font-medium text-gray-500 dark:text-gray-400">
-                        Description
-                      </th>
-                      <th className="py-2 text-right font-medium text-gray-500 dark:text-gray-400 w-16">
-                        Qty
-                      </th>
-                      <th className="py-2 text-right font-medium text-gray-500 dark:text-gray-400 w-24">
-                        Unit Price
-                      </th>
-                      <th className="py-2 text-right font-medium text-gray-500 dark:text-gray-400 w-24">
-                        Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {lineItems.map((item, i) => (
-                      <tr key={i}>
-                        <td className="py-2 text-gray-900 dark:text-gray-100">
-                          {item.description}
-                        </td>
-                        <td className="py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">
-                          {item.quantity}
-                        </td>
-                        <td className="py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">
-                          {formatAmount(item.unit_price, inv.currency)}
-                        </td>
-                        <td
-                          className={`py-2 text-right font-medium tabular-nums ${Number(item.total) < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}
-                        >
-                          {formatAmount(item.total, inv.currency)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <>
+                  {lineItems.length === 0 ? (
+                    <div className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
+                      No line items.
+                    </div>
+                  ) : (
+                    <table className="min-w-full text-sm mb-6">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-gray-700">
+                          <th className="py-2 text-left font-medium text-gray-500 dark:text-gray-400">
+                            Description
+                          </th>
+                          <th className="py-2 text-right font-medium text-gray-500 dark:text-gray-400 w-16">
+                            Qty
+                          </th>
+                          <th className="py-2 text-right font-medium text-gray-500 dark:text-gray-400 w-24">
+                            Unit Price
+                          </th>
+                          <th className="py-2 text-right font-medium text-gray-500 dark:text-gray-400 w-24">
+                            Total
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {lineItems.map((item, i) => (
+                          <tr key={i}>
+                            <td className="py-2 text-gray-900 dark:text-gray-100">
+                              {item.description}
+                            </td>
+                            <td className="py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">
+                              {item.quantity}
+                            </td>
+                            <td className="py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">
+                              {formatAmount(item.unit_price, inv.currency)}
+                            </td>
+                            <td
+                              className={`py-2 text-right font-medium tabular-nums ${Number(item.total) < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}
+                            >
+                              {formatAmount(item.total, inv.currency)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
+                      <span className="tabular-nums text-gray-900 dark:text-gray-100">
+                        {formatAmount(inv.subtotal, inv.currency)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">
+                        VAT ({inv.tax_rate ? Number(inv.tax_rate).toFixed(2) : '0.00'}%)
+                      </span>
+                      <span className="tabular-nums text-gray-900 dark:text-gray-100">
+                        {formatAmount(inv.tax_amount, inv.currency)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-semibold text-base pt-1 border-t border-gray-200 dark:border-gray-700">
+                      <span className="text-gray-900 dark:text-gray-100">Total</span>
+                      <span
+                        className={`tabular-nums ${Number(inv.total) < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}
+                      >
+                        {formatAmount(inv.total, inv.currency)}
+                      </span>
+                    </div>
+                  </div>
+                </>
               )}
-              {/* Totals */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-1.5 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
-                  <span className="tabular-nums text-gray-900 dark:text-gray-100">
-                    {formatAmount(inv.subtotal, inv.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">
-                    VAT ({inv.tax_rate ? Number(inv.tax_rate).toFixed(2) : '0.00'}%)
-                  </span>
-                  <span className="tabular-nums text-gray-900 dark:text-gray-100">
-                    {formatAmount(inv.tax_amount, inv.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between font-semibold text-base pt-1 border-t border-gray-200 dark:border-gray-700">
-                  <span className="text-gray-900 dark:text-gray-100">Total</span>
-                  <span
-                    className={`tabular-nums ${Number(inv.total) < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}
-                  >
-                    {formatAmount(inv.total, inv.currency)}
-                  </span>
-                </div>
-              </div>
             </div>
           )}
         </div>
@@ -1296,6 +1582,24 @@ function DetailPanel({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {isDraft && (
+              <>
+                <button
+                  onClick={handleSaveDraft}
+                  disabled={isSaving || isSending}
+                  className="px-4 py-1.5 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40"
+                >
+                  {isSaving ? 'Saving...' : 'Save Draft'}
+                </button>
+                <button
+                  onClick={handleSendDraft}
+                  disabled={isSaving || isSending}
+                  className="px-4 py-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg disabled:opacity-40"
+                >
+                  {isSending ? 'Sending...' : 'Send Invoice'}
+                </button>
+              </>
+            )}
             {canResend && (
               <button
                 onClick={onResend}
@@ -1372,8 +1676,19 @@ export default function InvoicesTab() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchParams, setSearchParamsInvoice] = useSearchParams();
+  const initialInvoiceId = searchParams.get('invoiceId');
+  const [selectedId, setSelectedId] = useState<string | null>(initialInvoiceId);
   const [view, setView] = useState<'list' | 'create' | 'replace'>('list');
+
+  // Clear invoiceId from URL after using it
+  useEffect(() => {
+    if (initialInvoiceId) {
+      const params = new URLSearchParams(searchParams);
+      params.delete('invoiceId');
+      setSearchParamsInvoice(params, { replace: true });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const params = useMemo(() => {
     const p: Record<string, string> = { page: String(page), per_page: '50' };
@@ -1469,6 +1784,26 @@ export default function InvoicesTab() {
     onError: () => showToast('Failed to sync Stripe payments', 'error'),
   });
 
+  const saveDraftMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      api.put(`/trainings/invoices/${selectedId}`, data),
+    onSuccess: () => {
+      invalidate();
+      showToast('Draft saved', 'success');
+    },
+    onError: () => showToast('Failed to save draft', 'error'),
+  });
+
+  const sendDraftMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      api.post(`/trainings/invoices/${selectedId}/send`, data),
+    onSuccess: () => {
+      invalidate();
+      showToast('Invoice sent and number assigned', 'success');
+    },
+    onError: () => showToast('Failed to send invoice', 'error'),
+  });
+
   const handleDownloadPdf = async (id: string, number: string | null) => {
     try {
       const res = await api.get(`/trainings/invoices/${id}/pdf`, { responseType: 'blob' });
@@ -1540,8 +1875,12 @@ export default function InvoicesTab() {
         onMarkPaid={() => markPaidMutation.mutate(selectedInvoice.id)}
         onReopen={() => reopenMutation.mutate(selectedInvoice.id)}
         onReplace={() => setView('replace')}
+        onSave={(data) => saveDraftMutation.mutate(data)}
+        onSend={(data) => sendDraftMutation.mutate(data)}
         isResending={resendMutation.isPending}
         isMutating={isMutating}
+        isSaving={saveDraftMutation.isPending}
+        isSending={sendDraftMutation.isPending}
       />
     );
   }

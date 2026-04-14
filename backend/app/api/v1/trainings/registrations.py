@@ -4,10 +4,12 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
+from app.core.exceptions import NotFoundError
 from app.models.training import Training
 from app.models.training_program import ProgramYearTraining
 from app.models.training_registration import TrainingRegistration
@@ -136,7 +138,79 @@ async def list_training_registrations(
             }
         )
 
-    return {"items": items, "total": total, "page": page, "per_page": per_page}
+    # ── Offer attendees (from accepted offers) ──────────────────────────────────
+    from app.models.customer_offer import CustomerOffer
+    from app.models.offer_attendee import OfferAttendee
+
+    oa_query = (
+        select(OfferAttendee, CustomerOffer.offer_number, CustomerOffer.customer_id)
+        .join(CustomerOffer, OfferAttendee.offer_id == CustomerOffer.id)
+        .where(
+            OfferAttendee.tenant_id == current_user.tenant_id,
+            CustomerOffer.status == "accepted",
+        )
+    )
+    if placement_id:
+        oa_query = oa_query.where(OfferAttendee.placement_id == placement_id)
+
+    oa_result = await db.execute(oa_query.order_by(OfferAttendee.created_at))
+    offer_attendee_rows = oa_result.all()
+
+    # Enrich with training info for any new placement IDs
+    oa_placement_ids = {row[0].placement_id for row in offer_attendee_rows if row[0].placement_id} - set(
+        training_info.keys()
+    )
+    if oa_placement_ids:
+        oa_t = await db.execute(
+            select(
+                ProgramYearTraining.id, Training.name, ProgramYearTraining.start_date, ProgramYearTraining.is_guaranteed
+            )
+            .join(Training, ProgramYearTraining.training_id == Training.id)
+            .where(ProgramYearTraining.id.in_(oa_placement_ids))
+        )
+        for pid, tname, sdate, guaranteed in oa_t.all():
+            training_info[pid] = {
+                "name": tname,
+                "start_date": sdate.isoformat() if sdate else None,
+                "is_guaranteed": guaranteed or False,
+            }
+
+    # Get customer names
+    customer_ids = {row[2] for row in offer_attendee_rows}
+    customer_names: dict[UUID, str] = {}
+    if customer_ids:
+        from app.models.customer import Customer
+
+        cn_result = await db.execute(select(Customer.id, Customer.name).where(Customer.id.in_(customer_ids)))
+        customer_names = {cid: cname for cid, cname in cn_result.all()}
+
+    offer_attendees = []
+    for att, offer_number, customer_id in offer_attendee_rows:
+        if not att.placement_id:
+            continue
+        pinfo = training_info.get(att.placement_id, {})
+        offer_attendees.append(
+            {
+                "id": str(att.id),
+                "placement_id": str(att.placement_id),
+                "training_name": pinfo.get("name", "Unknown"),
+                "training_date": pinfo.get("start_date"),
+                "is_guaranteed": pinfo.get("is_guaranteed", False),
+                "first_name": att.first_name,
+                "last_name": att.last_name,
+                "email": att.email,
+                "offer_id": str(att.offer_id),
+                "offer_number": offer_number,
+                "customer_id": str(customer_id),
+                "customer_name": customer_names.get(customer_id, "—"),
+                "certification": att.certification,
+                "exam_mode": att.exam_mode,
+                "exam_language": att.exam_language,
+                "extra_time": att.extra_time,
+            }
+        )
+
+    return {"items": items, "offer_attendees": offer_attendees, "total": total, "page": page, "per_page": per_page}
 
 
 @router.get("/{registration_id}")
@@ -156,8 +230,6 @@ async def get_training_registration(
     )
     reg = result.scalars().unique().first()
     if not reg:
-        from app.core.exceptions import NotFoundError
-
         raise NotFoundError("Registration not found")
 
     return {
@@ -194,4 +266,52 @@ async def get_training_registration(
             }
             for a in reg.attendees
         ],
+    }
+
+
+class UpdateAttendeeRequest(BaseModel):
+    exam_mode: str | None = None
+    exam_language: str | None = None
+    extra_time: bool | None = None
+    include_exam: bool | None = None
+
+
+@router.patch("/{registration_id}/attendees/{attendee_id}")
+async def update_registration_attendee(
+    registration_id: UUID,
+    attendee_id: UUID,
+    data: UpdateAttendeeRequest,
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Update exam fields on a training registration attendee."""
+    from app.models.training_registration import TrainingRegistrationAttendee
+
+    result = await db.execute(
+        select(TrainingRegistrationAttendee).where(
+            TrainingRegistrationAttendee.id == attendee_id,
+            TrainingRegistrationAttendee.registration_id == registration_id,
+            TrainingRegistrationAttendee.tenant_id == current_user.tenant_id,
+        )
+    )
+    att = result.scalar_one_or_none()
+    if not att:
+        raise NotFoundError("Attendee not found")
+
+    update_fields = data.model_dump(exclude_unset=True)
+    for field, value in update_fields.items():
+        setattr(att, field, value)
+
+    await db.commit()
+    await db.refresh(att)
+
+    return {
+        "id": str(att.id),
+        "first_name": att.first_name,
+        "last_name": att.last_name,
+        "email": att.email,
+        "include_exam": att.include_exam,
+        "exam_mode": att.exam_mode,
+        "exam_language": att.exam_language,
+        "extra_time": att.extra_time,
     }
