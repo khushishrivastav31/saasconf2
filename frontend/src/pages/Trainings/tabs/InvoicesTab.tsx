@@ -1369,6 +1369,8 @@ export default function InvoicesTab() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState<'list' | 'create' | 'replace'>('list');
@@ -1378,8 +1380,10 @@ export default function InvoicesTab() {
     if (search) p.search = search;
     if (statusFilter) p.status = statusFilter;
     if (typeFilter) p.template_type = typeFilter;
+    if (dateFrom) p.date_from = dateFrom;
+    if (dateTo) p.date_to = dateTo;
     return p;
-  }, [search, statusFilter, typeFilter, page]);
+  }, [search, statusFilter, typeFilter, dateFrom, dateTo, page]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['training-invoices', params],
@@ -1444,6 +1448,25 @@ export default function InvoicesTab() {
       showToast('Invoice reopened', 'success');
     },
     onError: () => showToast('Failed to reopen invoice', 'error'),
+  });
+
+  const syncStripeMutation = useMutation({
+    mutationFn: () => api.post('/trainings/invoices/sync-stripe'),
+    onSuccess: (res) => {
+      invalidate();
+      const d = res.data as { total_checked: number; updated_to_paid: number; errors: unknown[] };
+      if (d.updated_to_paid > 0) {
+        showToast(
+          `${d.updated_to_paid} invoice(s) updated to paid. ${d.total_checked} total checked.`,
+          'success'
+        );
+      } else if (d.total_checked > 0) {
+        showToast(`Checked ${d.total_checked} invoice(s). No status changes.`, 'info');
+      } else {
+        showToast('No pending credit card invoices to sync', 'info');
+      }
+    },
+    onError: () => showToast('Failed to sync Stripe payments', 'error'),
   });
 
   const handleDownloadPdf = async (id: string, number: string | null) => {
@@ -1535,15 +1558,30 @@ export default function InvoicesTab() {
             </span>
           )}
         </h2>
-        <button
-          onClick={() => setView('create')}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Invoice
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => syncStripeMutation.mutate()}
+            disabled={syncStripeMutation.isPending}
+            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Check Stripe for payment status updates on all pending credit card invoices"
+          >
+            {syncStripeMutation.isPending ? 'Syncing...' : '\u27F3 Sync Stripe Payments'}
+          </button>
+          <button
+            onClick={() => setView('create')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add Invoice
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -1586,6 +1624,26 @@ export default function InvoicesTab() {
           <option value="credit_card">Credit Card</option>
           <option value="credit_note">Credit Note</option>
         </select>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => {
+            setDateFrom(e.target.value);
+            setPage(1);
+          }}
+          title="Issue date from"
+          className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => {
+            setDateTo(e.target.value);
+            setPage(1);
+          }}
+          title="Issue date to"
+          className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100"
+        />
       </div>
 
       {isLoading ? (

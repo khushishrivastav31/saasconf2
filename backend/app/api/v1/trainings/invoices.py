@@ -67,6 +67,8 @@ async def list_training_invoices(
     status: str | None = Query(None),
     template_type: str | None = Query(None),
     search: str | None = Query(None),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
 ) -> dict:
@@ -87,6 +89,10 @@ async def list_training_invoices(
             | func.lower(TrainingInvoice.invoice_number).contains(search.lower())
             | func.lower(TrainingInvoice.recipient_email).contains(search.lower())
         )
+    if date_from:
+        query = query.where(TrainingInvoice.issue_date >= date.fromisoformat(date_from))
+    if date_to:
+        query = query.where(TrainingInvoice.issue_date <= date.fromisoformat(date_to))
 
     count_q = select(func.count()).select_from(query.with_only_columns(TrainingInvoice.id).subquery())
     total = (await db.execute(count_q)).scalar() or 0
@@ -655,4 +661,68 @@ async def replace_training_invoice(
         "cancelled_invoice": _invoice_to_dict(inv),
         "credit_note": _invoice_to_dict(credit_note),
         "new_invoice": _invoice_to_dict(new_inv),
+    }
+
+
+# ── Stripe sync ──────────────────────────────────────────────────────────────
+
+
+@router.post("/sync-stripe")
+async def sync_training_stripe_payments(
+    current_user: TenantAdminDep,
+    db: DbSessionDep,
+) -> dict:
+    """Bulk-check Stripe for completed payments on pending credit card invoices."""
+    tenant = await db.get(Tenant, current_user.tenant_id)
+    if not tenant:
+        raise NotFoundError("Tenant not found")
+
+    from app.core.training_stripe_helper import (
+        find_payment_intent_for_training_invoice,
+        get_training_stripe_client,
+    )
+
+    client = get_training_stripe_client(tenant)
+    if not client:
+        return {"total_checked": 0, "updated_to_paid": 0, "errors": [], "message": "Stripe not configured"}
+
+    # Fetch all pending credit card invoices
+    result = await db.execute(
+        select(TrainingInvoice).where(
+            TrainingInvoice.tenant_id == current_user.tenant_id,
+            TrainingInvoice.template_type == "credit_card",
+            TrainingInvoice.status.in_(["sent", "overdue"]),
+        )
+    )
+    invoices = result.scalars().all()
+
+    total_checked = 0
+    updated_to_paid = 0
+    errors: list[dict] = []
+
+    for inv in invoices:
+        total_checked += 1
+        try:
+            pi = await find_payment_intent_for_training_invoice(inv, client, log_prefix="[SYNC] ")
+            if pi and pi.status == "succeeded":
+                inv.status = "paid"
+                inv.stripe_payment_intent_id = pi.id
+                updated_to_paid += 1
+                logger.info("Sync: training invoice %s updated to paid (PI %s)", inv.invoice_number, pi.id)
+        except Exception as exc:
+            logger.warning("Sync: error checking invoice %s: %s", inv.id, exc)
+            errors.append(
+                {
+                    "invoice_id": str(inv.id),
+                    "invoice_number": inv.invoice_number or "DRAFT",
+                    "error": str(exc),
+                }
+            )
+
+    await db.commit()
+
+    return {
+        "total_checked": total_checked,
+        "updated_to_paid": updated_to_paid,
+        "errors": errors,
     }

@@ -205,3 +205,82 @@ async def refund_training_payment(
     except stripe.StripeError as e:
         logger.error("Stripe refund failed for training invoice %s: %s", invoice.id, e)
         raise ValidationError(f"Stripe refund error: {e!s}") from e
+
+
+async def find_payment_intent_for_training_invoice(
+    invoice: TrainingInvoice,
+    stripe_client: stripe.StripeClient,
+    log_prefix: str = "",
+) -> stripe.PaymentIntent | None:  # type: ignore[name-defined]
+    """Find the PaymentIntent for a training invoice using multiple strategies.
+
+    Mirrors ``find_payment_intent_for_invoice`` from ``stripe_helper.py`` but
+    uses the ``stripe_payment_link_id`` stored directly on the training invoice
+    instead of querying event logs.
+
+    Strategies (tried in order):
+    1. Retrieve stored ``stripe_payment_intent_id``
+    2. Search Stripe by ``training_invoice_id`` metadata
+    3. Payment Link → Checkout Session → PaymentIntent traversal
+
+    Side-effect: updates ``invoice.stripe_payment_intent_id`` if found via
+    fallback — caller must commit.
+    """
+    payment_intent = None
+
+    # Strategy 1: retrieve stored payment_intent_id
+    if invoice.stripe_payment_intent_id:
+        try:
+            payment_intent = stripe_client.payment_intents.retrieve(invoice.stripe_payment_intent_id)
+            logger.info(
+                "%sRetrieved stored PI %s — status: %s",
+                log_prefix,
+                payment_intent.id,
+                payment_intent.status,
+            )
+        except stripe.StripeError as e:
+            logger.warning("%sFailed to retrieve PI %s: %s", log_prefix, invoice.stripe_payment_intent_id, e)
+
+    # Strategy 2: search by training_invoice_id metadata
+    if not payment_intent or payment_intent.status != "succeeded":
+        try:
+            query = f'metadata["training_invoice_id"]:"{invoice.id}" AND status:"succeeded"'
+            results = stripe_client.payment_intents.search({"query": query, "limit": 1})
+            if results.data:
+                payment_intent = results.data[0]
+                invoice.stripe_payment_intent_id = payment_intent.id
+                logger.info(
+                    "%sFound succeeded PI %s via metadata search for invoice %s",
+                    log_prefix,
+                    payment_intent.id,
+                    invoice.id,
+                )
+        except Exception as e:
+            logger.warning("%sMetadata search failed for invoice %s: %s", log_prefix, invoice.id, e)
+
+    # Strategy 3: Payment Link → Checkout Sessions → PaymentIntent
+    if (not payment_intent or payment_intent.status != "succeeded") and invoice.stripe_payment_link_id:
+        try:
+            sessions = stripe_client.checkout.sessions.list(
+                {"payment_link": invoice.stripe_payment_link_id, "limit": 10}
+            )
+            for session in sessions.data:
+                if session.payment_intent and session.status == "complete":
+                    pi_id = (
+                        session.payment_intent if isinstance(session.payment_intent, str) else session.payment_intent.id
+                    )
+                    pi = stripe_client.payment_intents.retrieve(pi_id)
+                    if pi.status == "succeeded":
+                        payment_intent = pi
+                        invoice.stripe_payment_intent_id = payment_intent.id
+                        logger.info(
+                            "%sFound succeeded PI %s via payment link %s",
+                            log_prefix,
+                            payment_intent.id,
+                            invoice.stripe_payment_link_id,
+                        )
+                        break
+        except Exception as e:
+            logger.warning("%sPayment link traversal failed for invoice %s: %s", log_prefix, invoice.id, e)
+
+    return payment_intent

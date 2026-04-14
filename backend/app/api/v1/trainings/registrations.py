@@ -1,5 +1,6 @@
 """Training registrations admin endpoints."""
 
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Query
@@ -21,6 +22,8 @@ async def list_training_registrations(
     status: str | None = Query(None),
     placement_id: UUID | None = Query(None),
     search: str | None = Query(None),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
 ) -> dict:
@@ -37,13 +40,32 @@ async def list_training_registrations(
         query = query.where(TrainingRegistration.status == status)
     if placement_id:
         query = query.where(TrainingRegistration.placement_id == placement_id)
+
+    # Search — contact name/email/company + training name
     if search:
-        query = query.where(
-            func.lower(TrainingRegistration.contact_first_name).contains(search.lower())
-            | func.lower(TrainingRegistration.contact_last_name).contains(search.lower())
-            | func.lower(TrainingRegistration.contact_email).contains(search.lower())
-            | func.lower(TrainingRegistration.company_name).contains(search.lower())
+        search_lower = search.lower()
+        # Sub-query: placement IDs whose training name matches
+        training_match_q = (
+            select(ProgramYearTraining.id)
+            .join(Training, ProgramYearTraining.training_id == Training.id)
+            .where(func.lower(Training.name).contains(search_lower))
         )
+        query = query.where(
+            func.lower(TrainingRegistration.contact_first_name).contains(search_lower)
+            | func.lower(TrainingRegistration.contact_last_name).contains(search_lower)
+            | func.lower(TrainingRegistration.contact_email).contains(search_lower)
+            | func.lower(TrainingRegistration.company_name).contains(search_lower)
+            | TrainingRegistration.placement_id.in_(training_match_q)
+        )
+
+    # Date filters — filter on placement start_date
+    if date_from or date_to:
+        placement_date_q = select(ProgramYearTraining.id).where(ProgramYearTraining.tenant_id == current_user.tenant_id)
+        if date_from:
+            placement_date_q = placement_date_q.where(ProgramYearTraining.start_date >= date.fromisoformat(date_from))
+        if date_to:
+            placement_date_q = placement_date_q.where(ProgramYearTraining.start_date <= date.fromisoformat(date_to))
+        query = query.where(TrainingRegistration.placement_id.in_(placement_date_q))
 
     # Count
     count_q = select(func.count()).select_from(query.with_only_columns(TrainingRegistration.id).subquery())
@@ -54,31 +76,37 @@ async def list_training_registrations(
     result = await db.execute(query)
     registrations = result.scalars().unique().all()
 
-    # Get training names for placements
+    # Get training names + is_guaranteed for placements
     placement_ids = {r.placement_id for r in registrations}
-    training_names: dict[UUID, dict] = {}
+    training_info: dict[UUID, dict] = {}
     if placement_ids:
         p_result = await db.execute(
             select(
                 ProgramYearTraining.id,
                 Training.name,
                 ProgramYearTraining.start_date,
+                ProgramYearTraining.is_guaranteed,
             )
             .join(Training, ProgramYearTraining.training_id == Training.id)
             .where(ProgramYearTraining.id.in_(placement_ids))
         )
-        for pid, tname, sdate in p_result.all():
-            training_names[pid] = {"name": tname, "start_date": sdate.isoformat() if sdate else None}
+        for pid, tname, sdate, guaranteed in p_result.all():
+            training_info[pid] = {
+                "name": tname,
+                "start_date": sdate.isoformat() if sdate else None,
+                "is_guaranteed": guaranteed or False,
+            }
 
     items = []
     for reg in registrations:
-        placement_info = training_names.get(reg.placement_id, {})
+        placement_data = training_info.get(reg.placement_id, {})
         items.append(
             {
                 "id": str(reg.id),
                 "placement_id": str(reg.placement_id),
-                "training_name": placement_info.get("name", "Unknown"),
-                "training_date": placement_info.get("start_date"),
+                "training_name": placement_data.get("name", "Unknown"),
+                "training_date": placement_data.get("start_date"),
+                "is_guaranteed": placement_data.get("is_guaranteed", False),
                 "status": reg.status,
                 "contact_first_name": reg.contact_first_name,
                 "contact_last_name": reg.contact_last_name,
