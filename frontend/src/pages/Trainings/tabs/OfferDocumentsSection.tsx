@@ -124,6 +124,8 @@ const SendModal = React.memo(function SendModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.offerDocuments(offerId) });
+      // Also refresh offer data so status updates from draft → sent
+      queryClient.invalidateQueries({ queryKey: ['customer-offers'] });
       showToast(`Document sent to ${recipientEmails.length} recipient(s)`, 'success');
       onClose();
     },
@@ -437,9 +439,12 @@ function OfferDocumentsSection({
     }
   }, [queryClient, offerId, selectedDocId]);
 
-  // Select document
+  // Select / deselect document (toggle)
   const handleSelectDoc = useCallback((doc: OfferDocument) => {
-    setSelectedDocId(doc.id);
+    setSelectedDocId((prev) => {
+      if (prev === doc.id) return null; // toggle off
+      return doc.id;
+    });
     setEditContent(doc.html_content ?? '');
     setIsContentDirty(false);
     setShowVersions(false);
@@ -577,7 +582,7 @@ function OfferDocumentsSection({
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Documents</h5>
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Quotes</h5>
           {documents.length > 0 && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
               {documents.length}
@@ -591,7 +596,7 @@ function OfferDocumentsSection({
             disabled={createFromTemplateMutation.isPending || templates.length === 0}
             className="text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md px-2.5 py-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
           >
-            {createFromTemplateMutation.isPending ? 'Creating...' : '+ From Template'}
+            {createFromTemplateMutation.isPending ? 'Creating...' : '+ Quote from Template'}
           </button>
           {showTemplatePicker && templates.length > 0 && (
             <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
@@ -619,10 +624,10 @@ function OfferDocumentsSection({
       </div>
 
       {isLoading ? (
-        <div className="text-center py-4 text-gray-400 text-sm">Loading documents...</div>
+        <div className="text-center py-4 text-gray-400 text-sm">Loading quotes...</div>
       ) : documents.length === 0 ? (
         <p className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-          No documents yet. Choose a template to get started.
+          No quotes yet. Choose a template to get started.
         </p>
       ) : (
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -664,6 +669,21 @@ function OfferDocumentsSection({
                     )}
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDocId(null)}
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded"
+                  title="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
               </div>
 
               {/* Action buttons */}

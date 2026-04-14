@@ -106,9 +106,9 @@ describe('OfferDocumentsSection', () => {
     });
   });
 
-  it('renders "Documents" heading', async () => {
+  it('renders "Quotes" heading', async () => {
     renderWithProviders(<OfferDocumentsSection {...defaultProps} />);
-    expect(screen.getByText('Documents')).toBeInTheDocument();
+    expect(screen.getByText('Quotes')).toBeInTheDocument();
   });
 
   it('shows document count badge when documents exist', async () => {
@@ -127,14 +127,14 @@ describe('OfferDocumentsSection', () => {
     });
     renderWithProviders(<OfferDocumentsSection {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByText(/No documents yet/)).toBeInTheDocument();
+      expect(screen.getByText(/No quotes yet/)).toBeInTheDocument();
     });
   });
 
-  it('shows "+ From Template" button', async () => {
+  it('shows "+ Quote from Template" button', async () => {
     renderWithProviders(<OfferDocumentsSection {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByText('+ From Template')).toBeInTheDocument();
+      expect(screen.getByText('+ Quote from Template')).toBeInTheDocument();
     });
   });
 
@@ -142,13 +142,13 @@ describe('OfferDocumentsSection', () => {
     const user = userEvent.setup();
     renderWithProviders(<OfferDocumentsSection {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByText('+ From Template')).toBeInTheDocument();
+      expect(screen.getByText('+ Quote from Template')).toBeInTheDocument();
     });
     // Wait for templates to load
     await waitFor(() => {
       expect(mockApi.get).toHaveBeenCalledWith('/trainings/offer-templates', expect.anything());
     });
-    await user.click(screen.getByText('+ From Template'));
+    await user.click(screen.getByText('+ Quote from Template'));
     await waitFor(() => {
       expect(screen.getByText('Standard Offer')).toBeInTheDocument();
       expect(screen.getByText('Custom Offer')).toBeInTheDocument();
