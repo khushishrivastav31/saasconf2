@@ -10,8 +10,12 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
+from app.api.v1.trainings._invoice_helpers import invoice_to_dict
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
+from app.core.training_invoice_number import generate_training_invoice_number
+from app.core.training_registration_emails import send_training_invoice_email
+from app.core.training_stripe_helper import create_training_payment_link
 from app.models.customer import Customer
 from app.models.customer_offer import CustomerOffer
 from app.models.offer_attendee import OfferAttendee
@@ -306,8 +310,6 @@ async def create_offer_invoice(
     # Invoice number
     invoice_number = None
     if data.status == "sent":
-        from app.core.training_invoice_number import generate_training_invoice_number
-
         invoice_number = await generate_training_invoice_number(db, current_user.tenant_id)
 
     issue_date = (
@@ -361,8 +363,6 @@ async def create_offer_invoice(
 
         if inv.template_type == "credit_card" and tenant:
             try:
-                from app.core.training_stripe_helper import create_training_payment_link
-
                 link_id, payment_link_url = await create_training_payment_link(db, tenant, inv)
                 inv.stripe_payment_link_id = link_id
                 inv.stripe_payment_link_url = payment_link_url
@@ -373,12 +373,8 @@ async def create_offer_invoice(
 
         if inv.recipient_email and tenant:
             try:
-                from app.core.training_registration_emails import send_training_invoice_email
-
                 await send_training_invoice_email(db, inv, None, tenant, payment_link_url=payment_link_url)
             except Exception as exc:
                 logger.warning("Failed to send offer invoice email %s: %s", inv.id, exc)
 
-    from app.api.v1.trainings.invoices import _invoice_to_dict
-
-    return {"invoice": _invoice_to_dict(inv)}
+    return {"invoice": invoice_to_dict(inv)}

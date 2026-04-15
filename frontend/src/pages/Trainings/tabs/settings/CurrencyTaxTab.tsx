@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../../config/api';
 import { queryKeys } from '../../../../config/queryKeys';
 import { useToast } from '../../../../components/Toast';
 import { parseApiError } from '../../../../utils/apiError';
 import { COUNTRY_OPTIONS } from '../../../../config/countries';
-import { useSaveStatus } from '../../../../hooks/useSaveStatus';
+import NumberFormatSection from './NumberFormatSection';
+import EuCountriesSection from './EuCountriesSection';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ interface CurrencyTaxSettings {
   vat_rates: Record<string, number>;
 }
 
-interface PlatformCurrency {
+export interface PlatformCurrency {
   code: string;
   name: string;
   symbol: string;
@@ -41,7 +42,8 @@ interface PlatformCurrency {
 
 // ─── Constants ──────────────────────────────────────────────────────
 
-const NUMBER_FORMAT_PRESETS = [
+// eslint-disable-next-line react-refresh/only-export-components
+export const NUMBER_FORMAT_PRESETS = [
   { code: 'us_uk', label: 'US/UK (1,234.56)', example: '1,234,567.89' },
   { code: 'european', label: 'European (1.234,56)', example: '1.234.567,89' },
   { code: 'swiss', label: "Swiss (1'234.56)", example: "1'234'567.89" },
@@ -50,7 +52,8 @@ const NUMBER_FORMAT_PRESETS = [
   { code: 'no_separator', label: 'No separator (1234.56)', example: '1234567.89' },
 ];
 
-const DEFAULT_EU_COUNTRIES = [
+// eslint-disable-next-line react-refresh/only-export-components
+export const DEFAULT_EU_COUNTRIES = [
   'AT',
   'BE',
   'BG',
@@ -130,7 +133,7 @@ const DEFAULTS: CurrencyTaxSettings = {
 
 // ─── Shared styles ──────────────────────────────────────────────────
 
-const cardClass =
+export const cardClass =
   'bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4';
 const selectClass =
   'mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100';
@@ -712,198 +715,6 @@ export default function CurrencyTaxTab() {
             </table>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Number Format Section (auto-save on change) ─────────────────────
-
-function NumberFormatSection({ currentPreset }: { currentPreset: string }) {
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
-  const [selectedPreset, setSelectedPreset] = useState(currentPreset);
-  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
-
-  useEffect(() => {
-    setSelectedPreset(currentPreset);
-  }, [currentPreset]);
-
-  const saveMutation = useMutation({
-    mutationFn: async (preset: string) => {
-      await api.put('/trainings/finance/currency-tax', {
-        number_format_preset: preset,
-      });
-    },
-    onMutate: () => setSaving(),
-    onSuccess: () => {
-      setSaved();
-      queryClient.invalidateQueries({ queryKey: queryKeys.trainingFinance });
-    },
-    onError: (err) => {
-      setSaveError();
-      showToast(parseApiError(err), 'error');
-    },
-  });
-
-  const handlePresetChange = useCallback(
-    (preset: string) => {
-      setSelectedPreset(preset);
-      saveMutation.mutate(preset);
-    },
-    [saveMutation]
-  );
-
-  const currentExample =
-    NUMBER_FORMAT_PRESETS.find((p) => p.code === selectedPreset)?.example || '1,234,567.89';
-
-  return (
-    <div className={cardClass}>
-      <div className="flex justify-between items-center mb-3">
-        <div>
-          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Number Format</h5>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Controls how amounts appear on invoices and in the admin interface.
-          </p>
-        </div>
-        {saveStatus === 'saving' && (
-          <span className="text-xs text-gray-500 dark:text-gray-400">Saving...</span>
-        )}
-        {saveStatus === 'saved' && (
-          <span className="text-xs text-green-600 dark:text-green-400">Saved</span>
-        )}
-      </div>
-      <div className="flex items-center gap-4">
-        <select
-          className="block w-64 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100"
-          value={selectedPreset}
-          onChange={(e) => handlePresetChange(e.target.value)}
-        >
-          {NUMBER_FORMAT_PRESETS.map((p) => (
-            <option key={p.code} value={p.code}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-        <span className="text-sm text-gray-600 dark:text-gray-300">
-          Example: <span className="font-mono font-medium">{currentExample}</span>
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ─── EU Countries Section (debounced auto-save, 800ms) ──────────────
-
-function EuCountriesSection({ initialCountries }: { initialCountries: string[] }) {
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
-  const [countries, setCountries] = useState<string[]>(initialCountries);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { saveStatus, setSaving, setSaved, setError: setSaveError } = useSaveStatus();
-
-  // Sync when server data changes
-  useEffect(() => {
-    setCountries(initialCountries);
-  }, [initialCountries]);
-
-  const saveMutation = useMutation({
-    mutationFn: async (updatedCountries: string[]) => {
-      await api.put('/trainings/finance/currency-tax', {
-        eu_countries: updatedCountries,
-      });
-    },
-    onMutate: () => setSaving(),
-    onSuccess: () => {
-      setSaved();
-      queryClient.invalidateQueries({ queryKey: queryKeys.trainingFinance });
-    },
-    onError: (err) => {
-      setSaveError();
-      showToast(parseApiError(err), 'error');
-    },
-  });
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    };
-  }, []);
-
-  const toggleCountry = useCallback(
-    (code: string) => {
-      const updated = countries.includes(code)
-        ? countries.filter((c) => c !== code)
-        : [...countries, code].sort();
-      setCountries(updated);
-
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => saveMutation.mutate(updated), 800);
-    },
-    [countries, saveMutation]
-  );
-
-  const resetToDefault = useCallback(() => {
-    setCountries([...DEFAULT_EU_COUNTRIES]);
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveMutation.mutate([...DEFAULT_EU_COUNTRIES]);
-  }, [saveMutation]);
-
-  const countrySet = useMemo(() => new Set(countries), [countries]);
-
-  // Display ALL countries sorted by code (like conferences)
-  const allCountryOptions = useMemo(
-    () => [...COUNTRY_OPTIONS].sort((a, b) => a.code.localeCompare(b.code)),
-    []
-  );
-
-  return (
-    <div className={cardClass}>
-      <div className="flex justify-between items-center mb-3">
-        <div>
-          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            EU Member States
-            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-              {countries.length} of {allCountryOptions.length} selected
-            </span>
-          </h5>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Countries classified as &quot;EU&quot; in the VAT decision table. Adjust if member
-            states change.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {saveStatus === 'saving' && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">Saving...</span>
-          )}
-          {saveStatus === 'saved' && (
-            <span className="text-xs text-green-600 dark:text-green-400">Saved</span>
-          )}
-          <button
-            onClick={resetToDefault}
-            className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
-          >
-            Reset to Default
-          </button>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
-        {allCountryOptions.map((c) => (
-          <label
-            key={c.code}
-            className="flex items-center gap-1.5 py-1 px-1.5 rounded text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-          >
-            <input
-              type="checkbox"
-              checked={countrySet.has(c.code)}
-              onChange={() => toggleCountry(c.code)}
-              className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-            />
-            <span className="font-mono text-gray-400 dark:text-gray-500">{c.code}</span>
-            <span className="truncate">{c.name}</span>
-          </label>
-        ))}
       </div>
     </div>
   );

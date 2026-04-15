@@ -8,6 +8,9 @@ from .email_settings import router as email_settings_router
 from .finance import router as finance_router
 from .holidays import router as holidays_router
 from .inhouse import router as inhouse_router
+from .invoice_operations import router as invoice_operations_router
+from .invoice_replace import router as invoice_replace_router
+from .invoice_sync import router as invoice_sync_router
 from .invoices import router as invoices_router
 from .languages import router as languages_router
 from .location_types import router as location_types_router
@@ -18,6 +21,9 @@ from .offer_templates import router as offer_templates_router
 from .offers import router as offers_router
 from .policies import router as policies_router
 from .portal_settings import router as portal_settings_router
+from .program_placements import router as program_placements_router
+from .program_publishing import router as program_publishing_router
+from .program_trainers import router as program_trainers_router
 from .programs import router as programs_router
 from .registration_questions import router as registration_questions_router
 from .registrations import router as registrations_router
@@ -34,6 +40,9 @@ router.include_router(certification_bodies_router)
 router.include_router(syllabi_router)
 router.include_router(trainers_router)
 router.include_router(programs_router)
+router.include_router(program_publishing_router)
+router.include_router(program_placements_router)
+router.include_router(program_trainers_router)
 router.include_router(holidays_router)
 router.include_router(policies_router)
 router.include_router(registration_questions_router)
@@ -49,6 +58,9 @@ router.include_router(offer_templates_router)
 router.include_router(portal_settings_router)
 router.include_router(registrations_router)
 router.include_router(invoices_router)
+router.include_router(invoice_operations_router)
+router.include_router(invoice_replace_router)
+router.include_router(invoice_sync_router)
 router.include_router(location_types_router)
 router.include_router(detail_router)
 

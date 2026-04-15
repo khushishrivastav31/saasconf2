@@ -177,10 +177,10 @@ async def test_replace_paid_cc_invoice_no_stripe_refund(
     with (
         patch("app.core.training_stripe_helper.refund_training_payment", new_callable=AsyncMock) as mock_refund,
         patch(
-            "app.core.training_stripe_helper.deactivate_training_payment_link", new_callable=AsyncMock
+            "app.api.v1.trainings.invoice_replace.deactivate_training_payment_link", new_callable=AsyncMock
         ) as mock_deactivate,
         patch(
-            "app.core.training_stripe_helper.create_training_payment_link", new_callable=AsyncMock
+            "app.api.v1.trainings.invoice_replace.create_training_payment_link", new_callable=AsyncMock
         ) as mock_create_link,
     ):
         response = await client.post(
@@ -233,10 +233,10 @@ async def test_replace_sent_cc_invoice_no_stripe_refund(
     with (
         patch("app.core.training_stripe_helper.refund_training_payment", new_callable=AsyncMock) as mock_refund,
         patch(
-            "app.core.training_stripe_helper.deactivate_training_payment_link", new_callable=AsyncMock
+            "app.api.v1.trainings.invoice_replace.deactivate_training_payment_link", new_callable=AsyncMock
         ) as mock_deactivate,
         patch(
-            "app.core.training_stripe_helper.create_training_payment_link",
+            "app.api.v1.trainings.invoice_replace.create_training_payment_link",
             new_callable=AsyncMock,
             return_value=("plink_new", "https://pay.stripe.com/new"),
         ) as mock_create_link,
@@ -315,9 +315,9 @@ async def test_reassign_from_parking_lot_no_stripe_refund(
     token = _make_token(tenant_admin_user, modules=["trainings"])
 
     with (
-        patch("app.core.training_stripe_helper.refund_training_payment", new_callable=AsyncMock) as mock_refund,
+        patch("app.api.v1.trainings.invoice_operations.refund_training_payment", new_callable=AsyncMock) as mock_refund,
         patch(
-            "app.core.training_stripe_helper.deactivate_training_payment_link", new_callable=AsyncMock
+            "app.api.v1.trainings.invoice_operations.deactivate_training_payment_link", new_callable=AsyncMock
         ) as mock_deactivate,
         patch("app.core.training_registration_emails.send_training_invoice_email", new_callable=AsyncMock),
     ):
@@ -357,9 +357,9 @@ async def test_direct_cancel_paid_cc_invoice_does_refund(
     token = _make_token(tenant_admin_user, modules=["trainings"])
 
     with (
-        patch("app.core.training_stripe_helper.refund_training_payment", new_callable=AsyncMock) as mock_refund,
+        patch("app.api.v1.trainings.invoice_operations.refund_training_payment", new_callable=AsyncMock) as mock_refund,
         patch(
-            "app.core.training_stripe_helper.deactivate_training_payment_link", new_callable=AsyncMock
+            "app.api.v1.trainings.invoice_operations.deactivate_training_payment_link", new_callable=AsyncMock
         ) as mock_deactivate,
     ):
         response = await client.post(
@@ -401,8 +401,8 @@ async def test_replace_paid_invoice_transfers_payment_intent(
 
     with (
         patch("app.core.training_stripe_helper.refund_training_payment", new_callable=AsyncMock),
-        patch("app.core.training_stripe_helper.deactivate_training_payment_link", new_callable=AsyncMock),
-        patch("app.core.training_registration_emails.send_training_invoice_email", new_callable=AsyncMock),
+        patch("app.api.v1.trainings.invoice_replace.deactivate_training_payment_link", new_callable=AsyncMock),
+        patch("app.api.v1.trainings.invoice_replace.send_training_invoice_email", new_callable=AsyncMock),
     ):
         response = await client.post(
             f"{BASE}/invoices/{data['invoice'].id}/replace",

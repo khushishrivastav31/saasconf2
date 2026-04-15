@@ -10,9 +10,12 @@ from sqlalchemy.orm import joinedload
 
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
+from app.models.customer import Customer
+from app.models.customer_offer import CustomerOffer
+from app.models.offer_attendee import OfferAttendee
 from app.models.training import Training
 from app.models.training_program import ProgramYearTraining
-from app.models.training_registration import TrainingRegistration
+from app.models.training_registration import TrainingRegistration, TrainingRegistrationAttendee
 
 router = APIRouter(prefix="/registrations", tags=["training-registrations"])
 
@@ -142,9 +145,6 @@ async def list_training_registrations(
         )
 
     # ── Offer attendees (from accepted offers) ──────────────────────────────────
-    from app.models.customer_offer import CustomerOffer
-    from app.models.offer_attendee import OfferAttendee
-
     oa_query = (
         select(OfferAttendee, CustomerOffer.offer_number, CustomerOffer.customer_id)
         .join(CustomerOffer, OfferAttendee.offer_id == CustomerOffer.id)
@@ -182,8 +182,6 @@ async def list_training_registrations(
     customer_ids = {row[2] for row in offer_attendee_rows}
     customer_names: dict[UUID, str] = {}
     if customer_ids:
-        from app.models.customer import Customer
-
         cn_result = await db.execute(select(Customer.id, Customer.name).where(Customer.id.in_(customer_ids)))
         customer_names = {cid: cname for cid, cname in cn_result.all()}
 
@@ -288,8 +286,6 @@ async def update_registration_attendee(
     db: DbSessionDep,
 ) -> dict:
     """Update exam fields on a training registration attendee."""
-    from app.models.training_registration import TrainingRegistrationAttendee
-
     result = await db.execute(
         select(TrainingRegistrationAttendee).where(
             TrainingRegistrationAttendee.id == attendee_id,

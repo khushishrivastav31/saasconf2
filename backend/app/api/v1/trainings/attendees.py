@@ -8,9 +8,19 @@ from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
+from app.core.attendee_reassignment import (
+    cancel_old_invoice_with_credit_note,
+    cleanup_empty_registration,
+    create_new_registration,
+    create_replacement_invoice,
+    find_old_invoice,
+    find_old_registration,
+)
 from app.core.dependencies import DbSessionDep, TenantAdminDep
 from app.core.exceptions import NotFoundError
+from app.core.training_registration_emails import send_training_invoice_email
 from app.models.offer_attendee import OfferAttendee
+from app.models.tenant import Tenant
 from app.models.training import Training
 from app.models.training_attendee import TrainingAttendee
 from app.models.training_attendee_history import TrainingAttendeeHistory
@@ -506,22 +516,7 @@ async def reassign_attendee(
     current_user: TenantAdminDep,
     db: DbSessionDep,
 ) -> dict:
-    """Reassign a parked attendee to a new training.
-
-    Full flow:
-    1. Find old registration (from park history) and its invoice
-    2. Cancel old invoice → create credit note
-    3. Create new registration on target placement (copy billing from old)
-    4. Add attendee to new registration
-    5. Create new invoice (same price, new training) → sent + emailed
-    6. Send credit note email too
-    """
-    from datetime import date as date_type
-    from datetime import timedelta
-
-    from app.core.training_invoice_number import generate_training_invoice_number
-    from app.models.tenant import Tenant
-    from app.models.training_invoice import TrainingInvoice
+    """Reassign a parked attendee to a new training with invoice transfer."""
 
     tenant_id = current_user.tenant_id
 
@@ -537,132 +532,36 @@ async def reassign_attendee(
         raise HTTPException(status_code=422, detail="Only parked attendees can be reassigned.")
 
     placement_uuid = UUID(data.placement_id)
-
-    # Get new training name
     new_training_name = await _get_training_name_for_placement(db, placement_uuid)
 
-    # Find the park event to trace back to the old registration
-    # source_id stores the registration_id (set during parking)
+    # Find old registration + invoice via park history
     park_event = next((h for h in att.history if h.event_type == "parked"), None)
-    old_registration: TrainingRegistration | None = None
-    old_invoice: TrainingInvoice | None = None
-
-    if park_event and park_event.source_type == "registration" and park_event.source_id:
-        # source_id stores registration_id (new code) or attendee row ID (legacy)
-        # Try as registration_id first
-        reg_q = await db.execute(
-            select(TrainingRegistration).where(
-                TrainingRegistration.id == park_event.source_id,
-                TrainingRegistration.tenant_id == tenant_id,
-            )
-        )
-        old_registration = reg_q.scalar_one_or_none()
-
-        # Fallback: find registration by contact email matching the attendee
-        if not old_registration and park_event.placement_id:
-            reg_q2 = await db.execute(
-                select(TrainingRegistration).where(
-                    TrainingRegistration.placement_id == park_event.placement_id,
-                    TrainingRegistration.tenant_id == tenant_id,
-                    TrainingRegistration.contact_email == att.email,
-                )
-            )
-            old_registration = reg_q2.scalar_one_or_none()
-
-            # Last resort: find by placement + contact name
-            if not old_registration:
-                reg_q3 = await db.execute(
-                    select(TrainingRegistration)
-                    .where(
-                        TrainingRegistration.placement_id == park_event.placement_id,
-                        TrainingRegistration.tenant_id == tenant_id,
-                    )
-                    .order_by(TrainingRegistration.created_at.desc())
-                    .limit(1)
-                )
-                old_registration = reg_q3.scalar_one_or_none()
-
-    # Find old invoice from the old registration (most recent non-cancelled)
+    old_registration = None
+    old_invoice = None
+    if park_event and park_event.source_type == "registration":
+        old_registration = await find_old_registration(db, park_event, att, tenant_id)
     if old_registration:
-        inv_q = await db.execute(
-            select(TrainingInvoice)
-            .where(
-                TrainingInvoice.training_registration_id == old_registration.id,
-                TrainingInvoice.tenant_id == tenant_id,
-                TrainingInvoice.status.in_(["sent", "paid", "overdue"]),
-                TrainingInvoice.template_type != "credit_note",
-            )
-            .order_by(TrainingInvoice.created_at.desc())
-            .limit(1)
-        )
-        old_invoice = inv_q.scalar_one_or_none()
+        old_invoice = await find_old_invoice(db, old_registration.id, tenant_id)
 
-    # ── Cancel old invoice + credit note ──────────────────────────────────
-    credit_note: TrainingInvoice | None = None
+    # Cancel old invoice + credit note
+    credit_note = None
     if old_invoice:
-        try:
-            from app.api.v1.trainings.invoices import _build_credit_note
-
-            old_invoice.status = "cancelled"
-            cn_number = await generate_training_invoice_number(db, tenant_id)
-            credit_note = _build_credit_note(
-                old_invoice,
-                tenant_id,
-                cn_number,
-                f"Attendee {att.first_name} {att.last_name} reassigned to {new_training_name}",
-            )
-            db.add(credit_note)
-        except Exception as exc:
-            logger.warning("Failed to cancel old invoice during reassignment: %s", exc)
-
-    # ── Clean up old registration if empty ────────────────────────────────
-    if old_registration:
-        remaining_q = await db.execute(
-            select(func.count(TrainingRegistrationAttendee.id)).where(
-                TrainingRegistrationAttendee.registration_id == old_registration.id
-            )
+        credit_note = await cancel_old_invoice_with_credit_note(
+            db,
+            old_invoice,
+            tenant_id,
+            f"Attendee {att.first_name} {att.last_name} reassigned to {new_training_name}",
         )
-        remaining_count = remaining_q.scalar() or 0
-        if remaining_count == 0:
-            # Unlink invoices from the old registration before deleting
-            await db.execute(
-                select(TrainingInvoice)  # just to import the model in context
-            )
-            from sqlalchemy import update
 
-            await db.execute(
-                update(TrainingInvoice)
-                .where(TrainingInvoice.training_registration_id == old_registration.id)
-                .values(training_registration_id=None)
-            )
-            await db.delete(old_registration)
-            logger.info("Deleted empty old registration %s after reassignment", old_registration.id)
+    # Clean up empty old registration
+    if old_registration:
+        await cleanup_empty_registration(db, old_registration)
 
-    # ── Create new registration on target placement ───────────────────────
-    new_registration = TrainingRegistration(
-        tenant_id=tenant_id,
-        placement_id=placement_uuid,
-        status="registered",
-        contact_first_name=old_registration.contact_first_name if old_registration else att.first_name,
-        contact_last_name=old_registration.contact_last_name if old_registration else att.last_name,
-        contact_email=old_registration.contact_email if old_registration else att.email,
-        contact_phone=old_registration.contact_phone if old_registration else None,
-        company_name=old_registration.company_name if old_registration else None,
-        street=old_registration.street if old_registration else None,
-        postal_code=old_registration.postal_code if old_registration else None,
-        city=old_registration.city if old_registration else None,
-        country=old_registration.country if old_registration else None,
-        vat_number=old_registration.vat_number if old_registration else None,
-        payment_method=old_registration.payment_method if old_registration else "bank_transfer",
-        subtotal=old_registration.subtotal if old_registration else None,
-        vat_amount=old_registration.vat_amount if old_registration else None,
-        total=old_registration.total if old_registration else None,
-        currency=old_registration.currency if old_registration else "EUR",
-    )
+    # Create new registration + add attendee
+    new_registration = create_new_registration(tenant_id, placement_uuid, old_registration, att)
     db.add(new_registration)
     await db.flush()
 
-    # Add attendee to new registration
     new_reg_att = TrainingRegistrationAttendee(
         tenant_id=tenant_id,
         registration_id=new_registration.id,
@@ -673,76 +572,24 @@ async def reassign_attendee(
     )
     db.add(new_reg_att)
 
-    # ── Create new invoice (same price as old) ────────────────────────────
-    # If old invoice was paid → new invoice is auto-marked paid (payment transferred, no refund)
-    new_invoice: TrainingInvoice | None = None
+    # Create replacement invoice (with payment transfer if paid)
+    new_invoice = None
     old_was_paid = old_invoice.status == "paid" if old_invoice else False
     if old_invoice:
-        try:
-            new_inv_number = await generate_training_invoice_number(db, tenant_id)
-            today = date_type.today()
+        new_invoice = await create_replacement_invoice(
+            db,
+            tenant_id,
+            old_invoice,
+            new_registration.id,
+            new_training_name,
+            att,
+        )
 
-            # Copy line items but update training name
-            new_line_items = []
-            for item in old_invoice.line_items or []:
-                new_item = dict(item)
-                new_item["description"] = f"{new_training_name} (1 attendee)"
-                new_line_items.append(new_item)
-                break  # Only first line item (training), keep exam items as-is
-            for item in (old_invoice.line_items or [])[1:]:
-                new_line_items.append(dict(item))
-
-            # Build payment history note
-            payment_note = f"Reassignment of {att.first_name} {att.last_name} to {new_training_name}"
-            if old_was_paid:
-                paid_date = old_invoice.issue_date.strftime("%d.%m.%Y") if old_invoice.issue_date else "unknown date"
-                payment_note += (
-                    f"\n\nPayment transferred from cancelled invoice {old_invoice.invoice_number}."
-                    f"\nOriginal payment: {old_invoice.currency} {old_invoice.total} "
-                    f"via {old_invoice.payment_method or 'unknown'} on {paid_date}."
-                )
-                if old_invoice.stripe_payment_intent_id:
-                    payment_note += f"\nStripe Payment Intent: {old_invoice.stripe_payment_intent_id}"
-
-            new_invoice = TrainingInvoice(
-                tenant_id=tenant_id,
-                training_registration_id=new_registration.id,
-                invoice_number=new_inv_number,
-                template_type=old_invoice.template_type,
-                status="paid" if old_was_paid else "sent",
-                issue_date=today,
-                due_date=today + timedelta(days=30) if not old_was_paid else today,
-                recipient_name=old_invoice.recipient_name,
-                recipient_email=old_invoice.recipient_email,
-                recipient_address_line1=old_invoice.recipient_address_line1,
-                recipient_city=old_invoice.recipient_city,
-                recipient_postal_code=old_invoice.recipient_postal_code,
-                recipient_country=old_invoice.recipient_country,
-                recipient_vat_number=old_invoice.recipient_vat_number,
-                payment_method=old_invoice.payment_method,
-                stripe_payment_intent_id=old_invoice.stripe_payment_intent_id if old_was_paid else None,
-                po_number=old_invoice.po_number,
-                line_items=new_line_items,
-                subtotal=old_invoice.subtotal,
-                tax_rate=old_invoice.tax_rate,
-                tax_amount=old_invoice.tax_amount,
-                total=old_invoice.total,
-                currency=old_invoice.currency,
-                notes=payment_note,
-                language=old_invoice.language,
-            )
-            db.add(new_invoice)
-        except Exception as exc:
-            logger.warning("Failed to create new invoice during reassignment: %s", exc)
-
-    # Update registration status if payment transferred
     if old_was_paid:
         new_registration.status = "paid"
 
-    # Update attendee status
     att.status = "active"
 
-    # Create history event
     reassign_note = data.notes or f"Reassigned to {new_training_name}"
     if old_was_paid:
         reassign_note += " (payment transferred from original invoice)"
@@ -760,12 +607,10 @@ async def reassign_attendee(
 
     await db.commit()
 
-    # ── Send emails ───────────────────────────────────────────────────────
+    # Send email
     tenant = await db.get(Tenant, tenant_id)
     if tenant and new_invoice and new_invoice.recipient_email:
         try:
-            from app.core.training_registration_emails import send_training_invoice_email
-
             await send_training_invoice_email(db, new_invoice, None, tenant)
         except Exception as exc:
             logger.warning("Failed to send new invoice email for reassignment: %s", exc)
